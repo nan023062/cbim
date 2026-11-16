@@ -33,7 +33,6 @@ export function memberTask(state: DispatchState, rootSessionId: string, taskId: 
   const task = graph?.tasks.find(t => t.taskId === taskId);
 
   if (!graph || !task)
-
     fail('TASK_NOT_FOUND', '当前主会话没有此派发任务');
 
   const member = state.members.find(m => m.agentInstanceId === task.assignee.agentInstanceId);
@@ -41,7 +40,6 @@ export function memberTask(state: DispatchState, rootSessionId: string, taskId: 
   const session = state.sessions.find(s => s.agentSessionId === task.assignee.agentSessionId);
 
   if (!member || !session)
-
     fail('MEMBER_NOT_FOUND', '成员实例或通道缺失');
 
   return { graph, task, member, session };
@@ -79,11 +77,9 @@ export function memberCandidate(task: TaskNode, summary: RunSummary): TaskNode['
   const progress = summary.taskProgress;
 
   if (hasMemberHelp(summary) || summary.status !== 'completed' || summary.unresolvedTools.length || progress?.state !== 'awaiting_review' || !progress.delivery || !progress.steps.length)
-
     return;
 
   if (progress.goal !== task.goal || JSON.stringify(progress.acceptance) !== JSON.stringify(task.acceptance.map(a => a.text)))
-
     return;
 
   const identity = { workspaceId: task.identity.workspaceId, taskId: task.taskId, runId: summary.runId };
@@ -91,7 +87,6 @@ export function memberCandidate(task: TaskNode, summary: RunSummary): TaskNode['
   const receipts = new Set((summary.toolReceipts ?? []).filter(receipt => isProgressEvidence(receipt, identity)).map(receipt => receipt.toolCallId));
 
   if (progress.steps.some(step => step.state !== 'reported_done' || !step.evidence.length || step.evidence.some(id => !receipts.has(id))))
-
     return;
 
   return { resultId: randomUUID(), runId: summary.runId, planRevision: task.planRevision, summary: progress.delivery.summary, limitations: progress.delivery.limitations, evidenceRefs: [...new Set(progress.steps.flatMap(step => step.evidence))], acceptance: 'not_evaluated' };

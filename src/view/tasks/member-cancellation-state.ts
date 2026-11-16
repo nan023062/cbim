@@ -14,11 +14,9 @@ export function committedMemberCancellation(task: TaskNode): MemberCancellation 
   const record = task.cancelledBeforeStart;
 
   if (!record || task.status !== 'cancelled' || task.runIds.length || task.activeRunId || task.result || task.help || task.awaitedChildren.length)
-
     return;
 
   if (!task.scopeId || record.scopeId !== task.scopeId || record.previousRevision + 1 !== task.revision || record.cancelledAt !== task.updatedAt)
-
     return;
 
   return record;

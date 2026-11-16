@@ -10,11 +10,9 @@ export function MemberProgressSummary({ run, compact = false }: { run: RunSummar
   const plan = run.taskProgress;
 
   if (!plan)
-
     return null;
 
   const active = plan.steps.filter(step => step.state === 'working'),
-
     shown = compact ? (active.length ? active : plan.steps.slice(-3)) : plan.steps;
 
   const labels = { pending: '待执行', working: '正在执行', reported_done: '已报告' };

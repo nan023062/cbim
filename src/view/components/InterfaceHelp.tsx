@@ -66,17 +66,15 @@ export function InterfaceHelp()
         if (element.getAttribute('aria-describedby') === id)
         {
           if (originalDescription === null)
-
             element.removeAttribute('aria-describedby');
-
           else
-
             element.setAttribute('aria-describedby', originalDescription);
         }
-        if (originalTitle !== null && !element.hasAttribute('title'))
 
+        if (originalTitle !== null && !element.hasAttribute('title'))
           element.setAttribute('title', originalTitle);
       }
+
       owner.current = null;
 
       setTip(null);
@@ -127,9 +125,7 @@ export function InterfaceHelp()
     dismiss.current();
 
     const descriptions = [...document.querySelectorAll<HTMLElement>(selector)]
-
       .filter(element => !element.closest('[hidden],[inert],dialog') && element.getClientRects().length && element !== trigger.current)
-
       .map(description).filter(Boolean);
 
     setHelp([...new Set(descriptions)]);

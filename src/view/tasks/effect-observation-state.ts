@@ -87,7 +87,6 @@ export const effectPreacceptRejected = (e: unknown) => /^EFFECT_PREACCEPT_(?:INP
 const bytes = (v: unknown) => new TextEncoder().encode(JSON.stringify(v)).length;
 
 export const EFFECT_LOCAL_BYTES = 2 * 1024 * 1024,
-
   EFFECT_LOCAL_LIMIT = 64;
 
 export const effectSelectionKey = (value: EffectObservationInput) => JSON.stringify([value.workspaceId, value.rootSessionId, value.subject.kind, 'taskId' in value.subject ? value.subject.taskId : null, value.subject.runId, value.subject.toolCallIds]);
@@ -100,7 +99,6 @@ export function checkedEffectReport(raw: unknown, selection: EffectObservationIn
   const report = effectObservationReportSchema.parse(raw);
 
   if (!sameIdentity(report.identity, selection))
-
     throw Error('影响报告不属于所选原调用');
 
   return report;
@@ -112,11 +110,9 @@ export function checkedEffectReceipt(raw: unknown, request: EffectDispositionInp
   const receipt = effectDispositionReceiptSchema.parse(raw);
 
   if (JSON.stringify(receipt.record.request) !== JSON.stringify(effectDispositionInputSchema.parse(request)))
-
     throw Error('处置回执与原请求不一致，请查询原命令');
 
   if (previous && JSON.stringify(previous) !== JSON.stringify(receipt))
-
     throw Error('已保存处置发生冲突，保留原回执');
 
   return receipt;
@@ -151,21 +147,17 @@ export class EffectObservationController
       const text = ports.storage.getItem(this.storageKey);
 
       if (text === null)
-
         return;
 
       if (new TextEncoder().encode(text).length > EFFECT_LOCAL_BYTES)
-
         throw Error('本机处置索引超出读取上限');
 
       const saved = JSON.parse(text);
 
       if (saved.version !== 1 || saved.workspaceId !== workspaceId || saved.rootSessionId !== rootSessionId || !Array.isArray(saved.drafts) || !Array.isArray(saved.attempts) || saved.drafts.length > EFFECT_LOCAL_LIMIT || saved.attempts.length > EFFECT_LOCAL_LIMIT)
-
         throw Error('本机处置索引格式无效');
 
       const commandIds = new Set<string>(),
-
         keys = new Set<string>();
 
       const attempts: EffectAttempt[] = saved.attempts.map((raw: any) => { const request = effectDispositionInputSchema.parse(raw.request); if (!this.Owns(request) || commandIds.has(request.commandId) || !['submitting', 'unknown', 'accepted', 'rejected'].includes(raw.phase)) throw Error('本机处置命令身份无效'); commandIds.add(request.commandId); const receipt = raw.receipt ? checkedEffectReceipt(raw.receipt, request) : undefined; if (raw.phase === 'accepted' && !receipt) throw Error('已保存处置缺少回执'); return { request, phase: raw.phase === 'submitting' ? 'unknown' : raw.phase, receipt, error: typeof raw.error === 'string' ? raw.error : undefined }; });
@@ -243,7 +235,6 @@ export class EffectObservationController
   private SetRead(identity: EffectObservationInput, patch: Partial<EffectReadState>)
   {
     const key = effectSelectionKey(identity),
-
       previous = this.value.reads[key] ?? { loading: false, error: '' };
 
     this.Publish({ ...this.value, reads: { ...this.value.reads, [key]: { ...previous, ...patch } } })
@@ -253,7 +244,6 @@ export class EffectObservationController
   ObserveAnchor(identity: EffectObservationInput, anchor: string)
   {
     if (this.Owns(identity))
-
       this.anchors.set(effectSelectionKey(identity), anchor)
   }
 
@@ -269,7 +259,6 @@ export class EffectObservationController
     try
     {
       if (this.unavailable)
-
         throw Error('本机记录不可用');
 
       const saved = { version: 1, workspaceId: this.workspaceId, rootSessionId: this.rootSessionId, drafts, attempts };
@@ -278,7 +267,6 @@ export class EffectObservationController
       const reserve = attempts.filter(x => !x.receipt && x.phase !== 'rejected').length * (128 * 1024 + 4096);
 
       if (drafts.length > EFFECT_LOCAL_LIMIT || attempts.length > EFFECT_LOCAL_LIMIT || bytes(saved) + reserve > EFFECT_LOCAL_BYTES)
-
         throw Error('本机处置记录达到保存上限，原记录保留');
 
       this.ports.storage.setItem(this.storageKey, JSON.stringify(saved));
@@ -289,6 +277,7 @@ export class EffectObservationController
 
       return false
     }
+
     this.Publish({ ...this.value, drafts, attempts, error: '' });
 
     return true;
@@ -297,13 +286,11 @@ export class EffectObservationController
   Edit(identity: EffectObservationInput, reason: string, decision: EffectDecision)
   {
     if (!this.Owns(identity) || this.unavailable || reason.length > 4096 || this.Draft(identity)?.commandId && this.Attempt(identity)?.phase !== 'rejected' || !['inspect_more', 'repair_in_new_cycle', 'leave_unresolved'].includes(decision))
-
       return;
 
     const parsed = effectObservationInputSchema.safeParse(identity);
 
     if (!parsed.success)
-
       return;
 
     this.Persist([...this.value.drafts.filter(x => !sameIdentity(x.identity, identity)), { identity: parsed.data, reason, decision }], this.value.attempts);
@@ -313,11 +300,9 @@ export class EffectObservationController
   Prepare(identity: EffectObservationInput)
   {
     const draft = this.Draft(identity),
-
       attempt = this.Attempt(identity);
 
     if (!draft || attempt?.phase !== 'accepted' || this.IsPending(attempt.request.commandId))
-
       return;
 
     this.Persist(this.value.drafts.map(x => x === draft ? { ...x, commandId: undefined } : x), this.value.attempts);
@@ -328,13 +313,10 @@ export class EffectObservationController
   async Observe(identity: EffectObservationInput)
   {
     if (!this.Owns(identity) || this.Read(identity)?.loading)
-
       return;
 
     const key = effectSelectionKey(identity),
-
       generation = (this.generations.get(key) ?? 0) + 1,
-
       anchor = this.anchors.get(key);
 
     this.generations.set(key, generation);
@@ -346,13 +328,11 @@ export class EffectObservationController
       const report = checkedEffectReport(await this.ports.observe(structuredClone(identity)), identity);
 
       if (this.generations.get(key) === generation)
-
         this.SetRead(identity, { report, anchor, loading: false, error: '' })
     }
     catch (error)
     {
       if (this.generations.get(key) === generation)
-
         this.SetRead(identity, { loading: false, error: '影响核实失败：' + errorText(error) })
     }
   }
@@ -361,11 +341,9 @@ export class EffectObservationController
   async Submit(identity: EffectObservationInput)
   {
     const draft = this.Draft(identity),
-
       report = this.Read(identity)?.report;
 
     if (!draft || draft.commandId && this.Attempt(identity)?.phase !== 'rejected' || !report || !this.Fresh(identity) || !draft.reason.trim() || this.unavailable)
-
       return;
 
     let request: EffectDispositionInput;
@@ -375,7 +353,6 @@ export class EffectObservationController
       request = effectDispositionInputSchema.parse({ ...identity, commandId: this.ports.uuid(), expectedBasis: report.basis, expectedRevision: report.dispositionRevision, decision: draft.decision, reason: draft.reason });
 
       if (this.value.attempts.some(x => x.request.commandId === request.commandId))
-
         throw Error('新命令与已保存处置重号')
     }
     catch (error)
@@ -384,10 +361,10 @@ export class EffectObservationController
 
       return
     }
+
     const attempt: EffectAttempt = { request, phase: 'submitting' };
 
     if (!this.Persist(this.value.drafts.map(x => x === draft ? { ...x, commandId: request.commandId } : x), [...this.value.attempts, attempt]))
-
       return;
 
     this.pending.add(request.commandId);
@@ -409,7 +386,6 @@ export class EffectObservationController
       this.SaveAttempt({ ...attempt, phase: rejected ? 'rejected' : 'unknown', error: (rejected ? '请求尚未进入保存事务，请重新核实后编辑处置：' : '保存结果尚未确认：') + errorText(error) + (rejected ? '' : '。请查询原命令。') });
 
       if (rejected)
-
         this.SetRead(identity, { anchor: undefined })
     }
     finally
@@ -431,15 +407,12 @@ export class EffectObservationController
   async Query(identity: EffectObservationInput, commandId: string)
   {
     const previous = this.value.attempts.find(x => x.request.commandId === commandId),
-
       listed = this.Read(identity)?.list?.records.some(x => x.dispositionId === commandId);
 
     if (!this.Owns(identity) || this.pending.has(commandId) || previous && !sameIdentity(previous.request, identity) || !previous && !listed)
-
       return;
 
     const selectionKey = effectSelectionKey(identity),
-
       selectionGeneration = (this.selectionGenerations.get(selectionKey) ?? 0) + 1;
 
     this.selectionGenerations.set(selectionKey, selectionGeneration);
@@ -453,19 +426,16 @@ export class EffectObservationController
       const raw = await this.ports.receipt({ workspaceId: this.workspaceId, rootSessionId: this.rootSessionId, commandId });
 
       if (raw === undefined)
-
         throw Error('尚未查到保存回执，保留未知状态');
 
       const parsed = effectDispositionReceiptSchema.parse(raw);
 
       if (!sameIdentity(parsed.record.request, identity) || parsed.record.dispositionId !== commandId)
-
         throw Error('处置历史不属于所选原调用');
 
       const receipt = checkedEffectReceipt(parsed, previous?.request ?? parsed.record.request, previous?.receipt);
 
       if (this.SaveAttempt({ request: receipt.record.request, phase: 'accepted', receipt }) && this.selectionGenerations.get(selectionKey) === selectionGeneration)
-
         this.SetRead(identity, { selectedId: commandId, relations: this.Read(identity)?.relations?.identity.dispositionId === commandId ? this.Read(identity)?.relations : undefined, error: '' });
     }
     catch (error)
@@ -473,12 +443,10 @@ export class EffectObservationController
       const message = '查询结果未确认：' + errorText(error);
 
       if (previous)
-
         this.SaveAttempt({ ...previous, phase: previous.receipt ? 'accepted' : 'unknown', error: message });
 
       // 历史选择不一定是当前草稿；错误放在该来源读取区，保留原选择及其真实关系。
       if (this.selectionGenerations.get(selectionKey) === selectionGeneration)
-
         this.SetRead(identity, { error: message });
     }
     finally
@@ -493,7 +461,6 @@ export class EffectObservationController
   async List(identity: EffectObservationInput)
   {
     if (!this.Owns(identity) || this.Read(identity)?.loading)
-
       return;
 
     this.SetRead(identity, { loading: true, error: '' });
@@ -503,7 +470,6 @@ export class EffectObservationController
       const list = effectDispositionListSchema.parse(await this.ports.list(structuredClone(identity)));
 
       if (!sameIdentity(list.identity, identity))
-
         throw Error('处置列表属于其他来源');
 
       this.SetRead(identity, { list, loading: false })
@@ -519,7 +485,6 @@ export class EffectObservationController
     const selected = this.Selected(identity);
 
     if (!selected || !this.Owns(identity) || this.Read(identity)?.loading)
-
       return;
 
     const dispositionId = selected.dispositionId;
@@ -531,15 +496,11 @@ export class EffectObservationController
       const relations = effectRelationsSchema.parse(await this.ports.relations({ workspaceId: this.workspaceId, rootSessionId: this.rootSessionId, dispositionId }));
 
       if (!sameIdentity(relations.record.request, identity) || relations.identity.dispositionId !== dispositionId || JSON.stringify(relations.record) !== JSON.stringify(selected))
-
         throw Error('后续关系与原处置不一致');
 
       if (this.Selected(identity)?.dispositionId === dispositionId)
-
         this.SetRead(identity, { relations, loading: false });
-
       else
-
         this.SetRead(identity, { loading: false });
     }
     catch (error)
@@ -561,7 +522,6 @@ export class EffectObservationPool
   Get(workspaceId: string, rootSessionId: string, ports: EffectPorts)
   {
     const key = JSON.stringify([workspaceId, rootSessionId]),
-
       controller = this.values.get(key) ?? new EffectObservationController(workspaceId, rootSessionId, ports);
 
     this.values.delete(key);
@@ -571,13 +531,12 @@ export class EffectObservationPool
     for (const [id, old] of this.values)
     {
       if (this.values.size <= this.idleLimit)
-
         break;
 
       if (id !== key && old.canRelease)
-
         this.values.delete(id)
     }
+
     return controller
   }
 }

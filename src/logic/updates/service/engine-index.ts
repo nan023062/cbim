@@ -20,7 +20,6 @@ export function engineIndexAsset(publicKey: string)
   const key = createPublicKey(publicKey);
 
   if (key.asymmetricKeyType !== 'ed25519')
-
     throw Error('引擎索引公钥类型无效');
 
   return `latest-${createHash('sha256').update(key.export({ type: 'spki', format: 'der' })).digest('hex')}.json`;
@@ -34,17 +33,14 @@ export function verifyEngineIndex(raw: unknown, cold: Pick<ColdRuntime, 'publicK
   const key = createPublicKey(cold.publicKey);
 
   if (key.asymmetricKeyType !== 'ed25519' || !verify(null, Buffer.from(envelope.payload), key, Buffer.from(envelope.signature, 'base64')))
-
     throw Error('引擎索引签名无效');
 
   const index = indexSchema.parse(JSON.parse(envelope.payload));
 
   if (index.platform !== cold.platform)
-
     throw Error('引擎平台不兼容');
 
   if (Date.parse(index.createdAt) > Date.now() + 300000 || Date.parse(index.expiresAt) <= Date.parse(index.createdAt) || !installed && Date.parse(index.expiresAt) <= Date.now())
-
     throw Error('引擎索引时间无效或已过期');
 
   const releases = new Map<string, EnginePackage>();
@@ -56,27 +52,23 @@ export function verifyEngineIndex(raw: unknown, cold: Pick<ColdRuntime, 'publicK
     validateEnginePackage(engine);
 
     if (!engine.adapter)
-
       throw Error('引擎缺少版本化适配器');
 
     const id = engine.kind + ':' + engine.package.sha256,
-
       version = engine.kind + ':' + engine.adapter.version;
 
     if (releases.has(id) || versions.has(version))
-
       throw Error('引擎制品或版本重复');
 
     releases.set(id, engine);
 
     versions.add(version)
   }
-  if (new Set(index.current.map(ref => ref.kind)).size !== index.current.length)
 
+  if (new Set(index.current.map(ref => ref.kind)).size !== index.current.length)
     throw Error('引擎当前版本重复');
 
   const visiting = new Set<string>(),
-
     visited = new Set<string>();
 
   function visit(kind: string, identity: string)
@@ -84,23 +76,19 @@ export function verifyEngineIndex(raw: unknown, cold: Pick<ColdRuntime, 'publicK
     const id = kind + ':' + identity;
 
     if (visiting.has(id))
-
       throw Error('引擎依赖成环');
 
     if (visited.has(id))
-
       return;
 
     const engine = releases.get(id);
 
     if (!engine)
-
       throw Error('引擎依赖或当前制品缺失');
 
     visiting.add(id);
 
     for (const ref of engine.dependencies ?? [])
-
       visit(ref.kind, ref.identity);
 
     visiting.delete(id);
@@ -109,11 +97,9 @@ export function verifyEngineIndex(raw: unknown, cold: Pick<ColdRuntime, 'publicK
   }
 
   for (const ref of index.current)
-
     visit(ref.kind, ref.identity);
 
   for (const engine of index.releases)
-
     visit(engine.kind, engine.package.sha256);
 
   return { index, envelope, digest: runtimeManifestDigest(envelope) };

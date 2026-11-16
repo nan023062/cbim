@@ -12,7 +12,6 @@ import { fail } from '../../../core/errors';
 export const plannedRequestSchema = z.object({ workspaceId: z.string().min(1), instanceId: z.string().uuid(), revision: z.string().min(1), requestId: z.string().regex(/^[A-Za-z0-9_-]{8,100}$/), changes: z.array(z.object({ path: z.string().min(1), text: z.string().nullable(), hash: z.string().optional() }).strict()) }).strict();
 
 const path = z.string().min(1).max(2048),
-
   digest = z.string().regex(/^[a-f0-9]{64}$/);
 
 export const resolvedObjectOperationSchema = z.object({ kind: z.enum(['agent', 'module', 'skill', 'workflow']), action: z.enum(['create', 'update', 'delete']), id: path, cascade: z.boolean().optional() }).strict();
@@ -56,22 +55,18 @@ export function checkedKnowledgePlan(kind: KnowledgePlanRef['kind'], raw: unknow
   const parsed = (kind === 'object_plan' ? objectPlanV2Schema : packagePlanV2Schema).safeParse(raw);
 
   if (!parsed.success)
-
     fail('SOURCE_PLAN_INVALID', '知识计划缺少完整来源语义或已改变，请重新预览');
 
   // strict 校验不替换原 wire；原 request 的字段顺序属于现有事务 fingerprint，不能被 Schema 重排。
   const plan = raw as PlannedKnowledgeCommit;
 
   if (knowledgePlanHash(plan) !== plan.planHash)
-
     fail('SOURCE_PLAN_INVALID', '知识计划指纹不一致');
 
   if ('mode' in plan && plan.mode === 'replace' && (!['team', 'architecture'].includes(plan.kind) || plan.targetRoot !== (plan.kind === 'team' ? '.cbim/team' : '.cbim/workspace') || plan.deletedRoots.length !== 1 || plan.deletedRoots[0] !== plan.targetRoot))
-
     fail('SOURCE_PLAN_INVALID', '整体替换计划范围不一致');
 
   if ('mode' in plan && plan.mode === 'add' && plan.deletedRoots.length)
-
     fail('SOURCE_PLAN_INVALID', '新增计划不能携带替换范围');
 
   return plan;

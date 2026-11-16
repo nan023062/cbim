@@ -21,11 +21,9 @@ export class TerminalSessions
   Start(key: string, cwd: string, command: string)
   {
     if (typeof command !== 'string' || !command.trim() || command.length > 16000)
-
       throw Error('请输入有效命令');
 
     if (this.entries.get(key)?.running)
-
       throw Error('上一条命令仍在运行');
 
     const entry:
@@ -76,20 +74,17 @@ export class TerminalSessions
     if (e?.process && e.running)
     {
       if (process.platform === 'win32' && e.process.pid)
-
         spawn('taskkill', ['/pid', String(e.process.pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' });
-
       else
-
         e.process.kill('SIGTERM')
     }
+
     this.entries.delete(key)
   }
 
   CloseAll()
   {
     for (const key of this.entries.keys())
-
       this.Close(key)
   }
 }

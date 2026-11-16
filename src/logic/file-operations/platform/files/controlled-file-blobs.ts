@@ -28,7 +28,6 @@ export class ControlledFileBlobs
   private async CheckedDirectory(create = false)
   {
     const absolute = path.resolve(this.directory),
-
       root = path.parse(absolute).root;
 
     let current = root;
@@ -36,7 +35,6 @@ export class ControlledFileBlobs
     for (const part of ['', ...path.relative(root, absolute).split(path.sep)])
     {
       if (part)
-
         current = path.join(current, part);
 
       let stat;
@@ -51,15 +49,14 @@ export class ControlledFileBlobs
           {
             code?: string
           }).code !== 'ENOENT')
-
           throw error;
 
         await fs.mkdir(current, { mode: 0o700 });
 
         stat = await fs.lstat(current)
       }
-      if (stat.isSymbolicLink() || !stat.isDirectory())
 
+      if (stat.isSymbolicLink() || !stat.isDirectory())
         fail('CONTROLLED_BLOB_PATH', '备份目录不是可靠私有目录')
     }
   }
@@ -77,9 +74,7 @@ export class ControlledFileBlobs
   private async Save(operationId: string, role: 'before' | 'intended_after', bytes: Uint8Array): Promise<ControlledFileBlobRef>
   {
     const blobId = randomUUID(),
-
       target = path.join(this.directory, blobId),
-
       temporary = target + '.tmp';
 
     const handle = await fs.open(temporary, 'wx', 0o600);
@@ -94,6 +89,7 @@ export class ControlledFileBlobs
     {
       await handle.close()
     }
+
     await fs.rename(temporary, target);
 
     const ref = controlledFileBlobRefSchema.parse({ version: 1, blobId, createdForOperationId: operationId, role, ...fact(bytes) });
@@ -111,11 +107,9 @@ export class ControlledFileBlobs
     await this.CheckedDirectory();
 
     const filename = path.join(this.directory, ref.blobId),
-
       before = await fs.lstat(filename);
 
     if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1 || before.size !== ref.byteLength)
-
       fail('CONTROLLED_BLOB_INVALID', '原备份文件不可核实');
 
     const handle = await fs.open(filename, 'r');
@@ -125,7 +119,6 @@ export class ControlledFileBlobs
       const opened = await handle.stat();
 
       if (opened.ino !== before.ino || opened.dev !== before.dev || opened.size !== ref.byteLength || opened.nlink !== 1)
-
         fail('CONTROLLED_BLOB_INVALID', '打开备份时身份变化');
 
       // 多读一字节只为识别并发增长；绝不让私有文件的当前长度决定无界分配。
@@ -138,19 +131,16 @@ export class ControlledFileBlobs
         const { bytesRead } = await handle.read(buffer, length, buffer.length - length, length);
 
         if (!bytesRead)
-
           break;
 
         length += bytesRead
       }
+
       const bytes = buffer.subarray(0, length),
-
         after = await handle.stat(),
-
         current = await fs.lstat(filename);
 
       if (bytes.length !== ref.byteLength || after.size !== ref.byteLength || current.size !== ref.byteLength || fact(bytes).sha256 !== ref.sha256 || after.ino !== opened.ino || after.nlink !== 1 || after.mtimeMs !== opened.mtimeMs || after.ctimeMs !== opened.ctimeMs || current.ino !== opened.ino || current.nlink !== 1 || current.isSymbolicLink())
-
         fail('CONTROLLED_BLOB_INVALID', '备份字节或身份变化');
 
       return bytes

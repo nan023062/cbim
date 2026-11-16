@@ -33,7 +33,6 @@ export class RuntimeStore
   ManifestPath(digest: string)
   {
     if (!/^[a-f0-9]{64}$/.test(digest))
-
       throw Error('资源身份无效');
 
     return path.join(this.root, 'manifests', digest + '.json')
@@ -54,13 +53,12 @@ export class RuntimeStore
       const old = await this.ReadManifest(checked.digest);
 
       if (old.envelope.payload !== envelope.payload)
-
         throw Error('资源清单身份冲突');
 
       return checked;
     }
-    const temporary = file + '.' + randomUUID() + '.tmp',
 
+    const temporary = file + '.' + randomUUID() + '.tmp',
       handle = await fs.open(temporary, 'wx', 0o600);
 
     try
@@ -73,6 +71,7 @@ export class RuntimeStore
     {
       await handle.close()
     }
+
     await fs.rename(temporary, file);
 
     await this.ReadManifest(checked.digest);
@@ -83,17 +82,14 @@ export class RuntimeStore
   async ReadManifest(digest: string)
   {
     const file = this.ManifestPath(digest),
-
       stat = await fs.lstat(file);
 
     if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 16 * 1024 * 1024)
-
       throw Error('本地资源清单无效');
 
     const checked = verifyRuntimeManifest(JSON.parse(await fs.readFile(file, 'utf8')), this.cold, { installed: true });
 
     if (checked.digest !== digest)
-
       throw Error('本地资源身份不符');
 
     return checked;
@@ -105,7 +101,6 @@ export class RuntimeStore
     const current = this.preparing.get(pkg.sha256);
 
     if (current)
-
       return current;
 
     const job = this.PreparePackage(pkg, signal, progress).finally(() => { if (this.preparing.get(pkg.sha256) === job) this.preparing.delete(pkg.sha256) });
@@ -131,22 +126,20 @@ export class RuntimeStore
 
       return target;
     }
+
     await fs.mkdir(path.join(this.root, 'staging'), { recursive: true });
 
     await fs.mkdir(path.dirname(target), { recursive: true });
 
     const space = await fs.statfs(this.root),
-
       required = pkg.bytes + pkg.files.reduce((sum, file) => sum + file.bytes, 0) + 32 * 1024 * 1024;
 
     if (space.bavail * space.bsize < required)
-
       throw Error('没有足够空间准备更新');
 
     const stage = await fs.mkdtemp(path.join(this.root, 'staging', 'package-'));
 
     const archive = path.join(stage, randomUUID() + '.zip'),
-
       expanded = path.join(stage, 'expanded');
 
     try
@@ -156,7 +149,6 @@ export class RuntimeStore
       for (const root of this.reuseRoots)
       {
         const candidate = path.join(root, 'packages', pkg.sha256),
-
           stat = await fs.lstat(candidate).catch(error => { if (error.code === 'ENOENT') return undefined; throw error });
 
         if (stat)
@@ -168,6 +160,7 @@ export class RuntimeStore
           break;
         }
       }
+
       if (source)
       {
         await fs.cp(source, expanded, { recursive: true });
@@ -180,6 +173,7 @@ export class RuntimeStore
 
         await extractRuntimeArchive(archive, expanded, pkg.files, signal, value => progress(70 + value * .25));
       }
+
       await verifyRuntimeDirectory(expanded, pkg.files, signal);
 
       signal.throwIfAborted();
@@ -198,11 +192,9 @@ export class RuntimeStore
     {
       // 只清理本调用创建的临时目录；不删除内容寻址缓存、活动版本或上一确认版本。
       const resolved = path.resolve(stage),
-
         parent = path.resolve(this.root, 'staging');
 
       if (path.dirname(resolved) === parent && path.basename(resolved).startsWith('package-'))
-
         await fs.rm(resolved, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 }).catch(() => { });
 
       throw error;

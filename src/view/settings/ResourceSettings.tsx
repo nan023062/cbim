@@ -12,19 +12,14 @@ const api = window.cbim;
 export function ResourceSettings({ onDirtyChange }: { onDirtyChange?: (dirty: boolean) => void } = {})
 {
   const [status, setStatus] = useState<RepositoryStatus>(),
-
     [error, setError] = useState(''),
-
     [notice, setNotice] = useState(''),
-
     [busy, setBusy] = useState(true);
 
   const [localPath, setLocalPath] = useState('');
 
   const [lan, setLan] = useState(false),
-
     [port, setPort] = useState(0),
-
     [connection, setConnection] = useState<
       {
         url: string;
@@ -45,7 +40,6 @@ export function ResourceSettings({ onDirtyChange }: { onDirtyChange?: (dirty: bo
   async function reload()
   {
     if (unsaved && !confirm('重新读取会放弃未保存的目录，继续吗？'))
-
       return;
 
     setBusy(true);
@@ -61,7 +55,6 @@ export function ResourceSettings({ onDirtyChange }: { onDirtyChange?: (dirty: bo
       setError(s.error || '');
 
       if (s.config?.mode === 'local')
-
         setLocalPath(s.config.location)
     }
     catch (e: any)

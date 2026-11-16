@@ -47,21 +47,17 @@ export class MemberHelpTools
   Guard(tool: string, toolCallId: string, input: unknown, otherActiveIds: string[]): string | undefined
   {
     if (this.reserved)
-
       return '已经请求主调度协助，请结束本轮；不能继续调用工具';
 
     if (tool !== name)
-
       return;
 
     const parsed = memberHelpInputSchema.safeParse(input);
 
     if (!parsed.success)
-
       return '求助参数不符合结构约定';
 
     if (otherActiveIds.length)
-
       return '仍有工具或审批未结束，请等待它们结束后再请求协助';
 
     this.reserved = { toolCallId, input: parsed.data };
@@ -71,7 +67,6 @@ export class MemberHelpTools
   Denied(toolCallId: string)
   {
     if (!this.consumed && this.reserved?.toolCallId === toolCallId)
-
       this.reserved = undefined
   }
 
@@ -79,11 +74,9 @@ export class MemberHelpTools
   async Call(tool: string, input: unknown, toolCallId?: string)
   {
     if (tool !== name || !toolCallId || this.consumed || this.reserved?.toolCallId !== toolCallId)
-
       throw Error('求助必须由当前成员已授权的一次性调用提交');
 
     let parsed: ReturnType<typeof memberHelpInputSchema.parse>,
-
       expectedInput: ReturnType<typeof memberHelpInputSchema.parse>;
 
     try
@@ -93,7 +86,6 @@ export class MemberHelpTools
       expectedInput = structuredClone(parsed);
 
       if (JSON.stringify(parsed) !== JSON.stringify(this.reserved.input))
-
         throw Error('求助参数与已授权调用不一致');
 
       this.ports.AssertReady(toolCallId, parsed.attemptedToolCallIds);
@@ -105,6 +97,7 @@ export class MemberHelpTools
 
       throw error;
     }
+
     this.consumed = true;
 
     const help: MemberHelpStaged = { helpId: randomUUID(), toolCallId, binding: structuredClone(this.binding), input: parsed, requestedAt: new Date().toISOString() };

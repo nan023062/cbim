@@ -14,7 +14,6 @@ export function MemberCancellationNotice({ task, compact = false }: { task: Task
   const record = committedMemberCancellation(task);
 
   if (!record)
-
     return null;
 
   return <section className={'member-cancellation-notice' + (compact ? ' compact' : '')} data-testid="member-cancellation" data-task-id={task.taskId} data-cancel-id={record.commandId} aria-label="未启动任务撤销记录">

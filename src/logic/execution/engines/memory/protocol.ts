@@ -17,17 +17,14 @@ export type MemoryMessage = z.infer<typeof memoryMessageSchema>;
 export function memoryDecision(value: Record<string, any>, allowed: ReadonlySet<string>): Extract<MemoryMessage, { role: 'assistant' }>
 {
   if (!Array.isArray(value.choices) || value.choices.length !== 1 || value.choices[0].index !== 0)
-
     throw Error('记忆模型必须返回唯一完整结果');
 
   const choice = value.choices[0];
 
   if (choice.finish_reason === 'length')
-
     throw Error('记忆模型输出达到上限，本轮停止；已完成操作不重做');
 
   if (!['stop', 'tool_calls'].includes(choice.finish_reason) || choice.message?.role !== 'assistant' || choice.message?.refusal)
-
     throw Error('记忆模型未返回完整回答或工具决定');
 
   const result = memoryMessageSchema.parse({ role: 'assistant', content: choice.message.content ?? null, ...(choice.message.tool_calls ? { tool_calls: choice.message.tool_calls } : {}) }) as Extract<MemoryMessage,
@@ -38,24 +35,20 @@ export function memoryDecision(value: Record<string, any>, allowed: ReadonlySet<
   if (result.tool_calls)
   {
     if (choice.finish_reason !== 'tool_calls')
-
       throw Error('工具决定与完成原因不一致');
 
     for (const call of result.tool_calls)
     {
       if (!allowed.has(call.function.name))
-
         throw Error('记忆模型请求未提供的工具');
 
       const input = JsonUtils.ParseStrictJson(call.function.arguments);
 
       if (!input || typeof input !== 'object' || Array.isArray(input))
-
         throw Error('记忆工具参数必须为对象')
     }
   }
   else if (choice.finish_reason !== 'stop' || !result.content?.trim())
-
     throw Error('记忆模型没有完整回答');
 
   return result;
@@ -65,7 +58,6 @@ export function memoryDecision(value: Record<string, any>, allowed: ReadonlySet<
 export function memoryVectors(value: Record<string, any>, count: number, dimensions: number): number[][]
 {
   if (!Array.isArray(value.data) || value.data.length !== count)
-
     throw Error('向量结果数量不匹配');
 
   const vectors = new Map<number, number[]>();
@@ -73,11 +65,11 @@ export function memoryVectors(value: Record<string, any>, count: number, dimensi
   for (const item of value.data)
   {
     if (!Number.isSafeInteger(item?.index) || item.index < 0 || item.index >= count || vectors.has(item.index) || !Array.isArray(item.embedding) || item.embedding.length !== dimensions || item.embedding.some((n: unknown) => typeof n !== 'number' || !Number.isFinite(n)))
-
       throw Error('向量结果序号、维度或数值无效');
 
     vectors.set(item.index, item.embedding);
   }
+
   return Array.from({ length: count }, (_, i) => vectors.get(i)!);
 }
 

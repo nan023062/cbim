@@ -65,27 +65,22 @@ export class RunJournal
     const text = await fs.readFile(path.join(directory, 'events.jsonl'), 'utf8');
 
     if (text.length === 0)
-
       fail('RUN_LOG_EMPTY', '运行记录尚无首条完整事件');
 
     try
     {
       const lines = text.split('\n'),
-
         partialTail = lines.pop() !== ''; // 只读有效前缀，报告但不截断未完成的最后一行。
 
       const events = lines.filter(Boolean).map(line => JSON.parse(line) as StoredEvent);
 
       if (!events.length || events[0].type !== 'run.started')
-
         throw Error('运行记录不完整');
 
       const first = events[0],
-
         task = first.data.task as TaskSpec;
 
       if (first.data.memberBinding !== undefined && first.data.conversationBinding !== undefined)
-
         throw Error('主对话实例绑定不能与成员任务绑定混用');
 
       const memberBinding = first.data.memberBinding === undefined ? undefined : checkedMemberRunBinding(first.data.memberBinding, task, first.runId);
@@ -95,13 +90,10 @@ export class RunJournal
       const source = first.data.source === undefined ? undefined : checkedRunInputSource(first.data.source);
 
       if (source && (task.mode !== 'chat' || memberBinding || !first.data.resumeFrom))
-
         throw Error('成员结果来源与主对话运行不匹配');
 
       for (let i = 0; i < events.length; i++)
-
         if (events[i].version !== 1 || events[i].seq !== i + 1 || events[i].runId !== first.runId || events[i].taskId !== task.taskId || events[i].workspaceId !== task.workspaceId)
-
           throw Error('运行记录身份或顺序错误');
 
       const pending = new Set<string>();
@@ -116,33 +108,28 @@ export class RunJournal
         {
           // Codex 首次准备可只确认线程 ID；只有真实文件回执才能成为恢复路径。
           if (typeof event.data.sessionFile !== 'string' || !event.data.sessionFile.trim())
-
             throw Error('原生会话文件记录无效');
 
           sessionFile = event.data.sessionFile;
         }
-        if (event.type === 'tool.allowed')
 
+        if (event.type === 'tool.allowed')
           pending.add(String(event.data.id));
 
         if (event.type === 'tool.finished')
-
           pending.delete(String(event.data.id));
 
         if (event.type === 'tool.denied')
-
           pending.delete(String(event.data.id));
 
         if (event.type === 'run.settled')
-
           status = event.data.status as RunSummary['status'];
 
         if (event.type === 'run.interrupted')
-
           status = 'interrupted';
       }
-      if (pending.size)
 
+      if (pending.size)
         status = 'interrupted';
 
       const receipts = new Map<string, ToolReceipt>();
@@ -154,12 +141,12 @@ export class RunJournal
         for (const receipt of records as ToolReceipt[])
         {
           if (receipt.workspaceId !== task.workspaceId || receipt.taskId !== task.taskId || receipt.runId !== first.runId)
-
             throw Error('工具回执身份与运行不匹配');
 
           receipts.set(receipt.toolCallId, receipt);
         }
       }
+
       const taskProgress = events.filter(e => e.type === 'task.updated').at(-1)?.data.progress as RunSummary['taskProgress'];
 
       return { task, runId: first.runId, status, acceptance: 'not_evaluated', sessionFile, ...(memberBinding ? { memberBinding } : {}), ...(conversationBinding ? { conversationBinding } : {}), ...(source ? { source } : {}), unresolvedTools: [...pending], toolReceipts: [...receipts.values()], taskProgress, events, logIntegrity: { partialTail } };
@@ -167,7 +154,6 @@ export class RunJournal
     catch (cause)
     {
       if (cause instanceof Fault)
-
         throw cause;
 
       fail('RUN_LOG_INVALID', '运行记录损坏或身份不一致，无法核实完整执行事实')

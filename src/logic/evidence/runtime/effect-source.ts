@@ -60,7 +60,6 @@ export async function readEffectSource(state: DispatchState, input: EffectObserv
   const finish = (summary?: RunSummary, run?: DispatchRun | AgentBusinessRun, facts?: ReturnType<typeof executionToolFacts>): EffectSourceRead => ({ source, summary, run, facts, stamp: hash(json({ source, summary })) });
 
   const graph = state.graphs.find(g => g.identity.workspaceId === input.workspaceId && g.identity.rootSessionId === input.rootSessionId),
-
     subject = input.subject;
 
   const task = subject.kind === 'member_run' ? graph?.tasks.find(t => t.taskId === subject.taskId) : undefined;
@@ -79,10 +78,10 @@ export async function readEffectSource(state: DispatchState, input: EffectObserv
 
     return finish()
   }
+
   Object.assign(source, { ...(recursive ? { executionModel: 'agent-tools-v1' as const } : {}), scopeId: scope.scopeId, scopeStatus: scope.status, ...(scope.outcome ? { scopeOutcome: scope.outcome } : {}), ...(scope.goal ? { goalRevision: scope.goal.revision, inputRevision: goalInputRevision(scope.goal), ...(scope.goal.plan ? { goalPlanRevision: scope.goal.plan.revision } : {}) } : {}), ...(task ? { taskRevision: task.revision, planRevision: task.planRevision } : {}) });
 
   let summary: RunSummary | undefined,
-
     run: DispatchRun | AgentBusinessRun | undefined;
 
   if (subject.kind === 'main_run')
@@ -92,7 +91,6 @@ export async function readEffectSource(state: DispatchState, input: EffectObserv
     source.logState = checked.source.state === 'legacy_unverified' ? 'incomplete' : checked.source.state === 'verified' ? 'verified' : checked.source.state;
 
     if (!checked.summary || checked.source.state !== 'verified')
-
       return finish();
 
     summary = checked.summary;
@@ -103,7 +101,6 @@ export async function readEffectSource(state: DispatchState, input: EffectObserv
     run = recursive;
 
     if (!ports || runs.length)
-
       return finish();
 
     try
@@ -121,12 +118,10 @@ export async function readEffectSource(state: DispatchState, input: EffectObserv
 
       return finish()
     }
+
     const first = summary.events[0],
-
       binding = recursive.binding,
-
       bounds = summary.events.filter(e => e.type === 'session.bound'),
-
       modules = recursive.prepared.modules.map(m => m.binding.moduleId);
 
     if (summary.runId !== subject.runId || summary.task.workspaceId !== input.workspaceId || summary.task.root !== root || summary.task.taskId !== subject.taskId || summary.task.agentId !== binding.agentId || !isDeepStrictEqual(summary.task.moduleIds, modules) || !isDeepStrictEqual(summary.task.ownerBinding, recursive.prepared.memberContext?.binding) || !isDeepStrictEqual(summary.memberBinding, binding) || summary.conversationBinding || first?.type !== 'run.started' || first.data.executionModel !== 'agent-tools-v1' || !isDeepStrictEqual(first.data.task, summary.task) || !isDeepStrictEqual(first.data.memberBinding, binding) || !isDeepStrictEqual(first.data.agentCall, recursive.parent) || bounds.some(e => e.data.sessionId !== first.data.nativeSessionId || e.data.sessionFile !== summary!.sessionFile) || summary.sessionFile && !bounds.length)
@@ -141,7 +136,6 @@ export async function readEffectSource(state: DispatchState, input: EffectObserv
     run = runs[0];
 
     if (!ports)
-
       return finish();
 
     try
@@ -159,14 +153,11 @@ export async function readEffectSource(state: DispatchState, input: EffectObserv
 
       return finish()
     }
+
     const binding = run.binding,
-
       member = state.members.find(m => m.agentInstanceId === binding.agentInstanceId),
-
       session = state.sessions.find(s => s.agentSessionId === binding.agentSessionId),
-
       first = summary.events[0],
-
       bounds = summary.events.filter(e => e.type === 'session.bound');
 
     if (!member || !session || member.workspaceId !== input.workspaceId || member.agentId !== binding.agentId || !member.agentSessionIds.includes(binding.agentSessionId) || session.workspaceId !== input.workspaceId || session.rootSessionId !== input.rootSessionId || session.agentInstanceId !== binding.agentInstanceId || session.agentId !== binding.agentId || binding.agentId !== task!.assignee.agentId || binding.agentInstanceId !== task!.assignee.agentInstanceId || binding.agentSessionId !== task!.assignee.agentSessionId || summary.runId !== subject.runId || !isDeepStrictEqual(summary.memberBinding, binding) || summary.conversationBinding || !isDeepStrictEqual(summary.task, memberPublicTask(task!, root)) || first?.type !== 'run.started' || !isDeepStrictEqual(first.data.task, summary.task) || !isDeepStrictEqual(first.data.memberBinding, binding) || summary.sessionFile !== run.session.sessionFile || bounds.some(e => e.data.sessionId !== (run as DispatchRun).session.nativeSessionId || e.data.sessionFile !== (run as DispatchRun).session.sessionFile) || run.session.sessionFile && !bounds.length)
@@ -176,6 +167,7 @@ export async function readEffectSource(state: DispatchState, input: EffectObserv
       return finish()
     }
   }
+
   const terminal = summary.events.filter(e => e.type === 'run.settled' || e.type === 'run.interrupted');
 
   if (summary.events.filter(e => e.type === 'run.started').length !== 1 || summary.events.some((e, i) => e.version !== 1 || e.seq !== i + 1 || e.workspaceId !== input.workspaceId || e.taskId !== (subject.kind === 'member_run' ? subject.taskId : input.rootSessionId) || e.runId !== subject.runId) || terminal.length > 1 || terminal.length === 1 && summary.events.some(e => e.seq > terminal[0].seq && e.type !== 'run.stop_requested'))
@@ -184,12 +176,14 @@ export async function readEffectSource(state: DispatchState, input: EffectObserv
 
     return finish()
   }
+
   if (summary.logIntegrity?.partialTail !== false)
   {
     source.logState = 'incomplete';
 
     return finish()
   }
+
   const facts = executionToolFacts(summary, { binding: { workspaceId: input.workspaceId, taskId: summary.task.taskId, runId: subject.runId } }, { toolCallIdLimit: 512 });
 
   if (facts.invalid || subject.toolCallIds.some(id => !facts.items.some(item => item.toolCallId === id && item.proposedSeq)))
@@ -198,6 +192,7 @@ export async function readEffectSource(state: DispatchState, input: EffectObserv
 
     return finish()
   }
+
   source.state = 'verified';
 
   source.logState = 'verified';

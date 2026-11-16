@@ -31,15 +31,12 @@ export function modelRoleChoices(role: ModelRoleDescriptor, models: LlmSettings)
 export function engineSelectionAvailable(value: { engine: LoopEngine; profileId: string; modelId: string; modelRoles?: ModelRolesSelection } | undefined | null, models: LlmSettings | undefined): boolean
 {
   if (!value || !models)
-
     return false;
 
   const descriptor = engineDescriptor(value.engine),
-
     profile = models.profiles.find(profile => profile.id === value.profileId);
 
   if (!profile?.models.some(model => model.id === value.modelId && model.enabled) || !providerSupportsEngine(value.engine, profile, value.modelId))
-
     return false;
 
   try
@@ -49,9 +46,9 @@ export function engineSelectionAvailable(value: { engine: LoopEngine; profileId:
       const role = descriptor.additionalModelRoles!.find(role => role.id === operation.slot)!;
 
       if (!modelRoleChoices(role, models).some(choice => choice.profileId === operation.profileId && choice.modelId === operation.modelId))
-
         return false
     }
+
     return true
   }
   catch

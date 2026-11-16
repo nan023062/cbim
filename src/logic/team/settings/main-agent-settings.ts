@@ -45,7 +45,6 @@ export class MainAgentSettings
         {
           code?: string
         }).code === 'ENOENT')
-
         return { version: 1 as const, revision: 0, selection: null };
 
       fail('AGENT_SETTINGS_READ', '主 Agent 配置读取失败，请检查配置文件后重试')

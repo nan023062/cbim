@@ -118,13 +118,12 @@ function validateMainToolOutput(name: MainToolName, value: unknown, expected: Ma
     graphCheck(result.graph);
 
     for (const stamp of [result.scope.goal?.plan?.graphCursor, result.scope.goal?.review?.graphCursor, result.scope.wait?.graphCursor])
-
       if (stamp && (stamp.streamId !== result.graph.cursor.streamId || stamp.seq > result.graph.cursor.seq))
-
         issue('目标引用的图基线不属于返回快照');
 
     return;
   }
+
   if (name === 'cbim_goal_plan' || name === 'cbim_goal_review')
   {
     const scope = value as MainToolScope;
@@ -132,7 +131,6 @@ function validateMainToolOutput(name: MainToolName, value: unknown, expected: Ma
     scopeCheck(scope);
 
     const draft = input as GoalPlanInput | GoalReviewInput,
-
       goal = scope.goal;
 
     if (scope.status !== 'active' || !goal || goal.blocked || goal.revision !== draft.expectedRevision + 1)
@@ -141,10 +139,10 @@ function validateMainToolOutput(name: MainToolName, value: unknown, expected: Ma
 
       return
     }
+
     if (name === 'cbim_goal_plan')
     {
       const proposed = draft as GoalPlanInput,
-
         plan = goal.plan;
 
       if (!plan || goal.review || plan.runId !== binding.runId || plan.revision !== goal.revision || goalInputRevision(plan) !== goalInputRevision(goal))
@@ -153,12 +151,12 @@ function validateMainToolOutput(name: MainToolName, value: unknown, expected: Ma
 
         return
       }
+
       const actual = { objective: plan.objective, constraints: plan.constraints, criteria: plan.criteria, assignments: plan.assignments.map(({ agentId, moduleIds, criterionIds, reason, workflowSelections, ownerSelection }) => ({ agentId, moduleIds, criterionIds, reason, ...(workflowSelections === undefined ? {} : { workflowSelections }), ...(ownerSelection === undefined ? {} : { ownerSelection }) })), reason: plan.reason };
 
       const { expectedRevision: _, ...requested } = proposed;
 
       if (!sameGoalValue(actual, requested))
-
         issue('保存计划与请求正文不一致');
     }
     else
@@ -171,22 +169,25 @@ function validateMainToolOutput(name: MainToolName, value: unknown, expected: Ma
 
         return
       }
+
       const actual = { decision: review.decision, checks: review.checks, superseded: review.superseded, gaps: review.gaps, reason: review.reason, ...(review.memberPause === undefined ? {} : { memberPause: review.memberPause }) };
 
       const { expectedRevision: _, ...requested } = draft as GoalReviewInput;
 
       if (!sameGoalValue(actual, requested))
-
         issue('保存审阅与请求事实不一致');
     }
+
     return;
   }
+
   if (name === 'cbim_dispatch_inspect')
   {
     const requested = input as
       {
         taskId?: string
       };
+
     if (!requested.taskId)
     {
       if (!('version' in (value as object)))
@@ -195,10 +196,12 @@ function validateMainToolOutput(name: MainToolName, value: unknown, expected: Ma
 
         return
       }
+
       graphCheck(value as GraphSnapshot);
 
       return
     }
+
     const task = value as TaskNode;
 
     if (task.kind !== 'task' || task.taskId !== requested.taskId || task.nodeId !== `task:${task.taskId}` || !sameIdentity(task.identity))
@@ -207,8 +210,10 @@ function validateMainToolOutput(name: MainToolName, value: unknown, expected: Ma
 
       return
     }
+
     return;
   }
+
   if (name === 'cbim_dispatch_task')
   {
     const result = value as MainToolOutput<'cbim_dispatch_task'>;
@@ -216,7 +221,6 @@ function validateMainToolOutput(name: MainToolName, value: unknown, expected: Ma
     commandCheck(result.commandId);
 
     if (!sameIdentity(result.cursor) || result.cursor.seq < 1)
-
       issue('派发回执不属于当前主会话');
 
     const request = input as
@@ -227,36 +231,33 @@ function validateMainToolOutput(name: MainToolName, value: unknown, expected: Ma
 
         ownerSelection?: unknown
       };
-    if (result.fallbackBinding && (request.ownerSelection || !automaticExecutionBindingMatches(result.fallbackBinding, binding.workspaceId, binding.scopeId, request.agentId, request.moduleIds)))
 
+    if (result.fallbackBinding && (request.ownerSelection || !automaticExecutionBindingMatches(result.fallbackBinding, binding.workspaceId, binding.scopeId, request.agentId, request.moduleIds)))
       issue('自动兜底回执与原派发范围或周期不一致');
 
     return;
   }
+
   if (name === 'cbim_dispatch_resume')
   {
     const result = value as MainToolOutput<'cbim_dispatch_resume'>,
-
       request = input as ResumeMemberInput;
 
     if (!sameIdentity(result.cursor) || result.taskId !== request.taskId || result.checkpointId !== request.checkpointId || result.trackedTaskIds[0] !== result.taskId)
-
       issue('预约回执与原任务或检查点不一致');
 
     cursorCheck(result.cursor, request.expectedGraphCursor);
 
     return;
   }
+
   if (name === 'cbim_dispatch_abandon_checkpoint')
   {
     const receipt = value as MainToolOutput<'cbim_dispatch_abandon_checkpoint'>,
-
       request = input as AbandonCheckpointInput,
-
       record = receipt.abandonment;
 
     if (!sameIdentity(receipt) || receipt.scopeId !== binding.scopeId || receipt.mainRunId !== binding.runId)
-
       issue('检查点放弃回执不属于当前主运行');
 
     commandCheck(receipt.commandId);
@@ -264,15 +265,14 @@ function validateMainToolOutput(name: MainToolName, value: unknown, expected: Ma
     cursorCheck(receipt.graphCursor, request.expectedGraphCursor);
 
     if (receipt.taskId !== request.taskId || record.commandId !== receipt.commandId || record.scopeId !== binding.scopeId || record.mainRunId !== binding.runId || record.checkpointId !== request.checkpointId || record.resumeRequestId !== request.expectedResumeRequestId || record.previousTaskRevision !== request.expectedRevision || record.planRevision !== request.expectedPlanRevision || record.goalRevision !== request.expectedGoalRevision || record.reason !== request.reason || !sameGoalValue(record.graphCursor, request.expectedGraphCursor))
-
       issue('检查点放弃审计与原请求及任务基线不一致');
 
     return;
   }
+
   const result = value as MainToolOutput<'cbim_dispatch_cancel'> | MainToolOutput<'cbim_dispatch_replace_dependency'> | MainToolOutput<'cbim_dispatch_add_dependency'> | MainToolOutput<'cbim_dispatch_revise_dependencies'>;
 
   if (!sameIdentity(result) || result.scopeId !== binding.scopeId || result.mainRunId !== binding.runId)
-
     issue('调度变更回执不属于当前主运行');
 
   commandCheck(result.commandId);
@@ -280,58 +280,50 @@ function validateMainToolOutput(name: MainToolName, value: unknown, expected: Ma
   if (name === 'cbim_dispatch_revise_dependencies')
   {
     const receipt = result as MainToolOutput<'cbim_dispatch_revise_dependencies'>,
-
       request = input as ReviseQueuedDependenciesInput,
-
       record = receipt.revision;
 
     cursorCheck(receipt.graphCursor, request.expectedGraphCursor);
 
     if (receipt.taskId !== request.target.taskId || record.commandId !== receipt.commandId || record.scopeId !== binding.scopeId || record.mainRunId !== binding.runId || record.goalPlanRevision !== request.expectedGoalRevision || !sameGoalValue(record.request, request) || !sameGoalValue(record.trackedTaskIds, receipt.trackedTaskIds) || !receipt.trackedTaskIds.includes(receipt.taskId) || [...record.removed, ...record.added].some(e => !receipt.trackedTaskIds.includes(e.sourceTaskId)) || record.removed.length !== request.remove.length || record.removed.some((e, i) => e.edgeId !== request.remove[i].edgeId || e.edgeRevision !== request.remove[i].expectedRevision) || record.added.length !== request.add.length || record.added.some((e, i) => e.sourceTaskId !== request.add[i].taskId || e.sourceTaskRevision !== request.add[i].expectedRevision || e.sourcePlanRevision !== request.add[i].expectedPlanRevision) || record.added.length > 0 && receipt.status !== 'waiting')
-
       issue('修订回执与原请求、增删来源或闭包不一致');
 
     return;
   }
+
   if (name === 'cbim_dispatch_cancel')
   {
     const receipt = result as MainToolOutput<'cbim_dispatch_cancel'>,
-
       request = input as CancelQueuedTasksInput;
 
     cursorCheck(receipt.graphCursor, request.expectedGraphCursor);
 
     if (!sameGoalValue([...receipt.cancelledTaskIds].sort(), request.targets.map(item => item.taskId).sort()))
-
       issue('撤销回执不是精确请求的任务集合');
 
     return;
   }
+
   if (name === 'cbim_dispatch_add_dependency')
   {
     const receipt = result as MainToolOutput<'cbim_dispatch_add_dependency'>,
-
       request = input as AddQueuedDependencyInput,
-
       record = receipt.addition;
 
     cursorCheck(receipt.graphCursor, request.expectedGraphCursor);
 
     if (request.source.taskId === request.target.taskId || receipt.taskId !== request.target.taskId || !receipt.trackedTaskIds.includes(receipt.taskId) || !receipt.trackedTaskIds.includes(request.source.taskId) || !sameGoalValue(receipt.trackedTaskIds, record.trackedTaskIds) || record.commandId !== receipt.commandId || record.scopeId !== binding.scopeId || record.mainRunId !== binding.runId || record.reason !== request.reason || !sameGoalValue(record.graphCursor, request.expectedGraphCursor) || record.goalRevision !== request.expectedGoalRevision || record.goalPlanRevision !== request.expectedGoalRevision || record.previousTaskRevision !== request.target.expectedRevision || record.targetPlanRevision !== request.target.expectedPlanRevision || record.dependency.sourceTaskId !== request.source.taskId || record.dependency.sourceTaskRevision !== request.source.expectedRevision || record.dependency.sourcePlanRevision !== request.source.expectedPlanRevision)
-
       issue('追加审计与本次精确前置或任务基线不一致');
 
     return;
   }
+
   const receipt = result as MainToolOutput<'cbim_dispatch_replace_dependency'>,
-
     request = input as ReplaceQueuedDependencyInput,
-
     record = receipt.replacement;
 
   cursorCheck(receipt.graphCursor, request.expectedGraphCursor);
 
   if (receipt.taskId !== request.target.taskId || receipt.trackedTaskIds[0] !== receipt.taskId || !sameGoalValue(receipt.trackedTaskIds, record.trackedTaskIds) || record.commandId !== receipt.commandId || record.scopeId !== binding.scopeId || record.mainRunId !== binding.runId || record.reason !== request.reason || !sameGoalValue(record.graphCursor, request.expectedGraphCursor) || record.goalRevision !== request.expectedGoalRevision || record.previousTaskRevision !== request.target.expectedRevision || record.targetPlanRevision !== request.target.expectedPlanRevision || record.retired.edgeId !== request.replace.edgeId || record.retired.revision !== request.replace.expectedRevision || record.replacement.sourceTaskId !== request.with.taskId || record.replacement.sourceTaskRevision !== request.with.expectedRevision || record.replacement.sourcePlanRevision !== request.with.expectedPlanRevision || record.replacement.runId !== request.with.runId || record.replacement.resultId !== request.with.resultId)
-
     issue('替换审计与本次精确边或候选不一致');
 }

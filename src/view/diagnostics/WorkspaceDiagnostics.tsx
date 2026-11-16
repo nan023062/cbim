@@ -27,15 +27,12 @@ const stateLabels: Record<string, string> = { registered: '已登记', running: 
 export function WorkspaceDiagnostics({ workspace, snapshot, refreshKnowledge }: WorkspaceDiagnosticsProps)
 {
   const [refreshing, setRefreshing] = useState(false),
-
     [error, setError] = useState('');
 
   const current = snapshot?.workspaceId === workspace.id && snapshot.instanceId === workspace.instanceId ? snapshot : undefined;
 
   const validation = current?.validation,
-
     issues = validation?.issues || [],
-
     errors = issues.filter(issue => issue.severity === 'error');
 
   const disabled = refreshing || workspace.state !== 'running';

@@ -19,23 +19,19 @@ export interface KnowledgeTreeNode
 export function knowledgeFileTree(files: readonly KnowledgeFile[], root: string, query = '', labels: Readonly<Record<string, string>> = {}): KnowledgeTreeNode
 {
   const tree: KnowledgeTreeNode = { path: root, name: labels[root] ?? root.split('/').at(-1)!, kind: 'folder', children: [] },
-
     needle = query.trim().toLocaleLowerCase();
 
   for (const file of files)
   {
     if (!file.path.startsWith(root + '/') || file.path.includes('\\'))
-
       continue;
 
     const parts = file.path.slice(root.length + 1).split('/');
 
     if (parts.some(part => !part || part === '.' || part === '..'))
-
       continue;
 
     if (needle && !`${file.path} ${Object.entries(labels).filter(([path]) => file.path.startsWith(path + '/')).map(([, name]) => name).join(' ')}`.toLocaleLowerCase().includes(needle))
-
       continue;
 
     let parent = tree;

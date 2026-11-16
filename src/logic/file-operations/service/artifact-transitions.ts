@@ -19,15 +19,11 @@ import type { Workspace } from '../../workspace/service/workspace';
 export function createArtifactTransitionPort(owner: Workspace, transport: ControlledFileTransport | undefined, isCurrent: () => boolean): ArtifactTransitionRunPort | undefined
 {
   if (!transport?.WithExclusiveTransition)
-
     return;
 
   const root = owner.entry.path,
-
     instanceId = owner.instanceId,
-
     workspaceId = owner.entry.id,
-
     protectedRoots = [owner.paths.userRoot, owner.paths.installRoot, ...(owner.paths.protectedRoots ?? [])];
 
   const check = () => { owner.Assert({ workspaceId, instanceId }); if (!isCurrent()) fail('ARTIFACT_TRANSITION_UNAVAILABLE', '工作区正在停止，不能发出删除/移动') };

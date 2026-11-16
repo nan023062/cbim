@@ -36,7 +36,6 @@ function RowSection<T>({ title, items, render }: { title: string; items: T[]; re
 function memberTarget(value: RuntimeMember, data: RuntimeSnapshot): RuntimeNavigationTarget | undefined
 {
   if (value.mainRootSessionId)
-
     return { workspaceId: value.workspaceId, rootSessionId: value.mainRootSessionId };
 
   const task = data.tasks.find(t => t.source === 'dispatch' && t.workspaceId === value.workspaceId && t.taskId === value.executionTaskId && t.agentInstanceId === value.agentInstanceId);
@@ -58,19 +57,13 @@ export function RuntimeMetrics({ data }: { data: RuntimeSnapshot })
 export function RuntimeOverview({ onOpen }: { onOpen: RuntimeOpen })
 {
   const visible = useRuntimeVisibility(),
-
     state = useRuntime(visible),
-
     admission = useAdmission(visible),
-
     [workspaceId, setWorkspaceId] = useState(''),
-
     [filter, setFilter] = useState<RuntimeFilter>('all'),
-
     data = state.data;
 
   const [section, setSection] = useState('tasks'),
-
     sectionId = useId();
 
   const panel = (name: string) => ({ className: 'view-panel', role: 'tabpanel', id: sectionId + '-panel-' + name, 'aria-labelledby': sectionId + '-tab-' + name, hidden: section !== name });

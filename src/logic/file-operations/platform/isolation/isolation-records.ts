@@ -19,17 +19,11 @@ import { fail } from '../../../../core/errors';
 import { isolationRecordSchema, isolationProcessSchema, type IsolationRecord } from './isolation-record';
 
 const changeSchema = z.discriminatedUnion('kind', [
-
   z.object({ kind: z.literal('prepared'), record: isolationRecordSchema }).strict(),
-
   z.object({ kind: z.literal('started'), process: isolationProcessSchema }).strict(),
-
   z.object({ kind: z.literal('settled') }).strict(), z.object({ kind: z.literal('cleaned') }).strict(),
-
   z.object({ kind: z.literal('cleanup_requested'), commandId: z.string().uuid(), basis: z.string().regex(/^[a-f0-9]{64}$/) }).strict(),
-
   z.object({ kind: z.literal('cleanup_complete'), commandId: z.string().uuid() }).strict(),
-
 ]);
 
 export type IsolationChange = z.infer<typeof changeSchema>;
@@ -70,7 +64,6 @@ export class FileIsolationRecords
     safeId(runId);
 
     if (!/^[a-f0-9]{64}$/.test(operationId))
-
       fail('ISOLATION_RECORD_ID', '原调用标识无效');
 
     return path.join(this.directory, runId, operationId + '.jsonl')
@@ -81,7 +74,6 @@ export class FileIsolationRecords
     const stat = await fs.lstat(file);
 
     if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1 || stat.size > 256 * 1024)
-
       fail('ISOLATION_RECORD_INVALID', '隔离记录不是有界普通文件')
   }
 
@@ -90,11 +82,9 @@ export class FileIsolationRecords
     const first = changes[0];
 
     if (first?.kind !== 'prepared')
-
       fail('ISOLATION_RECORD_INVALID', '缺少原隔离来源');
 
     let phase: IsolationChange['kind'] = 'prepared',
-
       commandId: string | undefined;
 
     for (const change of changes.slice(1))
@@ -102,15 +92,14 @@ export class FileIsolationRecords
       const allowed = change.kind === 'started' ? phase === 'prepared' : change.kind === 'settled' ? ['prepared', 'started'].includes(phase) : change.kind === 'cleaned' ? ['prepared', 'started', 'settled'].includes(phase) : change.kind === 'cleanup_requested' ? ['prepared', 'started', 'settled'].includes(phase) : change.kind === 'cleanup_complete' ? phase === 'cleanup_requested' && change.commandId === commandId : false;
 
       if (!allowed)
-
         fail('ISOLATION_RECORD_INVALID', '隔离资源阶段顺序不一致');
 
       if (change.kind === 'cleanup_requested')
-
         commandId = change.commandId;
 
       phase = change.kind;
     }
+
     return first.record;
   }
 
@@ -126,21 +115,19 @@ export class FileIsolationRecords
     catch (error)
     {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT')
-
         return;
 
       throw error
     }
+
     const text = await fs.readFile(file, 'utf8');
 
     if (!text.endsWith('\n'))
-
       fail('ISOLATION_RECORD_INVALID', '隔离记录尾部不完整');
 
     const lines = text.trimEnd().split('\n');
 
     if (!lines.length || lines.length > 32)
-
       fail('ISOLATION_RECORD_LIMIT', '隔离记录数量不合法');
 
     let previous = '';
@@ -153,17 +140,16 @@ export class FileIsolationRecords
         { checksum, ...body } = frame;
 
       if (body.sequence !== index + 1 || body.previous !== previous || hash(JSON.stringify(body)) !== checksum)
-
         fail('ISOLATION_RECORD_INVALID', '隔离记录哈希链不一致');
 
       changes.push(body.change);
 
       previous = checksum
     }
+
     const record = this.Validate(changes);
 
     if (record.origin.binding.runId !== runId || isolationOperationId(runId, record.origin.toolCallId) !== operationId)
-
       fail('ISOLATION_RECORD_ID', '隔离记录不属于原调用');
 
     return { record, changes, revision: changes.length, checksum: previous, phase: changes.at(-1)!.kind };
@@ -180,7 +166,6 @@ export class FileIsolationRecords
       const stat = await fs.lstat(directory);
 
       if (!stat.isDirectory() || stat.isSymbolicLink())
-
         fail('ISOLATION_RECORD_INVALID', '隔离记录目录被替换');
 
       names = await fs.readdir(directory)
@@ -188,13 +173,12 @@ export class FileIsolationRecords
     catch (error)
     {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT')
-
         return [];
 
       throw error
     }
-    if (names.length > 256 || names.some(name => !/^([a-f0-9]{64})\.jsonl$/.test(name)))
 
+    if (names.length > 256 || names.some(name => !/^([a-f0-9]{64})\.jsonl$/.test(name)))
       fail('ISOLATION_RECORD_LIMIT', '隔离记录目录超限或包含未知文件');
 
     const results: MemoryEntry[] = [];
@@ -202,15 +186,14 @@ export class FileIsolationRecords
     for (const name of names.sort())
     {
       const operationId = name.slice(0, -6),
-
         head = await this.Read(runId, operationId);
 
       if (!head)
-
         fail('ISOLATION_RECORD_CHANGED', '读取期间隔离记录消失');
 
       results.push({ operationId, head })
     }
+
     return results
   }
 

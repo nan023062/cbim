@@ -33,7 +33,6 @@ function rows<T>(previous: T[], next: T[], key: (item: T) => string)
 export function reconcileRuntime(previous: RuntimeSnapshot | undefined, next: RuntimeSnapshot): RuntimeSnapshot
 {
   if (!previous || previous.cursor.streamId !== next.cursor.streamId)
-
     return next;
 
   return { ...next, workspaces: rows(previous.workspaces, next.workspaces, x => x.workspaceId), members: rows(previous.members, next.members, x => x.workspaceId + ':' + x.agentInstanceId), tasks: rows(previous.tasks, next.tasks, runtimeTaskKey), scopes: rows(previous.scopes, next.scopes, x => x.workspaceId + ':' + x.scopeId), runs: rows(previous.runs, next.runs, runtimeRunKey), pressure: same(previous.pressure, next.pressure) ? previous.pressure : next.pressure, usage: same(previous.usage, next.usage) ? previous.usage : next.usage };
@@ -76,6 +75,7 @@ export class RuntimeFeed
 
       void this.Refresh()
     }
+
     return () => { unsubscribe(); if (!this.listeners.size) { this.generation.Advance(); clearTimeout(this.timer) } }
   }
 
@@ -83,7 +83,6 @@ export class RuntimeFeed
   Refresh(): Promise<void>
   {
     if (this.pending)
-
       return this.pending;
 
     clearTimeout(this.timer);

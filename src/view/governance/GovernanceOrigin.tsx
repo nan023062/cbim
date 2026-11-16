@@ -8,11 +8,9 @@ import type { ModuleGovernanceOrigin } from '../../bridge/contracts/governance';
 export function GovernanceOrigin({ origin }: { origin?: ModuleGovernanceOrigin })
 {
   if (!origin)
-
     return <p className="governance-origin" data-testid="governance-origin">历史记录未保存来源，无法确定由本机操作还是主 Agent 提出。</p>;
 
   if (origin.kind === 'local_desktop')
-
     return <p className="governance-origin" data-testid="governance-origin">来源：本机明确提交；不代表账号认证或已获批准。</p>;
 
   return <details className="governance-origin" open data-testid="governance-origin"><summary>来源：主 Agent · 尚不构成人工决定</summary><dl>

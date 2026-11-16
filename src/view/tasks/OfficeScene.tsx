@@ -52,17 +52,12 @@ export function OfficeScene({ graph, sessions, scopes, mainRunning, queued, acti
   const scene = useMemo(() => officeScene(graph, sessions, scopes, mainRunning), [graph, sessions, scopes, mainRunning]);
 
   const tracker = useRef(new OfficeEventTracker()),
-
     [events, setEvents] = useState<OfficeEvent[]>([]),
-
     [notice, setNotice] = useState(''),
-
     [reduced, setReduced] = useState(false);
 
   const stage = useRef<HTMLDivElement>(null),
-
     anchors = useRef(new Map<string, HTMLDivElement>()),
-
     [paths, setPaths] = useState<Record<string,
       {
         x: number;
@@ -90,7 +85,6 @@ export function OfficeScene({ graph, sessions, scopes, mainRunning, queued, acti
   const renderActor = (actor: OfficeActor) =>
   {
     const event = playing.find(event => actorFor(event)?.id === actor.id),
-
       path = event ? paths[event.id] : undefined;
 
     return <div key={actor.id} className="office-worker" data-selected={actor.sessionId === selectedAgentSessionId} data-office-actor={actor.id}>

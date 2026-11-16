@@ -8,17 +8,13 @@
 import { z } from 'zod';
 
 const id = z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/),
-
   logical = z.string().trim().min(1).max(512);
 
 const callId = z.string().min(1).max(128).refine(value => value.trim() === value && !/[\x00-\x1f]/.test(value));
 
 const seq = z.number().int().nonnegative().safe(),
-
   positive = seq.min(1),
-
   digest = z.string().regex(/^[a-f0-9]{64}$/),
-
   time = z.string().datetime();
 
 export const artifactLimits = { sources: 16, files: 16, fileBytes: 8 * 1024 * 1024, totalBytes: 32 * 1024 * 1024, baselines: 8 } as const;

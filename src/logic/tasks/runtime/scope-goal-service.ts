@@ -124,7 +124,6 @@ const identitySchema = z.object({ workspaceId: z.string().min(1).max(512), rootS
 function check(condition: unknown, code: string, message: string): asserts condition
 {
   if (!condition)
-
     fail(code, message)
 }
 
@@ -143,7 +142,6 @@ export class ScopeGoalService
   async ReviewCandidate(identity: GraphIdentity, scopeId: string, runId: string, commandId: string, raw: CandidateReviewInput, assertCurrent: () => void): Promise<TaskNode>
   {
     const input = this.Parse(candidateReviewInputSchema, raw),
-
       command = { commandId, fingerprint: hash(json({ identity, scopeId, runId, input })) };
 
     return this.store.Transact(command, async state =>
@@ -151,7 +149,6 @@ export class ScopeGoalService
       assertCurrent();
 
       const scope = this.Scope(state, identity, scopeId),
-
         graph = this.Graph(state, scope);
 
       check(scope.status === 'active' && scope.goal?.plan && !scope.goal.blocked && !goalNeedsReplan(scope.goal) && !scopeHasUnresolvedActiveInput(scope), 'CANDIDATE_REVIEW_SCOPE', '当前目标未准备好审阅');
@@ -176,7 +173,6 @@ export class ScopeGoalService
       check((await this.owner.Read()).revision === knowledge.revision, 'CANDIDATE_REVIEW_CHANGED', '审阅期间知识发生变化');
 
       const now = new Date().toISOString(),
-
         updated: TaskNode = { ...task, revision: task.revision + 1, updatedAt: now, candidateReview: { resultId: task.result!.resultId, runId: task.result!.runId, planRevision: task.planRevision, mainRunId: runId, decision: input.decision, reason: input.reason, recordedAt: now } };
 
       return { batch: { version: 1, identity, streamId: graph.cursor.streamId, seq: graph.cursor.seq + 1, eventId: randomUUID(), commandId, cause: 'task.revised', committedAt: now, changes: [{ type: 'task.upserted', task: updated }] }, receipt: updated };
@@ -188,7 +184,6 @@ export class ScopeGoalService
     const result = schema.safeParse(value);
 
     if (!result.success)
-
       fail('GOAL_INPUT_INVALID', result.error.issues.map(issue => issue.message).join('；'));
 
     return result.data
@@ -254,7 +249,6 @@ export class ScopeGoalService
   async InspectWithGraph(identity: GraphIdentity, scopeId: string): Promise<{ scope: DispatchScope; graph: GraphSnapshot }>
   {
     const state = await this.store.Read(),
-
       scope = this.Scope(state, identity, scopeId);
 
     return { scope, graph: this.Graph(state, scope) };
@@ -264,7 +258,6 @@ export class ScopeGoalService
   async PreviewClosure(identity: GraphIdentity, scopeId: string, input?: CancelQueuedTasksInput)
   {
     const state = await this.store.Read(),
-
       scope = this.Scope(state, identity, scopeId);
 
     return coordinationPreview(state, scope, this.Graph(state, scope), input);
@@ -274,7 +267,6 @@ export class ScopeGoalService
   async Plan(identity: GraphIdentity, scopeId: string, runId: string, commandId: string, raw: GoalPlanInput, assertCurrent?: () => void): Promise<DispatchScope>
   {
     const draft = this.Parse(goalPlanInputSchema, raw),
-
       command = this.Command('goal.plan', identity, scopeId, runId, commandId, draft);
 
     const old = await this.store.CommandReceipt(command.commandId);
@@ -282,7 +274,6 @@ export class ScopeGoalService
     if (old)
     {
       if (old.fingerprint !== command.fingerprint)
-
         fail('COMMAND_ID_CONFLICT', '相同命令 ID 已用于不同请求');
 
       return old.receipt as DispatchScope
@@ -295,7 +286,6 @@ export class ScopeGoalService
     const business = draft.assignments.filter(assignment => assignment.agentId !== 'cbim:main');
 
     if (business.length && !this.owners)
-
       fail('OWNER_EXECUTION_UNAVAILABLE', '未装配岗位执行计划端口');
 
     const save = async (context: { snapshot: Awaited<ReturnType<Owner['Snapshot']>>; profiles: readonly import('../../team/rules/workspace-member').WorkspaceMemberModelSnapshot[] }) => this.store.Transact(command, async state => { alive(); const scope = this.Scope(state, identity, scopeId), goal = this.Editable(scope, draft.expectedRevision), graph = this.Graph(state, scope), snapshot = context.snapshot; check(snapshot.workspaceId === scope.workspaceId, 'GOAL_IDENTITY', '知识快照不属于目标工作区'); const criterionIds = draft.criteria.map(item => item.id); check((goal.plan?.criteria ?? []).filter(item => item.kind === 'human').every(item => draft.criteria.some(candidate => sameGoalValue(item, candidate))), 'GOAL_HUMAN_REQUIRED', '重新规划不能删除或降低既有人工验收项'); if (scope.replan) { const proof = scope.replan.source.proof, modules = proof.requiredModules.map(item => item.moduleId), planned = draft.assignments.flatMap(item => item.moduleIds); check(proof.inheritedHuman.every(({ id, text, kind }) => draft.criteria.some(item => sameGoalValue(item, { id, text, kind }))), 'GOAL_HUMAN_REQUIRED', '新业务计划必须保留来源业务的人工验收项'); check(planned.every(id => modules.includes(id)) && modules.every(id => planned.includes(id)), 'GOAL_MODULE_SCOPE', '新业务计划必须完整覆盖且不能超出已核实模块'); } check(new Set(criterionIds).size === criterionIds.length, 'GOAL_PLAN_INVALID', '验收项 ID 不能重复'); check(draft.assignments.every(item => item.criterionIds.every(id => criterionIds.includes(id))) && criterionIds.every(id => draft.assignments.some(item => item.criterionIds.includes(id))), 'GOAL_PLAN_INVALID', '每个验收项必须有负责角色，分配不能引用不存在的验收项'); const assignments = []; for (const assignment of draft.assignments) { check(assignment.agentId !== 'cbim:main' || assignment.workflowSelections === undefined, 'GOAL_PLAN_INVALID', '主会话直接工作不绑定成员专属 Workflow 执行契约'); validateWorkflowSelections(assignment.moduleIds, assignment.workflowSelections); const agent = assignment.agentId === 'cbim:main' ? resolveConversationAgent(snapshot) : await resolveDispatchAgent(snapshot, assignment.agentId); check(assignment.agentId === 'cbim:main' || assignment.moduleIds.length, 'GOAL_PLAN_INVALID', '业务执行角色必须明确目标模块'); const { ownerBinding, fallbackBinding } = assignment.agentId === 'cbim:main' ? {} : await this.owners!.ResolveExecution(state, context, scopeId, assignment.ownerSelection, assignment.moduleIds, assignment.agentId); const root = assignment.agentId === 'cbim:main' && assignment.moduleIds.includes('cbim:project'); const ids = root ? assignment.moduleIds.filter(id => id !== 'cbim:project') : assignment.moduleIds; const modules = [...(ids.length ? await resolveExecutionModules(snapshot, ids, assignment.workflowSelections, fallbackBinding) : []), ...(root ? [{ moduleId: 'cbim:project', name: '项目根模块' }] : [])]; const member = ownerBinding ? state.workspaceMembers!.find(member => member.memberId === ownerBinding.memberId) : undefined; assignments.push({ ...assignment, ...(ownerBinding ? { ownerBinding } : {}), ...(fallbackBinding ? { fallbackBinding } : {}), agentName: member?.name ?? agent.name, teamId: agent.teamId, moduleNames: assignment.moduleIds.map(id => modules.find(module => module.moduleId === id)!.name) }); } check((await this.owner.Read()).revision === snapshot.revision, 'GOAL_KNOWLEDGE_CHANGED', '规划期间知识已变化，请重新读取'); const { expectedRevision: _, ...body } = draft, newGoal: DispatchScopeGoal = { revision: goal.revision + 1, ...(goal.inputRevision === undefined ? {} : { inputRevision: goal.inputRevision }), input: goal.input, plan: { ...body, assignments, revision: goal.revision + 1, inputRevision: goalInputRevision(goal), runId, recordedAt: new Date().toISOString(), knowledgeRevision: snapshot.revision, graphCursor: cursor(graph) } }; const next = { ...scope, goal: newGoal }; alive(); return { scopes: [next], receipt: next }; });
@@ -312,7 +302,6 @@ export class ScopeGoalService
 
     // 旧无 goal 周期保持读取/运行兼容，不给历史记录补造计划。
     if (!scope.goal)
-
       fail('GOAL_PLAN_REQUIRED', '新业务必须有当前主目标计划，旧周期不能补造执行许可');
 
     check(scope.status === 'active' && !scope.goal.blocked, 'GOAL_BLOCKED', '周期已经关闭或阻塞');
@@ -336,15 +325,12 @@ export class ScopeGoalService
     check(!scopeHasUnresolvedActiveInput(scope), 'GOAL_ACTIVE_INPUT_UNRESOLVED', '运行中补充仍在接收或结果未知，不能沿旧目标完成或安全等待');
 
     if (main)
-
       validateScopeActiveInputLog(scope, main);
 
     const runs = new Set((scope.activeInputs ?? []).filter(item => item.status === 'accepted').map(item => item.runId));
 
     for (const runId of runs)
-
       if (runId !== main?.runId)
-
         validateScopeActiveInputLog(scope, await this.Logs().InspectMain(scope.rootSessionId, runId));
   }
 
@@ -358,7 +344,6 @@ export class ScopeGoalService
   private Main(state: DispatchState, summary: RunSummary, scope: DispatchScope, graph: GraphSnapshot, runId: string)
   {
     const binding = summary.conversationBinding,
-
       root = graph.root.agent;
 
     const channel = state.sessions.find(session => session.agentSessionId === binding?.agentSessionId && session.purpose === 'conversation');
@@ -369,15 +354,12 @@ export class ScopeGoalService
   private Receipt(summary: RunSummary, toolCallId: string): { receipt: ToolReceipt; event: StoredEvent }
   {
     const receipts = (summary.toolReceipts ?? []).filter(item => item.toolCallId === toolCallId),
-
       events = summary.events.filter(event => event.type === 'tool.finished' && event.data.id === toolCallId);
 
     check(receipts.length === 1 && events.length === 1, 'GOAL_EVIDENCE_INVALID', '工具证据缺失或身份重复');
 
     const receipt = receipts[0],
-
       event = events[0],
-
       allowed = summary.events.find(item => item.type === 'tool.allowed' && item.data.id === toolCallId);
 
     check(receipt.toolName !== questionToolName, 'GOAL_EVIDENCE_INVALID', '问题回答与取消不是业务完成证据或人工验收决定');
@@ -412,23 +394,20 @@ export class ScopeGoalService
     check(progress?.state === 'awaiting_review' && progress.delivery && progress.goal === task.goal && sameGoalValue(progress.acceptance, task.acceptance.map(item => item.text)) && progress.delivery.summary === result.summary && sameGoalValue(progress.delivery.limitations, result.limitations) && progress.steps.length && progress.steps.every(step => step.state === 'reported_done' && step.evidence.length) && sameSet([...new Set(progress.steps.flatMap(step => step.evidence))], result.evidenceRefs), 'GOAL_EVIDENCE_INVALID', '候选内容与运行的真实交付记录不一致');
 
     for (const id of result.evidenceRefs)
-
       this.Receipt(summary, id);
 
     try
     {
       if (historical)
-
         memberWorkflowFiles(task, run, summary, this.owner.entry.path, this.ports?.NormalizeValidationPath);
-
       else
-
         await validateMemberWorkflow(task, run, summary, this.owner.entry.path, this.ports?.CheckValidationFiles && this.ports.NormalizeValidationPath ? { NormalizePath: this.ports.NormalizeValidationPath, CheckFiles: this.ports.CheckValidationFiles, CheckManifest: this.ports.CheckManifest } : undefined);
     }
     catch (error)
     {
       fail('GOAL_WORKFLOW_UNMET', error instanceof Error ? error.message : '成员 Workflow 程序条件无法核实')
     }
+
     return summary;
   }
 
@@ -436,9 +415,7 @@ export class ScopeGoalService
   async RepairContext(identity: GraphIdentity, scopeId: string, expected: RunSummary)
   {
     const state = await this.store.Read(),
-
       scope = this.Scope(state, identity, scopeId),
-
       graph = this.Graph(state, scope);
 
     check(scope.status === 'active' && !scope.goal?.blocked && scope.runTracking?.mainRunIds.at(-1) === expected.runId, 'GOAL_REPAIR_UNSAFE', '原周期或最新主运行已经变化');
@@ -454,9 +431,9 @@ export class ScopeGoalService
       check(summary.status === 'completed' && summary.logIntegrity?.partialTail === false && !summary.unresolvedTools.length && summary.events.at(-1)?.type === 'run.settled' && !facts.invalid && !facts.counts.unknown && !facts.counts.not_authorized, 'GOAL_REPAIR_UNSAFE', '主运行含未知、不完整或未授权事实，不能自动返工');
 
       if (runId === expected.runId)
-
         check(sameGoalValue(summary.events, expected.events), 'GOAL_REPAIR_UNSAFE', '主运行结算后日志已变化');
     }
+
     const tasks = graph.tasks.filter(task => task.scopeId === scopeId);
 
     check(!tasks.some(task => task.activeRunId || ['planned', 'queued', 'running', 'waiting', 'checkpointed'].includes(task.status)), 'GOAL_REPAIR_UNSAFE', '当前周期仍有未结束工作');
@@ -471,15 +448,16 @@ export class ScopeGoalService
 
         await this.ValidateHistoricalMemberCandidate(state, scope, graph, task, run.prepared.knowledgeRevision)
       }
+
       for (const run of (state.runs ?? []).filter(value => value.binding.taskId === task.taskId))
       {
         const summary = await this.Logs().InspectMember(run),
-
           facts = executionToolFacts(summary, { binding: { workspaceId: scope.workspaceId, taskId: task.taskId, runId: run.binding.runId } });
 
         check(['completed', 'failed', 'cancelled'].includes(summary.status) && summary.logIntegrity?.partialTail === false && !summary.unresolvedTools.length && !facts.invalid && !facts.counts.unknown && !facts.counts.not_authorized, 'GOAL_REPAIR_UNSAFE', '成员运行或副作用未可靠结算');
       }
     }
+
     check(sameGoalValue(await this.store.Read(), state), 'GOAL_REPAIR_UNSAFE', '返工取证期间调度状态已变化');
 
     return { scope, graph };
@@ -489,7 +467,6 @@ export class ScopeGoalService
   async ValidateMemberCandidate(state: DispatchState, scope: DispatchScope, graph: GraphSnapshot, task: TaskNode, knowledgeRevision: string): Promise<RunSummary>
   {
     const summary = await this.Member(state, scope, graph, task, knowledgeRevision),
-
       run = state.runs!.find(item => item.binding.runId === task.result!.runId && item.binding.taskId === task.taskId)!;
 
     this.MemberTerminal(scope, task, run, summary);
@@ -501,7 +478,6 @@ export class ScopeGoalService
   async ValidateHistoricalMemberCandidate(state: DispatchState, scope: DispatchScope, graph: GraphSnapshot, task: TaskNode, knowledgeRevision: string): Promise<RunSummary>
   {
     const summary = await this.Member(state, scope, graph, task, knowledgeRevision, true),
-
       run = state.runs!.find(item => item.binding.runId === task.result!.runId && item.binding.taskId === task.taskId)!;
 
     this.MemberTerminal(scope, task, run, summary);
@@ -516,19 +492,14 @@ export class ScopeGoalService
   async ValidateHumanCandidates(state: DispatchState, scope: DispatchScope, criterionId: string)
   {
     const graph = this.Graph(state, scope),
-
       goal = scope.goal,
-
       review = goal?.review,
-
       wait = scope.wait,
-
       plan = goal?.plan;
 
     check(scope.status === 'waiting' && goal && !goal.blocked && plan && review?.decision === 'awaiting_user' && wait && wait.runId === review.runId && wait.goalRevision === goal.revision && review.revision === goal.revision && review.planRevision === plan.revision && !goalNeedsReplan(goal) && goalInputRevision(review) === goalInputRevision(goal), 'HUMAN_NOT_WAITING', '人工决定只接受当前安全等待的目标及审阅');
 
     const criterion = plan.criteria.find(item => item.id === criterionId),
-
       item = review.checks.find(item => item.criterionId === criterionId);
 
     check(criterion?.kind === 'human' && item && item.evidence.length && item.evidence.every(reference => reference.kind === 'member-result'), 'HUMAN_SOURCE_INVALID', '请选择含真实成员候选的人工验收项；本步不接主知识治理证据');
@@ -544,11 +515,8 @@ export class ScopeGoalService
     this.Main(state, main, scope, graph, review.runId);
 
     const head = main.events[0],
-
       tail = main.events.at(-1),
-
       bounds = main.events.filter(event => event.type === 'session.bound'),
-
       facts = executionToolFacts(main, { binding: { workspaceId: scope.workspaceId, taskId: scope.rootSessionId, runId: review.runId } });
 
     check(main.status === 'completed' && main.logIntegrity?.partialTail === false && !main.unresolvedTools.length && head?.type === 'run.started' && sameGoalValue(head.data.task, main.task) && sameGoalValue(head.data.conversationBinding, main.conversationBinding) && !head.data.memberBinding && tail?.type === 'run.settled' && tail.data.status === 'completed' && main.events.every((event, index) => event.seq === index + 1 && event.workspaceId === scope.workspaceId && event.taskId === scope.rootSessionId && event.runId === review.runId) && !!main.sessionFile && bounds.length && bounds.every(event => event.data.sessionFile === main.sessionFile && typeof event.data.sessionId === 'string' && !!event.data.sessionId && event.data.sessionId === bounds[0].data.sessionId) && !facts.invalid && !facts.counts.unknown && !facts.counts.not_authorized, 'HUMAN_EVIDENCE_INVALID', '主审阅日志或原生通道登记不完整，不能据此保存人工决定');
@@ -575,7 +543,6 @@ export class ScopeGoalService
       check(reference.kind === 'member-result', 'HUMAN_SOURCE_INVALID', '人工验收只支持成员结果');
 
       const task = graph.tasks.find(task => task.taskId === reference.taskId),
-
         result = task?.result;
 
       check(task && result && result.runId === reference.runId && result.resultId === reference.resultId && result.planRevision === reference.planRevision && reference.toolCallIds.length && reference.toolCallIds.every(id => result.evidenceRefs.includes(id)) && plan.assignments.some(assignment => assignment.agentId === task.assignee.agentId && sameSet(assignment.moduleIds, task.modules.map(module => module.moduleId)) && sameWorkflowSelectionsForModules(assignment.workflowSelections, task.workflowSelections, task.modules.map(module => module.moduleId)) && sameAutomaticExecutionForModules(assignment.fallbackBinding, task.fallbackBinding, task.modules.map(module => module.moduleId)) && sameOwnerExecutionForModules(assignment.ownerBinding, task.ownerBinding, task.modules.map(module => module.moduleId)) && assignment.criterionIds.includes(criterionId)), 'HUMAN_SOURCE_INVALID', '候选、证据、模块或 Workflow 分工不属于此人工验收项');
@@ -585,7 +552,6 @@ export class ScopeGoalService
       if (!candidate)
       {
         const summary = await this.ValidateHistoricalMemberCandidate(state, scope, graph, task, snapshot.revision),
-
           run = state.runs!.find(run => run.binding.runId === result.runId && run.binding.taskId === task.taskId)!;
 
         const { files: workflowFiles, manifest } = memberWorkflowEvidence(task, run, summary, this.owner.entry.path, this.ports?.NormalizeValidationPath);
@@ -594,15 +560,16 @@ export class ScopeGoalService
 
         selected.set(task.taskId, candidate);
       }
+
       for (const id of reference.toolCallIds)
       {
         this.Receipt(candidate.summary, id);
 
         if (!candidate.evidenceToolCallIds.includes(id))
-
           candidate.evidenceToolCallIds.push(id)
       }
     }
+
     check(selected.size <= 16, 'HUMAN_LIMIT', '单项人工决定最多核实 16 个成员候选');
 
     check((await this.owner.Read()).revision === snapshot.revision, 'HUMAN_KNOWLEDGE_CHANGED', '人工验收依据读取期间知识版本发生变化');
@@ -620,7 +587,6 @@ export class ScopeGoalService
     check(['completed', 'failed'].includes(run.status) && summary.status === run.status && summary.logIntegrity?.partialTail === false && !summary.unresolvedTools.length && !summary.toolReceipts?.some(receipt => receipt.outcome === 'unknown'), 'GOAL_EVIDENCE_INVALID', '成员执行记录尚未可靠结束或有未知结果');
 
     const first = summary.events[0],
-
       last = summary.events.at(-1);
 
     check(first?.type === 'run.started' && sameGoalValue(first.data.task, summary.task) && sameGoalValue(first.data.memberBinding, binding) && !first.data.conversationBinding && last?.type === 'run.settled' && last.data.status === summary.status && summary.events.every((event, index) => event.seq === index + 1 && event.workspaceId === scope.workspaceId && event.taskId === task.taskId && event.runId === binding.runId && event.data && typeof event.data === 'object' && !Array.isArray(event.data)), 'GOAL_EVIDENCE_INVALID', '成员日志头、连续顺序或终态不完整');
@@ -641,7 +607,6 @@ export class ScopeGoalService
     if (task.status === 'cancelled' && task.checkpointAbandonment)
     {
       const run = abandonedCheckpointSource(state, { workspaceId: scope.workspaceId, rootSessionId: scope.rootSessionId }, scope.scopeId, task),
-
         ports = this.Logs();
 
       check(ports.NormalizeValidationPath, 'GOAL_EVIDENCE_INVALID', '未装配原检查点路径核验，不能替换已放弃来源');
@@ -650,6 +615,7 @@ export class ScopeGoalService
 
       return;
     }
+
     check(task.scopeId === scope.scopeId && !task.activeRunId && !task.result && (task.status === 'failed' || task.status === 'blocked' && task.help), 'GOAL_EVIDENCE_INVALID', '原前置没有可安全替换的失败或求助记录');
 
     const runs = (state.runs ?? []).filter(run => run.binding.taskId === task.taskId && run.binding.rootSessionId === scope.rootSessionId);
@@ -663,11 +629,8 @@ export class ScopeGoalService
       this.MemberTerminal(scope, task, run, summary);
 
       if (task.help && run.binding.runId === task.help.binding.runId)
-
         check(sameGoalValue(memberHelpCandidate(task, run, summary), task.help), 'GOAL_EVIDENCE_INVALID', '原前置求助与真实安全交接记录不一致');
-
       else
-
         check(run.status === 'failed', 'GOAL_EVIDENCE_INVALID', '原前置不是明确失败，不能绕过已有结果');
     }
   }
@@ -675,9 +638,7 @@ export class ScopeGoalService
   private async Evidence(state: DispatchState, scope: DispatchScope, graph: GraphSnapshot, draft: GoalReviewInput, main: RunSummary, knowledgeRevision: string)
   {
     const plan = scope.goal!.plan!,
-
       criteria = plan.criteria,
-
       checks = draft.checks;
 
     check(new Set(checks.map(item => item.criterionId)).size === checks.length && checks.every(item => criteria.some(criterion => criterion.id === item.criterionId)), 'GOAL_REVIEW_INVALID', '审阅项重复或不属于当前计划');
@@ -693,7 +654,6 @@ export class ScopeGoalService
       this.Main(state, origin, scope, graph, intent.runId);
 
       const header = origin.events[0],
-
         source = header?.data.source as Record<string, unknown> | undefined;
 
       check(origin.logIntegrity?.partialTail === false && header?.type === 'run.started' && sameGoalValue(header.data.task, origin.task) && sameGoalValue(header.data.conversationBinding, origin.conversationBinding) && header.data.resumeFrom === intent.wait.runId && source?.kind === 'human_decisions' && source.continuationId === intent.continuationId && source.scopeId === scope.scopeId && source.waitId === intent.wait.waitId && source.inputRevision === intent.inputRevision && source.decisionRevision === intent.decisionRevision && Array.isArray(source.decisionIds) && sameSet(source.decisionIds as string[], intent.decisionIds), 'GOAL_HUMAN_SOURCE', '人工接续原始日志没有对应可信来源或已被改写');
@@ -705,14 +665,13 @@ export class ScopeGoalService
       if (origin.runId !== main.runId)
       {
         const terminal = origin.events.at(-1),
-
           facts = executionToolFacts(origin, { binding: { workspaceId: scope.workspaceId, taskId: scope.rootSessionId, runId: origin.runId } });
 
         check(origin.status === 'completed' && terminal?.type === 'run.settled' && terminal.data.status === 'completed' && !origin.unresolvedTools.length && !facts.invalid && !facts.counts.unknown, 'GOAL_HUMAN_SOURCE', '前一人工接续运行未安全结束或存在未知工具，不能沿用其决定');
       }
     }
-    const members = new Map<string, Promise<RunSummary>>(),
 
+    const members = new Map<string, Promise<RunSummary>>(),
       acceptedHumans = new Map<string, HumanDecisionRecord>();
 
     for (const item of checks)
@@ -722,7 +681,6 @@ export class ScopeGoalService
       check(criterion.kind !== 'human' || item.outcome !== 'satisfied' || item.evidence.some(reference => reference.kind === 'human-decision'), 'GOAL_HUMAN_REQUIRED', '人工项满足必须引用本输入版本实际消费的接受决定');
 
       if (item.outcome === 'satisfied')
-
         check(item.evidence.length, 'GOAL_EVIDENCE_REQUIRED', '已满足的验收项必须有真实证据');
 
       for (const reference of item.evidence)
@@ -730,7 +688,6 @@ export class ScopeGoalService
         if (reference.kind === 'member-result')
         {
           const task = graph.tasks.find(value => value.taskId === reference.taskId),
-
             result = task?.result;
 
           check(task && task.candidateReview?.decision !== 'reject' && result && result.runId === reference.runId && result.resultId === reference.resultId && result.planRevision === reference.planRevision && reference.toolCallIds.every(id => result.evidenceRefs.includes(id)), 'GOAL_EVIDENCE_INVALID', '成员证据不是当前可接受的结果候选');
@@ -738,13 +695,11 @@ export class ScopeGoalService
           check(plan.assignments.some(assignment => assignment.agentId === task.assignee.agentId && sameSet(assignment.moduleIds, task.modules.map(module => module.moduleId)) && sameWorkflowSelectionsForModules(assignment.workflowSelections, task.workflowSelections, task.modules.map(module => module.moduleId)) && sameAutomaticExecutionForModules(assignment.fallbackBinding, task.fallbackBinding, task.modules.map(module => module.moduleId)) && sameOwnerExecutionForModules(assignment.ownerBinding, task.ownerBinding, task.modules.map(module => module.moduleId)) && assignment.criterionIds.includes(item.criterionId)), 'GOAL_EVIDENCE_IDENTITY', '成员结果不属于此验收项的角色、模块或 Workflow 分配');
 
           if (!members.has(task.taskId))
-
             members.set(task.taskId, this.Member(state, scope, graph, task, knowledgeRevision));
 
           const summary = await members.get(task.taskId)!;
 
           for (const id of reference.toolCallIds)
-
             this.Receipt(summary, id);
         }
         else if (reference.kind === 'human-decision')
@@ -791,6 +746,7 @@ export class ScopeGoalService
                     text?: string
                   }>
               };
+
             let body: Record<string, unknown> | undefined;
 
             try
@@ -798,17 +754,18 @@ export class ScopeGoalService
               const texts = result.content?.filter(value => value.type === 'text');
 
               if (texts?.length === 1)
-
                 body = JSON.parse(texts[0].text!)
             }
             catch
             {
               /* 下方统一拒绝无效正文，不回显私密内容。 */
             }
+
             check(body?.state === 'committed' && body.workspaceId === scope.workspaceId && body.instanceId === this.owner.instanceId && body.revision === knowledgeRevision && typeof body.requestId === 'string' && Array.isArray(body.changed) && body.changed.length > 0 && body.changed.every(value => typeof value === 'string' && value.startsWith('.cbim/')), 'GOAL_EVIDENCE_INVALID', '知识提交正文没有证明当前版本的真实变更');
           }
         }
       }
+
       if (criterion.kind === 'human' && item.outcome === 'satisfied')
       {
         const ref = item.evidence.find(reference => reference.kind === 'human-decision');
@@ -820,6 +777,7 @@ export class ScopeGoalService
         check(item.evidence.every(reference => reference.kind === 'human-decision' || reference.kind === 'member-result' && record.proof.candidates.some(candidate => candidate.taskId === reference.taskId && candidate.runId === reference.runId && candidate.resultId === reference.resultId && candidate.planRevision === reference.planRevision && reference.toolCallIds.every(id => candidate.evidenceToolCallIds.includes(id)))), 'GOAL_HUMAN_CANDIDATE', '人工满足不能混入此次接受以外的新候选或证据');
       }
     }
+
     // 审阅属于已核身份的主运行；终态复核若原占用已释放，装配端退回普通只读申请。
     try
     {
@@ -830,8 +788,8 @@ export class ScopeGoalService
       // 完成门禁保留 GOAL 命名空间，让协调器记录阻塞并收束；接受依据失效不能留下悬挂的活动周期。
       fail('GOAL_HUMAN_STALE', error instanceof Error ? error.message : '人工接受的当前依据无法核实');
     }
-    if (draft.decision === 'complete')
 
+    if (draft.decision === 'complete')
       check(!draft.gaps.length && checks.length === criteria.length && checks.every(item => item.outcome === 'satisfied'), 'GOAL_CRITERIA_UNMET', '仍有未满足或需要人工确认的验收项');
 
     await this.Supersessions(state, scope, graph, draft, members, knowledgeRevision);
@@ -840,20 +798,17 @@ export class ScopeGoalService
   private async Supersessions(state: DispatchState, scope: DispatchScope, graph: GraphSnapshot, draft: GoalReviewInput, cache: Map<string, Promise<RunSummary>>, knowledgeRevision: string)
   {
     const entries = draft.superseded,
-
       ids = entries.map(item => item.taskId);
 
     check(new Set(ids).size === ids.length, 'GOAL_REVIEW_INVALID', '同一失败任务不能重复指定替代关系');
 
     const edges = new Map(entries.map(item => [item.taskId, item.replacementTaskIds])),
-
       colors = new Map<string, 'visiting' | 'done'>();
 
     // 共享子路径只遍历一次，防止模型构造稠密无环关系导致指数递归。
     const visit = (id: string) => { check(colors.get(id) !== 'visiting', 'GOAL_SUPERSESSION_CYCLE', '任务替代关系不能成环'); if (colors.get(id) === 'done') return; colors.set(id, 'visiting'); for (const next of edges.get(id) ?? []) visit(next); colors.set(id, 'done') };
 
     for (const id of ids)
-
       visit(id);
 
     for (const item of entries)
@@ -876,6 +831,7 @@ export class ScopeGoalService
 
         await this.ValidateHistoricalMemberCandidate(state, scope, graph, source, run.prepared.knowledgeRevision);
       }
+
       if (human)
       {
         const candidate = human.record.proof.candidates.find(candidate => candidate.taskId === source?.taskId);
@@ -884,13 +840,13 @@ export class ScopeGoalService
 
         // 返工允许文件变化，但不能把旧运行损坏或未知结果藏在 superseded 后跳过完成核实。
         const summary = await this.Member(state, scope, graph, source, human.record.proof.source.knowledgeRevision, true),
-
           historicalRun = state.runs!.find(run => run.binding.runId === source.result!.runId && run.binding.taskId === source.taskId)!;
 
         this.MemberTerminal(scope, source, historicalRun, summary);
 
         check(hash(json(summary.events)) === candidate.logHash && candidate.evidenceToolCallIds.every(id => source.result!.evidenceRefs.includes(id)), 'GOAL_SUPERSESSION_INVALID', '被拒候选的原始日志或证据已经变化，不能用旧决定替代');
       }
+
       check(source && source.scopeId === scope.scopeId && (['failed', 'blocked', 'cancelled', 'interrupted'].includes(source.status) || stale || human || rejected), 'GOAL_SUPERSESSION_INVALID', '只能替代失败、基线过期或明确拒绝的精确候选');
 
       const covered = new Set<string>();
@@ -902,21 +858,20 @@ export class ScopeGoalService
         check(replacement && replacement.scopeId === scope.scopeId && graph.tasks.indexOf(replacement) > graph.tasks.indexOf(source), 'GOAL_SUPERSESSION_INVALID', '替代任务必须是本周期后续创建的任务');
 
         if (human)
-
           check(!human.continuation.priorTaskIds.includes(replacement.taskId), 'GOAL_SUPERSESSION_INVALID', '人工返工必须创建接续之后的新任务，不能借用先前已有候选');
 
         for (const module of replacement.modules)
-
           covered.add(module.moduleId);
 
         if (!cache.has(id))
-
           cache.set(id, this.Member(state, scope, graph, replacement, knowledgeRevision));
 
         await cache.get(id);
       }
+
       check(source.modules.every(module => covered.has(module.moduleId)), 'GOAL_SUPERSESSION_INVALID', '替代任务集合没有覆盖原目标模块');
     }
+
     if (draft.decision === 'complete')
     {
       const tasks = graph.tasks.filter(task => task.scopeId === scope.scopeId);
@@ -924,17 +879,14 @@ export class ScopeGoalService
       check(!tasks.some(task => task.activeRunId || ['planned', 'queued', 'running', 'waiting', 'checkpointed'].includes(task.status)) && !state.runs?.some(run => tasks.some(task => task.taskId === run.binding.taskId) && ['starting', 'running'].includes(run.status)), 'GOAL_WORK_PENDING', '本周期还有未结束的任务、检查点或运行');
 
       for (const task of tasks)
-
         if (task.status === 'result_ready' && !ids.includes(task.taskId))
         {
           if (!cache.has(task.taskId))
-
             cache.set(task.taskId, this.Member(state, scope, graph, task, knowledgeRevision));
 
           await cache.get(task.taskId);
         }
         else
-
           check(ids.includes(task.taskId), 'GOAL_WORK_FAILED', '本周期失败任务尚未被真实成功任务替代');
     }
   }
@@ -943,7 +895,6 @@ export class ScopeGoalService
   async Review(identity: GraphIdentity, scopeId: string, runId: string, commandId: string, raw: GoalReviewInput): Promise<DispatchScope>
   {
     const draft = this.Parse(goalReviewInputSchema, raw),
-
       command = this.Command('goal.review', identity, scopeId, runId, commandId, draft);
 
     return this.store.Transact(command, async state => { const scope = this.Scope(state, identity, scopeId), goal = this.Editable(scope, draft.expectedRevision), graph = this.Graph(state, scope); check(goal.plan, 'GOAL_PLAN_REQUIRED', '审阅前必须建立本轮目标计划'); check(!goalNeedsReplan(goal), 'GOAL_REPLAN_REQUIRED', '用户已补充目标，必须按最新输入重新规划再审阅'); if (draft.memberPause) { check(draft.decision === 'awaiting_user' && this.memberPauses, 'GOAL_MEMBER_PAUSE_INVALID', '成员等待清单只用于已装配的等待用户分支'); await this.memberPauses.VerifyWaiting(state, scope, draft.memberPause) } const main = await this.Logs().InspectMain(scope.rootSessionId, runId); this.Main(state, main, scope, graph, runId); check(!main.logIntegrity?.partialTail, 'GOAL_EVIDENCE_INVALID', '主运行日志尾行不完整，不能据此前缀审阅'); await this.ValidateActiveInputs(scope, main); const snapshot = await this.owner.Read(); await this.Evidence(state, scope, graph, draft, main, snapshot.revision); check((await this.owner.Read()).revision === snapshot.revision, 'GOAL_KNOWLEDGE_CHANGED', '审阅期间知识版本发生变化'); const { expectedRevision: _, ...body } = draft, review: ScopeGoalReview = { ...body, revision: goal.revision + 1, inputRevision: goalInputRevision(goal), planRevision: goal.plan.revision, runId, recordedAt: new Date().toISOString(), knowledgeRevision: snapshot.revision, graphCursor: cursor(graph), observedSeq: main.events.at(-1)?.seq ?? 0, lastEffectSeq: lastEffect(main) }; const next = { ...scope, goal: { ...goal, revision: goal.revision + 1, review } }; return { scopes: [next], receipt: next }; });
@@ -957,9 +908,7 @@ export class ScopeGoalService
     this.Logs();
 
     const graph = this.Graph(state, scope),
-
       goal = scope.goal,
-
       review = goal?.review;
 
     check(scope.status === 'active' && goal && !goal.blocked && goal.plan && review?.decision === 'complete' && review.revision === goal.revision && review.planRevision === goal.plan.revision, 'GOAL_REVIEW_REQUIRED', '目标尚未有当前版本的完成审阅');
@@ -990,17 +939,12 @@ export class ScopeGoalService
   async ValidateCompletedInspection(state: DispatchState, scope: DispatchScope): Promise<{ knowledgeRevision: string; evidenceDigest: string; coveredModuleIds: string[] }>
   {
     if (scope.recovery && 'executionModel' in scope.recovery.source && scope.recovery.source.executionModel === 'agent-tools-v1')
-
       return RecursiveInspectionEvidence.Verify(state, scope, this.owner, { ...this.Logs(), ValidateActiveInputs: summary => validateScopeActiveInputLog(scope, summary) });
 
     const logs = this.Logs(),
-
       graph = this.Graph(state, scope),
-
       goal = scope.goal,
-
       review = goal?.review,
-
       recovery = scope.recovery;
 
     check(scope.status === 'closed' && scope.outcome === 'completed' && recovery && goal && !goal.blocked && goal.plan && review?.decision === 'complete' && review.revision === goal.revision && review.planRevision === goal.plan.revision, 'REPLAN_SOURCE_INVALID', '只能从已完成并通过目标审阅的只读核实周期创建业务新周期');
@@ -1017,15 +961,12 @@ export class ScopeGoalService
 
         run?: DispatchRun
       }> = [],
-
       mainIds = new Set<string>();
 
     const audit = (summary: RunSummary) => { check(!summary.logIntegrity?.partialTail && !summary.unresolvedTools.length && ['run.settled', 'run.interrupted'].includes(summary.events.at(-1)?.type ?? ''), 'REPLAN_PROOF_INVALID', '核实日志不完整或仍有未决操作'); const facts = executionToolFacts(summary, { binding: { workspaceId: scope.workspaceId, taskId: summary.task.taskId, runId: summary.runId } }); check(!facts.invalid && !facts.counts.unknown, 'REPLAN_PROOF_INVALID', '核实日志有未知或矛盾工具回执'); check(!facts.items.some(item => item.allowedSeq !== undefined && (item.effects.some(effect => effects.has(effect)) || ['write', 'edit', 'bash'].includes(item.toolName))), 'REPLAN_PROOF_INVALID', '只读核实期间存在写入或命令授权，不能作为业务重规划依据'); };
 
     let runId = review.runId,
-
       main: RunSummary | undefined,
-
       nativeFile: string | undefined;
 
     for (; ;)
@@ -1045,7 +986,6 @@ export class ScopeGoalService
       recorded.push({ summary });
 
       if (!main)
-
         main = summary;
 
       const header = summary.events.find(event => event.type === 'run.started')?.data;
@@ -1071,18 +1011,18 @@ export class ScopeGoalService
 
         break;
       }
+
       check(!header.freshMain && typeof header.resumeFrom === 'string' && !!header.resumeFrom, 'REPLAN_PROOF_INVALID', '核实主链缺少可信上游运行或意外开启另一上下文');
 
       runId = header.resumeFrom;
     }
+
     check(mainIds.has(goal.plan.runId) && (scope.continuations ?? []).every(item => mainIds.has(item.runId) && item.wait.mainRunIds.every(id => mainIds.has(id))), 'REPLAN_PROOF_INVALID', '核实主链遗漏计划或补充运行');
 
     check(lastEffect(main!) === review.lastEffectSeq && review.observedSeq <= (main!.events.at(-1)?.seq ?? 0), 'REPLAN_PROOF_INVALID', '主审阅的副作用或日志版本不一致');
 
     const tasks = graph.tasks.filter(task => task.scopeId === scope.scopeId),
-
       taskIds = new Set(tasks.map(task => task.taskId)),
-
       runs = (state.runs ?? []).filter(run => taskIds.has(run.binding.taskId));
 
     check(!tasks.some(task => task.activeRunId) && !state.members.some(member => member.executionScopeId === scope.scopeId && (member.lifecycle !== 'released' || member.activeRunId || member.activeTaskId || member.waitingTaskIds.length || member.communicatingMessageIds.length)), 'REPLAN_BUSY', '核实周期仍有活动成员');
@@ -1101,12 +1041,12 @@ export class ScopeGoalService
 
       recorded.push({ summary, run });
     }
+
     check(tasks.every(task => task.runIds.every(id => runs.some(run => run.binding.runId === id))), 'REPLAN_PROOF_INVALID', '核实任务存在未登记的运行记录');
 
     await this.Evidence(state, scope, graph, { ...review, expectedRevision: goal.revision }, main!, knowledge.revision);
 
     const replaced = new Set(review.superseded.map(item => item.taskId)),
-
       coveredModuleIds = [...new Set(tasks.filter(task => task.status === 'result_ready' && !replaced.has(task.taskId)).flatMap(task => task.modules.map(module => module.moduleId)))].sort();
 
     // 读取不持有日志文件锁；再读同一批 canonical 摘要，发现中途变更则拒绝，不把多时点拼成一份证明。
@@ -1116,6 +1056,7 @@ export class ScopeGoalService
 
       check(sameGoalValue(again, item.summary), 'REPLAN_STALE', '核实日志读取期间发生变化')
     }
+
     check((await this.owner.Read()).revision === knowledge.revision, 'REPLAN_KNOWLEDGE_CHANGED', '核实证据读取期间知识版本变化');
 
     return { knowledgeRevision: knowledge.revision, coveredModuleIds, evidenceDigest: hash(json({ goal, tasks, runs, logs: recorded.map(item => item.summary) })) };
@@ -1130,11 +1071,8 @@ export class ScopeGoalService
     await this.ValidateActiveInputs(scope, summary);
 
     const logs = this.Logs(),
-
       graph = this.Graph(state, scope),
-
       goal = scope.goal,
-
       review = goal?.review;
 
     check(scope.status === 'active' && goal && !goal.blocked && goal.plan && review?.decision === 'awaiting_user' && review.revision === goal.revision && review.planRevision === goal.plan.revision, 'GOAL_WAIT_REQUIRED', '只有当前版本的等待用户审阅可以建立安全检查点');
@@ -1160,7 +1098,6 @@ export class ScopeGoalService
     check(lastEffect(main) === review.lastEffectSeq && !main.events.some(event => event.seq > review.observedSeq && event.type === 'tool.allowed' && Array.isArray(event.data.effects) && event.data.effects.some(effect => effects.has(String(effect)))), 'GOAL_EFFECT_CHANGED', '等待申请后又发生可能改变产物的操作');
 
     const tasks = graph.tasks.filter(task => task.scopeId === scope.scopeId),
-
       ids = new Set(tasks.map(task => task.taskId));
 
     if (review.memberPause)
@@ -1169,6 +1106,7 @@ export class ScopeGoalService
 
       await this.memberPauses.VerifyWaiting(state, scope, review.memberPause)
     }
+
     const retained = new Set(review.memberPause?.tasks.map(ref => ref.taskId));
 
     check(!tasks.some(task => task.activeRunId || !retained.has(task.taskId) && ['planned', 'queued', 'running', 'waiting', 'checkpointed'].includes(task.status)) && !state.runs?.some(run => run.binding.rootSessionId === scope.rootSessionId && ['starting', 'running'].includes(run.status)), 'GOAL_WORK_PENDING', '本周期仍有未列入可靠等待的待办或活动运行');
@@ -1176,7 +1114,6 @@ export class ScopeGoalService
     check(!state.members.some(member => member.executionScopeId === scope.scopeId && (member.activeRunId || member.activeTaskId || member.communicatingMessageIds.length || !retained.has(member.executionTaskId!) && (member.activity !== 'idle' || member.waitingTaskIds.length))), 'GOAL_WORK_PENDING', '执行成员仍有活动占用或待通信操作');
 
     for (const run of state.runs ?? [])
-
       if (ids.has(run.binding.taskId))
       {
         const task = tasks.find(item => item.taskId === run.binding.taskId)!;
@@ -1187,6 +1124,7 @@ export class ScopeGoalService
 
         check(member.runId === run.binding.runId && member.task.workspaceId === scope.workspaceId && member.task.taskId === task.taskId && member.task.agentId === task.assignee.agentId && sameGoalValue(member.task.fallbackBinding, task.fallbackBinding) && sameGoalValue(run.prepared.fallbackBinding, task.fallbackBinding) && sameGoalValue(member.task.ownerBinding, task.ownerBinding) && sameGoalValue(run.prepared.memberContext?.binding, task.ownerBinding) && sameGoalValue(member.memberBinding, run.binding) && member.status === run.status && !member.logIntegrity?.partialTail && !member.unresolvedTools.length && !member.toolReceipts?.some(receipt => receipt.outcome === 'unknown'), 'GOAL_WAIT_UNCERTAIN', '成员日志存在未知工具结果或运行身份不一致');
       }
+
     const snapshot = await this.owner.Read();
 
     check(snapshot.revision === review.knowledgeRevision, 'GOAL_KNOWLEDGE_CHANGED', '等待申请后知识版本已变化');
@@ -1200,7 +1138,6 @@ export class ScopeGoalService
   async Block(identity: GraphIdentity, scopeId: string, reason: string): Promise<DispatchScope>
   {
     const text = this.Parse(z.string().trim().min(1).max(16000), reason),
-
       command = { commandId: 'goal-block-' + hash(json({ ...identity, scopeId })), fingerprint: hash(json({ ...identity, scopeId, reason: text })) };
 
     return this.store.Transact(command, async state => { const scope = this.Scope(state, identity, scopeId); check(scope.status === 'active', 'GOAL_CLOSED', '目标周期已经结束'); if (!scope.goal || scope.goal.blocked) return { receipt: scope }; const next = { ...scope, goal: { ...scope.goal, blocked: { reason: text, at: new Date().toISOString() } } }; return { scopes: [next], receipt: next }; });

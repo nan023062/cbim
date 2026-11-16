@@ -32,7 +32,6 @@ const equal = (a: unknown, b: unknown) => knowledgeSourceCanonical(a) === knowle
 function check(value: unknown, message: string, code = 'SOURCE_AUDIT'): asserts value
 {
   if (!value)
-
     fail(code, message)
 }
 
@@ -44,7 +43,6 @@ export function projectKnowledgeSourceMutation(previous: DispatchState, mutation
   let projection = { knowledgeSourceGenerations: previous.knowledgeSourceGenerations ?? [], knowledgeSourceTransitions: previous.knowledgeSourceTransitions ?? [], knowledgeSourceChanges: previous.knowledgeSourceChanges ?? [], sourceCursor: previous.sourceCursor ?? null };
 
   let capture: KnowledgeSourceCapture | undefined,
-
     permit: KnowledgeSourceCapturePermit | undefined;
 
   if (mutation.knowledgeSourceChanges !== undefined)
@@ -60,7 +58,6 @@ export function projectKnowledgeSourceMutation(previous: DispatchState, mutation
       capture = event;
 
       const key = event.consumer.kind === 'workspace_member' ? 'workspaceMemberChanges' : 'ownershipChanges',
-
         events = mutation[key];
 
       check(Object.keys(mutation).every(name => name === 'knowledgeSourceChanges' || name === key || name === 'receipt') && Array.isArray(events) && events.length === 1 && events[0]?.changeId === event.consumer.changeId && events[0]?.committedAt === event.recordedAt, '捕获必须与唯一明确消费者同事务且同一提交时间');
@@ -77,7 +74,6 @@ export function projectKnowledgeSourceMutation(previous: DispatchState, mutation
     }
   }
   else
-
     check(!command.commandId.startsWith('knowledge-source-'), '来源命令缺少审计');
 
   const projected: KnowledgeSourceRegistry = { workspaceId: previous.workspaceId, ...projection };
@@ -95,6 +91,7 @@ export function projectKnowledgeSourceMutation(previous: DispatchState, mutation
 
       return;
     }
+
     check(!knowledgeSourcePending(previous), '知识来源尚待结算，不能采纳', 'SOURCE_PENDING');
 
     if (!selection)
@@ -104,14 +101,12 @@ export function projectKnowledgeSourceMutation(previous: DispatchState, mutation
 
       return;
     }
+
     check(ref && sourceSelectionMatches(selection, previous.workspaceId, source) && sourceRefMatches(ref, previous.workspaceId, source), '采纳来源与消费者身份不一致');
 
     if (selection.kind === 'workspace' && selection.expectedRef === null)
-
       check(capture && capture.consumer.kind === consumerKind && capture.consumer.changeId === consumerId && equal(knowledgeSourceRef(capture.generation), ref) && equal(capture.observation, selection.observation), '未追踪来源必须与精确捕获原子采纳');
-
     else
-
       check(!capture, '已有代次或内置来源不应产生工作区捕获');
 
     validateKnowledgeSourceSelection(projected, selection, ref);
@@ -124,9 +119,7 @@ export function projectKnowledgeSourceMutation(previous: DispatchState, mutation
     check(workspaceMemberChangeSchema.safeParse(event).success, '岗位来源消费者结构无效');
 
     const input = event.request.change,
-
       old = previous.workspaceMembers?.find(item => item.memberId === event.next.memberId),
-
       configuration = event.next.adoption.configuration;
 
     const selected = input.kind === 'register' || input.kind === 'adopt' && input.target === 'capability';
@@ -134,13 +127,12 @@ export function projectKnowledgeSourceMutation(previous: DispatchState, mutation
     consume(event.sourceSelection, event.next.adoption.sourceRef, old?.adoption.sourceRef, configuration.source === 'builtin' ? 'cbim:executor' : { kind: 'agent', sourceId: configuration.agentId }, selected, 'workspace_member', event.changeId);
 
     if (event.sourceSelection?.kind === 'builtin')
-
       check(event.sourceSelection.ref.contentHash === workspaceMemberCapabilityHash(configuration), '内置来源内容指纹不匹配');
 
     if (event.sourceSelection?.kind === 'workspace')
-
       check(event.sourceSelection.observation.knowledgeRevision === event.next.adoption.knowledgeRevision, '岗位采纳与来源观察知识版本不一致');
   }
+
   if (mutation.ownershipChanges?.length === 1)
   {
     const event = mutation.ownershipChanges[0];
@@ -148,17 +140,14 @@ export function projectKnowledgeSourceMutation(previous: DispatchState, mutation
     check(moduleOwnershipChangeSchema.safeParse(event).success, '责任来源消费者结构无效');
 
     const input = event.request.change,
-
       old = previous.moduleOwnerships?.find(item => item.moduleId === input.moduleId),
-
       selected = !!input.nextOwner || isModuleOwnershipSourceAdoption(input);
 
     consume(event.sourceSelection, event.next.sourceRef, old?.sourceRef, { kind: 'module', sourceId: input.moduleId }, selected, 'module_ownership', event.changeId);
 
     if (event.sourceSelection)
-    {
       check(event.sourceSelection.kind === 'workspace' && event.sourceSelection.observation.knowledgeRevision === event.next.observedModule.knowledgeRevision && event.sourceSelection.observation.definitionHash === event.next.observedModule.definitionHash, '责任采纳与真实模块观察不一致');
-    }
   }
+
   return { projection, permit };
 }

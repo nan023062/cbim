@@ -14,9 +14,7 @@ import { artifactBaselineStagedSchema, artifactReportInputSchema } from './artif
 import { artifactTransitionProofSchema } from '../../file-operations/rules/artifact-transition';
 
 const id = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/),
-
   digest = z.string().regex(/^[a-f0-9]{64}$/),
-
   seq = z.number().int().nonnegative().safe();
 
 const callId = z.string().min(1).max(128).refine(value => value.trim() === value && !/[\x00-\x1f]/.test(value));

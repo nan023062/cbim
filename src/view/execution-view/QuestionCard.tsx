@@ -11,11 +11,8 @@ import './questions.css';
 export function QuestionCard({ request, onAnswer }: { request: PendingQuestion; onAnswer: (answers: { option: number | null; other: string }[]) => Promise<void> })
 {
   const [answers, setAnswers] = useState(request.questions.map(() => ({ option: -1 as number | null, other: '' }))),
-
     [busy, setBusy] = useState(false),
-
     [sent, setSent] = useState(false),
-
     [error, setError] = useState('');
 
   const update = (i: number, patch: Partial<typeof answers[number]>) => setAnswers(old => old.map((a, n) => n === i ? { ...a, ...patch } : a));

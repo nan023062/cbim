@@ -11,7 +11,6 @@ import type { QueuedMessage } from '../../bridge/contracts/execution';
 export function useMessageQueue(workspaceId: string, taskId?: string)
 {
   const [items, setItems] = useState<QueuedMessage[]>([]),
-
     [error, setError] = useState('');
 
   const state = useRef({ scope: '', sequence: 0, projection: new QueueProjection() });

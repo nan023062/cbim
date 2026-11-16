@@ -18,15 +18,10 @@ import '../knowledge/knowledge-files.css';
 function SourceFolder({ target, name, selected, onFile }: { target: SourceTarget; name: string; selected?: SourceTarget; onFile: (target: SourceTarget) => void })
 {
   const [open, setOpen] = useState(false),
-
     [data, setData] = useState<SourceDirectory>(),
-
     [offset, setOffset] = useState(0),
-
     [refresh, setRefresh] = useState(0),
-
     [busy, setBusy] = useState(false),
-
     [error, setError] = useState('');
 
   const key = JSON.stringify(target);
@@ -47,9 +42,7 @@ function SourceFolder({ target, name, selected, onFile }: { target: SourceTarget
 export function ModuleSourceTree({ snapshot, query, selected, source, onModule, onFile, actions }: { snapshot: Snapshot; query: string; selected: string; source?: SourceTarget; onModule: (id: string) => void; onFile: (target: SourceTarget) => void; actions: (id: string) => TreeAction[] })
 {
   const [closed, setClosed] = useState(new Set<string>()),
-
     tree = snapshot.validation?.tree,
-
     needle = query.trim().toLocaleLowerCase();
 
   const matches = (id: string, seen = new Set<string>()): boolean => { const node = tree?.nodes[id]; if (!node || seen.has(id)) return false; const next = new Set(seen).add(id); return !needle || [node.name, node.summary, id].some(value => value.toLocaleLowerCase().includes(needle)) || node.children.some(child => matches(child, next)) };
@@ -59,15 +52,12 @@ export function ModuleSourceTree({ snapshot, query, selected, source, onModule, 
     const node = tree?.nodes[id];
 
     if (!node || !matches(id))
-
       return null;
 
     if (ancestors.has(id))
-
       return <li key={id} role="alert">模块包含关系存在循环，请检查配置。</li>;
 
     const seen = new Set(ancestors).add(id),
-
       open = !!needle || !closed.has(id);
 
     return <li key={id}><div className={'knowledge-file-row' + (selected === id && !source ? ' selected' : '')}><button className="knowledge-file-name" data-module-id={id} title={node.name + ' · ' + id} onClick={() => onModule(id)}><Icon name="module" size={15} /><span>{node.name}</span></button><button className="knowledge-file-toggle" aria-label={(open ? '折叠模块 ' : '展开模块 ') + node.name} aria-expanded={open} onClick={() => setClosed(old => { const next = new Set(old); next.has(id) ? next.delete(id) : next.add(id); return next })}><Icon name="chevron" size={13} /></button><TreeActions name={node.name} actions={actions(id)} /></div>

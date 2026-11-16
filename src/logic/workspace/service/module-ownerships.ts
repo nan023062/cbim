@@ -38,7 +38,6 @@ function input<S extends z.ZodTypeAny>(schema: S, raw: unknown): z.output<S>
   const result = schema.safeParse(raw);
 
   if (!result.success)
-
     fail('OWNERSHIP_INPUT', '责任请求不完整或包含不支持的字段');
 
   return result.data
@@ -73,20 +72,17 @@ export class ModuleOwnerships
   private Assert(identity: ModuleOwnershipIdentity)
   {
     if (identity.workspaceId !== this.owner.entry.id || identity.instanceId !== this.owner.instanceId)
-
       fail('OWNERSHIP_IDENTITY', '工作区实例已变化，请重新读取责任关系');
 
     this.owner.Assert(identity);
 
     if (!this.isCurrent())
-
       fail('OWNERSHIP_UNAVAILABLE', '工作区正在关闭，未接受新的责任变更');
   }
 
   private Workspace(id: string)
   {
     if (id !== this.owner.entry.id)
-
       fail('OWNERSHIP_IDENTITY', '责任记录不属于当前工作区')
   }
 
@@ -112,8 +108,8 @@ export class ModuleOwnerships
     {
       return { visible: new Map(), issue: 'unavailable' }
     }
-    if (snapshot.workspaceId !== this.owner.entry.id || !snapshot.validation?.structural)
 
+    if (snapshot.workspaceId !== this.owner.entry.id || !snapshot.validation?.structural)
       return { snapshot, visible: new Map(), issue: 'invalid' };
 
     try
@@ -127,7 +123,6 @@ export class ModuleOwnerships
 
       // 派生注册表只含 id/summary；显示名称来自同一已校验树，不能假定索引有 name 或用 ID 补造名称。
       if (!Array.isArray(modules) || modules.some(item => typeof item.id !== 'string' || typeof item.summary !== 'string' || typeof snapshot.validation!.tree.nodes[item.id]?.name !== 'string'))
-
         throw Error('invalid registry');
 
       return { snapshot, visible: new Map(modules.map(item => [item.id, { name: snapshot.validation!.tree.nodes[item.id].name, summary: item.summary }])) };
@@ -141,13 +136,11 @@ export class ModuleOwnerships
   private Observed(knowledge: Knowledge, moduleId: string): ObservedModule | undefined
   {
     if (knowledge.issue || !knowledge.visible.has(moduleId))
-
       return;
 
     const file = knowledge.snapshot!.files.find(item => item.path === moduleId + '/module.json');
 
     if (!file || file.hash !== hash(file.text))
-
       return;
 
     return { knowledgeRevision: knowledge.snapshot!.revision, definitionHash: file.hash, observedAt: new Date().toISOString() };
@@ -156,19 +149,15 @@ export class ModuleOwnerships
   private View(state: DispatchState, knowledge: Knowledge, moduleId: string): ModuleOwnershipView
   {
     const binding = state.moduleOwnerships?.find(item => item.moduleId === moduleId) ?? null,
-
       member = binding?.ownerMemberId ? state.workspaceMembers?.find(item => item.memberId === binding.ownerMemberId) : undefined;
 
     const observed = this.Observed(knowledge, moduleId),
-
       module = knowledge.visible.get(moduleId);
 
     const source: ModuleOwnershipView['source'] = observed ? { status: binding ? (observed.definitionHash === binding.observedModule.definitionHash ? 'same' : 'changed') : 'observed', knowledgeRevision: observed.knowledgeRevision, definitionHash: observed.definitionHash }
-
       : { status: knowledge.issue ?? (module ? 'invalid' : 'missing'), issue: knowledge.issue === 'unavailable' ? '当前知识无法读取；保留原责任记录' : knowledge.issue === 'invalid' || module ? '当前模块知识未通过结构校验' : '模块缺失或不在当前可见注册表；不自动解除责任' };
 
     const pending = knowledgeSourcePending(state),
-
       sourceStatus = pending ? { status: 'pending' as const, transitionId: pending.transitionId } : knowledge.snapshot ? this.owner.sources!.Status(state, knowledge.snapshot, { kind: 'module', sourceId: moduleId }, binding?.sourceRef) : { status: 'unverifiable' as const, issue: '当前知识无法核实来源' };
 
     return { moduleId, ...(module ? { module } : {}), binding, ...(member ? { owner: summarizeWorkspaceMember(member) } : {}), status: !binding?.ownerMemberId ? 'unassigned' : !member ? 'owner_missing' : member.state === 'active' ? 'assigned' : member.state === 'suspended' ? 'owner_suspended' : 'owner_retired', source, sourceStatus };
@@ -194,7 +183,6 @@ export class ModuleOwnerships
     this.Assert(identity);
 
     const state = await this.store.Read(),
-
       knowledge = await this.Knowledge();
 
     this.Assert(identity);
@@ -215,7 +203,6 @@ export class ModuleOwnerships
     this.Assert(request);
 
     if (request.memberId && !state.workspaceMembers?.some(item => item.memberId === request.memberId))
-
       fail('OWNERSHIP_NOT_FOUND', '指定岗位不存在');
 
     const knowledge = await this.Knowledge();
@@ -223,7 +210,6 @@ export class ModuleOwnerships
     this.Assert(request);
 
     if (!request.memberId && knowledge.issue)
-
       fail('OWNERSHIP_SOURCE_INVALID', '无法完整读取模块注册表，请先处理知识问题');
 
     const ids = request.memberId ? (state.moduleOwnerships ?? []).filter(item => item.ownerMemberId === request.memberId).map(item => item.moduleId) : [...new Set([...knowledge.visible.keys(), ...(state.moduleOwnerships ?? []).map(item => item.moduleId)])];
@@ -231,17 +217,13 @@ export class ModuleOwnerships
     ids.sort();
 
     const basis = this.Basis(state, knowledge),
-
       offset = request.offset ?? 0,
-
       limit = request.limit ?? 20;
 
     if (request.expectedReadBasis && !isDeepStrictEqual(basis, request.expectedReadBasis) || offset > ids.length)
-
       fail('OWNERSHIP_REGISTRY_STALE', '责任列表依据已变化，请从第一页重新读取');
 
     const items = ids.slice(offset, offset + limit).map(id => this.View(state, knowledge, id)),
-
       end = offset + items.length;
 
     await this.VerifyRead(state, knowledge, request);
@@ -257,7 +239,6 @@ export class ModuleOwnerships
     this.Assert(request);
 
     const state = await this.store.Read(),
-
       knowledge = await this.Knowledge();
 
     this.Assert(request);
@@ -265,11 +246,9 @@ export class ModuleOwnerships
     const view = this.View(state, knowledge, request.moduleId);
 
     if (!view.binding && !knowledge.visible.has(request.moduleId))
-
       fail('OWNERSHIP_NOT_FOUND', '模块及其责任记录不存在');
 
     const changes = (state.ownershipChanges ?? []).filter(item => item.next.moduleId === request.moduleId),
-
       items = changes.slice(-20).map(summarizeModuleOwnershipChange);
 
     await this.VerifyRead(state, knowledge, request);
@@ -288,9 +267,9 @@ export class ModuleOwnerships
       assertCurrent?.();
 
       if (current.revision !== knowledge.snapshot.revision)
-
         fail('OWNERSHIP_SOURCE_CHANGED', '读取期间知识变化，请重新读取或预览')
     }
+
     this.Assert(identity);
 
     assertCurrent?.();
@@ -305,7 +284,6 @@ export class ModuleOwnerships
     this.Assert(identity);
 
     if (!isDeepStrictEqual(this.Cursor(state), this.Cursor(after)) || !isDeepStrictEqual(state.registryCursor ?? null, after.registryCursor ?? null) || !isDeepStrictEqual(state.sourceCursor, after.sourceCursor))
-
       fail('OWNERSHIP_REGISTRY_STALE', '读取期间责任、岗位或来源变化，请重新读取');
   }
 
@@ -317,7 +295,6 @@ export class ModuleOwnerships
     this.Assert(request);
 
     const state = await this.store.Read(),
-
       prepared = await this.Prepare(state, request);
 
     await this.VerifyKnowledge(prepared.knowledge, request);
@@ -327,7 +304,6 @@ export class ModuleOwnerships
     this.Assert(request);
 
     if (!isDeepStrictEqual(this.Cursor(state), this.Cursor(after)) || !isDeepStrictEqual(state.registryCursor ?? null, after.registryCursor ?? null) || !isDeepStrictEqual(state.sourceCursor, after.sourceCursor) || moduleOwnershipImpact(after, request.change.moduleId).digest !== prepared.preview.impact.digest)
-
       fail('OWNERSHIP_REGISTRY_STALE', '预览期间责任、岗位、来源或关联任务变化，请重新预览');
 
     return prepared.preview;
@@ -340,7 +316,6 @@ export class ModuleOwnerships
     assertCurrent?.();
 
     const change = request.change,
-
       previous = state.moduleOwnerships?.find(item => item.moduleId === change.moduleId) ?? null;
 
     assertModuleOwnershipExpectedBinding(change, previous);
@@ -348,26 +323,21 @@ export class ModuleOwnerships
     const previousOwner = previous?.ownerMemberId ? state.workspaceMembers?.find(item => item.memberId === previous.ownerMemberId) : undefined;
 
     const adopting = isModuleOwnershipSourceAdoption(change),
-
       requiresSource = adopting || !!change.nextOwner;
 
     if (requiresSource && knowledgeSourcePending(state))
-
       fail('OWNERSHIP_SOURCE_PENDING', '来源事务待核实，尚未保存新的责任采纳');
 
     const nextOwner = adopting ? previousOwner : change.nextOwner ? state.workspaceMembers?.find(item => item.memberId === change.nextOwner!.memberId) : undefined;
 
     if (requiresSource && (!nextOwner || nextOwner.state !== 'active'))
-
       fail('OWNERSHIP_MEMBER_UNAVAILABLE', '负责人必须是本工作区启用的岗位');
 
     // 退役内置岗位只保留历史；解除它可恢复主 Agent 默认执行，不允许新增或继续采纳该关系。
     if (requiresSource && nextOwner?.adoption.configuration.source === 'builtin')
-
       fail('AGENT_RETIRED', '内置默认执行 Agent 已退役；请解除旧负责人以恢复主 Agent 默认执行，或选择自定义岗位');
 
     if (change.nextOwner && nextOwner && nextOwner.revision !== change.nextOwner.expectedRevision)
-
       fail('OWNERSHIP_MEMBER_CHANGED', '岗位版本已变化，请重新预览');
 
     // 解除不读取已失效来源；原 observedModule 由关系头保留，不制造新的观察时间。
@@ -380,13 +350,11 @@ export class ModuleOwnerships
     const observedModule = requiresSource ? this.Observed(knowledge, change.moduleId) : undefined;
 
     if (requiresSource && !observedModule)
-
       fail('OWNERSHIP_SOURCE_INVALID', '新责任需要真实、可见且结构有效的模块');
 
     const sourceSelection = requiresSource ? this.owner.sources!.Selection(state, knowledge.snapshot!, { kind: 'module', sourceId: change.moduleId }) : undefined;
 
     if (adopting && sourceSelection?.kind === 'workspace' && sourceSelection.expectedRef && isDeepStrictEqual(previous?.sourceRef, sourceSelection.expectedRef))
-
       fail('OWNERSHIP_NO_CHANGE', '原负责人已经采纳当前来源');
 
     const facts = { workspaceId: request.workspaceId, change, ownershipCursor: this.Cursor(state), previous, ...(previousOwner ? { previousOwner: summarizeWorkspaceMember(previousOwner) } : {}), ...(nextOwner ? { nextOwner: summarizeWorkspaceMember(nextOwner) } : {}), ...(observedModule ? { observedModule } : {}), ...(sourceSelection ? { sourceSelection } : {}), impact: moduleOwnershipImpact(state, change.moduleId) };
@@ -415,7 +383,6 @@ export class ModuleOwnerships
     const result = moduleOwnershipReceiptSchema.safeParse(raw);
 
     if (!result.success || result.data.identity.workspaceId !== workspaceId || result.data.commandId !== commandId)
-
       fail('OWNERSHIP_RECEIPT_INVALID', '原责任回执不完整，请保留命令核实');
 
     return result.data;
@@ -425,9 +392,7 @@ export class ModuleOwnerships
   async Commit(raw: unknown, rawActor: ModuleOwnershipActor, assertCurrent?: () => void): Promise<ModuleOwnershipReceipt>
   {
     const request = input(moduleOwnershipCommitInputSchema, raw),
-
       actor = input(moduleOwnershipActorSchema, rawActor),
-
       command = moduleOwnershipCommand(request, actor);
 
     this.Workspace(request.workspaceId);
@@ -437,13 +402,12 @@ export class ModuleOwnerships
     if (old)
     {
       if (old.fingerprint !== command.fingerprint)
-
         fail('OWNERSHIP_COMMAND_CONFLICT', '原命令已绑定其他请求，请查询原回执');
 
       return this.CheckedReceipt(old.receipt, request.workspaceId, request.commandId)
     }
-    if (actor.kind === 'main_agent' && !assertCurrent)
 
+    if (actor.kind === 'main_agent' && !assertCurrent)
       fail('OWNERSHIP_ACTOR', '主运行责任写入缺少可信生命周期端口');
 
     this.Assert(request);

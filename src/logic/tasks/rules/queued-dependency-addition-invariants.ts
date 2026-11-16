@@ -19,7 +19,6 @@ import { queuedDependencyAdditionSelection } from './queued-dependency-addition-
 function valid(value: unknown, message: string): asserts value
 {
   if (!value)
-
     fail('GRAPH_INPUT_INVALID', message)
 }
 
@@ -32,19 +31,14 @@ export function validateQueuedDependencyAddition(previous: DispatchState, next: 
 
       record: DependencyAddition
     }[] = [],
-
     commands = new Set<string>(),
-
     edges = new Set<string>();
 
   for (const graph of next.graphs)
-
     for (const task of graph.tasks)
     {
       const old = previous.graphs.find(value => value.identity.rootSessionId === graph.identity.rootSessionId)?.tasks.find(value => value.taskId === task.taskId),
-
         history = old?.dependencyAdditions ?? [],
-
         records = task.dependencyAdditions ?? [];
 
       valid(records.length >= history.length && records.length <= history.length + 1 && records.length <= 32 && history.every((record, index) => sameGoalValue(record, records[index])) && (!old?.dependencyAdditions || !!task.dependencyAdditions), '前置追加审计只能逐次追加，不能改删历史');
@@ -55,6 +49,7 @@ export function validateQueuedDependencyAddition(previous: DispatchState, next: 
 
         additions.push({ task, record: records.at(-1)! })
       }
+
       for (const record of records)
       {
         valid(dependencyAdditionSchema.safeParse(record).success && record.scopeId === task.scopeId && !commands.has(record.commandId) && !edges.has(record.dependency.edgeId), '前置追加审计结构或身份无效');
@@ -68,18 +63,16 @@ export function validateQueuedDependencyAddition(previous: DispatchState, next: 
         valid(scope?.runTracking?.mainRunIds.includes(record.mainRunId) && !(next.runs ?? []).some(run => run.binding.runId === record.mainRunId), '前置追加主运行不属于本周期');
       }
     }
+
   valid(additions.length <= 1, '单次事务只能追加一个目标的一条前置');
 
   if (!additions.length)
-
     return new Set<string>();
 
   const { task, record } = additions[0],
-
     selected = queuedDependencyAdditionSelection(previous, task.identity, record.scopeId, record.mainRunId, { expectedGraphCursor: record.graphCursor, expectedGoalRevision: record.goalRevision, source: { taskId: record.dependency.sourceTaskId, expectedRevision: record.dependency.sourceTaskRevision, expectedPlanRevision: record.dependency.sourcePlanRevision }, target: { taskId: task.taskId, expectedRevision: record.previousTaskRevision, expectedPlanRevision: record.targetPlanRevision }, reason: record.reason });
 
   const { graph, scope, source, target, tasks, members } = selected,
-
     batch = mutation.batch;
 
   valid(batch && batch.cause === 'dependency.changed' && batch.commandId === command.commandId && record.commandId === command.commandId && sameGoalValue(batch.identity, graph.identity), '追加必须由同一主调度命令提交');
@@ -97,7 +90,6 @@ export function validateQueuedDependencyAddition(previous: DispatchState, next: 
   valid(!mutation.scopes?.length && !mutation.sessions?.length && !mutation.runs?.length && !mutation.messages?.length && mutation.members?.length === 1 && batch.changes.length === 3, '追加不能夹带周期、运行、信封或其它成员变更');
 
   const member = members.find(value => value.agentInstanceId === target.assignee.agentInstanceId)!,
-
     view = graph.agents.find(value => value.agentInstanceId === member.agentInstanceId);
 
   valid(view, '目标成员缺少原图投影');

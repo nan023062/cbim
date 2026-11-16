@@ -38,7 +38,6 @@ export class AutomaticReturnService
   private async ModelHash(options: AutomaticReturn['options'])
   {
     if (!this.models)
-
       fail('AUTO_RETURN_UNAVAILABLE', '模型配置核实未装配');
 
     return workspaceMemberModelHash(await this.models.Configuration(options.profileId, options.model, options.engine, options.modelRoles));
@@ -50,11 +49,9 @@ export class AutomaticReturnService
     this.owner.Assert();
 
     const state = await this.store.Read(),
-
       scope = state.scopes?.find(value => value.scopeId === scopeId && value.rootSessionId === identity.rootSessionId && value.workspaceId === identity.workspaceId);
 
     if (!scope || identity.workspaceId !== this.owner.entry.id)
-
       fail('AUTO_RETURN_IDENTITY', '回传批次不属于当前工作区');
 
     const prior = scope.automaticReturns?.find(value => value.mainRunId === summary.runId);
@@ -62,19 +59,17 @@ export class AutomaticReturnService
     if (prior)
     {
       if (!sameGoalValue(prior.taskIds, taskIds) || !sameGoalValue(prior.options, options))
-
         fail('AUTO_RETURN_CONFLICT', '原回传批次不能改变任务或选项');
 
       return
     }
-    if (summary.status !== 'completed' || summary.unresolvedTools.length || scope.status !== 'active' || scope.runTracking?.mainRunIds.at(-1) !== summary.runId)
 
+    if (summary.status !== 'completed' || summary.unresolvedTools.length || scope.status !== 'active' || scope.runTracking?.mainRunIds.at(-1) !== summary.runId)
       fail('AUTO_RETURN_UNSAFE', '主运行尚未可靠结算');
 
     const canonical = await this.logs?.InspectMain(identity.rootSessionId, summary.runId);
 
     if (!canonical || canonical.logIntegrity?.partialTail !== false || !sameGoalValue(canonical.events, summary.events))
-
       fail('AUTO_RETURN_UNSAFE', '主运行日志不可核实');
 
     const record = automaticReturnSchema.parse({ mainRunId: summary.runId, taskIds, options, sourceLogHash: hash(json(canonical.events)), modelHash: await this.ModelHash(options), recordedAt: new Date().toISOString() });
@@ -90,56 +85,45 @@ export class AutomaticReturnService
     const record = scope.automaticReturns?.at(-1);
 
     if (!record || scope.status !== 'active' || scope.goal?.blocked || scope.recovery || scope.runTracking?.mainRunIds.at(-1) !== record.mainRunId)
-
       return;
 
     if (await this.ModelHash(record.options) !== record.modelHash)
-
       fail('AUTO_RETURN_MODEL_CHANGED', '原主模型配置变化，不能无人值守接续');
 
     const summary = await this.logs?.InspectMain(scope.rootSessionId, record.mainRunId);
 
     if (!summary || hash(json(summary.events)) !== record.sourceLogHash)
-
       fail('AUTO_RETURN_UNSAFE', '原主运行日志已变化');
 
     const identity = { workspaceId: scope.workspaceId, rootSessionId: scope.rootSessionId };
 
     const context = await this.goals.RepairContext(identity, scope.scopeId, summary),
-
       state = await this.store.Read();
 
     if (!sameGoalValue(context.scope, scope))
-
       fail('AUTO_RETURN_UNSAFE', '取证期间原周期变化');
 
     // 重启也从原任务终态累计异常，不能因内存重建获得新的自动接续额度。
     const failureReason = memberFailureStopReason(context.graph, scope.scopeId);
 
     if (failureReason)
-
       fail('GOAL_MEMBER_FAILURE_LIMIT', failureReason);
 
     const tasks = context.graph.tasks.filter(task => task.scopeId === scope.scopeId),
-
       knowledge = await this.owner.Read();
 
     if (!tasks.length || tasks.some(task => task.status !== 'result_ready' || !task.result || task.activeRunId))
-
       fail('AUTO_RETURN_UNSAFE', '自动恢复仅支持全部成员已可靠交付的周期');
 
     for (const task of tasks)
-
       await this.goals.ValidateMemberCandidate(state, scope, context.graph, task, knowledge.revision);
 
     const messages = state.outbox.filter(message => message.kind === 'result' && record.taskIds.includes(message.taskId) && message.identity.rootSessionId === scope.rootSessionId && message.identity.workspaceId === scope.workspaceId && message.to.agentInstanceId === context.graph.root.agent.agentInstanceId && message.to.agentSessionId === context.graph.root.agent.agentSessionId);
 
     if (messages.length !== record.taskIds.length || new Set(messages.map(message => message.taskId)).size !== record.taskIds.length || messages.some(message => message.delivery !== 'pending' || message.kind !== 'result' || !tasks.some(task => task.taskId === message.taskId && task.result?.resultId === message.resultId && task.result.runId === message.runId)))
-
       fail('AUTO_RETURN_UNSAFE', '结果信封缺失、变化或已经消费');
 
     if (!sameGoalValue(await this.store.Read(), state))
-
       fail('AUTO_RETURN_UNSAFE', '核实期间调度状态变化');
 
     const repairs = [];
@@ -149,9 +133,9 @@ export class AutomaticReturnService
       const run = await this.logs!.InspectMain(scope.rootSessionId, runId);
 
       if (run.source?.kind === 'goal-repair')
-
         repairs.push(run.source)
     }
+
     return { ...context, record, summary, repairs };
   }
 

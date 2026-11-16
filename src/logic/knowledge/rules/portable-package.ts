@@ -98,9 +98,7 @@ const pp = path.posix;
 const packageShape = z.object({ format: z.literal('cbim-workspace-package'), version: z.literal(1), kind: z.enum(['team', 'agent', 'skill', 'architecture']), name: z.string().trim().min(1).max(100), summary: z.string().trim().max(1000), files: z.array(z.object({ path: z.string().min(1).max(1000), text: z.string().min(1).max(200000) }).strict()).min(1).max(512), skill: z.object({ name: z.string().min(1), purpose: z.string().min(1) }).strict().optional(), fingerprint: z.string().regex(/^[a-f0-9]{64}$/) }).strict();
 
 const label = z.string().min(1),
-
   empty = z.array(z.never()).max(0),
-
   summary = label.refine(value => { const n = Array.from(value.replace(/\s/g, '')).length; return value === value.trim() && !/[\r\n]/.test(value) && n >= 100 && n <= 250 });
 
 const skill = z.object({ name: label, purpose: label, reference: z.string().regex(/^skills\/[^/]+\/SKILL\.md$/) }).strict();
@@ -116,7 +114,6 @@ const removed = ['不携带真人花名册、账号和凭据', '清除作者、�
 function check(condition: unknown, message: string): asserts condition
 {
   if (!condition)
-
     fail('RESOURCE_PACKAGE', message)
 }
 
@@ -147,7 +144,6 @@ function links(text: string, replace: (link: string) => string)
 function localReference(owner: string, reference: string): string | undefined
 {
   if (reference.startsWith('#'))
-
     return;
 
   if (/^[a-z][a-z0-9+.-]*:/i.test(reference))
@@ -162,10 +158,12 @@ function localReference(owner: string, reference: string): string | undefined
     {
       fail('RESOURCE_PACKAGE', '正文包含无效链接')
     }
+
     check(['https:', 'http:'].includes(url.protocol) && !url.username && !url.password && !/[?&](?:api[_-]?key|token|access_token|secret|password)=/i.test(reference), '资源正文不能携带本机地址或凭据链接');
 
     return;
   }
+
   const clean = reference.split('#')[0];
 
   check(!/[\\\x00-\x1f:?%]/.test(clean) && !clean.startsWith('/'), '正文引用必须是包内相对路径');
@@ -185,6 +183,7 @@ function exactObject(text: string, schema: z.ZodTypeAny)
   {
     fail('RESOURCE_PACKAGE', '资源包包含无效 JSON 定义')
   }
+
   const result = schema.safeParse(value);
 
   check(result.success, '资源定义无效或携带项目绑定/未允许字段');
@@ -207,6 +206,7 @@ export function parseWorkspacePackage(content: string, kind?: string): Workspace
   {
     fail('RESOURCE_PACKAGE', '该资源不是可导入的 CBIM 静态架构包')
   }
+
   const result = packageShape.safeParse(decoded);
 
   check(result.success, '资源包格式、版本或字段无效');
@@ -220,19 +220,12 @@ export function parseWorkspacePackage(content: string, kind?: string): Workspace
   check(pack.kind === 'skill' ? !!pack.skill : !pack.skill, '独立 Skill 元数据与资源类型不一致');
 
   const prefix = pack.kind === 'architecture' ? 'workspace' : pack.kind,
-
     files = new Map(pack.files.map(file => [file.path, file.text])),
-
     folded = new Set<string>(),
-
     agents: string[] = [],
-
     modules = new Map<string, any>(),
-
     entries = new Set<string>(),
-
     reachable = new Set<string>(),
-
     roots: string[] = [];
 
   for (const file of pack.files)
@@ -315,13 +308,12 @@ export function parseWorkspacePackage(content: string, kind?: string): Workspace
       }
     }
     else
-
       check(file.path.endsWith('.md'), '包只允许静态正文和已知定义，不允许任意 JSON 配置或可执行文件');
 
     if (file.path.endsWith('.md'))
     {
       if (file.path.endsWith('/workflow.md'))
-
+      {
         try
         {
           parseWorkflowContract(file.text)
@@ -330,6 +322,8 @@ export function parseWorkspacePackage(content: string, kind?: string): Workspace
         {
           fail('RESOURCE_PACKAGE', '资源包的 Workflow 执行约定无效')
         }
+      }
+
       check(!/(?:sk-[a-zA-Z0-9_-]{16,}|gh[pousr]_[a-zA-Z0-9]{20,}|-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----)/.test(file.text), '正文疑似包含真实凭据，不能发布到资源仓库');
 
       check(!/\.cbim\/(?:team|workspace|connectors)\/[a-z0-9_-]/i.test(file.text), '正文仍绑定源工程对象，请改为可移植的相对引用再发布');
@@ -337,8 +331,8 @@ export function parseWorkspacePackage(content: string, kind?: string): Workspace
       links(file.text, link => { const target = localReference(owner, link); check(!target || target.startsWith(prefix + '/') && files.has(target), '正文引用未包含在此静态资源包中'); return link });
     }
   }
-  for (const owner of agents)
 
+  for (const owner of agents)
     check(!agents.some(other => other !== owner && other.startsWith(owner + '/')), 'Agent 必须是团队叶子');
 
   for (const [id, data] of modules)
@@ -346,7 +340,6 @@ export function parseWorkspacePackage(content: string, kind?: string): Workspace
     check(new Set(data.children).size === data.children.length, '模块子节点重复');
 
     for (const child of data.children)
-
       check(modules.has(child) && pp.dirname(child) === id, '模块 children 未形成完整包含树');
 
     const parent = modules.get(pp.dirname(id));
@@ -355,10 +348,9 @@ export function parseWorkspacePackage(content: string, kind?: string): Workspace
 
     check(!parent || parent.children.includes(id), '父模块漏记直属子模块')
   }
+
   for (const file of pack.files)
-
     if (file.path.endsWith('/SKILL.md') || file.path.endsWith('/workflow.md'))
-
       check(pack.kind === 'skill' && file.path === 'skill/SKILL.md' || entries.has(file.path), '方法正文没有归属清单');
 
   check(pack.kind !== 'agent' || agents.length === 1 && files.has('agent/agent.json'), '独立 Agent 包须恰好包含一个根 Agent');
@@ -376,13 +368,13 @@ export function parseWorkspacePackage(content: string, kind?: string): Workspace
     const current = roots[index];
 
     if (reachable.has(current))
-
       continue;
 
     reachable.add(current);
 
     links(files.get(current)!, link => { const target = localReference(pp.dirname(current), link); if (target && !reachable.has(target)) roots.push(target); return link })
   }
+
   check(pack.files.every(file => reachable.has(file.path)), '资源包包含未归属的正文，不能附带隐藏文件');
 
   return pack;
@@ -394,13 +386,10 @@ export function buildWorkspacePackage(snapshot: Snapshot, selection: PackageSele
   check(snapshot.validation?.structural, '源工作区知识尚有结构错误，请先处理后发布');
 
   const source = new Map(snapshot.files.map(file => [file.path, file.text])),
-
     mapping = new Map<string, string>(),
-
     output = new Map<string, string>();
 
   const prefix = selection.kind === 'architecture' ? 'workspace' : selection.kind,
-
     scope = selection.kind === 'architecture' ? '.cbim/workspace' : '.cbim/team';
 
   const read = (id: string) => { const text = source.get(id); check(text !== undefined, '要发布的静态对象不存在'); return text };
@@ -431,19 +420,14 @@ export function buildWorkspacePackage(snapshot: Snapshot, selection: PackageSele
     const groups = index ? parseJson(index).groups : [];
 
     for (const group of [{ id: '.cbim/team' }, ...groups])
-
       if (!source.has(group.id + '/skills.json'))
-
         source.set(group.id + '/skills.json', json({ skills: [] }));
 
     for (const [from, text] of source)
-
       if (from.startsWith(scope + '/') && (from.endsWith('/agent.json') || from.endsWith('/skills.json')))
       {
         const data = parseJson(text),
-
           owner = pp.dirname(from),
-
           to = 'team' + from.slice(scope.length);
 
         if (from.endsWith('/agent.json'))
@@ -460,6 +444,7 @@ export function buildWorkspacePackage(snapshot: Snapshot, selection: PackageSele
 
           enqueue(target, 'team' + target.slice(scope.length))
         }
+
         put(from, to, json(data));
 
         addInventory(owner, pp.dirname(to), data);
@@ -499,6 +484,7 @@ export function buildWorkspacePackage(snapshot: Snapshot, selection: PackageSele
 
       enqueue(item.reference, 'agent/' + reference)
     }
+
     put(id + '/agent.json', 'agent/agent.json', json(data));
   }
   else if (selection.kind === 'skill')
@@ -508,13 +494,11 @@ export function buildWorkspacePackage(snapshot: Snapshot, selection: PackageSele
     check(requested && cleanPath(requested), '发布 Skill 必须指定静态方法对象');
 
     const entry = requested.endsWith('/SKILL.md') ? requested : requested + '/SKILL.md',
-
       split = entry.lastIndexOf('/skills/');
 
     check(split >= 0, 'Skill 标识无效');
 
     const owner = entry.slice(0, split),
-
       definition = source.has(owner + '/agent.json') ? get(owner + '/agent.json') : get(owner + '/skills.json');
 
     const item = definition.skills.find((item: any) => localReference(owner, item.reference) === entry);
@@ -530,15 +514,11 @@ export function buildWorkspacePackage(snapshot: Snapshot, selection: PackageSele
     check(!selection.objectId || selection.objectId === '.cbim/workspace', '业务模板只能发布完整业务架构，不能选择单 Module 或 Workflow');
 
     for (const [from, text] of source)
-
       if (from.startsWith(scope + '/') && from.endsWith('/module.json'))
       {
         const data = parseJson(text),
-
           owner = pp.dirname(from),
-
           to = 'workspace' + from.slice(scope.length),
-
           locations = data.sources.map((item: any) => item.location);
 
         data.id = 'workspace' + owner.slice(scope.length);
@@ -572,6 +552,7 @@ export function buildWorkspacePackage(snapshot: Snapshot, selection: PackageSele
         }
       }
   }
+
   // 递归纳入正文依赖；仅允许当前静态领域的 Markdown，禁止偷偷收进连接器配置或业务代码。
   for (let cursor = 0; cursor < documents.length; cursor++)
   {
@@ -579,8 +560,8 @@ export function buildWorkspacePackage(snapshot: Snapshot, selection: PackageSele
 
     links(output.get(to)!, reference => { const target = localReference(pp.dirname(from), reference); if (!target) return reference; if (!mapping.has(target)) { const relative = pp.relative(pp.dirname(from), target), destination = !relative.startsWith('../') ? pp.join(pp.dirname(to), relative) : prefix + '/references/' + hash(target).slice(0, 10) + '-' + pp.basename(target); enqueue(target, destination) } return reference; });
   }
-  for (const { from, to } of documents)
 
+  for (const { from, to } of documents)
     output.set(to, links(output.get(to)!, reference => { const target = localReference(pp.dirname(from), reference); if (!target) return reference; const destination = mapping.get(target); check(destination, '正文引用不完整'); const anchor = reference.includes('#') ? '#' + reference.split('#').slice(1).join('#') : ''; return pp.relative(pp.dirname(to), destination) + anchor }));
 
   const body = { format: 'cbim-workspace-package' as const, version: 1 as const, kind: selection.kind, name: selection.name, summary: selection.summary, files: [...output].sort(([a], [b]) => a.localeCompare(b)).map(([path, text]) => ({ path, text })), ...(skillInfo ? { skill: skillInfo } : {}) };
@@ -598,15 +579,11 @@ export function planWorkspacePackage(snapshot: Snapshot, pack: WorkspacePackage,
   parseWorkspacePackage(json(pack), pack.kind);
 
   const original = new Map(snapshot.files.map(file => [file.path, file.text])),
-
     target = new Map(original),
-
     createdRoots: string[] = [],
-
     deletedRoots: string[] = [];
 
   const slug = placement.slug,
-
     parent = placement.targetParentId ?? '.cbim/team';
 
   let targetRoot: string;
@@ -654,11 +631,10 @@ export function planWorkspacePackage(snapshot: Snapshot, pack: WorkspacePackage,
     deletedRoots.push(targetRoot);
 
     for (const id of target.keys())
-
       if (id.startsWith(targetRoot + '/') && !protectedFile(id))
-
         target.delete(id);
   }
+
   const prefix = pack.kind === 'architecture' ? 'workspace' : pack.kind;
 
   for (const file of pack.files)
@@ -677,12 +653,13 @@ export function planWorkspacePackage(snapshot: Snapshot, pack: WorkspacePackage,
 
       text = json(data)
     }
+
     target.set(destination, text);
   }
+
   if (pack.kind === 'skill')
   {
     const ownerFile = original.has(parent + '/agent.json') ? parent + '/agent.json' : parent + '/skills.json',
-
       data = target.has(ownerFile) ? parseJson(target.get(ownerFile)!) : { skills: [] };
 
     check(!data.skills.some((item: any) => item.name.toLowerCase() === pack.skill!.name.toLowerCase()), '目标已登记同名 Skill');
@@ -691,6 +668,7 @@ export function planWorkspacePackage(snapshot: Snapshot, pack: WorkspacePackage,
 
     target.set(ownerFile, json(data));
   }
+
   const changes = [...new Set([...original.keys(), ...target.keys()])].filter(id => !protectedFile(id) && original.get(id) !== target.get(id)).map(id => ({ path: id, text: target.get(id) ?? null }));
 
   check(changes.length > 0, '资源包与目标定义相同，没有需要提交的变更');

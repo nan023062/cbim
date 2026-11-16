@@ -145,7 +145,6 @@ export const scopeViewHistoryLimit = 256;
 function valid(condition: unknown, message: string): asserts condition
 {
   if (!condition)
-
     fail('SCOPE_VIEW_INVALID', message)
 }
 
@@ -161,22 +160,15 @@ export function emptyScopeSnapshot(identity: GraphIdentity, graphStreamId: strin
 export function summarizeScope(scope: DispatchScope, streamId: string, seq: number): ScopeSummary
 {
   const goal = scope.goal,
-
     interruption = pendingTopicInterruption(scope);
 
   return {
     scopeId: scope.scopeId, status: scope.status, createdAt: scope.createdAt, ...(scope.closedAt ? { closedAt: scope.closedAt } : {}), ...(scope.outcome ? { outcome: scope.outcome } : {}), hasGoal: !!goal, hasPlan: !!goal?.plan, ...(scope.followupOf ? { followupOf: scope.followupOf } : {}),
-
     ...(interruption ? { interruption: { commandId: interruption.request.commandId, phase: scope.wait?.interruptionId === interruption.request.commandId ? 'paused' as const : 'requested' as const } } : {}),
-
     ...(scope.runTracking ? { mainRunIds: [...scope.runTracking.mainRunIds] } : {}),
-
     ...(scope.activeInputs?.length ? { activeInputCount: scope.activeInputs.length } : {}), ...(scopeActiveInputStatus(scope) ? { activeInputStatus: scopeActiveInputStatus(scope) } : {}),
-
     ...(goal ? { goalRevision: goal.revision, inputRevision: goalInputRevision(goal), needsReplan: goalNeedsReplan(goal), inputPreview: preview(goal.input.message) } : {}),
-
     ...(goal?.plan ? { objective: preview(goal.plan.objective) } : {}), ...(goal?.review ? { reviewDecision: goal.review.decision } : {}), ...(scope.recovery ? { readOnly: true as const, origin: 'inspection' as const } : scope.replan ? { origin: 'business_replan' as const } : {}),
-
     ...(goal?.blocked ? { blockedReason: preview(goal.blocked.reason) } : {}), ...(scope.budget ? { budget: { policy: structuredClone(scope.budget.policy), ...(scope.budget.blocked ? { blocked: structuredClone(scope.budget.blocked) } : {}) } } : {}), ...(scope.humanDecisions ? { humanDecisions: { revision: scope.humanDecisions.revision, count: scope.humanDecisions.records.length, lastDecisionAt: scope.humanDecisions.records.at(-1)!.recordedAt } } : {}), ...(scope.wait ? { wait: { ...(scope.wait.interruptionId ? { interruptionId: scope.wait.interruptionId } : {}), waitId: scope.wait.waitId, reason: preview(scope.wait.reason), goalRevision: scope.wait.goalRevision, createdAt: scope.wait.createdAt } } : {}), stamp: { scopeId: scope.scopeId, streamId, seq }
   };
 }
@@ -231,19 +223,17 @@ export function applyScopeBatch(previous: ScopeSnapshot, event: ScopeEventBatch)
   if (event.seq <= previous.cursor.seq)
   {
     if (sameGoalValue(history?.get(event.seq), event))
-
       return previous;
 
     fail('SCOPE_EVENT_CONFLICT', '周期序号重复但缺少一致的重放证明')
   }
-  if (event.seq !== previous.cursor.seq + 1)
 
+  if (event.seq !== previous.cursor.seq + 1)
     fail('SCOPE_SEQUENCE_GAP', '周期序号断档，需要补读');
 
   const values = new Map(previous.scopes.map(item => [item.scopeId, item]));
 
   for (const item of event.scopes)
-
     values.set(item.scopeId, structuredClone(item));
 
   const next: ScopeSnapshot = { identity: previous.identity, cursor: { ...previous.cursor, seq: event.seq }, scopes: [...values.values()] };
@@ -253,7 +243,6 @@ export function applyScopeBatch(previous: ScopeSnapshot, event: ScopeEventBatch)
   seen.set(event.seq, structuredClone(event));
 
   while (seen.size > scopeViewHistoryLimit)
-
     seen.delete(seen.keys().next().value!);
 
   seenBatches.set(next, seen);
@@ -269,7 +258,6 @@ export function readScopeDelta(snapshot: ScopeSnapshot, batches: readonly ScopeE
   const reset = (reason: ScopeResetReason): ScopeDelta => ({ mode: 'reset', reason, snapshot, cursor: snapshot.cursor });
 
   if (!cursor)
-
     return reset('initial');
 
   valid(scopeCursor.safeParse(cursor).success, '周期游标无效');
@@ -277,25 +265,20 @@ export function readScopeDelta(snapshot: ScopeSnapshot, batches: readonly ScopeE
   assertGraphIdentity(snapshot.identity, cursor);
 
   if (cursor.streamId !== snapshot.cursor.streamId)
-
     return reset('stream_changed');
 
   if (cursor.seq > snapshot.cursor.seq)
-
     return reset('cursor_ahead');
 
   if (cursor.seq === snapshot.cursor.seq)
-
     return { mode: 'noop', cursor: snapshot.cursor };
 
   const first = batches[0]?.seq;
 
   if (first === undefined || cursor.seq < first - 1)
-
     return reset('history_compacted');
 
   const start = cursor.seq + 1 - first,
-
     selected = batches.slice(start, start + limit);
 
   valid(selected.length, '周期增量缺少已提交记录');
@@ -310,6 +293,7 @@ export function readScopeDelta(snapshot: ScopeSnapshot, batches: readonly ScopeE
 
     validateSummaries(event.scopes, { streamId: event.streamId, seq: event.seq }, true)
   }
+
   const last = selected.at(-1)!.seq;
 
   valid(last === snapshot.cursor.seq || start + selected.length < batches.length, '周期增量未到持久化头部');
@@ -328,13 +312,12 @@ export function readScopeDetail(snapshot: ScopeSnapshot, scopes: readonly Dispat
   if (!selected)
   {
     if (selectedScopeId)
-
       fail('DISPATCH_SCOPE_IDENTITY', '选中周期不属于当前主会话');
 
     return { mode: 'empty' }
   }
-  if (stamp && sameGoalValue(stamp, selected.stamp))
 
+  if (stamp && sameGoalValue(stamp, selected.stamp))
     return { mode: 'noop', stamp: selected.stamp };
 
   const scope = scopes.find(item => item.scopeId === selected.scopeId && item.workspaceId === snapshot.identity.workspaceId && item.rootSessionId === snapshot.identity.rootSessionId);

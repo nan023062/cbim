@@ -44,7 +44,6 @@ export function ProviderConnections({ value, onChange }: { value: LlmDefinition;
 export function ProviderConnectionTest({ profile, busy, onTest }: { profile: LlmProfile; busy: boolean; onTest: (operation: ({ kind: 'generation'; modelId: string; api: LlmApi } | { kind: 'embedding'; modelId: string })) => void })
 {
   const [chosen, setChosen] = useState(JSON.stringify(['generation', profile.defaultModel])),
-
     [api, setApi] = useState<LlmApi>(profile.api);
 
   const choices = [...profile.models.filter(model => model.enabled).map(model => ({ kind: 'generation' as const, id: model.id, label: (model.name || model.id) + ' · 生成' })), ...(profile.embedding?.models ?? []).filter(model => model.enabled).map(model => ({ kind: 'embedding' as const, id: model.id, label: (model.name || model.id) + ' · 向量' }))];

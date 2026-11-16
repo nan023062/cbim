@@ -29,25 +29,16 @@ export function ModelSettings({ onDirtyChange }: { onDirtyChange?: (dirty: boole
   const baseline = useRef('');
 
   const [state, setState] = useState<LlmSettings>(),
-
     [editing, setEditing] = useState(false),
-
     [id, setId] = useState<string>(),
-
     [draft, setDraft] = useState(empty),
-
     [key, setKey] = useState('');
 
   const [modelId, setModelId] = useState(''),
-
     [found, setFound] = useState<DiscoveredModel[]>([]),
-
     [busy, setBusy] = useState(false),
-
     [error, setError] = useState(''),
-
     [notice, setNotice] = useState(''),
-
     [removeId, setRemoveId] = useState<string>();
 
   const unsaved = editing && (JSON.stringify(draft) !== baseline.current || !!key || !!modelId);

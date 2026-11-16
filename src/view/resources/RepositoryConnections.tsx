@@ -31,38 +31,29 @@ const message = (cause: unknown) => cause instanceof Error ? cause.message : Str
 export function RepositoryConnections({ onSettings }: { onSettings: () => void })
 {
   const [workspaces, setWorkspaces] = useState<WorkspaceView[]>([]),
-
     [workspaceId, setWorkspaceId] = useState('');
 
   const [list, setList] = useState<RepositoryConnectionList>(),
-
     [status, setStatus] = useState<RepositoryStatus>();
 
   const [preview, setPreview] = useState<RepositoryConnectionPreview>(),
-
     [busy, setBusy] = useState(false),
-
     [error, setError] = useState(''),
-
     [notice, setNotice] = useState('');
 
   const [slug, setSlug] = useState('resource-repository'),
-
     [name, setName] = useState('团队资源仓库');
 
   const [checks, setChecks] = useState<Record<string, RepositoryConnectionCheck>>({});
 
   const [pending, setPending] = useState<RepositoryConnectionPending>(),
-
     [storageError, setStorageError] = useState(false);
 
   const store = useRef(createRepositoryConnectionPendingStore({ getItem: key => window.localStorage.getItem(key), setItem: (key, value) => window.localStorage.setItem(key, value) })).current;
 
   // 同步锁早于 React 重绘，拒绝双击；generation 防止旧目标结果覆盖新选择。
   const lock = useRef(false),
-
     generation = useRef(0),
-
     alive = useRef(false);
 
   useEffect(() => { alive.current = true; void initial(); return () => { alive.current = false; generation.current++ } }, []);
@@ -97,7 +88,6 @@ export function RepositoryConnections({ onSettings }: { onSettings: () => void }
     catch (cause)
     {
       if (current(token))
-
         setError(message(cause))
     }
     finally
@@ -116,13 +106,11 @@ export function RepositoryConnections({ onSettings }: { onSettings: () => void }
     const [snapshot, repository] = await Promise.all([window.cbim.call('snapshot', { id }) as Promise<Snapshot>, window.cbim.call('resources.status') as Promise<RepositoryStatus>]);
 
     if (snapshot.workspaceId !== id)
-
       throw Error('工作区身份已变化，请重新选择');
 
     const value: RepositoryConnectionList = await window.cbim.call('resources.connection.list', { workspaceId: id, instanceId: snapshot.instanceId });
 
     if (value.identity.workspaceId !== id || value.identity.instanceId !== snapshot.instanceId)
-
       throw Error('连接列表身份不一致，请重新加载');
 
     if (current(token))
@@ -136,7 +124,6 @@ export function RepositoryConnections({ onSettings }: { onSettings: () => void }
   async function select(id: string)
   {
     if (lock.current)
-
       return;
 
     setWorkspaceId(id);
@@ -167,12 +154,14 @@ export function RepositoryConnections({ onSettings }: { onSettings: () => void }
 
       return
     }
+
     if (!id)
     {
       generation.current++;
 
       return
     }
+
     await perform(async token => load(id, token));
   }
 
@@ -180,7 +169,6 @@ export function RepositoryConnections({ onSettings }: { onSettings: () => void }
   async function perform(action: (token: number) => Promise<void>)
   {
     if (lock.current)
-
       return;
 
     lock.current = true;
@@ -198,7 +186,6 @@ export function RepositoryConnections({ onSettings }: { onSettings: () => void }
     catch (cause)
     {
       if (current(token))
-
         setError(message(cause))
     }
     finally
@@ -220,7 +207,6 @@ export function RepositoryConnections({ onSettings }: { onSettings: () => void }
   async function prepare()
   {
     if (!list?.sharing)
-
       return;
 
     const base = list;
@@ -231,7 +217,6 @@ export function RepositoryConnections({ onSettings }: { onSettings: () => void }
   async function commit()
   {
     if (!preview || !preview.validation.structural)
-
       return;
 
     const frozen = preview;
@@ -242,7 +227,6 @@ export function RepositoryConnections({ onSettings }: { onSettings: () => void }
   async function authorize(row: Connection, action: 'grant' | 'revoke')
   {
     if (!list)
-
       return;
 
     const identity = list.identity;
@@ -261,11 +245,8 @@ export function RepositoryConnections({ onSettings }: { onSettings: () => void }
   async function accepted(receipt: unknown, request: RepositoryConnectionPending, token: number)
   {
     if (request.action === 'commit')
-
       checkedRepositoryConnectionCommit(receipt, request);
-
     else
-
       checkedRepositoryConnectionReceipt(receipt, request);
 
     store.Remove(request);
@@ -285,7 +266,6 @@ export function RepositoryConnections({ onSettings }: { onSettings: () => void }
   async function inspectPending()
   {
     if (!pending)
-
       return;
 
     const frozen = pending;
@@ -297,7 +277,6 @@ export function RepositoryConnections({ onSettings }: { onSettings: () => void }
   async function resolveUnaccepted()
   {
     if (!pending)
-
       return;
 
     const frozen = pending;
@@ -308,7 +287,6 @@ export function RepositoryConnections({ onSettings }: { onSettings: () => void }
   async function check(row: Connection)
   {
     if (!list)
-
       return;
 
     const base = list;
@@ -317,7 +295,6 @@ export function RepositoryConnections({ onSettings }: { onSettings: () => void }
   }
 
   const blocked = busy || !!pending || storageError,
-
     sharing = !!list?.sharing;
 
   return <section className="repository-connections" data-testid="repository-connections">

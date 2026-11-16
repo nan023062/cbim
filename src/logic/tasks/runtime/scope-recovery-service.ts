@@ -64,7 +64,6 @@ export type AcceptedRecovery =
 function check(condition: unknown, code: string, message: string): asserts condition
 {
   if (!condition)
-
     fail(code, message)
 }
 
@@ -79,7 +78,6 @@ export class ScopeRecoveryService
     const parsed = schema.safeParse(raw);
 
     if (!parsed.success)
-
       fail('RECOVERY_INPUT_INVALID', '只读核实请求或可信启动参数无效');
 
     return parsed.data
@@ -105,7 +103,6 @@ export class ScopeRecoveryService
     const scope = state.scopes?.find(s => s.recovery?.recoveryId === input.commandId);
 
     if (scope)
-
       check(scope.workspaceId === input.workspaceId && scope.rootSessionId === input.rootSessionId, 'RECOVERY_IDENTITY', '核实请求标识已用于其它主会话');
 
     return scope;
@@ -129,7 +126,6 @@ export class ScopeRecoveryService
   async Inspect(raw: RecoveryLookup): Promise<RecoveryReceipt | undefined>
   {
     const input = this.Parse(recoveryLookupSchema, raw),
-
       scope = this.Found(await this.store.Read(), input);
 
     return scope ? this.Receipt(scope) : undefined
@@ -139,7 +135,6 @@ export class ScopeRecoveryService
   async LatestContext(raw: GraphIdentity): Promise<RecoveryContext | undefined>
   {
     const identity = this.Parse(graphIdentityInput, raw),
-
       state = await this.store.Read();
 
     this.Workspace(state, identity);
@@ -153,7 +148,6 @@ export class ScopeRecoveryService
   async PriorRunIds(raw: GraphIdentity): Promise<string[]>
   {
     const identity = this.Parse(graphIdentityInput, raw),
-
       state = await this.store.Read();
 
     this.Workspace(state, identity);
@@ -187,7 +181,6 @@ export class ScopeRecoveryService
       check(this.effects, 'RECOVERY_UNAVAILABLE', '未装配原调用影响观察');
 
       const { reportBasis, ...subject } = input.source,
-
         report = await this.effects.Observe({ workspaceId: input.workspaceId, rootSessionId: input.rootSessionId, subject });
 
       check(report.consistency === 'stable' && report.basis === reportBasis, 'RECOVERY_REPORT_STALE', '原影响观察已变化，请重新核实');
@@ -204,16 +197,17 @@ export class ScopeRecoveryService
 
         check(record && record.request.workspaceId === input.workspaceId && record.request.rootSessionId === input.rootSessionId && record.request.decision === 'inspect_more' && sameEffectSubject(record.request.subject, subject) && record.observation.basis === reportBasis, 'RECOVERY_DISPOSITION_INVALID', '处置不属于原来源、观察或继续核实决定')
       }
+
       const common = { ...input.source, scopeId: source.scopeId, scopeOutcome: source.outcome, reportExecution: report.source.execution, logState: report.source.logState, unknownToolCount: report.source.unknownToolCount, ...(report.source.logPrefixHash ? { logPrefixHash: report.source.logPrefixHash, throughSeq: report.source.throughSeq } : {}) };
 
       const saved: ScopeRecovery['source'] = input.source.kind === 'main_run' ? { ...common, kind: 'main_run', runId: input.source.runId, toolCallIds: input.source.toolCallIds, ...(report.source.goalRevision ? { sourceGoalRevision: report.source.goalRevision, sourceInputRevision: report.source.inputRevision } : {}), ...(report.source.goalPlanRevision ? { sourcePlanRevision: report.source.goalPlanRevision } : {}) } : { ...common, kind: 'member_run', taskId: input.source.taskId, runId: input.source.runId, toolCallIds: input.source.toolCallIds, ...(report.source.executionModel === 'agent-tools-v1' ? { executionModel: 'agent-tools-v1' as const } : { taskRevision: report.source.taskRevision!, planRevision: report.source.planRevision! }) };
 
       return saved;
     }
+
     check(!input.dispositionId, 'RECOVERY_DISPOSITION_INVALID', '旧来源协议不能夹带新处置引用');
 
     const selected = input.source,
-
       source = state.scopes?.find(s => s.scopeId === selected.scopeId && s.rootSessionId === input.rootSessionId && s.workspaceId === input.workspaceId);
 
     check(source?.status === 'closed' && source.outcome, 'RECOVERY_SOURCE_NOT_CLOSED', '只读核实必须来自已关闭周期；活动或等待周期应先停止并结算');
@@ -246,7 +240,6 @@ export class ScopeRecoveryService
   async Accept(raw: RecoveryRequest, trusted: RecoveryLaunch): Promise<AcceptedRecovery>
   {
     const input = this.Parse(recoveryRequestSchema, raw),
-
       context = this.Parse(recoveryContextSchema, { initialRunId: trusted.runId, nativeSessionId: trusted.nativeSessionId, excludedRunIds: trusted.excludedRunIds });
 
     const command = { commandId: 'scope-recovery-' + input.commandId, fingerprint: hash(json({ operation: 'scope.recovery', input })) };
@@ -265,12 +258,11 @@ export class ScopeRecoveryService
 
       return { scope, recovery: scope.recovery, fresh: false }
     }
+
     trusted.signal?.throwIfAborted();
 
     const before = await this.store.Read(),
-
       savedSource = await this.Report(before, input),
-
       stamp = effectStateStamp(before, input);
 
     trusted.signal?.throwIfAborted();

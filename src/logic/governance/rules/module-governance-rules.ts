@@ -42,14 +42,12 @@ export interface ModuleGovernanceWriteRequest
 function check(condition: unknown, code: string, message: string): asserts condition
 {
   if (!condition)
-
     fail(code, message)
 }
 
 function fileMap(files: readonly ModuleGovernanceFile[])
 {
   const map = new Map<string, ModuleGovernanceFile>(),
-
     seen = new Set<string>();
 
   for (const file of files)
@@ -62,6 +60,7 @@ function fileMap(files: readonly ModuleGovernanceFile[])
 
     map.set(file.path, file)
   }
+
   return map;
 }
 
@@ -77,11 +76,9 @@ function readFact(files: Map<string, ModuleGovernanceFile>, path: string)
 function canonical(value: unknown): string
 {
   if (Array.isArray(value))
-
     return '[' + value.map(canonical).join(',') + ']';
 
   if (value && typeof value === 'object')
-
     return '{' + Object.keys(value).sort().map(key => JSON.stringify(key) + ':' + canonical((value as Record<string, unknown>)[key])).join(',') + '}';
 
   return JSON.stringify(value);
@@ -111,11 +108,9 @@ export function moduleGovernanceMainCommandId(workspaceId: string, raw: ModuleGo
 export function validateModuleGovernanceRecordOrigin(record: ModuleGovernanceObservation | ModuleGovernanceProposal): void
 {
   if (record.origin?.kind !== 'main_agent')
-
     return;
 
   const observation = 'observationId' in record && !('proposalId' in record),
-
     id = observation ? (record as ModuleGovernanceObservation).observationId : (record as ModuleGovernanceProposal).proposalId;
 
   check(record.origin.toolName === (observation ? 'cbim_governance_observe' : 'cbim_governance_propose') && id === moduleGovernanceMainCommandId(record.workspaceId, record.origin), 'GOVERNANCE_IDENTITY', '治理来源与原工具命令不一致');
@@ -141,7 +136,6 @@ export function moduleGovernanceBinding(moduleId: string, files: readonly Module
   check(visibleModuleIds.includes(moduleId), 'GOVERNANCE_PROTECTED', '受保护模块必须保持在正式模块索引中可见');
 
   const map = fileMap(files),
-
     definition = readFact(map, moduleId + '/module.json');
 
   let value: unknown;
@@ -154,6 +148,7 @@ export function moduleGovernanceBinding(moduleId: string, files: readonly Module
   {
     fail('GOVERNANCE_DRIFT', '受保护模块定义不是有效 JSON')
   }
+
   check(value && typeof value === 'object' && !Array.isArray(value), 'GOVERNANCE_DRIFT', '受保护模块定义无效');
 
   const data = value as Record<string, unknown>;
@@ -177,9 +172,7 @@ export function moduleGovernanceProposalBasis(proposal: Omit<ModuleGovernancePro
 export function validateModuleGovernanceProposal(raw: ModuleGovernanceProposal, rawProtection: ModuleGovernanceProtection, rawObservation: ModuleGovernanceObservation): void
 {
   const p = moduleGovernanceProposalSchema.parse(raw),
-
     protection = moduleGovernanceProtectionSchema.parse(rawProtection),
-
     observation = moduleGovernanceObservationSchema.parse(rawObservation);
 
   validateModuleGovernanceRecordOrigin(p);
@@ -201,9 +194,7 @@ export function validateModuleGovernanceProposal(raw: ModuleGovernanceProposal, 
 export function validateModuleGovernanceDecisionAppend(previous: readonly ModuleGovernanceDecision[], rawNext: ModuleGovernanceDecision): void
 {
   const next = moduleGovernanceDecisionSchema.parse(rawNext),
-
     all = [...previous, next],
-
     ids = new Set<string>();
 
   check(all.length <= 128, 'GOVERNANCE_LIMIT', '该提案决定记录已达到上限');
@@ -259,11 +250,8 @@ export function validateModuleGovernanceWrite(input: ModuleGovernanceWriteInput)
   check(input.request.workspaceId === input.workspaceId && input.request.revision === input.currentRevision, 'GOVERNANCE_IDENTITY', '知识事务不属于当前治理工作区或版本');
 
   const oldFiles = fileMap(input.currentFiles),
-
     nextFiles = fileMap(input.projectedFiles),
-
     ids = new Set<string>(),
-
     modules = new Set<string>();
 
   const protections = input.protections.map(raw => moduleGovernanceProtectionSchema.parse(raw));
@@ -279,7 +267,6 @@ export function validateModuleGovernanceWrite(input: ModuleGovernanceWriteInput)
     check(protection.definition.path === protection.moduleId + '/module.json' && protection.overview.path === protection.moduleId + '/module.md', 'GOVERNANCE_PROTECTED', '保护登记与真实 Module 文件绑定不一致');
 
     const oldDefinition = readFact(oldFiles, protection.definition.path),
-
       oldOverview = readFact(oldFiles, protection.overview.path);
 
     check(oldDefinition.hash === protection.definition.hash && oldOverview.hash === protection.overview.hash, 'GOVERNANCE_DRIFT', '受保护知识已偏离登记或原实施 journal，不能追认外部改动');
@@ -289,19 +276,15 @@ export function validateModuleGovernanceWrite(input: ModuleGovernanceWriteInput)
     check(binding.definition.hash === protection.definition.hash && binding.overview.path === protection.overview.path, 'GOVERNANCE_PROTECTED', '本片不允许变更、移动、删除受保护定义或更换正文绑定');
 
     if (!input.authorized || input.authorized.intent.protectionId !== protection.protectionId)
-
       check(binding.overview.hash === protection.overview.hash, 'GOVERNANCE_PROTECTED', '受保护正文须通过精确获批提案的独立实施入口');
   }
-  if (!input.authorized)
 
+  if (!input.authorized)
     return;
 
   const { latestDecisionRevision } = input.authorized,
-
     intent = moduleGovernanceApplyIntentSchema.parse(input.authorized.intent),
-
     proposal = moduleGovernanceProposalSchema.parse(input.authorized.proposal),
-
     decision = moduleGovernanceDecisionSchema.parse(input.authorized.decision);
 
   const protection = protections.find(item => item.protectionId === intent.protectionId);
@@ -317,17 +300,13 @@ export function validateModuleGovernanceWrite(input: ModuleGovernanceWriteInput)
   check(intent.request.requestId === intent.intentId && intent.request.revision === input.currentRevision && intent.requestFingerprint === hash(json(intent.request)) && intent.requestFingerprint === hash(json(input.request)), 'GOVERNANCE_INTENT', '实施意图与本次原知识请求不一致');
 
   const change = intent.request.changes[0],
-
     next = readFact(nextFiles, protection.overview.path),
-
     before = readFact(oldFiles, protection.overview.path);
 
   check(proposal.change.path === protection.overview.path && proposal.change.beforeText === before.text && proposal.change.beforeHash === before.hash && proposal.change.afterHash === hash(proposal.change.afterText) && proposal.change.beforeHash !== proposal.change.afterHash && change.path === protection.overview.path && change.text === proposal.change.afterText && next.hash === proposal.change.afterHash && next.text === proposal.change.afterText, 'GOVERNANCE_PROTECTED', '实施请求只允许原批准的唯一 overview 正文差异');
 
   for (const path of new Set([...oldFiles.keys(), ...nextFiles.keys()]))
-
     if (oldFiles.get(path)?.hash !== nextFiles.get(path)?.hash)
-
       check(path === protection.overview.path || path === '.cbim/team/registry.json' || path === '.cbim/workspace/registry.json', 'GOVERNANCE_PROTECTED', '受控实施不能夹带其他知识文件变更');
 }
 
@@ -335,7 +314,6 @@ export function validateModuleGovernanceWrite(input: ModuleGovernanceWriteInput)
 export function advanceModuleGovernanceProtection(raw: ModuleGovernanceProtection, proposal: ModuleGovernanceProposal, rawReceipt: ModuleGovernanceKnowledgeReceipt): ModuleGovernanceProtection
 {
   const protection = moduleGovernanceProtectionSchema.parse(raw),
-
     receipt = moduleGovernanceKnowledgeReceiptSchema.parse(rawReceipt);
 
   check(protection.workspaceId === receipt.workspaceId && proposal.workspaceId === receipt.workspaceId && proposal.protectionId === protection.protectionId && proposal.moduleId === protection.moduleId && proposal.base.protectionRevision === protection.revision && proposal.base.definitionHash === protection.definition.hash && proposal.base.overviewHash === protection.overview.hash && proposal.change.path === protection.overview.path && proposal.change.beforeHash === protection.overview.hash && proposal.change.afterHash === hash(proposal.change.afterText) && proposal.basis === moduleGovernanceProposalBasis(proposal) && receipt.changed.includes(protection.overview.path) && !receipt.changed.includes(protection.definition.path), 'GOVERNANCE_RECEIPT', '知识回执不能推进此保护对象基线');

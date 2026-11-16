@@ -41,7 +41,6 @@ const bytes = (value: unknown) => new TextEncoder().encode(JSON.stringify(value)
 function check(value: unknown, message: string, code = 'SOURCE_AUDIT'): asserts value
 {
   if (!value)
-
     fail(code, message)
 }
 
@@ -85,7 +84,6 @@ export function knowledgeSourceStatus(state: KnowledgeSourceRegistry, key: Knowl
   const pending = knowledgeSourcePending(state);
 
   if (pending)
-
     return { status: 'pending', transitionId: pending.transitionId };
 
   const current = currentKnowledgeSource(state, key);
@@ -95,19 +93,17 @@ export function knowledgeSourceStatus(state: KnowledgeSourceRegistry, key: Knowl
     const old = state.knowledgeSourceGenerations?.find(item => equal(knowledgeSourceRef(item), adopted));
 
     if (!old)
-
       return { status: 'unverifiable', issue: '已采纳代次缺少来源日志' };
 
     if (old.retired)
-
       return { status: 'retired', ref: adopted, ...(current ? { currentRef: knowledgeSourceRef(current) } : {}) };
 
     if (current && equal(knowledgeSourceRef(current), adopted))
-
       return { status: 'current', ref: adopted };
 
     return { status: 'unverifiable', issue: '已采纳代次与来源头不一致' };
   }
+
   return current ? { status: 'needs_adoption', currentRef: knowledgeSourceRef(current) } : { status: 'untracked', source: key, observation };
 }
 
@@ -147,13 +143,9 @@ export function applyKnowledgeSourceChange(state: KnowledgeSourceRegistry, raw: 
   check(knowledgeSourceChangeSchema.safeParse(raw).success, '来源事件结构无效');
 
   const event = raw,
-
     history = state.knowledgeSourceChanges ?? [],
-
     generations = state.knowledgeSourceGenerations ?? [],
-
     transitions = state.knowledgeSourceTransitions ?? [],
-
     cursor = state.sourceCursor ?? null;
 
   check(event.workspaceId === state.workspaceId, '来源事件工作区不一致');
@@ -165,7 +157,6 @@ export function applyKnowledgeSourceChange(state: KnowledgeSourceRegistry, raw: 
   check(new Set(generations.map(item => item.generationId)).size === generations.length && new Set(generations.filter(item => !item.retired).map(item => knowledgeSourceKey(item.source))).size === generations.filter(item => !item.retired).length, '来源投影包含重复代次或当前头');
 
   let nextGenerations = [...generations],
-
     nextTransitions = [...transitions];
 
   const pending = knowledgeSourcePending(state);
@@ -205,6 +196,7 @@ export function applyKnowledgeSourceChange(state: KnowledgeSourceRegistry, raw: 
         check(item.next.origin === (item.reason === 'replaced' ? 'controlled_replace' : 'controlled_create'), '受控来源起因与计划不一致');
       }
     }
+
     check(generations.length + planned.size <= knowledgeSourceLimits.generations, '来源代次数量超过上限', 'SOURCE_LIMIT');
 
     // 16 KiB 覆盖 terminal 所有严格字符串的最坏 UTF-8 大小（包括两处 workspace、transitionId 与知识 revision）。
@@ -219,7 +211,7 @@ export function applyKnowledgeSourceChange(state: KnowledgeSourceRegistry, raw: 
     check(Date.parse(event.recordedAt) >= Date.parse(pending.preparedAt), '结算早于准备');
 
     if (event.outcome === 'committed')
-
+    {
       for (const item of pending.changes)
       {
         if (item.previous)
@@ -232,12 +224,15 @@ export function applyKnowledgeSourceChange(state: KnowledgeSourceRegistry, raw: 
 
           nextGenerations = nextGenerations.map(value => value.generationId === old.generationId ? { ...value, retired: { changeId: event.changeId, at: event.recordedAt, reason } } : value);
         }
-        if (item.next)
 
+        if (item.next)
           nextGenerations.push(item.next);
       }
+    }
+
     nextTransitions = transitions.map(value => value.transitionId === event.transitionId ? { ...value, state: event.outcome, resolved: { at: event.recordedAt, journalProofHash: event.journalProofHash, ...(event.committedRevision ? { committedRevision: event.committedRevision } : {}) } } : value);
   }
+
   check(nextGenerations.length <= knowledgeSourceLimits.generations && history.length < knowledgeSourceLimits.events && history.reduce((sum, item) => sum + bytes(item), 0) + bytes(event) <= knowledgeSourceLimits.historyBytes, '来源历史达到容量上限', 'SOURCE_LIMIT');
 
   return { knowledgeSourceGenerations: nextGenerations, knowledgeSourceTransitions: nextTransitions, knowledgeSourceChanges: [...history, event], sourceCursor: event.sourceCursor };
@@ -254,6 +249,7 @@ export function validateKnowledgeSourceSelection(state: KnowledgeSourceRegistry,
 
     return;
   }
+
   check(selection.workspaceId === state.workspaceId && !('kind' in ref) && ref.workspaceId === state.workspaceId && sameKnowledgeSourceKey(selection.source, ref.source), '来源选择与消费者不一致');
 
   const current = currentKnowledgeSource(state, selection.source);
@@ -261,6 +257,5 @@ export function validateKnowledgeSourceSelection(state: KnowledgeSourceRegistry,
   check(current && equal(knowledgeSourceRef(current), ref), '采纳来源不是当前有效代次', 'SOURCE_STALE');
 
   if (selection.expectedRef)
-
     check(equal(selection.expectedRef, ref), '预览来源代次已经变化', 'SOURCE_STALE');
 }

@@ -31,11 +31,8 @@ import { isProgressEvidence, memberToolContract, memberToolOutputSchema, progres
 
 const definitions = {
   cbim_task_inspect: { description: '读取本会话执行计划、本轮可引用的成功工具回执及已装配的产物验证事实。rejected 是检查已执行但不符合要求，不能满足交付出口。普通问答无需创建计划。', schema: progressToolInputSchemas.cbim_task_inspect },
-
   cbim_task_plan: { description: '创建或修订执行计划。expectedVersion 初次为 0；修订清除旧证据并保留历史。责任是描述，不会派发其他 Agent。', schema: progressToolInputSchemas.cbim_task_plan },
-
   cbim_task_step: { description: '更新步骤；reported_done 必须引用 cbim_task_inspect 返回的本轮有效 evidenceIds。完成声明仍需人工判断。', schema: progressToolInputSchemas.cbim_task_step },
-
   cbim_delivery_prepare: { description: '准备交付候选。全部步骤须有有效回执；Workflow 若要求 requireCompleteManifest，须明确原 manifestId，产物验证须引用同一清单，程序重核全部声明根及后代。仅观察声明和旧模式不传 manifestId。这里只标记待审阅，不能表示人工业务验收通过。', schema: progressToolInputSchemas.cbim_delivery_prepare },
 };
 
@@ -43,13 +40,11 @@ const definitions = {
 export function progressTool(name: string, input: unknown)
 {
   if (!Object.hasOwn(definitions, name))
-
     return undefined;
 
   const definition = definitions[name as keyof typeof definitions];
 
   if (!definition)
-
     return undefined;
 
   return { args: definition.schema.parse(input), effects: ['maintenance'] as const, native: false };
@@ -93,7 +88,6 @@ export class TaskProgressTools
     this.identity = structuredClone(ports.identity);
 
     if (!progressToolIdentitySchema.safeParse(this.identity).success)
-
       fail('TASK_PROGRESS_IDENTITY', '执行进度必须绑定真实工作区、任务与运行')
   }
 
@@ -107,7 +101,6 @@ export class TaskProgressTools
   BeforeEffects(): number | undefined
   {
     if (!this.workflow?.bindings.length)
-
       return;
 
     const version = assertWorkflowPlan(this.workflow.bindings, this.planEstablished ? this.state : undefined, this.workflow.task);
@@ -147,7 +140,6 @@ export class TaskProgressTools
   Record(receipt: ToolReceipt, generation: number)
   {
     if (generation === this.generation && isProgressEvidence(receipt, this.identity))
-
       this.evidence.set(receipt.toolCallId, structuredClone(receipt))
   }
 
@@ -159,7 +151,6 @@ export class TaskProgressTools
       const parsed = progressTool(name, input);
 
       if (!parsed)
-
         throw Error('未知任务工具');
 
       const args = structuredClone(parsed.args) as ProgressPlanInput | ProgressStepInput | ProgressDeliveryInput;
@@ -182,7 +173,6 @@ export class TaskProgressTools
       else
       {
         if (args.expectedVersion !== (this.state?.version ?? 0))
-
           throw Error('任务计划版本已变化，请重新读取');
 
         if (name === 'cbim_task_plan')
@@ -190,7 +180,6 @@ export class TaskProgressTools
           const draft = args as ProgressPlanInput;
 
           if (new Set(draft.steps.map(s => s.id)).size !== draft.steps.length)
-
             throw Error('步骤 ID 不能重复');
 
           const next: TaskProgress = { version: draft.expectedVersion + 1, goal: draft.goal, reason: draft.reason, acceptance: draft.acceptance, state: 'executing', steps: draft.steps.map(s => ({ ...s, state: 'pending', evidence: [] })) };
@@ -208,7 +197,6 @@ export class TaskProgressTools
         else
         {
           if (!this.state)
-
             throw Error('请先创建任务计划');
 
           const next = structuredClone(this.state);
@@ -218,19 +206,15 @@ export class TaskProgressTools
           if (name === 'cbim_task_step')
           {
             const draft = args as ProgressStepInput,
-
               step = next.steps.find(s => s.id === draft.id);
 
             if (!step)
-
               throw Error('步骤不存在');
 
             if (draft.state === 'reported_done' && !draft.evidenceIds.length)
-
               throw Error('缺少执行证据，不能报告完成');
 
             if (draft.evidenceIds.some(id => !this.evidence.has(id)))
-
               throw Error('证据不存在、已过期或不属于本轮');
 
             Object.assign(step, { state: draft.state, evidence: draft.evidenceIds });
@@ -244,7 +228,6 @@ export class TaskProgressTools
             this.ports?.AssertDeliveryReady?.();
 
             if (next.steps.some(s => s.state !== 'reported_done' || !s.evidence.length || s.evidence.some(id => !this.evidence.has(id))))
-
               throw Error('仍有未完成步骤或缺失有效证据');
 
             const draft = args as ProgressDeliveryInput;
@@ -254,13 +237,11 @@ export class TaskProgressTools
             next.delivery = { summary: draft.summary, limitations: draft.limitations };
 
             if (draft.manifestId && !completeOutputRequired(this.workflow?.bindings ?? []))
-
               fail('MANIFEST_UNDECLARED', '本轮未声明完整交付要求，不能把观察引用作为出口');
 
             if (this.workflow?.bindings.length)
             {
               if (!this.planEstablished || next.goal !== this.workflow.task.goal || JSON.stringify(next.acceptance) !== JSON.stringify(this.workflow.task.acceptance))
-
                 fail('WORKFLOW_PLAN_REQUIRED', 'Workflow 交付要求本轮保存与原任务一致的计划');
 
               const selected = [...new Set(next.steps.flatMap(step => step.evidence))].map(id => this.evidence.get(id)!);
@@ -270,13 +251,11 @@ export class TaskProgressTools
               const complete = completeOutputRequired(this.workflow.bindings);
 
               if (complete && (!draft.manifestId || !this.ports.manifests))
-
                 fail('MANIFEST_REQUIRED', '完整交付必须明确选择原清单并装配真实复核端口');
 
               const manifest = complete ? this.ports.manifests!.Select(draft.manifestId!, draft.expectedVersion) : undefined;
 
               if (manifest)
-
                 basis.manifest = completeOutputProof(manifest);
 
               // 先核所有引用是否同一集合，再做文件读取；不能验证后自动换绑另一清单。
@@ -285,13 +264,13 @@ export class TaskProgressTools
               if (validations.length)
               {
                 if (!this.ports.validations)
-
                   fail('WORKFLOW_VALIDATION_UNAVAILABLE', '本轮没有可信文件验证端口');
 
                 await this.ports.validations.VerifyCurrent(validations);
 
                 this.ports.AssertDeliveryReady?.()
               }
+
               if (manifest)
               {
                 await this.ports.manifests!.VerifyCurrent(manifest);
@@ -300,11 +279,13 @@ export class TaskProgressTools
               }
             }
           }
+
           basis.expected = structuredClone(next);
 
           result = await this.Persist(next);
         }
       }
+
       return checkedJsonToolResult(name, result, memberToolOutputSchema(name as MemberToolName, { binding: this.identity, input: expectedInput, progress: basis }));
     })
   }

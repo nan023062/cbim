@@ -25,20 +25,15 @@ import { sourceExcerpt } from './chat-source-readers';
 const identitySchema = z.object({ id: z.string().min(1).max(128), importId: z.string().uuid() }).strict();
 
 const connectorId = z.string().regex(/^\.cbim\/connectors\/[A-Za-z0-9_-]+$/),
-
   digest = z.string().regex(/^[a-f0-9]{64}$/);
 
 const selectionSchema = z.object({ connectorId, connectionId: z.string().uuid() }).strict();
 
 const importSchema = identitySchema.extend({
   attachment: z.discriminatedUnion('kind', [
-
     z.object({ kind: z.literal('link'), value: z.string().min(1).max(4096) }).strict(),
-
     z.object({ kind: z.literal('web'), value: z.string().min(1).max(4096) }).strict(),
-
     selectionSchema.extend({ kind: z.literal('repository_resource'), expectedRevision: digest, resourceId: z.string().uuid() }).strict(),
-
   ])
 }).strict();
 
@@ -49,7 +44,6 @@ function input<T>(schema: z.ZodType<T>, raw: unknown)
   const parsed = schema.safeParse(raw);
 
   if (!parsed.success)
-
     fail('ATTACHMENT_IMPORT_INPUT', '资料导入字段无效，请重新选择');
 
   return parsed.data
@@ -89,28 +83,23 @@ export class ChatMaterialImports
     signal?.throwIfAborted();
 
     if (this.closed)
-
       fail('ATTACHMENT_IMPORT_CLOSED', '资料导入服务正在关闭');
 
     owner.Assert();
 
     if (this.workspace(owner.entry.id) !== owner)
-
       fail('ATTACHMENT_IMPORT_STALE', '工作区实例已变化，请重新选择资料')
   }
 
   private Operation(id: string, importId: string)
   {
     const key = this.Key(id, importId),
-
       old = this.operations.get(key);
 
     if (old)
-
       return old;
 
     if (this.operations.size >= 4096)
-
       fail('ATTACHMENT_IMPORT_LIMIT', '本次应用的资料导入记录已达上限，请正常重开应用后再导入');
 
     const value = { workspaceId: id, controller: new AbortController(), started: false, finished: false };
@@ -124,7 +113,6 @@ export class ChatMaterialImports
   Cancel(raw: unknown)
   {
     const request = input(identitySchema, raw),
-
       operation = this.Operation(request.id, request.importId);
 
     operation.controller.abort(Object.assign(Error('资料导入已取消'), { code: 'ATTACHMENT_IMPORT_CANCELLED' }));
@@ -139,7 +127,6 @@ export class ChatMaterialImports
     operation.controller.signal.throwIfAborted();
 
     if (operation.started)
-
       fail('ATTACHMENT_IMPORT_REUSED', '原导入已经处理，请核实原结果；再次导入需要新的操作标识');
 
     const owner = this.workspace(id);
@@ -157,7 +144,6 @@ export class ChatMaterialImports
   async Targets(raw: unknown)
   {
     const { id } = input(z.object({ id: z.string().min(1).max(128) }).strict(), raw),
-
       owner = this.workspace(id);
 
     this.Assert(owner);
@@ -195,11 +181,9 @@ export class ChatMaterialImports
     const target = port?.targets.find(item => item.connectorId === connectorId);
 
     if (!port || !target)
-
       fail('REPOSITORY_CONNECTION_NOT_GRANTED', '当前工作区没有此已授权且共享就绪的资料连接');
 
     if (target.connectionId !== connectionId)
-
       fail('REPOSITORY_CONNECTION_STALE', '资料连接已变化，请重新选择来源');
 
     return port;
@@ -223,9 +207,7 @@ export class ChatMaterialImports
   RetireWorkspace(id: string)
   {
     for (const value of this.operations.values())
-
       if (value.workspaceId === id && !value.finished)
-
         value.controller.abort(Object.assign(Error('工作区已关闭，资料导入已取消'), { code: 'ATTACHMENT_IMPORT_CANCELLED' }))
   }
 
@@ -234,7 +216,6 @@ export class ChatMaterialImports
     this.closed = true;
 
     for (const value of this.operations.values())
-
       value.controller.abort();
 
     await this.pending.Drain()

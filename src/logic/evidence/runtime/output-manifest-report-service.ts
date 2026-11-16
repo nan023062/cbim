@@ -57,7 +57,6 @@ export class OutputManifestReportService
     const parsed = outputManifestQuerySchema.safeParse(raw);
 
     if (!parsed.success)
-
       fail('MANIFEST_INPUT_INVALID', '完整产物清单查询参数无效');
 
     const { manifestId, ...identity } = parsed.data;
@@ -65,11 +64,9 @@ export class OutputManifestReportService
     this.owner.Assert();
 
     if (identity.workspaceId !== this.owner.entry.id)
-
       fail('GRAPH_IDENTITY_MISMATCH', '完整产物清单不属于当前工作区');
 
     const before = await this.store.Read(),
-
       facts = this.Facts(before, identity.rootSessionId, identity.taskId, identity.runId),
       { task, run, recursive } = facts;
 
@@ -80,7 +77,6 @@ export class OutputManifestReportService
     const unavailable = (reason: string) => { if (manifestId) report.verification = { manifestId, state: 'unverifiable', expectedHash: report.manifests.find(item => item.manifestId === manifestId)?.manifestHash ?? '0'.repeat(64), reason } };
 
     let summary: RunSummary | undefined,
-
       logStamp: string | undefined;
 
     if (!run || !recursive && !task?.runIds.includes(identity.runId))
@@ -101,74 +97,56 @@ export class OutputManifestReportService
 
         unavailable('原日志不可核实')
       }
+
       if (summary)
       {
         try
         {
           const binding = run.binding,
-
             first = summary.events[0],
-
             bounds = summary.events.filter(event => event.type === 'session.bound'),
-
             contracts = preparedWorkflowContracts(run.prepared);
 
           if (recursive ? !recursiveEvidenceLogMatches(recursive, summary, this.owner.entry.path) : (binding.workspaceId !== identity.workspaceId || binding.rootSessionId !== identity.rootSessionId || binding.taskId !== identity.taskId || binding.agentId !== task!.assignee.agentId || binding.agentInstanceId !== task!.assignee.agentInstanceId || binding.agentSessionId !== task!.assignee.agentSessionId || binding.planRevision !== task!.planRevision || summary.runId !== binding.runId || !equal(summary.memberBinding, binding) || summary.conversationBinding || !equal(summary.task, memberPublicTask(task!, this.owner.entry.path)) || first?.type !== 'run.started' || !equal(first.data.memberBinding, binding) || !equal(first.data.task, summary.task) || !equal(first.data.workflowContracts ?? [], contracts) || summary.sessionFile !== (run as DispatchRun).session.sessionFile || !summary.events.every((event, index) => event.seq === index + 1 && event.workspaceId === identity.workspaceId && event.taskId === identity.taskId && event.runId === identity.runId) || bounds.some(event => event.data.sessionId !== (run as DispatchRun).session.nativeSessionId || event.data.sessionFile !== (run as DispatchRun).session.sessionFile) || (run as DispatchRun).session.sessionFile && !bounds.length || summary.events.some(event => event.type === 'artifact.manifest_captured') && (!(run as DispatchRun).session.sessionFile || !bounds.length)))
-
             throw Error('日志身份、连续性或冻结范围不符');
 
           if (summary.logIntegrity?.partialTail !== false)
-
             throw Error('原日志完整性未确认');
 
           const scopes = preparedArtifactScopes(contracts),
-
             verified = verifyOutputManifests(summary.events, binding, run.prepared.knowledgeRevision, scopes);
 
           report.log = 'verified';
 
           if (scopes.length)
-
             report.scopes = scopes;
 
           report.manifests = verified.refs;
 
           for (const item of verified.issues)
-
             issue(item.code, item.message);
 
           logStamp = hash(json(summary.events));
 
           if (!scopes.length)
-
             issue('MANIFEST_SCOPE_MISSING', '此运行没有冻结的完整产物范围，旧选定文件记录不能转换为完整清单');
-
           else if (!verified.refs.length)
-
             issue('MANIFEST_MISSING', '此运行没有已确认的完整采集记录，不会自动补采');
 
           if (summary.unresolvedTools.length)
-
             issue('MANIFEST_UNKNOWN_EFFECT', '本轮仍有未确认工具；当前文件观察不能替代原副作用核实');
 
           if (manifestId)
           {
             const record = verified.records.find(item => item.manifest.manifestId === manifestId),
-
               terminal = summary.events.at(-1);
 
             if (!record)
-
               unavailable('所选清单不存在或缺少原成功采集回执');
-
             else if (run.status === 'active' || run.status === 'starting' || run.status === 'running')
-
               unavailable('本轮仍在运行，请结束后再明确复核');
-
             else if ((!recursive && summary.status !== run.status) || !terminal || !['run.settled', 'run.interrupted'].includes(terminal.type))
-
               unavailable('派发状态与日志终态尚未一致');
-
             else
             {
               const current = await this.owner.Read();
@@ -180,9 +158,7 @@ export class OutputManifestReportService
                 release = this.ports.AcquireRead();
 
                 const expected = record.manifest.snapshot,
-
                   signal = AbortSignal.timeout(artifactScopeLimits.readMs),
-
                   check = outputManifestCheckSchema.parse(await this.ports.Check(structuredClone(expected), signal));
 
                 signal.throwIfAborted();
@@ -190,17 +166,14 @@ export class OutputManifestReportService
                 this.owner.Assert();
 
                 if (check.expectedHash !== record.manifest.manifestHash)
-
                   throw Error('复核换绑原清单');
 
                 if (check.state === 'unverifiable')
                 {
                   if (check.observed || check.observedHash)
-
                     throw Error('未知复核不得返回部分观察作为完整结果')
                 }
                 else if (!check.observed || !equal(check.observed.scopes, expected.scopes) || check.observedHash !== outputManifestHash(check.observed) || (check.state === 'matches') !== (check.observedHash === record.manifest.manifestHash))
-
                   throw Error('平台返回的完整范围或结论不一致');
 
                 report.verification = { ...check, manifestId, expected: structuredClone(expected) };
@@ -215,6 +188,7 @@ export class OutputManifestReportService
               {
                 release?.()
               }
+
               const latest = await this.owner.Read();
 
               if (latest.revision !== current.revision)
@@ -226,7 +200,6 @@ export class OutputManifestReportService
                 issue('MANIFEST_KNOWLEDGE_CHANGED_DURING_READ', '复核期间知识版本变化，本次观察不可合并为稳定结果')
               }
               else if (current.revision !== record.manifest.knowledgeRevision)
-
                 issue('MANIFEST_KNOWLEDGE_CHANGED', '当前知识版本与采集时不同；集合相同不表示原任务依据仍有效');
             }
           }
@@ -245,6 +218,7 @@ export class OutputManifestReportService
         }
       }
     }
+
     const after = await this.store.Read();
 
     this.owner.Assert();
@@ -257,6 +231,7 @@ export class OutputManifestReportService
 
       issue('MANIFEST_STATE_CHANGED', '任务或运行事实已变化，请重新核实')
     }
+
     if (manifestId && run && logStamp)
     {
       try
@@ -264,7 +239,6 @@ export class OutputManifestReportService
         const afterLog = await this.Inspect(run);
 
         if (afterLog.logIntegrity?.partialTail !== false || hash(json(afterLog.events)) !== logStamp)
-
           throw Error('日志变化')
       }
       catch
@@ -276,6 +250,7 @@ export class OutputManifestReportService
         issue('MANIFEST_LOG_CHANGED', '复核期间原日志变化，本次观察无效')
       }
     }
+
     report.basis = hash(json({ state: this.Stamp(facts), log: logStamp ?? report.log, scopes: report.scopes, manifests: report.manifests, verification: report.verification, issues: report.issues, consistency: report.consistency }));
 
     return outputManifestReportSchema.parse(report);
@@ -286,28 +261,24 @@ export class OutputManifestReportService
     if ('protocol' in run)
     {
       if (!this.ports.InspectAgent)
-
         fail('EVIDENCE_SOURCE_UNAVAILABLE', '未装配递归运行只读日志入口');
 
       return this.ports.InspectAgent(run)
     }
+
     return this.ports.Inspect(run);
   }
 
   private Facts(state: DispatchState, root: string, taskId: string, runId: string)
   {
     const graph = state.graphs.find(g => g.identity.workspaceId === this.owner.entry.id && g.identity.rootSessionId === root),
-
       task = graph?.tasks.find(t => t.taskId === taskId),
-
       recursive = recursiveEvidenceRun(state, this.owner.entry.id, root, taskId, runId);
 
     if (state.workspaceId !== this.owner.entry.id || !graph || !task && !recursive)
-
       fail('TASK_NOT_FOUND', '当前主会话没有此任务');
 
     const run = recursive ?? state.runs?.find(r => r.binding.workspaceId === this.owner.entry.id && r.binding.rootSessionId === root && r.binding.taskId === taskId && r.binding.runId === runId),
-
       scope = state.scopes?.find(s => s.workspaceId === this.owner.entry.id && s.rootSessionId === root && s.scopeId === (recursive?.scopeId ?? task?.scopeId));
 
     return { graph, task, run, scope, recursive };

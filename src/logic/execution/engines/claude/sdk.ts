@@ -18,7 +18,6 @@ import type { EngineRuntimePackage } from '../../rules/engine-runtime';
 export async function loadClaudeSdk(runtime?: EngineRuntimePackage): Promise<{ query: typeof query }>
 {
   if (runtime && runtime.version !== '0.3.322')
-
     throw Error('当前资源版本尚未验证此 Claude 引擎版本');
 
   const requireRuntime = createRequire(typeof __filename === 'string' ? __filename : import.meta.url);

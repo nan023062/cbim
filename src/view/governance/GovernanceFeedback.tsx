@@ -25,7 +25,6 @@ export function GovernanceDecisionFeedback({ decision }: { decision: ModuleGover
 export function GovernanceResponseDetails({ selected }: { selected: GovernanceSelected })
 {
   if (!selected.proposal.respondsTo?.length)
-
     return null;
 
   return <section data-testid="governance-response-sources"><h4>本方案回应的原意见</h4>{!governanceResponsesCurrent(selected) && <p role="status">来源意见已被替代或尚未核实，不能继续沿用它批准或实施。历史记录保持不变。</p>}{selected.responseStates?.map(state => <article key={state.reference.decisionId}><b>{state.state === 'current' ? '来源仍有效' : '来源已被替代'}</b><code>{state.reference.decisionId}</code><p>{state.comment}</p><p>{focusLabels[state.feedback.focus]} · 期望回应：{state.feedback.expectedResponse}</p>{state.state === 'superseded' && <small>当前决定 {state.latestDecisionId} · 版本 {state.latestDecisionRevision}</small>}</article>)}<p>回应评价独立记录；没有评价就是未评价，批准不表示已回应或已理解。</p></section>;
@@ -35,15 +34,11 @@ export function GovernanceResponseDetails({ selected }: { selected: GovernanceSe
 export function GovernanceDecisionForm({ selected, disabled, OnSubmit: onSubmit }: { selected: GovernanceSelected; disabled: boolean; OnSubmit(fields: ReturnType<typeof governanceDecisionFields>): void | Promise<void> })
 {
   const [draft, setDraft] = useState(newGovernanceDecisionDraft),
-
     [reviewedKey, setReviewedKey] = useState<string>(),
-
     [error, setError] = useState('');
 
   const key = governanceDecisionReviewKey(selected),
-
     confirmed = reviewedKey === key,
-
     current = governanceResponsesCurrent(selected);
 
   function change(update: Partial<GovernanceDecisionDraft>)

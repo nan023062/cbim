@@ -19,7 +19,6 @@ import { ownerExecutionBindingSchema } from '../../team/rules/member-execution-b
 const id = z.string().min(1).max(512).refine(value => value.trim() === value && !/[\x00-\x1f]/.test(value));
 
 const text = z.string().trim().min(1).max(16000),
-
   revision = z.number().int().min(1).max(65);
 
 const unique = (values: string[]) => new Set(values).size === values.length;

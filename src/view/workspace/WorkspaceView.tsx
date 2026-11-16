@@ -46,19 +46,14 @@ import './workspace-view.css';
 export function BusinessArchitecture({ workspace, tabId, dirty, snapshot, refresh, onStarted }: { workspace: WorkspaceView; tabId: string; dirty: React.RefObject<Set<string>>; snapshot?: Snapshot; refresh?: () => Promise<void>; onStarted?: (taskId: string, title: string) => void })
 {
   const id = workspace.id,
-
     [query, setQuery] = useState(''),
-
     [chosen, setChosen] = useState(projectRootModuleId),
-
     [file, setFile] = useState('');
 
   const [source, setSource] = useState<SourceTarget>();
 
   const current = snapshot?.workspaceId === id ? snapshot : undefined,
-
     tree = current?.validation?.tree,
-
     node = tree?.nodes[chosen];
 
   const [editor, setEditor] = useState<
@@ -71,22 +66,17 @@ export function BusinessArchitecture({ workspace, tabId, dirty, snapshot, refres
 
       mode?: 'edit' | 'delete'
     }>(),
-
     [transfer, setTransfer] = useState<'publish' | 'import'>(),
-
     [message, setMessage] = useState(''),
-
     [error, setError] = useState('');
 
   const [governance, setGovernance] = useState<string>(),
-
     [ownership, setOwnership] = useState<
       {
         moduleId?: string;
 
         memberId?: string
       }>(),
-
     [registration, setRegistration] = useState<
       {
         moduleId: string;
@@ -111,7 +101,6 @@ export function BusinessArchitecture({ workspace, tabId, dirty, snapshot, refres
   function selectSource(target: SourceTarget)
   {
     if (dirty.current.has(tabId) && !confirm('丢弃未提交的知识草稿并切换？'))
-
       return;
 
     setFile('');
@@ -124,7 +113,6 @@ export function BusinessArchitecture({ workspace, tabId, dirty, snapshot, refres
   function select(path: string, kind: 'folder' | 'file')
   {
     if (dirty.current.has(tabId) && !confirm('丢弃未提交的知识草稿并切换？'))
-
       return;
 
     setSource(undefined);
@@ -143,7 +131,6 @@ export function BusinessArchitecture({ workspace, tabId, dirty, snapshot, refres
     setMessage('知识已更新，已有任务记录保持不变。');
 
     if (objects[0])
-
       select(objects[0], 'folder');
 
     try
@@ -162,50 +149,35 @@ export function BusinessArchitecture({ workspace, tabId, dirty, snapshot, refres
     const wrap = (work: () => void) => () => { if (dirty.current.has(tabId) && !confirm('存在未提交的知识草稿，继续打开节点操作？')) return; work() };
 
     if (target === '.cbim/workspace')
-
+    {
       return [
-
         { id: 'business-govern', label: launch.label, icon: 'sparkles', disabled: launch.disabled, OnSelect: wrap(() => void launch.start()) },
-
         { id: 'module-new', label: '新建工程模块', icon: 'plus', OnSelect: wrap(() => setEditor({ kind: 'module', parentId: target })) },
-
         { id: 'ownerships', label: '负责人记录', icon: 'clock', OnSelect: wrap(() => setOwnership({})) },
-
         { id: 'architecture-publish', label: '发布架构', icon: 'upload', disabled: !tree?.roots.length, OnSelect: wrap(() => setTransfer('publish')) },
-
         { id: 'architecture-import', label: '使用模板', icon: 'download', OnSelect: wrap(() => setTransfer('import')) },
-
       ];
+    }
 
     if (!tree?.nodes[target])
-
       return [];
 
     return [
-
       { id: 'module-child', label: '新建子模块', icon: 'plus', OnSelect: wrap(() => setEditor({ kind: 'module', parentId: target })) },
-
       { id: 'module-edit', label: '编辑模块', icon: 'edit', OnSelect: wrap(() => setEditor({ kind: 'module', id: target })) },
-
       { id: 'module-delete', label: '删除模块', icon: 'trash', OnSelect: wrap(() => setEditor({ kind: 'module', id: target, mode: 'delete' })) },
-
       { id: 'module-governance', label: '知识治理记录', icon: 'knowledge', OnSelect: wrap(() => setGovernance(target)) },
-
       { id: 'module-ownership', label: '负责人记录', icon: 'clock', OnSelect: wrap(() => setOwnership({ moduleId: target })) },
-
       { id: 'workflow-new', label: '新建 Workflow', icon: 'flow', OnSelect: wrap(() => setEditor({ kind: 'workflow', parentId: target })) },
-
     ];
   }
 
   const definition = (() => { try { return JSON.parse(current?.files.find(item => item.path === node?.id + '/module.json')?.text ?? '{}') } catch { return {} } })();
 
   if (current && registration)
-
     return <WorkspaceMembers key={id + current.instanceId} workspace={workspace} agents={agents} initialRegistration={{ agentId: registration.agentId }} returnLabel="返回模块负责人" onRegistered={memberId => { setOwnership({ moduleId: registration.moduleId, memberId }); setRegistration(undefined) }} onClose={() => { setOwnership({ moduleId: registration.moduleId }); setRegistration(undefined) }} />;
 
   if (current && ownership)
-
     return <ModuleOwnershipPanel key={id + current.instanceId} identity={{ workspaceId: id, instanceId: current.instanceId }} initialModuleId={ownership.moduleId} initialMemberId={ownership.memberId} registration={{ agents, onSelect: (moduleId, agentId) => setRegistration({ moduleId, agentId }) }} onClose={() => setOwnership(undefined)} />;
 
   return <div className="knowledge-tools business-management"><GovernanceStatus launch={launch} />

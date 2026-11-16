@@ -11,19 +11,16 @@ import { contextBridge, ipcRenderer, webUtils } from 'electron';
 async function importFiles(id: string, files: File[])
 {
   if (!Array.isArray(files) || !files.length || files.length > 12)
-
     throw Error('一次最多添加 12 个文件');
 
   const paths = files.map(file => webUtils.getPathForFile(file));
 
   if (paths.some(p => !p))
-
     throw Error('此粘贴内容没有本地文件路径，请先保存后选择文件');
 
   const result = await ipcRenderer.invoke('cbim:drop', { id, paths });
 
   if (!result.ok)
-
     throw Error(result.error.message);
 
   return result.value;

@@ -16,7 +16,6 @@ export function checkedMaterialTargets(raw: unknown, workspaceId: string)
   const value = targets.parse(raw);
 
   if (value.workspaceId !== workspaceId || value.targets.some(item => item.workspaceId !== workspaceId) || new Set(value.targets.map(item => item.connectorId)).size !== value.targets.length)
-
     throw Error('仓库资料来源与原工作区不一致');
 
   return value.targets;
@@ -29,7 +28,6 @@ export function checkedMaterialPage(raw: unknown, workspaceId: string, request: 
     { target } = request;
 
   if (target.workspaceId !== workspaceId || page.scope.workspaceId !== workspaceId || page.scope.connectorId !== target.connectorId || page.scope.repositoryId !== target.repositoryId || page.scope.connectionId !== target.connectionId || page.offset !== (request.offset ?? 0) || request.expectedRevision && page.revision !== request.expectedRevision)
-
     throw Error('仓库目录回包与原来源或版本不一致');
 
   return page;

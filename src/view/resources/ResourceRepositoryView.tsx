@@ -41,25 +41,18 @@ const api = window.cbim;
 export function ResourceRepositoryView({ category, onSettings }: { category: ResourceCategory; onSettings: () => void })
 {
   const meta = resourceCategories[category],
-
     kinds = (Object.keys(resourceKinds) as ResourceKind[]).filter(k => resourceKinds[k].category === category);
 
   const createKinds = creatableResourceKinds(category);
 
   const [status, setStatus] = useState<RepositoryStatus>(),
-
     [data, setData] = useState<ResourceLibrarySnapshot>(),
-
     [error, setError] = useState(''),
-
     [busy, setBusy] = useState(true);
 
   const [filter, setFilter] = useState<ResourceKind | 'all'>('all'),
-
     [query, setQuery] = useState(''),
-
     [draft, setDraft] = useState<Draft>(),
-
     [dirty, setDirty] = useState(false);
 
   const [apply, setApply] = useState<
@@ -85,7 +78,6 @@ export function ResourceRepositoryView({ category, onSettings }: { category: Res
     }>();
 
   const alive = useRef(true),
-
     targetRequest = useRef(0);
 
   async function refresh()
@@ -119,7 +111,6 @@ export function ResourceRepositoryView({ category, onSettings }: { category: Res
     finally
     {
       if (alive.current)
-
         setBusy(false)
     }
   }
@@ -131,7 +122,6 @@ export function ResourceRepositoryView({ category, onSettings }: { category: Res
   function edit(item?: ResourceDefinition, copy = false)
   {
     if (!data || (copy && item && !createKinds.includes(item.kind)))
-
       return;
 
     setDirty(false);
@@ -145,7 +135,6 @@ export function ResourceRepositoryView({ category, onSettings }: { category: Res
     const kind = applicableResourceKind(item);
 
     if (!kind)
-
       return;
 
     const request = ++targetRequest.current;
@@ -162,19 +151,16 @@ export function ResourceRepositoryView({ category, onSettings }: { category: Res
         } = await api.call('list');
 
       if (alive.current && targetRequest.current === request)
-
         setApply({ item, kind, entries: list.entries, targetId: list.entries.find(entry => entry.state === 'running')?.id ?? '' })
     }
     catch (cause)
     {
       if (alive.current && targetRequest.current === request)
-
         setError(cause instanceof Error ? cause.message : String(cause))
     }
     finally
     {
       if (alive.current && targetRequest.current === request)
-
         setBusy(false)
     }
   }
@@ -182,11 +168,9 @@ export function ResourceRepositoryView({ category, onSettings }: { category: Res
   async function continueApply()
   {
     if (!apply?.targetId || busy)
-
       return;
 
     const selected = apply,
-
       request = ++targetRequest.current;
 
     setBusy(true);
@@ -198,11 +182,9 @@ export function ResourceRepositoryView({ category, onSettings }: { category: Res
       const snapshot: Snapshot = await api.call('snapshot', { id: selected.targetId });
 
       if (!alive.current || targetRequest.current !== request)
-
         return;
 
       if (snapshot.workspaceId !== selected.targetId)
-
         throw Error('工作区身份已改变，请重新选择目标');
 
       setTransfer({ workspaceId: selected.targetId, snapshot, resourceId: selected.item.id, kind: selected.kind });
@@ -212,13 +194,11 @@ export function ResourceRepositoryView({ category, onSettings }: { category: Res
     catch (cause)
     {
       if (alive.current && targetRequest.current === request)
-
         setError(cause instanceof Error ? cause.message : String(cause))
     }
     finally
     {
       if (alive.current && targetRequest.current === request)
-
         setBusy(false)
     }
   }
@@ -226,7 +206,6 @@ export function ResourceRepositoryView({ category, onSettings }: { category: Res
   async function save()
   {
     if (!draft)
-
       return;
 
     setBusy(true);
@@ -256,7 +235,6 @@ export function ResourceRepositoryView({ category, onSettings }: { category: Res
   async function remove(item: ResourceDefinition)
   {
     if (!data || !confirm(`从当前仓库删除「${item.name}」？已存在的工作区知识不会被修改。`))
-
       return;
 
     setBusy(true);
@@ -285,7 +263,6 @@ export function ResourceRepositoryView({ category, onSettings }: { category: Res
   function closeDraft()
   {
     if (!busy && (!dirty || confirm('放弃尚未保存的资源修改？')))
-
       setDraft(undefined)
   }
 

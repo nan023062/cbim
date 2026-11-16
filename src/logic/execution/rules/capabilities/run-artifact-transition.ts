@@ -99,49 +99,38 @@ export class RunArtifactTransition implements ArtifactTransitionToolPort
   Guard(name: string, id: string, raw: unknown, active: readonly string[]): string | undefined
   {
     if (this.reserved)
-
       return '原删除/移动尚未结束，请等待实际操作和回执';
 
     if (this.unverified.size && !['read', 'grep', 'find', 'ls', 'cbim_scoped_read', 'cbim_task_inspect', 'cbim_task_help'].includes(name))
-
       return 'ARTIFACT_TRANSITION_REVIEW_REQUIRED: 原删除/移动待核实，本轮仅可读取或求助，不能重试、交付或停泊';
 
     if (name !== artifactTransitionToolName)
-
       return;
 
     if (this.controller.signal.aborted)
-
       return '运行已停止删除/移动';
 
     const parsed = artifactTransitionInputSchema.safeParse(raw);
 
     if (!parsed.success)
-
       return '删除/移动参数不符合冻结操作选择协议';
 
     const input = parsed.data,
-
       requirement = preparedArtifactTransitions(this.scopes).find(item => item.moduleId === input.moduleId && item.operationIndex === input.operationIndex);
 
     if (!requirement || active.length || this.context.Version() !== input.expectedTaskProgressVersion)
-
       return '冻结操作、执行计划或唯一调用状态已变化';
 
     const prepared = this.events.filter(e => e.type === 'artifact.transition_prepared');
 
     if (prepared.length >= artifactScopeLimits.transitions || prepared.some(e => { const p = e.data.prepared as ArtifactTransitionPrepared; return p?.moduleId === input.moduleId && p?.operationIndex === input.operationIndex }))
-
       return '本轮原操作已登记，不能再次发出同一删除/移动';
 
     const evidence = verifyOutputManifests(this.events, this.binding, this.manifests.knowledgeRevision, this.scopes),
-
       before = evidence.records.find(item => item.manifest.manifestId === input.beforeManifestId),
-
       ref = evidence.refs.find(item => item.manifestId === input.beforeManifestId);
 
     if (!before || !ref || ref.invalidated || before.manifest.progressVersion > input.expectedTaskProgressVersion)
-
       return '请明确选择本轮未失效的真实写前完整清单';
 
     try
@@ -152,6 +141,7 @@ export class RunArtifactTransition implements ArtifactTransitionToolPort
     {
       return '写前清单没有所需源文件、目标已存在或范围不完整'
     }
+
     this.reserved = { id, input: structuredClone(input), inputHash: hash(JSON.stringify(raw)), before: structuredClone(before), operation: requirement.operation, consumed: false, settled: false, validated: false, finished: false, badFinish: false };
   }
 
@@ -159,20 +149,17 @@ export class RunArtifactTransition implements ArtifactTransitionToolPort
   Authorize(id: string, seq: number)
   {
     if (this.reserved?.id === id && !this.controller.signal.aborted)
-
       this.reserved.allowedSeq = seq
   }
 
   Observed(event: StoredEvent)
   {
     if (event.type === 'run.started' || event.type.startsWith('tool.') || event.type.startsWith('artifact.') || ['task.updated', 'run.stop_requested', 'run.interrupted'].includes(event.type))
-
       this.events.push(event);
 
     const current = this.reserved;
 
     if (!current || event.data.id !== current.id)
-
       return;
 
     if (event.type === 'tool.denied' && !current.consumed)
@@ -181,6 +168,7 @@ export class RunArtifactTransition implements ArtifactTransitionToolPort
 
       return
     }
+
     if (event.type === 'tool.finished')
     {
       current.finished = true;
@@ -201,13 +189,13 @@ export class RunArtifactTransition implements ArtifactTransitionToolPort
           })?.content;
 
         if (content?.length !== 1 || content[0].type !== 'text' || typeof content[0].text !== 'string' || !equal(artifactTransitionOutputSchema.parse(JSON.parse(content[0].text)).operation, current.result))
-
           current.badFinish = true
       }
       catch
       {
         current.badFinish = true
       }
+
       this.Release();
     }
   }
@@ -217,15 +205,11 @@ export class RunArtifactTransition implements ArtifactTransitionToolPort
     const current = this.reserved;
 
     if (!current?.settled || !current.finished)
-
       return;
 
     if (current.validated && !current.badFinish)
-
       this.unverified.delete(current.id);
-
     else
-
       this.unverified.add(current.id);
 
     this.reserved = undefined
@@ -240,7 +224,6 @@ export class RunArtifactTransition implements ArtifactTransitionToolPort
   AssertVerified()
   {
     if (this.unverified.size)
-
       fail('ARTIFACT_TRANSITION_REVIEW_REQUIRED', '原删除/移动结果待核实，不能交付或安全交接')
   }
 
@@ -264,11 +247,9 @@ export class RunArtifactTransition implements ArtifactTransitionToolPort
   async Call(name: string, raw: unknown, id?: string, signal?: AbortSignal)
   {
     const input = artifactTransitionInputSchema.parse(raw),
-
       current = this.reserved;
 
     if (name !== artifactTransitionToolName || !id || !current || current.id !== id || current.consumed || !current.allowedSeq || !equal(current.input, input) || current.inputHash !== hash(JSON.stringify(raw)))
-
       fail('ARTIFACT_TRANSITION_AUTHORIZATION', '删除/移动缺少本轮原参数的一次性可靠授权');
 
     current.consumed = true;
@@ -276,7 +257,6 @@ export class RunArtifactTransition implements ArtifactTransitionToolPort
     this.unverified.add(id);
 
     const active = AbortSignal.any([this.controller.signal, ...(signal ? [signal] : []), AbortSignal.timeout(60000)]),
-
       version = this.context.Version();
 
     const check = () => { active.throwIfAborted(); this.context.AssertReady(id); if (this.context.Version() !== version) fail('ARTIFACT_TRANSITION_CHANGED', '删除/移动期间计划发生变化') };
@@ -288,7 +268,6 @@ export class RunArtifactTransition implements ArtifactTransitionToolPort
     try
     {
       const operation = await work,
-
         result = checkedJsonToolResult(name, { state: 'applied', operation }, artifactTransitionOutputSchema);
 
       current.result = structuredClone(operation);

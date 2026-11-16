@@ -16,21 +16,13 @@ export function chatIpcHandlers(app: ApplicationServices): IpcHandlers<keyof Cha
 {
   return {
     'chat.paths': args => new ChatInputs(app.Workspace(args.id)).PastedPaths(args.paths),
-
     'chat.image': args => new ChatInputs(app.Workspace(args.id)).ClipboardImage(args),
-
     'chat.attach': async args => { return new ChatInputs(app.Workspace(args.id)).Add(args.attachment); },
-
     'chat.materialTargets': async args => { return app.chatMaterials.Targets(args); },
-
     'chat.materialList': async args => { return app.chatMaterials.List(args); },
-
     'chat.import': async args => { return app.chatMaterials.Import(args); },
-
     'chat.importCancel': async args => { return app.chatMaterials.Cancel(args); },
-
     'chat.connectors': async args => { return new ChatInputs(app.Workspace(args.id)).Connectors(); },
-
     'chat.preview': async args => { return new ChatInputs(app.Workspace(args.id)).Preview(args.attachmentId); },
   };
 }

@@ -45,7 +45,6 @@ export class ExecutionReportService
     const parsed = executionReportInputSchema.safeParse(raw);
 
     if (!parsed.success)
-
       fail('MEMBER_INPUT_INVALID', '执行核实参数无效');
 
     const input = parsed.data;
@@ -53,13 +52,11 @@ export class ExecutionReportService
     this.owner.Assert();
 
     if (input.workspaceId !== this.owner.entry.id)
-
       fail('GRAPH_IDENTITY_MISMATCH', '执行核实不属于当前工作区');
 
     const before = await this.store.Read();
 
     if (before.agentBusinessRuns?.some(r => r.binding.workspaceId === input.workspaceId && r.binding.rootSessionId === input.rootSessionId && r.binding.taskId === input.taskId))
-
       return this.ReadRecursive(input, before);
 
     const facts = this.Facts(before, input.rootSessionId, input.taskId, input.runId);
@@ -71,14 +68,12 @@ export class ExecutionReportService
     const issue = (code: string, severity: ExecutionReport['issues'][number]['severity'], message: string) => result.issues.push({ code, severity, message });
 
     let summary: RunSummary | undefined,
-
       logToken: unknown;
 
     if (!input.runId)
     {
       // 没有 run 意图也必须没有领取/执行事实，才可说当前任务尚未启动。
       const claimed = facts.assignments.some(message => !!message.claim),
-
         registered = facts.registeredRuns.length > 0;
 
       const cancelled = this.CancelledWithoutRun(facts);
@@ -92,7 +87,6 @@ export class ExecutionReportService
         issue(cancelled ? 'TASK_CANCELLED_BEFORE_START' : 'TASK_NOT_STARTED', 'info', cancelled ? '该任务已在启动前明确撤销，没有登记运行或领取记录；这不表示其它任务没有修改工作区。' : '当前任务没有已提交的运行或领取记录；这不表示工作区从未被其它任务修改。');
       }
       else
-
         issue('RUN_NOT_SELECTED', 'info', '请选择需要核实的运行轮次；未选择时不自动读取最新日志。');
     }
     else if (!task.runIds.includes(input.runId) || !run || !this.Bound(run, task, input.workspaceId, input.rootSessionId))
@@ -118,6 +112,7 @@ export class ExecutionReportService
 
         issue('RUN_LOG_' + result.log.state.toUpperCase(), 'danger', '无法核实所选运行日志；缺失或损坏不代表没有执行或没有副作用。');
       }
+
       if (summary)
       {
         try
@@ -133,7 +128,6 @@ export class ExecutionReportService
           else
           {
             const terminal = summary.events.at(-1),
-
               hasTerminal = terminal?.type === 'run.settled' || terminal?.type === 'run.interrupted';
 
             const toolFacts = executionToolFacts(summary, run);
@@ -150,45 +144,34 @@ export class ExecutionReportService
             const uncertain = !!summary.logIntegrity?.partialTail || toolFacts.invalid || toolFacts.explicitUnknown || (!active(run) && pending);
 
             if (summary.logIntegrity?.partialTail)
-
               issue('RUN_LOG_INCOMPLETE', 'danger', '日志尾行尚未完整写入；可读前缀不能证明本次执行已完整结束。');
 
             if (toolFacts.invalid)
-
               issue('TOOL_EVIDENCE_INVALID', 'danger', '部分工具缺少匹配的授权链或可信回执，结果未知。');
 
             if (pending)
-
               issue(active(run) && !uncertain ? 'TOOLS_IN_FLIGHT' : 'TOOLS_UNCONFIRMED', active(run) && !uncertain ? 'info' : 'warning', active(run) && !uncertain ? '存在正在执行、尚未返回回执的工具。' : '存在未确认结果的工具；请核实产物和外部操作，不要自动重放。');
 
             if (!uncertain)
             {
               if (active(run) && !hasTerminal)
-
                 result.execution = 'in_flight';
-
               else if (!active(run) && hasTerminal && summary.status === run.status)
-
                 result.execution = 'settled';
-
               else
-
                 issue('RUN_STATE_UNCONFIRMED', 'warning', '派发状态与日志终态尚未一致，等待状态稳定后重新核实。');
             }
-            if (toolFacts.counts.failed)
 
+            if (toolFacts.counts.failed)
               issue('TOOLS_FAILED_WITH_POSSIBLE_EFFECTS', 'warning', '收到工具失败回执；工具失败前仍可能已经写入文件或改变外部状态。');
 
             if (['failed', 'cancelled', 'interrupted'].includes(run.status))
-
               issue('RUN_ENDED_ABNORMALLY', 'warning', '运行已异常结束或停止；这不表示已撤销执行产生的改动。');
 
             if (run.status === 'completed' && run.checkpointProof)
-
               issue('RUN_CHECKPOINTED', 'info', '本轮已正常结束并提交安全检查点；检查点不是交付候选，也不自动恢复执行。');
 
             if (result.execution === 'settled' && task.result?.runId === input.runId && task.result.planRevision === run.binding.planRevision)
-
               result.candidate = { resultId: task.result.resultId, runId: task.result.runId, planRevision: task.result.planRevision, acceptance: 'not_evaluated' };
 
             // 先保留完整有界字段用于 hash/count；分页只在读后屏障通过后返回。
@@ -214,6 +197,7 @@ export class ExecutionReportService
         }
       }
     }
+
     const after = await this.store.Read();
 
     this.owner.Assert();
@@ -232,20 +216,16 @@ export class ExecutionReportService
 
       issue('REPORT_CHANGED_DURING_READ', 'warning', '读取期间任务或运行状态发生变化；请重新核实，不能合并本次与旧报告。');
     }
+
     result.basis.key = hash(json({ state: this.Stamp(facts), log: logToken ?? result.log, consistency: result.consistency }));
 
     this.Page(result, input);
 
     if (scope?.status === 'closed')
-
       result.next = { kind: 'new_cycle_only', reason: '本调度周期已关闭，只能先核实遗留影响，再在新周期创建新的执行任务；本报告不执行重试。' };
-
     else if (result.execution === 'in_flight' || result.execution === 'not_started')
-
       result.next = { kind: 'observe', reason: '继续观察任务状态；读取报告不会启动、停止或确认任何操作。' };
-
     else if (result.execution === 'settled' && !result.tools.counts.failed)
-
       result.next = { kind: 'inspect_effects', reason: '已核实运行回执；产物是否满足业务目标仍需独立验证与验收。' };
 
     return executionReportSchema.parse(result);
@@ -266,13 +246,10 @@ export class ExecutionReportService
     const issue = (code: string, severity: ExecutionReport['issues'][number]['severity'], message: string) => result.issues.push({ code, severity, message });
 
     let summary: RunSummary | undefined,
-
       logToken: string | undefined;
 
     if (!input.runId)
-
       issue('RUN_NOT_SELECTED', 'info', '请选择原运行；未选择时不读取最近日志。');
-
     else if (!run)
     {
       result.log.state = 'missing';
@@ -284,7 +261,6 @@ export class ExecutionReportService
       try
       {
         if (!this.inspectAgent)
-
           fail('EVIDENCE_SOURCE_UNAVAILABLE', '未装配递归日志入口');
 
         summary = await this.inspectAgent(structuredClone(run))
@@ -300,6 +276,7 @@ export class ExecutionReportService
 
         issue('RUN_LOG_UNAVAILABLE', 'danger', '原调用日志不能核实，不表示没有执行。')
       }
+
       if (summary)
       {
         try
@@ -313,7 +290,6 @@ export class ExecutionReportService
           else
           {
             const hasTerminal = summary.events.some(e => e.type === 'run.settled' || e.type === 'run.interrupted'),
-
               tools = executionToolFacts(summary, run);
 
             result.basis.logSeq = summary.events.at(-1)?.seq;
@@ -325,41 +301,31 @@ export class ExecutionReportService
             logToken = hash(json(summary.events));
 
             const pending = tools.counts.unknown > 0 || summary.unresolvedTools.length > 0,
-
               uncertain = result.log.state !== 'verified' || tools.invalid || tools.explicitUnknown || (run.status === 'closed' && pending);
 
             if (result.log.state === 'incomplete')
-
               issue('RUN_LOG_INCOMPLETE', 'danger', '日志尾部不完整，不能据此前缀判定完整执行。');
 
             if (tools.invalid)
-
               issue('TOOL_EVIDENCE_INVALID', 'danger', '工具缺少可靠授权链或回执。');
 
             if (!uncertain)
             {
               if (run.status === 'active' && !hasTerminal)
-
                 result.execution = 'in_flight';
-
               else if (run.status === 'closed' && hasTerminal)
-
                 result.execution = 'settled';
-
               else
-
                 issue('RUN_STATE_UNCONFIRMED', 'warning', '原登记与日志终态尚未一致。')
             }
-            if (pending)
 
+            if (pending)
               issue(result.execution === 'in_flight' ? 'TOOLS_IN_FLIGHT' : 'TOOLS_UNCONFIRMED', 'warning', '原调用仍有未确认工具结果，不自动重放。');
 
             if (tools.counts.failed)
-
               issue('TOOLS_FAILED_WITH_POSSIBLE_EFFECTS', 'warning', '工具返回失败，失败前仍可能已修改文件或外部状态。');
 
             if (hasTerminal && summary.status !== 'completed')
-
               issue('RUN_ENDED_ABNORMALLY', 'warning', '原调用已停止或异常结束，不代表已经撤销改动。');
           }
         }
@@ -380,6 +346,7 @@ export class ExecutionReportService
         }
       }
     }
+
     const after = await this.store.Read();
 
     this.owner.Assert();
@@ -394,16 +361,14 @@ export class ExecutionReportService
 
       issue('REPORT_CHANGED_DURING_READ', 'warning', '读取期间登记或周期变化，请重新核实。')
     }
+
     result.basis.key = hash(json({ state: stamp(facts), log: logToken ?? result.log, consistency: result.consistency }));
 
     this.Page(result, input);
 
     if (scope.status === 'closed')
-
       result.next = { kind: 'new_cycle_only', reason: '原周期已关闭；先核实遗留影响，新指令须走新调用，不自动重放原工具。' };
-
     else if (result.execution === 'in_flight')
-
       result.next = { kind: 'observe', reason: '继续观察原调用；读取报告不会执行操作。' };
 
     return executionReportSchema.parse(result);
@@ -413,7 +378,6 @@ export class ExecutionReportService
   private Page(result: ExecutionReport, input: ReturnType<typeof executionReportInputSchema.parse>)
   {
     const reset = !!input.cursor && input.cursor.basis !== result.basis.key,
-
       offset = reset ? 0 : input.cursor?.offset ?? 0;
 
     result.tools.paginationReset = reset || offset > result.tools.total;
@@ -423,18 +387,15 @@ export class ExecutionReportService
     result.tools.items = result.tools.items.slice(start, start + input.limit);
 
     if (result.tools.available && start + input.limit < result.tools.total)
-
       result.tools.nextCursor = { basis: result.basis.key, offset: start + input.limit };
   }
 
   private Facts(state: DispatchState, rootSessionId: string, taskId: string, runId?: string)
   {
     const graph = state.graphs.find(g => g.identity.workspaceId === this.owner.entry.id && g.identity.rootSessionId === rootSessionId),
-
       task = graph?.tasks.find(t => t.taskId === taskId);
 
     if (state.workspaceId !== this.owner.entry.id || !graph || !task)
-
       fail('TASK_NOT_FOUND', '当前主会话没有此派发任务');
 
     const run = runId ? state.runs?.find(r => r.binding.runId === runId && r.binding.taskId === taskId && r.binding.rootSessionId === rootSessionId && r.binding.workspaceId === this.owner.entry.id) : undefined;
@@ -443,7 +404,6 @@ export class ExecutionReportService
 
     // 未选 run 时同样把领取与持久意图纳入读取屏障，不能仅依据 task.runIds 的显示字段判断未启动。
     const assignments = state.outbox.filter(message => message.kind === 'assignment' && message.taskId === taskId),
-
       registeredRuns = (state.runs ?? []).filter(item => item.binding.taskId === taskId);
 
     return { graph, task, run, scope, assignments, registeredRuns };
@@ -455,7 +415,6 @@ export class ExecutionReportService
     const parsed = queuedTaskCancellationSchema.safeParse(task.cancelledBeforeStart);
 
     if (!parsed.success)
-
       return false;
 
     const record = parsed.data;

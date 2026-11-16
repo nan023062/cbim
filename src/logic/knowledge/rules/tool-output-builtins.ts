@@ -12,15 +12,10 @@ const referenceBase = { reference: z.string(), anchor: z.string().optional() };
 
 /** 缺少目标 ID 的外部、同文档及未解析引用仍是明确结果，不推断为可读取内置资料。 */
 const reference = z.discriminatedUnion('status', [
-
   z.object({ ...referenceBase, status: z.literal('available'), id: knowledgeOutputIdSchema }).strict(),
-
   z.object({ ...referenceBase, status: z.literal('same_document') }).strict(),
-
   z.object({ ...referenceBase, status: z.literal('external') }).strict(),
-
   z.object({ ...referenceBase, status: z.literal('unavailable') }).strict(),
-
 ]);
 
 export const builtinCatalogOutputSchema = z.object({ entryId: knowledgeOutputIdSchema, contract: z.string(), revision: knowledgeOutputHashSchema, items: z.array(entry) }).strict();

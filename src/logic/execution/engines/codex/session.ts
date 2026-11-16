@@ -17,41 +17,33 @@ export function codexPath(file: string)
 export async function readCodexSession(home: string, file: string, id: string, cwd: string)
 {
   const root = await fs.realpath(path.join(home, 'sessions')),
-
     absolute = codexPath(file),
-
     relative = path.relative(root, absolute);
 
   if (!relative || relative === '..' || relative.startsWith('..' + path.sep) || path.isAbsolute(relative) || !path.basename(file).endsWith('-' + id + '.jsonl'))
-
     throw Error('Codex 会话不属于本机受管目录');
 
   if (await fs.realpath(file) !== absolute)
-
     throw Error('Codex 会话路径包含链接');
 
   const stat = await fs.lstat(file);
 
   if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1 || stat.size > 64 * 1024 * 1024)
-
     throw Error('Codex 会话文件不能可靠核实');
 
   const text = new TextDecoder('utf-8', { fatal: true }).decode(await fs.readFile(file));
 
   if (!text.endsWith('\n'))
-
     throw Error('Codex 会话尾行不完整');
 
   const entries = text.trimEnd().split('\n').map(line => JSON.parse(line));
 
   if (entries.length > 100000 || entries.some(entry => !entry || typeof entry !== 'object' || Array.isArray(entry) || typeof entry.type !== 'string'))
-
     throw Error('Codex 会话记录损坏');
 
   const meta = entries[0];
 
   if (meta.type !== 'session_meta' || meta.payload?.id !== id || path.resolve(meta.payload.cwd ?? '') !== path.resolve(cwd) || entries.slice(1).some(entry => entry.type === 'session_meta'))
-
     throw Error('Codex 原生身份或工作区不一致');
 
   return meta.payload as

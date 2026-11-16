@@ -34,13 +34,9 @@ export function coordinationVersions(scope: MainToolScope, graph: GraphSnapshot)
 {
   return {
     goalRevision: scope.goal?.revision ?? null, planRevision: scope.goal?.plan?.revision ?? null,
-
     graphCursor: { streamId: graph.cursor.streamId, seq: graph.cursor.seq },
-
     tasks: graph.tasks.map(task => ({ taskId: task.taskId, scopeId: task.scopeId ?? null, revision: task.revision, planRevision: task.planRevision, status: task.status })),
-
     evidence: graph.tasks.filter(task => task.scopeId === scope.scopeId && task.result).map(task => ({ kind: 'member-result' as const, taskId: task.taskId, runId: task.result!.runId, resultId: task.result!.resultId, planRevision: task.result!.planRevision, toolCallIds: task.result!.evidenceRefs, })),
-
     evidenceNotice: '候选引用不是验收；toolCallIds 沿原交付保存，审阅仍核实真实工具、日志与当前文件。',
   };
 }
@@ -52,23 +48,19 @@ export function coordinationPreview(state: DispatchState, scope: DispatchScope, 
 
   const result: CoordinationPreview = {
     status: 'preview', readOnly: true, requiresConfirmation: true,
-
     workspaceId: scope.workspaceId, rootSessionId: scope.rootSessionId, scopeId: scope.scopeId,
-
     graphCursor: { streamId: graph.cursor.streamId, seq: graph.cursor.seq }, goalRevision: scope.goal?.revision ?? null,
-
     affectedTaskIds: [], retainedTaskIds: [], issues: []
   };
+
   try
   {
     if (input)
     {
       const nodes = new Set(input.targets.map(target => { const task = scoped.find(task => task.taskId === target.taskId); if (!task) fail('CANCEL_NOT_ALLOWED', '撤销目标不属于本周期：' + target.taskId); if (task.revision !== target.expectedRevision) fail('CANCEL_TASK_STALE', '任务版本已变化：' + target.taskId); return task.nodeId; })),
-
         queue = [...nodes];
 
       for (let i = 0; i < queue.length; i++)
-
         for (const edge of graph.edges)
         {
           if (edge.enabled && edge.kind === 'dependency' && edge.fromNodeId === queue[i] && !nodes.has(edge.toNodeId))
@@ -78,6 +70,7 @@ export function coordinationPreview(state: DispatchState, scope: DispatchScope, 
             queue.push(edge.toNodeId);
           }
         }
+
       const selected = graph.tasks.filter(task => nodes.has(task.nodeId) && task.status !== 'cancelled');
 
       result.affectedTaskIds = selected.map(task => task.taskId);
@@ -99,6 +92,7 @@ export function coordinationPreview(state: DispatchState, scope: DispatchScope, 
       const draft = memberPauseSchema.parse({
         version: 1, expectedGraphCursor: result.graphCursor, tasks: pending.map(task => ({ taskId: task.taskId, expectedRevision: task.revision, expectedPlanRevision: task.planRevision, ...(task.status === 'checkpointed' ? { kind: 'checkpoint', checkpointId: task.checkpoints?.at(-1)?.checkpointId } : { kind: 'unstarted' }), }))
       });
+
       memberPauseSelection(state, scope, draft);
 
       result.memberPause = draft;
@@ -108,5 +102,6 @@ export function coordinationPreview(state: DispatchState, scope: DispatchScope, 
   {
     result.issues.push({ code: error instanceof Fault ? error.code : 'CLOSURE_UNAVAILABLE', message: error instanceof Fault ? error.message : '当前集合不满足清单约束，请核实任务状态、数量及可靠检查点。' });
   }
+
   return coordinationPreviewSchema.parse(result);
 }

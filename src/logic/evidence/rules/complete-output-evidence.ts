@@ -60,29 +60,22 @@ export function completeOutputProof(raw: OutputManifestRecord): OutputManifestPr
 export function selectCompleteOutput(evidence: ReturnType<typeof verifyOutputManifests>, bindings: readonly CompleteOutputBinding[], manifestId: string, context: { workspaceId: string; taskId: string; runId: string; knowledgeRevision: string; progressVersion?: number }): OutputManifestRecord
 {
   const records = evidence.records.filter(record => record.manifest.manifestId === manifestId),
-
     refs = evidence.refs.filter(ref => ref.manifestId === manifestId),
-
     scopes = preparedArtifactScopes(bindings);
 
   if (records.length !== 1 || refs.length !== 1 || refs[0].invalidated)
-
     fail('MANIFEST_REQUIRED', '需要明确选择本轮已确认且未失效的完整产物清单');
 
   const record = outputManifestRecordSchema.parse(records[0]),
-
     manifest = record.manifest,
-
     proof = completeOutputProof(record);
 
   if (!scopes.length || !equal(manifest.scopes, scopes) || manifest.binding.workspaceId !== context.workspaceId || manifest.binding.taskId !== context.taskId || manifest.binding.runId !== context.runId || manifest.knowledgeRevision !== context.knowledgeRevision || context.progressVersion !== undefined && manifest.progressVersion > context.progressVersion || !equal(outputManifestReference(manifest), (({ invalidated: _invalidated, ...ref }) => ref)(refs[0])))
-
     fail('MANIFEST_IDENTITY', '完整清单不属于原运行、冻结范围、知识或当前计划');
 
   const provenSources = (proof.operations ?? []).map(item => item.operation.kind === 'delete' ? item.operation.path : item.operation.from);
 
   if (manifest.snapshot.roots.some(root => root.state === 'missing' && !provenSources.includes(root.relativePath)) || !proof.entryCount && !proof.operations?.length)
-
     fail('MANIFEST_OUTPUT_MISSING', '完整交付要求的输出根缺失且没有原删除/移动证明，请补齐产物后重新采集');
 
   return structuredClone(record);
@@ -92,7 +85,6 @@ export function selectCompleteOutput(evidence: ReturnType<typeof verifyOutputMan
 export function assertCompleteOutputCurrent(expected: OutputManifestSnapshot, raw: unknown): void
 {
   if (completeOutputObservation(expected, raw).state !== 'matches')
-
     fail('MANIFEST_OUTPUT_CHANGED', '完整产物集合已变化、缺失或无法核实，请重新读取、采集并验证');
 }
 
@@ -100,11 +92,9 @@ export function assertCompleteOutputCurrent(expected: OutputManifestSnapshot, ra
 export function completeOutputObservation(expected: OutputManifestSnapshot, raw: unknown): { state: 'matches' | 'changed' | 'unverifiable'; observedHash?: string }
 {
   const parsed = outputManifestCheckSchema.safeParse(raw),
-
     expectedHash = outputManifestHash(expected);
 
   if (!parsed.success || parsed.data.expectedHash !== expectedHash)
-
     fail('MANIFEST_OBSERVATION_INVALID', '完整产物观察缺少正确的原清单身份');
 
   const value = parsed.data;
@@ -112,13 +102,12 @@ export function completeOutputObservation(expected: OutputManifestSnapshot, raw:
   if (value.state === 'unverifiable')
   {
     if (value.observed || value.observedHash)
-
       fail('MANIFEST_OBSERVATION_INVALID', '无法核实的集合不能附带局部成功观察');
 
     return { state: value.state }
   }
-  if (!value.observed || !equal(value.observed.scopes, expected.scopes) || value.observedHash !== outputManifestHash(value.observed) || (value.state === 'matches') !== (value.observedHash === expectedHash))
 
+  if (!value.observed || !equal(value.observed.scopes, expected.scopes) || value.observedHash !== outputManifestHash(value.observed) || (value.state === 'matches') !== (value.observedHash === expectedHash))
     fail('MANIFEST_OBSERVATION_INVALID', '完整产物观察范围或集合指纹不一致');
 
   return { state: value.state, observedHash: value.observedHash };
@@ -130,6 +119,5 @@ export function assertCompleteOutputBudget(records: readonly OutputManifestRecor
   const manifests = records.map(record => record.manifest);
 
   if (manifests.reduce((sum, item) => sum + item.snapshot.roots.length, 0) > artifactScopeLimits.roots || files.length + manifests.reduce((sum, item) => sum + item.entryCount, 0) > artifactScopeLimits.entries || files.reduce((sum, file) => sum + file.byteLength, 0) + manifests.reduce((sum, item) => sum + item.byteLength, 0) > artifactScopeLimits.totalBytes)
-
     fail('MANIFEST_LIMIT', '本次完整产物复核超过16根、512条目或32 MiB总预算');
 }

@@ -22,13 +22,10 @@ import './conversation-topics.css';
 export function MemberConversation({ member, graph, scopes, active, onSelectTask, selectedTopicId, onSelectTopic }: { member: TeamConversation; graph?: GraphSnapshot; scopes: readonly ScopeSummary[]; active: boolean; onSelectTask: (id: string) => void; selectedTopicId?: string; onSelectTopic?: (id?: string) => void })
 {
   const tasks = memberConversationTasks(member.session, graph),
-
     topics = scopes.filter(scope => tasks.some(task => task.scopeId === scope.scopeId));
 
   const [choice, setChoice] = useState<string>(),
-
     [taskChoice, setTaskChoice] = useState<string>(),
-
     [runChoice, setRunChoice] = useState<string>();
 
   const selected = topics.find(scope => scope.scopeId === (selectedTopicId ?? choice)) ?? topics.find(scope => scope.status !== 'closed') ?? topics.at(-1);

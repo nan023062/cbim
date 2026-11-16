@@ -14,21 +14,13 @@ import { feedbackAvailabilitySchema, feedbackConnectionCheckSchema, feedbackRece
 
 const messages: Record<FeedbackAvailability['code'], string> = {
   FEEDBACK_READY: '本轮已装配反馈提交与核实工具；实际提交仍需通过会话权限、连接和 GitHub 核验。',
-
   FEEDBACK_TOOL_NOT_LOADED: '本轮未装配反馈连接诊断服务。请检查 CBIM 版本或重启应用后查看运行日志；不能据此判断账号未连接。',
-
   FEEDBACK_NEW_TURN_REQUIRED: 'GitHub 已连接，但本轮没有提交与核实工具。请发送一条新消息开启新一轮并沿用已填上下文；若仍缺失，请检查版本和运行日志，不要反复登录。',
-
   GITHUB_NOT_CONNECTED: '本机尚未保存 GitHub 连接。请到设置 → GitHub 反馈连接账号，再发送新消息继续。',
-
   GITHUB_AUTH_PENDING: '本机仍在等待 GitHub 授权结果。请回到设置 → GitHub 反馈，保持页面打开直到显示已连接；网页授权后无需重复授权。',
-
   GITHUB_CONNECTION_CHANGED: '本机 GitHub 连接已变化，本轮仍绑定原连接。请发送新消息开启新一轮；原未知提交仍需核实，不能自动重发。',
-
   GITHUB_EXPIRED: 'GitHub 登录已过期。请在设置中重新连接，再发送新消息继续。',
-
   GITHUB_SECRET_STORAGE: '本机安全存储不可用。请检查系统安全存储后继续。',
-
   GITHUB_SETTINGS: '无法核实本机 GitHub 设置。请查看设置页和本机日志；不能据此判断账号未连接。',
 };
 
@@ -52,7 +44,6 @@ export class FeedbackStatusTool
   private Parse(name: string, input: unknown)
   {
     if (!this.Has(name) || !feedbackReceiptInputSchema.safeParse(input).success)
-
       fail('GITHUB_FEEDBACK_INPUT', '反馈状态查询不接受身份、仓库、凭据或授权参数')
   }
 
@@ -68,7 +59,6 @@ export class FeedbackStatusTool
   async Snapshot(): Promise<FeedbackAvailability>
   {
     if (!this.check)
-
       return { code: 'FEEDBACK_TOOL_NOT_LOADED', submitAvailable: this.registered, receiptAvailable: this.registered, message: messages.FEEDBACK_TOOL_NOT_LOADED };
 
     let connection: FeedbackConnectionCheck;
@@ -81,6 +71,7 @@ export class FeedbackStatusTool
     {
       connection = { code: 'GITHUB_SETTINGS' }
     }
+
     const code = connection.code === 'GITHUB_CONNECTED' ? (this.registered ? 'FEEDBACK_READY' : 'FEEDBACK_NEW_TURN_REQUIRED') : connection.code;
 
     return { code, submitAvailable: this.registered, receiptAvailable: this.registered, ...(connection.repository ? { repository: connection.repository } : {}), message: messages[code] };

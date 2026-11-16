@@ -19,7 +19,6 @@ import { queuedTaskCancellationSchema } from './queued-task-cancel';
 function check(value: unknown, code: string, message: string): asserts value
 {
   if (!value)
-
     fail(code, message)
 }
 
@@ -31,7 +30,6 @@ export function queuedCancellationSelection(state: DispatchState, identity: Grap
   check(state.workspaceId === identity.workspaceId, 'GRAPH_IDENTITY_MISMATCH', '撤销目标不属于当前工作区');
 
   const graph = state.graphs.find(item => item.identity.workspaceId === identity.workspaceId && item.identity.rootSessionId === identity.rootSessionId),
-
     scope = state.scopes?.find(item => item.scopeId === scopeId && item.workspaceId === identity.workspaceId && item.rootSessionId === identity.rootSessionId);
 
   check(graph && scope, 'DISPATCH_SCOPE_IDENTITY', '撤销周期不属于当前主会话');
@@ -43,7 +41,6 @@ export function queuedCancellationSelection(state: DispatchState, identity: Grap
   check(graph.cursor.streamId === input.expectedGraphCursor.streamId && graph.cursor.seq === input.expectedGraphCursor.seq, 'CANCEL_GRAPH_STALE', '任务图已变化，请读取最新游标并重新核实撤销范围');
 
   const taskIds = new Set(input.targets.map(item => item.taskId)),
-
     byNode = new Map(graph.tasks.map(item => [item.nodeId, item]));
 
   const tasks = input.targets.map(target => { const task = graph.tasks.find(item => item.taskId === target.taskId); check(task?.scopeId === scopeId, 'CANCEL_NOT_ALLOWED', '撤销任务不属于本周期：' + target.taskId); check(task.revision === target.expectedRevision, 'CANCEL_TASK_STALE', '任务版本已变化：' + task.taskId); check(pending(task) && !task.runIds.length && !task.activeRunId && !task.result && !task.help && !task.cancelledBeforeStart && !task.awaitedChildren.length, 'CANCEL_NOT_ALLOWED', '任务已启动、结束或存在未决工作，不能作为排队任务撤销：' + task.taskId); check(!state.runs?.some(run => run.binding.taskId === task.taskId), 'CANCEL_NOT_ALLOWED', '任务已经登记过运行，不能撤销为未启动：' + task.taskId); return task; });
@@ -52,23 +49,17 @@ export function queuedCancellationSelection(state: DispatchState, identity: Grap
   const outgoing = new Map<string, string[]>();
 
   for (const edge of graph.edges)
-
     if (edge.enabled && edge.kind === 'dependency')
-
       outgoing.set(edge.fromNodeId, [...(outgoing.get(edge.fromNodeId) ?? []), edge.toNodeId]);
 
   const seen = new Set(tasks.map(task => task.nodeId)),
-
     queue = [...seen],
-
     missing: string[] = [];
 
   for (let index = 0; index < queue.length; index++)
-
     for (const nodeId of outgoing.get(queue[index]) ?? [])
     {
       if (seen.has(nodeId))
-
         continue;
 
       seen.add(nodeId);
@@ -82,15 +73,14 @@ export function queuedCancellationSelection(state: DispatchState, identity: Grap
       check(!task.runIds.length && !task.activeRunId && !task.result && !task.help && !state.runs?.some(run => run.binding.taskId === task.taskId), 'CANCEL_NOT_ALLOWED', '依赖后继已经领取或执行，不能撤销其前置任务：' + task.taskId);
 
       if (task.status === 'cancelled')
-
         continue;
 
       check(pending(task), 'CANCEL_NOT_ALLOWED', '依赖后继不是可撤销排队任务：' + task.taskId);
 
       if (!taskIds.has(task.taskId))
-
         missing.push(task.taskId);
     }
+
   check(!missing.length, 'CANCEL_DEPENDENTS_REQUIRED', '请明确包含以下尚未启动的依赖后继：' + missing.join('、'));
 
   const assignments = tasks.map(task => { const messages = state.outbox.filter(item => item.taskId === task.taskId && item.kind === 'assignment'); check(messages.length === 1 && messages[0].delivery === 'pending' && !messages[0].claim, 'CANCEL_NOT_ALLOWED', '任务已被领取或派发信封不完整：' + task.taskId); return messages[0]; });
@@ -115,17 +105,14 @@ export function validateQueuedTaskCancellation(previous: DispatchState, next: Di
   const added: TaskNode[] = [];
 
   for (const graph of next.graphs)
-
     for (const task of graph.tasks)
     {
       const old = previous.graphs.find(item => item.identity.rootSessionId === graph.identity.rootSessionId)?.tasks.find(item => item.taskId === task.taskId);
 
       if (old?.cancelledBeforeStart)
-
         valid(equal(old, task), '已撤销的未启动任务不可改写、恢复或补造执行');
 
       if (!task.cancelledBeforeStart)
-
         continue;
 
       const record = task.cancelledBeforeStart;
@@ -143,17 +130,14 @@ export function validateQueuedTaskCancellation(previous: DispatchState, next: Di
       valid(member?.activity === 'idle' && !member.activeTaskId && !member.activeRunId && !member.waitingTaskIds.length && !member.communicatingMessageIds.length, '撤销任务不能保留执行占用或待办');
 
       if (!old?.cancelledBeforeStart)
-
         added.push(task);
     }
-  if (!added.length)
 
+  if (!added.length)
     return;
 
   const first = added[0],
-
     record = first.cancelledBeforeStart!,
-
     graph = previous.graphs.find(item => item.identity.rootSessionId === first.identity.rootSessionId);
 
   valid(graph && mutation.batch?.commandId === command.commandId && mutation.batch.cause === 'task.cancelled' && record.commandId === command.commandId, '撤销记录必须由当前图取消命令原子产生');
@@ -166,6 +150,7 @@ export function validateQueuedTaskCancellation(previous: DispatchState, next: Di
 
     valid(equal(task.identity, first.identity) && value.scopeId === record.scopeId && value.mainRunId === record.mainRunId && value.commandId === record.commandId && value.reason === record.reason && value.cancelledAt === record.cancelledAt && equal(value.graphCursor, record.graphCursor), '一次撤销必须具有同一来源、时间、原因和图基线')
   }
+
   const selected = queuedCancellationSelection(previous, first.identity, record.scopeId, { expectedGraphCursor: record.graphCursor, targets: added.map(task => ({ taskId: task.taskId, expectedRevision: task.cancelledBeforeStart!.previousRevision })), reason: record.reason });
 
   valid(added.length <= 100 && mutation.batch!.changes.length === added.length * 2 && mutation.members?.length === added.length && mutation.messages?.length === added.length, '撤销事务只包含明确任务、对应实例和派发信封');
@@ -177,13 +162,11 @@ export function validateQueuedTaskCancellation(previous: DispatchState, next: Di
     valid(equal(task, { ...old, revision: old.revision + 1, status: 'cancelled', updatedAt: record.cancelledAt, waitReason: record.reason, cancelledBeforeStart: task.cancelledBeforeStart }) && Date.parse(record.cancelledAt) >= Date.parse(old.updatedAt), '撤销不能改写原目标、范围、责任或计划');
 
     const oldMember = selected.members.find(item => item.agentInstanceId === task.assignee.agentInstanceId)!,
-
       member = mutation.members!.find(item => item.agentInstanceId === oldMember.agentInstanceId);
 
     valid(equal(member, { ...oldMember, activity: 'idle', waitingTaskIds: [], communicatingMessageIds: [] }), '撤销只清理本任务待办，不释放实例或改换租约');
 
     const oldView = selected.graph.agents.find(item => item.agentInstanceId === oldMember.agentInstanceId)!,
-
       view = mutation.batch!.changes.find(change => change.type === 'agent.upserted' && change.agent.agentInstanceId === oldMember.agentInstanceId);
 
     valid(view?.type === 'agent.upserted' && equal(view.agent, { ...oldView, revision: oldView.revision + 1, state: 'idle', waitingTaskIds: [], runningTaskId: undefined }), '撤销必须同步本图空闲投影');

@@ -32,29 +32,23 @@ export function appendScopeMainRun<T extends TrackingScope>(scope: T, id: string
   const parsed = runId.safeParse(id);
 
   if (!parsed.success)
-
     fail('GOAL_RUN_CONFLICT', '主运行身份无效');
 
   if (!scope.runTracking)
-
     return scope;
 
   const tracking = scopeRunTrackingSchema.safeParse(scope.runTracking);
 
   if (!tracking.success)
-
     fail('GOAL_RUN_CONFLICT', '周期主运行清单无效');
 
   if (tracking.data.mainRunIds.includes(id))
-
     return scope;
 
   if (scope.status !== 'active')
-
     fail('DISPATCH_SCOPE_CLOSED', '只有活动周期可以登记新主运行');
 
   if (tracking.data.mainRunIds.length >= 32)
-
     fail('GOAL_CYCLE_LIMIT', '本次目标已达到 32 次主调度运行');
 
   return { ...scope, runTracking: { version: 1, mainRunIds: [...tracking.data.mainRunIds, id] } };

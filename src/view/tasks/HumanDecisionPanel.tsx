@@ -42,15 +42,11 @@ function ManifestSummary({ manifest }: { manifest: NonNullable<HumanDecisionPrev
 export function HumanDecisionPanel({ state }: { state: HumanDecisionsView })
 {
   const { record, preview } = state,
-
     result = preview?.result,
-
     attempt = record?.attempt,
-
     history = state.history.filter(value => value.criterionId === state.criterionId);
 
   if (!state.criteria.length && !state.history.length)
-
     return null;
 
   return <section className="human-decisions" aria-label="人工决定" data-testid="human-decision-panel" data-scope-id={state.scopeId} data-criterion-id={state.criterionId} data-basis={state.previewCurrent ? result?.basis : undefined} data-phase={attempt?.phase ?? 'draft'}>

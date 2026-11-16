@@ -16,22 +16,17 @@ export type FeedbackSkillTitle = 'BUG 反馈' | '需求许愿';
 export function AttachmentMenu({ workspaceId, disabled, attachmentsFull = false, skillsDisabled, onAdd, onBusy, onSkill }: { workspaceId: string; disabled: boolean; attachmentsFull?: boolean; skillsDisabled: boolean; onAdd: (items: ChatAttachment[]) => void; onBusy: (busy: boolean) => void; onSkill: (skill: FeedbackSkillTitle) => void })
 {
   const [kind, setKind] = useState<'link' | 'web' | 'connector'>(),
-
     [value, setValue] = useState(''),
-
     [connectors, setConnectors] = useState<
       {
         id: string;
 
         name: string
       }[]>([]),
-
     [busy, setBusy] = useState(false),
-
     [error, setError] = useState('');
 
   const menu = useRef<HTMLDetailsElement>(null),
-
     lock = useRef(false);
 
   useEffect(() => { const close = (e: PointerEvent) => { if (!menu.current?.contains(e.target as Node)) menu.current?.removeAttribute('open') }; document.addEventListener('pointerdown', close); return () => document.removeEventListener('pointerdown', close) }, []);
@@ -39,7 +34,6 @@ export function AttachmentMenu({ workspaceId, disabled, attachmentsFull = false,
   async function run(fn: () => Promise<ChatAttachment[]>)
   {
     if (lock.current)
-
       return;
 
     lock.current = true;
@@ -83,14 +77,12 @@ export function AttachmentMenu({ workspaceId, disabled, attachmentsFull = false,
     setError('');
 
     if (next === 'connector')
-
       void window.cbim.call('chat.connectors', { id: workspaceId }).then(setConnectors).catch((e: Error) => setError(e.message))
   }
 
   function invokeSkill(skill: FeedbackSkillTitle)
   {
     if (disabled || busy || lock.current || skillsDisabled)
-
       return;
 
     setKind(undefined);

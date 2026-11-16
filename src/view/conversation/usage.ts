@@ -16,7 +16,6 @@ export function conversationUsage(runs: readonly RunSummary[], now: number, curr
   const data = taskUsage(runs, now);
 
   if (currentRun === undefined)
-
     return data;
 
   const head = taskUsage(currentRun ? [currentRun] : [], now);

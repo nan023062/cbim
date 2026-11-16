@@ -18,7 +18,6 @@ export class ApprovalQueue
   async Request(taskId: string, call: ToolCall): Promise<ToolDecision>
   {
     if (this.approvedRuns.has(taskId))
-
       return { allow: true, reason: '用户已允许本次运行的后续操作' };
 
     return new Promise(resolve => { const id = randomUUID(); this.approvals.set(id, { view: { id, taskId, name: call.name, input: call.input, createdAt: new Date().toISOString() }, resolve }) })
@@ -42,29 +41,27 @@ export class ApprovalQueue
     const pending = this.approvals.get(id);
 
     if (!pending || pending.view.taskId !== taskId)
-
       fail('APPROVAL_EXPIRED', '审批已结束，请刷新对话');
 
     if (allowAll)
     {
       if (allow !== true)
-
         fail('APPROVAL', '全部通过必须由用户明确允许');
 
       this.approvedRuns.add(taskId);
 
       for (const [key, item] of this.approvals)
-
         if (item.view.taskId === taskId)
         {
           this.approvals.delete(key);
 
           item.resolve({ allow: true, reason: '用户已允许本次运行的后续操作' })
         }
+
       return;
     }
-    if (this.approvals.get(id) !== pending)
 
+    if (this.approvals.get(id) !== pending)
       fail('APPROVAL_EXPIRED', '审批已结束，请刷新对话');
 
     this.approvals.delete(id);
@@ -75,15 +72,11 @@ export class ApprovalQueue
   Cancel(taskId?: string)
   {
     if (taskId)
-
       this.approvedRuns.delete(taskId);
-
     else
-
       this.approvedRuns.clear();
 
     for (const [id, p] of this.approvals)
-
       if (!taskId || p.view.taskId === taskId)
       {
         this.approvals.delete(id);

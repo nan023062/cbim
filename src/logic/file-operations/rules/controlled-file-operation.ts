@@ -12,13 +12,9 @@ export const controlledFileLimits = { contentBytes: 1024 * 1024, inputBytes: 3 *
 const id = z.string().min(1).max(512).refine(v => v.trim() === v && !/[\x00-\x1f\x7f]/.test(v), '标识含空白或控制字符');
 
 const digest = z.string().regex(/^[a-f0-9]{64}$/),
-
   uuid = z.string().uuid(),
-
   time = z.string().datetime(),
-
   positive = z.number().int().positive().safe(),
-
   count = z.number().int().nonnegative().safe();
 
 /** 只检测 Unicode 完整性，不替换未配对代理字符或重新编码已读取的 before 字节。 */
@@ -33,13 +29,12 @@ export function controlledFileUtf8Bytes(value: string): number | undefined
       const n = value.charCodeAt(++i);
 
       if (!(n >= 0xdc00 && n <= 0xdfff))
-
         return undefined
     }
     else if (c >= 0xdc00 && c <= 0xdfff)
-
       return undefined
   }
+
   return new TextEncoder().encode(value).length
 }
 

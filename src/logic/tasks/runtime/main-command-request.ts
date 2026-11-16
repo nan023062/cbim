@@ -78,11 +78,8 @@ export interface RestoredMainCommand
 export function restoreMainCommand(name: VerifiableMainToolName, binding: MainToolOutputBinding, toolCallId: string, raw: unknown, parentRevision?: number): RestoredMainCommand
 {
   const identity = { workspaceId: binding.workspaceId, rootSessionId: binding.rootSessionId },
-
     scopeId = binding.scopeId,
-
     runId = binding.runId,
-
     commandId = mainToolCommandId(name, binding, toolCallId)!;
 
   if (name === 'cbim_goal_plan' || name === 'cbim_goal_review')
@@ -91,37 +88,38 @@ export function restoreMainCommand(name: VerifiableMainToolName, binding: MainTo
 
     return { ...goalCommand(name === 'cbim_goal_plan' ? 'goal.plan' : 'goal.review', identity, scopeId, runId, commandId, draft), input: draft };
   }
+
   if (name === 'cbim_dispatch_task')
   {
     const parsed = historicalTaskInput.parse(raw),
       { agentId, ...task } = parsed;
 
     if (agentId === 'cbim:main')
-
       fail('COMMAND_INPUT_UNSUPPORTED', '原派发角色不能是主调度');
 
     if (parentRevision === undefined)
-
       return { commandId, input: parsed };
 
     const request = dispatchTaskInput.parse({ ...identity, commandId, expectedParentRevision: parentRevision, task: { ...task, assigneeAgentId: agentId } });
 
     return { ...dispatchCommand('dispatch', { ...request, scopeId }), input: parsed };
   }
+
   if (name === 'cbim_dispatch_resume')
   {
     const input = resumeMemberInputSchema.parse(raw);
 
     return { ...memberResumeCommand(identity, scopeId, runId, commandId, input), input };
   }
+
   if (name === 'cbim_dispatch_abandon_checkpoint')
   {
     const input = abandonCheckpointInputSchema.parse(raw),
-
       context = { ...identity, scopeId, mainRunId: runId, commandId };
 
     return { ...contextualMainCommand('member.checkpoint.abandon', context, input), input };
   }
+
   const input = name === 'cbim_dispatch_cancel' ? cancelQueuedTasksInputSchema.parse(raw) : name === 'cbim_dispatch_add_dependency' ? addQueuedDependencyInputSchema.parse(raw) : name === 'cbim_dispatch_revise_dependencies' ? reviseQueuedDependenciesInputSchema.parse(raw) : replaceQueuedDependencyInputSchema.parse(raw);
 
   const operation = name === 'cbim_dispatch_cancel' ? 'dispatch.cancelQueued' : name === 'cbim_dispatch_add_dependency' ? 'dispatch.addDependency' : name === 'cbim_dispatch_revise_dependencies' ? 'dispatch.reviseDependencies' : 'dispatch.replaceDependency';

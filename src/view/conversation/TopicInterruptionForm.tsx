@@ -22,7 +22,6 @@ export function TopicInterruptionForm({ scope, options, active, onRefresh, draft
   const controller = useMemo(() => new TopicInterruptionController({ workspaceId: scope.workspaceId, rootSessionId: scope.rootSessionId, scopeId: scope.scopeId, expectedInputRevision: scope.goal?.inputRevision ?? 1 }, { storage: window.localStorage, uuid: () => crypto.randomUUID(), submit: request => window.cbim.call('loop.topicInterrupt', request), lookup: request => window.cbim.call('loop.goalContinuation', request) }), [scope.workspaceId, scope.rootSessionId, scope.scopeId, scope.goal?.inputRevision]);
 
   const saved = pendingTopicInterruption(scope),
-
     state = controller.snapshot;
 
   useEffect(() => { const unsubscribe = controller.Subscribe(() => render(value => value + 1)); void controller.Restore(saved?.request); return unsubscribe }, [controller, saved?.request.commandId]);

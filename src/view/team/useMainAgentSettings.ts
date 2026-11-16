@@ -9,15 +9,11 @@ import { mainAgentSettingsSchema, type MainAgentSettingsView, type AgentModelSel
 export function useMainAgentSettings(workspaceId: string, instanceId?: string, active = true)
 {
   const [value, setValue] = useState<MainAgentSettingsView>(),
-
     [error, setError] = useState(''),
-
     [busy, setBusy] = useState(false);
 
   const generation = useRef(0),
-
     saving = useRef(false),
-
     current = useRef(value);
 
   current.current = value;
@@ -30,7 +26,6 @@ export function useMainAgentSettings(workspaceId: string, instanceId?: string, a
     const base = current.current;
 
     if (!base || saving.current)
-
       return false;
 
     const ticket = generation.current;
@@ -46,7 +41,6 @@ export function useMainAgentSettings(workspaceId: string, instanceId?: string, a
       const result = mainAgentSettingsSchema.parse(await window.cbim.call('agent.configureMain', { ...base, revision: expectedRevision ?? base.revision, selection }));
 
       if (result.workspaceId !== workspaceId || result.instanceId !== instanceId)
-
         throw Error('主 Agent 配置保存回执身份不一致');
 
       if (generation.current === ticket)
@@ -55,12 +49,12 @@ export function useMainAgentSettings(workspaceId: string, instanceId?: string, a
 
         setValue(result)
       }
+
       return true;
     }
     catch (cause)
     {
       if (generation.current === ticket)
-
         setError(cause instanceof Error ? cause.message : String(cause));
 
       return false
@@ -70,7 +64,6 @@ export function useMainAgentSettings(workspaceId: string, instanceId?: string, a
       saving.current = false;
 
       if (generation.current === ticket)
-
         setBusy(false)
     }
   }

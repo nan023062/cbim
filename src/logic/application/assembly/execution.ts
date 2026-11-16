@@ -89,7 +89,6 @@ export function createExecutionManager(workspace: Workspace, models: EngineModel
     const llm = options.profileId ? await models.Resolve(options.profileId, options.model, options.engine, options.modelRoles) : undefined;
 
     if (llm && (options.provider !== 'cbim-' + llm.profile.id || options.model !== llm.profile.model))
-
       throw Error('模型配置已变化，请重新启动任务');
 
     launch.signal.throwIfAborted();
@@ -103,13 +102,12 @@ export function createExecutionManager(workspace: Workspace, models: EngineModel
     if (images.length && (!llm || !llm.profile.vision))
     {
       if (launch.preparedInputImages !== undefined)
-
         fail('GOAL_ATTACHMENT_VISION', '当前模型配置未启用图片输入，请选择视觉模型后再补充');
 
       if (llm)
-
         throw Error('当前模型未启用图片输入，请在设置中确认视觉能力，或切换支持图片的模型');
     }
+
     const conversationBinding = task.mode === 'chat' ? await dispatch?.ConversationBinding(task) : undefined;
 
     const repositoryTools = task.mode === 'chat' ? await repositories?.PrepareTools({ workspaceId: workspace.entry.id, instanceId: workspace.instanceId }) : undefined;
@@ -118,45 +116,31 @@ export function createExecutionManager(workspace: Workspace, models: EngineModel
 
     const agentCalls = launch.executionModel === 'agent-tools-v1' ? createAgentCallAssembly({
       models, workspace, task, options: { ...options, engineRuntimes }, llm, storage, members: ownerships?.members, admission, dispatch, requestBudgets, authorizeNative, businessServices,
-
       // 每个业务子调用独立捕获工作区身份；仅复用已有受控工人，不降级到任意文件命令。
       artifactTransitions: () => createArtifactTransitionPort(workspace, controlledTransport, () => admission?.IsCurrent() ?? false),
     }) : undefined;
 
     return createWorkspaceLoop(workspace.paths, workspace, { ...options, llm, images, engineRuntimes }, {
       storage,
-
       ...agentCalls,
-
       RequestBudget: agentCalls ? agentCalls.requestBudget : requestBudgets ? ({ task, runId }, role) => requestBudgets.ForRun({ rootSessionId: task.taskId, taskId: task.taskId, runId, kind: 'main' }, llm, role) : undefined,
-
       conversationBinding,
-
       repositoryTools,
-
       // 主会话使用同一实例的公开网页端口；每次网络前后核实工作区仍有效。
       webTools: task.mode === 'chat' && web ? {
         Fetch: async (input, signal) => { workspace.Assert(); const value = await web.Fetch(input, signal); workspace.Assert(); return value }, Search: async (input, signal) => { workspace.Assert(); const value = await web.Search(input, signal); workspace.Assert(); return value }
       } : undefined,
-
       FeedbackTools: task.mode === 'chat' && feedback ? () => feedback.Prepare({ workspaceId: workspace.entry.id, rootSessionId: task.taskId }, () => workspace.Assert()) : undefined,
-
       FeedbackStatus: task.mode === 'chat' && feedback ? scope => { workspace.Assert(); return feedback.auth.CheckConnection(scope) } : undefined,
-
       GovernanceTools: conversationBinding ? ({ task, runId }) => mainGovernanceTools(workspace, task, runId, conversationBinding) : undefined,
-
       OwnershipTools: conversationBinding && ownerships ? ({ task, runId }) => { const context = agentCalls ? agentCalls.MainToolContext(task, runId) : collaboration?.()?.MainToolContext(task, runId); return context ? { port: mainModuleOwnershipTools(workspace, ownerships.service, ownerships.members, task, runId, conversationBinding, context, dispatch?.owners), binding: { ...context.binding, instanceId: workspace.instanceId, agentInstanceId: conversationBinding.agentInstanceId, agentSessionId: conversationBinding.agentSessionId } } : undefined } : undefined,
-
       MemberTools: conversationBinding && ownerships ? ({ task, runId }) => { const context = agentCalls ? agentCalls.MainToolContext(task, runId) : collaboration?.()?.MainToolContext(task, runId); return context ? { port: mainWorkspaceMemberTools(workspace, ownerships.members, task, runId, conversationBinding, context), binding: { ...context.binding, instanceId: workspace.instanceId, agentInstanceId: conversationBinding.agentInstanceId, agentSessionId: conversationBinding.agentSessionId } } : undefined } : undefined,
-
       DispatchTools: ({ task, runId }) => collaboration?.()?.Tools(task, runId, options),
-
       AcquireLease: async task =>
       {
         workspace.Assert();
 
         if (task.workspaceId !== workspace.entry.id || task.root !== workspace.entry.path)
-
           throw Error('任务与工作区身份不匹配');
 
         // 两种协作模式的主轮都能执行；ask/execute 同样独占，等待审批期间也不能放行冲突运行。

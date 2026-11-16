@@ -16,7 +16,6 @@ export function continuationAttachments(value: unknown): ChatAttachment[]
   const items = z.array(material).max(12).parse(value);
 
   if (new Set(items.map(item => item.id)).size !== items.length)
-
     throw Error('补充附件身份重复');
 
   return items;
@@ -26,7 +25,6 @@ export function continuationAttachments(value: unknown): ChatAttachment[]
 export function appendContinuationAttachments(current: readonly ChatAttachment[], picked: unknown): ChatAttachment[]
 {
   const additions = continuationAttachments(picked),
-
     ids = new Set(current.map(item => item.id));
 
   return continuationAttachments([...current, ...additions.filter(item => !ids.has(item.id))]);
@@ -38,7 +36,6 @@ export function continuationFiles(value: unknown): ChatAttachment[]
   const items = z.array(file).max(12).parse(value);
 
   if (new Set(items.map(item => item.id)).size !== items.length)
-
     throw Error('补充附件身份重复');
 
   return items;
@@ -48,7 +45,6 @@ export function continuationFiles(value: unknown): ChatAttachment[]
 export function appendContinuationFiles(current: readonly ChatAttachment[], picked: unknown): ChatAttachment[]
 {
   const additions = continuationFiles(picked),
-
     ids = new Set(current.map(item => item.id));
 
   return continuationFiles([...current, ...additions.filter(item => !ids.has(item.id))]);

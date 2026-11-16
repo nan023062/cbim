@@ -83,7 +83,6 @@ export type RunInputSource = MemberResultSource | UserContinuationSource | Human
 export function checkedRunInputSource(value: unknown): RunInputSource
 {
   if (!value || typeof value !== 'object' || Array.isArray(value))
-
     throw Error('无效成员接续来源');
 
   const source = value as Record<string, unknown>;
@@ -91,33 +90,31 @@ export function checkedRunInputSource(value: unknown): RunInputSource
   if (source.kind === 'goal-repair')
   {
     if (Object.keys(source).some(key => !['kind', 'continuationId', 'scopeId', 'sourceRunId', 'attempt', 'failureCode', 'fingerprint'].includes(key)) || !['continuationId', 'scopeId', 'sourceRunId', 'failureCode', 'fingerprint'].every(key => typeof source[key] === 'string') || !Number.isSafeInteger(source.attempt) || (source.attempt as number) < 1 || (source.attempt as number) > 3 || !/^GOAL_[A-Z_]+$/.test(source.failureCode as string) || !/^[a-f0-9]{64}$/.test(source.fingerprint as string))
-
       throw Error('无效目标返工来源');
 
     return { kind: 'goal-repair', continuationId: safeId(source.continuationId as string), scopeId: safeId(source.scopeId as string), sourceRunId: safeId(source.sourceRunId as string), attempt: source.attempt as number, failureCode: source.failureCode as string, fingerprint: source.fingerprint as string };
   }
+
   if (source.kind === 'human_decisions')
   {
     if (Object.keys(source).some(key => !['kind', 'continuationId', 'scopeId', 'waitId', 'inputRevision', 'decisionRevision', 'decisionIds'].includes(key)) || !['continuationId', 'scopeId', 'waitId'].every(key => typeof source[key] === 'string') || !Number.isSafeInteger(source.inputRevision) || (source.inputRevision as number) < 2 || (source.inputRevision as number) > 32 || !Number.isSafeInteger(source.decisionRevision) || (source.decisionRevision as number) < 1 || (source.decisionRevision as number) > 64 || !Array.isArray(source.decisionIds) || !source.decisionIds.length || source.decisionIds.length > 50 || source.decisionIds.some(id => typeof id !== 'string') || new Set(source.decisionIds).size !== source.decisionIds.length)
-
       throw Error('无效人工决定接续来源');
 
     return { kind: 'human_decisions', continuationId: safeId(source.continuationId as string), scopeId: safeId(source.scopeId as string), waitId: safeId(source.waitId as string), inputRevision: source.inputRevision as number, decisionRevision: source.decisionRevision as number, decisionIds: (source.decisionIds as string[]).map(safeId) };
   }
+
   if (source.kind === 'user-continuation')
   {
     if (Object.keys(source).some(key => !['kind', 'continuationId', 'scopeId', 'waitId', 'inputRevision', 'attachmentManifestHash', 'interruptionId'].includes(key)) || !['continuationId', 'scopeId', 'waitId'].every(key => typeof source[key] === 'string') || !Number.isSafeInteger(source.inputRevision) || (source.inputRevision as number) < 2 || (source.inputRevision as number) > 32 || source.interruptionId !== undefined && (typeof source.interruptionId !== 'string' || source.interruptionId !== source.continuationId || source.interruptionId !== source.waitId) || source.attachmentManifestHash !== undefined && (typeof source.attachmentManifestHash !== 'string' || !/^[a-f0-9]{64}$/.test(source.attachmentManifestHash)))
-
       throw Error('无效目标补充来源');
 
     return { kind: 'user-continuation', continuationId: safeId(source.continuationId as string), scopeId: safeId(source.scopeId as string), waitId: safeId(source.waitId as string), inputRevision: source.inputRevision as number, ...(source.interruptionId === undefined ? {} : { interruptionId: safeId(source.interruptionId as string) }), ...(source.attachmentManifestHash === undefined ? {} : { attachmentManifestHash: source.attachmentManifestHash as string }) };
   }
-  if (source.kind !== 'member-results' || Object.keys(source).some(key => !['kind', 'continuationId', 'messageIds', 'taskIds'].includes(key)))
 
+  if (source.kind !== 'member-results' || Object.keys(source).some(key => !['kind', 'continuationId', 'messageIds', 'taskIds'].includes(key)))
     throw Error('无效成员接续来源');
 
   if (typeof source.continuationId !== 'string')
-
     throw Error('缺少成员接续标识');
 
   const ids = (value: unknown, required: boolean) => { if (!Array.isArray(value) || value.length > 100 || (required && !value.length) || value.some(id => typeof id !== 'string') || new Set(value).size !== value.length) throw Error('无效成员接续消息或任务标识'); return (value as string[]).map(safeId); };

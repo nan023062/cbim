@@ -12,23 +12,18 @@ export const memberHelpKindLabels: Record<MemberHelp['input']['kind'], string> =
 export function committedMemberHelp(task: TaskNode, runId?: string): MemberHelp | undefined
 {
   const help = task.help,
-
     binding = help?.binding;
 
   if (!help || !binding || task.status !== 'blocked' || task.activeRunId || task.result)
-
     return;
 
   if (binding.workspaceId !== task.identity.workspaceId || binding.rootSessionId !== task.identity.rootSessionId || binding.taskId !== task.taskId || binding.planRevision !== task.planRevision)
-
     return;
 
   if (binding.agentId !== task.assignee.agentId || binding.agentInstanceId !== task.assignee.agentInstanceId || binding.agentSessionId !== task.assignee.agentSessionId)
-
     return;
 
   if (!task.runIds.includes(binding.runId) || runId !== undefined && binding.runId !== runId)
-
     return;
 
   return help;

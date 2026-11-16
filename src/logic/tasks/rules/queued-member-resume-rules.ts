@@ -26,7 +26,6 @@ import { validMemberCheckpointChain, currentMemberResumeRequest } from './member
 function check(value: unknown, code: string, message: string): asserts value
 {
   if (!value)
-
     fail(code, message)
 }
 
@@ -36,7 +35,6 @@ export function memberResumeSelection(state: DispatchState, identity: GraphIdent
   check(state.workspaceId === identity.workspaceId, 'GRAPH_IDENTITY_MISMATCH', '检查点不属于当前工作区');
 
   const graph = state.graphs.find(graph => graph.identity.workspaceId === identity.workspaceId && graph.identity.rootSessionId === identity.rootSessionId),
-
     scope = state.scopes?.find(scope => scope.workspaceId === identity.workspaceId && scope.rootSessionId === identity.rootSessionId && scope.scopeId === scopeId);
 
   check(graph && scope, 'DISPATCH_SCOPE_IDENTITY', '检查点不属于当前主会话周期');
@@ -50,7 +48,6 @@ export function memberResumeSelection(state: DispatchState, identity: GraphIdent
   check(scope.goal?.plan && scope.goal.revision === input.expectedGoalRevision && !goalNeedsReplan(scope.goal) && !scope.goal.review, 'MEMBER_RESUME_STALE', '目标计划已变化、尚未建立或已进入审阅');
 
   const task = graph.tasks.find(task => task.taskId === input.taskId),
-
     checkpoint = task?.checkpoints?.at(-1);
 
   check(task?.scopeId === scopeId && checkpoint && validMemberCheckpointChain(task) && task.status === 'checkpointed' && !currentMemberResumeRequest(task) && task.runIds.at(-1) === checkpoint.binding.runId && !task.activeRunId && !task.result && !task.help, 'MEMBER_RESUME_NOT_ALLOWED', '任务没有尚未预约的最新安全检查点');
@@ -58,7 +55,6 @@ export function memberResumeSelection(state: DispatchState, identity: GraphIdent
   check(task.revision === input.expectedRevision && checkpoint.checkpointId === input.checkpointId, 'MEMBER_RESUME_STALE', '任务或检查点身份已变化');
 
   const member = state.members.find(member => member.agentInstanceId === task.assignee.agentInstanceId),
-
     session = state.sessions.find(session => session.agentSessionId === task.assignee.agentSessionId);
 
   const { run } = completedCheckpointLedger(state, task, 'MEMBER_RESUME_NOT_ALLOWED');
@@ -72,19 +68,14 @@ export function memberResumeSelection(state: DispatchState, identity: GraphIdent
   check(!state.outbox.some(message => message.kind === 'assignment' && message.taskId === task.taskId && message.identity.rootSessionId === identity.rootSessionId && message.resumeFrom?.checkpointId === checkpoint.checkpointId), 'MEMBER_RESUME_NOT_ALLOWED', '本段检查点已预约，不能创建第二个续执行信封');
 
   const trackedTaskIds = [task.taskId],
-
     byNode = new Map(graph.tasks.map(task => [task.nodeId, task])),
-
     visited = new Set([task.nodeId]),
-
     queue = [task.nodeId];
 
   for (let index = 0; index < queue.length; index++)
-
     for (const edge of graph.edges)
     {
       if (!edge.enabled || edge.kind !== 'dependency' || edge.fromNodeId !== queue[index] || visited.has(edge.toNodeId))
-
         continue;
 
       visited.add(edge.toNodeId);
@@ -96,13 +87,13 @@ export function memberResumeSelection(state: DispatchState, identity: GraphIdent
       check(next?.scopeId === scopeId && !next.runIds.length && !next.activeRunId && !next.result && !next.help && !next.checkpoints && !state.runs?.some(run => run.binding.taskId === next.taskId), 'MEMBER_RESUME_DEPENDENTS', '检查点依赖后继已经执行或不属于本周期');
 
       if (next.status === 'cancelled')
-
         continue;
 
       check(['planned', 'queued', 'waiting'].includes(next.status), 'MEMBER_RESUME_DEPENDENTS', '检查点后继不是未启动待办');
 
       trackedTaskIds.push(next.taskId);
     }
+
   check(trackedTaskIds.length <= 500, 'MEMBER_RESUME_DEPENDENTS', '续执行后继超过本次支持上限');
 
   return { graph, scope, task, member, session, run, checkpoint, trackedTaskIds };

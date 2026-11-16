@@ -29,7 +29,6 @@ function reference(value: unknown): AgentCallReference | undefined
   const item = record(value);
 
   if (!item || item.version !== 1 || fields.slice(1).some(key => typeof item[key] !== 'string' || !item[key] || String(item[key]).length > 512))
-
     return;
 
   return item as unknown as AgentCallReference;
@@ -40,32 +39,31 @@ function resultReference(value: unknown): unknown
   const result = record(value);
 
   if (!result)
-
     return;
 
   if (result.agentCall)
-
     return result.agentCall;
 
   if (Array.isArray(result.content))
-
+  {
     for (const item of result.content)
     {
       if (item?.type === 'text' && typeof item.text === 'string')
-
+      {
         try
         {
           const parsed = record(JSON.parse(item.text));
 
           if (parsed?.agentCall)
-
             return parsed.agentCall
         }
         catch
         {
           /* 原始非 JSON 输出仍由工具轨道展示。 */
         }
+      }
     }
+  }
 }
 
 function sameReference(left: AgentCallReference, right: AgentCallReference)
@@ -81,27 +79,24 @@ export function agentCallReference(run: RunSummary, toolCallId: string): AgentCa
   for (const event of run.events)
   {
     if (!['tool.updated', 'tool.finished'].includes(event.type) || event.data.id !== toolCallId || event.data.name !== 'cbim_agent_call')
-
       continue;
 
     if (event.workspaceId !== run.task.workspaceId || event.taskId !== run.task.taskId || event.runId !== run.runId)
-
       return;
 
     const raw = event.data.agentCall ?? resultReference(event.data.result);
 
     if (raw === undefined)
-
       continue;
 
     const current = reference(raw);
 
     if (!current || current.workspaceId !== run.task.workspaceId || current.callerTaskId !== run.task.taskId || current.callerRunId !== run.runId || current.toolCallId !== toolCallId || selected && !sameReference(selected, current))
-
       return;
 
     selected = current;
   }
+
   return selected;
 }
 
@@ -109,11 +104,9 @@ export function agentCallReference(run: RunSummary, toolCallId: string): AgentCa
 export function assertAgentCallRun(call: AgentCallReference, run: RunSummary): void
 {
   const start = run.events[0],
-
     bound = reference(start?.data.agentCall);
 
   if (run.task.workspaceId !== call.workspaceId || run.task.taskId !== call.taskId || run.runId !== call.runId || start?.type !== 'run.started' || start.workspaceId !== call.workspaceId || start.taskId !== call.taskId || start.runId !== call.runId || !bound || !sameReference(call, bound))
-
     throw Error('执行对话身份与原工具调用不一致，未展示该记录。');
 }
 
@@ -121,28 +114,21 @@ export function assertAgentCallRun(call: AgentCallReference, run: RunSummary): v
 export function AgentCallDetails({ parentRun, toolCallId, active = true }: { parentRun: RunSummary; toolCallId: string; active?: boolean })
 {
   const call = agentCallReference(parentRun, toolCallId),
-
     key = call ? JSON.stringify(fields.map(field => call[field])) : '';
 
   const [open, setOpen] = useState(false),
-
     [snapshot, setSnapshot] = useState<
       {
         key: string;
 
         run: RunSummary
       }>(),
-
     [error, setError] = useState(''),
-
     [loading, setLoading] = useState(false),
-
     [retry, setRetry] = useState(0);
 
   const dialog = useRef<HTMLDialogElement>(null),
-
     trigger = useRef<HTMLButtonElement>(null),
-
     titleId = useId();
 
   const run = snapshot?.key === key ? snapshot.run : undefined;
@@ -161,7 +147,6 @@ export function AgentCallDetails({ parentRun, toolCallId, active = true }: { par
   }
 
   if (!call)
-
     return null;
 
   const items = run ? transcript(run) : [];

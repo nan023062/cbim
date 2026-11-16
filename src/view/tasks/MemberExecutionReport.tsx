@@ -58,7 +58,6 @@ const runLabels = { active: '启动意图已登记', closed: '原调用已关闭
 export function ExecutionReportPanel({ state, taskId, runId }: { state: ExecutionReportView; taskId: string; runId?: string })
 {
   const { report, loading, error, stale } = state,
-
     phase = loading ? 'loading' : error ? 'error' : report ? 'ready' : 'idle';
 
   return <section className="execution-report" aria-label="成员执行记录核实" data-testid="member-execution-report" data-task-id={taskId} data-run-id={runId ?? ''} data-report-state={phase} data-execution={report?.execution} data-log-state={report?.log.state}>

@@ -54,37 +54,25 @@ const record = (value: unknown): Record<string, unknown> | undefined => value !=
 function measureRun(events: readonly StoredEvent[]): RunMeasurement
 {
   let input = 0,
-
     output = 0,
-
     cacheRead = 0,
-
     cacheWrite = 0,
-
     reasoning = 0,
-
     cost = 0,
-
     reports = 0,
-
     priced = 0;
 
   let generationMs = 0,
-
     outputForRate = 0,
-
     timingComplete = true,
-
     missingUsage = false;
 
   for (const event of events)
   {
     if (event.type !== 'message')
-
       continue;
 
     const data = event.data ?? {},
-
       usage = record(data.usage);
 
     if (!usage || !number(usage.output))
@@ -95,6 +83,7 @@ function measureRun(events: readonly StoredEvent[]): RunMeasurement
 
       continue
     }
+
     reports++;
 
     input += number(usage.input) ? usage.input : 0;
@@ -114,7 +103,6 @@ function measureRun(events: readonly StoredEvent[]): RunMeasurement
       outputForRate += usage.output;
     }
     else
-
       timingComplete = false;
 
     const price = record(usage.cost);
@@ -126,21 +114,19 @@ function measureRun(events: readonly StoredEvent[]): RunMeasurement
       priced++;
     }
   }
+
   // 最后一个有效汇总包含压缩等额外消耗；损坏的后续记录不能清空已经确认的计量。
   for (let i = events.length - 1; i >= 0; i--)
   {
     const event = events[i],
-
       data = event.data ?? {};
 
     if (event.type !== 'engine.status' || data.metric !== 'run-usage')
-
       continue;
 
     const tokens = record(data.tokens);
 
     if (!tokens || !number(tokens.input) || !number(tokens.output) || !number(tokens.cacheRead) || !number(tokens.cacheWrite))
-
       continue;
 
     input = tokens.input;
@@ -165,10 +151,10 @@ function measureRun(events: readonly StoredEvent[]): RunMeasurement
 
     break;
   }
+
   return {
     usage: {
       input, output, cacheRead, cacheWrite, reasoning, total: input + output + cacheRead + cacheWrite,
-
       cost: priced ? cost : undefined, costPartial: priced < reports || missingUsage, usageReported: reports > 0
     },
     reports, generationMs, outputForRate, timingComplete
@@ -198,33 +184,22 @@ export function runDuration(run: RunSummary, now: number)
 export function taskUsage(runs: readonly RunSummary[], now: number)
 {
   let input = 0,
-
     output = 0,
-
     cacheRead = 0,
-
     cacheWrite = 0,
-
     reasoning = 0,
-
     cost = 0,
-
     reports = 0,
-
     pricedRuns = 0;
 
   let generationMs = 0,
-
     outputForRate = 0,
-
     timingComplete = true,
-
     costPartial = false;
 
   for (const run of runs)
   {
     const measured = measureRun(run.events),
-
       usage = measured.usage;
 
     input += usage.input;
@@ -254,6 +229,7 @@ export function taskUsage(runs: readonly RunSummary[], now: number)
       pricedRuns++
     }
   }
+
   const events = runs.at(-1)?.events ?? [];
 
   const context = [...events].reverse().find(e => e.type === 'engine.status' && e.data?.metric === 'context')?.data;
@@ -266,11 +242,8 @@ export function taskUsage(runs: readonly RunSummary[], now: number)
 
   return {
     durationMs: runs.reduce((n, r) => n + runDuration(r, now), 0), input, output, cacheRead, cacheWrite, reasoning, reports,
-
     total: input + output + cacheRead + cacheWrite, generationMs, ratePartial: !timingComplete,
-
     rate: reports && generationMs > 0 && outputForRate > 0 ? outputForRate / (generationMs / 1000) : undefined,
-
     cost: pricedRuns ? cost : undefined, costPartial, capacity, used, percent: capacity && used !== undefined ? used / capacity * 100 : undefined
   };
 }
@@ -279,9 +252,7 @@ export function taskUsage(runs: readonly RunSummary[], now: number)
 export function tokenCount(value: number)
 {
   for (const [unit, suffix] of [[1e9, 'B'], [1e6, 'M'], [1e3, 'k']] as const)
-
     if (value >= unit * 0.99995)
-
       return (value / unit).toFixed(1) + suffix;
 
   return String(Math.round(value))

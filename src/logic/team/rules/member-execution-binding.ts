@@ -14,17 +14,13 @@ import { capabilitySourceRefSchema, knowledgeSourceRefSchema, sourceRefMatches }
 const id = z.string().min(1).max(512).refine(value => value.trim() === value && !/[\x00-\x1f]/.test(value));
 
 const uuid = z.string().uuid(),
-
   revision = z.number().int().positive().safe(),
-
   digest = z.string().regex(/^[a-f0-9]{64}$/);
 
 const expectedOwnerFields = z.object({
   moduleId: id, bindingId: uuid.optional(), revision: revision.optional(), ownerMemberId: uuid,
-
   /** 仅继承时存在，指向实际责任记录；moduleId 始终是本次执行范围。 */
   inheritedFrom: id.optional(),
-
   /** 由当前主模型阅读模块与岗位能力后选择，不写责任表；版本和来源防止跨知识复用。 */
   match: z.object({ reason: z.string().trim().min(1).max(2000), knowledgeRevision: digest, sourceRef: knowledgeSourceRefSchema }).strict().optional(),
 }).strict();
@@ -32,7 +28,6 @@ const expectedOwnerFields = z.object({
 function checkOwnerChoice(value: z.infer<typeof expectedOwnerFields>, context: z.RefinementCtx)
 {
   if (value.match ? value.bindingId !== undefined || value.revision !== undefined || value.inheritedFrom !== undefined || value.match.sourceRef.source.kind !== 'module' || value.match.sourceRef.source.sourceId !== value.moduleId : !value.bindingId || !value.revision || value.inheritedFrom !== undefined && !value.moduleId.startsWith(value.inheritedFrom + '/'))
-
     context.addIssue({ code: 'custom', message: '显式、父级继承或模型匹配的执行依据不一致' });
 }
 
@@ -62,11 +57,9 @@ const equal = (a: unknown, b: unknown): boolean => { const order = (value: unkno
 export function ownerExecutionSelectionMatches(selection: OwnerExecutionSelection, binding: OwnerExecutionBinding): boolean
 {
   if (!ownerExecutionSelectionSchema.safeParse(selection).success || !ownerExecutionBindingSchema.safeParse(binding).success)
-
     return false;
 
   const expected = ownerExecutionSelectionFor(binding),
-
     sort = (value: OwnerExecutionSelection) => ({ ...value, expectedOwners: [...value.expectedOwners].sort((a, b) => a.moduleId.localeCompare(b.moduleId)) });
 
   return equal(sort(selection), sort(expected));
@@ -76,11 +69,9 @@ export function ownerExecutionSelectionMatches(selection: OwnerExecutionSelectio
 export function sameOwnerExecutionForModules(planned: OwnerExecutionBinding | undefined, actual: OwnerExecutionBinding | undefined, moduleIds: readonly string[]): boolean
 {
   if (!planned || !actual)
-
     return planned === actual;
 
   if (!ownerExecutionBindingSchema.safeParse(planned).success || !ownerExecutionBindingSchema.safeParse(actual).success || !moduleIds.length || new Set(moduleIds).size !== moduleIds.length)
-
     return false;
 
   const { owners: left, ...a } = planned,

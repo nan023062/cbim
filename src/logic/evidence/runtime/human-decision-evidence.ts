@@ -70,7 +70,6 @@ export type HumanCandidateValidator = (state: DispatchState, scope: DispatchScop
 function check(value: unknown, code: string, message: string): asserts value
 {
   if (!value)
-
     fail(code, message)
 }
 
@@ -78,7 +77,6 @@ function check(value: unknown, code: string, message: string): asserts value
 export function consumedHumanDecision(scope: DispatchScope, reference: { decisionId: string; continuationId: string }, criterionId?: string): { continuation: ScopeHumanContinuation; record: HumanDecisionRecord }
 {
   const continuation = currentHumanContinuation(scope),
-
     record = referencedHumanDecision(scope, reference);
 
   check(continuation && record && (!criterionId || record.criterionId === criterionId), 'GOAL_HUMAN_SOURCE', '人工决定不是当前输入版本已消费的验收项最新意见');
@@ -100,13 +98,11 @@ export function assertHumanSubject(scope: DispatchScope, continuation: ScopeHuma
 export async function validateHumanAcceptances(owner: Pick<KnowledgeWorkspace, 'entry' | 'Assert' | 'Read'>, state: DispatchState, scope: DispatchScope, records: readonly HumanDecisionRecord[], logs: HumanEvidenceLogs | undefined, ports: HumanDecisionPorts | undefined, validateCandidate: HumanCandidateValidator, withinMainRun = false): Promise<void>
 {
   if (!records.length)
-
     return;
 
   check(logs && ports, 'HUMAN_CONTINUATION_UNAVAILABLE', '尚未接入人工接受所需的可信日志及文件核实');
 
   const current = () => { owner.Assert(); ports.AssertCurrent?.() },
-
     graph = state.graphs.find(item => item.identity.workspaceId === scope.workspaceId && item.identity.rootSessionId === scope.rootSessionId);
 
   check(graph, 'HUMAN_CONTINUATION_IDENTITY', '人工接受缺少对应主会话图');
@@ -129,9 +125,7 @@ export async function validateHumanAcceptances(owner: Pick<KnowledgeWorkspace, '
 
         manifest?: OutputManifestRecord
       }>(),
-
       mains = new Map<string, RunSummary>(),
-
       files = new Map<string, ArtifactFileFact>();
 
     for (const record of records)
@@ -146,6 +140,7 @@ export async function validateHumanAcceptances(owner: Pick<KnowledgeWorkspace, '
 
         mains.set(record.proof.source.reviewRunId, main)
       }
+
       const main = mains.get(record.proof.source.reviewRunId)!;
 
       check(main.logIntegrity?.partialTail === false && main.status === 'completed' && !main.unresolvedTools.length && hash(json(main.events)) === record.proof.source.reviewLogHash, 'HUMAN_CONTINUATION_STALE', '原人工审阅日志已变化或无法完整核实');
@@ -153,7 +148,6 @@ export async function validateHumanAcceptances(owner: Pick<KnowledgeWorkspace, '
       for (const candidate of record.proof.candidates)
       {
         const task = graph.tasks.find(item => item.taskId === candidate.taskId),
-
           selected = candidate.selected;
 
         check(task && task.scopeId === scope.scopeId && task.revision === candidate.taskRevision && task.planRevision === candidate.planRevision && task.result?.resultId === candidate.resultId && task.result.runId === candidate.runId, 'HUMAN_CONTINUATION_STALE', '接受的成员候选已经变化');
@@ -177,7 +171,7 @@ export async function validateHumanAcceptances(owner: Pick<KnowledgeWorkspace, '
           observed.set(candidate.runId, log);
 
           if (!evidence.manifest)
-
+          {
             for (const file of evidence.files)
             {
               const existing = files.get(file.relativePath);
@@ -186,7 +180,9 @@ export async function validateHumanAcceptances(owner: Pick<KnowledgeWorkspace, '
 
               files.set(file.relativePath, file)
             }
+          }
         }
+
         check(hash(json(log.summary.events)) === candidate.logHash && candidate.evidenceToolCallIds.every(id => task.result!.evidenceRefs.includes(id)), 'HUMAN_CONTINUATION_STALE', '接受的日志或证据引用已经变化');
 
         if (log.manifest)
@@ -195,12 +191,11 @@ export async function validateHumanAcceptances(owner: Pick<KnowledgeWorkspace, '
 
           continue;
         }
+
         check(!candidate.selectedManifest && selected && !selected.invalidated && selected.files.length && selected.files.every(file => file.state === 'matches'), 'HUMAN_CONTINUATION_STALE', '接受的选定文件基线已经变化');
 
         const artifacts = verifyArtifactBaselines(log.summary.events, log.run.binding, knowledge.revision, ports.NormalizePath, selected.baselineId),
-
           baseline = artifacts.records.find(item => item.baseline.baselineId === selected.baselineId),
-
           ref = artifacts.refs.find(item => item.baselineId === selected.baselineId);
 
         check(baseline && ref && !ref.invalidated && baseline.capturedSeq === selected.capturedSeq && baseline.finishedSeq === selected.finishedSeq && baseline.baseline.captureToolCallId === selected.captureToolCallId && baseline.baseline.knowledgeRevision === selected.knowledgeRevision && baseline.baseline.progressVersion === selected.progressVersion && baseline.baseline.files.length === selected.files.length, 'HUMAN_CONTINUATION_STALE', '接受的采集事件、成功回执或基线版本不再有效');
@@ -208,9 +203,7 @@ export async function validateHumanAcceptances(owner: Pick<KnowledgeWorkspace, '
         for (const captured of baseline.baseline.files)
         {
           const expected = { relativePath: captured.relativePath, byteLength: captured.byteLength, sha256: captured.sha256 },
-
             old = selected.files.find(file => file.relativePath === expected.relativePath),
-
             existing = files.get(expected.relativePath);
 
           check(old && sameGoalValue(old.expected, { byteLength: expected.byteLength, sha256: expected.sha256 }) && (!existing || sameGoalValue(existing, expected)), 'HUMAN_CONTINUATION_STALE', '人工接受之间的文件期望或真实采集字节不一致');
@@ -219,6 +212,7 @@ export async function validateHumanAcceptances(owner: Pick<KnowledgeWorkspace, '
         }
       }
     }
+
     const manifests = [...observed.values()].flatMap(log => log.manifest ? [log.manifest] : []);
 
     check((files.size > 0 || manifests.length > 0) && files.size <= artifactLimits.files && [...files.values()].reduce((total, file) => total + file.byteLength, 0) <= artifactLimits.totalBytes, 'HUMAN_CONTINUATION_LIMIT', '本次人工接受的选定文件复核超过 16 文件或 32 MiB 上限');
@@ -226,9 +220,7 @@ export async function validateHumanAcceptances(owner: Pick<KnowledgeWorkspace, '
     assertCompleteOutputBudget(manifests, [...files.values()]);
 
     const expected = [...files.values()].sort((a, b) => a.relativePath < b.relativePath ? -1 : 1),
-
       signal = AbortSignal.timeout(15000),
-
       checked = expected.length ? await ports.CheckFiles(expected, signal) : [];
 
     current();
@@ -256,6 +248,7 @@ export async function validateHumanAcceptances(owner: Pick<KnowledgeWorkspace, '
         fail('HUMAN_CONTINUATION_STALE', '已接受的完整产物集合已变化或无法核实；原意见保留，请重新安排验证')
       }
     }
+
     for (const { run, summary } of observed.values())
     {
       const again = await logs.InspectMember(run);
@@ -264,6 +257,7 @@ export async function validateHumanAcceptances(owner: Pick<KnowledgeWorkspace, '
 
       check(sameGoalValue(summary, again), 'HUMAN_CONTINUATION_STALE', '人工接受复核期间成员日志变化')
     }
+
     for (const [runId, summary] of mains)
     {
       const again = await logs.InspectMain(scope.rootSessionId, runId);
@@ -272,6 +266,7 @@ export async function validateHumanAcceptances(owner: Pick<KnowledgeWorkspace, '
 
       check(sameGoalValue(summary, again), 'HUMAN_CONTINUATION_STALE', '人工接受复核期间主审阅日志变化')
     }
+
     check((await owner.Read()).revision === knowledge.revision, 'HUMAN_CONTINUATION_STALE', '人工接受复核期间知识变化');
 
     current();

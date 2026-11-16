@@ -20,9 +20,7 @@ export const enginePackageSchema = z.object({ kind: z.string().regex(/^[a-z][a-z
 
 const manifestSchema = z.object({
   schema: z.literal(1), codeVersion: version, resourceVersion: z.number().int().positive(), coldFingerprint: hash,
-
   platform: z.literal('win32-x64'), createdAt: z.string().datetime(), expiresAt: z.string().datetime(), sourceCommit: z.string().regex(/^[a-f0-9]{40}$/),
-
   notes: z.string().max(30000), resource: packageSchema, engines: z.array(enginePackageSchema).min(1).max(64)
 }).strict();
 
@@ -40,7 +38,6 @@ export function validateEnginePackage(engine: EnginePackage)
   runtimeRelativePath(engine.entry);
 
   if (!engine.package.files.some(file => file.path === engine.entry))
-
     throw Error('引擎入口不在清单中');
 
   if (engine.adapter)
@@ -48,13 +45,12 @@ export function validateEnginePackage(engine: EnginePackage)
     runtimeRelativePath(engine.adapter.entry);
 
     if (!engine.adapter.entry.endsWith('.cjs') || !engine.package.files.some(file => file.path === engine.adapter!.entry))
-
       throw Error('适配器入口不在清单中');
   }
+
   const dependencies = engine.dependencies ?? [];
 
   if (dependencies.some(d => d.kind === engine.kind) || new Set(dependencies.map(d => d.kind)).size !== dependencies.length)
-
     throw Error('引擎依赖无效或重复');
 
   validateRuntimeFiles(engine.package.files);
@@ -86,13 +82,10 @@ export interface SignedRuntimeManifest
 export function runtimeRelativePath(value: string)
 {
   if (!value || value.length > 600 || value.includes('\\') || /[\x00-\x1f<>:"|?*]/.test(value) || value.startsWith('/') || value.normalize('NFC') !== value)
-
     throw Error('更新文件路径无效');
 
   for (const segment of value.split('/'))
-
     if (!segment || segment === '.' || segment === '..' || /[ .]$/.test(segment) || /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(segment))
-
       throw Error('更新文件路径无效');
 
   return value;
@@ -110,15 +103,14 @@ export function validateRuntimeFiles(files: RuntimeFile[])
     const name = runtimeRelativePath(file.path).toLowerCase();
 
     if (names.has(name))
-
       throw Error('更新文件重复');
 
     names.add(name);
 
     bytes += file.bytes;
   }
-  if (bytes > 4 * 2 ** 30)
 
+  if (bytes > 4 * 2 ** 30)
     throw Error('更新展开大小超过上限');
 
   for (const name of names)
@@ -130,7 +122,6 @@ export function validateRuntimeFiles(files: RuntimeFile[])
     while (parts.length)
     {
       if (names.has(parts.join('/')))
-
         throw Error('更新文件与目录冲突');
 
       parts.pop();
@@ -161,19 +152,16 @@ export function verifyRuntimeManifest(raw: unknown, cold: ColdRuntime, options: 
   const key = createPublicKey(cold.publicKey);
 
   if (key.asymmetricKeyType !== 'ed25519' || !verify(null, Buffer.from(envelope.payload), key, Buffer.from(envelope.signature, 'base64')))
-
     throw Error('更新清单签名无效');
 
   const manifest = manifestSchema.parse(JSON.parse(envelope.payload));
 
   if (manifest.codeVersion !== cold.codeVersion || manifest.platform !== cold.platform || manifest.coldFingerprint !== cold.coldFingerprint)
-
     throw Error('资源包与冷更基础不兼容');
 
   const now = options.now ?? Date.now();
 
   if (Date.parse(manifest.createdAt) > now + 5 * 60_000 || Date.parse(manifest.expiresAt) <= Date.parse(manifest.createdAt) || (!options.installed && Date.parse(manifest.expiresAt) <= now))
-
     throw Error('更新清单时间无效或已过期');
 
   const kinds = new Set<string>();
@@ -181,7 +169,6 @@ export function verifyRuntimeManifest(raw: unknown, cold: ColdRuntime, options: 
   for (const engine of manifest.engines)
   {
     if (kinds.has(engine.kind))
-
       throw Error('引擎清单重复');
 
     kinds.add(engine.kind);
@@ -189,23 +176,19 @@ export function verifyRuntimeManifest(raw: unknown, cold: ColdRuntime, options: 
     runtimeRelativePath(engine.entry);
 
     if (!engine.package.files.some(file => file.path === engine.entry))
-
       throw Error('引擎入口不在清单中');
 
     validateEnginePackage(engine);
   }
+
   validateRuntimeFiles(manifest.resource.files);
 
   for (const file of manifest.resource.files)
-
     if (/\.(exe|dll|node|sys|dylib|so)$/i.test(file.path))
-
       throw Error('资源包不能更换冷基础原生文件');
 
   for (const entry of ['.vite/build/main.js', '.vite/build/preload.js', '.vite/renderer/main_window/index.html'])
-
     if (!manifest.resource.files.some(file => file.path === entry))
-
       throw Error('资源包缺少应用入口');
 
   return { manifest, envelope, digest: runtimeManifestDigest(envelope) };

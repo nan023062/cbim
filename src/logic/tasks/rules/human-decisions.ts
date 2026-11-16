@@ -19,11 +19,8 @@ const logical = z.string().min(1).max(512).refine(value => value.trim() === valu
 const callId = z.string().min(1).max(128).refine(value => value.trim() === value && !/[\x00-\x1f]/.test(value));
 
 const digest = z.string().regex(/^[a-f0-9]{64}$/),
-
   seq = z.number().int().nonnegative().safe(),
-
   positive = seq.min(1),
-
   time = z.string().datetime();
 
 const unique = (values: string[]) => new Set(values).size === values.length;
@@ -124,35 +121,28 @@ export const humanDecisionRecordSchema = z.object({ decisionId: z.string().uuid(
   const issue = (message: string) => context.addIssue({ code: 'custom', message });
 
   if (value.criterionId !== value.proof.source.criterion.id || !value.proof.allowedDecisions.includes(value.decision))
-
     issue('人工项或决定不属于核实依据');
 
   if (value.reconsidersDecisionId === value.decisionId)
-
     issue('新决定不能引用自身作为旧意见');
 
   if (value.decision !== 'accept' && !value.comment)
-
     issue('拒绝或补证须保留意见');
 
   const selected = value.proof.candidates.filter(item => item.selected);
 
   if (value.baselines.length !== selected.length || !value.baselines.every(selection => selected.some(item => item.taskId === selection.taskId && item.runId === selection.runId && item.selected!.baselineId === selection.baselineId)))
-
     issue('选择与已核实文件依据不一致');
 
   const manifests = value.proof.candidates.filter(item => item.selectedManifest);
 
   if ((value.manifests?.length ?? 0) !== manifests.length || !value.manifests?.every(selection => manifests.some(item => item.taskId === selection.taskId && item.runId === selection.runId && item.selectedManifest!.manifest.manifestId === selection.manifestId)) && manifests.length)
-
     issue('完整选择与已核实的原交付清单不一致');
 
   if (value.proof.candidates.some(item => item.selected && item.selectedManifest))
-
     issue('同一候选不能同时引用文件子集与完整清单');
 
   if (value.decision === 'accept' && value.proof.candidates.some(item => item.selectedManifest ? item.selectedManifest.state !== 'matches' || item.selectedManifest.manifest.knowledgeRevision !== value.proof.source.knowledgeRevision : !item.selected || item.selected.invalidated || !item.selected.files.length || item.selected.files.some(file => file.state !== 'matches') || item.selected.knowledgeRevision !== value.proof.source.knowledgeRevision))
-
     issue('接受必须明确选择全部候选的当前有效且完全匹配的产物依据');
 
   const files = new Map<string,
@@ -164,27 +154,23 @@ export const humanDecisionRecordSchema = z.object({ decisionId: z.string().uuid(
 
   // 拒绝/补证可保留冲突观察；相同路径仍按最大期望大小计量，不能用后来较小的版本降低读取上限。
   for (const item of selected)
-
     for (const file of item.selected!.files)
     {
       const existing = files.get(file.relativePath);
 
       if (existing && (existing.byteLength !== file.expected.byteLength || existing.sha256 !== file.expected.sha256) && value.decision === 'accept')
-
         issue('候选对同一文件的期望不一致');
 
       if (!existing || existing.byteLength < file.expected.byteLength)
-
         files.set(file.relativePath, file.expected)
     }
-  if (files.size > artifactLimits.files || [...files.values()].reduce((total, file) => total + file.byteLength, 0) > artifactLimits.totalBytes)
 
+  if (files.size > artifactLimits.files || [...files.values()].reduce((total, file) => total + file.byteLength, 0) > artifactLimits.totalBytes)
     issue('人工决定的文件核实范围超过上限');
 
   const proofs = manifests.map(item => item.selectedManifest!.manifest);
 
   if (proofs.reduce((sum, item) => sum + item.scopes.reduce((n, scope) => n + scope.scope.roots.length, 0), 0) > artifactScopeLimits.roots || files.size + proofs.reduce((sum, item) => sum + item.entryCount, 0) > artifactScopeLimits.entries || [...files.values()].reduce((sum, file) => sum + file.byteLength, 0) + proofs.reduce((sum, item) => sum + item.byteLength, 0) > artifactScopeLimits.totalBytes)
-
     issue('人工决定的完整集合合并预算超过上限');
 });
 

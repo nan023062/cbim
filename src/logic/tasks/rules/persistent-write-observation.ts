@@ -6,11 +6,8 @@
 import { z } from 'zod';
 
 const id = z.string().min(1).max(512),
-
   uuid = z.string().uuid(),
-
   hash = z.string().regex(/^[a-f0-9]{64}$/),
-
   positive = z.number().int().positive().safe();
 
 export const persistentWriteEffects = { cbim_governance_observe: 'maintenance', cbim_governance_propose: 'preview', cbim_module_owner_change_commit: 'knowledge-write' } as const;
@@ -20,13 +17,9 @@ export type PersistentWriteName = keyof typeof persistentWriteEffects;
 export const persistentWriteIdentitySchema = z.object({ workspaceId: id, rootSessionId: id, runId: id, toolCallId: id, toolName: z.enum(['cbim_governance_observe', 'cbim_governance_propose', 'cbim_module_owner_change_commit']), commandId: uuid }).strict();
 
 const record = z.discriminatedUnion('kind', [
-
   z.object({ kind: z.literal('observation'), recordId: uuid, instanceId: uuid, recordedAt: z.string().datetime() }).strict(),
-
   z.object({ kind: z.literal('proposal'), recordId: uuid, instanceId: uuid, recordedAt: z.string().datetime() }).strict(),
-
   z.object({ kind: z.literal('ownership'), recordId: uuid, instanceId: uuid, recordedAt: z.string().datetime(), action: z.enum(['assign', 'replace', 'unassign', 'adopt_source']), revision: positive }).strict(),
-
 ]);
 
 /** sourceHash 绑定原已解析参数和真实来源；只有原记录完整校验通过才携带回执摘要。 */

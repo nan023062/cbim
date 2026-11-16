@@ -44,7 +44,6 @@ export function governanceDecisionReviewKey(selected: GovernanceSelected)
 export function governanceResponsesCurrent(selected: GovernanceSelected)
 {
   const refs = selected.proposal.respondsTo ?? [],
-
     states = selected.responseStates ?? [];
 
   return refs.length === states.length && refs.every(ref => states.some(state => state.reference.decisionId === ref.decisionId && state.reference.proposalId === ref.proposalId && state.reference.basis === ref.basis && state.reference.decisionRevision === ref.decisionRevision && state.state === 'current'));
@@ -54,39 +53,32 @@ export function governanceResponsesCurrent(selected: GovernanceSelected)
 export function governanceDecisionFields(selected: GovernanceSelected, draft: GovernanceDecisionDraft, decision: 'approve' | 'reject' | 'defer', reviewedKey?: string)
 {
   if (reviewedKey !== governanceDecisionReviewKey(selected))
-
     throw Error('提案或来源已变化，请重新审阅后勾选确认');
 
   if (decision !== 'approve' && !draft.comment.trim())
-
     throw Error('驳回或暂缓须填写具体意见');
 
   if (decision === 'defer' && !draft.revisitCondition.trim())
-
     throw Error('暂缓须填写复查条件');
 
   const refs = selected.proposal.respondsTo ?? [],
-
     assessments: ModuleGovernanceResponseAssessment[] = [];
 
   for (const [decisionId, value] of Object.entries(draft.assessments))
   {
     if (!refs.some(ref => ref.decisionId === decisionId))
-
       throw Error('评价不属于当前提案回应的意见');
 
     if (!value.outcome)
-
       continue;
 
     if (!value.explanation.trim() || value.explanation.length > 1024)
-
       throw Error('回应评价须填写不超过 1024 字的具体说明');
 
     assessments.push({ decisionId, outcome: value.outcome, explanation: value.explanation });
   }
-  if ((decision === 'approve' || assessments.length > 0) && !governanceResponsesCurrent(selected))
 
+  if ((decision === 'approve' || assessments.length > 0) && !governanceResponsesCurrent(selected))
     throw Error('来源意见已被替代；请基于当前意见重新提出方案，或仅记录驳回/暂缓');
 
   let feedback: ModuleGovernanceFeedback | undefined;
@@ -94,14 +86,13 @@ export function governanceDecisionFields(selected: GovernanceSelected, draft: Go
   if (draft.includeFeedback)
   {
     if (decision === 'approve')
-
       throw Error('补证或异议请记录为暂缓或驳回，不能同时批准');
 
     if (!draft.expectedResponse.trim() || draft.expectedResponse.length > 1024)
-
       throw Error('请填写不超过 1024 字的期望回应');
 
     feedback = { kind: decision === 'defer' ? 'evidence_request' : 'objection', focus: draft.focus, expectedResponse: draft.expectedResponse };
   }
+
   return { decision, comment: draft.comment, ...(decision === 'defer' ? { revisitCondition: draft.revisitCondition } : {}), ...(feedback ? { feedback } : {}), ...(assessments.length ? { assessments } : {}) };
 }

@@ -30,11 +30,8 @@ export function agentHistoryIpcHandlers(app: AgentHistoryIpcServices): IpcHandle
 {
   return {
     'agentHistory.roles': input => app.AgentHistory(input.workspaceId).Roles(input),
-
     'agentHistory.sessions': input => app.AgentHistory(input.workspaceId).Sessions(input),
-
     'agentHistory.runs': input => app.AgentHistory(input.workspaceId).Runs(input),
-
     'agentHistory.events': input => app.AgentHistory(input.workspaceId).Events(input),
   }
 }

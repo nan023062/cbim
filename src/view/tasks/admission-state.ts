@@ -53,6 +53,7 @@ export class AdmissionFeed
 
       void this.Refresh()
     }
+
     return () => { unsubscribe(); if (!this.listeners.size) { this.generation.Advance(); clearTimeout(this.timer) } };
   }
 
@@ -60,7 +61,6 @@ export class AdmissionFeed
   Refresh(): Promise<void>
   {
     if (this.pending)
-
       return this.pending;
 
     clearTimeout(this.timer);
@@ -74,14 +74,13 @@ export class AdmissionFeed
     void pending.finally(() =>
     {
       if (this.pending === pending)
-
         this.pending = undefined;
 
       // 即使旧请求跨越重新挂载才返回，也为当前订阅重新读取；不发布旧代数据。
       if (this.listeners.size)
-
         this.timer = setTimeout(() => void this.Refresh(), this.generation.IsCurrent(generation) ? this.intervalMs : 0);
     });
+
     return pending;
   }
 }
@@ -92,7 +91,6 @@ export function sessionAdmission(data: AdmissionSnapshot | undefined, workspaceI
   const matches = (item: { workspaceId: string; rootSessionId: string }) => item.workspaceId === workspaceId && item.rootSessionId === rootSessionId;
 
   const waiting = rootSessionId ? data?.waiting.filter(matches) ?? [] : [],
-
     occupied = rootSessionId ? data?.occupied.filter(matches) ?? [] : [];
 
   return { waiting, occupied, waitingOnly: waiting.length > 0 && !occupied.length, waitingSince: waiting.length ? waiting.reduce((earliest, item) => earliest < item.requestedAt ? earliest : item.requestedAt, waiting[0].requestedAt) : undefined };

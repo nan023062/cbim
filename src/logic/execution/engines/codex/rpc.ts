@@ -24,7 +24,6 @@ export class CodexRpc
   /** 完整非空行及尾部均保留 UTF-8 字节限额；CR 仍包含在完整行的计量内。 */
   private readonly frames = new LineFramer({
     checkLine: line => { if (line.trim() && Buffer.byteLength(line) > 32 * 1024 * 1024) throw Error('Codex 消息超出限制') },
-
     checkRemainder: text => { if (Buffer.byteLength(text) > 32 * 1024 * 1024) throw Error('Codex 消息超出限制') },
   });
 
@@ -56,7 +55,6 @@ export class CodexRpc
   private Receive(value: any)
   {
     if (!value || typeof value !== 'object' || Array.isArray(value))
-
       throw Error('Codex 返回无效协议消息');
 
     if (typeof value.method === 'string')
@@ -64,7 +62,6 @@ export class CodexRpc
       const work = (value.id !== undefined ? (async () => { const result = await this.requestHandler(value.method, value.params); this.Send({ id: value.id, result }) })() : this.notifications.then(() => this.notify(value.method, value.params))).catch(error => this.Fail(error instanceof Error ? error : Error(String(error))));
 
       if (value.id === undefined)
-
         this.notifications = work;
 
       this.handling.Track(work);
@@ -74,13 +71,11 @@ export class CodexRpc
       const pending = this.pending.Take(value.id);
 
       if (!pending)
-
         return;
 
       value.error ? pending.reject(Error(String(value.error.message ?? 'Codex 拒绝请求'))) : pending.resolve(value.result)
     }
     else
-
       throw Error('Codex 返回不可关联的消息');
   }
 
@@ -88,7 +83,6 @@ export class CodexRpc
   Request(method: string, params: unknown = {}, timeoutMs = 30000): Promise<any>
   {
     if (this.failure || this.closing)
-
       return Promise.reject(this.failure ?? Error('Codex 已关闭'));
 
     const id = ++this.sequence;
@@ -99,7 +93,6 @@ export class CodexRpc
   Send(value: unknown)
   {
     if (this.failure || this.closing || !this.child)
-
       throw this.failure ?? Error('Codex 不可用');
 
     this.child.stdin.write(JSON.stringify(value) + '\n')
@@ -108,7 +101,6 @@ export class CodexRpc
   private Fail(error: Error)
   {
     if (this.failure)
-
       return;
 
     this.failure = error;

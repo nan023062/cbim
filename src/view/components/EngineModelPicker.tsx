@@ -27,9 +27,7 @@ export function EngineModelPicker({ models, value, onChange, required = false, e
   const available = !value || profiles.some(p => p.id === value.profileId && selectable(p).some(m => m.id === value.modelId));
 
   const emptyReason = !models?.profiles.length ? '尚未配置供应商，请到模型设置中添加供应商与模型。'
-
     : !profiles.length ? `当前供应商没有适用的兼容接口。${engine === 'claude-code' ? 'Claude Code 需要 Anthropic Messages 兼容端点；仅有 OpenAI Chat/Responses 地址时不能直接切换协议。' : engine === 'codex' ? 'Codex 需要 OpenAI Responses 端点。' : '请检查供应商接口协议。'}请在模型设置中选择供应商预设或添加兼容接口，同一供应商共用一份 Key。`
-
       : '兼容供应商没有已启用模型，请在模型设置中添加或启用模型；获取目录失败时也可手动添加真实模型 ID。';
 
   return <><label>Loop 引擎<select aria-label="Agent Loop 引擎" required={required} value={engine} onChange={event => { setChosen(event.target.value as LoopEngine | ''); onChange(null) }}><option value="">{emptyLabel}</option>{loopEngineSchema.options.map(item => <option key={item} value={item}>{engineLabel(item)}</option>)}</select></label>

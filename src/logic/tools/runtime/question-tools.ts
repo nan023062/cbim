@@ -38,13 +38,11 @@ export class QuestionTools
   private Parse(name: string, raw: unknown)
   {
     if (!this.Has(name))
-
       fail('QUESTION_TOOL_UNKNOWN', '当前运行没有该提问工具');
 
     const parsed = questionInput.safeParse(raw);
 
     if (!parsed.success)
-
       fail('QUESTION_INPUT_INVALID', '问题参数无效，请提供1至3个问题及各2至6个选项，不接受身份或授权字段');
 
     return parsed.data;
@@ -62,7 +60,6 @@ export class QuestionTools
   async Call(name: string, raw: unknown, signal: AbortSignal)
   {
     const input = this.Parse(name, raw),
-
       schema = questionResultForInput(input);
 
     const result = await this.request(input, signal);

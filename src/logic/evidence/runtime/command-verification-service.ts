@@ -76,7 +76,6 @@ export class CommandVerificationService
     const parsed = commandVerificationInputSchema.safeParse(raw);
 
     if (!parsed.success)
-
       fail('COMMAND_REPORT_INPUT', '原命令查询身份无效');
 
     const input = parsed.data;
@@ -96,11 +95,8 @@ export class CommandVerificationService
     const scope = this.Scope(before, input);
 
     let command: CommandRecord = { state: 'unverifiable', reason: 'source_unverified' },
-
       evidence: DispatchCommandEvidence | undefined,
-
       commandId: string | undefined,
-
       queryFailed = false;
 
     if (first.source.state === 'verified' && first.source.toolName)
@@ -108,17 +104,11 @@ export class CommandVerificationService
       const name = first.source.toolName;
 
       if (!isVerifiableMainToolName(name))
-
         command = { state: 'not_applicable', reason: ['cbim_goal_inspect', 'cbim_dispatch_inspect', commandReportToolName].includes(name) ? 'readonly_tool' : 'unsupported_family' };
-
       else if (!scope)
-
         command = { state: 'unverifiable', reason: 'scope_unverified' };
-
       else if (!first.source.allowedSeq || first.source.outcome === 'denied' || first.source.outcome === 'not_authorized')
-
         command = { state: 'unverifiable', reason: 'source_unverified' };
-
       else
       {
         const binding = { workspaceId: input.workspaceId, rootSessionId: input.rootSessionId, scopeId: scope.scopeId, runId: input.runId };
@@ -137,16 +127,13 @@ export class CommandVerificationService
           {
             queryFailed = true
           }
+
           alive();
 
           if (queryFailed)
-
             command = { state: 'unverifiable', reason: 'store_unavailable' };
-
           else if (!evidence)
-
             command = { state: 'absent', commandId };
-
           else
           {
             const graph = evidence.graph;
@@ -154,19 +141,15 @@ export class CommandVerificationService
             const validPrestate = graph && graph.identity.workspaceId === input.workspaceId && graph.identity.rootSessionId === input.rootSessionId && graph.before && graph.before.cursor.workspaceId === input.workspaceId && graph.before.cursor.rootSessionId === input.rootSessionId && graph.afterCursor.workspaceId === input.workspaceId && graph.afterCursor.rootSessionId === input.rootSessionId && graph.afterCursor.streamId === graph.before.cursor.streamId && graph.afterCursor.seq === graph.before.cursor.seq + 1 && Number.isSafeInteger(graph.before.rootRevision) && graph.before.rootRevision > 0;
 
             if (name === 'cbim_dispatch_task' && (!validPrestate || graph?.cause !== 'task.dispatched'))
-
               command = { state: 'unverifiable', reason: 'missing_prestate' };
-
             else
             {
               const complete = restoreMainCommand(name, binding, input.toolCallId, first.raw, name === 'cbim_dispatch_task' ? graph!.before!.rootRevision : undefined);
 
               if (complete.fingerprint !== evidence.fingerprint)
-
                 command = { state: 'unverifiable', reason: 'fingerprint_mismatch' };
-
               else
-
+              {
                 try
                 {
                   const result = projectCommandReceipt(name, evidence.receipt, { binding, input: complete.input, expectedCommandId: commandId });
@@ -176,9 +159,9 @@ export class CommandVerificationService
                     const cursor = 'cursor' in result ? result.cursor : result.graphCursor;
 
                     if (!validPrestate || cursor.streamId !== graph!.afterCursor.streamId || cursor.seq !== graph!.afterCursor.seq)
-
                       throw new Error('receipt cursor');
                   }
+
                   if (result.toolName === 'cbim_dispatch_task')
                   {
                     // 原assignment的command/message/task/from身份固定；旧协议可修订任务计划及assignee，不能拿今日版本否定旧派发。
@@ -189,15 +172,16 @@ export class CommandVerificationService
                     const assignment = assignments[0];
 
                     if (assignments.length !== 1 || !assignment || assignment.kind !== 'assignment' || assignment.messageId !== result.messageId || assignment.taskId !== result.taskId || assignment.resumeFrom || !task || task.scopeId !== scope.scopeId || assignment.from.agentId !== task.requester.agentId || assignment.from.agentInstanceId !== task.requester.agentInstanceId || assignment.from.agentSessionId !== task.requester.agentSessionId)
-
                       throw new Error('assignment identity');
                   }
+
                   command = commandRecordSchema.parse({ state: 'committed', commandId, requestFingerprint: evidence.fingerprint, receiptHash: hash(json(evidence.receipt)), commit: evidence.commit, result });
                 }
                 catch
                 {
                   command = { state: 'unverifiable', reason: 'receipt_invalid' }
                 }
+              }
             }
           }
         }
@@ -209,6 +193,7 @@ export class CommandVerificationService
         }
       }
     }
+
     // 不仅比较命令键：原日志、周期/主身份和提交证据都必须保持同一观察。
     let afterEvidence: DispatchCommandEvidence | undefined;
 
@@ -223,6 +208,7 @@ export class CommandVerificationService
         queryFailed = true
       }
     }
+
     alive();
 
     // 反向闭合观察区间：Store前态→日志→命令→命令→日志→Store后态，不能在最后日志IO前提前宣布Store稳定。
@@ -237,25 +223,19 @@ export class CommandVerificationService
     const changed = first.stamp !== last.stamp || this.Stamp(before, input) !== this.Stamp(after, input) || commandId !== undefined && !queryFailed && !isDeepStrictEqual(evidence, afterEvidence);
 
     if (changed)
-
       command = { state: 'unverifiable', reason: 'changed_during_read' };
-
     else if (queryFailed || !before || !after)
-
       command = { state: 'unverifiable', reason: 'store_unavailable' };
 
     const issues: CommandVerificationReport['issues'] = [];
 
     if (changed)
-
       issues.push({ code: 'COMMAND_OBSERVATION_CHANGED', severity: 'warning', message: '读取期间原日志或调度事实发生变化，本次不返回已提交结论。' });
 
     if (command.state === 'absent')
-
       issues.push({ code: 'COMMAND_RECORD_ABSENT', severity: 'warning', message: '仅表示原命令键下查无已确认记录，不证明未执行、回滚或可以重试。' });
 
     if (command.state === 'unverifiable' && !changed)
-
       issues.push({ code: 'COMMAND_UNVERIFIABLE', severity: 'warning', message: '现有资料不足以核实原命令；保留原未知状态，不自动重放。' });
 
     const scopeView = scope ? { scopeId: scope.scopeId, status: scope.status, ...(scope.goal ? { goalRevision: scope.goal.revision, inputRevision: goalInputRevision(scope.goal), ...(scope.goal.plan ? { planRevision: scope.goal.plan.revision } : {}) } : {}), ...(scope.outcome ? { outcome: scope.outcome } : {}) } : undefined;
@@ -286,7 +266,6 @@ export class CommandVerificationService
   private Stamp(state: DispatchState | undefined, input: CommandVerificationInput)
   {
     const graph = state?.graphs.find(graph => graph.identity.rootSessionId === input.rootSessionId && graph.identity.workspaceId === input.workspaceId),
-
       root = graph?.root.agent;
 
     return hash(json({ available: !!state, scope: this.Scope(state, input), root, graphCursor: graph?.cursor, member: state?.members.find(member => member.agentInstanceId === root?.agentInstanceId), sessions: state?.sessions.filter(session => session.agentInstanceId === root?.agentInstanceId && session.rootSessionId === input.rootSessionId), assignments: state?.outbox.filter(message => message.kind === 'assignment' && message.identity.workspaceId === input.workspaceId && message.identity.rootSessionId === input.rootSessionId) }));
@@ -295,7 +274,6 @@ export class CommandVerificationService
   private async Log(input: CommandVerificationInput, state: DispatchState | undefined): Promise<ReadLog>
   {
     if (!this.ports)
-
       return { source: { state: 'unavailable' }, stamp: 'unavailable' };
 
     let summary: RunSummary;
@@ -310,85 +288,68 @@ export class CommandVerificationService
         {
           code?: string
         })?.code,
-
         state: Source['state'] = code === 'ENOENT' ? 'missing' : code === 'RUN_LOG_EMPTY' ? 'incomplete' : ['RUN_LOG_INVALID', 'CONVERSATION_IDENTITY'].includes(code ?? '') ? 'invalid' : 'unavailable';
 
       return { source: { state }, stamp: state };
     }
+
     // 未核身份的资料不向公开 source 泄漏原工具、run 状态或参数摘要。
     try
     {
       if (summary.task.workspaceId !== input.workspaceId || summary.task.taskId !== input.rootSessionId || summary.runId !== input.runId || summary.task.mode !== 'chat' || summary.task.agentId !== 'cbim:main' || summary.memberBinding)
-
         throw new Error('identity');
 
       if (!summary.conversationBinding)
-
         return { source: { state: 'legacy_unverified' }, stamp: hash(json(summary)) };
 
       const binding = checkedConversationAgentBinding(summary.conversationBinding, summary.task),
-
         graph = state?.graphs.find(graph => graph.identity.workspaceId === input.workspaceId && graph.identity.rootSessionId === input.rootSessionId),
-
         root = graph?.root.agent;
 
       const member = state?.members.find(member => member.agentInstanceId === binding.agentInstanceId),
-
         session = state?.sessions.find(session => session.agentSessionId === binding.agentSessionId);
 
       const mailbox = state?.sessions.find(session => session.agentSessionId === root?.agentSessionId);
 
       // 图根的结果邮箱与普通对话通道是两个真实 session；分别核归属，不能按通道相同猜绑定。
       if (!root || !member || !session || !mailbox || root.agentId !== binding.agentId || root.agentInstanceId !== binding.agentInstanceId || member.workspaceId !== binding.workspaceId || member.teamId !== binding.teamId || member.agentId !== binding.agentId || member.mainRootSessionId !== binding.rootSessionId || !member.agentSessionIds.includes(binding.agentSessionId) || !member.agentSessionIds.includes(mailbox.agentSessionId) || session.workspaceId !== binding.workspaceId || session.teamId !== binding.teamId || session.agentId !== binding.agentId || session.agentInstanceId !== binding.agentInstanceId || session.rootSessionId !== binding.rootSessionId || session.purpose !== 'conversation' || mailbox.workspaceId !== binding.workspaceId || mailbox.teamId !== binding.teamId || mailbox.agentId !== binding.agentId || mailbox.agentInstanceId !== binding.agentInstanceId || mailbox.rootSessionId !== binding.rootSessionId || mailbox.purpose === 'conversation')
-
         throw new Error('binding');
 
       if (!summary.events.length || summary.events[0].type !== 'run.started' || summary.events.filter(event => event.type === 'run.started').length !== 1 || summary.events.some((event, index) => event.version !== 1 || event.seq !== index + 1 || event.workspaceId !== input.workspaceId || event.taskId !== input.rootSessionId || event.runId !== input.runId))
-
         throw new Error('events');
 
       const terminal = summary.events.filter(event => event.type === 'run.settled' || event.type === 'run.interrupted');
 
       // 本报告可查询真实在途调用；终态只有一个。停止收尾可迟到写 stop_requested，不能在终态后新发工具。
       if (terminal.length > 1 || terminal.length === 1 && summary.events.some(event => event.seq > terminal[0].seq && event.type !== 'run.stop_requested'))
-
         throw new Error('terminal order');
 
       const started = summary.events[0].data;
 
       if (!isDeepStrictEqual(started.task, summary.task) || !isDeepStrictEqual(started.conversationBinding, summary.conversationBinding))
-
         throw new Error('started');
 
       const stamp = hash(json(summary)),
-
         logPrefixHash = hash(json(summary.events)),
-
         throughSeq = summary.events.at(-1)!.seq;
 
       if (summary.logIntegrity?.partialTail)
-
         return { source: { state: 'incomplete' }, stamp, logPrefixHash, throughSeq };
 
       if (!summary.logIntegrity)
-
         return { source: { state: 'legacy_unverified' }, stamp, logPrefixHash, throughSeq };
 
       const facts = executionToolFacts(summary, { binding: { workspaceId: input.workspaceId, taskId: input.rootSessionId, runId: input.runId } }, { toolCallIdLimit: 512 }),
-
         item = facts.items.find(item => item.toolCallId === input.toolCallId);
 
       if (facts.invalid)
-
         return { source: { state: 'invalid' }, stamp, logPrefixHash, throughSeq };
 
       if (!item?.proposedSeq)
-
         return { source: { state: 'missing' }, stamp, logPrefixHash, throughSeq };
 
       // 八项主写入口的真实分类固定为工作区 maintenance；链内自洽不等于此入口获得过正确授权。
       if (isVerifiableMainToolName(item.toolName) && item.allowedSeq && (item.effects.length !== 1 || item.effects[0] !== 'maintenance' || item.scope.kind !== 'workspace' || item.scope.workspaceId !== input.workspaceId))
-
         return { source: { state: 'invalid' }, stamp, logPrefixHash, throughSeq };
 
       const original = summary.events.find(event => event.seq === item.proposedSeq)!.data.input;

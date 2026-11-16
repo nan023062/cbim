@@ -23,9 +23,7 @@ export const mainAgentId = 'cbim:main';
 export function agentToolInstructions(role: 'root' | 'called'): string
 {
   const recipient = role === 'root'
-
     ? '你是与用户交互的主 Agent。接收用户指令并向用户反馈；你对最终成果、验证和未完成项负责。'
-
     : '你是被调用的执行 Agent。接收直接调用方的指令，结果、问题和错误仅返回直接调用方；不要冒充用户，不直接向用户索要输入。';
 
   return `${recipient}

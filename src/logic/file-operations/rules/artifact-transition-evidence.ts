@@ -23,7 +23,6 @@ import { artifactTransitionToolName, artifactTransitionInputSchema, artifactTran
 function valid(value: unknown, message: string): asserts value
 {
   if (!value)
-
     throw Error(message)
 }
 
@@ -39,15 +38,12 @@ export function artifactTransitionOperationId(binding: Binding, toolCallId: stri
 export function expectedArtifactTransitionSnapshot(raw: OutputManifestSnapshot, operation: ArtifactTransitionDefinition): OutputManifestSnapshot
 {
   const before = outputManifestSnapshotSchema.parse(raw),
-
     source = operation.kind === 'delete' ? operation.path : operation.from,
-
     entry = before.entries.find(item => item.relativePath === source);
 
   valid(entry?.kind === 'file' && entry.byteLength <= 1024 * 1024, '原操作来源不是受支持的真实普通文件');
 
   if (operation.kind === 'move')
-
     valid(!before.entries.some(item => item.relativePath.toLowerCase() === operation.to.toLowerCase()), '原目标已存在，不能覆盖或借此证明移动');
 
   const after = structuredClone(before);
@@ -55,9 +51,7 @@ export function expectedArtifactTransitionSnapshot(raw: OutputManifestSnapshot, 
   after.entries = after.entries.filter(item => item.relativePath !== source);
 
   for (const root of after.roots)
-
     if (root.relativePath === source)
-
       root.state = 'missing';
 
   if (operation.kind === 'move')
@@ -65,11 +59,10 @@ export function expectedArtifactTransitionSnapshot(raw: OutputManifestSnapshot, 
     after.entries.push({ ...entry, relativePath: operation.to });
 
     for (const root of after.roots)
-
       if (root.relativePath === operation.to)
-
         root.state = 'file'
   }
+
   after.entries.sort((a, b) => a.relativePath < b.relativePath ? -1 : a.relativePath > b.relativePath ? 1 : 0);
 
   return outputManifestSnapshotSchema.parse(after);
@@ -89,13 +82,10 @@ const appliedEvent = z.object({ operationId: z.string().regex(/^[a-f0-9]{64}$/),
 export function verifyArtifactTransitions(events: readonly ArtifactEvidenceEvent[], binding: Binding, knowledgeRevision: string, scopes: readonly ArtifactScopeBinding[], manifests: readonly OutputManifestRecord[]): ArtifactTransitionProof[]
 {
   const proofs: ArtifactTransitionProof[] = [],
-
     preparedEvents = events.filter(e => e.type === 'artifact.transition_prepared'),
-
     declared = preparedArtifactTransitions(scopes);
 
   if (preparedEvents.length > artifactScopeLimits.transitions)
-
     return proofs;
 
   for (const event of preparedEvents)
@@ -103,9 +93,7 @@ export function verifyArtifactTransitions(events: readonly ArtifactEvidenceEvent
     try
     {
       const prepared = artifactTransitionPreparedSchema.parse(event.data.prepared),
-
         own = artifactSucceededCall(events, binding, prepared.toolCallId),
-
         input = artifactTransitionInputSchema.parse(own.allowed.data.input);
 
       valid(equal(prepared.binding, binding) && prepared.knowledgeRevision === knowledgeRevision && prepared.scopeHash === outputManifestScopeHash(scopes) && prepared.operationId === artifactTransitionOperationId(binding, prepared.toolCallId), '原操作身份不一致');
@@ -132,23 +120,18 @@ export function verifyArtifactTransitions(events: readonly ArtifactEvidenceEvent
       valid(!events.some(e => e.seq > before.finishedSeq && e.seq < own.allowed.seq && (artifactEventChangesFiles(e) || e.type === 'tool.allowed' && e.data.name === 'cbim_task_plan')), '写前清单已被其它操作或重规划取代');
 
       const source = prepared.operation.kind === 'delete' ? prepared.operation.path : prepared.operation.from,
-
         file = before.manifest.snapshot.entries.find(e => e.relativePath === source);
 
       valid(file?.kind === 'file' && file.byteLength === prepared.before.byteLength && file.sha256 === prepared.before.sha256, '句柄字节与原清单不一致');
 
       const executingEvents = events.filter(e => e.type === 'artifact.transition_executing' && e.data.operationId === prepared.operationId),
-
         appliedEvents = events.filter(e => e.type === 'artifact.transition_applied' && e.data.operationId === prepared.operationId);
 
       valid(executingEvents.length === 1 && appliedEvents.length === 1, '原操作阶段缺失或重复');
 
       const executing = executingEvents[0],
-
         applied = appliedEvents[0],
-
         intent = artifactTransitionExecutingSchema.parse(executing.data),
-
         after = appliedEvent.parse(applied.data);
 
       valid(intent.preparedSeq === event.seq && after.executingSeq === executing.seq, '原操作阶段关联不一致');
@@ -184,6 +167,7 @@ export function verifyArtifactTransitions(events: readonly ArtifactEvidenceEvent
       /* 无完整成功链的原事实保留历史，但不给新清单签发操作证明 */
     }
   }
+
   return proofs.sort((a, b) => a.finishedSeq - b.finishedSeq);
 }
 
@@ -191,15 +175,12 @@ export function verifyArtifactTransitions(events: readonly ArtifactEvidenceEvent
 export function currentArtifactTransitions(events: readonly ArtifactEvidenceEvent[], proofs: readonly ArtifactTransitionProof[], snapshot: OutputManifestSnapshot): ArtifactTransitionProof[]
 {
   if (!proofs.length)
-
     return [];
 
   const ids = new Set(proofs.map(p => p.toolCallId)),
-
     first = proofs[0];
 
   if (new Set(proofs.map(p => p.moduleId + '\0' + p.operationIndex)).size !== proofs.length || events.some(e => e.seq > first.allowedSeq && (artifactEventChangesFiles(e) && !ids.has(String(e.data.id)) || e.type === 'tool.allowed' && e.data.name === 'cbim_task_plan')) || proofs.at(-1)!.afterManifestHash !== outputManifestHash(snapshot) || proofs.some((p, i) => i > 0 && p.beforeManifestHash !== proofs[i - 1].afterManifestHash))
-
     return [];
 
   return structuredClone([...proofs]);

@@ -81,7 +81,6 @@ export function checkedEngineAdapter(value: unknown, expected: { id: string; ver
   const adapter = value as Partial<EngineAdapter> | null;
 
   if (!adapter || adapter.protocol !== engineAdapterProtocol || adapter.id !== expected.id || typeof adapter.version !== 'string' || !/^\d+\.\d+\.\d+$/.test(adapter.version) || expected.version !== undefined && adapter.version !== expected.version || typeof adapter.create !== 'function')
-
     throw Error('引擎包身份、版本或运行协议不兼容');
 
   if (expected.descriptor)
@@ -96,10 +95,11 @@ export function checkedEngineAdapter(value: unknown, expected: { id: string; ver
     {
       /* 损坏声明不是可执行包，不透传原对象或解析细节。 */
     }
-    if (!matches)
 
+    if (!matches)
       throw Error('引擎包的模型或历史协议声明与当前应用不匹配，请更新匹配的引擎包；未启动或自动重试');
   }
+
   return adapter as EngineAdapter;
 }
 

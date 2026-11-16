@@ -21,9 +21,7 @@ import type { ChannelDraft, ChannelDraftIdentity } from './channel-draft';
 export function ChannelComposer({ identity, summary, scope, continuation, options, active, blocked = false, onRefresh, onFollowup }: { identity: ChannelDraftIdentity; summary: ScopeSummary; scope?: PublicDispatchScope; continuation: ScopeContinuationView; options?: TopicInterruptionRequest['options']; active: boolean; blocked?: boolean; onRefresh: () => void; onFollowup: (scopeId: string, draft: ChannelDraft) => Promise<boolean> })
 {
   const draft = useChannelDraft(identity, active),
-
     [sending, setSending] = useState(false),
-
     [error, setError] = useState('');
 
   const submitted = useRef<number | undefined>(undefined);
@@ -43,11 +41,9 @@ export function ChannelComposer({ identity, summary, scope, continuation, option
   const pendingInterruption = scope?.topicInterruptions?.some(item => !scope.continuations?.some(value => value.continuationId === item.request.commandId));
 
   if (scope && (scope.status === 'active' || pendingInterruption))
-
     return <TopicInterruptionForm key={scope.goal?.inputRevision ?? 1} scope={scope} draft={draft} options={options} active={active && !blocked && !sending} onRefresh={onRefresh} />;
 
   if (waiting && original?.record?.attempt && original.record.attempt.phase !== 'rejected')
-
     return <ScopeContinuationForm state={original} />;
 
   const editable = active && !blocked && !sending && draft.store.writable && (summary.status === 'closed' || !!waiting && !!original?.editable);

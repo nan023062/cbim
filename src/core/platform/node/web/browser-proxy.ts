@@ -27,9 +27,7 @@ export async function openBrowserProxy(signal: AbortSignal, onFailure: (error: E
   const sockets = new Set<Socket>();
 
   let bytes = 0,
-
     connections = 0,
-
     closed = false;
 
   const server = http.createServer();
@@ -64,10 +62,10 @@ export async function openBrowserProxy(signal: AbortSignal, onFailure: (error: E
 
         return;
       }
+
       const { url, address, port } = await target(request.url ?? '');
 
       if (url.protocol !== 'http:')
-
         throw Error('WEB_SSRF: 代理明文请求必须使用 HTTP');
 
       const headers: http.OutgoingHttpHeaders = { ...request.headers, host: url.host };
@@ -90,6 +88,7 @@ export async function openBrowserProxy(signal: AbortSignal, onFailure: (error: E
       upstream.end();
     })().catch(fail);
   });
+
   signal.addEventListener('abort', destroy, { once: true });
 
   try
@@ -101,12 +100,10 @@ export async function openBrowserProxy(signal: AbortSignal, onFailure: (error: E
     const address = server.address();
 
     if (!address || typeof address === 'string')
-
       throw Error('WEB_NETWORK: 浏览器代理未启动');
 
     return {
       port: address.port,
-
       close: () => { signal.removeEventListener('abort', destroy); destroy(); },
     };
   }

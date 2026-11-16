@@ -73,15 +73,10 @@ const editPair = z.object({ oldText: z.string(), newText: z.string() }).strict()
 
 const nativeInputs = {
   read: z.object({ path: z.string().min(1), offset: z.number().int().positive().optional(), limit: z.number().int().positive().optional() }).strict(),
-
   write: z.object({ path: z.string().min(1), content: z.string() }).strict(),
-
   edit: z.union([
-
     z.object({ path: z.string().min(1), edits: z.array(editPair).min(1) }).strict(),
-
     z.object({ path: z.string().min(1), oldText: z.string(), newText: z.string() }).strict(),
-
   ]),
 };
 
@@ -90,7 +85,6 @@ type Owner = Pick<KnowledgeWorkspace, 'entry' | 'Assert'>;
 function check(value: unknown, code: string, message: string): asserts value
 {
   if (!value)
-
     fail(code, message)
 }
 
@@ -105,7 +99,6 @@ export class EffectObservationService
     const value = schema.safeParse(raw);
 
     if (!value.success)
-
       fail('EFFECT_INPUT_INVALID', '影响核实或处置请求无效');
 
     return value.data
@@ -157,13 +150,9 @@ export class EffectObservationService
     const report: EffectObservationReport = { version: 1, identity: input, checkedAt: new Date().toISOString(), basis: '0'.repeat(64), dispositionRevision: effectDispositionRevision(before, input.rootSessionId), consistency: 'stable', source: first.source, calls: [], limitations: ['本报告仅覆盖明确选择的调用和文件；当前观察不证明原操作完整效果，也不代表业务验收。'], readOnly: true, acceptance: 'not_evaluated' };
 
     const paths = new Map<string, string>(),
-
       knowledge = new Map<string, KnowledgeWriteReference>(),
-
       persistent = new Map<string, PersistentWriteReference>(),
-
       controlled = new Map<string, ControlledEffectReference>(),
-
       readable = first.source.state === 'verified' && first.summary && first.facts;
 
     for (const toolCallId of input.subject.toolCallIds)
@@ -180,6 +169,7 @@ export class EffectObservationService
 
         continue
       }
+
       const original = first.summary!.events.find(e => e.seq === fact.proposedSeq)?.data.input;
 
       Object.assign(item, { toolName: fact.toolName, inputHash: hash(JSON.stringify(original) ?? 'undefined'), proposedSeq: fact.proposedSeq, ...(fact.allowedSeq ? { allowedSeq: fact.allowedSeq } : {}), ...(fact.finishedSeq ? { finishedSeq: fact.finishedSeq } : {}), effects: fact.effects, scope: fact.scope });
@@ -195,11 +185,11 @@ export class EffectObservationService
         item.limitations.push('仅核实原控制面提交，不证明成员执行或业务完成。');
 
         if (control.consistency !== 'stable')
-
           report.consistency = 'changed_during_read';
 
         continue;
       }
+
       const name = fact.toolName;
 
       if (input.subject.kind === 'member_run' && name === controlledFileWriteToolName && fact.allowedSeq && fact.status !== 'denied' && fact.scope.kind === 'workspace' && fact.scope.workspaceId === input.workspaceId && fact.effects.length === 1 && fact.effects[0] === 'business-write' && this.ports?.ObserveControlled && first.run && first.source.scopeId)
@@ -212,6 +202,7 @@ export class EffectObservationService
 
           continue
         }
+
         const reference: ControlledEffectReference = { identity: { workspaceId: input.workspaceId, rootSessionId: input.rootSessionId, taskId: input.subject.taskId, runId: input.subject.runId, toolCallId }, scopeId: first.source.scopeId, binding: first.run.binding, input: parsed.data };
 
         item.coverage = 'controlled_file';
@@ -223,11 +214,11 @@ export class EffectObservationService
         item.limitations.push('仅核实原写入和独立补偿阶段；不读取当前文件，不授予补偿或业务验收。');
 
         if (item.controlled.state === 'absent')
-
           item.limitations.push('未查到原受控记录不等于没有写入，不可据此重试。');
 
         continue;
       }
+
       if (input.subject.kind === 'main_run' && Object.prototype.hasOwnProperty.call(persistentWriteEffects, name) && fact.allowedSeq && fact.status !== 'denied' && fact.scope.kind === 'knowledge' && fact.scope.workspaceId === input.workspaceId && fact.effects.length === 1 && fact.effects[0] === persistentWriteEffects[name as PersistentWriteName] && this.ports?.ObservePersistent)
       {
         const main = first.summary!.conversationBinding;
@@ -240,6 +231,7 @@ export class EffectObservationService
 
           continue
         }
+
         item.coverage = 'persistent_record';
 
         item.persistent = await this.Persistent(reference, signal);
@@ -249,11 +241,11 @@ export class EffectObservationService
         item.limitations.push(reference.kind === 'governance' ? '只核实原观察或提案的保存，不表示批准、知识实施、迁移或业务完成。' : '只核实原责任变更的保存，不证明今日负责人、旧任务交接或派发切换。');
 
         if (item.persistent.state === 'absent')
-
           item.limitations.push('未查到原保存记录不等于从未执行，原结果保持。');
 
         continue;
       }
+
       if (input.subject.kind === 'main_run' && (name === 'cbim_knowledge_commit' || name === 'cbim_object_commit' || name === 'cbim_knowledge_refresh') && fact.allowedSeq && fact.status !== 'denied' && fact.scope.kind === 'knowledge' && fact.scope.workspaceId === input.workspaceId && fact.effects.length === 1 && fact.effects[0] === 'knowledge-write' && this.ports?.ObserveKnowledge)
       {
         const version = first.summary!.events.find(e => e.seq === fact.allowedSeq)?.data.contractVersion;
@@ -266,6 +258,7 @@ export class EffectObservationService
 
           continue
         }
+
         item.coverage = 'knowledge_transaction';
 
         item.knowledge = await this.Knowledge(reference, signal);
@@ -275,21 +268,21 @@ export class EffectObservationService
         item.limitations.push('仅核实原知识事务阶段，不证明今天的正文、业务验收或可安全重放。');
 
         if (name === 'cbim_object_commit')
-
           item.limitations.push('对象事务提交不证明后续空目录修剪成功；查询不会修剪目录。');
 
         if (item.knowledge.state === 'absent')
-
           item.limitations.push('未查到原事务不等于从未执行，原结果保持。');
 
         continue;
       }
+
       if ((name !== 'read' && name !== 'write' && name !== 'edit') || !fact.allowedSeq || fact.status === 'denied' || fact.scope.kind !== 'workspace' || fact.effects.length !== 1 || fact.effects[0] !== (name === 'read' ? 'read' : 'business-write') || !this.ports)
       {
         item.limitations.push('没有受支持的单文件授权适配；不执行补充命令，不把查无记录解释为未执行。');
 
         continue
       }
+
       const parsed = nativeInputs[name].safeParse(original);
 
       if (!parsed.success)
@@ -298,6 +291,7 @@ export class EffectObservationService
 
         continue
       }
+
       try
       {
         const relative = artifactRelativePathSchema.parse(this.ports.NormalizePath(parsed.data.path));
@@ -309,6 +303,7 @@ export class EffectObservationService
         item.limitations.push('原路径不能安全定位到当前工作区业务文件，未读取内容。')
       }
     }
+
     const unique = [...new Set(paths.values())];
 
     if (unique.length)
@@ -322,7 +317,6 @@ export class EffectObservationService
         release = withinMainRun && this.ports!.AcquireMainRead ? this.ports!.AcquireMainRead(input.rootSessionId) : this.ports!.AcquireRead();
 
         const timeout = AbortSignal.timeout(15_000),
-
           readSignal = signal ? AbortSignal.any([signal, timeout]) : timeout;
 
         const files = (await this.ports!.ObserveFiles(unique, readSignal)).map(value => effectFileObservationSchema.parse(value));
@@ -334,7 +328,6 @@ export class EffectObservationService
           const relative = paths.get(item.toolCallId);
 
           if (!relative)
-
             continue;
 
           item.coverage = 'selected_files_now';
@@ -344,9 +337,9 @@ export class EffectObservationService
           item.limitations.push('仅为当前字节观察，不证明原调用成功、完整作用或可恢复。');
 
           if (item.file.reason === '读取期间文件发生变化')
-
             report.consistency = 'changed_during_read'
         }
+
         this.Baselines(first, report);
       }
       catch (error)
@@ -354,7 +347,6 @@ export class EffectObservationService
         this.Alive(input.workspaceId, signal);
 
         for (const item of report.calls)
-
           if (paths.has(item.toolCallId))
           {
             item.coverage = 'unsupported';
@@ -371,6 +363,7 @@ export class EffectObservationService
         release?.()
       }
     }
+
     // 两次核实同一原引用；prepared 等阶段变化不能沿用第一次观察保存确定依据。
     for (const [toolCallId, reference] of knowledge)
     {
@@ -383,6 +376,7 @@ export class EffectObservationService
         report.limitations.push('读取期间原知识事务发生变化，请重新核实。')
       }
     }
+
     for (const [toolCallId, reference] of persistent)
     {
       const again = await this.Persistent(reference, signal);
@@ -394,6 +388,7 @@ export class EffectObservationService
         report.limitations.push('读取期间原保存记录发生变化，请重新核实。')
       }
     }
+
     for (const [toolCallId, reference] of controlled)
     {
       const again = await observeControlledEffect(reference, this.ports!.ObserveControlled!, () => this.Alive(input.workspaceId, signal), signal);
@@ -405,6 +400,7 @@ export class EffectObservationService
         report.limitations.push('读取期间原受控阶段或补偿历史变化，请重新核实。')
       }
     }
+
     const last = await readEffectSource(before, input, this.owner.entry.path, this.ports, this.commands);
 
     this.Alive(input.workspaceId, signal);
@@ -419,6 +415,7 @@ export class EffectObservationService
 
       report.limitations.push('读取期间来源、周期或处置版本变化，请重新核实；本次不作为确定保存依据。')
     }
+
     // 先形成严格公开对象再计算依据，避免构造时键插入顺序与 Store 重放的 Schema 顺序不同。
     const checked = effectObservationReportSchema.parse(report);
 
@@ -445,7 +442,6 @@ export class EffectObservationService
       check(isDeepStrictEqual(value.identity, identity), 'EFFECT_PORT_INVALID', '知识观察不属于原请求');
 
       if (reference.kind === 'request')
-
         check(value.requestHash === undefined || value.requestHash === hash(json(reference.request)), 'EFFECT_PORT_INVALID', '知识观察的原请求指纹不一致');
 
       return value
@@ -462,7 +458,6 @@ export class EffectObservationService
   private async Persistent(reference: PersistentWriteReference, signal?: AbortSignal): Promise<PersistentWriteObservation>
   {
     const identity = persistentWriteIdentity(reference),
-
       sourceHash = persistentWriteSourceHash(reference);
 
     this.Alive(identity.workspaceId, signal);
@@ -488,7 +483,6 @@ export class EffectObservationService
   private Baselines(source: EffectSourceRead, report: EffectObservationReport)
   {
     if (!source.run || !source.summary || !this.ports)
-
       return;
 
     const verified = verifyArtifactBaselines(source.summary.events, source.run.binding, source.run.prepared.knowledgeRevision, this.ports.NormalizePath);
@@ -498,7 +492,6 @@ export class EffectObservationService
       const current = call.file;
 
       if (!current)
-
         continue;
 
       const checks: NonNullable<EffectCallObservation['baselineChecks']> = [];
@@ -507,7 +500,6 @@ export class EffectObservationService
 
       // records 来自 canonical 的持久顺序；只比较最近八份，较旧历史仍由原运行报告读取。
       if (matching.length > effectObservationLimits.baselines)
-
         call.limitations.push('同文件成功基线较多，本次仅比较持久顺序中最近的八份；不代表覆盖全部历史。');
 
       for (const record of matching.slice(-effectObservationLimits.baselines))
@@ -515,13 +507,12 @@ export class EffectObservationService
         const file = record.baseline.files.find(file => file.relativePath === current.relativePath)!;
 
         const expected = { byteLength: file.byteLength, sha256: file.sha256 },
-
           observed = current.state === 'present' ? { byteLength: current.byteLength!, sha256: current.sha256! } : undefined;
 
         checks.push({ baselineId: record.baseline.baselineId, invalidated: verified.refs.find(ref => ref.baselineId === record.baseline.baselineId)!.invalidated, file: { relativePath: current.relativePath, state: observed ? (isDeepStrictEqual(expected, observed) ? 'matches' : 'changed') : current.state === 'missing' ? 'missing' : 'unverifiable', ...(observed ? { observed } : {}), expected, ...(current.reason ? { reason: current.reason } : {}) } });
       }
-      if (checks.length)
 
+      if (checks.length)
         call.baselineChecks = checks;
     }
   }
@@ -552,7 +543,6 @@ export class EffectObservationService
     const value = await this.store.CommandReceipt('effect-disposition-' + input.commandId);
 
     if (!value)
-
       return undefined;
 
     const receipt = effectDispositionReceiptSchema.parse(value.receipt);
@@ -566,7 +556,6 @@ export class EffectObservationService
   private async RecordReady(raw: EffectDispositionInput, actor: { kind: 'local_desktop'; interaction: 'explicit_submit' }, signal?: AbortSignal)
   {
     const input = this.Parse(effectDispositionInputSchema, raw),
-
       command = effectDispositionCommand(input);
 
     this.Alive(input.workspaceId, signal);
@@ -579,12 +568,11 @@ export class EffectObservationService
 
       return { receipt: effectDispositionReceiptSchema.parse(old.receipt) }
     }
+
     check(isDeepStrictEqual(actor, { kind: 'local_desktop', interaction: 'explicit_submit' }), 'EFFECT_ACTOR', '处置只能由本机明确提交');
 
     const selection = { workspaceId: input.workspaceId, rootSessionId: input.rootSessionId, subject: input.subject },
-
       prepared = await this.Prepare(selection, signal),
-
       observation = prepared.report;
 
     check(observation.consistency === 'stable' && observation.basis === input.expectedBasis, 'EFFECT_BASIS_STALE', '观察依据已变化，请重新核实');
@@ -619,13 +607,12 @@ export class EffectObservationService
         })?.code;
 
       if (code && ['EFFECT_INPUT_INVALID', 'EFFECT_IDENTITY', 'EFFECT_ACTOR', 'EFFECT_BASIS_STALE', 'EFFECT_REVISION_CONFLICT', 'EFFECT_SOURCE_NOT_CLOSED', 'EFFECT_LIMIT'].includes(code))
-
         fail(code.replace('EFFECT_', 'EFFECT_PREACCEPT_'), '处置尚未提交：' + (error instanceof Error ? error.message : '请重新核实输入'));
 
       throw error;
     }
-    if (ready.receipt)
 
+    if (ready.receipt)
       return this.Output(ready.receipt);
 
     const { input, command, selection, prepared, record } = ready;
@@ -643,13 +630,11 @@ export class EffectObservationService
     this.Alive(input.workspaceId);
 
     const state = await this.store.Read(),
-
       record = state.effectDispositions?.find(r => r.dispositionId === input.dispositionId && r.request.workspaceId === input.workspaceId && r.request.rootSessionId === input.rootSessionId);
 
     check(record, 'EFFECT_NOT_FOUND', '未找到本会话的处置记录');
 
     const graph = state.graphs.find(g => g.identity.rootSessionId === input.rootSessionId),
-
       links = (state.scopes ?? []).filter(s => s.rootSessionId === input.rootSessionId && s.workspaceId === input.workspaceId && (s.recovery?.dispositionId === input.dispositionId || s.replan?.dispositionId === input.dispositionId)).map(s => ({ kind: s.recovery ? 'inspection' as const : 'repair' as const, scopeId: s.scopeId, status: s.status, ...(s.outcome ? { outcome: s.outcome } : {}), runId: (s.recovery ?? s.replan)!.context.initialRunId, taskIds: [...(graph?.tasks.filter(t => t.scopeId === s.scopeId).map(t => t.taskId) ?? []), ...(state.agentBusinessRuns ?? []).filter(run => run.scopeId === s.scopeId).map(run => run.binding.taskId)], ...(s.goal ? { goalRevision: s.goal.revision } : {}), ...(s.goal?.review ? { reviewDecision: s.goal.review.decision } : {}) }));
 
     return this.Output(effectRelationsSchema.parse({ identity: input, record, links, readOnly: true }));

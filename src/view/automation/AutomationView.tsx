@@ -30,11 +30,8 @@ const newDefinition = (): AutomationDefinition => ({ name: '', enabled: true, ex
 export function AutomationView({ workspace, active = true, onOpenRun }: { workspace: WorkspaceView; snapshot?: Snapshot; active?: boolean; onOpenRun?: (taskId: string, title: string) => void })
 {
   const [state, setState] = useState<AutomationState>(),
-
     [catalog, setCatalog] = useState<AutomationCatalog>(),
-
     [selected, setSelected] = useState(''),
-
     [editing, setEditing] = useState<
       {
         id: string;
@@ -43,13 +40,10 @@ export function AutomationView({ workspace, active = true, onOpenRun }: { worksp
 
         definition: AutomationDefinition
       }>(),
-
     [busy, setBusy] = useState(false),
-
     [error, setError] = useState('');
 
   const mounted = useRef(true),
-
     gate = useRef(false);
 
   useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, []);
@@ -61,7 +55,6 @@ export function AutomationView({ workspace, active = true, onOpenRun }: { worksp
   async function act(work: () => Promise<unknown>)
   {
     if (gate.current)
-
       return;
 
     gate.current = true;
@@ -79,7 +72,6 @@ export function AutomationView({ workspace, active = true, onOpenRun }: { worksp
     catch (e)
     {
       if (mounted.current)
-
         setError(String(e) + '。请刷新核实原记录；系统未自动重试。')
     }
     finally
@@ -87,7 +79,6 @@ export function AutomationView({ workspace, active = true, onOpenRun }: { worksp
       gate.current = false;
 
       if (mounted.current)
-
         setBusy(false)
     }
   }
@@ -95,13 +86,11 @@ export function AutomationView({ workspace, active = true, onOpenRun }: { worksp
   const identity = { workspaceId: workspace.id, instanceId: workspace.instanceId! };
 
   const job = state?.jobs.find(j => j.id === selected),
-
     runs = (state?.runs ?? []).filter(r => !selected || r.automationId === selected).slice().reverse();
 
   function choose(id: string)
   {
     if (editing && !confirm('放弃尚未保存的自动化设置？'))
-
       return;
 
     setEditing(undefined);
@@ -112,14 +101,12 @@ export function AutomationView({ workspace, active = true, onOpenRun }: { worksp
   function edit()
   {
     if (job)
-
       setEditing({ id: job.id, revision: job.revision, definition: structuredClone(job.definition) })
   }
 
   function create()
   {
     if (editing && !confirm('放弃尚未保存的自动化设置？'))
-
       return;
 
     setSelected('');

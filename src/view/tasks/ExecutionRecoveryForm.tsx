@@ -11,11 +11,9 @@ import type { ExecutionRecoveryView } from './useExecutionRecovery';
 export function ExecutionRecoveryForm({ state }: { state: ExecutionRecoveryView })
 {
   if (!state.visible)
-
     return null;
 
   const attempt = state.record?.attempt,
-
     phase = attempt?.phase;
 
   return <section className="execution-recovery" data-testid="execution-recovery-form" data-recovery-phase={state.pending ? 'pending' : phase ?? 'draft'}>

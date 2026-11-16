@@ -61,35 +61,23 @@ export function ModuleOwnershipPanel({ identity, initialModuleId, initialMemberI
   const controller = useMemo(() => commands.Get(identity.workspaceId, { storage: window.localStorage, uuid: () => crypto.randomUUID(), commit: input => window.cbim.call('workspace.ownerships.commit', input), lookup: input => window.cbim.call('workspace.ownerships.receipt', input) }), [identity.workspaceId]);
 
   const [, setTick] = useState(0),
-
     [page, setPage] = useState<ModuleOwnershipPage>(),
-
     [detail, setDetail] = useState<ModuleOwnershipDetail>(),
-
     [members, setMembers] = useState<WorkspaceMemberList['items']>([]);
 
   const [nextId, setNextId] = useState(''),
-
     [reason, setReason] = useState(''),
-
     [preview, setPreview] = useState<ModuleOwnershipPreview>(),
-
     [error, setError] = useState(''),
-
     [loading, setLoading] = useState(false),
-
     [membersLoaded, setMembersLoaded] = useState(false);
 
   const alive = useRef(false),
-
     generation = useRef(0),
-
     lock = useRef(false),
-
     selection = useRef(0);
 
   const state = controller.snapshot,
-
     blocked = controller.blocked;
 
   const dirty = useRef(false);
@@ -105,7 +93,6 @@ export function ModuleOwnershipPanel({ identity, initialModuleId, initialMemberI
   async function list(offset = 0)
   {
     if (lock.current)
-
       return;
 
     lock.current = true;
@@ -123,13 +110,11 @@ export function ModuleOwnershipPanel({ identity, initialModuleId, initialMemberI
       const value = memberId ? checkedModuleOwnershipPage(await window.cbim.call('workspace.ownerships.byMember', { ...input, memberId }), { ...input, memberId }) : checkedModuleOwnershipPage(await window.cbim.call('workspace.ownerships.list', input), input);
 
       if (alive.current && generation.current === token)
-
         setPage(value)
     }
     catch (cause)
     {
       if (alive.current && generation.current === token)
-
         setError('责任列表读取失败：' + failure(cause))
     }
     finally
@@ -137,7 +122,6 @@ export function ModuleOwnershipPanel({ identity, initialModuleId, initialMemberI
       lock.current = false;
 
       if (alive.current && generation.current === token)
-
         setLoading(false)
     }
   }
@@ -147,7 +131,6 @@ export function ModuleOwnershipPanel({ identity, initialModuleId, initialMemberI
     const result: WorkspaceMemberList['items'] = [];
 
     let offset = 0,
-
       cursor: WorkspaceMemberList['registryCursor'] | undefined;
 
     do
@@ -161,11 +144,9 @@ export function ModuleOwnershipPanel({ identity, initialModuleId, initialMemberI
       cursor = value.registryCursor;
 
       if (value.nextOffset === undefined)
-
         return result;
 
       if (value.nextOffset <= offset || result.length > 256)
-
         throw Error('岗位分页没有前进或超过范围');
 
       offset = value.nextOffset
@@ -178,7 +159,6 @@ export function ModuleOwnershipPanel({ identity, initialModuleId, initialMemberI
   async function select(moduleId: string, preferredMemberId?: string)
   {
     if (lock.current || !leaveDraft())
-
       return;
 
     markDirty(false);
@@ -212,7 +192,6 @@ export function ModuleOwnershipPanel({ identity, initialModuleId, initialMemberI
       const value = checkedModuleOwnershipDetail(await window.cbim.call('workspace.ownerships.get', input), input);
 
       if (!alive.current || generation.current !== token)
-
         return;
 
       setDetail(value);
@@ -232,11 +211,8 @@ export function ModuleOwnershipPanel({ identity, initialModuleId, initialMemberI
           if (preferredMemberId)
           {
             if (choices.some(item => item.memberId === preferredMemberId && item.state === 'active'))
-
               setNextId(preferredMemberId);
-
             else
-
               setError('新登记岗位当前不可选，请重新核实岗位状态。')
           }
         }
@@ -244,14 +220,12 @@ export function ModuleOwnershipPanel({ identity, initialModuleId, initialMemberI
       catch (cause)
       {
         if (alive.current && generation.current === token)
-
           setError('岗位列表无法核实；仍可明确解除现有关系：' + failure(cause))
       }
     }
     catch (cause)
     {
       if (alive.current && generation.current === token)
-
         setError('模块责任读取失败：' + failure(cause))
     }
     finally
@@ -259,7 +233,6 @@ export function ModuleOwnershipPanel({ identity, initialModuleId, initialMemberI
       lock.current = false;
 
       if (alive.current && generation.current === token)
-
         setLoading(false)
     }
   }
@@ -276,11 +249,9 @@ export function ModuleOwnershipPanel({ identity, initialModuleId, initialMemberI
   async function prepare(adoptSource = false)
   {
     if (!detail || blocked || lock.current)
-
       return;
 
     const binding = detail.view.binding,
-
       next = members.find(item => item.memberId === nextId);
 
     if (adoptSource && !binding?.ownerMemberId)
@@ -289,12 +260,14 @@ export function ModuleOwnershipPanel({ identity, initialModuleId, initialMemberI
 
       return
     }
+
     if (!adoptSource && nextId && (!next || next.state !== 'active'))
     {
       setError('请选择当前已启用的项目岗位');
 
       return
     }
+
     const expectedBinding = binding ? { bindingId: binding.bindingId, revision: binding.revision, ownerMemberId: binding.ownerMemberId } : null;
 
     // 来源采纳保留原负责人；不能将界面选中的另一个岗位夹带进此命令。
@@ -317,13 +290,11 @@ export function ModuleOwnershipPanel({ identity, initialModuleId, initialMemberI
       const value = checkedModuleOwnershipPreview(await window.cbim.call('workspace.ownerships.preview', input), input);
 
       if (alive.current && selection.current === token)
-
         setPreview(value)
     }
     catch (cause)
     {
       if (alive.current && selection.current === token)
-
         setError('负责人变更预览失败：' + failure(cause))
     }
     finally
@@ -331,7 +302,6 @@ export function ModuleOwnershipPanel({ identity, initialModuleId, initialMemberI
       lock.current = false;
 
       if (alive.current)
-
         setLoading(false)
     }
   }
@@ -339,7 +309,6 @@ export function ModuleOwnershipPanel({ identity, initialModuleId, initialMemberI
   async function commit()
   {
     if (!preview || blocked || lock.current)
-
       return;
 
     lock.current = true;
@@ -351,7 +320,6 @@ export function ModuleOwnershipPanel({ identity, initialModuleId, initialMemberI
     lock.current = false;
 
     if (!alive.current)
-
       return;
 
     setLoading(false);
@@ -367,31 +335,24 @@ export function ModuleOwnershipPanel({ identity, initialModuleId, initialMemberI
       await list();
 
       if (alive.current)
-
         await select(record.receipt!.moduleId)
     }
     else if (record?.error)
-
       setError(record.error);
   }
 
   async function query(commandId: string, retry = false)
   {
     if (retry)
-
       await controller.Retry(commandId);
-
     else
-
       await controller.Query(commandId);
 
     if (alive.current)
-
       await list()
   }
 
   const binding = detail?.view.binding,
-
     sameOwner = (binding?.ownerMemberId ?? null) === (nextId || null);
 
   return <section className="module-ownership" data-testid="module-ownership-panel" aria-label="模块负责人">

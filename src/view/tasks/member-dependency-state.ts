@@ -32,17 +32,14 @@ export interface MemberDependencyRevisionHistory
 export function memberDependencyRevisionHistory(task: TaskNode): MemberDependencyRevisionHistory
 {
   if (task.dependencyRevisions === undefined)
-
     return { records: [], invalid: false };
 
   const parsed = dependencyRevisionSchema.array().min(1).max(32).safeParse(task.dependencyRevisions);
 
   if (!parsed.success || !task.scopeId)
-
     return { records: [], invalid: true };
 
   const records = parsed.data,
-
     commands = new Set<string>();
 
   let revision = 0;
@@ -52,13 +49,13 @@ export function memberDependencyRevisionHistory(task: TaskNode): MemberDependenc
     const target = r.request.target;
 
     if (r.scopeId !== task.scopeId || target.taskId !== task.taskId || target.expectedRevision <= revision || target.expectedRevision >= task.revision || target.expectedPlanRevision > task.planRevision || !r.trackedTaskIds.includes(task.taskId) || [...r.removed, ...r.added].some(e => e.sourceTaskId === task.taskId || !r.trackedTaskIds.includes(e.sourceTaskId)) || commands.has(r.commandId))
-
       return { records: [], invalid: true };
 
     commands.add(r.commandId);
 
     revision = target.expectedRevision;
   }
+
   return { records, invalid: false };
 }
 
@@ -66,17 +63,14 @@ export function memberDependencyRevisionHistory(task: TaskNode): MemberDependenc
 export function memberDependencyHistory(task: TaskNode): MemberDependencyHistory
 {
   if (task.dependencyReplacements === undefined)
-
     return { records: [], invalid: false };
 
   const parsed = dependencyReplacementSchema.array().min(1).max(32).safeParse(task.dependencyReplacements);
 
   if (!parsed.success || !task.scopeId)
-
     return { records: [], invalid: true };
 
   const records = parsed.data,
-
     commands = new Set<string>();
 
   let revision = 0;
@@ -84,13 +78,13 @@ export function memberDependencyHistory(task: TaskNode): MemberDependencyHistory
   for (const record of records)
   {
     if (record.scopeId !== task.scopeId || record.previousTaskRevision <= revision || record.previousTaskRevision >= task.revision || record.targetPlanRevision > task.planRevision || !record.trackedTaskIds.includes(task.taskId) || commands.has(record.commandId))
-
       return { records: [], invalid: true };
 
     commands.add(record.commandId);
 
     revision = record.previousTaskRevision;
   }
+
   return { records, invalid: false };
 }
 
@@ -98,17 +92,14 @@ export function memberDependencyHistory(task: TaskNode): MemberDependencyHistory
 export function memberDependencyAdditionHistory(task: TaskNode): MemberDependencyAdditionHistory
 {
   if (task.dependencyAdditions === undefined)
-
     return { records: [], invalid: false };
 
   const parsed = dependencyAdditionSchema.array().min(1).max(32).safeParse(task.dependencyAdditions);
 
   if (!parsed.success || !task.scopeId)
-
     return { records: [], invalid: true };
 
   const records = parsed.data,
-
     commands = new Set<string>();
 
   let revision = 0;
@@ -116,12 +107,12 @@ export function memberDependencyAdditionHistory(task: TaskNode): MemberDependenc
   for (const record of records)
   {
     if (record.scopeId !== task.scopeId || record.previousTaskRevision <= revision || record.previousTaskRevision >= task.revision || record.targetPlanRevision > task.planRevision || record.dependency.sourceTaskId === task.taskId || !record.trackedTaskIds.includes(task.taskId) || !record.trackedTaskIds.includes(record.dependency.sourceTaskId) || commands.has(record.commandId))
-
       return { records: [], invalid: true };
 
     commands.add(record.commandId);
 
     revision = record.previousTaskRevision;
   }
+
   return { records, invalid: false };
 }

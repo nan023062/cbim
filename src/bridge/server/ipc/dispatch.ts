@@ -48,9 +48,7 @@ function handlers(app: ApplicationServices): IpcHandlers<ApplicationIpcAction>
 {
   return {
     ...peopleIpcHandlers(app), ...governanceIpcHandlers(app), ...dispatchIpcHandlers(app), ...settingsIpcHandlers(app), ...loopIpcHandlers(app), ...chatIpcHandlers(app), ...resourcesIpcHandlers(app), ...workspaceIpcHandlers(app),
-
     ...agentHistoryIpcHandlers(app),
-
     ...automationIpcHandlers(app),
   }
 }
@@ -75,11 +73,9 @@ export function dispatchApplication(app: ApplicationServices, action: string, in
 export async function dispatchApplication(app: ApplicationServices, action: string, input: unknown = {})
 {
   if (!isApplicationAction(action))
-
     fail('ACTION', '未知操作');
 
   if (action === 'loop.start')
-
     fail('OWNER_DISPATCH_REQUIRED', '业务执行必须通过当前目标计划和负责岗位派发；旧任务历史仍可读取');
 
   return invoke(app, action, input);

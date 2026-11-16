@@ -56,7 +56,6 @@ function runningWorkspace(raw: unknown, id: string): WorkspaceView
   const matches = rows.filter(value => object(value) && value.id === id);
 
   if (matches.length !== 1 || !object(matches[0]) || matches[0].state !== 'running' || typeof matches[0].instanceId !== 'string' || !matches[0].instanceId)
-
     throw Error('原工作区当前未就绪，无法定位会话。');
 
   return matches[0] as unknown as WorkspaceView;
@@ -87,13 +86,11 @@ export class RuntimeNavigationResolver
     try
     {
       if (!target.workspaceId || !target.rootSessionId)
-
         throw Error('运行记录缺少原会话身份，无法定位。');
 
       const first = await this.read('list');
 
       if (!current())
-
         return;
 
       const workspace = runningWorkspace(first, target.workspaceId);
@@ -101,17 +98,14 @@ export class RuntimeNavigationResolver
       const records = await this.read('loop.list', { id: target.workspaceId });
 
       if (!current())
-
         return;
 
       if (!Array.isArray(records))
-
         throw Error('原会话记录无效，请重新核实。');
 
       const candidates = records.filter(record => object(record) && object(record.task) && record.task.taskId === target.rootSessionId);
 
       if (!candidates.length)
-
         throw Error('找不到可核实的原会话记录，未创建替代会话。');
 
       for (const record of candidates)
@@ -119,19 +113,17 @@ export class RuntimeNavigationResolver
         const task = (record as Record<string, unknown>).task as Record<string, unknown>;
 
         if (task.workspaceId !== target.workspaceId || task.mode !== 'chat' || typeof task.goal !== 'string')
-
           throw Error('原会话身份与工作区不一致，无法定位。');
       }
+
       const last = await this.read('list');
 
       if (!current())
-
         return;
 
       const latest = runningWorkspace(last, target.workspaceId);
 
       if (latest.instanceId !== workspace.instanceId)
-
         throw Error('工作区实例已变化，请从运行管理重新定位。');
 
       const task = (candidates[0] as
@@ -149,7 +141,6 @@ export class RuntimeNavigationResolver
     catch (error)
     {
       if (current())
-
         throw error;
 
       return
@@ -165,7 +156,6 @@ export function bindRuntimeConversation(layout: TabLayout | undefined, verified:
   const existing = base.tabs.find(tab => tab.kind === 'chat' && tab.taskId === verified.conversation.taskId);
 
   if (existing)
-
     return base.active === existing.id ? base : { ...base, active: existing.id };
 
   const tab = { ...newTab('chat'), taskId: verified.conversation.taskId, title: verified.conversation.goal.split('\n')[0].slice(0, 60) || '历史对话' };
@@ -177,11 +167,9 @@ export function bindRuntimeConversation(layout: TabLayout | undefined, verified:
 export function runtimeTaskSelection(target: RuntimeNavigationTarget, identity: { workspaceId: string; rootSessionId?: string }, graph: NavigationGraph | undefined, scopes: readonly Pick<ScopeSummary, 'scopeId'>[]): { taskId: string; scopeId?: string }
 {
   if (target.workspaceId !== identity.workspaceId || target.rootSessionId !== identity.rootSessionId)
-
     throw Error('定位请求不属于当前会话。');
 
   if (graph && (graph.identity.workspaceId !== identity.workspaceId || graph.identity.rootSessionId !== identity.rootSessionId))
-
     throw Error('原任务图身份不一致，请重新同步。');
 
   const rootId = graph?.root.nodeId ?? 'session:' + target.rootSessionId;
@@ -191,17 +179,14 @@ export function runtimeTaskSelection(target: RuntimeNavigationTarget, identity: 
   const task = isRoot ? undefined : graph?.tasks.find(item => item.taskId === target.taskId);
 
   if (!isRoot && !task)
-
     throw Error('原任务节点已不可读取，未选择其他节点。');
 
   const scopeId = target.scopeId ?? task?.scopeId;
 
   if (scopeId && !scopes.some(scope => scope.scopeId === scopeId))
-
     throw Error('原目标周期已不可读取，未切换为最新目标。');
 
   if (task && target.scopeId && task.scopeId !== target.scopeId)
-
     throw Error('任务节点与指定目标周期不一致。');
 
   return { taskId: isRoot ? rootId : task!.taskId, ...(scopeId ? { scopeId } : {}) };

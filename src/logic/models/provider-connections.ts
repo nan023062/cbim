@@ -32,19 +32,16 @@ const supportsModel = (connection: AlternateConnection, modelId?: string) => !co
 export function selectProviderConnection(profile: ProviderConnections, requirement: ModelConnectionRequirement, modelId?: string): SelectedConnection | undefined
 {
   if (requirement.supportedApis.includes(profile.api))
-
     return { api: profile.api, baseUrl: profile.baseUrl, source: 'primary' };
 
   const api = requirement.fallbackApi;
 
   if (!api || !requirement.supportedApis.includes(api))
-
     return undefined;
 
   const explicit = profile.alternateConnections?.find(connection => connection.api === api);
 
   if (explicit)
-
     return supportsModel(explicit, modelId) ? { api: explicit.api, baseUrl: explicit.baseUrl, source: 'explicit' } : undefined;
 
   const preset = profile.autoDetect !== false ? identifyProvider(profile.baseUrl)?.connections.find(connection => connection.api === api) : undefined;

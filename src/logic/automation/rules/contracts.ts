@@ -5,11 +5,8 @@
 import { z } from 'zod';
 
 const id = z.string().min(1).max(1024),
-
   uuid = z.string().uuid(),
-
   time = z.string().datetime(),
-
   revision = z.number().int().positive().safe();
 
 export const automationScheduleSchema = z.discriminatedUnion('kind', [z.object({ kind: z.literal('manual') }).strict(), z.object({ kind: z.literal('interval'), minutes: z.number().int().min(1).max(525600) }).strict(), z.object({ kind: z.literal('daily'), time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/), timezone: z.string().min(1).max(100).refine(value => { try { new Intl.DateTimeFormat('en', { timeZone: value }); return true } catch { return false } }, '时区无效') }).strict(), z.object({ kind: z.literal('once'), at: time }).strict(),]);

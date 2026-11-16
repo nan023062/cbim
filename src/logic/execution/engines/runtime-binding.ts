@@ -23,7 +23,6 @@ const legacyVersions: Record<string, string> = { pi: '1.5.0', 'claude-code': '0.
 export function pinRuntimeEngine(engine: AgentEngine, home: string, runtime?: EngineRuntimePackage, tools: EngineRuntimePackage | undefined = runtime?.dependencies?.pi): AgentEngine
 {
   if (!runtime)
-
     return engine;
 
   const release = runtime.retain?.();
@@ -45,7 +44,6 @@ export function pinRuntimeEngine(engine: AgentEngine, home: string, runtime?: En
       const stat = await fs.lstat(file(id));
 
       if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 16384)
-
         throw Error('引擎会话版本记录无效');
 
       text = await fs.readFile(file(id), 'utf8')
@@ -53,21 +51,18 @@ export function pinRuntimeEngine(engine: AgentEngine, home: string, runtime?: En
     catch (error: any)
     {
       if (error.code !== 'ENOENT')
-
         throw error;
 
       if (legacyResume && (runtime!.version !== legacyVersions[engine.kind] || tools && tools.version !== legacyVersions.pi))
-
         throw Error('旧会话没有此引擎版本的兼容记录，请保留历史并新建对话');
 
       return;
     }
-    const saved = binding.parse(JSON.parse(text)),
 
+    const saved = binding.parse(JSON.parse(text)),
       current = expected(id);
 
     if (saved.kind !== current.kind || saved.sessionId !== id || saved.identity !== current.identity || saved.version !== current.version || saved.toolsIdentity !== current.toolsIdentity || JSON.stringify(saved.dependencies) !== JSON.stringify(current.dependencies))
-
       throw Error('此会话绑定的引擎包已变化，请保留历史并新建对话；未用新引擎恢复旧原生会话');
   }
 
@@ -93,7 +88,6 @@ export function pinRuntimeEngine(engine: AgentEngine, home: string, runtime?: En
     catch (error: any)
     {
       if (error.code !== 'EEXIST')
-
         throw error;
 
       await check(id)
@@ -106,11 +100,9 @@ export function pinRuntimeEngine(engine: AgentEngine, home: string, runtime?: En
     async start(context)
     {
       if (context.sessionFile && !context.nativeSessionId)
-
         throw Error('原生恢复缺少会话身份');
 
       if (context.nativeSessionId)
-
         await check(context.nativeSessionId, !!context.sessionFile);
 
       await engine.start({

@@ -25,7 +25,6 @@ export interface DiscoveredModel
 export function parseModelCatalog(data: unknown): DiscoveredModel[]
 {
   if (!Array.isArray(data))
-
     throw Error('接口未返回模型列表，请手动添加模型');
 
   const limit = (v: unknown) => typeof v === 'number' && Number.isInteger(v) && v > 0 && v <= 2000000 ? v : undefined;
@@ -35,7 +34,6 @@ export function parseModelCatalog(data: unknown): DiscoveredModel[]
   for (const row of data)
   {
     if (!row || typeof row.id !== 'string' || !row.id.trim() || row.id.length > 160)
-
       continue;
 
     const contextWindow = limit(row.context_window ?? row.contextWindow);
@@ -51,8 +49,8 @@ export function parseModelCatalog(data: unknown): DiscoveredModel[]
     found.get(row.id)!.vision = vision;
 
     if (found.size >= 200)
-
       break;
   }
+
   return [...found.values()];
 }

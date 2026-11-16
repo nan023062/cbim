@@ -8,7 +8,6 @@ import { z } from 'zod';
 import { toolScopeSchema } from './scope-schema';
 
 const id = z.string().min(1).max(128),
-
   digest = z.string().regex(/^[a-f0-9]{64}$/);
 
 export const toolReceiptEffectSchema = z.enum(['read', 'preview', 'maintenance', 'business-write', 'knowledge-write', 'external-write', 'command']);

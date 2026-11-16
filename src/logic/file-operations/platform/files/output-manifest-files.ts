@@ -54,13 +54,11 @@ export class OutputManifestFiles
     normalizeArtifactPath(this.root, raw);
 
     const root = await fs.realpath(this.root),
-
       rootStat = await fs.lstat(this.root);
 
     this.Current(signal);
 
     if (normal(root) !== normal(this.root) || !rootStat.isDirectory() || rootStat.isSymbolicLink())
-
       fail('MANIFEST_PATH', '工作区位置或类型已变化');
 
     let current = this.root;
@@ -85,23 +83,22 @@ export class OutputManifestFiles
           {
             code?: string
           }).code === 'ENOENT')
-
           return;
 
         throw error
       }
+
       this.Current(signal);
 
       if (stat.isSymbolicLink() || index < parts.length - 1 && !stat.isDirectory())
-
         fail('MANIFEST_PATH', '产物路径含链接或非目录祖先');
     }
+
     const real = await fs.realpath(current);
 
     this.Current(signal);
 
     if (normal(real) !== normal(current))
-
       fail('MANIFEST_PATH', '产物实际路径与声明不符');
 
     return { file: current, stat };
@@ -110,9 +107,7 @@ export class OutputManifestFiles
   private async Scan(scopes: ArtifactScopeBinding[], signal: AbortSignal): Promise<OutputManifestSnapshot>
   {
     const roots: OutputManifestSnapshot['roots'] = [],
-
       entries: OutputManifestEntry[] = [],
-
       seen = new Set<string>();
 
     let bytes = 0;
@@ -122,7 +117,6 @@ export class OutputManifestFiles
       this.Current(signal);
 
       if (relativePath.split('/').length > artifactScopeLimits.depth)
-
         fail('MANIFEST_LIMIT', '产物目录超过32层');
 
       const target = await this.Locate(relativePath, signal);
@@ -135,26 +129,23 @@ export class OutputManifestFiles
 
           return
         }
+
         fail('MANIFEST_CHANGED', '目录枚举期间条目已消失')
       }
-      const { stat, file } = target,
 
+      const { stat, file } = target,
         kind = stat.isFile() ? 'file' : stat.isDirectory() ? 'directory' : undefined;
 
       if (!kind || kind === 'file' && stat.nlink !== 1)
-
         fail('MANIFEST_PATH', '清单只支持未链接的普通文件和目录');
 
       if (expected && expected !== kind)
-
         fail('MANIFEST_KIND_CHANGED', '产物类型与声明范围不符');
 
       if (expected)
-
         roots.push({ relativePath, state: kind });
 
       if (entries.length >= artifactScopeLimits.entries || seen.has(relativePath.toLowerCase()))
-
         fail('MANIFEST_LIMIT', '产物超过512条或存在大小写别名');
 
       seen.add(relativePath.toLowerCase());
@@ -162,7 +153,6 @@ export class OutputManifestFiles
       if (kind === 'file')
       {
         if (stat.size > artifactScopeLimits.fileBytes || bytes + stat.size > artifactScopeLimits.totalBytes)
-
           fail('MANIFEST_LIMIT', '产物超过单文件8 MiB或总计32 MiB');
 
         const [fact] = await this.files.CaptureFiles([relativePath], signal);
@@ -172,7 +162,6 @@ export class OutputManifestFiles
         bytes += fact.byteLength;
 
         if (bytes > artifactScopeLimits.totalBytes)
-
           fail('MANIFEST_LIMIT', '读取期间产物总字节超过32 MiB');
 
         entries.push({ ...fact, kind: 'file' });
@@ -194,10 +183,10 @@ export class OutputManifestFiles
 
             await visit(relativePath + '/' + child.name)
           }
+
           const after = await this.Locate(relativePath, signal);
 
           if (!after || !same(stat, after.stat))
-
             fail('MANIFEST_CHANGED', '目录或条目集合在读取期间变化');
         }
         finally
@@ -210,7 +199,6 @@ export class OutputManifestFiles
     const declared = scopes.flatMap(value => value.scope.roots).sort((a, b) => a.path < b.path ? -1 : a.path > b.path ? 1 : 0);
 
     for (const root of declared)
-
       await visit(root.path, root.kind);
 
     this.Current(signal);
@@ -224,17 +212,14 @@ export class OutputManifestFiles
   async Capture(raw: readonly ArtifactScopeBinding[], signal: AbortSignal): Promise<OutputManifestSnapshot>
   {
     const scopes = artifactScopeBindingsSchema.parse(raw),
-
       limited = AbortSignal.any([signal, AbortSignal.timeout(artifactScopeLimits.readMs)]);
 
     const first = await this.Scan(scopes, limited),
-
       second = await this.Scan(scopes, limited);
 
     this.Current(limited);
 
     if (outputManifestHash(first) !== outputManifestHash(second))
-
       fail('MANIFEST_CHANGED', '两次完整产物观察不一致，请等待稳定后重新采集');
 
     return second;
@@ -244,13 +229,11 @@ export class OutputManifestFiles
   async Check(raw: OutputManifestSnapshot, signal: AbortSignal): Promise<OutputManifestCheck>
   {
     const expected = outputManifestSnapshotSchema.parse(raw),
-
       expectedHash = outputManifestHash(expected);
 
     try
     {
       const observed = await this.Capture(expected.scopes, signal),
-
         observedHash = outputManifestHash(observed);
 
       return { state: expectedHash === observedHash ? 'matches' : 'changed', expectedHash, observed, observedHash }

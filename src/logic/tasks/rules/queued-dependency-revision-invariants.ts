@@ -19,7 +19,6 @@ import { queuedDependencyRevisionSelection } from './queued-dependency-revision-
 function valid(v: unknown, message: string): asserts v
 {
   if (!v)
-
     fail('GRAPH_INPUT_INVALID', message)
 }
 
@@ -32,19 +31,14 @@ export function validateQueuedDependencyRevision(previous: DispatchState, next: 
 
       record: DependencyRevision
     }[] = [],
-
     commands = new Set<string>(),
-
     edgeIds = new Set<string>();
 
   for (const graph of next.graphs)
-
     for (const task of graph.tasks)
     {
       const old = previous.graphs.find(g => g.identity.rootSessionId === graph.identity.rootSessionId)?.tasks.find(t => t.taskId === task.taskId),
-
         history = old?.dependencyRevisions ?? [],
-
         records = task.dependencyRevisions ?? [];
 
       valid(records.length >= history.length && records.length <= history.length + 1 && records.length <= 32 && history.every((r, i) => equal(r, records[i])) && (!old?.dependencyRevisions || !!task.dependencyRevisions), '前置修订审计只能追加，不能改删');
@@ -55,6 +49,7 @@ export function validateQueuedDependencyRevision(previous: DispatchState, next: 
 
         additions.push({ task, record: records.at(-1)! })
       }
+
       for (const r of records)
       {
         valid(dependencyRevisionSchema.safeParse(r).success && r.scopeId === task.scopeId && r.request.target.taskId === task.taskId && !commands.has(r.commandId), '修订审计身份无效或复用命令');
@@ -73,17 +68,16 @@ export function validateQueuedDependencyRevision(previous: DispatchState, next: 
         }
       }
     }
+
   valid(additions.length <= 1, '单次前置修订只能改变一个目标');
 
   const permits = { added: new Set<string>(), retired: new Set<string>() };
 
   if (!additions.length)
-
     return permits;
 
   const { task, record: r } = additions[0],
     { graph, scope, target, removed, added, tasks, members, status } = queuedDependencyRevisionSelection(previous, task.identity, r.scopeId, r.mainRunId, r.request),
-
     batch = mutation.batch;
 
   valid(batch && batch.commandId === command.commandId && r.commandId === command.commandId && batch.cause === 'dependency.changed' && equal(batch.identity, graph.identity), '修订须来自同一原子命令');
@@ -97,19 +91,16 @@ export function validateQueuedDependencyRevision(previous: DispatchState, next: 
   valid(r.added.length === added.length && r.added.every((e, i) => equal(e, { edgeId: e.edgeId, sourceTaskId: added[i].taskId, sourceTaskRevision: added[i].revision, sourcePlanRevision: added[i].planRevision }) && !graph.edges.some(old => old.edgeId === e.edgeId)), '新边来源或身份错误');
 
   const waitReason = status === 'waiting' ? '等待修订后的前置任务有效结果' : undefined,
-
     updated = { ...target, revision: target.revision + 1, status, waitReason, updatedAt: r.revisedAt, dependencyRevisions: [...(target.dependencyRevisions ?? []), r] };
 
   valid(equal(task, updated), '修订只能更新目标等待、版本与审计');
 
   const member = members.find(m => m.agentInstanceId === target.assignee.agentInstanceId)!,
-
     view = graph.agents.find(v => v.agentInstanceId === member.agentInstanceId);
 
   valid(view, '修订缺少原成员投影');
 
   const activity = status === 'waiting' ? 'waiting' as const : 'idle' as const,
-
     waitingTaskIds = status === 'waiting' ? [target.taskId] : [];
 
   valid(!mutation.scopes?.length && !mutation.sessions?.length && !mutation.runs?.length && !mutation.messages?.length && !mutation.workspaceMemberChanges?.length && !mutation.ownershipChanges?.length && !mutation.knowledgeSourceChanges?.length && !mutation.effectDispositions?.length && !mutation.controlledFileChanges?.length && equal(mutation.members, [{ ...member, activity, waitingTaskIds }]), '修订不能夹带其它领域或成员状态');
@@ -126,11 +117,9 @@ export function validateQueuedDependencyRevision(previous: DispatchState, next: 
   valid(reviseQueuedDependenciesReceiptSchema.safeParse(mutation.receipt).success && equal(mutation.receipt, receipt), '修订回执不匹配实际变更');
 
   for (const e of r.added)
-
     permits.added.add(e.edgeId);
 
   for (const e of removed)
-
     permits.retired.add(e.edgeId);
 
   return permits;

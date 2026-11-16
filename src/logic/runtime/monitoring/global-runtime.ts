@@ -77,21 +77,17 @@ const statuses = new Set(['running', 'completed', 'cancelled', 'failed', 'interr
 function measurement(event: StoredEvent): StoredEvent | undefined
 {
   const data = event.data ?? {},
-
     next: Record<string, unknown> = {};
 
   if (event.type === 'message')
   {
     const usage = record(data.usage),
-
       safe: Record<string, unknown> = {};
 
     if (usage)
     {
       for (const field of ['input', 'output', 'cacheRead', 'cacheWrite', 'reasoning'])
-
         if (finite(usage[field]))
-
           safe[field] = usage[field];
 
       const price = record(usage.cost);
@@ -101,53 +97,46 @@ function measurement(event: StoredEvent): StoredEvent | undefined
         const cost: Record<string, unknown> = {};
 
         if (finite(price.total))
-
           cost.total = price.total;
 
         if (price.totalFromProvider === true)
-
           cost.totalFromProvider = true;
 
         safe.cost = cost
       }
+
       next.usage = safe;
     }
-    if (typeof data.pricingKnown === 'boolean')
 
+    if (typeof data.pricingKnown === 'boolean')
       next.pricingKnown = data.pricingKnown;
   }
   else if (event.type === 'engine.status' && data.metric === 'run-usage')
   {
     const tokens = record(data.tokens),
-
       safe: Record<string, unknown> = {};
 
     if (tokens)
-
+    {
       for (const field of ['input', 'output', 'cacheRead', 'cacheWrite', 'reasoning'])
-
         if (finite(tokens[field]))
-
           safe[field] = tokens[field];
+    }
 
     next.metric = 'run-usage';
 
     next.tokens = safe;
 
     if (finite(data.cost))
-
       next.cost = data.cost;
 
     if (typeof data.pricingKnown === 'boolean')
-
       next.pricingKnown = data.pricingKnown;
 
     if (data.totalFromProvider === true)
-
       next.totalFromProvider = true;
   }
   else
-
     return;
 
   return { version: 1, workspaceId: event.workspaceId, taskId: event.taskId, runId: event.runId, seq: event.seq, time: event.time, type: event.type, data: next };
@@ -224,7 +213,6 @@ export class GlobalRuntimeManager
     const state = this.Current(id, epoch);
 
     if (!state)
-
       return;
 
     this.Issue(id, epoch, 'workspace', error);
@@ -245,7 +233,6 @@ export class GlobalRuntimeManager
     const state = this.Current(id, epoch);
 
     if (!state)
-
       return;
 
     state.view.availability = 'closed';
@@ -258,14 +245,12 @@ export class GlobalRuntimeManager
   Forget(id: string)
   {
     if (this.workspaces.delete(id))
-
       this.Changed()
   }
 
   private Interrupt(state: WorkspaceIndex)
   {
     for (const run of state.runs.values())
-
       if (run.view.status === 'running')
       {
         run.view.status = 'interrupted';
@@ -280,13 +265,11 @@ export class GlobalRuntimeManager
     const state = this.Current(id, epoch);
 
     if (!state || state.view.issues.some(i => i.source === source && i.message === message))
-
       return;
 
     state.view.issues.push({ source, message });
 
     if (state.view.issues.length > 100)
-
       state.view.issues.shift();
 
     this.Changed();
@@ -298,17 +281,13 @@ export class GlobalRuntimeManager
     const state = this.Current(id, epoch);
 
     if (!state)
-
       return;
 
     if (baseline.workspaceId !== id)
-
       throw Error('全局监管收到其他工作区的派发记录');
 
     const members = new Map<string, RuntimeMember>(),
-
       tasks = new Map<string, RuntimeDispatchTask>(),
-
       sequences = new Map<string,
         {
           streamId: string;
@@ -319,23 +298,22 @@ export class GlobalRuntimeManager
     for (const member of baseline.members)
     {
       if (member.workspaceId !== id)
-
         throw Error('成员身份与工作区不一致');
 
       members.set(member.agentInstanceId, this.Member(member, false))
     }
+
     for (const graph of baseline.graphs)
     {
       if (graph.identity.workspaceId !== id)
-
         throw Error('派发图身份与工作区不一致');
 
       sequences.set(graph.identity.rootSessionId, { streamId: graph.cursor.streamId, seq: graph.cursor.seq });
 
       for (const task of graph.tasks)
-
         tasks.set(key(task.identity.rootSessionId, task.taskId), this.Task(task));
     }
+
     const scopes = this.ProjectScopes(id, sequences, new Map(), baseline.scopes ?? []);
 
     state.members = members;
@@ -357,21 +335,17 @@ export class GlobalRuntimeManager
     const state = this.Current(id, epoch);
 
     if (!state)
-
       return;
 
     const batch = mutation.batch;
 
     if ((mutation.members ?? []).some(m => m.workspaceId !== id) || batch && batch.identity.workspaceId !== id)
-
       throw Error('提交身份与监管工作区不一致');
 
     if ((mutation.messages ?? []).some(m => m.identity.workspaceId !== id))
-
       throw Error('信封身份与监管工作区不一致');
 
     if (batch?.changes.some(change => change.type === 'task.upserted' && (change.task.identity.workspaceId !== id || change.task.identity.rootSessionId !== batch.identity.rootSessionId)))
-
       throw Error('任务身份与提交不一致');
 
     if (batch)
@@ -379,7 +353,6 @@ export class GlobalRuntimeManager
       const previous = state.graphSequences.get(batch.identity.rootSessionId);
 
       if (previous?.streamId === batch.streamId && batch.seq <= previous.seq)
-
         return;
 
       if (previous && (previous.streamId !== batch.streamId || batch.seq !== previous.seq + 1))
@@ -389,6 +362,7 @@ export class GlobalRuntimeManager
         return
       }
     }
+
     // 先准备整批周期候选；身份错误不能留下半次成员/任务/周期投影。新图与周期允许在同次提交建立。
     let scopes = state.scopes;
 
@@ -397,17 +371,16 @@ export class GlobalRuntimeManager
       const roots = new Map(state.graphSequences);
 
       if (batch)
-
         roots.set(batch.identity.rootSessionId, { streamId: batch.streamId, seq: batch.seq });
 
       scopes = this.ProjectScopes(id, roots, state.scopes, mutation.scopes)
     }
+
     let changed = false;
 
     for (const member of mutation.members ?? [])
     {
       const view = this.Member(member, true),
-
         old = state.members.get(member.agentInstanceId);
 
       if (JSON.stringify(old) !== JSON.stringify(view))
@@ -417,18 +390,20 @@ export class GlobalRuntimeManager
         changed = true
       }
     }
+
     if (batch)
     {
       for (const change of batch.changes)
-
         if (change.type === 'task.upserted')
         {
           state.tasks.set(key(change.task.identity.rootSessionId, change.task.taskId), this.Task(change.task));
 
           changed = true;
         }
+
       state.graphSequences.set(batch.identity.rootSessionId, { streamId: batch.streamId, seq: batch.seq });
     }
+
     // 邮箱保留已领取/处理信封作为审计，但这些记录不再占待消费负载。
     for (const message of mutation.messages ?? [])
     {
@@ -442,9 +417,9 @@ export class GlobalRuntimeManager
         }
       }
       else if (state.outbox.delete(message.messageId))
-
         changed = true;
     }
+
     for (const scope of mutation.scopes ?? [])
     {
       const next = scopes.get(scope.scopeId)!;
@@ -456,8 +431,8 @@ export class GlobalRuntimeManager
         changed = true
       }
     }
-    if (changed)
 
+    if (changed)
       this.Changed();
   }
 
@@ -465,7 +440,6 @@ export class GlobalRuntimeManager
   private ProjectScopes(id: string, roots: ReadonlyMap<string, unknown>, previous: ReadonlyMap<string, RuntimeScope>, updates: NonNullable<DispatchState['scopes']>): Map<string, RuntimeScope>
   {
     if (!Array.isArray(updates) || new Set(updates.map(scope => scope?.scopeId)).size !== updates.length)
-
       throw Error('周期提交集合无效或身份重复');
 
     const next = new Map(previous);
@@ -473,27 +447,25 @@ export class GlobalRuntimeManager
     for (const scope of updates)
     {
       const value = projectRuntimeScope(scope),
-
         old = previous.get(value.scopeId);
 
       if (value.workspaceId !== id || !roots.has(value.rootSessionId) || old && old.rootSessionId !== value.rootSessionId)
-
         throw Error('周期身份与监管工作区或主会话不一致');
 
       next.set(value.scopeId, value);
     }
+
     const open = new Set<string>();
 
     for (const scope of next.values())
-
       if (scope.status !== 'closed')
       {
         if (open.has(scope.rootSessionId))
-
           throw Error('同一主会话不能有多个未关闭周期');
 
         open.add(scope.rootSessionId)
       }
+
     return next;
   }
 
@@ -513,32 +485,25 @@ export class GlobalRuntimeManager
     const state = this.Current(id, epoch);
 
     if (!state)
-
       return;
 
     if (summary.task.workspaceId !== id)
-
       throw Error('运行身份与监管工作区不一致');
 
     if (!statuses.has(summary.status) || !Array.isArray(summary.events))
-
       throw Error('恢复运行的状态或事件列表无效');
 
     const runKey = key(summary.task.taskId, summary.runId),
-
       existing = state.runs.get(runKey);
 
     const last = summary.events.at(-1)?.seq ?? 0;
 
     // 已接收的实时事实优先，延迟恢复不能把活跃 run 覆盖成历史状态。
     if (existing && existing.receivedSeq >= last)
-
       return;
 
     const started = summary.events.find(event => event.type === 'run.started')?.data,
-
       recorded = started?.memberBinding,
-
       conversation = started?.conversationBinding;
 
     const value = this.NewRun(summary.task, summary.runId, summary.events[0]?.time ?? '', summary.memberBinding ?? recorded, summary.conversationBinding ?? conversation);
@@ -548,21 +513,20 @@ export class GlobalRuntimeManager
       const checked = checkedMemberRunBinding(recorded, summary.task, summary.runId);
 
       if (!value.view.memberBinding || Object.entries(checked).some(([field, data]) => value.view.memberBinding![field as keyof typeof checked] !== data))
-
         throw Error('恢复摘要与运行起始成员身份不一致');
     }
+
     if (conversation !== undefined)
     {
       const checked = checkedConversationAgentBinding(conversation, summary.task);
 
       if (!value.view.conversationBinding || Object.entries(checked).some(([field, data]) => value.view.conversationBinding![field as keyof typeof checked] !== data))
-
         throw Error('恢复摘要与运行起始主会话身份不一致');
     }
+
     for (const event of summary.events)
     {
       if (event.workspaceId !== id || event.taskId !== summary.task.taskId || event.runId !== summary.runId || event.seq !== value.receivedSeq + 1)
-
         throw Error('恢复运行的身份或事件顺序无效');
 
       value.receivedSeq = event.seq;
@@ -570,9 +534,9 @@ export class GlobalRuntimeManager
       const item = measurement(event);
 
       if (item)
-
         value.measurements.push(item);
     }
+
     value.view.lastSeq = value.receivedSeq;
 
     value.view.updatedAt = summary.events.at(-1)?.time ?? value.view.updatedAt;
@@ -593,9 +557,9 @@ export class GlobalRuntimeManager
       value.view.phase = existing!.view.phase;
 
       for (const event of summary.events)
-
         this.Phase(value, event);
     }
+
     state.runs.set(runKey, value);
 
     this.Changed();
@@ -607,15 +571,12 @@ export class GlobalRuntimeManager
     const state = this.Current(id, epoch);
 
     if (!state)
-
       return;
 
     if (event.workspaceId !== id)
-
       throw Error('运行事件属于其他工作区');
 
     if (!Number.isSafeInteger(event.seq) || event.seq < 1)
-
       throw Error('运行事件序号无效');
 
     const runKey = key(event.taskId, event.runId);
@@ -632,18 +593,18 @@ export class GlobalRuntimeManager
 
         return
       }
+
       run = this.NewRun(task, event.runId, event.time, event.data?.memberBinding, event.data?.conversationBinding);
 
       state.runs.set(runKey, run);
 
       run.liveEstablished = true;
     }
-    if (event.seq <= run.receivedSeq)
 
+    if (event.seq <= run.receivedSeq)
       return;
 
     if (event.seq !== run.receivedSeq + 1)
-
       this.Issue(id, epoch, 'run', '运行事件序号有缺口，当前统计可能不完整');
 
     run.receivedSeq = event.seq;
@@ -660,8 +621,8 @@ export class GlobalRuntimeManager
 
       changed = true
     }
-    const phase = run.view.phase,
 
+    const phase = run.view.phase,
       status = run.view.status;
 
     this.Phase(run, event);
@@ -695,19 +656,12 @@ export class GlobalRuntimeManager
     else if (run.view.status === 'running')
     {
       if (event.type === 'run.stop_requested')
-
         run.view.phase = 'stopping';
-
       else if (event.type === 'tool.proposed')
-
         run.view.phase = 'waiting';
-
       else if (event.type === 'tool.started' || event.type === 'tool.allowed')
-
         run.view.phase = 'tool';
-
       else if (event.type === 'tool.finished' || event.type === 'tool.denied' || event.type === 'message')
-
         run.view.phase = 'working';
     }
   }
@@ -716,15 +670,12 @@ export class GlobalRuntimeManager
   private NewRun(task: TaskSpec, runId: string, time: string, memberBinding?: unknown, conversationBinding?: unknown): ObservedRun
   {
     if (!task || typeof task !== 'object' || typeof task.workspaceId !== 'string' || !task.workspaceId || typeof task.taskId !== 'string' || !task.taskId || typeof runId !== 'string' || !runId || !Array.isArray(task.moduleIds) || task.moduleIds.some(id => typeof id !== 'string') || task.agentId !== undefined && typeof task.agentId !== 'string')
-
       throw Error('运行任务概要无效');
 
     if (memberBinding !== undefined && conversationBinding !== undefined)
-
       throw Error('运行不能同时绑定主会话和派发成员任务');
 
     const binding = memberBinding === undefined ? undefined : checkedMemberRunBinding(memberBinding, task, runId),
-
       conversation = conversationBinding === undefined ? undefined : checkedConversationAgentBinding(conversationBinding, task);
 
     return { view: { workspaceId: task.workspaceId, taskId: task.taskId, runId, agentId: task.agentId, ...(binding ? { memberBinding: binding } : {}), ...(conversation ? { conversationBinding: conversation } : {}), status: 'running', phase: 'working', lastSeq: 0, startedAt: time, updatedAt: time, usage: runUsage([]) }, moduleIds: [...task.moduleIds], measurements: [], receivedSeq: 0, liveEstablished: false };
@@ -736,11 +687,9 @@ export class GlobalRuntimeManager
     const state = this.Current(id, epoch);
 
     if (!state)
-
       return;
 
     if (!count(counts.pending) || !count(counts.paused) || !count(counts.inserting))
-
       throw Error('队列统计必须是非负整数');
 
     if (JSON.stringify(state.view.queue) !== JSON.stringify(counts))
@@ -757,7 +706,6 @@ export class GlobalRuntimeManager
     const current = this.Cursor();
 
     if (cursor?.streamId === current.streamId && cursor.revision === current.revision)
-
       return { mode: 'noop', cursor: current };
 
     return { mode: 'snapshot', cursor: current, snapshot: this.Snapshot() };
@@ -767,13 +715,9 @@ export class GlobalRuntimeManager
   Snapshot(): RuntimeSnapshot
   {
     const workspaces: RuntimeWorkspace[] = [],
-
       members: RuntimeMember[] = [],
-
       tasks: Array<RuntimeDispatchTask | RuntimeLoopTask> = [],
-
       runs: RuntimeRun[] = [],
-
       scopes: RuntimeScope[] = [];
 
     const pressure: RuntimePressure = { taskInstances: 0, memberInstances: 0, openWorkspaces: 0, unavailableWorkspaces: 0, activeMembers: 0, workingMembers: 0, waitingMembers: 0, communicatingMembers: 0, activeRuns: 0, queuedDispatchTasks: 0, waitingDispatchTasks: 0, blockedDispatchTasks: 0, pendingOutbox: 0, queuedConversationMessages: 0, pausedConversationMessages: 0, insertingConversationMessages: 0 };
@@ -787,34 +731,30 @@ export class GlobalRuntimeManager
       scopes.push(...state.scopes.values());
 
       if (availability === 'ready')
-
         pressure.openWorkspaces++;
 
       if (availability === 'unavailable')
-
         pressure.unavailableWorkspaces++;
 
       // 仅真实起始事件能证明当前活动；历史恢复、同名角色和已关闭工作区不能制造活跃实例。
       const conversations = new Map<string, RuntimeRun>();
 
       if (availability === 'ready')
-
+      {
         for (const run of state.runs.values())
-
           if (run.liveEstablished && run.view.status === 'running' && run.view.conversationBinding)
           {
             const binding = run.view.conversationBinding,
-
               member = state.members.get(binding.agentInstanceId);
 
             if (member?.lifecycle !== 'released' && member?.agentId === binding.agentId && member.teamId === binding.teamId && (!member.mainRootSessionId || member.mainRootSessionId === binding.rootSessionId))
-
               conversations.set(binding.agentInstanceId, run.view);
           }
+      }
+
       for (const member of state.members.values())
       {
         const view: RuntimeMember = { ...member, availability, activityCurrent: member.activityCurrent && availability === 'ready' },
-
           conversation = conversations.get(member.agentInstanceId);
 
         if (conversation)
@@ -827,10 +767,10 @@ export class GlobalRuntimeManager
 
           view.activeConversation = { rootSessionId: binding.rootSessionId, agentSessionId: binding.agentSessionId, runId: conversation.runId }
         }
+
         members.push(view);
 
         if (view.lifecycle !== 'released')
-
           pressure.memberInstances++;
 
         if (view.activityCurrent && view.activity !== 'idle')
@@ -838,18 +778,16 @@ export class GlobalRuntimeManager
           pressure.activeMembers++;
 
           if (view.activity === 'working')
-
             pressure.workingMembers++;
 
           if (view.activity === 'waiting')
-
             pressure.waitingMembers++;
 
           if (view.activity === 'communicating')
-
             pressure.communicatingMembers++
         }
       }
+
       for (const task of state.tasks.values())
       {
         // 安全停泊仍是未完任务，但没有活动运行或执行槽；将其计入等待压力，避免监管视图漏掉待主调度安排的工作。
@@ -858,18 +796,16 @@ export class GlobalRuntimeManager
         if (state.members.get(task.agentInstanceId)?.lifecycle !== 'released')
         {
           if (task.status === 'queued')
-
             pressure.queuedDispatchTasks++;
 
           if (task.status === 'waiting' || task.status === 'checkpointed')
-
             pressure.waitingDispatchTasks++;
 
           if (task.status === 'blocked')
-
             pressure.blockedDispatchTasks++
         }
       }
+
       const groups = new Map<string, ObservedRun[]>();
 
       for (const run of state.runs.values())
@@ -885,24 +821,25 @@ export class GlobalRuntimeManager
 
           groups.set(run.view.taskId, group)
         }
+
         const instanceId = run.view.memberBinding?.agentInstanceId ?? run.view.conversationBinding?.agentInstanceId;
 
         if (run.view.status === 'running' && availability === 'ready' && (!instanceId || state.members.get(instanceId)?.lifecycle !== 'released'))
-
           pressure.activeRuns++;
       }
+
       for (const group of groups.values())
       {
         group.sort((a, b) => (a.view.startedAt ?? '').localeCompare(b.view.startedAt ?? '') || a.view.runId.localeCompare(b.view.runId));
 
         const latest = group.at(-1)!,
-
           active = group.filter(r => r.view.status === 'running');
 
         const binding = latest.view.conversationBinding;
 
         tasks.push({ source: 'loop', ...(binding ? { binding: 'instance' as const, agentInstanceId: binding.agentInstanceId, agentSessionId: binding.agentSessionId, rootSessionId: binding.rootSessionId } : { binding: 'role-only' as const }), workspaceId: state.view.workspaceId, taskId: latest.view.taskId, agentId: latest.view.agentId, moduleIds: latest.moduleIds, status: active.length ? 'running' : latest.view.status, runIds: group.map(r => r.view.runId), activeRunIds: active.map(r => r.view.runId), lastRunId: latest.view.runId, updatedAt: latest.view.updatedAt });
       }
+
       pressure.pendingOutbox += state.outbox.size;
 
       pressure.queuedConversationMessages += state.view.queue.pending;
@@ -911,6 +848,7 @@ export class GlobalRuntimeManager
 
       pressure.insertingConversationMessages += state.view.queue.inserting;
     }
+
     pressure.taskInstances = tasks.length;
 
     const usage: RuntimeUsage = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, reasoning: 0, total: 0, costPartial: false, usageReported: false, runCount: runs.length, reportedRuns: 0, unreportedRuns: 0, unpricedRuns: 0 };
@@ -920,7 +858,6 @@ export class GlobalRuntimeManager
       const value = run.usage;
 
       for (const field of ['input', 'output', 'cacheRead', 'cacheWrite', 'reasoning', 'total'] as const)
-
         usage[field] += value[field];
 
       if (value.usageReported)
@@ -930,19 +867,17 @@ export class GlobalRuntimeManager
         usage.usageReported = true;
 
         if (value.cost === undefined || value.costPartial)
-
           usage.unpricedRuns++
       }
       else
-
         usage.unreportedRuns++;
 
       if (value.cost !== undefined)
-
         usage.cost = (usage.cost ?? 0) + value.cost;
 
       usage.costPartial ||= value.costPartial || !value.usageReported;
     }
+
     return clone({ cursor: this.Cursor(), workspaces, members, tasks, runs, scopes, pressure, usage, complete: workspaces.every(w => (w.availability === 'ready' || w.availability === 'closed') && !w.issues.length) });
   }
 }

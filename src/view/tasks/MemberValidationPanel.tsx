@@ -18,7 +18,6 @@ export function MemberValidationPanel({ run }: { run: RunSummary })
   const rows = memberValidationViews(run);
 
   if (!rows.length)
-
     return null;
 
   return <section className="member-validation-panel" aria-label="产物结构验证"><h4>产物结构验证</h4>

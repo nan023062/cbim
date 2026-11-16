@@ -21,7 +21,6 @@ const equal = (left: unknown, right: unknown): boolean => { /** 保留本模块�
 function valid(value: unknown, message: string): asserts value
 {
   if (!value)
-
     fail('GRAPH_INPUT_INVALID', message)
 }
 
@@ -37,13 +36,11 @@ function recordedRuns(scope: DispatchScope): string[]
 export function validateScopeRunTracking(previous: DispatchState, next: DispatchState, mutation: DispatchMutation): void
 {
   const scopes = next.scopes ?? [],
-
     owners = new Map<string, Set<string>>();
 
   for (const scope of scopes)
   {
     if (scope.runTracking !== undefined)
-
       valid(scopeRunTrackingSchema.safeParse(scope.runTracking).success, '周期主运行归属清单无效');
 
     for (const id of recordedRuns(scope))
@@ -55,6 +52,7 @@ export function validateScopeRunTracking(previous: DispatchState, next: Dispatch
       owners.set(id, values)
     }
   }
+
   const memberIds = new Set((next.runs ?? []).map(run => run.binding.runId));
 
   const previouslyExcluded = new Set((previous.scopes ?? []).flatMap(scope => scopeFreshContext(scope)?.excludedRunIds ?? []));
@@ -62,15 +60,12 @@ export function validateScopeRunTracking(previous: DispatchState, next: Dispatch
   for (const scope of scopes)
   {
     const old = previous.scopes?.find(item => item.scopeId === scope.scopeId),
-
       tracking = scope.runTracking;
 
     if (old)
-
       valid((old.runTracking === undefined) === (tracking === undefined), '已有周期不能补造或移除主运行归属清单');
 
     if (!tracking)
-
       continue;
 
     valid(scopeRunTrackingSchema.safeParse(tracking).success, '周期主运行归属清单无效');
@@ -78,17 +73,13 @@ export function validateScopeRunTracking(previous: DispatchState, next: Dispatch
     const ids = tracking.mainRunIds;
 
     for (const id of ids)
-
       valid(owners.get(id)?.size === 1 && !memberIds.has(id), '主运行不能跨周期归属或借用成员运行身份');
 
     for (const id of ids.slice(old?.runTracking?.mainRunIds.length ?? 0))
-
       valid(!previouslyExcluded.has(id), '新登记主运行不能重用已经隔离的历史运行');
 
     if (!old)
-
       valid(ids.length === 1, '新周期必须原子登记且只登记首个主运行');
-
     else
     {
       const before = old.runTracking!.mainRunIds;
@@ -98,9 +89,7 @@ export function validateScopeRunTracking(previous: DispatchState, next: Dispatch
       if (ids.length > before.length)
       {
         const history = scope.continuations ?? [],
-
           prior = old.continuations ?? [],
-
           supplement = history.length === prior.length + 1;
 
         valid(scope.status === 'active' && (old.status === 'active' || old.status === 'waiting' && supplement), '等待或封存周期不能登记新运行');
@@ -109,10 +98,10 @@ export function validateScopeRunTracking(previous: DispatchState, next: Dispatch
 
         // 启用预算时准入证明必须与真实运行一起追加；策略和证明的边界由预算不变量独立核实。
         if (!supplement)
-
           valid(equal({ ...old, runTracking: tracking, budget: scope.budget }, scope), '主运行追加不能顺带修改目标或周期状态');
       }
     }
+
     const fresh = scopeFreshContext(scope);
 
     if (fresh)
@@ -121,26 +110,23 @@ export function validateScopeRunTracking(previous: DispatchState, next: Dispatch
 
       valid(ids.every(id => !fresh.excludedRunIds.includes(id)), '周期登记不能包含已隔离的旧运行')
     }
+
     for (const item of scope.continuations ?? [])
     {
       valid(equal(ids.slice(0, item.wait.mainRunIds.length), item.wait.mainRunIds) && ids[item.wait.mainRunIds.length] === item.runId, '补充必须紧接完整等待前缀登记新运行');
     }
-    if (scope.wait)
 
+    if (scope.wait)
       valid(equal(ids, scope.wait.mainRunIds), '等待检查点必须保留周期完整主运行清单');
 
     if (scope.goal?.plan)
-
       valid(ids.includes(scope.goal.plan.runId), '周期计划必须来自已登记主运行');
 
     if (scope.goal?.review)
-
       valid(ids.includes(scope.goal.review.runId), '周期审阅必须来自已登记主运行');
 
     for (const task of next.graphs.flatMap(graph => graph.tasks).filter(task => task.scopeId === scope.scopeId))
-
       if (task.cancelledBeforeStart)
-
         valid(ids.includes(task.cancelledBeforeStart.mainRunId), '未启动撤销必须来自本周期已登记主运行');
   }
 }

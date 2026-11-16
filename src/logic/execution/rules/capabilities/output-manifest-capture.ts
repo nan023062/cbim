@@ -80,39 +80,33 @@ export class RunOutputManifestCapture
   Guard(name: string, id: string, input: unknown, activeIds: readonly string[]): string | undefined
   {
     if (this.reserved || this.deliveryOwner || this.reading)
-
       return '正在完整采集或核实产物，请等待本次调用结束';
 
     if (name === 'cbim_delivery_prepare' && completeOutputRequired(this.bindings))
     {
       if (this.controller.signal.aborted)
-
         return '本轮已停止完整交付';
 
       if (activeIds.length)
-
         return '仍有工具或审批在途，不能完整交付';
 
       this.deliveryOwner = id;
 
       return;
     }
-    if (name !== outputManifestToolName)
 
+    if (name !== outputManifestToolName)
       return;
 
     if (this.controller.signal.aborted)
-
       return '本轮已停止完整产物采集';
 
     const parsed = outputManifestInputSchema.safeParse(input);
 
     if (!parsed.success)
-
       return '完整产物采集参数无效';
 
     if (activeIds.length)
-
       return '仍有工具或审批在途，不能采集完整产物';
 
     this.reserved = { id, input: parsed.data, consumed: false };
@@ -122,15 +116,12 @@ export class RunOutputManifestCapture
   Observed(event: StoredEvent)
   {
     if (event.type === 'run.started' || event.type.startsWith('tool.') || event.type.startsWith('artifact.transition_') || ['task.updated', 'artifact.manifest_captured', 'run.stop_requested', 'run.interrupted'].includes(event.type))
-
       this.events.push(event);
 
     if ((event.type === 'tool.finished' || event.type === 'tool.denied') && event.data.id === this.reserved?.id)
-
       this.reserved = undefined;
 
     if ((event.type === 'tool.finished' || event.type === 'tool.denied') && event.data.id === this.deliveryOwner)
-
       this.deliveryOwner = undefined;
   }
 
@@ -154,11 +145,9 @@ export class RunOutputManifestCapture
   async VerifyCurrent(record: OutputManifestRecord, name: 'cbim_delivery_prepare' | 'cbim_validation_run', signal: AbortSignal = new AbortController().signal): Promise<void>
   {
     if (this.reserved || this.reading || name === 'cbim_validation_run' && this.deliveryOwner || name === 'cbim_delivery_prepare' && !this.deliveryOwner)
-
       fail('MANIFEST_BUSY', '完整产物复核尚未就绪或存在其它调用');
 
     const version = this.context.Current()?.version,
-
       limited = AbortSignal.any([this.controller.signal, signal, AbortSignal.timeout(artifactScopeLimits.readMs)]);
 
     const check = () => { limited.throwIfAborted(); this.context.AssertReadingReady(name); if (this.context.Current()?.version !== version || version === undefined || !equal(this.Select(record.manifest.manifestId, version), record)) fail('MANIFEST_PROGRESS_CHANGED', '完整复核期间进度或原清单发生变化') };
@@ -178,7 +167,6 @@ export class RunOutputManifestCapture
       check();
 
       const observedHash = outputManifestHash(observed),
-
         expectedHash = record.manifest.manifestHash;
 
       assertCompleteOutputCurrent(record.manifest.snapshot, { state: observedHash === expectedHash ? 'matches' : 'changed', expectedHash, observedHash, observed });
@@ -198,7 +186,6 @@ export class RunOutputManifestCapture
     const reserved = this.reserved;
 
     if (!reserved || reserved.id !== id || reserved.consumed || !equal(reserved.input, input))
-
       fail('MANIFEST_CALL', '完整采集必须来自已授权的一次性调用');
 
     reserved.consumed = true;
@@ -208,7 +195,6 @@ export class RunOutputManifestCapture
     check();
 
     if (this.events.filter(event => event.type === 'artifact.manifest_captured').length >= artifactScopeLimits.captures)
-
       fail('MANIFEST_LIMIT', '本轮最多保存8份完整清单，失败暂存也占用历史容量');
 
     const lastEffectSeq = this.events.reduce((seq, event) => artifactEventChangesFiles(event) ? event.seq : seq, 0);
@@ -222,7 +208,6 @@ export class RunOutputManifestCapture
     check();
 
     if (!equal(snapshot.scopes, this.scopes))
-
       fail('MANIFEST_SCOPE_CHANGED', '文件端口未完整返回原冻结范围');
 
     await this.port.AssertCurrentKnowledge();
@@ -230,13 +215,11 @@ export class RunOutputManifestCapture
     check();
 
     if (lastEffectSeq !== this.events.reduce((seq, event) => artifactEventChangesFiles(event) ? event.seq : seq, 0))
-
       fail('MANIFEST_EFFECT_CHANGED', '采集期间出现新的副作用');
 
     const operations = currentArtifactTransitions(this.events, verifyArtifactTransitions(this.events, this.binding, this.port.knowledgeRevision, this.scopes, this.Inspect().records), snapshot);
 
     const files = snapshot.entries.filter(entry => entry.kind === 'file'),
-
       manifest = outputManifestStagedSchema.parse({ version: 1, manifestId: randomUUID(), captureToolCallId: id, binding: this.binding, scopeHash: outputManifestScopeHash(this.scopes), manifestHash: outputManifestHash(snapshot), knowledgeRevision: this.port.knowledgeRevision, progressVersion: input.expectedTaskProgressVersion, capturedAt: new Date().toISOString(), lastEffectSeq, entryCount: snapshot.entries.length, fileCount: files.length, byteLength: files.reduce((sum, file) => sum + file.byteLength, 0), scopes: this.scopes, snapshot, ...(operations.length ? { operations } : {}) });
 
     await this.context.Save(manifest);

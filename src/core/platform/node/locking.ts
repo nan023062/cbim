@@ -32,9 +32,7 @@ const release = win?.func('int __stdcall ReleaseMutex(void *)');
 const close = win?.func('int __stdcall CloseHandle(void *)');
 
 const libc = !win
-
   ? koffi.load(process.platform === 'darwin' ? '/usr/lib/libSystem.B.dylib' : 'libc.so.6')
-
   : null;
 
 const flock = libc?.func('int flock(int, int)');
@@ -57,7 +55,6 @@ export class KernelLock
     this.key = scope + id;
 
     if (held.has(this.key))
-
       throw new Fault('LOCKED', '该工程已在运行');
 
     if (win)
@@ -65,7 +62,6 @@ export class KernelLock
       this.handle = create!(null, 0, `Global\\CBIM_${scope}_${id}`);
 
       if (!this.handle)
-
         throw new Fault('LOCK_PERMISSION', '工程锁不可访问，可能由其他用户持有；拒绝重复启动');
 
       const result = wait!(this.handle, 0);
@@ -92,6 +88,7 @@ export class KernelLock
         throw new Fault('LOCKED', '该工程已在运行');
       }
     }
+
     held.add(this.key);
   }
 
@@ -106,6 +103,7 @@ export class KernelLock
 
       this.handle = null;
     }
+
     if (this.fd !== undefined)
     {
       flock!(this.fd, 8);
@@ -114,6 +112,7 @@ export class KernelLock
 
       this.fd = undefined;
     }
+
     held.delete(this.key);
   }
 }

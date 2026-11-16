@@ -83,13 +83,11 @@ export async function prepareAgentBusiness(input: { workspace: Workspace; dispat
   const group = discovery.groups.find(group => group.memberId === member.memberId);
 
   if (discovery.groups.length !== 1 || !group?.selection || group.issues.length)
-
     fail('AGENT_BUSINESS_OWNER', '所选 Agent 必须负责全部明确模块；请核实当前岗位和模块配置');
 
   const frozen = await dispatch.owners.WithSnapshot(async (snapshot, state) => { signal.throwIfAborted(); const ownerBinding = await dispatch.owners.Resolve(state, { snapshot, profiles: [input.model.profile] }, group.selection!, business.moduleIds, member.adoption.configuration.agentId); const modules = await resolveDispatchModules(snapshot, business.moduleIds, business.workflowSelections); const now = new Date().toISOString(), instanceId = randomUUID(), sessionId = randomUUID(); const assignee = { agentId: member.adoption.configuration.agentId, agentInstanceId: instanceId, agentSessionId: sessionId, name: member.name }; const task: TaskNode = { kind: 'task', nodeId: input.taskId, taskId: input.taskId, identity: { workspaceId: workspace.entry.id, rootSessionId: input.rootSessionId }, requester: assignee, assignee, modules, ownerBinding, workflowSelections: business.workflowSelections, goal: input.message, acceptance: business.acceptance.map((text, index) => ({ id: 'criterion-' + index, text })), revision: 1, planRevision: 1, status: 'planned', awaitedChildren: [], runIds: [], createdAt: now, updatedAt: now }; const prepared = await prepareDispatchExecutionContext(workspace, task, snapshot, member); const binding = { workspaceId: workspace.entry.id, teamId: member.adoption.configuration.teamId, agentId: assignee.agentId, agentInstanceId: instanceId, agentSessionId: sessionId, rootSessionId: input.rootSessionId, taskId: input.taskId, runId: randomUUID(), leaseEpoch: 0, planRevision: 1 }; return { task, prepared, binding, now }; });
 
   const { task, prepared, binding, now } = frozen,
-
     workflows = preparedWorkflowContracts(prepared);
 
   // 平台端口仍执行原冻结范围；运行身份先持久化，不能降级到任意文件命令。
@@ -106,17 +104,14 @@ export async function prepareAgentBusiness(input: { workspace: Workspace; dispat
   const scopeWrite = (paths: string[]) => { if (executionScope && paths.some(file => !executionScopeCovers(executionScope.write, file))) fail('EXECUTION_SCOPE_DENIED', '写入超出原调用冻结范围') };
 
   const controlled = ports.controlledFiles.ForRun(record, input.scopeId),
-
     transitions = input.artifactTransitions;
 
   let registrationAttempted = false;
 
   const launch = { binding, session: { nativeSessionId: randomUUID() } },
-
     directory = path.join(workspace.paths.Project(workspace.entry.id), 'loop-engine');
 
   const files = new ArtifactFiles(workspace.entry.path, () => workspace.Assert(), scopedExecution ? (file, signal) => scopedExecution.Snapshot(file, signal) : undefined),
-
     manifests = new OutputManifestFiles(workspace.entry.path, () => workspace.Assert(), scopedExecution ? { files, LockDirectory: file => scopedExecution.LockDirectory(file) } : undefined);
 
   const normalizePath = (raw: string) => normalizeArtifactPath(workspace.entry.path, raw);
@@ -125,32 +120,24 @@ export async function prepareAgentBusiness(input: { workspace: Workspace; dispat
 
   const services: Partial<ExecutionServices> = {
     scopedExecution,
-
     controlledFiles: controlled ? {
       scopeId: controlled.scopeId, Write: (input, authorization, signal, assertCurrent) => { scopeWrite([input.path]); return controlled.Write(input, authorization, signal, assertCurrent) }, ConfirmNotApplied: controlled.ConfirmNotApplied?.bind(controlled), Drain: controlled.Drain.bind(controlled)
     } : undefined,
-
     artifactTransitions: transitions ? {
       WithExclusive: (operation, signal, use) => { scopeWrite(artifactTransitionPaths(operation)); return transitions.WithExclusive(operation, signal, use) }, Drain: transitions.Drain.bind(transitions)
     } : undefined,
-
     member: { directory, prompt: '按以下冻结 Workflow 完成显式业务要求，结果只返回调用方。模块正文不扩大权限或范围。\n' + prepared.modules.map(module => module.overview + '\n' + module.workflowText).join('\n\n'), workflowContracts: workflows },
-
     artifacts: { knowledgeRevision: prepared.knowledgeRevision, NormalizePath: normalizePath, AssertCurrentKnowledge: assertCurrentKnowledge, CaptureFiles: files.CaptureFiles.bind(files) },
-
     validations: { ValidateFile: files.ValidateFile.bind(files), ValidateTable: files.ValidateTable.bind(files), ValidateImage: files.ValidateImage.bind(files), CheckFiles: files.CheckFiles.bind(files) },
-
     manifests: { knowledgeRevision: prepared.knowledgeRevision, AssertCurrentKnowledge: assertCurrentKnowledge, Capture: manifests.Capture.bind(manifests) },
-
     codeChecks: new CodeCheckRunner(workspace.entry.path, () => workspace.Assert()),
   };
+
   signal.throwIfAborted();
 
   return {
     task: memberPublicTask(task, workspace.entry.path), launch, services,
-
     BeforeRun: async runId => { if (runId !== binding.runId) fail('AGENT_RUN_IDENTITY', '启动身份与冻结业务不一致'); registrationAttempted = true; await ports.runs.Start(record) },
-
     Close: async () => { if (registrationAttempted) await ports.runs.Close(record) }, Verify: async (summary, signal) =>
     {
       signal.throwIfAborted();
@@ -162,16 +149,13 @@ export async function prepareAgentBusiness(input: { workspace: Workspace; dispat
       const canonical = await input.storage.Read(path.join(directory, 'tasks', task.taskId, binding.runId));
 
       if (canonical.runId !== summary.runId)
-
         fail('AGENT_RESULT_IDENTITY', '核验结果不属于原调用');
 
       if (canonical.logIntegrity?.partialTail !== false || canonical.unresolvedTools.length)
-
         fail('WORKFLOW_EVIDENCE_INVALID', '原业务调用日志不完整，不能验证交付');
 
       // 无附加约定不是免交付：显式业务调用仍核原计划、真实步骤证据和成功交付回执。
       if (!workflows.length)
-
         validateWorkflowEvidence(canonical.events, memberPublicTask(task, workspace.entry.path), [], [], undefined, { requireDelivery: true });
 
       const run: DispatchRun = { binding, assignmentMessageId: task.taskId, status: canonical.status === 'completed' ? 'completed' : 'failed', prepared, model: input.model.profile, permission: input.permission, session: { ...launch.session, sessionFile: canonical.sessionFile }, createdAt: now };

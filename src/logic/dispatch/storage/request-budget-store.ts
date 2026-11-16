@@ -11,7 +11,6 @@ function budgetState(state: DispatchState): RequestBudgetState
 {
   return structuredClone({
     ...(state.scopes ? { scopes: state.scopes.map(({ workspaceId, rootSessionId, scopeId, budget, runTracking }) => ({ workspaceId, rootSessionId, scopeId, ...(budget ? { budget: { policy: budget.policy } } : {}), ...(runTracking ? { runTracking: { mainRunIds: runTracking.mainRunIds } } : {}) })) } : {}),
-
     ...(state.modelRequestBudgetChanges ? { modelRequestBudgetChanges: state.modelRequestBudgetChanges } : {}),
   });
 }
@@ -21,7 +20,6 @@ export function requestBudgetStore(store: Pick<DispatchStore, 'Read' | 'Transact
 {
   return {
     ReadBudget: async () => budgetState(await store.Read()),
-
     TransactBudget: (command, prepare) => store.Transact(command, async state => { const proposed = await prepare(budgetState(state)); if (Reflect.ownKeys(proposed).some(key => key !== 'modelRequestBudgetChanges' && key !== 'receipt')) throw Error('请求预算端口不能提交其它领域变更'); return { modelRequestBudgetChanges: proposed.modelRequestBudgetChanges, receipt: proposed.receipt }; }),
   };
 }

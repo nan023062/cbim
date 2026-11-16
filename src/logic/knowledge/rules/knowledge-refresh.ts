@@ -38,11 +38,9 @@ export class KnowledgeRefresh
     const s = await this.workspace.Snapshot();
 
     if (!previous && s.revision !== request.revision)
-
       fail('CONFLICT', '知识已变化，请重新读取；不能将原刷新请求绑定到今日版本');
 
     if (!previous && !s.validation!.structural)
-
       return { ...context(s), state: 'invalid', indexesUpdated: false, validation: s.validation };
 
     const result = previous ?? await this.workspace.Commit(request);

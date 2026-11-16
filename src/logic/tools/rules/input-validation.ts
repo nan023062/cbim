@@ -10,7 +10,6 @@ import { Fault } from '../../../core/errors';
 export function inputIssueMessage(issues: unknown): string | undefined
 {
   if (!Array.isArray(issues) || !issues.length || !issues.every(i => i && typeof i === 'object' && typeof i.code === 'string' && Array.isArray(i.path) && i.path.every((p: unknown) => typeof p === 'string' || typeof p === 'number')))
-
     return;
 
   return issues.slice(0, 8).map(i => `${i.path.join('.') || '参数'}：${i.code === 'invalid_type' && i.received === 'undefined' ? '缺少必填字段' : '类型或格式不符合工具声明'}`).join('；');

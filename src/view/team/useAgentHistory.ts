@@ -86,9 +86,7 @@ export function useHistoryEvents(record: AgentHistoryRun)
   useEffect(() =>
   {
     let stopped = false,
-
       inFlight: Promise<void> | undefined,
-
       projection = emptyMemberEvents(historyEventScope(record));
 
     const current = { key, pull };
@@ -100,11 +98,9 @@ export function useHistoryEvents(record: AgentHistoryRun)
     async function pull(): Promise<void>
     {
       if (stopped)
-
         return;
 
       if (inFlight)
-
         return inFlight;
 
       setState(old => old.key === key ? { ...old, loading: true, error: '' } : old);
@@ -120,7 +116,6 @@ export function useHistoryEvents(record: AgentHistoryRun)
             const result = await window.cbim.call('agentHistory.events', { workspaceId: record.workspaceId, agentId: record.agentId, sessionId: record.sessionId, taskId: record.taskId, runId: record.runId, cursor: projection.cursor, limit: 200 });
 
             if (stopped || controller.current !== current)
-
               return;
 
             const previous = projection.cursor?.seq ?? 0;
@@ -137,8 +132,8 @@ export function useHistoryEvents(record: AgentHistoryRun)
 
               throw error
             }
-            if (next.hasMore && next.cursor?.seq === previous)
 
+            if (next.hasMore && next.cursor?.seq === previous)
               throw Error('公开事件分页未前进，请重新读取');
 
             projection = next;
@@ -149,19 +144,16 @@ export function useHistoryEvents(record: AgentHistoryRun)
             pages++;
 
             if (pages >= 100)
-
               break;
           }
           while (projection.hasMore && !stopped);
 
           if (!stopped)
-
             setState({ key, projection, loading: false, error: '' });
         }
         catch (error)
         {
           if (!stopped && controller.current === current)
-
             setState(old => ({ ...old, key, loading: false, error: error instanceof Error ? error.message : '公开记录读取失败，请重试' }))
         }
         finally

@@ -29,9 +29,7 @@ export function KnowledgeFileTree({ snapshot, root, label, selected, onSelect, q
   const branch = (node: KnowledgeTreeNode) =>
   {
     const open = !closed.has(node.path) || !!query,
-
       name = node.path === root ? label : node.name,
-
       items = node.kind === 'folder' ? actions?.(node) ?? [] : [];
 
     return <li key={node.path}><div className={'knowledge-file-row' + (selected === node.path ? ' selected' : '')}>

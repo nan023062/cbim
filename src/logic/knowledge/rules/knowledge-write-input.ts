@@ -48,33 +48,31 @@ export function originalKnowledgeWrite(name: string, raw: unknown, contractVersi
   if (name === 'cbim_knowledge_refresh')
   {
     if (contractVersion !== 2)
-
       return;
 
     const parsed = knowledgeRefreshInputSchema.safeParse(raw);
 
     if (!parsed.success)
-
       return;
 
     return { kind: 'request', request: knowledgeRefreshRequest(parsed.data) };
   }
+
   if (name === 'cbim_knowledge_commit')
   {
     const parsed = knowledgeCommitInputSchema.safeParse(raw);
 
     if (!parsed.success || !plannedRequestSchema.safeParse(parsed.data).success)
-
       return;
 
     return { kind: 'request', request: parsed.data };
   }
+
   if (name === 'cbim_object_commit')
   {
     const parsed = knowledgeObjectCommitInputSchema.safeParse(raw);
 
     if (!parsed.success || !parsed.data.workspaceId || !z.string().uuid().safeParse(parsed.data.instanceId).success || !z.string().uuid().safeParse(parsed.data.planId).success)
-
       return;
 
     return { kind: 'object_plan', ...parsed.data };

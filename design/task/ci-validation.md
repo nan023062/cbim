@@ -21,7 +21,7 @@
 
 `static` 同时执行 `pnpm check:method-names`：检查源码方法大驼峰及逐项登记的固定协议例外。命名检查与类型、架构及行为测试分别负责各自边界，不能相互替代。
 
-`static` 执行 `pnpm check:source-format`，只读检查 `src/` 脚本的 Allman 布局、逐行留白和单行声明/箭头函数。格式漂移返回非零退出码，开发时用 `pnpm format:source` 修正。格式器先核对全部候选文件的语法树、词法内容、注释及幂等性，再写入；必要的字面量、JSX 和注释换行不压缩，`pnpm check:source-format --json` 可查看具体位置与原因。这项检查不替代产品行为测试或人工代码 review。
+`static` 执行 `pnpm check:source-format`，只读检查 `src/` 脚本的 Allman 布局、独立语句/成员留白、表达式内部连续排列、if 执行体及单行声明/箭头函数。格式漂移返回非零退出码，开发时用 `pnpm format:source` 修正。格式器先核对全部候选文件的语法树、词法内容、注释及幂等性，再写入；仅忽略已确认不改变作用域的单语句 if 包裹块，其余语法与词法严格一致。必要的字面量、JSX、注释换行及分支块不压缩，`pnpm check:source-format --json` 可查看具体位置与原因。这项检查不替代产品行为测试或人工代码 review。
 
 ## 按耗时分片与覆盖证明
 

@@ -131,7 +131,6 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
   const graph = useSessionGraph(workspace.id, tab.taskId, active);
 
   const admission = useAdmission(active),
-
     admissionState = sessionAdmission(admission.error ? undefined : admission.data, workspace.id, tab.taskId);
 
   const [selectedTaskId, setSelectedTaskId] = useState<string>();
@@ -178,7 +177,6 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
   useEffect(() =>
   {
     if (!active || !navigation || handledNavigation.current === navigation.requestId)
-
       return;
 
     setSection('tasks');
@@ -187,17 +185,14 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
 
     // 任务图的首次读取完成后才能证明节点不存在；不从全局摘要补造节点或周期。
     if (graph.loading)
-
       return;
 
     try
     {
       if (workspace.state !== 'running' || workspace.instanceId !== navigation.instanceId)
-
         throw Error('工作区实例已变化，请从运行管理重新定位。');
 
       if (graph.error)
-
         throw Error(graph.error);
 
       const selection = runtimeTaskSelection(navigation, { workspaceId: workspace.id, rootSessionId: tab.taskId }, graph.graph, graph.scopes);
@@ -210,15 +205,14 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
     {
       setNavigationError(error instanceof Error ? error.message : '原任务定位失败。')
     }
+
     handledNavigation.current = navigation.requestId;
 
     onNavigationHandled?.(navigation.requestId);
   }, [active, navigation, workspace.id, workspace.instanceId, tab.taskId, graph.loading, graph.error, graph.graph, graph.scopes, graph.selectScope, onNavigationHandled]);
 
   const [models, setModels] = useState<LlmSettings>(),
-
     [runs, setRuns] = useState<RunSummary[]>([]),
-
     [history, setHistory] = useState<HistoryItem[]>([]);
 
   const members = useMemo(() => teamConversations(graph.teamSessions, graph.graph), [graph.teamSessions, graph.graph]);
@@ -234,7 +228,6 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
 
   // 坏旧日志只作为只读问题占位；可续接头由后端确认，不能从过滤后的 runs 猜测。
   const [threadIssues, setThreadIssues] = useState<ConversationThreadView['issues']>([]),
-
     [resumeRunId, setResumeRunId] = useState<string>();
 
   // 默认权限以手掌标识，业务文件与知识提交共用本轮审批；模式变化仅作用于下次发送。
@@ -266,19 +259,14 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
   useEffect(() => { try { localStorage.setItem(preferenceKey, JSON.stringify({ permission })) } catch { } }, [preferenceKey, permission]);
 
   const [attachmentBusy, setAttachmentBusy] = useState(false),
-
     [dragActive, setDragActive] = useState(false);
 
   const dragDepth = useRef(0),
-
     importing = useRef(false);
 
   const [busy, setBusy] = useState(false),
-
     [error, setError] = useState(''),
-
     [pollError, setPollError] = useState(''),
-
     [loaded, setLoaded] = useState(false);
 
   const { items: queued, error: queueError, refresh: refreshQueue, invalidate: invalidateQueue } = useMessageQueue(workspace.id, tab.taskId);
@@ -290,7 +278,6 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
   const [questions, setQuestions] = useState<PendingQuestion[]>([]);
 
   const [now, setNow] = useState(Date.now()),
-
     [approvals, setApprovals] = useState<ChatApproval[]>([]);
 
   const attachments = tab.attachments || [];
@@ -304,9 +291,7 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
     const combined = [...attachmentRef.current];
 
     for (const item of items)
-
       if (!combined.some(a => a.kind === item.kind && a.source === item.source))
-
         combined.push(item);
 
     if (combined.length > 12)
@@ -315,17 +300,16 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
 
       return
     }
+
     onAttachments(combined);
 
     if (taskOpen)
-
       setNextTip(Date.now())
   }
 
   async function importFiles(files: File[])
   {
     if (importing.current || attachmentBusy || busy)
-
       return;
 
     if (files.length + attachmentRef.current.length > 12)
@@ -334,6 +318,7 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
 
       return
     }
+
     importing.current = true;
 
     setAttachmentBusy(true);
@@ -360,7 +345,6 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
   async function importPaste(files: File[], paths?: string[], original = '')
   {
     if (importing.current || attachmentBusy || busy)
-
       return;
 
     if ((paths?.length ?? files.length) + attachmentRef.current.length > 12)
@@ -368,11 +352,11 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
       setError('最多可添加 12 项附件');
 
       if (original)
-
         onDraft((input.current?.value || '') + '\n' + original);
 
       return
     }
+
     importing.current = true;
 
     setAttachmentBusy(true);
@@ -384,17 +368,13 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
       let items: ChatAttachment[];
 
       if (paths)
-
         items = await api.call('chat.paths', { id: workspace.id, paths });
-
       else
       {
         const images = files.filter(file => file.type.startsWith('image/')),
-
           others = files.filter(file => !file.type.startsWith('image/'));
 
         if (images.reduce((sum, file) => sum + file.size, 0) > 20 * 1024 * 1024)
-
           throw Error('图片合计超过 20 MiB，请分批粘贴');
 
         const prepared = await Promise.all(images.map(pastedImage));
@@ -402,15 +382,13 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
         items = [];
 
         for (const image of prepared)
-
           items.push(await api.call('chat.image', { id: workspace.id, ...image }));
 
         if (others.length)
-
           items.push(...await api.ImportFiles(workspace.id, others));
       }
-      if (alive.current)
 
+      if (alive.current)
         addAttachments(items);
     }
     catch (e: any)
@@ -420,7 +398,6 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
         setError(e.message + (original ? '；原路径已保留在草稿。' : ''));
 
         if (original)
-
           onDraft((input.current?.value || '') + '\n' + original)
       }
     }
@@ -429,7 +406,6 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
       importing.current = false;
 
       if (alive.current)
-
         setAttachmentBusy(false)
     }
   }
@@ -437,17 +413,12 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
   const input = useRef<HTMLTextAreaElement>(null);
 
   const lock = useRef(false),
-
     alive = useRef(true),
-
     scroll = useRef<HTMLDivElement>(null),
-
     follow = useRef(true),
-
     historyContent = useRef<HTMLDivElement>(null);
 
   const stopGate = useRef(new ConversationStopGate()),
-
     [, renderStop] = useState(0);
 
   stopGate.current.Observe(tab.taskId ? { id: workspace.id, taskId: tab.taskId } : undefined);
@@ -456,7 +427,6 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
 
   // 当前开放目标和正在执行分开；持久等待不能通过旧 running 日志或历史选择恢复插入/队列。
   const currentRun = threadResumeRun(runs, resumeRunId),
-
     latest = currentRun ?? runs.at(-1),
     { mainRunning, executing, taskOpen, waiting, canContinueQueue, shouldQueue } = conversationExecutionState(currentRun, graph.openScope, queued.length);
 
@@ -473,7 +443,6 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
   useEffect(() =>
   {
     let cancelled = false,
-
       timer: ReturnType<typeof setTimeout>;
 
     setRuns([]);
@@ -491,7 +460,6 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
         const list: HistoryItem[] = await api.call('loop.list', { id: workspace.id });
 
         if (!cancelled)
-
           setHistory(old => JSON.stringify(old) === JSON.stringify(list) ? old : list);
 
         const view: ConversationThreadView = tab.taskId ? await api.call('loop.threadView', { id: workspace.id, taskId: tab.taskId }) : { runs: [], issues: [] };
@@ -532,7 +500,6 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
       finally
       {
         if (!cancelled)
-
           timer = setTimeout(() => void poll(), 1000)
       }
     }
@@ -554,7 +521,6 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
   async function operate(work: () => Promise<void>)
   {
     if (lock.current)
-
       return;
 
     lock.current = true;
@@ -572,7 +538,6 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
     catch (e: any)
     {
       if (alive.current)
-
         setError(e.message)
     }
     finally
@@ -584,7 +549,6 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
       lock.current = false;
 
       if (alive.current)
-
         setBusy(false)
     }
   }
@@ -593,13 +557,11 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
   async function stopCurrent()
   {
     if (!tab.taskId)
-
       return;
 
     const token = stopGate.current.Begin({ id: workspace.id, taskId: tab.taskId });
 
     if (!token)
-
       return;
 
     const current = () => alive.current && stopGate.current.IsCurrent(token);
@@ -615,7 +577,6 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
     catch (e: any)
     {
       if (current())
-
         setError(e.message)
     }
     finally
@@ -623,7 +584,6 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
       stopGate.current.Finish(token);
 
       if (alive.current)
-
         renderStop(value => value + 1);
 
       if (current())
@@ -643,19 +603,16 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
     const message = skill ? `请调用「${skill}」Skill，提示我用一句话描述问题或愿望即可，其余信息自愿补充，不强制追问。` : (tab.draft || '').trim() || (attachments.length ? '请查看附加的资料。' : '');
 
     if (!message)
-
       return;
 
     const sentAttachments = skill ? [] : attachments;
 
     if (tab.taskId && stopGate.current.Pending({ id: workspace.id, taskId: tab.taskId }))
-
       return;
 
     await operate(async () =>
     {
       if (!modelAvailable || !selectedProfile || !selectedModel)
-
         throw Error('请为当前引擎选择兼容的已启用模型');
 
       const options = { engine: chosenEngine, ...roleOptions, profileId: selectedProfile.id, model: selectedModel.id, permission, collaborationMode: 'auto' as const };
@@ -670,27 +627,26 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
 
         return;
       }
-      if (tab.taskId && !shouldQueue && !resumeRunId)
 
+      if (tab.taskId && !shouldQueue && !resumeRunId)
         throw Error('当前执行记录不可安全续接，请先核实任务记录。');
 
       // 即使离开页面，旧回调也只更新原工作区页签；历史可找回已启动任务。
       const accepted = (result: { taskId: string }) => { onBind(result.taskId); if (!skill) { onDraft(''); onAttachments([]) } };
 
       const taskId = tab.taskId,
-
         runId = resumeRunId;
 
       const queued = !!taskId && shouldQueue;
 
       if (taskId && !queued && !runId)
-
         throw Error('当前执行记录不可安全续接，请先核实任务记录。');
 
       let result:
         {
           taskId: string
         };
+
       if (taskId && shouldQueue)
       {
         result = await api.call('loop.enqueue', { id: workspace.id, taskId, message, attachments: sentAttachments.map(a => a.id), options });
@@ -698,15 +654,11 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
         accepted(result)
       }
       else if (taskId && runId)
-
         result = await api.call('loop.resume', { id: workspace.id, taskId, runId, message, attachments: sentAttachments.map(a => a.id), options });
-
       else
-
         result = await api.call('loop.chat', { id: workspace.id, message, attachments: sentAttachments.map(a => a.id), options });
 
       if (!queued)
-
         accepted(result);
 
       if (alive.current)
@@ -767,18 +719,19 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
 
       return
     }
+
     if (!profile || !model)
     {
       setPendingEngine(next);
 
       return
     }
+
     if (await mainAgent.save({ engine: next, ...(next === chosenEngine ? roleOptions : {}), profileId: profile.id, modelId: model.id }))
     {
       setPendingEngine(undefined);
 
       if (taskOpen)
-
         setNextTip(Date.now())
     }
   }
@@ -792,7 +745,6 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
       setPendingEngine(undefined);
 
       if (taskOpen)
-
         setNextTip(Date.now())
     }
   }
@@ -865,42 +817,27 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
       {pendingEngine && <p role="status">选择兼容模型后将保存主 Agent 配置。</p>}
       {!modelAvailable && models && mainAgent.value && !mainAgent.busy && <p className="chat-model-notice">{compatibleProfiles.some(p => p.models.some(m => m.enabled)) ? '所选模型已不可用，请重新选择。' : engineLabel(chosenEngine) + ' 暂无兼容的已启用模型，请检查模型接口协议。'}<button onClick={openSettings}><Icon name="openExternal" size={16} />前往模型设置</button></p>}
       <ComposerCard className={COMPOSER_CONTENT_CLASS + (dragActive ? ' drag-active' : '')} aria-busy={attachmentBusy}
-
           onDragEnter={e => { if (e.dataTransfer.types.includes('Files')) { e.preventDefault(); dragDepth.current++; setDragActive(true) } }}
-
           onDragOver={e => { if (e.dataTransfer.types.includes('Files')) { e.preventDefault(); e.dataTransfer.dropEffect = busy || attachmentBusy ? 'none' : 'copy' } }}
-
           onDragLeave={() => { dragDepth.current = Math.max(0, dragDepth.current - 1); if (!dragDepth.current) setDragActive(false) }}
-
           onDrop={e => { e.preventDefault(); dragDepth.current = 0; setDragActive(false); if (e.dataTransfer.files.length) void importFiles(Array.from(e.dataTransfer.files)) }}
-
           onPaste={e => { if (e.target !== input.current || busy || attachmentBusy || importing.current) return; if (e.clipboardData.files.length) { e.preventDefault(); void importPaste(Array.from(e.clipboardData.files)); return } const text = e.clipboardData.getData('text/plain'), paths = pastedLocalPaths(text); if (paths) { e.preventDefault(); void importPaste([], paths, text) } }}>
         <MessageQueue embedded items={queued} busy={busy} continueDisabled={stopping || waiting || graph.loading} onChange={queueChange} onContinue={queueContinue}
-
             onEdit={(queueId, message, expected) => queueOperation('loop.queueEdit', { queueId, message, expected })}
-
             onMove={(queueId, beforeId) => void queueOperation('loop.queueMove', { queueId, beforeId })}
-
           />
         {dragActive && <div className="composer-drop-target"><Icon name="folder" size={24} /><b>松开以添加到对话</b><small>文件和文件夹会保存在本机附件快照中</small></div>}
         {attachmentBusy && <div className="composer-upload-state" role="status"><span className="work-spinner" />正在准备附件…</div>}
         <ComposerAttachments items={attachments} workspaceId={workspace.id} disabled={busy || attachmentBusy} onRemove={id => onAttachments(attachments.filter(a => a.id !== id))} />
         <textarea ref={input} aria-label="对话草稿" disabled={busy} value={tab.draft || ''} onChange={e => onDraft(e.target.value)} placeholder={waiting ? '补充要求，继续当前目标…' : '向主 Agent 发送指令…'} title="Enter 发送，Shift+Enter 换行；执行期间的消息按实际引擎能力处理" onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && canSend) { e.preventDefault(); void send() } }} />
         <div className="chat-controls"><div className="chat-controls-left"><AttachmentMenu workspaceId={workspace.id} disabled={busy || attachmentBusy} attachmentsFull={attachments.length >= 12} skillsDisabled={!canSendRequest} onBusy={setAttachmentBusy} onAdd={addAttachments} onSkill={skill => { if (canSendRequest) void send(skill) }} /><ComposerPicker label="执行权限" value={permission} onChange={v => { setPermission(v as ChatPermission); if (taskOpen) setNextTip(Date.now()) }} disabled={busy} warning={permission === 'execute'} options={[
-
             { value: 'read', label: '只读访问', icon: 'knowledge', description: '只查看、分析和预览，不修改业务文件或正式知识，不执行命令' },
-
             { value: 'ask', label: '默认权限', icon: 'hand', description: '修改业务文件、提交知识和运行命令前逐次确认' },
-
             { value: 'execute', label: '完全访问', icon: 'warning', description: '自动执行业务文件、知识提交和命令操作；仍检查工作区边界及知识版本' },
-
           ]} /></div>
         <div className="chat-controls-right"><EnginePicker onConfigure={() => setModelEditor({ revision: mainAgent.value!.revision, initial: selectedRuntime ?? undefined, engine: chosenEngine })} value={chosenEngine} disabled={busy || mainAgent.busy || !models || !mainAgent.value} onChange={value => void chooseEngine(value)} /><ComposerPicker label="对话模型" value={pendingEngine ? '' : selection} onChange={value => void chooseModel(value)} disabled={busy || mainAgent.busy || !models || !mainAgent.value} fallbackLabel={models ? '所选模型不可用' : '正在加载模型…'} searchable align="right" options={[
-
               ...(defaultModel ? [{ value: '', label: defaultModel.name || defaultModel.id, description: '使用设置中的默认供应商和模型', group: '默认' }] : []),
-
               ...(compatibleProfiles.flatMap(p => p.models.filter(m => m.enabled).map(m => ({ value: JSON.stringify([p.id, m.id]), label: m.name || m.id, description: p.name + ' / ' + m.id, group: p.name }))) || []),
-
             ]} />{taskOpen && <SendButton disabled={stopping} isStreaming stopLabel={waiting ? '取消当前任务' : undefined} onClick={() => void stopCurrent()} />} {(!taskOpen || !!tab.draft?.trim() || attachments.length > 0) && <SendButton disabled={!canSend} continuing={waiting} queued={shouldQueue && !waiting} onClick={() => void send()} />}</div></div>
       </ComposerCard>
       <div className="chat-footer"><span><Icon name="folder" size={13} />{workspace.name}</span><UsageStatus runs={runs} currentRun={currentRun ?? null} historyIncomplete={threadIssues.length > 0} now={now} placement="footer" capacity={selectedModel?.contextWindow} /></div>

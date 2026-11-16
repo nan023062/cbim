@@ -49,6 +49,7 @@ export class LineFramer
 
       receive(line);
     }
+
     this.policy.checkRemainder(this.remainder);
   }
 }

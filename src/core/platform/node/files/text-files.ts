@@ -48,6 +48,7 @@ export async function atomic(filename: string, value: string): Promise<void>
     {
       await handle.close();
     }
+
     await fs.rename(temporary, filename);
   }
   finally

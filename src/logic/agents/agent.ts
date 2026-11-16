@@ -43,7 +43,6 @@ export class Agent
   constructor(definition: AgentDefinition, conversation: AgentConversation)
   {
     if (!definition.id || !definition.name || !conversation.taskId || !conversation.workspaceId)
-
       throw Error('Agent 身份不完整');
 
     this.definition = Object.freeze({ ...definition, ...(definition.model ? { model: Object.freeze({ ...definition.model }) } : {}) });

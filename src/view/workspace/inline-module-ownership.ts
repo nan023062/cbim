@@ -52,7 +52,6 @@ export async function readInlineMembers(identity: ModuleOwnershipIdentity, call:
   const members: WorkspaceMemberList['items'] = [];
 
   let offset = 0,
-
     cursor: WorkspaceMemberList['registryCursor'] | undefined;
 
   for (; ;)
@@ -64,11 +63,9 @@ export async function readInlineMembers(identity: ModuleOwnershipIdentity, call:
     members.push(...page.items);
 
     if (page.nextOffset === undefined)
-
       return members;
 
     if (page.nextOffset <= offset || members.length > 256)
-
       throw Error('岗位列表超出范围或分页未前进');
 
     cursor = page.registryCursor;
@@ -81,11 +78,9 @@ export async function readInlineMembers(identity: ModuleOwnershipIdentity, call:
 export async function readInlineOwners(identity: ModuleOwnershipIdentity, call: InlineOwnerCall): Promise<InlineOwnerData>
 {
   const members = await readInlineMembers(identity, call),
-
     views: ModuleOwnershipView[] = [];
 
   let offset = 0,
-
     basis: ModuleOwnershipPage['basis'] | undefined;
 
   for (; ;)
@@ -97,11 +92,9 @@ export async function readInlineOwners(identity: ModuleOwnershipIdentity, call: 
     views.push(...page.items);
 
     if (page.nextOffset === undefined)
-
       return { members, views };
 
     if (page.nextOffset <= offset || views.length > 4096)
-
       throw Error('模块列表超出范围或分页未前进');
 
     basis = page.basis;
@@ -141,7 +134,6 @@ export async function assignInlineOwner(identity: ModuleOwnershipIdentity, modul
   const previous = detail.view.binding;
 
   let members = await readInlineMembers(identity, ports.call),
-
     member = members.find(item => 'member:' + item.memberId === value);
 
   current();
@@ -151,33 +143,25 @@ export async function assignInlineOwner(identity: ModuleOwnershipIdentity, modul
     const agent = agents.find(item => 'agent:' + item.id === value && item.id !== 'cbim:main' && item.id !== 'cbim:executor');
 
     if (!agent)
-
       throw Error('所选 Agent 已不存在，请刷新列表。');
 
     const matches = members.filter(item => item.agentId === agent.id);
 
     if (matches.length > 1)
-
       throw Error('该 Agent 已有多个项目岗位，请刷新后在一级列表中明确选择。');
 
     if (matches.length)
-
       member = matches[0];
-
     else
     {
       const models: LlmSettings = await ports.call('models.list'),
-
         profile = models.profiles.find(item => item.id === (agent.runtime?.profileId ?? models.selectedId)),
-
         model = profile?.models.find(item => item.id === (agent.runtime?.modelId ?? profile.defaultModel) && item.enabled);
 
       if (agent.runtime && (!profile || !model || !providerSupportsEngine(agent.runtime.engine, profile, model.id)))
-
         throw Error('Agent 配置的引擎或模型不可用，请先编辑该 Agent 的选型。');
 
       if (!profile || !model)
-
         throw Error('尚未配置默认模型，请先在模型设置中选择默认模型，再选择负责人。');
 
       const input: WorkspaceMemberPreviewInput = { ...identity, change: { kind: 'register', agentId: agent.id, name: agent.name.slice(0, 100), position: '承担所选 Agent 在本项目的模块责任', adaptation: { instructions: '', references: [] }, runtimePolicy: { engine: agent.runtime?.engine ?? 'pi', profileId: profile.id, modelId: model.id }, reason: '用户在模块卡片直接选择 Agent：' + agent.name } };
@@ -189,7 +173,6 @@ export async function assignInlineOwner(identity: ModuleOwnershipIdentity, modul
       const record = await ports.members.Submit(input, preview);
 
       if (record?.phase !== 'accepted')
-
         throw Error('岗位登记尚未确认，负责人未保存。' + (record?.error ?? ports.members.snapshot.error));
 
       current();
@@ -199,16 +182,14 @@ export async function assignInlineOwner(identity: ModuleOwnershipIdentity, modul
       member = members.find(item => item.memberId === record.receipt!.memberId);
 
       if (!member)
-
         throw Error('岗位已保存，但暂时无法读取；请刷新后继续选择负责人。');
     }
   }
-  if (value && (!member || member.state !== 'active' || !agents.some(agent => agent.id === member!.agentId && agent.id !== 'cbim:main')))
 
+  if (value && (!member || member.state !== 'active' || !agents.some(agent => agent.id === member!.agentId && agent.id !== 'cbim:main')))
     throw Error('所选 Agent 或岗位当前不可用，请刷新后重新选择。');
 
   if ((previous?.ownerMemberId ?? null) === (member?.memberId ?? null))
-
     return;
 
   const input = { ...identity, change: { moduleId, expectedBinding: previous ? { bindingId: previous.bindingId, revision: previous.revision, ownerMemberId: previous.ownerMemberId } : null, nextOwner: member ? { memberId: member.memberId, expectedRevision: member.revision } : null, reason: member ? '用户在模块卡片选择负责人：' + member.name : '用户解除显式负责人，恢复父级继承、模型匹配与主 Agent 兜底' } };
@@ -220,6 +201,5 @@ export async function assignInlineOwner(identity: ModuleOwnershipIdentity, modul
   const record = await ports.ownerships.Submit(input, preview);
 
   if (record?.phase !== 'accepted')
-
     throw Error('负责人保存尚未确认，请核实原操作。' + (record?.error ?? ports.ownerships.snapshot.error));
 }

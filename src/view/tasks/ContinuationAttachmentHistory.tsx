@@ -9,7 +9,6 @@ const labels = { image: '图片', reference: '二进制引用', text: '文本快
 function sourceSummary(item: ContinuationAttachmentItem)
 {
   if (item.kind === 'file')
-
     return;
 
   const source = item.proof;
@@ -17,19 +16,12 @@ function sourceSummary(item: ContinuationAttachmentItem)
   switch (source.kind)
   {
     case 'folder':
-
       return `首层 ${source.entryCount} 项${source.truncated ? ' · 已截取清单' : ''}，没有递归读取文件内容`;
-
     case 'link':
-
       return `${source.url} · 仅保存地址`;
-
     case 'web':
-
       return `${source.url} · 实际响应 ${source.rawBytes} 字节${source.truncated ? ' · 正文已截取' : ''}`;
-
     case 'repository_resource':
-
       return `${source.resourceKind} · ${source.resourceId} · 仓库版本 ${source.revision.slice(0, 12)} · 原文 ${source.fullContentBytes} 字节${source.truncated ? ' · 已截取' : ''} · 导入时只读授权第 ${source.grantRevision} 版`;
   }
 }

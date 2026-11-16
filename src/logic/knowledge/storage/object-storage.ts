@@ -37,7 +37,6 @@ export class FileObjectStorage implements ObjectStorage
     catch (e: any)
     {
       if (e.code !== 'ENOENT')
-
         throw e
     }
   }
@@ -51,22 +50,17 @@ export class FileObjectStorage implements ObjectStorage
         const p = id + '/' + e.name;
 
         if (e.isSymbolicLink())
-
           fail('PATH', '对象含链接');
 
         if (e.isDirectory())
-
           await this.AssertKnowledgeOnly(p, files);
-
         else if (!files.some(f => f.path === p))
-
           fail('OBJECT_ASSETS', '对象含非知识资源，当前事务不支持删除这些资源')
       }
     }
     catch (e: any)
     {
       if (e.code !== 'ENOENT')
-
         throw e
     }
   }
@@ -74,7 +68,6 @@ export class FileObjectStorage implements ObjectStorage
   private PlanPath(id: string)
   {
     if (!/^[0-9a-f-]{36}$/.test(id))
-
       fail('PLAN', '无效预览标识');
 
     return path.join(this.owner.paths.Local(this.owner.entry.id, 'cache'), 'object-plans', id + '.json')
@@ -101,15 +94,12 @@ export class FileObjectStorage implements ObjectStorage
   async PruneEmpty(id: string): Promise<void>
   {
     const checked = await this.owner.paths.Knowledge(this.owner.entry.path, id + '/__check__'),
-
       dir = path.dirname(checked);
 
     try
     {
       for (const e of await fs.readdir(dir, { withFileTypes: true }))
-
         if (e.isDirectory() && !e.isSymbolicLink())
-
           await this.PruneEmpty(id + '/' + e.name);
 
       await fs.rmdir(dir)
@@ -117,7 +107,6 @@ export class FileObjectStorage implements ObjectStorage
     catch (e: any)
     {
       if (!['ENOENT', 'ENOTEMPTY', 'EEXIST'].includes(e.code))
-
         throw e
     }
   }

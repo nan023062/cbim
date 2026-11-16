@@ -51,23 +51,18 @@ export class ValidationTools
   async Call(name: string, input: unknown, toolCallId?: string)
   {
     if (name !== validationToolName || !toolCallId || toolCallId.length > 128 || toolCallId.trim() !== toolCallId || /[\x00-\x1f]/.test(toolCallId))
-
       throw Error('验证必须由本轮真实调用发起');
 
     const args = validationInputSchema.parse(input),
-
       expected = structuredClone(args),
-
       selected = validationRequirement(this.bindings, expected.moduleId, expected.requirementId);
 
     if (completeOutputRequired(this.bindings) !== !!expected.manifestId)
-
       throw Error('验证产物依据与本轮完整出口声明不一致');
 
     const manifest = expected.manifestId ? structuredClone(this.port.ManifestIdentity?.(expected)) : undefined;
 
     if (expected.manifestId && (!manifest || manifest.manifestId !== expected.manifestId))
-
       throw Error('验证缺少可信原完整清单身份');
 
     const result = await this.port.Run(args, toolCallId);

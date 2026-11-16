@@ -12,11 +12,9 @@ const labels = { global_capacity: '等待运行名额', workspace_conflict: '等
 export function AdmissionNotice({ tickets, error }: { tickets: AdmissionTicket[]; error?: string })
 {
   if (error)
-
     return <p className="admission-notice" role="status" data-testid="admission-unavailable">运行配额状态暂时无法同步；上次数据可能已过期。</p>;
 
   if (!tickets.length)
-
     return null;
 
   const first = [...tickets].sort((a, b) => a.order - b.order)[0];

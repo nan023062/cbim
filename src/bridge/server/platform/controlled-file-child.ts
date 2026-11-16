@@ -20,15 +20,11 @@ const port = (process as NodeJS.Process &
 }).parentPort;
 
 if (!port)
-
   throw Error('受控文件入口只能由 utilityProcess 启动');
 
 let file: Win32ControlledFile | undefined,
-
   token: string | undefined,
-
   lastSeq = 0,
-
   used = false;
 
 const send = (value: ControlledChildReply) => port.postMessage(value);

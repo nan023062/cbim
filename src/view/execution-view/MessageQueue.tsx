@@ -25,13 +25,10 @@ export function MessageQueue({ items, busy, onChange, onContinue, onEdit, onMove
 
       text: string
     }>(),
-
     [dragging, setDragging] = useState<string>(),
-
     [over, setOver] = useState<string>();
 
   if (!items.length)
-
     return null;
 
   const insertTip = '插入到当前任务，不打断正在执行的工作，当前动作完成后优先处理这条消息 · Ctrl+Enter。沿用当前运行的模型和权限。';
@@ -43,15 +40,11 @@ export function MessageQueue({ items, busy, onChange, onContinue, onEdit, onMove
       const disabled = busy || item.status === 'starting';
 
       return <div role="listitem" className={'queued-message' + (over === item.id ? ' queue-drop-before' : '') + (dragging === item.id ? ' queue-dragging' : '')} key={item.id}
-
         onDragOver={e => { if (dragging && onMove && !disabled) { e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = 'move'; setOver(item.id) } }}
-
         onDrop={e => { if (!dragging || !onMove) return; e.preventDefault(); e.stopPropagation(); if (!disabled) onMove(dragging, item.id); setDragging(undefined); setOver(undefined) }}>
  <div className="queue-row" tabIndex={0} onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && onInsert && !disabled) { e.preventDefault(); onInsert(item.id) } }}>
  <button className="queue-grip" disabled={disabled} draggable={!!onMove && !disabled} aria-label={'拖动第 ' + (i + 1) + ' 条消息排序'} title="拖动排序；Alt+↑ / Alt+↓ 前后移动"
-
             onKeyDown={e => { if (e.altKey && ['ArrowUp', 'ArrowDown'].includes(e.key)) { e.preventDefault(); onChange(item.id, e.key === 'ArrowUp' ? 'up' : 'down') } }}
-
             onDragStart={e => { e.stopPropagation(); e.dataTransfer.setData('application/x-cbim-queue', item.id); e.dataTransfer.effectAllowed = 'move'; setDragging(item.id) }} onDragEnd={() => { setDragging(undefined); setOver(undefined) }}><Icon name="grip" size={16} /></button>
  <span className="queue-text" title={textOf(item) + '\n' + item.options.model}>{textOf(item).split('\n')[0]}</span>
  {!!item.options.attachmentIds?.length && <span className="queue-attachment-count" title="保留发送时的附件快照">+{item.options.attachmentIds.length}</span>}

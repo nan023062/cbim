@@ -106,86 +106,73 @@ export const dispatchScopeGoalSchema = z.object({ revision, inputRevision: input
   if (goal.revision === 1)
   {
     if (goal.plan || goal.review || (goal.inputRevision ?? 1) !== 1)
-
       issue('初始目标不能包含决策或补充');
 
     return
   }
+
   // 普通对话可在同轮接收补充而尚未规划；输入增版不强迫创建业务计划。
   if (!goal.plan)
   {
     if (goal.review || goal.revision !== (goal.inputRevision ?? 1))
-
       issue('无计划目标只能随真实补充增加输入版本');
 
     return
   }
+
   const criteria = goal.plan.criteria.map(item => item.id);
 
   if (!unique(criteria) || !goal.plan.assignments.every(item => item.criterionIds.every(id => criteria.includes(id))) || !criteria.every(id => goal.plan!.assignments.some(item => item.criterionIds.includes(id))))
-
     issue('计划验收项及责任映射无效');
 
   if (goal.plan.revision < 2 || goal.plan.revision > goal.revision)
-
     issue('计划版本超出目标版本');
 
   const currentInput = goal.inputRevision ?? 1,
-
     plannedInput = goal.plan.inputRevision ?? 1;
 
   if (plannedInput > currentInput)
-
     issue('计划输入版本超前');
 
   if (!goal.review)
   {
     if (plannedInput === currentInput && goal.plan.revision !== goal.revision)
-
       issue('未审阅时最新版本必须是计划');
 
     if (plannedInput < currentInput && goal.plan.revision >= goal.revision)
-
       issue('过期计划不能占据补充后的最新版本');
 
     return
   }
-  if (goal.review.memberPause && goal.review.decision !== 'awaiting_user')
 
+  if (goal.review.memberPause && goal.review.decision !== 'awaiting_user')
     issue('成员持久等待清单只能用于等待用户审阅');
 
   if (plannedInput !== currentInput || (goal.review.inputRevision ?? 1) !== currentInput)
-
     issue('审阅必须对应最新输入版本的计划');
 
   if (goal.review.revision !== goal.revision || goal.review.planRevision !== goal.plan.revision || goal.review.revision <= goal.plan.revision)
-
     issue('审阅与目标计划版本不一致');
 
   if (goal.review.lastEffectSeq > goal.review.observedSeq)
-
     issue('副作用序号不能超过已观察日志');
 
   if (!unique(goal.review.checks.map(item => item.criterionId)) || !goal.review.checks.every(item => criteria.includes(item.criterionId)))
-
     issue('审阅项重复或不属于计划');
 
   for (const item of goal.review.checks)
   {
     const human = goal.plan.criteria.find(value => value.id === item.criterionId)?.kind === 'human',
-
       refs = item.evidence.filter(value => value.kind === 'human-decision');
 
     if (item.outcome === 'satisfied' && (!item.evidence.length || human && refs.length !== 1))
-
       issue('满足项必须有证据，人工项须引用一次明确人工接续');
 
     if (refs.length && (!human || item.outcome !== 'satisfied' || item.evidence.some(value => value.kind === 'main-knowledge' || value.kind === 'main-execution')))
-
       issue('人工决定仅可用于对应人工项的满足申请，不能代替业务工具或未满足项证据');
   }
-  if (goal.review.decision === 'complete' && (goal.review.gaps.length || goal.review.checks.length !== criteria.length || goal.review.checks.some(item => item.outcome !== 'satisfied')))
 
+  if (goal.review.decision === 'complete' && (goal.review.gaps.length || goal.review.checks.length !== criteria.length || goal.review.checks.some(item => item.outcome !== 'satisfied')))
     issue('完成申请仍有未满足验收项');
 });
 
@@ -215,7 +202,6 @@ export const sameGoalValue = (a: unknown, b: unknown) => JSON.stringify(ordered(
 function valid(condition: unknown, message: string): asserts condition
 {
   if (!condition)
-
     fail('GRAPH_INPUT_INVALID', message)
 }
 
@@ -228,8 +214,8 @@ export function validateScopeGoalTransition(previous: DispatchScopeGoal | undefi
 
     return
   }
-  if (sameGoalValue(previous, next))
 
+  if (sameGoalValue(previous, next))
     return;
 
   valid(previous && next, '周期输入创建后不能改写、移除或给旧记录补造');
@@ -244,6 +230,7 @@ export function validateScopeGoalTransition(previous: DispatchScopeGoal | undefi
 
     return;
   }
+
   valid(sameGoalValue(previous.inputRevision, next.inputRevision), '只有已核实的等待接续或运行中接受可以提升输入版本');
 
   if (next.blocked)
@@ -252,6 +239,7 @@ export function validateScopeGoalTransition(previous: DispatchScopeGoal | undefi
 
     return
   }
+
   valid(next.revision === previous.revision + 1 && next.revision <= scopeGoalDecisionLimit + 1, '目标决策版本必须逐次增加且不超过上限');
 
   if (!sameGoalValue(previous.plan, next.plan))
@@ -261,6 +249,5 @@ export function validateScopeGoalTransition(previous: DispatchScopeGoal | undefi
     valid((previous.plan?.criteria ?? []).filter(item => item.kind === 'human').every(item => next.plan!.criteria.some(candidate => sameGoalValue(item, candidate))), '重新规划不能删除或降低既有人工验收项');
   }
   else
-
     valid(next.plan && next.review && next.review.revision === next.revision && next.review.planRevision === next.plan.revision && !sameGoalValue(previous.review, next.review), '审阅必须绑定现有计划和新的目标版本');
 }

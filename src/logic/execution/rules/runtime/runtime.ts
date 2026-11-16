@@ -271,7 +271,6 @@ export class LoopRuntime
   async Start(task: TaskSpec, message = task.goal, resume?: { runId: string; reconciledToolIds?: string[] }, source?: RunInputSource, control?: RunStartControl): Promise<{ runId: string; done: Promise<RunSummary> }>
   {
     if (this.closing)
-
       throw Error('Loop Engine 正在关闭');
 
     const pending = this.StartInternal(task, message, resume, undefined, source, control);
@@ -295,7 +294,6 @@ export class LoopRuntime
   async StartMember(task: TaskSpec, message: string, launch: MemberRunLaunch, control?: RunStartControl): Promise<{ runId: string; done: Promise<RunSummary> }>
   {
     if (this.closing)
-
       throw Error('Loop Engine 正在关闭');
 
     const prepared = checkedMemberRunLaunch(launch, task);
@@ -318,11 +316,9 @@ export class LoopRuntime
   async ResumeMember(task: TaskSpec, message: string, launch: MemberRunLaunch, checkpoint: { checkpointId: string; runId: string; logHash: string }, control?: Pick<RunStartControl, 'signal'>): Promise<{ runId: string; done: Promise<RunSummary> }>
   {
     if (this.closing)
-
       throw Error('Loop Engine 正在关闭');
 
     if (!this.options.artifacts || !this.options.AssertMemberResume || !this.options.AssertMemberResumeInputs)
-
       throw Error('成员续执行缺少可信基线核实端口');
 
     const prepared = checkedMemberRunLaunch(launch, task);
@@ -345,11 +341,9 @@ export class LoopRuntime
   async StartFreshMain(task: TaskSpec, message: string, control: FreshMainStartControl): Promise<{ runId: string; done: Promise<RunSummary> }>
   {
     if (this.closing)
-
       throw Error('Loop Engine 正在关闭');
 
     if (!control?.signal || typeof control.BeforeRun !== 'function')
-
       throw Error('新主上下文必须提供可信意图提交与停止信号');
 
     const pending = this.StartInternal(task, message, undefined, undefined, undefined, { signal: control.signal }, control);
@@ -373,17 +367,14 @@ export class LoopRuntime
     const workflows = structuredClone(this.options.workflowContracts ?? []);
 
     if (workflows.length && (!member || !this.options.DescribeTool))
-
       fail('WORKFLOW_GATE_UNAVAILABLE', '带执行约定的 Workflow 必须通过正式成员及可信工具分类门禁');
 
     const preparedValidation = prepareRunValidation(workflows, member?.binding, this.options.artifacts, this.options.validations),
-
       validationRequired = preparedValidation.required;
 
     const executionScope = preparedExecutionScope(workflows);
 
     if (executionScope && (!member || !this.options.scopedExecution || task.moduleIds.some(id => !workflows.some(binding => binding.moduleId === id))))
-
       fail('EXECUTION_SCOPE_UNAVAILABLE', '范围任务缺少完整模块声明或实际平台端口');
 
     const codeChecksRequired = prepareCodeChecks(workflows, this.options.codeChecks);
@@ -391,17 +382,14 @@ export class LoopRuntime
     const manifestScopes = preparedArtifactScopes(workflows);
 
     if (manifestScopes.length && (!member || !this.options.manifests))
-
       fail('MANIFEST_UNAVAILABLE', '声明的完整产物范围缺少正式成员枚举端口');
 
     if (preparedArtifactTransitions(manifestScopes).length && (!member || !this.options.artifactTransitions))
-
       fail('ARTIFACT_TRANSITION_UNAVAILABLE', '冻结的删除/移动要求缺少真实受控平台端口');
 
     const conversationBinding = this.options.conversationBinding === undefined ? undefined : checkedConversationAgentBinding(this.options.conversationBinding, task);
 
     if (fresh && (task.mode !== 'chat' || task.agentId !== 'cbim:main' || !conversationBinding || resume || member || source))
-
       throw Error('新上下文仅限已经登记的主对话实例');
 
     if (source)
@@ -409,9 +397,9 @@ export class LoopRuntime
       source = checkedRunInputSource(source);
 
       if (task.mode !== 'chat' || !resume || member)
-
         throw Error('可信接续只能用于已有主对话');
     }
+
     control?.signal.throwIfAborted();
 
     safeId(task.taskId);
@@ -419,11 +407,9 @@ export class LoopRuntime
     safeId(task.workspaceId);
 
     if (!task.goal.trim() || !message.trim())
-
       throw Error('任务目标和执行消息不能为空');
 
     if (this.active.has(task.taskId))
-
       throw Error('任务正在执行');
 
     const release = await this.options.AcquireLease(task);
@@ -443,20 +429,17 @@ export class LoopRuntime
         previous = await this.Inspect(task.taskId, safeId(memberResume.runId));
 
         if (!member || !this.options.artifacts || !this.options.AssertMemberResume || previous.status !== 'completed' || previous.logIntegrity?.partialTail !== false || previous.unresolvedTools.length || hash(json(previous.events)) !== memberResume.logHash || !isDeepStrictEqual(previous.task, task) || !previous.memberBinding || !previous.sessionFile || previous.sessionFile !== member.session.sessionFile)
-
           throw Error('成员检查点日志、目标或上下文不再匹配');
 
         const { runId: _oldRun, leaseEpoch: oldEpoch, ...old } = previous.memberBinding,
           { runId: _newRun, leaseEpoch: newEpoch, ...next } = member.binding;
 
         if (member.binding.runId === previous.runId || newEpoch !== oldEpoch + 1 || !isDeepStrictEqual(old, next))
-
           throw Error('续执行必须保留原成员任务身份并创建下一代租约的新运行');
 
         const proof = verifyMemberCheckpoint(previous.events, previous.memberBinding, this.options.artifacts.knowledgeRevision, this.options.artifacts.NormalizePath);
 
         if (proof?.checkpoint.checkpointId !== memberResume.checkpointId || proof.logHash !== memberResume.logHash)
-
           throw Error('成员检查点未通过完整证据核验');
 
         await this.options.AssertMemberResume();
@@ -469,13 +452,11 @@ export class LoopRuntime
       {
         // 只枚举旧运行身份。坏历史仍保留；不能扫描“最新可读”记录来悄悄恢复旧上下文。
         const listed = await this.options.storage.List(path.join(this.options.directory, task.taskId)),
-
           known = await fresh.KnownRunIds?.() ?? [];
 
         const all = [...new Set([...listed.map(safeId), ...known.map(safeId)])];
 
         if (all.length > 4096 || new Set(listed).size !== listed.length)
-
           throw Error('主会话历史数量或身份异常，不能建立新上下文');
 
         excludedRunIds = all.sort();
@@ -487,53 +468,42 @@ export class LoopRuntime
         previous = await this.Inspect(task.taskId, resume.runId);
 
         if (previous.logIntegrity?.partialTail)
-
           throw Error('原运行日志尾行不完整，先核实执行记录；不能直接续接或重放');
 
         // 整话题补充在 beforeRun 再核原等待并原子消费；只额外接受已完整取消的主轮，失败/未知不获得续接权。
         if (source && ((previous.status !== 'completed' && !(source.kind === 'user-continuation' && source.interruptionId && previous.status === 'cancelled')) || previous.unresolvedTools.length))
-
           throw Error('主对话上轮未安全完成，不能接续目标或成员结果');
 
         if (previous.memberBinding)
-
           throw Error('成员任务不能通过普通对话恢复；请先由调度核实上次执行');
 
         // 已绑定历史不得改换或丢失登记身份；旧未绑定历史可在明确续聊时首次绑定，不重写旧记录。
         if (previous.conversationBinding && (!conversationBinding || Object.entries(previous.conversationBinding).some(([key, value]) => conversationBinding[key as keyof ConversationAgentBinding] !== value)))
-
           throw Error('恢复必须使用原主对话实例与通道身份');
 
         if (previous.task.workspaceId !== task.workspaceId || previous.task.root !== task.root || JSON.stringify(previous.task) !== JSON.stringify(task))
-
           throw Error('恢复必须使用原任务定义与工作区');
 
         if (previous.unresolvedTools.length)
-
           fail('RECOVERY_INSPECTION_REQUIRED', '原运行存在未确认工具结果，请显式创建新的只读核实；勾选调用 ID 不能续接原生上下文');
-
         // 目标引擎文件及 ID 由 selectEngineSession 一起核实；只有完整无交互的启动失败可转交输入后新建。
         // 成功历史缺少文件、损坏身份和未决工具不会因此降级；旧 Pi 文件缺少原生 ID 仍由适配器拒绝。
       }
       else
-      {
         await this.options.storage.ReserveTask(this.options.directory, task.taskId); // 已存在任务只能经显式恢复入口继续。
-      }
-      const runId = member?.binding.runId ?? randomUUID(),
 
+      const runId = member?.binding.runId ?? randomUUID(),
         directory = path.join(this.options.directory, safeId(task.taskId), runId);
 
       // 周期依赖的工具装配不能前移；只用冻结身份预检，不创建引擎、不登记 scope。
       const declaredEngine = this.options.engineKind;
 
       let engineSession: EngineSessionSelection | undefined = previous && !member && declaredEngine !== undefined
-
         ? await selectEngineSession(declaredEngine, previous, id => this.Inspect(task.taskId, id)) : undefined;
 
       control?.signal.throwIfAborted();
 
       if (fresh)
-
         await fresh.BeforeRun({ task: structuredClone(task), runId, nativeSessionId: nativeSessionId!, excludedRunIds: [...excludedRunIds!] });
 
       await control?.BeforeRun?.({ task: structuredClone(task), runId });
@@ -544,7 +514,6 @@ export class LoopRuntime
       const engine = preparedEngine = this.options.CreateEngine({ task: structuredClone(task), runId });
 
       if (declaredEngine !== undefined && engine.kind !== declaredEngine)
-
         throw Error('实际引擎与启动预检的冻结引擎身份不一致');
 
       // 独立旧工厂未声明引擎时保留原检查；产品 createWorkspaceLoop 始终声明，不能走该兼容路径。
@@ -555,7 +524,6 @@ export class LoopRuntime
       await journal.Init();
 
       let boundSessionFile: string | undefined,
-
         boundNativeSessionId: string | undefined;
 
       const pendingTools = new Set<string>();
@@ -616,7 +584,6 @@ export class LoopRuntime
       const emit = async (event: EngineEvent, trustedArtifact = false) =>
       {
         if (!trustedArtifact && event.type === 'tool.updated' && event.data.agentCall !== undefined)
-
           fail('AGENT_CALL_IDENTITY', 'Agent 调用引用只能由可信调度器保存');
 
         // 契约版本来自真实描述和授权；模型/引擎事件不能给旧调用补造新协议来源。
@@ -626,16 +593,14 @@ export class LoopRuntime
 
           event = { ...event, data }
         }
-        if (event.type === 'tool.allowed' && [controlledFileWriteToolName, artifactTransitionToolName, scopedReadToolName, scopedNodeToolName].includes(String(event.data.name)) && !trustedArtifact)
 
+        if (event.type === 'tool.allowed' && [controlledFileWriteToolName, artifactTransitionToolName, scopedReadToolName, scopedNodeToolName].includes(String(event.data.name)) && !trustedArtifact)
           fail('CONTROLLED_FILE_AUTHORIZATION', '受控文件授权只能由本轮策略可靠保存');
 
         if (event.type === 'engine.status' && event.data.activeInput !== undefined && !trustedArtifact)
-
           throw Error('目标补充身份只能由可信插入端口保存');
 
         if ((['artifact.baseline_captured', 'artifact.manifest_captured', 'task.checkpoint_requested', 'validation.checked', 'code.validation_checked'].includes(event.type) || event.type.startsWith('artifact.transition_')) && !trustedArtifact)
-
           throw Error('产物、原操作、产物验证与检查点只能由本轮可信端口保存');
 
         if (event.type === 'tool.finished')
@@ -648,21 +613,21 @@ export class LoopRuntime
           if (known)
           {
             if (data.name !== undefined && data.name !== known.call.name)
-
               throw Error('工具结果名称与已授权调用不一致');
 
             event = { ...event, data: { ...data, receipt: toolReceipt(identity, known.call, known.decision, !known.decision.allow ? 'denied' : data.isError ? 'failed' : 'succeeded', data.result) } };
           }
           else
-
             event = { ...event, data };
         }
+
         if ((event.type === 'tool.finished' || event.type === 'tool.denied') && calls.has(String(event.data.id)))
         {
           const status = event.type === 'tool.denied' ? 'rejected' : event.data.isError ? 'unknown' : 'returned';
 
           event = { ...event, data: { ...event.data, outcome: toolOutcome(status) } };
         }
+
         const saved = await journal.Append(event);
 
         artifactCapture?.Observed(saved);
@@ -684,23 +649,21 @@ export class LoopRuntime
         if (event.type === 'session.bound')
         {
           if (typeof event.data.sessionFile === 'string')
-
             boundSessionFile = event.data.sessionFile;
 
           if (typeof event.data.sessionId === 'string')
-
             boundNativeSessionId = event.data.sessionId;
         }
+
         if (event.type === 'tool.finished' && event.data.receipt)
         {
           const known = calls.get(String(event.data.id))!;
 
           if (!workflows.length || known.effect || !known.overlappedEffect && !effectsInFlight.size)
-
             taskTools.Record(event.data.receipt as import('../../../tools/rules/types').ToolReceipt, known.generation);
         }
-        if (event.type === 'tool.allowed')
 
+        if (event.type === 'tool.allowed')
           pendingTools.add(String(event.data.id));
 
         if (event.type === 'tool.finished' || event.type === 'tool.denied')
@@ -711,6 +674,7 @@ export class LoopRuntime
 
           effectsInFlight.delete(String(event.data.id))
         }
+
         if (event.type === 'tool.finished' || event.type === 'tool.denied')
         {
           const blocked = repeatedFailures.Settled(String(event.data.id), event.type === 'tool.denied' || event.data.isError === true);
@@ -723,6 +687,7 @@ export class LoopRuntime
             void stop().catch(() => { });
           }
         }
+
         try
         {
           void Promise.resolve(this.options.OnEvent?.(saved)).catch(() => { })
@@ -731,6 +696,7 @@ export class LoopRuntime
         {
           /* observers cannot change durable execution */
         }
+
         return saved;
       };
 
@@ -741,87 +707,80 @@ export class LoopRuntime
       const agentTools = this.options.AgentTools?.({
         task, runId, Emit: async event => { await emit(event, true) }, AssertQuestionWait: () => { const ids = [...pendingTools]; if (stopping || ids.length !== 1 || calls.get(ids[0])?.call.name !== 'cbim_ask_user_question' || [...activeCalls].some(id => id !== ids[0])) fail('AGENT_QUESTION_BUSY', '必须等待其他工具完成后才能向调用方求助'); }, AssertExclusive: id => { if (stopping || calls.get(id)?.decision.allow !== true || !pendingTools.has(id) || [...activeCalls].some(other => other !== id) || [...pendingTools].some(other => other !== id)) fail('AGENT_CALL_BUSY', '存在其他在途工具或审批，不能交接 Agent 调用'); }
       });
+
       // 递归调用使用同调用求助；旧终止交接/检查点仅供历史执行链。
       const memberHelpTools = member && !agentTools ? new MemberHelpTools(member.binding, {
         Save: async help => { await emit({ type: 'task.help_requested', data: { help } }) },
-
         AssertReady: (id, attempted) => { if (stopping || calls.get(id)?.decision.allow !== true || !pendingTools.has(id)) throw Error('求助调用已停止或未获得授权'); if ([...activeCalls].some(other => other !== id) || [...pendingTools].some(other => other !== id)) throw Error('仍有未结束工具，不能交接求助'); if (attempted.some(other => other === id || !calls.has(other) || activeCalls.has(other))) throw Error('求助引用了本轮不存在或未结束的工具调用'); },
       }) : undefined;
 
       if (member && this.options.artifacts)
-
+      {
         artifactCapture = new RunArtifactCapture(member.binding, this.options.artifacts, {
           Current: () => taskTools.Current(),
-
           AssertReady: id => { if (stopping || calls.get(id)?.decision.allow !== true || !pendingTools.has(id)) throw Error('文件采集已停止或未获得当前调用授权'); if ([...activeCalls].some(other => other !== id) || [...pendingTools].some(other => other !== id)) throw Error('存在其它在途工具或审批，不能采集文件基线'); },
-
           Save: async baseline => { await emit({ type: 'artifact.baseline_captured', data: { baseline } }, true) },
         });
-      if (member && manifestScopes.length && this.options.manifests)
+      }
 
+      if (member && manifestScopes.length && this.options.manifests)
+      {
         manifestCapture = new RunOutputManifestCapture(member.binding, manifestScopes, this.options.manifests, {
           bindings: workflows,
-
           Current: () => taskTools.Current(),
-
           AssertReady: id => { if (stopping || calls.get(id)?.decision.allow !== true || !pendingTools.has(id) || [...activeCalls].some(other => other !== id) || [...pendingTools].some(other => other !== id)) fail('MANIFEST_CALL', '完整产物采集已停止、未获准或仍有其它在途工具'); },
-
           AssertReadingReady: name => { const ids = [...activeCalls]; if (stopping || ids.length !== 1 || pendingTools.size !== 1 || !pendingTools.has(ids[0]) || calls.get(ids[0])?.decision.allow !== true || calls.get(ids[0])?.call.name !== name) fail('MANIFEST_CALL', '完整产物复核已停止、未获准或仍有其它在途工具'); controlledFile?.AssertVerified(); artifactTransition?.AssertVerified(); },
-
           Save: async manifest => { await emit({ type: 'artifact.manifest_captured', data: { manifest } }, true) },
         });
+      }
+
       const checkpointAllowance = this.options.memberCheckpointAllowance ?? (memberResume ? 0 : 1);
 
       if (!Number.isInteger(checkpointAllowance) || checkpointAllowance < 0 || checkpointAllowance > memberCheckpointLimit)
-
         throw Error('成员检查点剩余额度无效');
 
       if (member && !agentTools && this.options.artifacts && checkpointAllowance > 0)
-
+      {
         checkpointTools = new RunMemberCheckpoint(member.binding, this.options.artifacts, {
           Current: () => taskTools.Current(), AssertReady: id => { if (stopping || calls.get(id)?.decision.allow !== true || !pendingTools.has(id) || [...activeCalls].some(other => other !== id) || [...pendingTools].some(other => other !== id)) throw Error('检查点调用已停止、未获准或仍有其他在途操作'); }, Save: async checkpoint => { await emit({ type: 'task.checkpoint_requested', data: { checkpoint } }, true) },
         });
-      if (codeChecksRequired && member && this.options.codeChecks && this.options.manifests)
+      }
 
+      if (codeChecksRequired && member && this.options.codeChecks && this.options.manifests)
+      {
         codeChecks = new RunCodeCheck(workflows, identity, this.options.manifests.knowledgeRevision, this.options.codeChecks, {
           CurrentVersion: () => taskTools.Current()?.version, Generation: () => taskTools.generation,
-
           AssertReady: id => { if (stopping || calls.get(id)?.decision.allow !== true || !pendingTools.has(id) || [...activeCalls].some(other => other !== id) || [...pendingTools].some(other => other !== id)) fail('CODE_CHECK_CALL', '检查未授权或有其它在途工具') },
-
           AssertKnowledge: () => this.options.manifests!.AssertCurrentKnowledge(),
-
           Save: async codeCheck => { await emit({ type: 'code.validation_checked', data: { codeCheck } }, true) },
         });
+      }
+
       validation = preparedValidation.Create({
         Current: () => taskTools.Current(), Generation: () => taskTools.generation,
-
         AssertReady: id => { if (stopping || calls.get(id)?.decision.allow !== true || !pendingTools.has(id) || [...activeCalls].some(other => other !== id) || [...pendingTools].some(other => other !== id)) fail('VALIDATION_CALL', '产物验证已停止、未获准或仍有其他在途操作') },
-
         AssertDeliveryReady: () => { if (stopping || [...activeCalls].some(id => calls.get(id)?.call.name !== 'cbim_delivery_prepare') || [...pendingTools].some(id => calls.get(id)?.call.name !== 'cbim_delivery_prepare') || activeCalls.size > 1) fail('VALIDATION_BUSY', '仍有其他工具或审批未结束，不能读取 JSON 交付证据'); assertDeliveryReady() },
-
         VerifyManifest: async (record, signal) => { if (!manifestCapture) fail('MANIFEST_UNAVAILABLE', '本轮完整产物端口尚未就绪'); await manifestCapture.VerifyCurrent(record, 'cbim_validation_run', signal) },
-
         Save: async value => { await emit({ type: 'validation.checked', data: { validation: value } }, true) },
       });
-      if (executionScope && this.options.scopedExecution)
 
+      if (executionScope && this.options.scopedExecution)
         scopedExecution = new RunScopedExecution(executionScope, this.options.scopedExecution, id => { if (stopping || calls.get(id)?.decision.allow !== true || !pendingTools.has(id) || [...activeCalls].some(other => other !== id) || [...pendingTools].some(other => other !== id)) fail('EXECUTION_SCOPE_CALL', '范围调用已停止、未获准或仍有其它工具'); });
 
       let finishing = false;
 
       if (member && this.options.controlledFiles)
-
         controlledFile = new RunControlledFile(member.binding, this.options.controlledFiles, id => { if (stopping || calls.get(id)?.decision.allow !== true || !pendingTools.has(id) || [...activeCalls].some(other => other !== id) || [...pendingTools].some(other => other !== id)) fail('CONTROLLED_FILE_CALL', '受控写已停止、未获准或有其他在途工具'); });
 
       if (member && preparedArtifactTransitions(manifestScopes).length && this.options.manifests && this.options.artifactTransitions)
-
+      {
         artifactTransition = new RunArtifactTransition(member.binding, manifestScopes, this.options.manifests, this.options.artifactTransitions, {
           Version: () => taskTools.Current()?.version,
-
           AssertReady: id => { if (stopping || calls.get(id)?.decision.allow !== true || !pendingTools.has(id) || [...activeCalls].some(other => other !== id) || [...pendingTools].some(other => other !== id)) fail('ARTIFACT_TRANSITION_CALL', '删除/移动已停止、未获准或仍有其它调用'); controlledFile?.AssertVerified() },
-
           Save: event => emit(event, true),
         });
+      }
+
       const injection = {
         runId, pending: new Set<Promise<ScopeActiveInputSendReceipt | undefined>>(), send: async (message: string, images: import('../types').InputImage[], signal: AbortSignal, activeInput?: RunSteerControl['activeInput']) =>
         {
@@ -832,7 +791,6 @@ export class LoopRuntime
           const token = activeInput ? scopeActiveInputTokenSchema.parse(structuredClone(activeInput.token)) : undefined;
 
           if (token && (token.runId !== runId || token.inputHash !== scopedActiveInputHash({ message, ...(activeInput?.attachmentIds ? { attachmentIds: activeInput.attachmentIds } : {}), ...(activeInput?.attachmentManifest ? { attachmentManifest: activeInput.attachmentManifest } : {}) })))
-
             fail('QUEUE_INSERT_STALE', '原插入快照与准备记录不一致，原消息仍保留在队列');
 
           const requested = await emit({ type: 'engine.status', data: { metric: 'insertion', state: 'requested', message, ...(token ? { activeInput: token } : {}), label: '正在插入用户补充' } }, true);
@@ -867,14 +825,15 @@ export class LoopRuntime
             {
               fail('QUEUE_INSERT_UNKNOWN', '插入结果未确认，请先核实原运行记录，勿重复发送')
             }
-            if (rejected)
 
+            if (rejected)
               throw error;
 
             fail('QUEUE_INSERT_UNKNOWN', '插入结果未确认，请先核实原运行记录，勿重复发送');
           }
         }
       };
+
       this.injections.set(task.taskId, injection);
 
       // 保存输入及可信来源；显式补充仍是用户消息，成员结果不能在界面或原生上下文中冒充用户授权。
@@ -885,7 +844,6 @@ export class LoopRuntime
       const stop = async () =>
       {
         if (stopping)
-
           return;
 
         stopping = true;
@@ -914,17 +872,15 @@ export class LoopRuntime
         {
           stopFailure = error
         }
+
         // 记录失败不能阻止实际 abort；失败事实在收尾按 interrupted 保留，不把无日志停止写成正常求助。
         const stopped = await Promise.allSettled([engine.stop(), agentTools?.Stop()]);
 
         for (const result of stopped)
-
           if (result.status === 'rejected')
-
             stopFailure ??= result.reason;
 
         if (stopFailure)
-
           throw stopFailure;
       };
 
@@ -946,18 +902,16 @@ export class LoopRuntime
         try
         {
           if (control?.signal.aborted)
-
             await stop();
 
           if (!stopping)
-
+          {
             await engine.start({
               task, runId, directory, sessionFile: engineSession.sessionFile, engineHandoff: engineSession.handoff, nativeSessionId: previous && !member ? engineSession.nativeSessionId : nativeSessionId, memberBinding: member?.binding, conversationBinding: conversationBinding ? structuredClone(conversationBinding) : undefined, source: source ? structuredClone(source) : undefined, capabilities: [...(agentTools ? [agentTools.capability] : []), ...memberToolCapabilities({ codeCheckTools: codeChecks, taskTools, memberHelpTools, artifactTools: artifactCapture?.tools, manifestTools: manifestCapture?.tools, memberCheckpointTools: checkpointTools?.tools, validationTools: validation?.tools, controlledFileTools: controlledFile, artifactTransitionTools: artifactTransition, scopedExecutionTools: scopedExecution })], assertMemberResume: memberResume ? this.options.AssertMemberResume : undefined, emit: async event => { await emit(event) }, beforeTool: async call =>
               {
                 call = structuredClone(call);
 
                 if (calls.has(call.id))
-
                   return { allow: false, reason: '同一运行不能重复使用工具调用 ID' };
 
                 const originalInput = structuredClone(call.input);
@@ -967,13 +921,13 @@ export class LoopRuntime
                 try
                 {
                   if (this.options.NormalizeToolInput)
-
                     call.input = structuredClone(this.options.NormalizeToolInput(structuredClone(call)))
                 }
                 catch (error)
                 {
                   normalizationError = error
                 }
+
                 repeatedFailures.Proposed(call);
 
                 // 验证、采集与停泊先同步预占，再进入策略；短读锁不会绕过求助/检查点的本轮结束门闩。
@@ -995,7 +949,6 @@ export class LoopRuntime
 
                 // 门闩明确拒绝的调用只记录拒绝事实，绝无执行机会，不能反过来阻塞已经获准的求助。
                 if (!helpReason && !stopping)
-
                   activeCalls.add(call.id);
 
                 calls.set(call.id, { call, decision: { allow: false }, generation: taskTools.generation, overlappedEffect: workflows.length > 0 && effectsInFlight.size > 0 });
@@ -1003,41 +956,29 @@ export class LoopRuntime
                 await emit({ type: 'tool.proposed', data: { ...call, ...(!isDeepStrictEqual(originalInput, call.input) ? { originalInput } : {}) } });
 
                 let decision: ToolDecision,
-
                   descriptor: RunToolDescriptor | undefined,
-
                   planVersion: number | undefined,
-
                   inputFailure: unknown;
 
                 try
                 {
                   if (normalizationError)
-
                     throw normalizationError;
 
                   if (repeatedFailures.blocked)
-
                     decision = { allow: false, reason: 'TOOL_REPEAT_BLOCKED: 同一工具同参数连续失败三次，请核实原结果并修正原因' };
-
                   else if (stopping)
-
                     decision = { allow: false, reason: '任务正在停止' };
-
                   else if (helpReason)
-
                     decision = { allow: false, reason: helpReason };
-
                   else
                   {
                     if (workflows.length && call.name === 'cbim_delivery_prepare')
-
                       assertDeliveryReady();
 
                     descriptor = this.options.DescribeTool?.(structuredClone(call));
 
                     if (descriptor && workflowHasEffects(descriptor.effects))
-
                       planVersion = taskTools.BeforeEffects();
 
                     decision = descriptor ? await this.options.ToolPolicy(structuredClone(call), structuredClone(descriptor)) : await this.options.ToolPolicy(structuredClone(call));
@@ -1056,19 +997,20 @@ export class LoopRuntime
 
                   decision = { allow: false, reason: (code?.startsWith('WORKFLOW_') ? code + ': ' : '') + (error instanceof Error ? error.message : String(error)), ...(descriptor ? { effects: descriptor.effects } : {}) }
                 }
+
                 if (stopping)
                 {
                   inputFailure = undefined;
 
                   decision = { ...decision, allow: false, reason: '任务正在停止' }
                 }
+
                 ;
 
                 // 人工意见只授权处理意见；子调用和主运行直接工具必须遵守同一副作用屏障。
                 const humanReason = decision.allow ? agentTools?.GuardEffects?.(descriptor?.effects ?? decision.effects) : undefined;
 
                 if (humanReason)
-
                   decision = { ...decision, allow: false, reason: humanReason };
 
                 // Workflow 首片仅约束业务副作用；知识提交仍沿用原来的证据失效规则，不能因分类拆分保留旧证据。
@@ -1081,11 +1023,10 @@ export class LoopRuntime
                     calls.get(call.id)!.effect = true;
 
                     for (const [id, known] of calls)
-
                       if (id !== call.id && activeCalls.has(id) && !known.effect)
-
                         known.overlappedEffect = true;
                   }
+
                   try
                   {
                     await taskTools.Invalidate('即将执行可能改变产物的操作，需要重新验证', planVersion)
@@ -1100,16 +1041,19 @@ export class LoopRuntime
                     decision = { ...decision, allow: false, reason: (code?.startsWith('WORKFLOW_') ? code + ': ' : '') + (error instanceof Error ? error.message : String(error)) }
                   }
                 }
+
                 calls.set(call.id, { ...calls.get(call.id)!, call, decision, generation: taskTools.generation });
 
                 if (!decision.allow)
-
+                {
                   decision = {
                     ...decision, reason: (toolFailureResult(inputFailure ?? decision.reason ?? '未获授权', true).content[0] as
                       {
                         text: string
                       }).text
                   };
+                }
+
                 const authorization = await emit({ type: decision.allow ? 'tool.allowed' : 'tool.denied', data: { id: call.id, name: call.name, input: call.input, ...decision, ...(Number.isSafeInteger(descriptor?.contractVersion) && descriptor!.contractVersion! > 0 ? { contractVersion: descriptor!.contractVersion } : {}), ...(!decision.allow ? { receipt: toolReceipt(identity, call, decision, 'denied') } : {}) } }, true);
 
                 if (stopping && decision.allow)
@@ -1120,45 +1064,39 @@ export class LoopRuntime
 
                   await emit({ type: 'tool.denied', data: { ...call, ...decision, receipt: toolReceipt(identity, call, decision, 'denied') } });
                 }
-                if (decision.allow)
 
+                if (decision.allow)
                   scopedExecution?.Authorize(call.id, authorization.seq);
 
                 if (decision.allow)
-
                   controlledFile?.Authorize(call.id, authorization.seq);
 
                 if (decision.allow)
-
                   artifactTransition?.Authorize(call.id, authorization.seq);
 
                 if (!decision.allow)
-
                   memberHelpTools?.Denied(call.id);
 
                 return decision;
               }
             });
-          if (control?.signal.aborted)
+          }
 
+          if (control?.signal.aborted)
             await stop();
 
           if (!stopping)
-
             await this.options.OnEngineReady?.({ taskId: task.taskId, runId, sessionFile: boundSessionFile, ...(boundNativeSessionId ? { nativeSessionId: boundNativeSessionId } : {}) });
 
           if (!stopping && memberResume)
-
             await this.options.AssertMemberResumeInputs!();
 
           if (control?.signal.aborted)
-
             await stop();
 
           result = stopping ? { status: 'cancelled' as const } : await engine.run(message);
 
           if (!stopping && agentTools?.Active())
-
             fail('AGENT_REPLY_REQUIRED', '仍有未答复的子调用，已停止原子树；不能报告本轮完成');
         }
         catch (error)
@@ -1193,6 +1131,7 @@ export class LoopRuntime
           {
             failure ??= error
           }
+
           // 只重试原收尾屏障，不重试文件写。首次退出未确认保留 active；再次 close 可确认原 child 后完成日志收尾。
           let draining: Promise<void> | undefined;
 
@@ -1215,15 +1154,15 @@ export class LoopRuntime
               const unverifiedControlledCalls = [...controlledFile?.unverifiedCallIds ?? [], ...artifactTransition?.unverifiedCallIds ?? []];
 
               if (failure || pendingTools.size || unverifiedControlledCalls.length)
-
+              {
                 await emit({
                   type: 'run.interrupted', data: {
                     error: failure instanceof Error ? failure.message : String(failure || (unverifiedControlledCalls.length ? 'CONTROLLED_FILE_REVIEW_REQUIRED: 原受控文件操作结果待核实，本轮不能安全交接' : '工具结果未确认')), unresolvedTools: [...pendingTools], ...(unverifiedControlledCalls.length ? { unverifiedControlledCalls } : {}), receipts: [...pendingTools].map(id => { const item = calls.get(id)!; return toolReceipt(identity, item.call, item.decision, 'unknown') })
                   }
                 });
+              }
               // close 仍属于本轮生命周期：在排空引擎期间收到停止，不能把已暂存的 completed 写成正常交接。
               else
-
                 await emit({ type: 'run.settled', data: { ...(repeatedFailures.blocked ? { status: 'failed' as const, blocked: repeatedFailures.blocked, error: 'TOOL_REPEAT_BLOCKED: 同一工具同参数连续失败三次，请核实原结果并修正原因。' } : stopping && result?.status === 'completed' ? { status: 'cancelled' as const } : result), acceptance: 'not_evaluated' } });
 
               await journal.Flush();
@@ -1241,11 +1180,11 @@ export class LoopRuntime
           const current = this.active.get(task.taskId);
 
           if (current)
-
             current.drain = drain;
 
           await drain();
         }
+
         return this.options.storage.Read(directory);
       })();
 
@@ -1267,6 +1206,7 @@ export class LoopRuntime
       {
         release()
       }
+
       throw error
     }
   }
@@ -1277,7 +1217,6 @@ export class LoopRuntime
     const summary = await this.options.storage.Read(path.join(this.options.directory, safeId(taskId), safeId(runId)));
 
     if (this.active.get(taskId)?.runId === runId && summary.status === 'interrupted')
-
       return { ...summary, status: 'running' as const };
 
     return summary;
@@ -1293,13 +1232,11 @@ export class LoopRuntime
   async Steer(taskId: string, message: string, images: import('../types').InputImage[], control: RunSteerControl)
   {
     if (this.closing || control?.signal?.aborted)
-
       fail('QUEUE_INSERT_STOPPED', '当前运行已停止插入，原消息仍保留在队列');
 
     const inject = this.injections.get(taskId);
 
     if (!control?.signal || !control.expectedRunId || this.active.get(taskId)?.runId !== control.expectedRunId || inject?.runId !== control.expectedRunId)
-
       fail('QUEUE_INSERT_STALE', '原主运行已变化，原消息仍保留在队列');
 
     const pending = inject.send(message, images, control.signal, control.activeInput ? structuredClone(control.activeInput) : undefined);
@@ -1334,7 +1271,6 @@ export class LoopRuntime
     const failed = drains.find(r => r.status === 'rejected');
 
     if (failed?.status === 'rejected')
-
       throw failed.reason
   }
 }

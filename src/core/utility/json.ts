@@ -58,7 +58,6 @@ export class JsonUtils
     const tree = parseTree(text, errors, { disallowComments: true, allowTrailingComma: false });
 
     if (errors.length || !tree)
-
       throw new StrictJsonError('invalid-syntax');
 
     const visit = (node: JsonNode) => { if (node.type === 'object') { const seen = new Set(); for (const property of node.children || []) { const key = property.children![0].value; if (seen.has(key)) throw new StrictJsonError('duplicate-key', key); seen.add(key); } } for (const child of node.children || []) visit(child); };

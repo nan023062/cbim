@@ -17,19 +17,15 @@ export function threadResumeRun(runs: readonly RunSummary[], resumeRunId?: strin
 export function threadRecoveryReason(run?: RunSummary): string | undefined
 {
   if (!run)
-
     return '当前会话没有可安全续接的执行记录。';
 
   if (run.logIntegrity?.partialTail)
-
     return '原运行日志不完整，需要先核实执行结果。';
 
   if (run.unresolvedTools.length)
-
     return '原工具操作的结果尚未确认，需要先核实当前影响。';
 
   if (!run.sessionFile)
-
     return '原运行未登记可恢复的原生会话文件，无法直接续接。';
 
   return undefined;
@@ -49,7 +45,6 @@ export function ThreadRecoveryNotice({ reason, disabled, onInspect, onNewConvers
 export function ThreadHistoryNotice({ issues }: { issues: ConversationThreadView['issues'] })
 {
   if (!issues.length)
-
     return null;
 
   return <section className="thread-history-issues" data-testid="thread-history-issues" aria-label="历史执行记录问题">

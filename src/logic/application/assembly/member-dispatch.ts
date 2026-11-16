@@ -125,7 +125,6 @@ export function createMemberServices(workspace: Workspace, models: EngineModelPr
   const directory = path.join(workspace.paths.Project(workspace.entry.id), 'dispatch');
 
   const store = workspace.dispatchStore,
-
     storage = new FileRunStorage();
 
   const runsDirectory = path.join(directory, 'runs');
@@ -137,11 +136,9 @@ export function createMemberServices(workspace: Workspace, models: EngineModelPr
   const nativeFiles = new NativeSessionFiles(path.join(runsDirectory, 'pi', 'sessions'), () => workspace.Assert());
 
   const claudeRoot = path.join(runsDirectory, 'claude', 'projects'),
-
     claudeFiles = new NativeSessionFiles(claudeRoot, () => workspace.Assert(), 'claude-code');
 
   const codexRoot = path.join(runsDirectory, 'codex', 'sessions'),
-
     codexFiles = new NativeSessionFiles(codexRoot, () => workspace.Assert(), 'codex');
 
   const nativeFingerprint = (session: { nativeSessionId: string; sessionFile?: string }, signal: AbortSignal) => { for (const [root, files] of [[claudeRoot, claudeFiles], [codexRoot, codexFiles]] as const) { const relative = session.sessionFile ? path.relative(root, session.sessionFile) : '..'; if (relative && !relative.startsWith('..') && !path.isAbsolute(relative)) return files.Read(session, signal) } return nativeFiles.Read(session, signal); };
@@ -170,6 +167,7 @@ export function createMemberServices(workspace: Workspace, models: EngineModelPr
   }, {
     ...checkpointPorts, AcquireRead: () => { workspace.Assert(); return lease.Acquire('member-pause:' + randomUUID(), 'read') }, AssertCurrent: () => { workspace.Assert(); if (admission && !admission.IsCurrent()) fail('GOAL_MEMBER_PAUSE_UNAVAILABLE', '工作区正在停止，原成员等待未消费') }
   });
+
   const requestBudgets = new ModelRequestBudgetService(workspace, requestBudgetStore(store), dispatch.budgets);
 
   const prepareEngine = (llm: ResolvedEngineModel, options: MemberStartOptions): PreparedEngine =>
@@ -180,29 +178,23 @@ export function createMemberServices(workspace: Workspace, models: EngineModelPr
         workspace.Assert();
 
         if (run.binding.workspaceId !== workspace.entry.id || task.identity.workspaceId !== workspace.entry.id)
-
           throw Error('成员运行与工作区身份不匹配');
 
         if (JSON.stringify(run.model) !== JSON.stringify(llm.profile))
-
           throw Error('成员运行模型快照与启动配置不一致');
 
         const checkpointState = await store.Read(),
-
           previous = run.resumeFrom ? checkpointState.runs?.find(old => old.binding.runId === run.resumeFrom!.runId) : undefined;
 
         const topic = checkpointState.scopes?.find(scope => scope.scopeId === task.scopeId),
-
           topicGraph = checkpointState.graphs.find(graph => graph.identity.rootSessionId === run.binding.rootSessionId);
 
         if (run.topicContext && (!topic || !topicGraph))
-
           fail('MEMBER_TOPIC_CONTEXT_IDENTITY', '原话题资料缺失，未启动成员');
 
         const topicContext = run.topicContext ? resolveMemberTopicContext(run.topicContext, task, topic!, topicGraph!) : undefined;
 
         if (run.resumeFrom && (!previous?.checkpointProof || previous.checkpointProof.checkpoint.checkpointId !== run.resumeFrom.checkpointId))
-
           fail('MEMBER_CHECKPOINT_INVALID', '续执行缺少原检查点证明');
 
         const executionScope = preparedExecutionScope(run.prepared.modules.map(module => ({ contract: module.workflowContract })));
@@ -223,15 +215,11 @@ export function createMemberServices(workspace: Workspace, models: EngineModelPr
 
         const loop = await createWorkspaceLoop(workspace.paths, workspace, {
           provider: 'cbim-' + llm.profile.id, model: llm.profile.model, profileId: llm.profile.id, llm, engineRuntimes,
-
           permission: run.permission, turnTimeoutMs: run.turnTimeoutMs, OnEvent: hooks.OnEvent, RequestApproval: hooks.RequestApproval, RequestQuestion: hooks.RequestQuestion,
         }, {
           memberCheckpointAllowance: memberCheckpointLimit - (task.checkpoints?.length ?? 0),
-
           RequestBudget: (_context, role) => requestBudgets.ForRun({ rootSessionId: run.binding.rootSessionId, taskId: task.taskId, runId: run.binding.runId, scopeId: task.scopeId, kind: 'member' }, llm, role),
-
           storage, member: { directory: runsDirectory, prompt: memberExecutionPrompt(run.prepared, task, run.prerequisites, topicContext), workflowContracts: preparedWorkflowContracts(run.prepared) }, OnEngineReady: hooks.OnEngineReady,
-
           artifacts: {
             knowledgeRevision: run.prepared.knowledgeRevision, NormalizePath: normalizeArtifact, AssertCurrentKnowledge: async () => { workspace.Assert(); await recheckDispatchExecutionContext(workspace, run.prepared) }, CaptureFiles: (paths, signal) => runFiles.CaptureFiles(paths, signal)
           },
@@ -239,29 +227,22 @@ export function createMemberServices(workspace: Workspace, models: EngineModelPr
             knowledgeRevision: run.prepared.knowledgeRevision, AssertCurrentKnowledge: async () => { workspace.Assert(); await recheckDispatchExecutionContext(workspace, run.prepared) }, Capture: (scopes, signal) => runManifests.Capture(scopes, signal)
           },
           codeChecks: new CodeCheckRunner(workspace.entry.path, () => workspace.Assert()),
-
           validations: { ValidateFile: (file, schema, signal) => runFiles.ValidateFile(file, schema, signal), ValidateTable: (file, schema, signal) => runFiles.ValidateTable(file, schema, signal), ValidateImage: (file, schema, signal) => runFiles.ValidateImage(file, schema, signal), CheckFiles: (files, signal) => runFiles.CheckFiles(files, signal) },
-
           scopedExecution,
-
           controlledFiles: controlled ? {
             scopeId: controlled.scopeId, Write: (input, authorization, signal, assertCurrent) => { scopeWrite([input.path]); return controlled.Write(input, authorization, signal, assertCurrent) }, ConfirmNotApplied: controlled.ConfirmNotApplied?.bind(controlled), Drain: controlled.Drain.bind(controlled)
           } : undefined,
-
           artifactTransitions: transitions ? {
             WithExclusive: (operation, signal, use) => { scopeWrite(artifactTransitionPaths(operation)); return transitions.WithExclusive(operation, signal, use) }, Drain: transitions.Drain.bind(transitions)
           } : undefined,
-
           // 领取后到 Pi 发出首条 prompt 前仍有异步准备；每个准备边界复核原证明，不只核原生文件而遗漏外部业务文件变化。
           AssertMemberResume: previous ? async () => { await verifyMemberCheckpointProof(workspace, task, previous, runCheckpointPorts, () => workspace.Assert(), previous.checkpointProof, checkpointState.runs) } : undefined,
-
           AssertMemberResumeInputs: previous ? () => verifyMemberCheckpointInputs(workspace, task, previous, runCheckpointPorts, () => workspace.Assert(), previous.checkpointProof!, checkpointState.runs) : undefined,
-
           // 成员管理器已在领取事务前取得共享占用，并持有到结算完成；大脑不能提前释放或再次领取。
           AcquireLease: async input => { workspace.Assert(); if (input.workspaceId !== workspace.entry.id || input.root !== workspace.entry.path || input.taskId !== task.taskId) throw Error('成员任务与工作区身份不匹配'); return () => { } },
-
           AuthorizeNative: async call => { workspace.Assert(); const reason = guard({ name: call.name === 'find' ? 'Glob' : call.name, input: call.input }, workspace.entry.path); return { allow: !reason, reason } },
         });
+
         return loop.runtime;
       }
     };
@@ -275,23 +256,16 @@ export function createMemberServices(workspace: Workspace, models: EngineModelPr
       InspectAgent: inspectMember, Check: (snapshot, signal) => manifestFiles.Check(snapshot, signal), AcquireRead: () => { workspace.Assert(); return lease.Acquire('manifest-report:' + randomUUID(), 'read') }
     },
     checkpoints: { NativeFingerprint: nativeFingerprint },
-
     budgets: dispatch.budgets,
-
     IsCurrent: () => admission?.IsCurrent() ?? true,
-
     signal: admission?.signal,
-
     Acquire: (key, permission, agentInstanceId, context) => { if (!context) { if (admission) fail('ADMISSION_IDENTITY', '成员准入缺少可信任务与命令身份'); return lease.Acquire('member:' + key, permission, agentInstanceId) } return acquireExecutionLease(lease, 'member:' + key, { workspaceId: workspace.entry.id, rootSessionId: context.task.identity.rootSessionId, taskId: context.task.taskId, scopeId: context.task.scopeId, requestId: admissionRequestId('member', context.commandId), agentInstanceId, source: context.wait ? 'member' : 'direct', workspacePermission: permission }, admission, context.wait); },
-
     owners: dispatch.owners,
-
     Prepare: async options => prepareEngine(await models.Resolve(options.profileId, options.model), options),
-
     WithEngineConfiguration: (model, options, use) => models.WithRuntimeConfiguration(model, async configuration => { workspace.Assert(); if (workspaceMemberModelHash(configuration.profile) !== model.configurationHash) fail('OWNER_MODEL_CHANGED', '岗位模型配置已变化，请明确采纳后重新规划'); return use({ model: configuration.profile, Prepare: () => prepareEngine(configuration.Resolve(), options) }); }),
-
     Inspect: inspectMember, InspectAgent: inspectMember,
   });
+
   const workspaceMembers = new WorkspaceMembers(workspace, store, models, () => admission?.IsCurrent() ?? true);
 
   const moduleOwnerships = new ModuleOwnerships(workspace, store, () => admission?.IsCurrent() ?? true);

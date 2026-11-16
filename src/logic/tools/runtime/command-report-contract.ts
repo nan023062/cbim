@@ -27,7 +27,6 @@ export function checkedCommandReportResult(value: unknown, identity: CommandVeri
   const result = checkedJsonToolResult(commandReportToolName, value, commandVerificationReportForInput(identity));
 
   if (Buffer.byteLength(result.content[0].text, 'utf8') > commandVerificationLimits.outputBytes)
-
     fail('TOOL_OUTPUT_INVALID', '原命令报告超出公开输出上限，未自动重新查询。');
 
   return result;

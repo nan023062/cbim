@@ -40,7 +40,6 @@ export class WebSettings
     catch (error)
     {
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT')
-
         fail('WEB_SETTINGS_INVALID', '网页配置损坏，请检查设置文件')
     }
   }
@@ -59,11 +58,9 @@ export class WebSettings
   Resolve(): string
   {
     if (!this.state.enabled || !this.state.encryptedKey)
-
       fail('WEB_SEARCH_CONFIG', '网页搜索未启用，请在设置中配置 Brave Search API');
 
     if (!this.cipher?.Available())
-
       fail('WEB_SECRET_UNAVAILABLE', '系统安全存储不可用');
 
     try

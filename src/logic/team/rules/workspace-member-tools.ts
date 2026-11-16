@@ -7,7 +7,6 @@ import { z } from 'zod';
 import { workspaceMemberChangeInputSchema, workspaceMemberCurrentDiffSchema, workspaceMemberIdentitySchema, workspaceMemberListSchema, workspaceMemberReceiptSchema, workspaceMemberStateSchema, workspaceRegistryCursorSchema } from './workspace-member';
 
 const uuid = z.string().uuid(),
-
   hash = z.string().regex(/^[a-f0-9]{64}$/);
 
 const [register, update, adopt, state] = workspaceMemberChangeInputSchema.options;

@@ -70,7 +70,6 @@ const equal = (a: unknown, b: unknown) => JSON.stringify(ordered(a)) === JSON.st
 function valid(value: unknown, message: string): asserts value
 {
   if (!value)
-
     fail('ARTIFACT_EVIDENCE_INVALID', message)
 }
 
@@ -106,21 +105,15 @@ function bound(events: readonly ArtifactEvidenceEvent[], binding: Binding)
 export function artifactSucceededCall(events: readonly ArtifactEvidenceEvent[], binding: Pick<Binding, 'workspaceId' | 'taskId' | 'runId'>, id: string)
 {
   const calls = events.filter(event => ['tool.proposed', 'tool.allowed', 'tool.denied', 'tool.finished'].includes(event.type) && event.data.id === id),
-
     proposed = calls.filter(event => event.type === 'tool.proposed'),
-
     allowed = calls.filter(event => event.type === 'tool.allowed'),
-
     finished = calls.filter(event => event.type === 'tool.finished');
 
   valid(proposed.length === 1 && allowed.length === 1 && finished.length === 1 && !calls.some(event => event.type === 'tool.denied'), '来源工具没有唯一完整的成功授权链');
 
   const p = proposed[0],
-
     a = allowed[0],
-
     f = finished[0],
-
     parsed = receipt.safeParse(f.data.receipt);
 
   valid(parsed.success, '来源工具回执结构无效');
@@ -158,7 +151,6 @@ export function artifactSources(events: readonly ArtifactEvidenceEvent[], bindin
 export function verifyArtifactBaselines(events: readonly ArtifactEvidenceEvent[], binding: Binding, knowledgeRevision: string, normalizePath: (path: string) => string, selectedBaselineId?: string): { records: ArtifactBaselineRecord[]; refs: ArtifactBaselineRef[]; issues: Issue[]; impact: 'selected_files_only' | 'unknown' }
 {
   const records: ArtifactBaselineRecord[] = [],
-
     issues: Issue[] = [];
 
   let impact: 'selected_files_only' | 'unknown' = 'selected_files_only';
@@ -173,10 +165,9 @@ export function verifyArtifactBaselines(events: readonly ArtifactEvidenceEvent[]
   {
     return { records: [], refs: [], issues: [{ code: 'ARTIFACT_LOG_INVALID', message: '运行记录身份或顺序不完整，无法核实文件基线' }], impact: 'unknown' }
   }
+
   const captures = events.filter(event => event.type === 'artifact.baseline_captured'),
-
     ids = new Map<string, number>(),
-
     calls = new Map<string, number>();
 
   for (const event of captures)
@@ -184,13 +175,12 @@ export function verifyArtifactBaselines(events: readonly ArtifactEvidenceEvent[]
     const value = event.data.baseline as Partial<ArtifactBaselineStaged> | undefined;
 
     if (value?.baselineId)
-
       ids.set(value.baselineId, (ids.get(value.baselineId) ?? 0) + 1);
 
     if (value?.captureToolCallId)
-
       calls.set(value.captureToolCallId, (calls.get(value.captureToolCallId) ?? 0) + 1)
   }
+
   for (const event of captures)
   {
     try
@@ -204,7 +194,6 @@ export function verifyArtifactBaselines(events: readonly ArtifactEvidenceEvent[]
       valid(equal(baseline.binding, binding) && baseline.knowledgeRevision === knowledgeRevision && ids.get(baseline.baselineId) === 1 && calls.get(baseline.captureToolCallId) === 1, '基线身份、知识或唯一标识不一致');
 
       const own = artifactSucceededCall(events, binding, baseline.captureToolCallId),
-
         input = artifactCaptureInputSchema.safeParse(own.allowed.data.input);
 
       valid(own.receipt.toolName === captureName && own.receipt.scope.kind === 'workspace' && own.receipt.effects.includes('maintenance') && input.success && input.data.expectedTaskProgressVersion === baseline.progressVersion, '采集调用范围与进度版本不一致');
@@ -222,6 +211,7 @@ export function verifyArtifactBaselines(events: readonly ArtifactEvidenceEvent[]
 
           text?: unknown
         };
+
       valid(block?.type === 'text' && typeof block.text === 'string', '采集工具没有结构化文本结果');
 
       const body = artifactCaptureResultSchema.safeParse(JSON.parse(block.text));
@@ -229,9 +219,7 @@ export function verifyArtifactBaselines(events: readonly ArtifactEvidenceEvent[]
       valid(body.success && equal(body.data.baseline, baseline), '采集暂存事件与真实成功回执不一致');
 
       const before = events.filter(value => value.seq < event.seq),
-
         selected = artifactSources(before, binding, input.data.sourceToolCallIds),
-
         sourceCalls = selected.sources.map(({ path: _, ...source }) => source);
 
       valid(equal(sourceCalls, baseline.sourceCalls) && baseline.lastEffectSeq === selected.lastEffectSeq && own.allowed.seq < event.seq && event.seq < own.finished.seq && sourceCalls.every(source => source.finishedSeq < own.allowed.seq), '采集来源、操作界限或事件顺序不一致');
@@ -246,13 +234,13 @@ export function verifyArtifactBaselines(events: readonly ArtifactEvidenceEvent[]
       valid(!events.some(value => value.seq > own.allowed.seq && value.seq < own.finished.seq && (value.type === 'run.stop_requested' || value.type === 'run.interrupted' || value.type === 'tool.allowed')), '采集期间出现停止或其它工具放行，不能核实稳定字节');
 
       for (const file of baseline.files)
-
         for (const id of file.sourceToolCallIds)
         {
           const source = selected.sources.find(value => value.toolCallId === id);
 
           valid(source && normalizePath(source.path) === normalizePath(file.relativePath), '采集文件与真实工具参数的路径关联不一致')
         }
+
       const record = artifactBaselineRecordSchema.parse({ baseline, capturedSeq: event.seq, finishedSeq: own.finished.seq });
 
       records.push(record);
@@ -264,13 +252,12 @@ export function verifyArtifactBaselines(events: readonly ArtifactEvidenceEvent[]
       add('ARTIFACT_BASELINE_INVALID', '存在未完成、损坏或来源不匹配的采集记录，不能作为已核实基线')
     }
   }
+
   if (records.length > artifactLimits.baselines)
-  {
     return { records: [], refs: [], issues: [{ code: 'ARTIFACT_LIMIT', message: '本轮成功基线超过受支持上限，不能核实完整清单' }], impact: 'unknown' }
-  }
+
   // 采集成功但没有相应暂存事件也属于损坏，不从工具正文补造记录。
   for (const event of events)
-
     if (event.type === 'tool.finished' && event.data.name === captureName && (event.data.receipt as
       {
         outcome?: unknown
@@ -280,6 +267,7 @@ export function verifyArtifactBaselines(events: readonly ArtifactEvidenceEvent[]
 
       add('ARTIFACT_BASELINE_INVALID', '采集成功回执缺少匹配的基线事件')
     }
+
   const refs = records.map(({ baseline, capturedSeq, finishedSeq }) => ({ baselineId: baseline.baselineId, captureToolCallId: baseline.captureToolCallId, knowledgeRevision: baseline.knowledgeRevision, progressVersion: baseline.progressVersion, capturedAt: baseline.capturedAt, capturedSeq, finishedSeq, fileCount: baseline.files.length, invalidated: events.some(event => event.seq > capturedSeq && (altered(event) || event.type === 'tool.finished' && event.data.name === 'cbim_task_plan' && (event.data.receipt as { outcome?: unknown } | undefined)?.outcome === 'succeeded')) }));
 
   // 明确复核一份时不能借用另一份基线的文件来宣称已覆盖；列表仅描述已记录集合，始终不是工作区完整覆盖。
@@ -300,8 +288,8 @@ export function verifyArtifactBaselines(events: readonly ArtifactEvidenceEvent[]
 
       add('ARTIFACT_UNKNOWN_EFFECT', '存在未知工具结果，所列文件不能代表完整影响范围')
     }
-    if (event.type !== 'tool.allowed')
 
+    if (event.type !== 'tool.allowed')
       continue;
 
     // 缺失的授权范围不是“没有副作用”；即使它不属于所选来源，也不能让损坏日志替整轮洗白。
@@ -315,8 +303,8 @@ export function verifyArtifactBaselines(events: readonly ArtifactEvidenceEvent[]
 
       continue
     }
-    const values = authorized.data.effects,
 
+    const values = authorized.data.effects,
       scope = authorized.data.scope;
 
     if (scope.kind === 'repository')
@@ -353,5 +341,6 @@ export function verifyArtifactBaselines(events: readonly ArtifactEvidenceEvent[]
       }
     }
   }
+
   return { records, refs, issues, impact };
 }

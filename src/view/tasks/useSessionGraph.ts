@@ -61,13 +61,9 @@ export function useSessionGraph(workspaceId: string, rootSessionId?: string, act
   useEffect(() =>
   {
     let stopped = false,
-
       inFlight = false,
-
       requested = false,
-
       reset = false,
-
       timer: ReturnType<typeof setTimeout> | undefined;
 
     const projection = new SessionReadProjection({ workspaceId, rootSessionId: rootSessionId ?? '' });
@@ -77,7 +73,6 @@ export function useSessionGraph(workspaceId: string, rootSessionId?: string, act
     async function poll()
     {
       if (stopped || !rootSessionId)
-
         return;
 
       if (inFlight)
@@ -86,6 +81,7 @@ export function useSessionGraph(workspaceId: string, rootSessionId?: string, act
 
         return
       }
+
       clearTimeout(timer);
 
       inFlight = true;
@@ -99,7 +95,6 @@ export function useSessionGraph(workspaceId: string, rootSessionId?: string, act
         const result: DispatchSessionRead = await window.cbim.call('dispatch.sessionRead', { identity: { workspaceId, rootSessionId }, graphCursor: reset ? undefined : projection.graphCursor, scopeCursor: reset ? undefined : projection.scopeCursor, selectedScopeId: requestedScopeId, detailStamp: reset ? undefined : projection.DetailStamp(requestedScopeId), limit: 100 });
 
         if (stopped)
-
           return;
 
         projection.Apply(result, requestedScopeId);
@@ -121,7 +116,6 @@ export function useSessionGraph(workspaceId: string, rootSessionId?: string, act
       catch (error)
       {
         if (stopped)
-
           return;
 
         const message = error instanceof Error ? error.message : String(error);
@@ -158,7 +152,6 @@ export function useSessionGraph(workspaceId: string, rootSessionId?: string, act
     document.addEventListener('visibilitychange', visible);
 
     if (rootSessionId)
-
       void poll();
 
     return () => { stopped = true; clearTimeout(timer); trigger.current = () => { }; document.removeEventListener('visibilitychange', visible) };

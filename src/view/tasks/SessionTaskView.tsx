@@ -60,7 +60,6 @@ export interface SessionTaskViewProps
 export function SessionTaskView({ workspaceId, taskId, runs, queued, graph, graphLoading, graphError, scopeState, ...props }: SessionTaskViewProps)
 {
   const history = sessionRuns(runs, workspaceId, taskId),
-
     pending = taskId ? queued.filter(message => message.taskId === taskId) : [];
 
   const matching = graph && graph.identity.workspaceId === workspaceId && graph.identity.rootSessionId === taskId ? graph : undefined;
@@ -72,9 +71,7 @@ export function SessionTaskView({ workspaceId, taskId, runs, queued, graph, grap
     {graphLoading && <p role="status" className="task-graph-loading">正在同步任务图…</p>}
     {taskId && scopeState?.selectedScopeId && <details className="office-usage"><summary>话题用量</summary><ScopeUsagePanel key={JSON.stringify([workspaceId, taskId, scopeState.selectedScopeId])} identity={{ workspaceId, rootSessionId: taskId, scopeId: scopeState.selectedScopeId }} /></details>}
     {!taskId ? <div className="task-graph-draft"><h3>尚未开始会话</h3><p>发送第一条消息后，这里显示主 Agent；派发成员任务后显示团队办公室。</p><button onClick={props.onChat}>开始对话</button></div> :
-
       matching ? <OfficeScene selectedAgentSessionId={props.selectedAgentSessionId} key={JSON.stringify([workspaceId, taskId])} selectedTaskId={props.selectedTaskId} graph={matching} sessions={scopeState?.teamSessions} scopes={scopeState?.scopes ?? []} mainRunning={history.some(run => run.status === 'running')} queued={pending.length} active={props.active} onChat={props.onAgentChat} onTask={props.onSelectTask} /> :
-
         <div className="task-graph-draft"><p>尚未取得办公室成员记录，正在自动同步；也可切换视图重新同步。</p><button onClick={props.onChat}>打开主 Agent 对话</button></div>}
   </div>;
 }

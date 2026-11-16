@@ -23,9 +23,7 @@ export function MainAgentEditor({ workspace, onClose }: { workspace: WorkspaceVi
   const settings = useMainAgentSettings(workspace.id, workspace.instanceId);
 
   const [models, setModels] = useState<LlmSettings>(),
-
     [selection, setSelection] = useState<AgentModelSelection | null>(null),
-
     [error, setError] = useState('');
 
   const [initial, setInitial] = useState<number>();
@@ -35,7 +33,6 @@ export function MainAgentEditor({ workspace, onClose }: { workspace: WorkspaceVi
   function close()
   {
     if (!settings.busy && (!changed || confirm('放弃尚未保存的主 Agent 配置？')))
-
       onClose()
   }
 
@@ -51,8 +48,8 @@ export function MainAgentEditor({ workspace, onClose }: { workspace: WorkspaceVi
 
       return
     }
-    if (await settings.save(selection, initial))
 
+    if (await settings.save(selection, initial))
       onClose();
   }
 

@@ -62,7 +62,6 @@ export class RequestBudgetController
   async Load()
   {
     if (this.state.busy)
-
       return;
 
     const generation = this.generation.Advance();
@@ -74,17 +73,14 @@ export class RequestBudgetController
       const report = requestBudgetReportSchema.parse(await this.call({ ...this.query }));
 
       if (report.workspaceId !== this.query.workspaceId || report.rootSessionId !== this.query.rootSessionId || report.scopeId !== this.query.scopeId || report.policyRevision !== this.revision)
-
         throw Error('请求账本返回了其它目标或策略的记录');
 
       if (this.generation.IsCurrent(generation))
-
         this.Publish({ busy: false, error: '', report })
     }
     catch (error)
     {
       if (this.generation.IsCurrent(generation))
-
         this.Publish({ ...this.state, busy: false, error: (error instanceof Error ? error.message : String(error)) + '；未将读取失败计为零消耗。' })
     }
   }

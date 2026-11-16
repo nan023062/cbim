@@ -25,7 +25,6 @@ const moduleIdsSchema = z.array(logicalId).max(100).refine(ids => new Set(ids).s
 export function validateWorkflowSelections(moduleIds: readonly string[], selections: readonly WorkflowSelection[] | undefined): void
 {
   if (!moduleIdsSchema.safeParse(moduleIds).success || !optionalSelections.safeParse(selections).success || selections?.some(value => !moduleIds.includes(value.moduleId)))
-
     fail('WORKFLOW_SELECTION_INVALID', 'Workflow 选择必须唯一且属于本次分配的模块');
 }
 
@@ -36,11 +35,9 @@ export function validateWorkflowSelections(moduleIds: readonly string[], selecti
 export function sameWorkflowSelectionsForModules(planned: readonly WorkflowSelection[] | undefined, actual: readonly WorkflowSelection[] | undefined, moduleIds: readonly string[]): boolean
 {
   if (!moduleIdsSchema.safeParse(moduleIds).success || !optionalSelections.safeParse(planned).success || !optionalSelections.safeParse(actual).success)
-
     return false;
 
   const left = new Map(planned?.map(value => [value.moduleId, value.workflowId])),
-
     right = new Map(actual?.map(value => [value.moduleId, value.workflowId]));
 
   return moduleIds.every(moduleId => left.get(moduleId) === right.get(moduleId));
@@ -56,7 +53,6 @@ export function validateTaskWorkflowSelections(selections: readonly WorkflowSele
     const module = modules.find(value => value.moduleId === selection.moduleId)!;
 
     if (module.workflow.kind !== 'module' || module.workflow.id !== selection.workflowId)
-
       fail('WORKFLOW_SELECTION_INVALID', '任务显式 Workflow 选择与已冻结模块流程不一致')
   }
 }

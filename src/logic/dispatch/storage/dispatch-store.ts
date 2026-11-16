@@ -83,7 +83,6 @@ function text(value: unknown): value is string
 function valid(condition: unknown, message: string): asserts condition
 {
   if (!condition)
-
     fail('GRAPH_INPUT_INVALID', message)
 }
 
@@ -106,7 +105,6 @@ function upsert<T>(old: T[], updates: T[], key: (item: T) => string)
   const map = new Map(old.map(item => [key(item), item]));
 
   for (const item of updates)
-
     map.set(key(item), item);
 
   return [...map.values()]
@@ -162,11 +160,9 @@ export class FileDispatchStore implements DispatchStore
   private Available()
   {
     if (this.closing)
-
       fail('GRAPH_STORE_CLOSED', '任务派发存储正在关闭或已关闭');
 
     if (this.storageFailure)
-
       throw this.storageFailure;
   }
 
@@ -203,7 +199,6 @@ export class FileDispatchStore implements DispatchStore
   private CheckIdentity(identity: GraphIdentity)
   {
     if (!identity || identity.workspaceId !== this.workspaceId)
-
       fail('GRAPH_IDENTITY_MISMATCH', '任务图不属于此工作区');
 
     valid(text(identity.rootSessionId), '缺少主会话身份');
@@ -216,7 +211,6 @@ export class FileDispatchStore implements DispatchStore
     const graph = this.state.graphs.find(g => sameGraph(g.identity, identity));
 
     if (!graph)
-
       fail('GRAPH_NOT_FOUND', '当前主会话尚未创建任务派发图');
 
     return graph;
@@ -232,7 +226,6 @@ export class FileDispatchStore implements DispatchStore
     await this.tail;
 
     if (this.storageFailure)
-
       throw this.storageFailure;
 
     return clone(this.state)
@@ -264,7 +257,6 @@ export class FileDispatchStore implements DispatchStore
     valid(text(commandId), '查询需要原命令身份');
 
     if (!this.initialization)
-
       fail('GRAPH_STORE_NOT_READY', '工作区尚未初始化，不能通过原命令查询触发恢复');
 
     await this.initialization;
@@ -286,7 +278,6 @@ export class FileDispatchStore implements DispatchStore
     await this.tail;
 
     if (this.storageFailure)
-
       throw this.storageFailure;
 
     return clone(this.Graph(identity))
@@ -302,7 +293,6 @@ export class FileDispatchStore implements DispatchStore
     await this.tail;
 
     if (this.storageFailure)
-
       throw this.storageFailure;
 
     const graph = this.Graph(identity);
@@ -326,11 +316,9 @@ export class FileDispatchStore implements DispatchStore
     await this.tail;
 
     if (this.storageFailure)
-
       throw this.storageFailure;
 
     const graph = this.Graph(input.identity),
-
       root = input.identity.rootSessionId;
 
     const scopes = this.scopeViews.get(root) ?? emptyScopeSnapshot(graph.identity, graph.cursor.streamId);
@@ -354,6 +342,7 @@ export class FileDispatchStore implements DispatchStore
     {
       return Promise.reject(error)
     }
+
     const fixedCommand = clone(command);
 
     const pending = this.tail.then(async () =>
@@ -361,7 +350,6 @@ export class FileDispatchStore implements DispatchStore
       await this.Init();
 
       if (this.storageFailure)
-
         throw this.storageFailure;
 
       const committed = this.commands.get(fixedCommand.commandId);
@@ -369,11 +357,11 @@ export class FileDispatchStore implements DispatchStore
       if (committed)
       {
         if (committed.fingerprint !== fixedCommand.fingerprint)
-
           fail('COMMAND_ID_CONFLICT', '相同命令 ID 已用于不同请求');
 
         return clone(committed.receipt) as T;
       }
+
       // JSON round-trip 固定实际落盘值；禁止 undefined 回执和不可序列化输入被静默省略。
       const proposed = await prepare(clone(this.state));
 
@@ -393,6 +381,7 @@ export class FileDispatchStore implements DispatchStore
       {
         fail('GRAPH_INPUT_INVALID', '事务必须是可序列化 JSON')
       }
+
       const next = this.Project(mutation, fixedCommand, 'module_owner_v1');
 
       const body: TransactionBody = { version: 1, executionProtocol: 'module_owner_v1', workspaceId: this.workspaceId, transactionSeq: this.transactionSeq + 1, previousHash: this.lastHash, command: fixedCommand, mutation };
@@ -426,16 +415,19 @@ export class FileDispatchStore implements DispatchStore
         {
           this.storageFailure = error as Error
         }
+
         this.ObservationFailed(this.storageFailure);
 
         throw this.storageFailure;
       }
+
       this.Publish(body, checksum, next);
 
       this.Observe(() => this.observer?.Committed(clone(mutation)));
 
       return clone(mutation.receipt);
     });
+
     this.tail = pending.then(() => { }, () => { });
 
     return pending;
@@ -453,6 +445,7 @@ export class FileDispatchStore implements DispatchStore
 
       this.closePromise = (async () => { await this.tail; await this.initialization?.catch(() => { }) })()
     }
+
     return this.closePromise;
   }
 
@@ -472,7 +465,6 @@ export class FileDispatchStore implements DispatchStore
     this.lastHash = checksum;
 
     if (body.executionProtocol === 'module_owner_v1')
-
       this.ownerProtocolSeen = true;
 
     this.commands.set(body.command.commandId, evidence);
@@ -485,6 +477,7 @@ export class FileDispatchStore implements DispatchStore
 
       this.events.set(batch.identity.rootSessionId, events)
     }
+
     const groups = new Map<string, DispatchScope[]>();
 
     for (const scope of body.mutation.scopes ?? [])
@@ -495,12 +488,12 @@ export class FileDispatchStore implements DispatchStore
 
       groups.set(scope.rootSessionId, values)
     }
+
     for (const [root, updates] of groups)
     {
       const graph = this.Graph({ workspaceId: this.workspaceId, rootSessionId: root });
 
       const previous = this.scopeViews.get(root) ?? emptyScopeSnapshot(graph.identity, graph.cursor.streamId),
-
         seq = previous.cursor.seq + 1;
 
       const event: ScopeEventBatch = { identity: graph.identity, streamId: previous.cursor.streamId, seq, scopes: updates.map(scope => summarizeScope(scope, previous.cursor.streamId, seq)) };
@@ -512,7 +505,6 @@ export class FileDispatchStore implements DispatchStore
       events.push(event);
 
       if (events.length > scopeViewHistoryLimit)
-
         events.shift();
 
       this.scopeEvents.set(root, events);
@@ -539,13 +531,9 @@ export class FileDispatchStore implements DispatchStore
     const modelRequests = projectModelRequestBudgetMutation(this.state, mutation, command);
 
     const members = mutation.members ?? [],
-
       sessions = mutation.sessions ?? [],
-
       messages = mutation.messages ?? [],
-
       runs = mutation.runs ?? [],
-
       scopes = mutation.scopes ?? [];
 
     valid(Array.isArray(members) && Array.isArray(sessions) && Array.isArray(messages) && Array.isArray(runs) && Array.isArray(scopes), '事务集合必须是数组');
@@ -584,9 +572,9 @@ export class FileDispatchStore implements DispatchStore
       const previous = this.state.members.find(m => m.agentInstanceId === member.agentInstanceId);
 
       if (previous)
-
         valid(previous.workspaceId === member.workspaceId && previous.teamId === member.teamId && previous.agentId === member.agentId && previous.mainRootSessionId === member.mainRootSessionId && previous.executionScopeId === member.executionScopeId && previous.executionTaskId === member.executionTaskId && member.leaseEpoch >= previous.leaseEpoch, '不能重绑定已有成员、主会话/执行周期范围或倒退租约代际');
     }
+
     for (const session of next.sessions)
     {
       valid(Object.keys(session).every(key => ['workspaceId', 'teamId', 'agentId', 'agentInstanceId', 'agentSessionId', 'rootSessionId', 'purpose', 'nativeSessionId', 'lastTaskId', 'lastRunId'].includes(key)), '公开成员通道不能携带私有路径或未知字段');
@@ -604,17 +592,14 @@ export class FileDispatchStore implements DispatchStore
       const previous = this.state.sessions.find(s => s.agentSessionId === session.agentSessionId);
 
       if (previous)
-
         valid(previous.agentInstanceId === session.agentInstanceId && previous.rootSessionId === session.rootSessionId && (previous.purpose ?? 'task') === (session.purpose ?? 'task'), '不能将已有会话改绑至其它成员、主会话或用途');
 
       if (previous?.nativeSessionId)
-
         valid(previous.nativeSessionId === session.nativeSessionId, '不能改绑已知原生会话身份');
     }
+
     for (const member of next.members)
-
       for (const id of member.agentSessionIds)
-
         valid(next.sessions.some(s => s.agentSessionId === id && s.agentInstanceId === member.agentInstanceId), '成员引用的独立会话不存在');
 
     const batch = mutation.batch;
@@ -631,6 +616,7 @@ export class FileDispatchStore implements DispatchStore
 
       next.graphs = upsert(next.graphs, [graph], g => g.identity.rootSessionId);
     }
+
     if (mutation.teamSessions !== undefined || this.state.teamSessions !== undefined)
     {
       valid(mutation.teamSessions === undefined || Array.isArray(mutation.teamSessions), '团队对话登记必须是数组');
@@ -657,10 +643,11 @@ export class FileDispatchStore implements DispatchStore
 
         checkAgent(task.assignee, graph.identity)
       }
-      for (const view of graph.agents)
 
+      for (const view of graph.agents)
         valid(next.members.some(m => m.agentInstanceId === view.agentInstanceId && m.agentId === view.agentId), '图状态引用了未知成员');
     }
+
     validateDispatchScopes(this.state, next, mutation);
 
     validateDispatchExecution(this.state, next, mutation, command);
@@ -668,14 +655,14 @@ export class FileDispatchStore implements DispatchStore
     validateOwnerExecutionMutation(this.state, next, mutation, protocol);
 
     if (batch)
-
+    {
       for (const change of batch.changes)
       {
         if (change.type === 'task.upserted' && !this.state.graphs.find(g => sameGraph(g.identity, batch.identity))?.tasks.some(t => t.taskId === change.task.taskId))
-        {
           valid(messages.some(m => m.kind === 'assignment' && m.taskId === change.task.taskId), '新任务必须与待投递信封一起提交');
-        }
       }
+    }
+
     return next;
   }
 
@@ -690,11 +677,11 @@ export class FileDispatchStore implements DispatchStore
     catch (error: any)
     {
       if (error.code === 'ENOENT')
-
         return;
 
       throw error
     }
+
     const complete = bytes.lastIndexOf(10) + 1;
 
     const lines = bytes.subarray(0, complete).toString('utf8').split('\n');
@@ -712,11 +699,11 @@ export class FileDispatchStore implements DispatchStore
         if (body?.version !== 1)
         {
           if (Number.isInteger(body?.version))
-
             fail('GRAPH_VERSION_UNSUPPORTED', '不支持此派发日志版本');
 
           fail('GRAPH_LOG_CORRUPT', '派发日志缺少协议版本');
         }
+
         valid(body.workspaceId === this.workspaceId && body.transactionSeq === this.transactionSeq + 1 && body.previousHash === this.lastHash, '日志身份、序号或前序哈希不一致');
 
         valid(text(record.checksum) && hash(JSON.stringify(body)) === record.checksum, '日志校验和不匹配');
@@ -736,12 +723,12 @@ export class FileDispatchStore implements DispatchStore
       catch (error: any)
       {
         if (error.code === 'GRAPH_VERSION_UNSUPPORTED')
-
           throw error;
 
         fail('GRAPH_LOG_CORRUPT', '任务派发日志损坏或不满足引用约束，不能继续派发');
       }
     }
+
     // 仅去掉无完整换行的崩溃尾部；中间空行、完整坏行及断序全部拒绝，不静默跳过。
     if (complete !== bytes.length)
     {

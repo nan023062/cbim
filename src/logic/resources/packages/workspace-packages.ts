@@ -102,11 +102,9 @@ export class WorkspacePackages
     const snapshot = await this.repositories.Read();
 
     if (snapshot.repositoryId !== repositoryId)
-
       fail('REPOSITORY_CHANGED', '当前仓库已切换，请重新读取资源');
 
     if (snapshot.revision !== repositoryRevision)
-
       fail('CONFLICT', '源仓库已变化，请重新选择资源并预览');
 
     return snapshot;
@@ -115,7 +113,6 @@ export class WorkspacePackages
   private PlanPath(id: string)
   {
     if (!z.string().uuid().safeParse(id).success)
-
       fail('PLAN', '无效资源导入计划');
 
     return path.join(this.workspace.paths.Local(this.workspace.entry.id, 'cache'), 'resource-imports', id + '.json')
@@ -137,7 +134,6 @@ export class WorkspacePackages
       const file = this.PlanPath(id);
 
       if ((await fs.lstat(file)).isSymbolicLink())
-
         fail('PLAN', '资源导入计划不能是符号链接');
 
       value = JSON.parse(await fs.readFile(file, 'utf8'))
@@ -146,27 +142,23 @@ export class WorkspacePackages
     {
       fail('PLAN', '资源导入预览不存在或损坏，请重新预览')
     }
+
     const parsed = planSchema.safeParse(value);
 
     if (!parsed.success)
-
       fail('PLAN', '资源导入计划格式无效');
 
     // Schema 只验证，不重排原缓存：现有指纹绑定原 JSON 字段顺序，可变回执也不能替换不可变意图。
     const plan = value as ImportPlan;
 
     if (plan.request.requestId !== id || planFingerprint(plan) !== plan.fingerprint)
-
       fail('PLAN', '资源导入计划内容已变化，请重新预览');
 
     for (const result of [plan.result, plan.committed])
-
       if (result && (result.requestId !== id || result.workspaceId !== plan.request.workspaceId || result.instanceId !== plan.request.instanceId))
-
         fail('PLAN', '资源导入回执身份不一致');
 
     if (plan.reindexRequest && (!plan.committed || plan.reindexRequest.workspaceId !== plan.request.workspaceId || plan.reindexRequest.instanceId !== plan.request.instanceId || plan.reindexRequest.changes.length))
-
       fail('PLAN', '资源导入索引计划身份不一致');
 
     return plan;
@@ -182,32 +174,25 @@ export class WorkspacePackages
     const snapshot = await this.workspace.Snapshot();
 
     if (snapshot.revision !== input.revision)
-
       fail('CONFLICT', '源工作区知识已变化，请刷新后发布');
 
     const built = buildWorkspacePackage(snapshot, input),
-
       content = json(built.package),
-
       repository = await this.repositories.Read();
 
     if (repository.repositoryId !== input.repositoryId)
-
       fail('REPOSITORY_CHANGED', '当前仓库已切换，请重新发布');
 
     // 回执丢失后重新点击同一内容可以找到已经保存的资源；不能按名称覆盖别人的定义。
     const existing = repository.items.find(item => item.kind === input.kind && item.name === input.name && item.summary === input.summary && item.content === content);
 
     if (existing)
-
       return { repository, resourceId: existing.id, warnings: built.warnings, removedBindings: built.removedBindings };
 
     if (repository.revision !== input.repositoryRevision)
-
       fail('CONFLICT', '目标仓库已变化，请刷新后发布');
 
     if ((await this.workspace.Read()).revision !== snapshot.revision)
-
       fail('CONFLICT', '发布期间源知识已变化，请刷新后重试');
 
     const saved = await this.repositories.Save({ repositoryId: input.repositoryId, revision: input.repositoryRevision, item: { kind: input.kind, name: input.name, summary: input.summary, content } });
@@ -215,7 +200,6 @@ export class WorkspacePackages
     const resource = saved.items.find(item => item.kind === input.kind && item.content === content);
 
     if (!resource)
-
       fail('RESOURCE_DATA', '仓库未返回已保存资源，请刷新核实');
 
     return { repository: saved, resourceId: resource.id, warnings: built.warnings, removedBindings: built.removedBindings };
@@ -229,37 +213,29 @@ export class WorkspacePackages
     this.workspace.Assert(input);
 
     const repository = await this.Source(input.repositoryId, input.repositoryRevision),
-
       resource = repository.items.find(item => item.id === input.resourceId);
 
     if (!resource)
-
       fail('NOT_FOUND', '源资源不存在，请刷新仓库');
 
     if (!['team', 'agent', 'skill', 'architecture'].includes(resource.kind))
-
       fail('RESOURCE_KIND', '此资源不支持应用；业务模板必须是完整业务架构包');
 
     const pack = parseWorkspacePackage(resource.content, resource.kind),
-
       snapshot = await this.workspace.Snapshot();
 
     if (snapshot.revision !== input.revision)
-
       fail('CONFLICT', '目标知识已变化，请刷新后重新预览');
 
     const planned = planWorkspacePackage(snapshot, pack, input);
 
     for (const root of planned.createdRoots)
-
       await this.workspace.objects.AssertAbsent(root);
 
     for (const root of planned.deletedRoots)
-
       await this.workspace.objects.AssertKnowledgeOnly(root, snapshot.files);
 
     const request: ChangeRequest = { workspaceId: input.workspaceId, instanceId: input.instanceId, revision: input.revision, requestId: randomUUID(), changes: planned.changes },
-
       preview = await this.workspace.Preview(request);
 
     const immutable = { version: 2 as const, request, source: { repositoryId: input.repositoryId, repositoryRevision: input.repositoryRevision, resourceId: input.resourceId, contentHash: hash(resource.content) }, kind: pack.kind, mode: input.mode, targetRoot: planned.targetRoot, createdRoots: planned.createdRoots, deletedRoots: planned.deletedRoots };
@@ -280,7 +256,6 @@ export class WorkspacePackages
   async Commit(raw: unknown): Promise<KnowledgeCommit>
   {
     const queue = commitQueues.get(this.workspace) ?? Promise.resolve(),
-
       current = queue.then(() => this.CommitPlan(raw));
 
     commitQueues.set(this.workspace, current.catch(() => { }));
@@ -300,7 +275,6 @@ export class WorkspacePackages
     const original = await this.workspace.CommittedReceipt(plan.request);
 
     if (plan.committed && !isDeepStrictEqual(original, plan.committed) || plan.result && !original)
-
       fail('SOURCE_PLAN_INVALID', '资源计划缓存没有匹配的原知识提交证明');
 
     if (plan.result)
@@ -312,19 +286,18 @@ export class WorkspacePackages
         const indexed = await this.workspace.CommittedReceipt(plan.reindexRequest);
 
         if (!indexed)
-
           fail('SOURCE_PLAN_INVALID', '资源计划最终缓存缺少原索引提交证明');
 
         expected = { ...expected, revision: indexed.revision, changed: [...new Set([...expected.changed, ...indexed.changed])] }
       }
-      if (!isDeepStrictEqual(expected, plan.result))
 
+      if (!isDeepStrictEqual(expected, plan.result))
         fail('SOURCE_PLAN_INVALID', '资源计划最终回执与原知识日志不一致');
 
       return plan.result;
     }
-    if (original && plan.request.instanceId !== this.workspace.instanceId)
 
+    if (original && plan.request.instanceId !== this.workspace.instanceId)
       return original;
 
     this.workspace.Assert(plan.request);
@@ -334,24 +307,20 @@ export class WorkspacePackages
     if (!plan.committed && current.revision === plan.request.revision)
     {
       const repository = await this.Source(plan.source.repositoryId, plan.source.repositoryRevision),
-
         resource = repository.items.find(item => item.id === plan.source.resourceId);
 
       if (!resource || hash(resource.content) !== plan.source.contentHash)
-
         fail('CONFLICT', '源资源内容已变化，请重新预览');
 
       for (const root of plan.createdRoots)
-
         await this.workspace.objects.AssertAbsent(root);
 
       for (const root of plan.deletedRoots)
-
         await this.workspace.objects.AssertKnowledgeOnly(root, current.files);
     }
+
     // 不同目标版本时 commit 仅能命中已提交回执，否则既有知识事务会拒绝过期 revision。
     if (!plan.committed)
-
       plan.committed = await this.workspace.CommitPlanned({ kind: 'package_plan', planId: input.planId });
 
     try
@@ -364,7 +333,6 @@ export class WorkspacePackages
       {
         // 只能 rmdir 空目录，不能删除未知文件；重试可重复执行。旧物理小组清除后，通过知识事务重建派生索引。
         for (const root of plan.deletedRoots)
-
           await this.workspace.objects.PruneEmpty(root);
 
         if (!plan.reindexRequest)
@@ -375,6 +343,7 @@ export class WorkspacePackages
 
           await this.SavePlan(plan)
         }
+
         try
         {
           const indexed = await this.workspace.Commit(plan.reindexRequest);
@@ -393,9 +362,11 @@ export class WorkspacePackages
 
             await this.SavePlan(plan)
           }
+
           throw error;
         }
       }
+
       plan.result = result;
 
       await this.SavePlan(plan);

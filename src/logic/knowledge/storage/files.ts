@@ -34,17 +34,14 @@ export async function readKnowledge(paths: Paths, root: string)
       const p = relative + '/' + entry.name;
 
       if (excluded.has(entry.name))
-
         continue;
 
       if (entry.isSymbolicLink())
-
         fail('PATH', `知识目录包含链接：${p}`);
 
       if (entry.isDirectory())
       {
         if (relative === '.cbim' && !['workspace', 'team', 'connectors'].includes(entry.name))
-
           continue;
 
         await walk(p)
@@ -56,7 +53,6 @@ export async function readKnowledge(paths: Paths, root: string)
         const stat = await fs.stat(target);
 
         if (stat.size > 2 * 1024 * 1024)
-
           fail('SIZE', `知识文件超过 2 MiB：${p}`);
 
         const text = await fs.readFile(target, 'utf8');
@@ -64,14 +60,12 @@ export async function readKnowledge(paths: Paths, root: string)
         result.push({ path: p, text, hash: hash(text) });
 
         if (result.length > 20000)
-
           fail('SIZE', '知识对象超过 20000 个')
       }
     }
   }
 
   if (await exists(path.join(root, '.cbim')))
-
     await walk('.cbim');
 
   return result.sort((a, b) => a.path.localeCompare(b.path));

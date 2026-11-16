@@ -49,15 +49,12 @@ export function emptyMemberEvents(scope: MemberEventScope): MemberEventState
 export function memberPollDelay(state: MemberEventState, background: boolean, failed = false): number | undefined
 {
   if (failed)
-
     return background ? 5000 : 2000;
 
   if (state.hasMore)
-
     return 0;
 
   if (!state.run || state.run.status === 'running')
-
     return background ? 5000 : 1000;
 
   return undefined;
@@ -73,23 +70,18 @@ export function applyMemberEvents(state: MemberEventState, reply: MemberEventsRe
   const { scope } = state;
 
   if (reply.cursor.runId !== scope.runId || reply.run.runId !== scope.runId || reply.run.task.workspaceId !== scope.workspaceId || reply.run.task.taskId !== scope.taskId)
-
     throw Error('成员运行身份不一致，请重新打开任务');
 
   if (!Number.isSafeInteger(reply.cursor.seq) || reply.cursor.seq < 0)
-
     throw Error('成员运行游标无效，请重新读取');
 
   if (state.cursor && reply.cursor.seq < state.cursor.seq)
-
     return state;
 
   if (reply.mode !== 'reset' && !state.cursor)
-
     throw Error('成员运行缺少初始记录，请重新读取');
 
   if (reply.mode === 'noop' && reply.cursor.seq !== state.cursor?.seq)
-
     throw Error('成员运行游标有缺口，请重新读取');
 
   const previous = state.run?.events ?? [];
@@ -105,7 +97,6 @@ export function applyMemberEvents(state: MemberEventState, reply: MemberEventsRe
     for (const event of reply.events)
     {
       if (event.workspaceId !== scope.workspaceId || event.taskId !== scope.taskId || event.runId !== scope.runId || !Number.isSafeInteger(event.seq) || event.seq < 1)
-
         throw Error('成员事件身份无效，请重新读取');
 
       if (event.seq <= seq)
@@ -113,31 +104,29 @@ export function applyMemberEvents(state: MemberEventState, reply: MemberEventsRe
         const known = events[event.seq - 1] ?? appended.find(item => item.seq === event.seq);
 
         if (!known || JSON.stringify(known) !== JSON.stringify(event))
-
           throw Error('成员事件内容冲突，请重新读取');
 
         continue
       }
-      if (event.seq !== seq + 1)
 
+      if (event.seq !== seq + 1)
         throw Error('成员运行事件不连续，请重新读取');
 
       appended.push(event);
 
       seq = event.seq;
     }
-    if (seq !== reply.cursor.seq)
 
+    if (seq !== reply.cursor.seq)
       throw Error('成员运行分页不完整，请重新读取');
 
     if (appended.length)
-
       events = [...events, ...appended];
 
     if (reply.mode === 'reset' && events.length === previous.length && events.every((item, index) => JSON.stringify(item) === JSON.stringify(previous[index])))
-
       events = previous;
   }
+
   const oldView = state.run ? (({ events: _, ...view }) => view)(state.run) : undefined;
 
   const viewUnchanged = JSON.stringify(oldView) === JSON.stringify(reply.run);
@@ -149,7 +138,6 @@ export function applyMemberEvents(state: MemberEventState, reply: MemberEventsRe
   const hasMore = reply.mode === 'noop' ? false : reply.hasMore;
 
   if (run === state.run && cursor === state.cursor && state.hasMore === hasMore)
-
     return state;
 
   return { scope, cursor, run, hasMore };

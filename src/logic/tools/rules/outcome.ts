@@ -41,7 +41,6 @@ export function toolOutcome(status: ToolOutcome['status'], reconciliation?: Tool
 {
   return {
     status, retryable: false, terminal: true, reconcileTool: reconciliation?.tool ?? null, reconcileArgs: reconciliation?.args ?? null,
-
     nextStep: status === 'returned' ? '本次调用已返回；不重复执行，业务完成仍须独立验收。' : status === 'rejected' ? '本次调用被拒绝；核实权限或修正参数，不以相同请求重试。' : reconciliation ? '只读查询原回执，未知/查无记录不证明未执行；不要换 ID 重做。' : '核实原运行日志和实际文件/外部副作用；本工具没有可用的只读领域回执，不自动重试。'
   };
 }
@@ -53,6 +52,7 @@ export function toolFailureResult(error: unknown, rejected = false): ToolResult
     {
       reconciliation?: ToolReconciliation
     };
+
   const reconciliation = candidate?.reconciliation;
 
   const code = error instanceof Fault ? error.code : 'TOOL_ERROR';
@@ -60,7 +60,6 @@ export function toolFailureResult(error: unknown, rejected = false): ToolResult
   const outcome = toolOutcome(rejected || code === 'FORBIDDEN' || code === 'TOOL_INPUT_INVALID' ? 'rejected' : 'unknown', reconciliation);
 
   if (code === 'TOOL_INPUT_INVALID')
-
     outcome.nextStep = '本次尚未执行。请补齐列出的必填字段或修正格式；可选参数可省略，已声明默认值会自动使用。';
 
   return { isError: true, content: [{ type: 'text', text: JSON.stringify({ ...outcome, code, message: error instanceof Error ? error.message : String(error) }) }], details: { outcome } };
@@ -74,11 +73,11 @@ export function toolReturnedResult(result: ToolResult): ToolResult
   if (result.isError)
   {
     if (details.outcome)
-
       return result;
 
     return toolFailureResult(result.content.filter(block => block.type === 'text').map(block => block.text).join('\n'));
   }
+
   let status: ToolOutcome['status'] = 'returned';
 
   if (result.content.length === 1 && result.content[0].type === 'text')
@@ -88,7 +87,6 @@ export function toolReturnedResult(result: ToolResult): ToolResult
       const value = JSON.parse(result.content[0].text);
 
       if (value?.status === 'unknown' || value?.status === 'absent')
-
         status = 'unknown'
     }
     catch
@@ -96,6 +94,7 @@ export function toolReturnedResult(result: ToolResult): ToolResult
       /* 非 JSON 的正常工具文本保持原协议。 */
     }
   }
+
   return { ...result, details: { ...details, outcome: toolOutcome(status) } };
 }
 

@@ -71,12 +71,12 @@ export class LocalRepository implements RepositoryStore
       catch (e: any)
       {
         if (e.code !== 'LOCKED')
-
           throw e;
 
         await new Promise(r => setTimeout(r, 30))
       }
     }
+
     return fail('BUSY', '仓库正由其他请求更新，请稍后重试')
   }
 
@@ -85,13 +85,11 @@ export class LocalRepository implements RepositoryStore
     try
     {
       if ((await fs.lstat(this.file)).isSymbolicLink())
-
         fail('PATH', '仓库数据文件不能是符号链接')
     }
     catch (e: any)
     {
       if (e.code !== 'ENOENT')
-
         throw e
     }
   }
@@ -111,11 +109,11 @@ export class LocalRepository implements RepositoryStore
       catch (e: any)
       {
         if (e.code !== 'ENOENT')
-
           throw e;
 
         await atomic(this.file, JsonUtils.FormatJson({ version: 1, repositoryId: randomUUID(), items: [] }))
       }
+
       return await this.Read()
     }
     finally
@@ -135,7 +133,6 @@ export class LocalRepository implements RepositoryStore
       const stat = await fs.stat(this.file);
 
       if (stat.size > MAX_BYTES)
-
         fail('SIZE', '资源仓库超过 8 MiB 限制');
 
       text = await fs.readFile(this.file, 'utf8')
@@ -143,17 +140,16 @@ export class LocalRepository implements RepositoryStore
     catch (e: any)
     {
       if (e.code === 'ENOENT')
-
         fail('NOT_FOUND', '仓库文件不存在，请重新选择仓库');
 
       throw e
     }
+
     try
     {
       const data = diskSchema.parse(JSON.parse(text));
 
       if (new Set(data.items.map(i => i.id)).size !== data.items.length)
-
         throw Error('duplicate');
 
       return { repositoryId: data.repositoryId, revision: hash(text), items: data.items }
@@ -187,11 +183,9 @@ export class LocalRepository implements RepositoryStore
       const current = await this.Read();
 
       if (current.repositoryId !== request.repositoryId)
-
         fail('IDENTITY', '仓库身份已变化，请重新连接');
 
       if (current.revision !== request.revision)
-
         fail('CONFLICT', '仓库已被修改，请刷新后重新编辑');
 
       edit(current);
@@ -199,7 +193,6 @@ export class LocalRepository implements RepositoryStore
       const text = JsonUtils.FormatJson(diskSchema.parse({ version: 1, repositoryId: current.repositoryId, items: current.items }));
 
       if (Buffer.byteLength(text) > MAX_BYTES)
-
         fail('SIZE', '资源仓库超过 8 MiB 限制');
 
       await atomic(this.file, text);

@@ -23,9 +23,8 @@ import type { EngineRuntimePackage } from '../rules/engine-runtime';
 export function nativeToolInput(name: string, input: Record<string, unknown>, cwd: string, platform: NodeJS.Platform = process.platform): Record<string, unknown>
 {
   if (platform === 'win32' && ['read', 'write', 'edit', 'find', 'grep', 'ls'].includes(name) && typeof input.path === 'string' && /^[/\\](?![/\\])/.test(input.path))
-  {
     return { ...input, path: path.win32.resolve(cwd, input.path) };
-  }
+
   return input;
 }
 
@@ -33,11 +32,9 @@ export function nativeToolInput(name: string, input: Record<string, unknown>, cw
 export async function managedNativeTools(cwd: string, runtime?: EngineRuntimePackage): Promise<EngineToolsPort>
 {
   if (runtime && runtime.version !== '1.5.0')
-
     throw Error('原生工具运行包版本不匹配');
 
   const resolve = createRequire(typeof __filename === 'string' ? __filename : import.meta.url),
-
     resources = (process as NodeJS.Process &
     {
       resourcesPath?: string
@@ -52,11 +49,9 @@ export async function managedNativeTools(cwd: string, runtime?: EngineRuntimePac
     const raw = await fs.readFile(path.join(folder, 'package.json'), 'utf8').catch(error => { if (error.code === 'ENOENT') return undefined; throw error });
 
     if (raw === undefined)
-
       continue;
 
     if (JSON.parse(raw).version !== '1.5.0')
-
       throw Error('原生工具版本不匹配');
 
     const candidate = path.join(folder, 'dist', 'index.js');
@@ -67,8 +62,8 @@ export async function managedNativeTools(cwd: string, runtime?: EngineRuntimePac
 
     break;
   }
-  if (!entry)
 
+  if (!entry)
     throw Error('缺少 CBIM 原生工具运行资源');
 
   const sdk: typeof NativeSdk = await import(pathToFileURL(entry).href);

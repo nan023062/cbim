@@ -71,15 +71,11 @@ export function WorkspaceMembers({ workspace, agents, onClose, initialRegistrati
   const controller = useMemo(() => commands.Get(workspace.id, { storage: window.localStorage, uuid: () => crypto.randomUUID(), commit: input => window.cbim.call('workspace.members.commit', input), lookup: input => window.cbim.call('workspace.members.receipt', input) }), [workspace.id]);
 
   const [tick, setTick] = useState(0),
-
     [page, setPage] = useState<WorkspaceMemberList>(),
-
     [detail, setDetail] = useState<WorkspaceMemberDetail>(),
-
     [models, setModels] = useState<LlmSettings>();
 
   const [editing, setEditing] = useState<WorkspaceMemberChangeInput['kind'] | undefined>(initialRegistration ? 'register' : undefined),
-
     [special, setSpecial] = useState<
       {
         target?: 'capability' | 'model';
@@ -88,15 +84,12 @@ export function WorkspaceMembers({ workspace, agents, onClose, initialRegistrati
       }>({});
 
   const [preview, setPreview] = useState<WorkspaceMemberPreview>(),
-
     [error, setError] = useState(''),
-
     [loading, setLoading] = useState(false);
 
   const [ownershipMember, setOwnershipMember] = useState<string>();
 
   const [search, setSearch] = useState(''),
-
     [stateFilter, setStateFilter] = useState('all');
 
   const draftDirty = useRef(false);
@@ -108,19 +101,14 @@ export function WorkspaceMembers({ workspace, agents, onClose, initialRegistrati
   const leaveDraft = () => !draftDirty.current || window.confirm('岗位编辑尚未保存，放弃这些输入？');
 
   const alive = useRef(false),
-
     epoch = useRef(0),
-
     lock = useRef(false),
-
     selection = useRef(0);
 
   const identity = { workspaceId: workspace.id, instanceId: workspace.instanceId ?? '' };
 
   const state = controller.snapshot,
-
     blocked = controller.blocked,
-
     available = workspace.state === 'running' && !!workspace.instanceId;
 
   useEffect(() => { alive.current = true; const unsubscribe = controller.Subscribe(() => setTick(value => value + 1)); void controller.Restore().then(() => { if (alive.current) void list() }); return () => { alive.current = false; epoch.current++; selection.current++; unsubscribe() } }, [controller, workspace.instanceId]);
@@ -130,7 +118,6 @@ export function WorkspaceMembers({ workspace, agents, onClose, initialRegistrati
   async function list(next?: number)
   {
     if (!available || lock.current)
-
       return;
 
     lock.current = true;
@@ -148,13 +135,11 @@ export function WorkspaceMembers({ workspace, agents, onClose, initialRegistrati
       const result = checkedWorkspaceMemberList(await window.cbim.call('workspace.members.list', input), input);
 
       if (alive.current && epoch.current === token)
-
         setPage(result)
     }
     catch (cause)
     {
       if (alive.current && epoch.current === token)
-
         setError('岗位列表读取失败：' + failure(cause))
     }
     finally
@@ -162,7 +147,6 @@ export function WorkspaceMembers({ workspace, agents, onClose, initialRegistrati
       lock.current = false;
 
       if (alive.current && epoch.current === token)
-
         setLoading(false)
     }
   }
@@ -170,7 +154,6 @@ export function WorkspaceMembers({ workspace, agents, onClose, initialRegistrati
   async function select(memberId: string)
   {
     if (!available || lock.current || !leaveDraft())
-
       return;
 
     markDirty(false);
@@ -198,13 +181,11 @@ export function WorkspaceMembers({ workspace, agents, onClose, initialRegistrati
       const result = checkedWorkspaceMemberDetail(await window.cbim.call('workspace.members.get', input), input);
 
       if (alive.current && epoch.current === token)
-
         setDetail(result)
     }
     catch (cause)
     {
       if (alive.current && epoch.current === token)
-
         setError('岗位详情读取失败：' + failure(cause))
     }
     finally
@@ -212,7 +193,6 @@ export function WorkspaceMembers({ workspace, agents, onClose, initialRegistrati
       lock.current = false;
 
       if (alive.current && epoch.current === token)
-
         setLoading(false)
     }
   }
@@ -220,7 +200,6 @@ export function WorkspaceMembers({ workspace, agents, onClose, initialRegistrati
   function start(kind: WorkspaceMemberChangeInput['kind'], extra: typeof special = {})
   {
     if (!leaveDraft())
-
       return;
 
     markDirty(false);
@@ -248,7 +227,6 @@ export function WorkspaceMembers({ workspace, agents, onClose, initialRegistrati
   async function prepare(change: WorkspaceMemberChangeInput)
   {
     if (!available || blocked || lock.current)
-
       return;
 
     lock.current = true;
@@ -268,13 +246,11 @@ export function WorkspaceMembers({ workspace, agents, onClose, initialRegistrati
       const result = checkedWorkspaceMemberPreview(await window.cbim.call('workspace.members.preview', input), input);
 
       if (alive.current && selection.current === generation)
-
         setPreview(result)
     }
     catch (cause)
     {
       if (alive.current && selection.current === generation)
-
         setError('岗位预览失败：' + failure(cause))
     }
     finally
@@ -282,7 +258,6 @@ export function WorkspaceMembers({ workspace, agents, onClose, initialRegistrati
       lock.current = false;
 
       if (alive.current)
-
         setLoading(false)
     }
   }
@@ -290,7 +265,6 @@ export function WorkspaceMembers({ workspace, agents, onClose, initialRegistrati
   async function commit()
   {
     if (!preview || blocked || lock.current)
-
       return;
 
     lock.current = true;
@@ -304,7 +278,6 @@ export function WorkspaceMembers({ workspace, agents, onClose, initialRegistrati
     lock.current = false;
 
     if (!alive.current)
-
       return;
 
     setLoading(false);
@@ -325,34 +298,28 @@ export function WorkspaceMembers({ workspace, agents, onClose, initialRegistrati
 
         return
       }
+
       await list();
 
       if (alive.current)
-
         await select(record.receipt!.memberId)
     }
     else if (record?.error)
-
       setError(record.error);
   }
 
   async function query(commandId: string, retry = false)
   {
     if (retry)
-
       await controller.Retry(commandId);
-
     else
-
       await controller.Query(commandId);
 
     if (alive.current)
-
       await list()
   }
 
   if (ownershipMember)
-
     return <ModuleOwnershipPanel key={workspace.id + workspace.instanceId + ownershipMember} identity={identity} memberId={ownershipMember} onDirtyChange={onDirtyChange} onClose={() => { setOwnershipMember(undefined); void select(ownershipMember) }} />;
 
   return <section className="workspace-members" data-testid="workspace-members" aria-label="项目岗位成员">

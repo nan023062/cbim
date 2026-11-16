@@ -29,7 +29,6 @@ const equal = (a: unknown, b: unknown) => json(a) === json(b);
 function valid(value: unknown): asserts value
 {
   if (!value)
-
     fail('MEMBER_HELP_INVALID', '求助记录未通过完整运行、授权回执和工具结束检查，请核实后重新安排任务')
 }
 
@@ -40,7 +39,6 @@ function valid(value: unknown): asserts value
 export function memberHelpCandidate(task: TaskNode, run: DispatchRun, summary: RunSummary): MemberHelpRecord | undefined
 {
   if (!hasMemberHelp(summary))
-
     return;
 
   valid(task.scopeId && summary.status === 'completed' && !summary.logIntegrity?.partialTail && !summary.unresolvedTools.length && equal(summary.memberBinding, run.binding) && summary.runId === run.binding.runId && summary.task.taskId === task.taskId);
@@ -58,7 +56,6 @@ export function memberHelpCandidate(task: TaskNode, run: DispatchRun, summary: R
   valid(requests.length === 1);
 
   const requested = requests[0],
-
     parsed = memberHelpStagedSchema.safeParse(requested.data?.help);
 
   valid(parsed.success);
@@ -76,7 +73,6 @@ export function memberHelpCandidate(task: TaskNode, run: DispatchRun, summary: R
   valid(own?.toolName === 'cbim_task_help' && own.status === 'succeeded' && own.allowedSeq !== undefined && own.allowedSeq < requested.seq && own.finishedSeq !== undefined && own.finishedSeq > requested.seq);
 
   const proposed = summary.events.find(event => event.type === 'tool.proposed' && event.data?.id === help.toolCallId),
-
     finished = summary.events.find(event => event.seq === own.finishedSeq);
 
   const input = memberHelpInputSchema.safeParse(proposed?.data.input);
@@ -96,6 +92,7 @@ export function memberHelpCandidate(task: TaskNode, run: DispatchRun, summary: R
 
       text?: string
     };
+
   valid(text?.type === 'text' && typeof text.text === 'string');
 
   let body: unknown;
@@ -108,6 +105,7 @@ export function memberHelpCandidate(task: TaskNode, run: DispatchRun, summary: R
   {
     valid(false)
   }
+
   const returned = memberHelpResultSchema.safeParse(body);
 
   valid(returned.success && equal(returned.data.help, help));
@@ -117,11 +115,9 @@ export function memberHelpCandidate(task: TaskNode, run: DispatchRun, summary: R
   for (const item of facts.items)
   {
     if (item.toolCallId === help.toolCallId)
-
       continue;
 
     const denied = summary.events.find(event => event.type === 'tool.denied' && event.data?.id === item.toolCallId),
-
       end = item.finishedSeq ?? denied?.seq;
 
     // 求助前已经放行的调用必须先结束；后续只允许只读任务查询。失败/拒绝回执不会抹掉先前副作用。
@@ -130,18 +126,18 @@ export function memberHelpCandidate(task: TaskNode, run: DispatchRun, summary: R
       valid(end !== undefined && (item.allowedSeq < requested.seq ? end < requested.seq : item.toolName === 'cbim_task_inspect'));
 
       if (item.effects.some(effect => ['business-write', 'knowledge-write', 'external-write', 'command'].includes(effect)) || ['write', 'edit', 'bash'].includes(item.toolName))
-
         lastEffectSeq = Math.max(lastEffectSeq, item.allowedSeq, end);
     }
   }
+
   for (const id of help.input.attemptedToolCallIds)
   {
     const item = facts.items.find(value => value.toolCallId === id),
-
       denied = summary.events.find(event => event.type === 'tool.denied' && event.data?.id === id);
 
     valid(item && id !== help.toolCallId && item.receipt && ['succeeded', 'failed', 'denied'].includes(item.status) && (item.finishedSeq ?? denied?.seq ?? Infinity) < requested.seq);
   }
+
   const record = memberHelpRecordSchema.safeParse({ ...help, requestedSeq: requested.seq, finishedSeq: own.finishedSeq, lastEffectSeq });
 
   valid(record.success);

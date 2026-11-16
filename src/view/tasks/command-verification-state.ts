@@ -34,11 +34,9 @@ export const commandVerificationKey = (selection: CommandVerificationSelection) 
 export function mainCommandSelection(run: RunSummary, toolCallId: string, toolName: string): CommandVerificationSelection | undefined
 {
   const binding = run.conversationBinding,
-
     task = run.task;
 
   if (!task || task.mode !== 'chat' || task.agentId !== 'cbim:main' || run.memberBinding || !binding || binding.agentId !== 'cbim:main' || binding.workspaceId !== task.workspaceId || binding.rootSessionId !== task.taskId)
-
     return;
 
   const parsed = commandVerificationInputSchema.safeParse({ workspaceId: task.workspaceId, rootSessionId: binding.rootSessionId, runId: run.runId, toolCallId });
@@ -50,15 +48,12 @@ export function mainCommandSelection(run: RunSummary, toolCallId: string, toolNa
 export function applyCommandVerification(raw: unknown, selection: CommandVerificationSelection): CommandVerificationReport
 {
   const report = commandVerificationReportSchema.parse(raw),
-
     identity = report.identity;
 
   if (identity.workspaceId !== selection.workspaceId || identity.rootSessionId !== selection.rootSessionId || identity.runId !== selection.runId || identity.toolCallId !== selection.toolCallId)
-
     throw Error('核实报告不属于所选原命令');
 
   if (report.source.toolName && report.source.toolName !== selection.expectedToolName)
-
     throw Error('核实报告的工具与原调用不一致');
 
   return report;
@@ -112,11 +107,9 @@ export class CommandVerificationController
   async Inspect()
   {
     if (this.value.loading)
-
       return;
 
     const { workspaceId, rootSessionId, runId, toolCallId } = this.selection,
-
       generation = this.generation.Capture();
 
     this.Publish({ ...this.value, loading: true, error: '' });
@@ -126,7 +119,6 @@ export class CommandVerificationController
       const raw = await this.read({ workspaceId, rootSessionId, runId, toolCallId });
 
       if (!this.generation.IsCurrent(generation))
-
         return;
 
       this.Publish({ report: applyCommandVerification(raw, this.selection), loading: false, error: '' })
@@ -134,7 +126,6 @@ export class CommandVerificationController
     catch (cause)
     {
       if (this.generation.IsCurrent(generation))
-
         this.Publish({ ...this.value, loading: false, error: cause instanceof Error ? cause.message : '原命令核实失败，请重新读取' })
     }
   }

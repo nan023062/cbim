@@ -10,11 +10,9 @@ import type { ToolCall } from '../../tools/rules/types';
 function canonical(value: unknown): unknown
 {
   if (Array.isArray(value))
-
     return value.map(canonical);
 
   if (value && typeof value === 'object')
-
     return Object.fromEntries(Object.keys(value).sort().map(key => [key, canonical((value as Record<string, unknown>)[key])]));
 
   return value;
@@ -58,7 +56,6 @@ export class RepeatedToolFailures
     const item = this.pending.find(call => call.id === id);
 
     if (!item || item.failed !== undefined || this.blocked)
-
       return;
 
     item.failed = failed;

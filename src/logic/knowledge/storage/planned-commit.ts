@@ -23,7 +23,6 @@ import type { ChangeRequest } from '../rules/types';
 export async function readKnowledgePlan(owner: { entry: { id: string }; paths: StoragePaths }, ref: KnowledgePlanRef): Promise<{ request: ChangeRequest; plan?: PlannedKnowledgeCommit }>
 {
   if (!z.string().uuid().safeParse(ref.planId).success || !['object_plan', 'package_plan'].includes(ref.kind))
-
     fail('SOURCE_PLAN_INVALID', '知识计划标识无效');
 
   const file = path.join(owner.paths.Local(owner.entry.id, 'cache'), ref.kind === 'object_plan' ? 'object-plans' : 'resource-imports', ref.planId + '.json');
@@ -35,7 +34,6 @@ export async function readKnowledgePlan(owner: { entry: { id: string }; paths: S
     const stat = await fs.lstat(file);
 
     if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 16 * 1024 * 1024)
-
       fail('SOURCE_PLAN_INVALID', '知识计划文件无效或超过容量');
 
     raw = JSON.parse(await fs.readFile(file, 'utf8'))
@@ -44,10 +42,10 @@ export async function readKnowledgePlan(owner: { entry: { id: string }; paths: S
   {
     fail('SOURCE_PLAN_INVALID', '原知识计划不存在或损坏，请重新预览')
   }
+
   const parsed = plannedRequestSchema.safeParse(raw.request);
 
   if (!parsed.success || parsed.data.workspaceId !== owner.entry.id || parsed.data.requestId !== ref.planId)
-
     fail('SOURCE_PLAN_INVALID', '知识计划身份不一致');
 
   const request = raw.request as ChangeRequest;
@@ -57,25 +55,23 @@ export async function readKnowledgePlan(owner: { entry: { id: string }; paths: S
     if (raw.version !== 2)
     {
       if (raw.hash !== hash(json(request)) || !Array.isArray(raw.deletedRoots) || raw.deletedRoots.some(x => typeof x !== 'string') || Object.keys(raw).some(k => !['request', 'hash', 'deletedRoots'].includes(k)))
-
         fail('SOURCE_PLAN_INVALID', '旧对象计划不完整');
 
       return { request }
     }
+
     return { request, plan: checkedKnowledgePlan(ref.kind, raw) };
   }
+
   const { fingerprint, ...body } = raw;
 
   if (fingerprint !== hash(json(body)))
-
     fail('SOURCE_PLAN_INVALID', '资源计划缓存指纹不一致');
 
   if (Object.keys(raw).some(k => !['version', 'request', 'source', 'createdRoots', 'deletedRoots', 'fingerprint', 'committed', 'reindexRequest', 'result', 'kind', 'mode', 'targetRoot', 'planHash'].includes(k)))
-
     fail('SOURCE_PLAN_INVALID', '资源计划包含未知字段');
 
   if (raw.version !== 2)
-
     return { request };
 
   const { committed: _, reindexRequest: __, result: ___, ...immutable } = body;

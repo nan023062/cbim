@@ -8,7 +8,6 @@ import { z } from 'zod';
 export const controlledPlatformBytes = 1024 * 1024;
 
 const token = z.string().regex(/^[a-f0-9]{64}$/),
-
   seq = z.number().int().positive();
 
 const fact = z.object({ byteLength: z.number().int().min(0).max(controlledPlatformBytes), sha256: z.string().regex(/^[a-f0-9]{64}$/) }).strict();

@@ -23,17 +23,14 @@ export interface ComposerOption
 export function ComposerPicker({ label, value, options, onChange, disabled = false, searchable = false, warning = false, align = 'left', fallbackLabel = '所选模型不可用' }: { label: string; value: string; options: ComposerOption[]; onChange: (value: string) => void; disabled?: boolean; searchable?: boolean; warning?: boolean; align?: 'left' | 'right'; fallbackLabel?: string })
 {
   const [open, setOpen] = useState(false),
-
     [query, setQuery] = useState('');
 
   const root = useRef<HTMLDivElement>(null),
-
     trigger = useRef<HTMLButtonElement>(null);
 
   const id = useId();
 
   const current = options.find(o => o.value === value),
-
     filtered = options.filter(o => (o.label + ' ' + o.description + ' ' + o.group).toLowerCase().includes(query.toLowerCase()));
 
   useEffect(() => { if (!open) return; const outside = (e: PointerEvent) => { if (!root.current?.contains(e.target as Node)) setOpen(false) }; document.addEventListener('pointerdown', outside); root.current?.querySelector<HTMLElement>(searchable ? 'input' : '[aria-selected="true"], [role="option"]')?.focus(); return () => document.removeEventListener('pointerdown', outside) }, [open, searchable]);

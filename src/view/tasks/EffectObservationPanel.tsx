@@ -42,9 +42,7 @@ export function EffectObservationPanel({ identity, anchor, context }: { identity
   const { controller, snapshot, read, draft, attempt, selected, fresh } = useEffectObservation(identity, anchor);
 
   const report = read?.report,
-
     pending = controller.IsPending(draft?.commandId),
-
     locked = !!draft?.commandId && attempt?.phase !== 'rejected';
 
   const eligible = context ? effectRecoveryTarget(identity, report, fresh, selected, context.state) : { reason: '当前视图没有主会话恢复上下文。' };
@@ -109,13 +107,11 @@ export function EffectObservationPanel({ identity, anchor, context }: { identity
 export function MemberEffectObservation({ report, anchor, context }: { report: ExecutionReport; anchor: string; context?: ExecutionRecoveryContext })
 {
   const [ids, setIds] = useState<string[]>([]),
-
     runId = report.identity.runId;
 
   const valid = ids.filter(id => report.tools.items.some(x => x.toolCallId === id));
 
   if (!runId || !report.tools.available)
-
     return null;
 
   const identity: EffectObservationInput = { workspaceId: report.identity.workspaceId, rootSessionId: report.identity.rootSessionId, subject: { kind: 'member_run', taskId: report.identity.taskId, runId, toolCallIds: valid } };

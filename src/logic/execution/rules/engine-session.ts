@@ -23,11 +23,8 @@ function failedBeforeInteraction(run: RunSummary): boolean
   const terminal = run.events.at(-1);
 
   return run.task.mode === 'chat' && run.task.agentId === 'cbim:main' && !run.memberBinding && !run.source && !run.events[0]?.data.freshMain
-
     && run.logIntegrity?.partialTail === false && ['failed', 'interrupted', 'cancelled'].includes(run.status)
-
     && (terminal?.type === 'run.interrupted' || terminal?.type === 'run.settled')
-
     && !run.events.some(event => ['tool.proposed', 'tool.allowed', 'tool.finished', 'tool.denied', 'message', 'message.delta'].includes(event.type));
 }
 
@@ -35,7 +32,6 @@ function failedBeforeInteraction(run: RunSummary): boolean
 export async function selectEngineSession(engine: string, previous: RunSummary, read: (runId: string) => Promise<RunSummary>): Promise<EngineSessionSelection>
 {
   const records: RunSummary[] = [],
-
     seen = new Set<string>();
 
   let current: RunSummary | undefined = previous;
@@ -43,31 +39,26 @@ export async function selectEngineSession(engine: string, previous: RunSummary, 
   while (current)
   {
     if (seen.has(current.runId) || seen.size >= 512)
-
       throw Error('引擎切换历史链异常或过长，请新建对话');
 
     seen.add(current.runId);
 
     if (current.task.taskId !== previous.task.taskId || current.task.workspaceId !== previous.task.workspaceId || current.task.root !== previous.task.root || current.logIntegrity?.partialTail || current.unresolvedTools.length)
-
       throw Error('历史记录无法可靠转交，请先核实原运行');
 
     const bound = [...current.events].reverse().find(event => event.type === 'session.bound');
 
     if (bound?.data.sessionId !== undefined && (typeof bound.data.sessionId !== 'string' || current.sessionFile && bound.data.sessionFile !== current.sessionFile))
-
       throw Error('原生会话身份记录与恢复文件不一致');
 
     const nativeSessionId = typeof bound?.data.sessionId === 'string' ? safeId(bound.data.sessionId) : undefined;
 
     if (!current.sessionFile && !failedBeforeInteraction(current))
-
       throw Error('缺少原生会话记录，不能伪装成恢复');
 
     if (current.sessionFile && (current.events[0]?.data.engine ?? 'pi') === engine)
-    {
       return { sessionFile: current.sessionFile, ...(nativeSessionId ? { nativeSessionId } : {}), ...(records.length ? { handoff: history(records) } : {}) };
-    }
+
     // 首次请求失败可能只有线程 ID，显式重发沿历史寻找可靠旧文件；没有则新建，并只转交输入资料。
     records.push(current);
 
@@ -75,6 +66,7 @@ export async function selectEngineSession(engine: string, previous: RunSummary, 
 
     current = typeof resume === 'string' ? await read(resume) : undefined;
   }
+
   return { handoff: history(records) };
 }
 
@@ -85,7 +77,6 @@ function history(records: RunSummary[]): string
   const encoded = JSON.stringify(value);
 
   if (Buffer.byteLength(encoded) > 1024 * 1024)
-
     throw Error('切换引擎所需历史超过 1 MiB，请新建对话并提供必要摘要');
 
   return encoded;

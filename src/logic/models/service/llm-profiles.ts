@@ -85,26 +85,23 @@ function selectConfiguration(data: ModelFile, id?: string, modelId?: string, con
   const definition = data.profiles.find(profile => profile.id === (id ?? data.selectedId));
 
   if (!definition)
-
     fail('LLM_REQUIRED', '请先在设置中配置默认大模型');
 
   const model = definition.models.find(item => item.id === (modelId ?? definition.defaultModel) && item.enabled);
 
   if (!model)
-
     fail('LLM_MODEL', '模型不存在或已禁用');
 
   const selectedConnection = connection ? selectProviderConnection(definition, connection, model.id) : { api: definition.api, baseUrl: definition.baseUrl };
 
   if (!selectedConnection)
-
     fail('LLM_CONNECTION_API', '没有满足所选协议要求的兼容接口，请在模型设置中配置该供应商的兼容接口');
 
   const profile: ResolvedLlm['profile'] = {
     id: definition.id, name: definition.name, api: selectedConnection.api, baseUrl: selectedConnection.baseUrl, auth: definition.auth, model: model.id, contextWindow: model.contextWindow, maxTokens: model.maxTokens, reasoning: model.reasoning,
-
     ...(model.vision === undefined ? {} : { vision: model.vision }), ...(model.outputLimit === undefined ? {} : { outputLimit: model.outputLimit }), ...(model.thinkingLevel === undefined ? {} : { thinkingLevel: model.thinkingLevel }), ...(model.workingContextWindow === undefined ? {} : { workingContextWindow: model.workingContextWindow }), ...(model.compactionPercent === undefined ? {} : { compactionPercent: model.compactionPercent }), ...(model.pricing === undefined ? {} : { pricing: structuredClone(model.pricing) })
   };
+
   // 单次运行只冻结实际接口；不改写供应商主接口或历史快照。
   return { definition, profile };
 }
@@ -113,25 +110,20 @@ function selectConfiguration(data: ModelFile, id?: string, modelId?: string, con
 function selectOperation(data: ModelFile, ref: ModelOperationReference): { definition: DiskProfile; profile: ResolvedModelOperation['profile'] }
 {
   if (!('kind' in ref))
-
     return selectConfiguration(data, ref.profileId, ref.modelId, ref.connection);
 
   if (ref.kind !== 'embedding')
-
     fail('LLM_MODEL_ROLE', '模型操作类型无效');
 
   const definition = data.profiles.find(profile => profile.id === ref.profileId);
 
   if (!definition)
-
     fail('LLM_REQUIRED', '向量模型供应商不存在');
 
   const connection = definition.embedding,
-
     model = connection?.models.find(model => model.id === ref.modelId && model.enabled);
 
   if (!connection || !model)
-
     fail('LLM_MODEL', '向量模型不存在或已禁用，请明确配置向量接口和型号');
 
   return { definition, profile: { kind: 'embedding', id: definition.id, name: definition.name, api: connection.api, baseUrl: connection.baseUrl, auth: definition.auth, model: model.id, inputTokens: model.inputTokens, dimensions: model.dimensions, ...(model.inputPrice === undefined ? {} : { inputPrice: model.inputPrice }) } };
@@ -157,17 +149,15 @@ export class LlmProfiles
     catch (e: any)
     {
       if (e.code === 'ENOENT')
-
         return { version: 1, profiles: [] };
 
       throw Error('模型配置读取失败，请检查配置文件')
     }
-    const data = fileSchema.parse(raw),
 
+    const data = fileSchema.parse(raw),
       profiles = data.profiles.map(p => { const { id, encryptedKey, ...rest } = p; return { ...definition.parse(rest), id, encryptedKey } });
 
     if (new Set(profiles.map(p => p.id)).size !== profiles.length || data.selectedId && !profiles.some(p => p.id === data.selectedId))
-
       fail('LLM_CONFIG', '模型配置身份不一致');
 
     return { version: 1, selectedId: data.selectedId, profiles };
@@ -207,11 +197,9 @@ export class LlmProfiles
   private Decrypt(p: DiskProfile)
   {
     if (p.auth === 'none')
-
       return 'cbim-local-no-auth';
 
     if (!p.encryptedKey || !this.cipher?.Available())
-
       fail('SECRET_STORAGE', '模型密钥不可用，请重新保存 API Key');
 
     try
@@ -236,7 +224,6 @@ export class LlmProfiles
   async Configuration(profileId: string, modelId: string, connection?: ModelConnectionRequirement): Promise<ResolvedLlm['profile']>
   {
     if (!z.string().uuid().safeParse(profileId).success || typeof modelId !== 'string' || !modelId.trim())
-
       fail('LLM_REQUIRED', '岗位配置必须明确选择供应商与模型');
 
     return selectConfiguration(await this.Read(), profileId, modelId, connection).profile;
@@ -264,7 +251,6 @@ export class LlmProfiles
   private Explicit(ref: ExplicitModelReference)
   {
     if (!z.string().uuid().safeParse(ref.profileId).success || typeof ref.modelId !== 'string' || !ref.modelId.trim())
-
       fail('LLM_REQUIRED', '岗位配置必须明确选择供应商与模型')
   }
 
@@ -298,13 +284,12 @@ export class LlmProfiles
       const p = (await this.Read()).profiles.find(p => p.id === r.id);
 
       if (!p || p.baseUrl !== r.connection.baseUrl || p.api !== r.connection.api)
-
         fail('KEY_REQUIRED', '请先输入该接口的 API Key');
 
       key = this.Decrypt(p)
     }
-    const base = r.connection.baseUrl.replace(/\/$/, ''),
 
+    const base = r.connection.baseUrl.replace(/\/$/, ''),
       anthropic = r.connection.api === 'anthropic-messages';
 
     const url = base + (anthropic && !base.endsWith('/v1') ? '/v1/models' : '/models');
@@ -312,7 +297,6 @@ export class LlmProfiles
     const body = await this.Request(url, { headers: this.Headers(r.connection.api, r.connection.auth, key) });
 
     if (!Array.isArray(body.data))
-
       fail('LLM_RESPONSE', '接口未返回模型列表，请手动添加模型');
 
     return parseModelCatalog(body.data);
@@ -327,11 +311,9 @@ export class LlmProfiles
       h['anthropic-version'] = '2023-06-01';
 
       if (auth === 'api-key')
-
         h['x-api-key'] = key
     }
     else if (auth === 'api-key')
-
       h.Authorization = 'Bearer ' + key;
 
     return h
@@ -362,6 +344,7 @@ export class LlmProfiles
 
         fail('LLM_HTTP', `模型端点 ${endpoint.href} 返回 HTTP ${response.status}：${reason}`);
       }
+
       const reader = response.body?.getReader();
 
       let text = '';
@@ -375,7 +358,6 @@ export class LlmProfiles
           const part = await reader.read();
 
           if (part.done)
-
             break;
 
           text += decoder.decode(part.value, { stream: true });
@@ -387,14 +369,15 @@ export class LlmProfiles
             fail('LLM_RESPONSE', '模型响应过大')
           }
         }
+
         text += decoder.decode()
       }
+
       return JSON.parse(text);
     }
     catch (e: any)
     {
       if (['LLM_HTTP', 'LLM_RESPONSE'].includes(e.code))
-
         throw e;
 
       fail('LLM_CONNECTION', `模型端点 ${endpoint.href} 连接失败或超时，请检查网络与接口配置`)
@@ -405,15 +388,11 @@ export class LlmProfiles
   async Test(id: string, modelId?: string, connection?: ModelConnectionRequirement)
   {
     const { profile: p, apiKey } = await this.Resolve(id, modelId, connection),
-
       started = Date.now(),
-
       anthropic = p.api === 'anthropic-messages',
-
       responses = p.api === 'openai-responses';
 
     const base = p.baseUrl.replace(/\/$/, ''),
-
       url = base + (anthropic ? (base.endsWith('/v1') ? '/messages' : '/v1/messages') : responses ? '/responses' : '/chat/completions');
 
     const payload = responses ? { model: p.model, max_output_tokens: 64, stream: false, input: 'Reply with OK.' } : { model: p.model, max_tokens: 64, stream: false, messages: [{ role: 'user', content: 'Reply with OK.' }] };
@@ -423,7 +402,6 @@ export class LlmProfiles
     const valid = anthropic ? body.content?.some((x: any) => x.type === 'text' && typeof x.text === 'string') : responses ? body.output?.some((x: any) => x.type === 'message' && x.content?.some((c: any) => c.type === 'output_text' && typeof c.text === 'string')) : typeof body.choices?.[0]?.message?.content === 'string';
 
     if (!valid)
-
       fail('LLM_RESPONSE', '接口没有返回有效文本，请核对接口协议');
 
     return { ok: true, model: p.model, latencyMs: Date.now() - started, api: p.api, baseUrl: p.baseUrl };
@@ -437,17 +415,14 @@ export class LlmProfiles
     const p = operation.profile;
 
     if (!('kind' in p) || p.kind !== 'embedding')
-
       fail('LLM_OPERATION', '所选模型没有向量能力');
 
     const started = Date.now(),
-
       body = await this.Request(p.baseUrl.replace(/\/$/, '') + '/embeddings', { method: 'POST', headers: this.Headers(p.api, p.auth, operation.apiKey), body: JSON.stringify({ model: p.model, input: ['connection test'], encoding_format: 'float' }) });
 
     const vector = body.data?.[0]?.embedding;
 
     if (!Array.isArray(body.data) || body.data.length !== 1 || body.data[0].index !== 0 || !Array.isArray(vector) || vector.length !== p.dimensions || vector.some((value: unknown) => typeof value !== 'number' || !Number.isFinite(value)))
-
       fail('LLM_RESPONSE', '接口未返回配置维度的有效向量，请核对模型与维度');
 
     return { ok: true, model: p.model, latencyMs: Date.now() - started, api: p.api, baseUrl: p.baseUrl, dimensions: p.dimensions };

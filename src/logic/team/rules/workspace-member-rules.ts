@@ -29,7 +29,6 @@ const equal = (a: unknown, b: unknown) => workspaceMemberCanonical(a) === worksp
 function valid(condition: unknown, message: string, code = 'MEMBER_AUDIT'): asserts condition
 {
   if (!condition)
-
     fail(code, message)
 }
 
@@ -55,7 +54,6 @@ export function workspaceMemberCommand(request: WorkspaceMemberCommitInput, acto
 export function workspaceMemberMainCommandId(workspaceId: string, actor: WorkspaceMemberActor)
 {
   const source = workspaceMemberMainActorSchema.parse(actor),
-
     h = hash(workspaceMemberCanonical({ domain: 'workspace-member-main-v1', workspaceId, source }));
 
   return `${h.slice(0, 8)}-${h.slice(8, 12)}-5${h.slice(13, 16)}-a${h.slice(17, 20)}-${h.slice(20, 32)}`;
@@ -73,7 +71,6 @@ export function workspaceMemberChangedFields(previous: WorkspaceMember | undefin
   const fields: WorkspaceMemberField[] = ['name', 'position', 'adaptation', 'capability', 'runtimePolicy', 'state'];
 
   if (!previous)
-
     return fields;
 
   const old = workspaceMemberProposed(previous);
@@ -117,9 +114,7 @@ export interface WorkspaceMemberRegistry
 function validateTransition(previous: WorkspaceMember | undefined, event: WorkspaceMemberChange, history: readonly WorkspaceMemberChange[])
 {
   const next = event.next,
-
     input = event.request.change,
-
     proposed = workspaceMemberProposed(next);
 
   valid(next.adoption.capabilityHash === workspaceMemberCapabilityHash(next.adoption.configuration) && next.runtimePolicy.configurationHash === workspaceMemberModelHash(next.runtimePolicy.snapshot), '采纳快照与规范内容指纹不一致');
@@ -138,6 +133,7 @@ function validateTransition(previous: WorkspaceMember | undefined, event: Worksp
 
     return;
   }
+
   valid(previous, '变更引用的岗位不存在');
 
   valid(previous.state !== 'retired', '退休岗位不可修改或复活', 'MEMBER_RETIRED');
@@ -147,7 +143,6 @@ function validateTransition(previous: WorkspaceMember | undefined, event: Worksp
   valid(next.memberId === previous.memberId && next.workspaceId === previous.workspaceId && next.createdAt === previous.createdAt && next.revision === previous.revision + 1 && Date.parse(event.committedAt) >= Date.parse(previous.updatedAt), '岗位身份或创建历史不能改变');
 
   const oldSource = previous.adoption.configuration,
-
     newSource = next.adoption.configuration;
 
   valid(oldSource.agentId === newSource.agentId && oldSource.teamId === newSource.teamId && oldSource.source === newSource.source, '已有岗位不能改绑另一能力来源');
@@ -168,6 +163,7 @@ function validateTransition(previous: WorkspaceMember | undefined, event: Worksp
 
       expected.runtimePolicy = next.runtimePolicy;
     }
+
     valid(equal(next.adoption, previous.adoption), '编辑元信息不得顺带采纳能力');
   }
   else if (input.kind === 'state')
@@ -190,6 +186,7 @@ function validateTransition(previous: WorkspaceMember | undefined, event: Worksp
 
     expected.runtimePolicy = next.runtimePolicy;
   }
+
   valid(equal(expected, proposed), '审计修改了未被本次操作选定的字段');
 
   valid(workspaceMemberChangedFields(previous, proposed).length > 0, '岗位没有语义变化', 'MEMBER_NO_CHANGE');
@@ -205,13 +202,10 @@ export function applyWorkspaceMemberChange(state: WorkspaceMemberRegistry, raw: 
   const event = raw;
 
   if (event.actor.kind === 'main_agent')
-
     valid(event.request.commandId === workspaceMemberMainCommandId(state.workspaceId, event.actor), '主岗位命令来源不一致', 'MEMBER_ACTOR');
 
   const members = state.workspaceMembers ?? [],
-
     history = state.workspaceMemberChanges ?? [],
-
     cursor = state.registryCursor ?? null;
 
   valid(Array.isArray(members) && Array.isArray(history) && new Set(members.map(item => item.memberId)).size === members.length, '岗位登记投影无效');

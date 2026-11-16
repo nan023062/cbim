@@ -121,25 +121,18 @@ const definition = z.record(jsonValue);
 
 const moduleBinding = z.object({
   moduleId: id, name: text, knowledgeRevision: id, maintenanceBindingId: id.optional(), maintainerPersonIds: z.array(id).optional(), workflow: z.discriminatedUnion('kind', [
-
     z.object({ kind: z.literal('module'), id, version: id }).strict(),
-
     z.object({ kind: z.literal('general'), id, version: id, reason: text }).strict(),
-
   ])
 }).strict();
 
 const shape = z.object({
   version: z.literal(1), workspaceId: id, knowledgeRevision: id,
-
   agent: z.object({
     workspaceId: id, teamId: id, agentId: id, knowledgeRevision: id, name: text, source: z.enum(['builtin', 'workspace']), principles: text,
-
     effectiveSkills: z.array(z.object({ skillId: id, ownerId: id, inherited: z.boolean(), content: text }).strict()),
   }).strict(), agentDefinition: definition,
-
   modules: z.array(z.object({ binding: moduleBinding, definition, overview: text, workflowText: text, workflowContract: workflowContractSchema.optional() }).strict()).min(1).max(100),
-
   standards: z.array(z.object({ id, version: id, text }).strict()).min(1), memberContext: z.object({ binding: ownerExecutionBindingSchema, name: z.string().min(1).max(100), position: z.string().min(1).max(500), adaptation: workspaceMemberAdaptationSchema }).strict().optional(), fallbackBinding: automaticExecutionBindingSchema.optional(), fingerprint: z.string().regex(/^[a-f0-9]{64}$/),
 }).strict();
 
@@ -164,7 +157,6 @@ export function validatePreparedDispatchKnowledge(value: unknown): asserts value
   const result = shape.safeParse(value);
 
   if (!result.success)
-
     fail('EXECUTION_CONTEXT_INVALID', '成员执行知识快照结构无效：' + (result.error.issues[0]?.path.join('.') || 'root'));
 
   const prepared = value as PreparedDispatchKnowledge;
@@ -179,12 +171,14 @@ export function validatePreparedDispatchKnowledge(value: unknown): asserts value
 
     invalid(!!prepared.memberContext || !automaticExecutionBindingMatches(b, prepared.workspaceId, b.scopeId, prepared.agent.agentId, prepared.modules.map(m => m.binding.moduleId)) || b.knowledgeRevision !== prepared.knowledgeRevision || b.teamId !== prepared.agent.teamId || b.capabilityHash !== workspaceMemberCapabilityHash(prepared.agent), '自动兜底身份或冻结能力不一致');
   }
+
   if (prepared.memberContext)
   {
     const binding = prepared.memberContext.binding;
 
     invalid(!ownerExecutionBindingMatches(binding, prepared.workspaceId, prepared.agent.agentId, prepared.modules.map(module => module.binding.moduleId)) || binding.capability.teamId !== prepared.agent.teamId || workspaceMemberCapabilityHash(prepared.agent) !== binding.capability.capabilityHash, '岗位冻结身份、能力正文或模块与执行知识不一致');
   }
+
   invalid(new Set(prepared.modules.map(module => module.binding.moduleId)).size !== prepared.modules.length, '执行模块不能重复');
 
   // 各模块声明单独有效仍可能重叠或合计超限；准备时核完整集合，不能领取后再裁剪范围。
@@ -196,6 +190,7 @@ export function validatePreparedDispatchKnowledge(value: unknown): asserts value
   {
     fail('EXECUTION_CONTEXT_INVALID', '冻结模块的完整产物范围重叠、数量超限或无效')
   }
+
   try
   {
     preparedExecutionScope(prepared.modules.map(module => ({ contract: module.workflowContract })))
@@ -204,6 +199,7 @@ export function validatePreparedDispatchKnowledge(value: unknown): asserts value
   {
     fail('EXECUTION_CONTEXT_INVALID', '冻结模块的执行范围混合、冲突或超限')
   }
+
   invalid(new Set(prepared.standards.map(standard => standard.id)).size !== prepared.standards.length, '内置规范不能重复');
 
   invalid(new Set(prepared.agent.effectiveSkills.map(skill => skill.skillId)).size !== prepared.agent.effectiveSkills.length, '角色有效 Skill 不能重复');
@@ -221,9 +217,7 @@ export function validatePreparedDispatchKnowledge(value: unknown): asserts value
     invalid(module.binding.knowledgeRevision !== prepared.knowledgeRevision || module.definition.id !== module.binding.moduleId, '模块定义与执行知识基线不一致');
 
     if (module.binding.workflow.kind === 'module')
-
       invalid(hash(module.workflowText) !== module.binding.workflow.version, '模块 Workflow 正文与冻结版本不一致');
-
     else
     {
       invalid(module.binding.workflow.id !== 'cbim:general' || module.binding.workflow.version !== '1', '不支持的通用任务流程');
@@ -231,8 +225,8 @@ export function validatePreparedDispatchKnowledge(value: unknown): asserts value
       invalid(module.workflowText !== prepared.standards.find(standard => standard.id === 'business-execution')!.text, '通用任务流程正文与内置执行规范不一致');
     }
   }
-  for (const standard of prepared.standards)
 
+  for (const standard of prepared.standards)
     invalid(hash(standard.text) !== standard.version, '内置规范正文与冻结版本不一致');
 
   invalid(dispatchKnowledgeFingerprint(prepared) !== prepared.fingerprint, '成员执行知识快照指纹不一致');

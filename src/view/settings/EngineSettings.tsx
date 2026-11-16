@@ -19,25 +19,17 @@ const api = window.cbim;
 export function EngineSettings({ active = true }: { active?: boolean })
 {
   const [selected, setSelected] = useState<LoopEngine | 'all'>('all'),
-
     [state, setState] = useState<EnginePackageSettings>(),
-
     [models, setModels] = useState<LlmSettings>();
 
   const [busy, setBusy] = useState(false),
-
     [error, setError] = useState(''),
-
     [readError, setReadError] = useState(''),
-
     [notice, setNotice] = useState('');
 
   const alive = useRef(false),
-
     reading = useRef<symbol | undefined>(undefined),
-
     acting = useRef(false),
-
     generation = useRef(new AsyncGeneration());
 
   const reload = useCallback(async (includeModels = false) => { if (reading.current === generation.current.Capture()) return; const request = generation.current.Capture(); reading.current = request; try { const [engines, models] = await Promise.all([api.call('engines.settings'), includeModels ? api.call('models.list') : Promise.resolve(undefined)]); if (alive.current && generation.current.IsCurrent(request)) { setState(engines); setReadError(''); if (models) setModels(models) } } catch (error: any) { if (alive.current && generation.current.IsCurrent(request)) setReadError(error.message) } finally { if (reading.current === request) reading.current = undefined } }, []);
@@ -47,7 +39,6 @@ export function EngineSettings({ active = true }: { active?: boolean })
   async function perform(work: () => Promise<EnginePackageSettings>, message: string)
   {
     if (acting.current)
-
       return;
 
     acting.current = true;
@@ -85,17 +76,14 @@ export function EngineSettings({ active = true }: { active?: boolean })
   }
 
   const descriptor = selected !== 'all' ? engineDescriptor(selected) : undefined,
-
     item = state?.items.find(item => item.kind === selected);
 
   const available = descriptor && models ? models.profiles.flatMap(profile => profile.models.filter(model => model.enabled && providerSupportsEngine(descriptor.id, profile, model.id)).map(model => profile.name + ' / ' + (model.name || model.id))) : [];
 
   const installed = !!item?.active,
-
     sameVersion = !!item?.active && item.active.identity === item.candidate?.identity;
 
   const preparing = !!item?.preparing,
-
     blocked = busy || preparing || !state?.managed;
 
   return <section className="repository-settings" aria-label="引擎能力支持列表">

@@ -67,13 +67,11 @@ export function SettingsView({ onDirtyChange, sidebarResize, section, onSectionC
   useEffect(() => () => onDirtyChange?.(false), [onDirtyChange]);
 
   const [query, setQuery] = useState(''),
-
     [visited, setVisited] = useState<SettingsSectionId[]>([section]);
 
   const content = useRef<HTMLDivElement>(null);
 
   const found = findSettingsSections(query),
-
     active = settingsSections.find(item => item.id === section)!;
 
   useEffect(() => { setVisited(old => old.includes(section) ? old : [...old, section]); content.current?.scrollTo(0, 0) }, [section]);
@@ -90,35 +88,20 @@ export function SettingsView({ onDirtyChange, sidebarResize, section, onSectionC
     switch (id)
     {
       case 'models':
-
         return <ModelSettings onDirtyChange={reporters.models} />;
-
       case 'accounts':
-
         return <AccountSettings onDirtyChange={reporters.accounts} />;
-
       case 'appearance':
-
         return <AppearanceSettings appearance={appearance} />;
-
       case 'runtime':
-
         return <AdmissionSettings onDirtyChange={reporters.runtime} active={section === 'runtime'} />;
-
       case 'budget':
-
         return <BudgetSettings onDirtyChange={reporters.budget} />;
-
       case 'web':
-
         return <WebSettings onDirtyChange={reporters.web} />;
-
       case 'resources':
-
         return <ResourceSettings onDirtyChange={reporters.resources} />;
-
       case 'about':
-
         return <AboutSettings updates={updates} onOpenUpdates={onOpenUpdates} />;
     }
   }

@@ -49,9 +49,7 @@ export function memberTaskLabel(task: TaskNode)
 export function MemberActivityCard({ workspaceId, rootSessionId, task, onSelectTask, active, inline = false }: { workspaceId: string; rootSessionId: string; task: TaskNode; onSelectTask: (id: string) => void; active: boolean; inline?: boolean })
 {
   const [expanded, setExpanded] = useState(false),
-
     latest = task.runIds.at(-1),
-
     cancellation = committedMemberCancellation(task);
 
   const { run, loading, error, refresh } = useMemberRun(workspaceId, rootSessionId, task.taskId, latest, !inline || expanded, active);
@@ -68,7 +66,7 @@ export function MemberActivityCard({ workspaceId, rootSessionId, task, onSelectT
   </>;
 
   if (inline)
-
+  {
     return <div className="inline-member" data-member-task-id={task.taskId}>
     <div className="inline-member-heading"><span>{task.assignee.name} · </span><span className={'member-state ' + task.status}><Icon name={stateIconNames[task.status] ?? 'info'} size={16} />{memberTaskLabel(task)}{task.status === 'result_ready' ? ' · 尚未验收' : ''}</span><button onClick={() => onSelectTask(task.taskId)}><Icon name="inspect" size={16} />查看任务详情</button></div>
     <p className="inline-member-goal">{task.goal}</p>
@@ -78,6 +76,7 @@ export function MemberActivityCard({ workspaceId, rootSessionId, task, onSelectT
     <button className="inline-member-toggle" aria-expanded={expanded} onClick={() => setExpanded(value => !value)}>{expanded ? '收起成员过程' : '展开成员过程'}</button>
     {expanded && <div className="inline-member-body">{body}</div>}
   </div>;
+  }
 
   return <article className="member-activity-card" aria-label={'成员任务 · ' + task.assignee.name}>
     <header><span className="member-avatar"><Icon name="team" size={17} /></span><div><strong>{task.assignee.name}</strong><span className="member-role-caption">执行 Agent</span></div><span className={'member-state ' + task.status}><Icon name={stateIconNames[task.status] ?? 'info'} size={16} />{memberTaskLabel(task)}</span></header>
@@ -92,7 +91,6 @@ export function MemberActivity({ workspaceId, rootSessionId, tasks, onSelectTask
   const local = tasks.filter(task => task.identity.workspaceId === workspaceId && task.identity.rootSessionId === rootSessionId);
 
   if (!local.length)
-
     return null;
 
   const latest = [...local].sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.taskId.localeCompare(a.taskId)).slice(0, 3);

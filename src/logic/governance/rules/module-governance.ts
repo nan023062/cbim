@@ -6,15 +6,11 @@
 import { z } from 'zod';
 
 const id = z.string().min(1).max(512),
-
   uuid = z.string().uuid(),
-
   digest = z.string().regex(/^[a-f0-9]{64}$/),
-
   count = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER);
 
 const positive = count.refine(value => value > 0),
-
   timestamp = z.string().datetime();
 
 const moduleId = z.string().max(1024).regex(/^\.cbim\/workspace\/(?:[a-z0-9_]+\/)*[a-z0-9_]+$/);
@@ -22,7 +18,6 @@ const moduleId = z.string().max(1024).regex(/^\.cbim\/workspace\/(?:[a-z0-9_]+\/
 const filePath = z.string().max(2048).regex(/^\.cbim\/workspace\/(?:[a-z0-9_]+\/)+(?:module\.json|module\.md)$/);
 
 const note = z.string().max(8000),
-
   nonempty = note.refine(value => value.trim().length > 0, '须提供非空说明');
 
 /** 正文沿用知识事务 2 MiB UTF-8 上限；不按 UTF-16 长度把多字节内容误判为可写。 */
@@ -35,7 +30,6 @@ export const moduleGovernanceIdentitySchema = z.object(identityShape).strict();
 export const moduleGovernanceActorSchema = z.object({ kind: z.literal('local_desktop'), interaction: z.literal('explicit_submit') }).strict();
 
 const runId = z.string().regex(/^[a-zA-Z0-9_-]{1,100}$/),
-
   agentIdentity = z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/);
 
 /** 来源由桌面提交入口或真实主运行闭包写入；缺省表示旧记录未登记来源，不推定为本机人员。 */
@@ -70,7 +64,6 @@ export const moduleGovernanceResponseStateSchema = z.object({ reference: moduleG
 function checkedFeedback(value: { decision: string; feedback?: z.infer<typeof moduleGovernanceFeedbackSchema> }, ctx: z.RefinementCtx)
 {
   if (value.feedback && value.decision !== (value.feedback.kind === 'evidence_request' ? 'defer' : 'reject'))
-
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['feedback'], message: '补证只能随明确暂缓登记，异议只能随明确驳回登记' });
 }
 

@@ -12,9 +12,7 @@ import { workspaceMemberListSchema, workspaceRegistryCursorSchema } from '../../
 import { ownerExecutionDiscoverySchema, moduleOwnerMatchesSchema } from '../../team/rules/owner-execution-discovery';
 
 const id = z.string().min(1).max(1024),
-
   uuid = z.string().uuid(),
-
   sha = z.string().regex(/^[a-f0-9]{64}$/);
 
 const modules = z.object({ moduleIds: z.array(id).min(1).max(20).refine(ids => new Set(ids).size === ids.length), matches: moduleOwnerMatchesSchema.optional() }).strict().refine(value => !value.matches || value.matches.choices.every(item => value.moduleIds.includes(item.moduleId)), '匹配必须属于本次模块');

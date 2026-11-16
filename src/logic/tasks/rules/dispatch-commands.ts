@@ -31,7 +31,6 @@ export const dispatchTaskFields = z.object({ assigneeAgentId: text.max(512), mod
 
 export const dispatchTaskInput = openGraphInput.extend({
   expectedParentRevision: z.number().int().min(1).max(Number.MAX_SAFE_INTEGER),
-
   // 缺省只供原命令查询兼容；新工具、服务和 Store 各自要求选择，不能由解析兼容取得新派发许可。
   task: dispatchTaskFields.superRefine((value, context) => { try { validateWorkflowSelections(value.moduleIds, value.workflowSelections) } catch { context.addIssue({ code: 'custom', message: 'Workflow 选择不属于本次任务模块' }) } if (value.ownerSelection && (value.ownerSelection.expectedOwners.length !== value.moduleIds.length || !value.moduleIds.every(id => value.ownerSelection!.expectedOwners.some(owner => owner.moduleId === id)))) context.addIssue({ code: 'custom', message: '负责人选择必须精确对应任务模块' }) }),
 }).strict();

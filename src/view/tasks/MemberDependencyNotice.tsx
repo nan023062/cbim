@@ -12,19 +12,14 @@ import './member-dependency.css';
 export function MemberDependencyNotice({ task, compact = false }: { task: TaskNode; compact?: boolean })
 {
   const history = memberDependencyHistory(task),
-
     addition = memberDependencyAdditionHistory(task),
-
     revision = memberDependencyRevisionHistory(task),
-
     all = [...history.records, ...addition.records, ...revision.records.map(r => ({ commandId: r.commandId, previousTaskRevision: r.request.target.expectedRevision }))];
 
   if (history.invalid || addition.invalid || revision.invalid || new Set(all.map(record => record.commandId)).size !== all.length || new Set(all.map(record => record.previousTaskRevision)).size !== all.length)
-
     return <p className="member-warning" role="alert" data-testid="member-dependency-invalid">前置调整记录与任务身份或版本不一致，请重新同步任务图核实。</p>;
 
   if (!all.length)
-
     return null;
 
   const latest = Math.max(...all.map(record => record.previousTaskRevision));

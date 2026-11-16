@@ -185,9 +185,7 @@ export class Application
   private BindAdmission(workspace: Workspace, lease: WorkspaceExecutionLease): WorkspaceAdmission
   {
     const id = workspace.entry.id,
-
       ownerEpoch = ++this.nextAdmissionEpoch,
-
       controller = new AbortController();
 
     let current = true;
@@ -198,11 +196,8 @@ export class Application
 
     return {
       manager: this.admission,
-
       ownerEpoch,
-
       signal: controller.signal,
-
       IsCurrent: () => current && !this.stopping && workspace.state === 'running' && this.running.get(id) === workspace,
     };
   }
@@ -219,11 +214,9 @@ export class Application
   private AssertServiceAvailable(id: string)
   {
     if (this.stopping)
-
       fail('SHUTTING_DOWN', 'CBIM 正在退出');
 
     if (this.retiring.has(id))
-
       fail('WORKSPACE_STOPPING', '工作区正在关闭或重启，请稍后重试');
   }
 
@@ -293,14 +286,12 @@ export class Application
     this.platform = platform;
 
     if (platform.engineArtifacts)
-
+    {
       this.enginePackages = new EnginePackages(
-
         path.join(paths.userRoot, 'engine-installations.json'),
-
         platform.engineArtifacts
-
       );
+    }
 
     this.webSettings = new WebSettings(path.join(paths.userRoot, 'web-search.json'), secretCipher);
 
@@ -311,23 +302,16 @@ export class Application
     this.engineModels = new EngineModelProfiles(this.models);
 
     this.mainAgentSettings = new MainAgentSettings(
-
       (id) => path.join(paths.Project(id), 'main-agent.json'),
-
       (identity) => { this.AssertServiceAvailable(identity.workspaceId); this.Workspace(identity.workspaceId).Assert(identity); },
-
       this.engineModels
-
     );
 
     this.githubFeedback = new GitHubFeedback(path.join(paths.userRoot, 'github-feedback'), secretCipher);
 
     this.admissionSettings = new AdmissionSettings(
-
       path.join(paths.userRoot, 'run-admission.json'),
-
       this.admission
-
     );
 
     this.budgetSettings = new BudgetSettings(path.join(paths.userRoot, 'scope-budget.json'));
@@ -339,13 +323,9 @@ export class Application
     this.resources = new ResourceRepositories(paths);
 
     this.repositoryConnections = new RepositoryConnections(
-
       path.join(paths.userRoot, 'repository-connections.json'),
-
       this.resources,
-
       (id) => { this.AssertServiceAvailable(id); const ws = this.Workspace(id); ws.Assert(); return ws; }
-
     );
 
     this.chatMaterials = new ChatMaterialImports((id) => { this.AssertServiceAvailable(id); const ws = this.Workspace(id); ws.Assert(); return ws; }, this.repositoryConnections);
@@ -361,7 +341,6 @@ export class Application
     const service = this.automationServices.get(id);
 
     if (!service)
-
       fail('SERVICE_NOT_READY', '工作区自动化尚未就绪');
 
     return service;
@@ -379,7 +358,6 @@ export class Application
     const service = this.dispatchers.get(id);
 
     if (!service)
-
       fail('SERVICE_NOT_READY', '工作区成员服务尚未就绪');
 
     return service;
@@ -397,7 +375,6 @@ export class Application
     const service = this.memberRegistries.get(id);
 
     if (!service)
-
       fail('SERVICE_NOT_READY', '工作区岗位登记尚未就绪');
 
     return service;
@@ -415,7 +392,6 @@ export class Application
     const service = this.ownershipRegistries.get(id);
 
     if (!service)
-
       fail('SERVICE_NOT_READY', '工作区模块责任尚未就绪');
 
     return service;
@@ -433,7 +409,6 @@ export class Application
     const service = this.memberExecutions.get(id);
 
     if (!service)
-
       fail('SERVICE_NOT_READY', '工作区成员执行服务尚未就绪');
 
     return service;
@@ -451,7 +426,6 @@ export class Application
     const manager = this.executions.get(id);
 
     if (!manager)
-
       fail('SERVICE_NOT_READY', '工作区执行服务尚未就绪');
 
     return manager;
@@ -469,7 +443,6 @@ export class Application
     const history = this.histories.get(id);
 
     if (!history)
-
       fail('SERVICE_NOT_READY', '工作区 Agent 历史尚未就绪');
 
     return history;
@@ -485,7 +458,6 @@ export class Application
     const service = this.requestBudgetServices.get(id);
 
     if (!service)
-
       fail('SERVICE_NOT_READY', '请求预算服务尚未就绪');
 
     return service;
@@ -501,7 +473,6 @@ export class Application
     const service = this.isolatedExecutionServices.get(id);
 
     if (!service)
-
       fail('SERVICE_NOT_READY', '隔离资源服务尚未就绪');
 
     return service;
@@ -517,7 +488,6 @@ export class Application
     const service = this.controlledFileServices.get(id);
 
     if (!service)
-
       fail('SERVICE_NOT_READY', '受控文件服务尚未就绪');
 
     return service;
@@ -543,7 +513,6 @@ export class Application
     await this.budgetSettings.Init();
 
     if (options.restore !== false)
-
       await this.Restore();
   }
 
@@ -554,17 +523,11 @@ export class Application
 
     return {
       ...data,
-
       warning: this.catalog.warning,
-
       entries: await Promise.all(
-
         data.entries.map(
-
           async (e) => this.running.get(e.id)?.View() || { ...e, state: (await exists(e.path)) ? 'registered' : 'missing', tasks: [], }
-
         )
-
       ),
     };
   }
@@ -575,7 +538,6 @@ export class Application
     const ws = this.running.get(id);
 
     if (!ws)
-
       fail('NOT_RUNNING', '工作区未运行，请由用户在桌面打开');
 
     return ws;
@@ -597,11 +559,9 @@ export class Application
   public async Open(id: string, restart = false)
   {
     if (this.stopping)
-
       fail('SHUTTING_DOWN', 'CBIM 正在退出');
 
     if (this.opening.has(id))
-
       return this.opening.get(id)!;
 
     this.AssertServiceAvailable(id);
@@ -611,7 +571,6 @@ export class Application
       const entry = (await this.catalog.Read()).entries.find((x) => x.id === id);
 
       if (!entry)
-
         fail('NOT_REGISTERED', '工作区未登记');
 
       let ws = this.running.get(id);
@@ -689,85 +648,50 @@ export class Application
           try
           {
             ws.AttachDispatchStore(
-
               new FileDispatchStore(
-
                 path.join(this.paths.Project(id), 'dispatch'),
-
                 id,
-
                 monitor.dispatchObserver
-
               )
-
             );
 
             await ws.Open({ beforeDispatchLoad: () => monitor.InitializeHistory() });
 
             const lease = new WorkspaceExecutionLease(),
-
               admission = this.BindAdmission(ws, lease),
               {
                 dispatch: service,
-
                 members,
-
                 workspaceMembers,
-
                 moduleOwnerships,
-
                 controlledFiles,
-
                 isolatedExecutions,
-
                 requestBudgets,
-
                 businessRuns,
               } = createMemberServices(
                 ws,
-
                 this.engineModels,
-
                 lease,
-
                 monitor.dispatchObserver,
-
                 admission,
-
                 () => this.budgetSettings.Read(),
-
                 this.platform.controlledFiles,
-
                 this.enginePackages ?? this.platform.engineRuntimes
               ),
-
               execution = createExecutionManager(
                 ws,
-
                 this.engineModels,
-
                 lease,
-
                 () => this.collaborations.get(id),
-
                 service,
-
                 admission,
-
                 this.repositoryConnections,
-
                 { service: moduleOwnerships, members: workspaceMembers },
-
                 requestBudgets,
-
                 this.githubFeedback,
-
                 this.web,
-
                 this.enginePackages ?? this.platform.engineRuntimes,
-
                 this.platform.controlledFiles,
-
                 { runs: businessRuns, controlledFiles, isolatedExecutions }
               );
 
@@ -790,19 +714,12 @@ export class Application
             await monitor.Initialize(ws, service, execution, members);
 
             const collaboration = new AutoCollaboration(
-
               ws,
-
               service,
-
               members,
-
               execution,
-
               lease,
-
               (root, error) => monitor.CollaborationIssue(root, error)
-
             );
 
             this.collaborations.set(id, collaboration);
@@ -810,17 +727,11 @@ export class Application
             await collaboration.Initialize();
 
             const automations = new WorkspaceAutomations(
-
               ws,
-
               execution,
-
               service,
-
               collaboration,
-
               (permission) => this.ChatOptions(id, { permission, collaborationMode: 'team' }, [])
-
             );
 
             this.automationServices.set(id, automations);
@@ -846,6 +757,7 @@ export class Application
           release();
         }
       }
+
       await this.catalog.Update((d) => { const item = d.entries.find((e) => e.id === id); if (item) item.lastOpened = new Date().toISOString(); d.recent = [id, ...d.recent.filter((x) => x !== id)].slice(0, 30); });
 
       return ws;
@@ -954,7 +866,6 @@ export class Application
     for (const entry of d.entries)
     {
       if (this.stopping)
-
         break;
 
       try
@@ -972,13 +883,11 @@ export class Application
   public async Shutdown()
   {
     if (this.shutdownPromise)
-
       return this.shutdownPromise;
 
     this.stopping = true;
 
     for (const id of this.admissionOwners.keys())
-
       this.RetireAdmission(id);
 
     this.shutdownPromise = (async () => { await this.githubFeedback.Close(); await this.chatMaterials.Close(); await this.repositoryConnections.Close(); await Promise.allSettled([...this.opening.values()]); for (const id of this.admissionOwners.keys()) this.RetireAdmission(id); await Promise.all([...this.automationServices.values()].map((x) => x.scheduler.Close())); this.automationServices.clear(); await Promise.all([...this.collaborations.values()].map((x) => x.Close())); this.collaborations.clear(); await Promise.all([...this.executions.values(), ...this.memberExecutions.values()].map((x) => x.Close())); this.executions.clear(); this.memberExecutions.clear(); await Promise.all([...this.controlledFileServices.values()].map((x) => x.Close())); this.controlledFileServices.clear(); await Promise.all([...this.isolatedExecutionServices.values()].map((x) => x.Close())); this.isolatedExecutionServices.clear(); await this.platform.controlledFiles?.Close(); await Promise.all([...this.running.values()].map((w) => w.PrepareClose())); await Promise.all([...this.dispatchers.values()].map((x) => x.Close())); this.dispatchers.clear(); this.memberRegistries.clear(); this.ownershipRegistries.clear(); for (const monitor of this.monitors.values()) monitor.Close(); await Promise.all([...this.histories.values()].map((x) => x.Close())); this.histories.clear(); this.monitors.clear(); const results = await Promise.allSettled([...this.running.values()].map((w) => w.Close())); await this.resources.Close(); this.running.clear(); const failed = results.find((r) => r.status === 'rejected'); if (failed?.status === 'rejected') throw failed.reason; })();
@@ -992,28 +901,20 @@ export class Application
   public async ModelOptions(input: any = {})
   {
     if (input?.provider && input?.model && !input.profileId)
-
       return input;
 
     const { profile } = await this.engineModels.Resolve(
       input?.profileId,
-
       input?.model,
-
       input?.engine,
-
       input?.modelRoles
     );
 
     return {
       ...input,
-
       engine: profile.engine ?? 'pi',
-
       provider: 'cbim-' + profile.id,
-
       model: profile.model,
-
       profileId: profile.id,
     };
   }
@@ -1024,37 +925,29 @@ export class Application
     if (!input?.profileId && !input?.provider && !input?.model && !input?.engine)
     {
       const workspace = this.Workspace(id),
-
         setting = await this.mainAgentSettings.Read({ workspaceId: id, instanceId: workspace.instanceId });
 
       if (setting.selection)
-
+      {
         input = {
           ...input,
-
           engine: setting.selection.engine,
-
           profileId: setting.selection.profileId,
-
           model: setting.selection.modelId,
-
           ...(setting.selection.modelRoles === undefined ? {} : { modelRoles: setting.selection.modelRoles }),
         };
+      }
     }
+
     const options = await this.ModelOptions(input);
 
     const images = await new ChatInputs(this.Workspace(id)).Images(attachments);
 
     if (
-
       images.length &&
-
       options.profileId &&
-
       !(await this.models.Resolve(options.profileId, options.model)).profile.vision
-
     )
-
       throw Error('当前模型未启用图片输入，请在设置中确认视觉能力，或切换支持图片的模型');
 
     return { ...options, attachmentIds: attachments ?? [] };

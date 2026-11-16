@@ -36,6 +36,7 @@ export function BudgetSettings({ onDirtyChange }: { onDirtyChange?: (dirty: bool
   catch
   {
   }
+
   return <section className="repository-settings" aria-label="目标软限额设置" data-testid="budget-settings"><h2>目标软限额</h2>
     <p>主 Agent 与执行成员共用本目标的额度。默认关闭；保存后仅对新目标生效，已开始的目标和等待中的目标保留原设置。</p>
     <label className="budget-settings-toggle"><input type="checkbox" aria-label="启用新目标软限额" checked={state.enabled} disabled={!state.policy || state.busy} onChange={event => controller.Edit({ enabled: event.target.checked })} />启用新目标软限额</label>

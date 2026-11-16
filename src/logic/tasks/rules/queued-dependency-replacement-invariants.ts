@@ -26,7 +26,6 @@ const equal = (a: unknown, b: unknown) => JSON.stringify(ordered(a)) === JSON.st
 function valid(value: unknown, message: string): asserts value
 {
   if (!value)
-
     fail('GRAPH_INPUT_INVALID', message)
 }
 
@@ -41,13 +40,10 @@ export function validateQueuedDependencyReplacement(previous: DispatchState, nex
     }[] = [];
 
   for (const graph of next.graphs)
-
     for (const task of graph.tasks)
     {
       const old = previous.graphs.find(value => value.identity.rootSessionId === graph.identity.rootSessionId)?.tasks.find(value => value.taskId === task.taskId),
-
         history = old?.dependencyReplacements ?? [],
-
         records = task.dependencyReplacements ?? [];
 
       valid(records.length >= history.length && records.length <= history.length + 1 && records.length <= 32 && history.every((record, index) => equal(record, records[index])), '前置替换审计只能逐次追加，不能改删历史');
@@ -58,6 +54,7 @@ export function validateQueuedDependencyReplacement(previous: DispatchState, nex
 
         additions.push({ task, record: records.at(-1)! })
       }
+
       for (const record of records)
       {
         valid(dependencyReplacementSchema.safeParse(record).success && record.scopeId === task.scopeId, '前置替换审计身份无效');
@@ -65,6 +62,7 @@ export function validateQueuedDependencyReplacement(previous: DispatchState, nex
         valid(!next.runs?.some(run => run.binding.runId === record.mainRunId), '替换审计不能冒用成员运行身份');
       }
     }
+
   valid(additions.length <= 1, '单次事务只能替换一个任务的一条前置');
 
   const addition = additions[0];
@@ -76,7 +74,6 @@ export function validateQueuedDependencyReplacement(previous: DispatchState, nex
     const selected = queuedDependencyReplacementSelection(previous, task.identity, record.scopeId, { expectedGraphCursor: record.graphCursor, expectedGoalRevision: record.goalRevision, target: { taskId: task.taskId, expectedRevision: record.previousTaskRevision, expectedPlanRevision: record.targetPlanRevision }, replace: { edgeId: record.retired.edgeId, expectedRevision: record.retired.revision }, with: { taskId: record.replacement.sourceTaskId, expectedRevision: record.replacement.sourceTaskRevision, expectedPlanRevision: record.replacement.sourcePlanRevision, runId: record.replacement.runId, resultId: record.replacement.resultId }, reason: record.reason });
 
     const { graph, scope, target, source, replacement, edge, tasks, members, status } = selected,
-
       batch = mutation.batch;
 
     valid(batch && batch.cause === 'dependency.changed' && batch.commandId === command.commandId && record.commandId === command.commandId, '换边必须由同一主调度命令原子提交');
@@ -98,7 +95,6 @@ export function validateQueuedDependencyReplacement(previous: DispatchState, nex
     valid(!mutation.scopes?.length && !mutation.sessions?.length && !mutation.runs?.length && !mutation.messages?.length && mutation.members?.length === 1 && batch.changes.length === 4, '换边不得顺带改写周期、信封、运行或其他成员');
 
     const member = members.find(value => value.agentInstanceId === target.assignee.agentInstanceId)!,
-
       view = graph.agents.find(value => value.agentInstanceId === member.agentInstanceId)!;
 
     valid(equal(mutation.members[0], { ...member, activity: status === 'waiting' ? 'waiting' : 'idle', waitingTaskIds: status === 'waiting' ? [target.taskId] : [] }), '换边只能重算目标成员的本任务等待状态');
@@ -113,27 +109,24 @@ export function validateQueuedDependencyReplacement(previous: DispatchState, nex
 
     valid(changes.some(value => value.type === 'edge.upserted' && equal(value.edge, { edgeId: record.replacement.edgeId, identity: graph.identity, kind: 'dependency', fromNodeId: replacement.nodeId, toNodeId: target.nodeId, revision: 1, enabled: true, condition: { kind: 'result_ready', planRevision: replacement.planRevision, resultId: replacement.result!.resultId, ...(value.edge.kind === 'dependency' && value.edge.condition.reviewRequired ? { reviewRequired: true } : {}) } })), '新边必须锁定真实候选的计划与结果身份');
   }
+
   // 所有普通图事务也经过此门禁。创建新任务可设初始依赖；已有依赖仅允许正式换边或真实首次领取固定候选。
   const batch = mutation.batch;
 
   if (!batch)
-
     return;
 
   const graph = previous.graphs.find(value => value.identity.rootSessionId === batch.identity.rootSessionId);
 
   if (!graph)
-
     return;
 
   for (const change of batch.changes)
   {
     if (change.type !== 'edge.upserted' || change.edge.kind !== 'dependency')
-
       continue;
 
     const edge = change.edge,
-
       old = graph.edges.find(value => value.edgeId === edge.edgeId);
 
     if (!old)
@@ -144,6 +137,7 @@ export function validateQueuedDependencyReplacement(previous: DispatchState, nex
 
       continue;
     }
+
     valid(old.kind === 'dependency' && old.enabled, '退役依赖已封存，不能重新启用或修改');
 
     if (!edge.enabled)
@@ -152,8 +146,8 @@ export function validateQueuedDependencyReplacement(previous: DispatchState, nex
 
       continue
     }
-    const target = graph.tasks.find(value => value.nodeId === edge.toNodeId),
 
+    const target = graph.tasks.find(value => value.nodeId === edge.toNodeId),
       source = graph.tasks.find(value => value.nodeId === edge.fromNodeId);
 
     const run = mutation.runs?.find(value => value.binding.taskId === target?.taskId && value.binding.rootSessionId === graph.identity.rootSessionId && !previous.runs?.some(prior => prior.binding.runId === value.binding.runId));

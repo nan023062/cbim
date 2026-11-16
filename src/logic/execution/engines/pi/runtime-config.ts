@@ -15,12 +15,10 @@ export function buildPiRuntimeSettings(model?: Pick<LlmModel, 'contextWindow' | 
   const budget = Math.min(model?.workingContextWindow ?? capacity, capacity);
 
   const reserveTokens = model?.compactionPercent === undefined && budget === capacity ? undefined :
-
     Math.max(1, Math.ceil(capacity - budget * ((model?.compactionPercent ?? 90) / 100)));
 
   return {
     transport: 'sse', retry: { enabled: true, maxRetries: 6, baseDelayMs: 2000, provider: { maxRetries: 0 } },
-
     ...(reserveTokens === undefined ? {} : { compaction: { reserveTokens } })
   };
 }

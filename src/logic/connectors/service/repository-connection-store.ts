@@ -42,7 +42,6 @@ export class RepositoryConnectionStore
       const stat = await fs.lstat(this.filename);
 
       if (!stat.isFile() || stat.isSymbolicLink() || stat.size > maxBytes)
-
         fail('REPOSITORY_CONNECTION_DATA', '本机仓库授权文件不安全或超过限制');
 
       text = await fs.readFile(this.filename, 'utf8')
@@ -50,19 +49,16 @@ export class RepositoryConnectionStore
     catch (error: any)
     {
       if (error.code === 'ENOENT')
-
         return;
 
       throw error
     }
+
     try
     {
       const state = stateSchema.parse(JSON.parse(text)),
-
         grants = new Set<string>(),
-
         commands = new Set<string>(),
-
         heads = new Map<string, RepositoryConnectionGrant>();
 
       for (const grant of state.grants)
@@ -70,35 +66,30 @@ export class RepositoryConnectionStore
         const key = JSON.stringify([grant.workspaceId, grant.connectorId]);
 
         if (grants.has(key))
-
           throw Error('duplicate');
 
         grants.add(key)
       }
+
       for (const command of state.commands)
       {
         const { receipt } = command,
-
           grant = receipt.grant,
-
           key = JSON.stringify([grant.workspaceId, grant.connectorId]),
-
           previous = heads.get(key);
 
         if (commands.has(command.commandId) || command.workspaceId !== receipt.workspaceId || command.commandId !== receipt.commandId || receipt.workspaceId !== grant.workspaceId || receipt.connectorId !== grant.connectorId || grant.enabled !== (receipt.action === 'grant') || grant.revision !== (previous?.revision ?? 0) + 1 || !previous && receipt.action !== 'grant')
-
           throw Error('identity');
 
         if (receipt.action === 'revoke' && previous && (previous.repositoryId !== grant.repositoryId || previous.definitionHash !== grant.definitionHash))
-
           throw Error('revoke identity');
 
         commands.add(command.commandId);
 
         heads.set(key, grant);
       }
-      if (heads.size !== state.grants.length || state.grants.some(grant => !isDeepStrictEqual(grant, heads.get(JSON.stringify([grant.workspaceId, grant.connectorId])))))
 
+      if (heads.size !== state.grants.length || state.grants.some(grant => !isDeepStrictEqual(grant, heads.get(JSON.stringify([grant.workspaceId, grant.connectorId])))))
         throw Error('orphan grant');
 
       this.state = state;
@@ -137,11 +128,9 @@ export class RepositoryConnectionStore
     const command = this.state.commands.find(item => item.commandId === commandId);
 
     if (!command)
-
       return undefined;
 
     if (command.workspaceId !== workspaceId || command.inputHash !== inputHash)
-
       fail('REPOSITORY_CONNECTION_CONFLICT', '原命令已绑定其他请求，请查询原回执，不要更换命令重放');
 
     return structuredClone(command.receipt)
@@ -155,7 +144,6 @@ export class RepositoryConnectionStore
     const encoded = json(next);
 
     if (Buffer.byteLength(encoded) > maxBytes)
-
       fail('REPOSITORY_CONNECTION_LIMIT', '本机仓库授权历史已达到容量上限，未保存新授权');
 
     await atomic(this.filename, encoded);

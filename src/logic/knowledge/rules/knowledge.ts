@@ -39,19 +39,15 @@ export function isKnowledge(relative: string)
 {
   // 废弃入口不再作为知识发布或写入；旧文件保留在磁盘，不自动覆盖或迁移。
   if (relative.toLowerCase() === '.cbim/entry.md')
-
     return false;
 
   if (relative === '.cbim/project.json' || relative === '.cbim/.cbimignore')
-
     return true;
 
   if (!relative.startsWith('.cbim/'))
-
     return false;
 
   if (relative.split('/').some(x => excluded.has(x)))
-
     return false;
 
   return /^\.cbim\/(workspace|team|connectors)\/.+\.(json|md)$/.test(relative) || /^\.cbim\/[^/]+\.md$/.test(relative);
@@ -71,7 +67,6 @@ export class Rules
     const ajv = new Ajv2020({ allErrors: true, strict: false });
 
     for (const [key, file] of Object.entries({ module: 'business/module.schema.json', agent: 'capability/agent.schema.json', skills: 'capability/team-skills.schema.json', connectors: 'connector/registry.schema.json' }))
-
       this.validators.set(key, ajv.compile(parseJson(await fs.readFile(path.join(this.assetsRoot, file), 'utf8'))))
   }
 
@@ -90,9 +85,8 @@ export class Rules
 
     // 废弃花名册只保留原始字节，不解析其内容或据此阻断旧项目；其他 JSON 仍严格校验。
     for (const file of files)
-
       if (file.path.endsWith('.json') && file.path !== '.cbim/team/people.json')
-
+      {
         try
         {
           parsed.set(file.path, parseJson(file.text))
@@ -101,10 +95,11 @@ export class Rules
         {
           add(file.path, 'json', e.message)
         }
+      }
+
     for (const file of files)
-
       if (file.path.startsWith('.cbim/workspace/') && file.path.endsWith('/workflow.md'))
-
+      {
         try
         {
           parseWorkflowContract(file.text)
@@ -113,6 +108,7 @@ export class Rules
         {
           add(file.path, 'workflow_contract', 'Workflow 执行约定无效：请核对唯一的 cbim-workflow 块及版本、条件、工具和证据 ID')
         }
+      }
 
     const schema = (p: string, key: string) =>
     {
@@ -124,6 +120,7 @@ export class Rules
 
         return false
       }
+
       const validator = this.validators.get(key)!;
 
       // 严格解析产出无原型对象；Ajv 的 uniqueItems 比较依赖 Object.prototype。
@@ -134,7 +131,6 @@ export class Rules
         if (!validator(structuredClone(value)))
         {
           for (const error of validator.errors || [])
-
             add(p, 'schema', `${error.instancePath} ${error.message}`);
 
           return false
@@ -146,6 +142,7 @@ export class Rules
 
         return false
       }
+
       return true
     };
 
@@ -154,7 +151,6 @@ export class Rules
     const summary = (p: string, s: string) => { const length = Array.from(s.replace(/\s/g, '')).length; if (s !== s.trim() || /[\r\n]/.test(s) || length < 100 || length > 250) add(p, 'summary', '摘要须为 100–250 个非空白字符的单行文本') };
 
     const modules = new Map<string, any>(),
-
       agents = new Map<string, any>();
 
     const groups = new Set<string>();
@@ -179,9 +175,9 @@ export class Rules
       connectorIds = registry.Ids();
 
       for (const _id of registry.Duplicates())
-
         add('.cbim/connectors/registry.json', 'duplicate', '链接器标识或提供方身份重复');
     }
+
     let ignores = ignore({ ignorecase: true });
 
     try
@@ -192,6 +188,7 @@ export class Rules
     {
       add('.cbim/.cbimignore', 'ignore', e.message)
     }
+
     const idSeen = new Set<string>();
 
     for (const f of files)
@@ -199,21 +196,17 @@ export class Rules
       const kind = f.path.endsWith('/module.json') && f.path.startsWith('.cbim/workspace/') ? 'module' : f.path.endsWith('/agent.json') && f.path.startsWith('.cbim/team/') ? 'agent' : undefined;
 
       if (!kind)
-
         continue;
 
       if (!schema(f.path, kind))
-
         continue;
 
       const d = data(f.path),
-
         id = pp.dirname(f.path);
 
       const folded = id.toLowerCase();
 
       if (idSeen.has(folded))
-
         add(f.path, 'duplicate', '标识不区分大小写时重复');
 
       idSeen.add(folded);
@@ -221,9 +214,7 @@ export class Rules
       summary(f.path, d.summary);
 
       for (const c of d.connectors)
-
         if (!connectorIds.has(c.toLowerCase()))
-
           add(f.path, 'connector', `未登记连接器：${c}`);
 
       if (kind === 'agent')
@@ -234,14 +225,13 @@ export class Rules
 
         continue
       }
+
       modules.set(id, d);
 
       if (d.id !== id)
-
         add(f.path, 'identity', 'id 必须与模块目录一致');
 
       if (!/^(?:[0-9]+_)?[a-z][a-z0-9]*(?:_[a-z0-9]+)*$/.test(d.name) || pp.basename(id) !== d.name)
-
         add(f.path, 'name', '模块目录和名称须一致并使用小写 snake_case');
 
       // 旧 maintenance 仅保留为历史描述，不再生成关系、核实真人或作为执行门禁。
@@ -263,6 +253,7 @@ export class Rules
 
           continue
         }
+
         const target = path.resolve(root, location);
 
         let resolved = target;
@@ -274,32 +265,26 @@ export class Rules
           const rel = path.relative(root, resolved);
 
           if (rel.startsWith('..') || path.isAbsolute(rel))
-
             add(f.path, 'source', 'source 链接越出项目');
 
           if (!(await fs.stat(resolved)).isDirectory())
-
             add(f.path, 'source', 'source 不允许引用文件')
         }
         catch (e: any)
         {
           if (e.code === 'ENOENT')
-
             add(f.path, 'source_missing', `目录尚不存在，需核实：${location}`, 'warning');
-
           else
-
             add(f.path, 'source', e.message)
         }
+
         if (ignores.ignores(location + '/'))
-
           add(f.path, 'source_ignored', `source 命中忽略规则：${location}`);
-
         else
-
           sourceRows.push({ module: id, key: resolved.replaceAll('\\', '/').toLowerCase(), location, scope: source.scope });
       }
     }
+
     groups.add('.cbim/team');
 
     for (const f of files.filter(x => x.path.startsWith('.cbim/team/')))
@@ -309,21 +294,17 @@ export class Rules
       const special = owner.match(/^(.*)\/(skills|references|assets|scripts)(?:\/|$)/);
 
       if (special)
-
         owner = special[1];
 
       if (agents.has(owner))
-
         owner = pp.dirname(owner);
 
       while (owner.startsWith('.cbim/team'))
       {
         if (!agents.has(owner))
-
           groups.add(owner);
 
         if (owner === '.cbim/team')
-
           break;
 
         owner = pp.dirname(owner)
@@ -338,15 +319,13 @@ export class Rules
     for (const [id] of agents)
     {
       for (const other of agents.keys())
-
         if (other !== id && other.startsWith(id + '/'))
-
           add(other + '/agent.json', 'team_leaf', 'Agent 必须是叶子，不能包含其他 Agent');
 
       if (id === '.cbim/team')
-
         add(id + '/agent.json', 'team_root', 'Team 根不能是 Agent')
     }
+
     const inventories = new Map<string, any[]>();
 
     for (const owner of new Set([...groups, ...agents.keys()]))
@@ -360,15 +339,16 @@ export class Rules
       if (!own && texts.has(p))
       {
         if (schema(p, 'skills'))
-
           list = data(p).skills
       }
+
       const actual = files.filter(f => f.path.startsWith(owner + '/skills/') && f.path.endsWith('/SKILL.md')).map(f => f.path);
 
       this.Inventory(owner, list, actual, ref, add, 'skill');
 
       inventories.set(owner, list);
     }
+
     const skills: NonNullable<Validation['skills']> = {};
 
     for (const [agent] of agents)
@@ -378,7 +358,6 @@ export class Rules
       const seen = new Map<string, string>();
 
       const chain: string[] = [],
-
         entries: NonNullable<Validation['skills']>[string]['entries'] = [];
 
       while (owner.startsWith('.cbim/team'))
@@ -392,22 +371,22 @@ export class Rules
           for (const key of ['name:' + skill.name.toLowerCase(), 'slug:' + pp.basename(pp.dirname(skill.reference)).toLowerCase()])
           {
             if (seen.has(key))
-
               add(agent + '/agent.json', 'skill_conflict', `继承冲突：${owner}/${skill.reference} 与 ${seen.get(key)}`);
 
             seen.set(key, owner + '/' + skill.reference)
           }
         }
-        if (owner === '.cbim/team')
 
+        if (owner === '.cbim/team')
           break;
 
         owner = pp.dirname(owner)
       }
+
       skills[agent] = { chain, entries }
     }
-    const nodes: Record<string, ModuleNode> = {},
 
+    const nodes: Record<string, ModuleNode> = {},
       parents = new Map<string, string>();
 
     for (const [id, d] of modules)
@@ -417,28 +396,26 @@ export class Rules
       for (const child of d.children)
       {
         if (!modules.has(child))
-
           add(id + '/module.json', 'child', `子模块不存在：${child}`);
 
         if (parents.has(child))
-
           add(id + '/module.json', 'parent', `子模块有多个父节点：${child}`);
 
         parents.set(child, id);
 
         if (pp.dirname(child) !== id)
-
           add(id + '/module.json', 'hierarchy', 'children 必须与已确认的模块目录层级一致')
       }
     }
+
     for (const id of modules.keys())
     {
       const parent = pp.dirname(id);
 
       if (modules.has(parent) && parents.get(id) !== parent)
-
         add(id + '/module.json', 'child_missing', '父模块未声明该直属子模块')
     }
+
     for (const id of modules.keys())
     {
       const visited = new Set<string>();
@@ -453,6 +430,7 @@ export class Rules
 
           break
         }
+
         visited.add(p);
 
         p = parents.get(p)
@@ -462,24 +440,21 @@ export class Rules
     const ancestor = (child: string, parent: string) => { const seen = new Set<string>(); let current = parents.get(child); while (current && !seen.has(current)) { if (current === parent) return true; seen.add(current); current = parents.get(current) } return false };
 
     for (let i = 0; i < sourceRows.length; i++)
-
       for (const b of sourceRows.slice(i + 1))
       {
         const a = sourceRows[i];
 
         if (a.key === b.key)
-
           add(a.module + '/module.json', 'source_duplicate', `${a.location} 与 ${b.module} 重复声明`);
-
         else if (a.key.startsWith(b.key + '/') || b.key.startsWith(a.key + '/'))
         {
           const aligned = (ancestor(a.module, b.module) && a.key.startsWith(b.key + '/')) || (ancestor(b.module, a.module) && b.key.startsWith(a.key + '/'));
 
           if (!aligned)
-
             add(a.module + '/module.json', 'source_overlap', `${a.location} 与 ${b.module} / ${b.location} 存在跨分支或冗余包含，需 review`, 'warning')
         }
       }
+
     const indexes: Record<string, string> = {};
 
     indexes[INDEXES[1]] = json({ modules: [...modules].filter(([id]) => !ignores.ignores(id + '/')).map(([id, d]) => ({ id, summary: d.summary })).sort((a, b) => a.id.localeCompare(b.id)) });
@@ -499,15 +474,12 @@ export class Rules
         const link = match[1];
 
         if (link.startsWith('#') || /^[a-z][a-z0-9+.-]*:/i.test(link))
-
           continue;
 
         const target = pp.normalize(pp.join(pp.dirname(file.path), link.split('#')[0]));
 
         if (target.startsWith('../') || target.startsWith('/'))
-
           add(file.path, 'reference', 'Markdown 引用越出工程');
-
         else if (target.startsWith('.cbim/'))
         {
           if (!texts.has(target) && !files.some(x => x.path.startsWith(target + '/')))
@@ -515,7 +487,7 @@ export class Rules
             let assetExists = false;
 
             if (!/\.(md|json)$/i.test(target))
-
+            {
               try
               {
                 const resolved = await fs.realpath(path.join(root, target));
@@ -527,23 +499,23 @@ export class Rules
               catch
               {
               }
-            if (!assetExists)
+            }
 
+            if (!assetExists)
               add(file.path, 'reference', `Markdown 引用不存在：${link}`)
           }
         }
         else if (!await exists(path.join(root, target)))
-
           add(file.path, 'reference', `项目引用不存在：${link}`)
       }
     }
+
     return { issues, indexes, skills, tree: { nodes, roots: [...modules.keys()].filter(id => !parents.has(id)).sort() }, structural: !issues.some(x => x.severity === 'error'), architecture: 'review-required', business: 'not-run' };
   }
 
   private Inventory(owner: string, list: any[], actual: string[], ref: (o: string, r: string) => string, add: (p: string, c: string, m: string) => void, kind: string)
   {
     const paths = new Set<string>(),
-
       names = new Set<string>();
 
     for (const item of list)
@@ -551,7 +523,6 @@ export class Rules
       const p = ref(owner, item.reference);
 
       if (paths.has(p) || names.has(item.name.toLowerCase()))
-
         add(owner, 'inventory', '方法名称或入口重复');
 
       paths.add(p);
@@ -559,19 +530,15 @@ export class Rules
       names.add(item.name.toLowerCase());
 
       if (!p.startsWith(owner + (kind === 'skill' ? '/skills/' : '/workflows/')))
-
         add(owner, 'ownership', '方法不属于当前对象')
     }
+
     for (const p of actual)
-
       if (!paths.has(p))
-
         add(p, 'inventory', '方法入口未登记');
 
     for (const p of paths)
-
       if (!actual.includes(p))
-
         add(p, 'inventory', '清单不是有效方法入口');
   }
 
@@ -586,11 +553,8 @@ export class Rules
     const content = new Map<string, string[]>();
 
     let section = '',
-
       fence = '',
-
       language = '',
-
       block: string[] = [];
 
     const diagrams:
@@ -609,7 +573,6 @@ export class Rules
         if (new RegExp('^\\s*' + fence[0] + '{' + fence.length + ',}\\s*$').test(line))
         {
           if (language === 'mermaid')
-
             diagrams.push({ section, text: block.join('\n') });
 
           fence = '';
@@ -617,11 +580,11 @@ export class Rules
           block = []
         }
         else
-
           block.push(line);
 
         continue
       }
+
       const opening = line.match(/^ {0,3}(`{3,}|~{3,})(.*)$/);
 
       if (opening)
@@ -632,14 +595,15 @@ export class Rules
 
         continue
       }
+
       if (/^#\s+/.test(line))
       {
         if (++titles > 1 || section)
-
           add(p, 'sections', '一级标题只能在正文前出现一次');
 
         continue
       }
+
       const h = line.match(/^##\s+(.+?)\s*#*\s*$/);
 
       if (h)
@@ -652,20 +616,20 @@ export class Rules
 
         continue
       }
+
       if (/^#{3,6}\s/.test(line))
       {
         const label = line.replace(/^#{3,6}\s+/, '').trim().replaceAll('`', '');
 
         if (section !== sections[1] || !['子模块', 'Source 路径与维护说明', ...d.sources.map((s: any) => s.location)].includes(label))
-
           add(p, 'sections', `不允许额外章节：${label}`)
       }
-      if (line.trim() && section)
 
+      if (line.trim() && section)
         content.get(section)?.push(line);
     }
-    if (fence)
 
+    if (fence)
       add(p, 'fence', '代码块未闭合');
 
     const wrongSections = JSON.stringify(seen) !== JSON.stringify(sections);
@@ -675,23 +639,18 @@ export class Rules
     const wrongDiagram = diagrams.length !== 1 || diagrams[0]?.section !== sections[2] || !/^\s*classDiagram\s+\S/.test(diagrams[0]?.text || '');
 
     if (wrongSections)
-
       add(p, 'sections', '二级标题必须按顺序逐字匹配，不加序号：\n' + sections.map(s => '## ' + s).join('\n'));
 
     for (const s of empty)
-
       add(p, 'empty', `章节不能为空：## ${s}`);
 
     if (wrongDiagram)
-
       add(p, 'diagram', `“## ${sections[2]}”须包含唯一非空 Mermaid classDiagram`);
 
     if (wrongSections || empty.length || wrongDiagram)
-
       add(p, 'module_template', '可复制的结构模板（须按实际业务填写后重新预览）：\n' + moduleBodyTemplate(d.sources.map((s: any) => s.location)));
 
     if (/^\s*(?:#{1,6}\s+|[-*]\s+)?(?:id|sources|children|summary)\s*[:：=]/im.test(text))
-
       add(p, 'duplicate_fields', '正文不得重复维护索引字段');
 
     if (d.sources.length)
@@ -699,7 +658,6 @@ export class Rules
       const diagram = diagrams[0]?.text || '';
 
       if (!diagram.includes('class CbimDirectContent["直属内容（虚拟子模块）"]') || !diagram.includes('<<virtual>> CbimDirectContent'))
-
         add(p, 'virtual', '有直属内容时应使用规定的虚拟子模块节点')
     }
   }

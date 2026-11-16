@@ -15,11 +15,9 @@ const reasons: Record<ScopeBudgetReason, string> = { token_limit: '已达到 Tok
 export function ScopeBudgetPanel({ budget, waiting = false, query }: { budget?: ScopeBudgetSummary; waiting?: boolean; query?: RequestBudgetQuery })
 {
   if (!budget)
-
     return <p className="scope-goal-muted" data-testid="scope-budget-panel">本目标未应用软限额（旧周期）。</p>;
 
   if (!budget.policy.enabled)
-
     return <p className="scope-goal-muted" data-testid="scope-budget-panel">本目标软限额未启用。</p>;
 
   const { limits } = budget.policy;

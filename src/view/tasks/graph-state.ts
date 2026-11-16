@@ -47,7 +47,6 @@ export class SessionGraphProjection
     const cursor = response.cursor;
 
     if (cursor.workspaceId !== this.identity.workspaceId || cursor.rootSessionId !== this.identity.rootSessionId)
-
       throw Error('任务图响应属于其他会话');
 
     let next = this.value;
@@ -57,43 +56,36 @@ export class SessionGraphProjection
       validateGraph(response.snapshot);
 
       if (!sameCursor(response.snapshot.cursor, cursor))
-
         throw Error('任务图快照与游标不一致');
 
       if (next && next.cursor.streamId === cursor.streamId && cursor.seq < next.cursor.seq)
-
         throw Error('任务图快照版本回退，需要重新同步');
 
       if (next && sameCursor(next.cursor, cursor))
       {
         if (JSON.stringify(next) !== JSON.stringify(response.snapshot))
-
           throw Error('相同任务图版本的内容不一致');
       }
       else
-
         next = response.snapshot;
     }
     else if (response.mode === 'noop')
     {
       if (!next || !sameCursor(next.cursor, cursor))
-
         throw Error('任务图无变化响应与本地游标不一致');
     }
     else
     {
       if (!next || !sameCursor(next.cursor, response.from) || !response.batches.length)
-
         throw Error('任务图增量断档，需要重新同步');
 
       for (const batch of response.batches)
-
         next = applyGraphBatch(next, batch);
 
       if (!sameCursor(next.cursor, cursor))
-
         throw Error('任务图增量未到达响应游标');
     }
+
     this.value = next;
 
     return next;

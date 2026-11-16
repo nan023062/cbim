@@ -79,30 +79,24 @@ export class RunControlledFile
   Guard(name: string, id: string, input: unknown, active: readonly string[]): string | undefined
   {
     if (this.reserved)
-
       return '受控文件操作尚未结束，请先等待原操作核实';
 
     // 问题只续接当前调用的直接调用方；答复不清除待核实写入屏障。
     if (this.unverified.size && !['read', 'grep', 'find', 'ls', 'cbim_scoped_read', 'cbim_task_inspect', 'cbim_task_help', 'cbim_ask_user_question'].includes(name))
-
       return 'CONTROLLED_FILE_REVIEW_REQUIRED: 原受控写结果待核实，本轮仅可读取、查看计划或记录求助，不能再次写入、交付或停泊';
 
     if (name !== controlledFileWriteToolName)
-
       return;
 
     if (this.controller.signal.aborted)
-
       return '运行已停止，不能开始受控写入';
 
     const parsed = controlledFileWriteInputSchema.safeParse(input);
 
     if (!parsed.success)
-
       return '受控文件参数不符合严格单文件协议';
 
     if (active.length)
-
       return '仍有工具或审批在途，不能开始受控写入';
 
     this.reserved = { id, input: structuredClone(parsed.data), inputHash: hash(JSON.stringify(input)), consumed: false, settled: false, finished: false, validated: false, failedEvent: false, safeNoWrite: false };
@@ -112,7 +106,6 @@ export class RunControlledFile
   Authorize(id: string, seq: number)
   {
     if (this.reserved?.id === id && !this.controller.signal.aborted)
-
       this.reserved.allowedSeq = seq
   }
 
@@ -121,17 +114,16 @@ export class RunControlledFile
     const current = this.reserved;
 
     if (!current || current.id !== id)
-
       return;
 
     if (type === 'tool.denied')
     {
       if (!current.consumed)
-
         this.reserved = undefined;
 
       return
     }
+
     if (type === 'tool.finished')
     {
       current.finished = true;
@@ -139,7 +131,6 @@ export class RunControlledFile
       current.failedEvent ||= isError;
 
       if (current.allowedSeq && !current.safeNoWrite)
-
         this.unverified.add(current.id);
 
       this.Release()
@@ -151,15 +142,11 @@ export class RunControlledFile
     const current = this.reserved;
 
     if (!current?.finished || !current.settled)
-
       return;
 
     if (current.safeNoWrite || current.validated && !current.failedEvent)
-
       this.unverified.delete(current.id);
-
     else
-
       this.unverified.add(current.id);
 
     this.reserved = undefined
@@ -174,7 +161,6 @@ export class RunControlledFile
   AssertVerified()
   {
     if (this.unverified.size)
-
       fail('CONTROLLED_FILE_REVIEW_REQUIRED', '原受控写结果待核实，本轮不能提交交付或安全交接')
   }
 
@@ -206,29 +192,23 @@ export class RunControlledFile
   async Call(name: string, raw: unknown, id?: string, signal?: AbortSignal)
   {
     if (name !== controlledFileWriteToolName || !id)
-
       fail('CONTROLLED_FILE_CALL', '受控写入缺少真实调用身份');
 
     const input = controlledFileWriteInputSchema.parse(raw),
-
       reservation = this.reserved;
 
     if (!reservation || reservation.id !== id || reservation.consumed || !reservation.allowedSeq || !equal(input, reservation.input) || hash(JSON.stringify(raw)) !== reservation.inputHash)
-
       fail('CONTROLLED_FILE_AUTHORIZATION', '受控写入没有本轮一次性可靠授权');
 
     reservation.consumed = true;
 
     const expected = structuredClone(input),
-
       bound = structuredClone(this.binding),
-
       activeSignal = signal ? AbortSignal.any([signal, this.controller.signal]) : this.controller.signal;
 
     const check = () => { activeSignal.throwIfAborted(); this.assertReady(id) };
 
     let operation: Promise<ControlledFileWriteApplied> | undefined,
-
       dispatched = false;
 
     const authorization = { toolCallId: id, inputHash: reservation.inputHash, allowedSeq: reservation.allowedSeq };
@@ -257,11 +237,9 @@ export class RunControlledFile
     {
       // 错误码或当前相同字节都不是未写证明。可信端口必须核原 not_applied 及真实退出，失败保持屏障和原错误。
       if (!dispatched)
-
         reservation.safeNoWrite = true;
-
       else
-
+      {
         try
         {
           reservation.safeNoWrite = await this.port.ConfirmNotApplied?.(authorization) === true
@@ -270,8 +248,9 @@ export class RunControlledFile
         {
           /* 未确认不能解除屏障 */
         }
-      if (reservation.safeNoWrite)
+      }
 
+      if (reservation.safeNoWrite)
         this.unverified.delete(id);
 
       throw error;

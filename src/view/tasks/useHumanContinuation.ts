@@ -21,13 +21,11 @@ export function currentHumanDecisions(state: ScopeGoalState): HumanDecisionRecor
   const scope = state.selectedScope;
 
   if (!scope?.wait)
-
     return [];
 
   const latest = new Map<string, HumanDecisionRecord>();
 
   for (const record of scope.humanDecisions?.records ?? [])
-
     latest.set(record.criterionId, record);
 
   return [...latest.values()].filter(record => record.proof.source.waitId === scope.wait!.waitId && scope.goal?.plan?.criteria.some(criterion => criterion.kind === 'human' && criterion.id === record.criterionId)).sort((a, b) => a.criterionId.localeCompare(b.criterionId));
@@ -37,15 +35,11 @@ export function currentHumanDecisions(state: ScopeGoalState): HumanDecisionRecor
 export function humanContinuationTarget(workspaceId: string, rootSessionId: string | undefined, state: ScopeGoalState): HumanContinuationTarget | undefined
 {
   const base = continuationTarget(workspaceId, rootSessionId, state),
-
     scope = state.selectedScope,
-
     revision = scope?.humanDecisions?.revision,
-
     records = currentHumanDecisions(state);
 
   if (!base || !revision || state.waitingScope?.humanDecisions?.revision !== revision || scope?.goal?.review?.decision !== 'awaiting_user' || !records.length)
-
     return;
 
   return { ...base, expectedDecisionRevision: revision, decisionIds: records.map(record => record.decisionId) };
@@ -55,17 +49,14 @@ export function humanContinuationTarget(workspaceId: string, rootSessionId: stri
 export function humanContinuationDraftForView(state: ScopeGoalState, records: readonly HumanContinuationDraft[], target?: HumanContinuationTarget): HumanContinuationDraft | undefined
 {
   if (target)
-
     return records.find(item => item.scopeId === target.scopeId && item.waitId === target.waitId);
 
   if (state.loading || state.detailLoading)
-
     return;
 
   const scope = state.selectedScope;
 
   if (scope?.status === 'waiting')
-
     return scope.scopeId === state.selectedScopeId && scope.wait ? records.find(item => item.scopeId === scope.scopeId && item.waitId === scope.wait!.waitId) : undefined;
 
   return [...records].reverse().find(item => item.scopeId === state.selectedScopeId);
@@ -104,11 +95,8 @@ export interface HumanContinuationView
 export function useHumanContinuation(workspaceId: string, rootSessionId: string | undefined, state: ScopeGoalState, model: ContinuationModel | undefined, refresh: () => void): HumanContinuationView
 {
   const [, render] = useState(0),
-
     identity = JSON.stringify([workspaceId, rootSessionId]),
-
     identityRef = useRef(identity),
-
     refreshRef = useRef(refresh);
 
   identityRef.current = identity;
@@ -120,19 +108,13 @@ export function useHumanContinuation(workspaceId: string, rootSessionId: string 
   useEffect(() => { if (!controller) return; const unsubscribe = controller.Subscribe(() => render(value => value + 1)); void controller.Restore().then(() => { if (identityRef.current === identity) refreshRef.current() }); return unsubscribe }, [controller, identity]);
 
   const target = humanContinuationTarget(workspaceId, rootSessionId, state),
-
     records = controller?.snapshot.records ?? [],
-
     record = humanContinuationDraftForView(state, records, target),
-
     attempt = record?.attempt,
-
     pending = controller?.IsPending(record) ?? false,
-
     effectiveModel = continuationModel(model, state);
 
   const editable = !!target && !!controller?.available && !pending && (!attempt || attempt.phase === 'rejected'),
-
     frozen = attempt && attempt.phase !== 'rejected';
 
   const decisions = frozen ? (state.selectedScope?.humanDecisions?.records ?? []).filter(value => attempt.request.decisionIds.includes(value.decisionId)) : currentHumanDecisions(state);
@@ -141,11 +123,8 @@ export function useHumanContinuation(workspaceId: string, rootSessionId: string 
 
   return {
     scopeId: target?.scopeId ?? record?.scopeId, waitId: target?.waitId ?? record?.waitId, record, decisions, eligible: !!target, pending, canSubmit: editable && !!effectiveModel, canRetry: !!target && !!controller?.available && !pending && attempt?.phase === 'unknown', error: controller?.snapshot.error ?? '',
-
     modelLabel: frozen ? `${attempt.request.options.model} · ${{ read: '只读访问', ask: '默认权限', execute: '完全访问' }[attempt.request.options.permission]}（本次接续已固定）` : effectiveModel?.label ?? '请先选择可用模型',
-
     submit: async () => { if (target && controller && editable && effectiveModel) await after(() => controller.Submit(target, effectiveModel.options)) },
-
     query: async () => { if (record && controller) await after(() => controller.Query(record.scopeId, record.waitId)) }, retry: async () => { if (target && record && controller) await after(() => controller.Retry(record.scopeId, record.waitId)) },
   };
 }

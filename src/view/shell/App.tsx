@@ -72,7 +72,6 @@ export function App()
   const sidebarSize = useSidebarWidth();
 
   const updates = useSoftwareUpdates(),
-
     [updateView, setUpdateView] = useState(false);
 
   /** 合并入口只叠加版本、日志和检查操作，不卸载当前页面或隐式下载。 */
@@ -82,9 +81,7 @@ export function App()
   }
 
   const [catalog, setCatalog] = useState<any>({ entries: [] }),
-
     [selected, setSelected] = useState(''),
-
     [screen, setScreen] = useState<'workspace' | 'settings' | 'runtime' | ResourceCategory>('workspace');
 
   const runtimeResolver = useRef(new RuntimeNavigationResolver((action, args) => api.call(...checkedIpcCall(action, args))));
@@ -96,13 +93,11 @@ export function App()
   const [runtimeNavigationError, setRuntimeNavigationError] = useState('');
 
   const [snapshots, setSnapshots] = useState<Record<string, Snapshot>>({}),
-
     [layouts, setLayouts] = useState<Layouts>(() => { try { return readLayouts(localStorage.getItem('cbim.workspace.tabs.v1')) } catch { return {} } });
 
   const [running, setRunning] = useState<Record<string, string[]>>({});
 
   const [teamChats, setTeamChats] = useState<Record<string, TeamConversation[]>>({}),
-
     [selectedChildren, setSelectedChildren] = useState<Record<string, string | undefined>>({});
 
   /** 侧栏只切换当前 Agent；交互区保留所属办公室的视图模式与频道选择。 */
@@ -136,13 +131,9 @@ export function App()
   const [openingIds, setOpeningIds] = useState<Set<string>>(new Set());
 
   const [error, setError] = useState(''),
-
     [busy, setBusy] = useState(''),
-
     [search, setSearch] = useState(''),
-
     [settings, setSettings] = useState(false),
-
     [sidebar, setSidebar] = useState(true);
 
   const appearance = useAppearance();
@@ -150,13 +141,9 @@ export function App()
   const [settingsSection, setSettingsSection] = useState<SettingsSectionId>('models');
 
   const dirty = useRef(new Set<string>()),
-
     snapshotCache = useRef<Record<string, Snapshot>>({}),
-
     loading = useRef(new Set<string>()),
-
     alive = useRef(true),
-
     listRequest = useRef(0);
 
   const settingsDirty = useCallback((value: boolean) => { value ? dirty.current.add('global:settings') : dirty.current.delete('global:settings') }, []);
@@ -164,11 +151,8 @@ export function App()
   useEffect(() => { const guard = (event: BeforeUnloadEvent) => { if (dirty.current.size) { event.preventDefault(); event.returnValue = '' } }; window.addEventListener('beforeunload', guard); return () => window.removeEventListener('beforeunload', guard) }, []);
 
   const workspaces: WorkspaceView[] = catalog.entries,
-
     current = workspaces.find(w => w.id === selected),
-
     layout = layouts[selected],
-
     active = layout?.tabs.find(t => t.id === layout.active && t.kind === 'chat') || layout?.tabs.find(t => t.kind === 'chat');
 
   const currentOpening = openingIds.has(selected) || current?.state === 'opening';
@@ -178,13 +162,11 @@ export function App()
   async function loadSnapshot(w: WorkspaceView, force = false)
   {
     if (loading.current.has(w.id))
-
       return;
 
     const cache = snapshotCache.current[w.id];
 
     if (!force && cache && cache.revision === w.revision && cache.instanceId === w.instanceId && !w.changed)
-
       return;
 
     loading.current.add(w.id);
@@ -196,13 +178,11 @@ export function App()
       snapshotCache.current[w.id] = snap;
 
       if (alive.current)
-
         setSnapshots(old => ({ ...old, [w.id]: snap }))
     }
     catch (e: any)
     {
       if (alive.current)
-
         setError(`${w.name}：${e.message}`)
     }
     finally
@@ -218,7 +198,6 @@ export function App()
     const data = await api.call('list');
 
     if (!alive.current || request !== listRequest.current)
-
       return;
 
     setCatalog(data);
@@ -226,7 +205,6 @@ export function App()
     void api.call('runtime.snapshot').then(snapshot => { if (alive.current && request === listRequest.current) setRunning(runningConversations(snapshot)) }).catch(() => { if (alive.current && request === listRequest.current) setRunning({}) });
 
     for (const w of data.entries as WorkspaceView[])
-
       if (w.state === 'running')
       {
         void loadSnapshot(w);
@@ -272,7 +250,6 @@ export function App()
   async function openWorkspace(id: string)
   {
     if (openingRequests.current.has(id))
-
       return;
 
     openingRequests.current.add(id);
@@ -313,13 +290,11 @@ export function App()
   function select(id: string, kind?: TabKind, openOnSelect = true)
   {
     if ((selected !== id || screen !== 'workspace') && !canLeave())
-
       return false;
 
     cancelRuntimeNavigation();
 
     if (selected !== id)
-
       dirty.current.clear();
 
     setSelected(id);
@@ -333,7 +308,6 @@ export function App()
     const state = workspaces.find(w => w.id === id)?.state;
 
     if (openOnSelect && !['opening', 'closing', 'missing'].includes(state || ''))
-
       void openWorkspace(id);
 
     return true
@@ -342,7 +316,6 @@ export function App()
   function global(kind: ResourceCategory | 'settings' | 'runtime')
   {
     if (!canLeave())
-
       return false;
 
     cancelRuntimeNavigation();
@@ -360,7 +333,6 @@ export function App()
   function openSettings(section: SettingsSectionId = 'models')
   {
     if (global('settings'))
-
       setSettingsSection(section)
   }
 
@@ -368,7 +340,6 @@ export function App()
   async function openRuntimeTarget(target: RuntimeNavigationTarget)
   {
     if (!canLeave())
-
       return;
 
     setError('');
@@ -382,7 +353,6 @@ export function App()
       const verified = await runtimeResolver.current.Resolve(target);
 
       if (!alive.current || !verified)
-
         return;
 
       dirty.current.clear();
@@ -402,7 +372,6 @@ export function App()
     catch (error)
     {
       if (alive.current)
-
         setRuntimeNavigationError(error instanceof Error ? error.message : '原会话定位失败。')
     }
   }
@@ -415,13 +384,11 @@ export function App()
   function newConversation(id: string)
   {
     if (!canLeave())
-
       return;
 
     cancelRuntimeNavigation();
 
     if (selected !== id)
-
       dirty.current.clear();
 
     setSelected(id);
@@ -433,7 +400,6 @@ export function App()
     const state = workspaces.find(w => w.id === id)?.state;
 
     if (!['opening', 'closing', 'missing'].includes(state || ''))
-
       void openWorkspace(id);
 
     const t = newTab('chat');
@@ -444,7 +410,6 @@ export function App()
   async function addWorkspace()
   {
     if (!canLeave())
-
       return;
 
     await perform('添加工作区', async () => { const folder = await api.call('chooseFolder'); if (!folder) return; const w = await api.call('add', { path: folder }); select(w.id, undefined, false); await openWorkspace(w.id) })

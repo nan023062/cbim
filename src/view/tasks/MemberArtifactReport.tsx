@@ -29,7 +29,6 @@ const logLabels = { verified: '日志已核实', missing: '运行日志缺失', 
 export function ArtifactReportPanel({ state, taskId, runId }: { state: ArtifactPanelState; taskId: string; runId: string })
 {
   const { report, selectedId, loading, error, stale } = state,
-
     verification = report?.verification;
 
   const selected = report?.baselines.find(item => item.baselineId === selectedId);

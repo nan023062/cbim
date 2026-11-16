@@ -76,7 +76,6 @@ export interface ControlledFilePorts
 }
 
 export const CONTROLLED_FILE_LOCAL_BYTES = 2 * 1024 * 1024,
-
   CONTROLLED_FILE_LOCAL_LIMIT = 64;
 
 export const controlledFileSelectionKey = (v: ControlledFileReportInput) => JSON.stringify([v.workspaceId, v.rootSessionId, v.taskId, v.runId, v.toolCallId]);
@@ -116,7 +115,6 @@ function summaryAdvances(previous: FileCompensationSummary, next: FileCompensati
 function bounded(raw: unknown)
 {
   if (byteLength(raw) > controlledFileLimits.outputBytes)
-
     throw Error('文件操作回包超过读取上限');
 
   return raw
@@ -128,23 +126,19 @@ export function checkedControlledFileReport(raw: unknown, identity: ControlledFi
   const report = controlledFileReportSchema.parse(bounded(raw));
 
   if (!sameIdentity(report.identity, identity))
-
     throw Error('文件操作报告不属于所选调用');
 
   if (previous?.ledger.state === 'recorded')
   {
     if (report.ledger.state !== 'recorded')
-
       throw Error('原已登记操作未能重新核实，保留上次记录');
 
     const a = previous.ledger.operation,
-
       b = report.ledger.operation;
 
     const fixed = (v: ControlledFileOperationSummary) => { const { phase, revision, updatedAt, issue, ...rest } = v; return rest };
 
     if (!same(fixed(a), fixed(b)) || (!same(a, b) && !phaseAdvances(a, b)) || Date.parse(b.updatedAt) < Date.parse(a.updatedAt))
-
       throw Error('原文件操作记录发生冲突');
 
     for (const old of previous.ledger.compensations)
@@ -152,10 +146,10 @@ export function checkedControlledFileReport(raw: unknown, identity: ControlledFi
       const next = report.ledger.compensations.find(v => v.compensationId === old.compensationId);
 
       if (!next || !summaryAdvances(old, next))
-
         throw Error('原补偿历史发生冲突')
     }
   }
+
   return report;
 }
 
@@ -165,7 +159,6 @@ export function checkedFileCompensationReceipt(raw: unknown, request: FileCompen
   const receipt = fileCompensationReceiptSchema.parse(bounded(raw));
 
   if (!same(receipt.request, fileCompensationInputSchema.parse(request)) || receipt.operationId !== source.operationId || receipt.relativePath !== source.relativePath || !same(receipt.before, source.intendedAfter) || !same(receipt.after, source.before))
-
     throw Error('补偿回执与原请求或文件摘要不一致');
 
   if (previous)
@@ -173,9 +166,9 @@ export function checkedFileCompensationReceipt(raw: unknown, request: FileCompen
     const fixed = (v: FileCompensationReceipt) => { const { revision, phase, updatedAt, issue, ...rest } = v; return rest };
 
     if (!same(fixed(previous), fixed(receipt)) || (!same(previous, receipt) && !phaseAdvances(previous, receipt)) || Date.parse(receipt.updatedAt) < Date.parse(previous.updatedAt))
-
       throw Error('已保存补偿回执发生冲突，保留原记录');
   }
+
   return receipt;
 }
 
@@ -203,21 +196,17 @@ export class ControlledFileController
       const text = ports.storage.getItem(this.storageKey);
 
       if (text === null)
-
         return;
 
       if (new TextEncoder().encode(text).length > CONTROLLED_FILE_LOCAL_BYTES)
-
         throw Error('本机补偿索引超出读取上限');
 
       const saved = JSON.parse(text);
 
       if (!localObject(saved, ['version', 'workspaceId', 'rootSessionId', 'drafts', 'attempts']) || saved.version !== 1 || saved.workspaceId !== workspaceId || saved.rootSessionId !== rootSessionId || !Array.isArray(saved.drafts) || !Array.isArray(saved.attempts) || saved.drafts.length > CONTROLLED_FILE_LOCAL_LIMIT || saved.attempts.length > CONTROLLED_FILE_LOCAL_LIMIT)
-
         throw Error('本机补偿索引格式无效');
 
       const ids = new Set<string>(),
-
         keys = new Set<string>();
 
       const attempts: FileCompensationAttempt[] = saved.attempts.map((raw: any) => { if (!localObject(raw, ['identity', 'request', 'source', 'state', 'receipt', 'error']) || raw.error !== undefined && typeof raw.error !== 'string') throw Error('本机补偿请求格式无效'); const identity = controlledFileReportInputSchema.parse(raw.identity), request = fileCompensationInputSchema.parse(raw.request), source = controlledFileOperationSummarySchema.parse(raw.source); if (!this.Owns(identity) || !this.Owns(request) || !ownsSource(source, identity) || source.operationId !== request.operationId || source.phase !== 'applied' || ids.has(request.commandId) || !['sending', 'unknown', 'settled', 'rejected'].includes(raw.state)) throw Error('本机补偿请求身份无效'); ids.add(request.commandId); const receipt = raw.receipt !== undefined ? checkedFileCompensationReceipt(raw.receipt, request, source) : undefined; if (raw.state === 'settled' && (!receipt || !['applied', 'not_applied'].includes(receipt.phase)) || raw.state === 'rejected' && receipt) throw Error('本机补偿状态与回执不符'); return { identity, request, source, state: raw.state === 'sending' ? 'unknown' : raw.state, receipt, error: typeof raw.error === 'string' ? raw.error.slice(0, 4096) : undefined }; });
@@ -286,7 +275,6 @@ export class ControlledFileController
   private SetRead(identity: ControlledFileReportInput, patch: Partial<ControlledFileRead>)
   {
     const key = controlledFileSelectionKey(identity),
-
       previous = this.Read(identity) ?? { loading: false, error: '' };
 
     this.Publish({ ...this.value, reads: { ...this.value.reads, [key]: { ...previous, ...patch } } })
@@ -295,7 +283,6 @@ export class ControlledFileController
   ObserveAnchor(identity: ControlledFileReportInput, anchor: string)
   {
     if (this.Owns(identity))
-
       this.anchors.set(controlledFileSelectionKey(identity), anchor)
   }
 
@@ -311,15 +298,12 @@ export class ControlledFileController
     try
     {
       if (this.unavailable)
-
         throw Error('本机记录不可用');
 
       const saved = { version: 1, workspaceId: this.workspaceId, rootSessionId: this.rootSessionId, drafts, attempts },
-
         reserve = attempts.filter(v => v.state !== 'settled' && v.state !== 'rejected').length * (controlledFileLimits.outputBytes + 4096);
 
       if (drafts.length > CONTROLLED_FILE_LOCAL_LIMIT || attempts.length > CONTROLLED_FILE_LOCAL_LIMIT || byteLength(saved) + reserve > CONTROLLED_FILE_LOCAL_BYTES)
-
         throw Error('本机补偿记录达到保存上限，原记录保留');
 
       this.ports.storage.setItem(this.storageKey, JSON.stringify(saved));
@@ -330,6 +314,7 @@ export class ControlledFileController
 
       return false
     }
+
     this.Publish({ ...this.value, drafts, attempts, error: '' });
 
     return true;
@@ -338,17 +323,14 @@ export class ControlledFileController
   Edit(identity: ControlledFileReportInput, reason: string)
   {
     const length = controlledFileUtf8Bytes(reason),
-
       attempt = this.Attempt(identity);
 
     if (!this.Owns(identity) || !this.available || this.Draft(identity)?.commandId && attempt?.state !== 'rejected' || length === undefined || length > controlledFileLimits.reasonBytes)
-
       return;
 
     const parsed = controlledFileReportInputSchema.safeParse(identity);
 
     if (!parsed.success)
-
       return;
 
     this.Persist([...this.value.drafts.filter(v => !sameIdentity(v.identity, identity)), { identity: parsed.data, reason }], this.value.attempts);
@@ -358,11 +340,9 @@ export class ControlledFileController
   Prepare(identity: ControlledFileReportInput)
   {
     const draft = this.Draft(identity),
-
       attempt = this.Attempt(identity);
 
     if (!draft || attempt?.receipt?.phase !== 'not_applied' || this.IsPending(attempt.request.commandId))
-
       return;
 
     this.Persist(this.value.drafts.map(v => v === draft ? { identity: v.identity, reason: v.reason } : v), this.value.attempts);
@@ -373,7 +353,6 @@ export class ControlledFileController
   async Inspect(identity: ControlledFileReportInput)
   {
     if (!this.Owns(identity) || this.Read(identity)?.loading)
-
       return;
 
     this.SetRead(identity, { loading: true, error: '', anchor: undefined });
@@ -394,11 +373,9 @@ export class ControlledFileController
   async Preview(identity: ControlledFileReportInput, instanceId: string)
   {
     const read = this.Read(identity),
-
       operation = read?.report?.ledger.state === 'recorded' ? read.report.ledger.operation : undefined;
 
     if (!this.Owns(identity) || read?.loading || operation?.phase !== 'applied' || this.IsPending(this.Draft(identity)?.commandId))
-
       return;
 
     const parsed = fileCompensationPreviewInputSchema.safeParse({ workspaceId: this.workspaceId, rootSessionId: this.rootSessionId, instanceId, operationId: operation.operationId });
@@ -409,8 +386,8 @@ export class ControlledFileController
 
       return
     }
-    const input = parsed.data,
 
+    const input = parsed.data,
       anchor = this.anchors.get(controlledFileSelectionKey(identity));
 
     this.SetRead(identity, { loading: true, error: '', anchor: undefined });
@@ -420,7 +397,6 @@ export class ControlledFileController
       const preview = fileCompensationPreviewSchema.parse(bounded(await this.ports.preview(structuredClone(input))));
 
       if (!same(preview.identity, input) || !same(preview.source, operation) || !ownsSource(preview.source, identity))
-
         throw Error('补偿预览不属于原操作或当前工作区实例');
 
       this.SetRead(identity, { preview, anchor, loading: false });
@@ -440,11 +416,9 @@ export class ControlledFileController
   async Submit(identity: ControlledFileReportInput, instanceId: string)
   {
     const draft = this.Draft(identity),
-
       preview = this.Read(identity)?.preview;
 
     if (!draft || draft.commandId && this.Attempt(identity)?.state !== 'rejected' || !preview?.eligible || !this.Fresh(identity, instanceId) || !this.available)
-
       return;
 
     let request: FileCompensationInput;
@@ -454,7 +428,6 @@ export class ControlledFileController
       request = fileCompensationInputSchema.parse({ ...preview.identity, commandId: this.ports.uuid(), expectedOperationRevision: preview.operationRevision, expectedCompensationRevision: preview.compensationRevision, expectedBasis: preview.basis, reason: draft.reason });
 
       if (this.value.attempts.some(v => v.request.commandId === request.commandId))
-
         throw Error('补偿命令与旧记录重号')
     }
     catch (error)
@@ -463,10 +436,10 @@ export class ControlledFileController
 
       return
     }
+
     const attempt: FileCompensationAttempt = { identity: structuredClone(identity), request, source: structuredClone(preview.source), state: 'sending' };
 
     if (!this.Persist(this.value.drafts.map(v => v === draft ? { ...v, commandId: request.commandId } : v), [...this.value.attempts, attempt]))
-
       return;
 
     this.pending.add(request.commandId);
@@ -497,13 +470,11 @@ export class ControlledFileController
   async Query(identity: ControlledFileReportInput, commandId: string)
   {
     const previous = this.value.attempts.find(v => v.request.commandId === commandId),
-
       ledger = this.Read(identity)?.report?.ledger;
 
     const source = previous?.source ?? (ledger?.state === 'recorded' && ledger.compensations.some(v => v.commandId === commandId) ? ledger.operation : undefined);
 
     if (!this.Owns(identity) || this.pending.has(commandId) || previous && !sameIdentity(previous.identity, identity) || !source || source.phase !== 'applied')
-
       return;
 
     this.pending.add(commandId);
@@ -515,13 +486,11 @@ export class ControlledFileController
       const raw = await this.ports.receipt({ workspaceId: this.workspaceId, rootSessionId: this.rootSessionId, commandId });
 
       if (raw === undefined)
-
         throw Error('尚未查到原补偿回执，保留未知状态');
 
       const parsed = fileCompensationReceiptSchema.parse(bounded(raw));
 
       if (!this.Owns(parsed) || parsed.commandId !== commandId || parsed.operationId !== source.operationId)
-
         throw Error('回执不属于所选原命令');
 
       const receipt = checkedFileCompensationReceipt(parsed, previous?.request ?? parsed.request, source, previous?.receipt);
@@ -531,7 +500,6 @@ export class ControlledFileController
       const { compensationId, revision, phase, preparedAt, updatedAt, issue } = receipt;
 
       if (summary && !summaryAdvances(summary, { compensationId, commandId, revision, phase, preparedAt, updatedAt, ...(issue ? { issue } : {}) }))
-
         throw Error('补偿回执与已观察历史冲突，保留原记录');
 
       this.SaveAttempt({ identity: structuredClone(identity), request: receipt.request, source, receipt, state: ['applied', 'not_applied'].includes(receipt.phase) ? 'settled' : 'unknown' });
@@ -543,7 +511,6 @@ export class ControlledFileController
       const message = '原补偿查询未确认：' + errorText(error);
 
       if (previous)
-
         this.SaveAttempt({ ...previous, state: previous.state === 'rejected' ? 'rejected' : previous.receipt && ['applied', 'not_applied'].includes(previous.receipt.phase) ? 'settled' : 'unknown', error: message });
 
       this.SetRead(identity, { error: message })
@@ -569,7 +536,6 @@ export class ControlledFilePool
   Get(workspaceId: string, rootSessionId: string, ports: ControlledFilePorts)
   {
     const key = JSON.stringify([workspaceId, rootSessionId]),
-
       value = this.values.get(key) ?? new ControlledFileController(workspaceId, rootSessionId, ports);
 
     this.values.delete(key);
@@ -579,13 +545,12 @@ export class ControlledFilePool
     for (const [id, controller] of this.values)
     {
       if (this.values.size <= this.idleLimit)
-
         break;
 
       if (id !== key && controller.canRelease)
-
         this.values.delete(id)
     }
+
     return value
   }
 }

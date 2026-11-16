@@ -39,13 +39,11 @@ interface KnowledgeEffectOwner
 export async function observeKnowledgeTransaction(owner: KnowledgeEffectOwner, reference: KnowledgeWriteReference, signal?: AbortSignal): Promise<KnowledgeTransactionObservation>
 {
   const identity = originalKnowledgeIdentity(reference),
-
     alive = () => { signal?.throwIfAborted(); owner.Assert() };
 
   alive();
 
   if (identity.workspaceId !== owner.entry.id)
-
     fail('EFFECT_IDENTITY', '原知识请求不属于当前工作区');
 
   return owner.Governed(async transaction => { alive(); let request: ChangeRequest; if (reference.kind === 'request') request = reference.request; else { try { const loaded = await readKnowledgePlan(owner, { kind: 'object_plan', planId: reference.planId }); if (loaded.request.workspaceId !== identity.workspaceId || loaded.request.instanceId !== identity.instanceId || loaded.request.requestId !== identity.requestId) throw Error('Original knowledge plan identity mismatch'); request = loaded.request; } catch { alive(); return knowledgeTransactionObservationSchema.parse({ identity, state: 'unverifiable', reason: 'original_plan_unavailable' }) } } alive(); const requestHash = hash(json(request)); let observation: KnowledgeTransactionObservation; try { const status = await transaction.Journal(request); observation = knowledgeTransactionObservationSchema.parse(status ? { identity, state: status.state, requestHash, evidenceHash: hash(json(status)), ...(status.state === 'committed' ? { revision: status.result?.revision, changedCount: status.result?.changed.length } : {}) } : { identity, state: 'absent', requestHash }); } catch { observation = knowledgeTransactionObservationSchema.parse({ identity, state: 'unverifiable', requestHash, reason: 'original_record_unverifiable' }) } alive(); return observation; });

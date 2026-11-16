@@ -70,11 +70,9 @@ export function humanContinuationRejected(error: unknown)
 export function checkedHumanContinuationReceipt(raw: unknown, request: HumanContinuationRequest, previous?: HumanContinuationReceipt): HumanContinuationReceipt
 {
   const receipt = humanContinuationReceiptSchema.parse(raw),
-
     value = receipt.continuation;
 
   if (receipt.workspaceId !== request.workspaceId || receipt.rootSessionId !== request.rootSessionId || receipt.scopeId !== request.scopeId || value.continuationId !== request.commandId || value.wait.waitId !== request.waitId || value.wait.goalRevision !== request.expectedGoalRevision || value.inputRevision !== request.expectedInputRevision + 1 || value.decisionRevision !== request.expectedDecisionRevision || !sameIds(value.decisionIds, request.decisionIds) || !equal(value.options, request.options) || previous && !equal(previous.continuation, value))
-
     throw Error('人工决定接续回执与冻结请求不一致，请查询原命令');
 
   return receipt;
@@ -101,17 +99,14 @@ export class HumanContinuationController
       const raw = ports.storage.getItem(this.storageKey);
 
       if (!raw)
-
         return;
 
       if (new TextEncoder().encode(raw).length > 2 * 1024 * 1024)
-
         throw Error('本地意图超过容量上限');
 
       const saved = JSON.parse(raw);
 
       if (saved.version !== 1 || saved.workspaceId !== workspaceId || saved.rootSessionId !== rootSessionId || !Array.isArray(saved.records) || saved.records.length > 128)
-
         throw Error('本地记录格式或归属不匹配');
 
       const seen = new Set<string>();
@@ -166,15 +161,11 @@ export class HumanContinuationController
   private Update(record: HumanContinuationDraft): boolean
   {
     const records = [...this.value.records],
-
       index = records.findIndex(value => value.scopeId === record.scopeId && value.waitId === record.waitId);
 
     if (index < 0)
-
       records.push(record);
-
     else
-
       records[index] = record;
 
     this.value = { records, error: '' };
@@ -184,7 +175,6 @@ export class HumanContinuationController
       const raw = JSON.stringify({ version: 1, workspaceId: this.workspaceId, rootSessionId: this.rootSessionId, records });
 
       if (records.length > 128 || new TextEncoder().encode(raw).length > 2 * 1024 * 1024)
-
         throw Error('本地记录超过容量上限');
 
       this.ports.storage.setItem(this.storageKey, raw);
@@ -211,13 +201,11 @@ export class HumanContinuationController
   async Submit(target: HumanContinuationTarget, options: HumanContinuationRequest['options'])
   {
     if (!this.available || target.workspaceId !== this.workspaceId || target.rootSessionId !== this.rootSessionId)
-
       return;
 
     const old = this.Record(target.scopeId, target.waitId);
 
     if (old && (old.attempt.phase !== 'rejected' || this.IsPending(old)))
-
       return;
 
     let request: HumanContinuationRequest;
@@ -234,21 +222,19 @@ export class HumanContinuationController
 
       return
     }
+
     const record: HumanContinuationDraft = { scopeId: target.scopeId, waitId: target.waitId, attempt: { request, phase: 'submitting', uncertain: false } };
 
     if (this.Update(record))
-
       await this.Send(record);
   }
 
   private async Send(record: HumanContinuationDraft)
   {
     const { attempt } = record,
-
       request = attempt.request;
 
     if (this.pending.has(request.commandId))
-
       return;
 
     this.pending.add(request.commandId);
@@ -281,7 +267,6 @@ export class HumanContinuationController
     const record = this.Record(scopeId, waitId);
 
     if (this.available && record?.attempt.phase === 'unknown' && !this.IsPending(record))
-
       await this.Send(record)
   }
 
@@ -291,11 +276,9 @@ export class HumanContinuationController
     const record = this.Record(scopeId, waitId);
 
     if (!record || this.IsPending(record))
-
       return;
 
     const { attempt } = record,
-
       request = attempt.request;
 
     this.pending.add(request.commandId);
@@ -307,11 +290,8 @@ export class HumanContinuationController
       const raw = await this.ports.lookup({ workspaceId: request.workspaceId, rootSessionId: request.rootSessionId, scopeId: request.scopeId, commandId: request.commandId });
 
       if (raw !== undefined)
-
         this.Update({ ...record, attempt: { ...attempt, phase: 'accepted', receipt: checkedHumanContinuationReceipt(raw, request, attempt.receipt), error: undefined } });
-
       else if (attempt.phase !== 'accepted')
-
         this.Update({ ...record, attempt: { ...attempt, phase: 'unknown', uncertain: true, error: '尚未查到回执；保留原请求，请继续查询或原请求重试。' } })
     }
     catch (error)
@@ -340,7 +320,6 @@ export class HumanContinuationPool
   Get(workspaceId: string, rootSessionId: string, ports: HumanContinuationPorts)
   {
     const key = JSON.stringify([workspaceId, rootSessionId]),
-
       value = this.controllers.get(key) ?? new HumanContinuationController(workspaceId, rootSessionId, ports);
 
     this.controllers.delete(key);
@@ -350,13 +329,12 @@ export class HumanContinuationPool
     for (const [oldKey, old] of this.controllers)
     {
       if (this.controllers.size <= 16)
-
         break;
 
       if (oldKey !== key && old.canRelease)
-
         this.controllers.delete(oldKey)
     }
+
     return value
   }
 }

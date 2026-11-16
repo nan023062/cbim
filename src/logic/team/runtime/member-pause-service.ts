@@ -39,7 +39,6 @@ export class MemberPauseService
   private Available()
   {
     if (!this.ports)
-
       fail('GOAL_MEMBER_PAUSE_UNAVAILABLE', '当前工作区未装配成员持久等待核实能力');
 
     return this.ports
@@ -50,7 +49,6 @@ export class MemberPauseService
     const scope = state.scopes?.find(s => s.workspaceId === request.workspaceId && s.rootSessionId === request.rootSessionId && s.scopeId === request.scopeId);
 
     if (state.workspaceId !== this.owner.entry.id || request.workspaceId !== this.owner.entry.id || scope?.status !== 'waiting' || !scope.wait?.memberPause || scope.wait.waitId !== request.waitId || scope.goal?.revision !== request.expectedGoalRevision || (scope.goal.inputRevision ?? 1) !== request.expectedInputRevision)
-
       fail('GOAL_WAIT_CONFLICT', '成员等待或目标版本已变化，请刷新后核实');
 
     return scope;
@@ -60,11 +58,9 @@ export class MemberPauseService
   async VerifyWaiting(state: DispatchState, scope: DispatchScope, pause: MemberPause): Promise<void>
   {
     const ports = this.Available(),
-
       selected = memberPauseSelection(state, scope, pause);
 
     for (const { task, run } of selected.checkpoints)
-
       await verifyMemberCheckpointHistory(this.owner, task, run, ports, () => ports.AssertCurrent(), state.runs);
   }
 
@@ -72,7 +68,6 @@ export class MemberPauseService
   async WithContext<T>(request: GoalContinuationRequest, alive: () => void, use: (context: OwnerExecutionContext) => Promise<T>, mainLeaseHeld = false): Promise<T>
   {
     const ports = this.Available(),
-
       assert = () => { this.owner.Assert(); ports.AssertCurrent(); alive() };
 
     assert();
@@ -93,11 +88,8 @@ export class MemberPauseService
   async ValidateCurrent(state: DispatchState, request: GoalContinuationRequest, context: OwnerExecutionContext, alive: () => void): Promise<void>
   {
     const ports = this.Available(),
-
       scope = this.Scope(state, request),
-
       selected = memberPauseSelection(state, scope, scope.wait!.memberPause!),
-
       assert = () => { this.owner.Assert(); ports.AssertCurrent(); alive() };
 
     assert();
@@ -105,7 +97,6 @@ export class MemberPauseService
     assertMemberPausePermission(selected.checkpoints, request.options.permission);
 
     if (context.snapshot.revision !== scope.wait!.knowledgeRevision || scope.goal?.plan?.knowledgeRevision !== context.snapshot.revision)
-
       fail('GOAL_KNOWLEDGE_CHANGED', '等待期间知识发生变化，原成员不能沿旧计划继续');
 
     for (const task of selected.tasks)
@@ -114,12 +105,14 @@ export class MemberPauseService
 
       assert()
     }
+
     for (const { task, run } of selected.checkpoints)
     {
       await verifyMemberCheckpointProof(this.owner, task, run, ports, assert, run.checkpointProof, state.runs);
 
       assert()
     }
+
     await this.owners.Recheck(context.snapshot, assert);
   }
 

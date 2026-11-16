@@ -15,19 +15,17 @@ export function requestBudgetReservation(model: RequestBudgetCapacity, maxOutput
   if ('inputTokens' in model)
   {
     if (maxOutputTokens !== 0)
-
       throw Error('向量请求不能声明生成输出容量');
 
     const cost = priced(model.inputPrice === undefined ? undefined : model.inputTokens * model.inputPrice);
 
     return { tokens: model.inputTokens, ...(cost === undefined ? {} : { estimatedCostUsd: cost }) };
   }
-  if (!Number.isSafeInteger(maxOutputTokens) || maxOutputTokens < 1 || maxOutputTokens > model.maxTokens)
 
+  if (!Number.isSafeInteger(maxOutputTokens) || maxOutputTokens < 1 || maxOutputTokens > model.maxTokens)
     throw Error('模型请求缺少有效的冻结输出上限');
 
   const tokens = model.contextWindow + maxOutputTokens,
-
     p = model.pricing;
 
   const cost = priced(p ? model.contextWindow * Math.max(p.input, p.cacheRead, p.cacheWrite) + maxOutputTokens * p.output : undefined);
@@ -39,13 +37,11 @@ export function requestBudgetReservation(model: RequestBudgetCapacity, maxOutput
 function priced(weighted: number | undefined): number | undefined
 {
   if (weighted === undefined)
-
     return;
 
   const cost = weighted > 0 ? Math.max(Number.MIN_VALUE, weighted / 1000000) : 0;
 
   if (!Number.isFinite(cost) || cost > Number.MAX_SAFE_INTEGER)
-
     throw Error('模型请求用量计价超出范围');
 
   return cost;
@@ -57,11 +53,11 @@ export function requestBudgetCost(model: RequestBudgetModel, usage: RequestBudge
   if (model.api === 'openai-embeddings')
   {
     if (usage.output || usage.cacheRead || usage.cacheWrite)
-
       throw Error('向量请求用量包含非输入分量');
 
     return priced(model.inputPrice === undefined ? undefined : usage.input * model.inputPrice);
   }
+
   const p = model.pricing;
 
   return priced(p ? usage.input * p.input + usage.output * p.output + usage.cacheRead * p.cacheRead + usage.cacheWrite * p.cacheWrite : undefined);
@@ -77,20 +73,18 @@ export function requestBudgetRecords(changes: readonly ModelRequestBudgetChange[
   for (const change of changes)
   {
     if (change.phase === 'reserved' || change.phase === 'denied')
-
       records.set(change.requestId, { intent: change.intent, change });
-
     else
     {
       const old = records.get(change.requestId);
 
       if (!old)
-
         throw Error('请求预算阶段没有原预留');
 
       records.set(change.requestId, { intent: old.intent, change })
     }
   }
+
   return [...records.values()];
 }
 
@@ -102,7 +96,6 @@ export function requestBudgetReport(records: readonly RequestBudgetRecord[], sco
   for (const { intent, change } of records)
   {
     if (intent.binding.scopeId !== scope.scopeId || intent.binding.workspaceId !== scope.workspaceId || intent.binding.rootSessionId !== scope.rootSessionId)
-
       continue;
 
     report.requests++;
@@ -116,21 +109,20 @@ export function requestBudgetReport(records: readonly RequestBudgetRecord[], sco
       report.lastDeniedTokens = intent.tokens;
 
       if (intent.estimatedCostUsd === undefined)
-
         delete report.lastDeniedCostUsd;
-
       else
-
         report.lastDeniedCostUsd = intent.estimatedCostUsd;
 
       continue
     }
+
     if (change.phase === 'not_sent')
     {
       report.notSent++;
 
       continue
     }
+
     if (change.phase === 'reported')
     {
       report.reported++;
@@ -138,35 +130,29 @@ export function requestBudgetReport(records: readonly RequestBudgetRecord[], sco
       report.tokens += change.usage.totalTokens;
 
       if (change.estimatedCostUsd === undefined)
-
         report.costComplete = false;
-
       else
-
         report.estimatedCostUsd += change.estimatedCostUsd;
 
       if (change.usage.input + change.usage.cacheRead + change.usage.cacheWrite > requestBudgetInputCapacity(intent.model) || change.usage.output > intent.maxOutputTokens || change.estimatedCostUsd !== undefined && intent.estimatedCostUsd !== undefined && exceeds(change.estimatedCostUsd, intent.estimatedCostUsd))
-
         report.overrun++;
 
       continue;
     }
+
     report.reservedTokens += intent.tokens;
 
     report.reservedCostUsd += intent.estimatedCostUsd ?? 0;
 
     if (change.phase === 'unknown' || intent.binding.ownerInstanceId !== ownerInstanceId)
-
       report.unknown++;
-
     else
-
       report.inFlight++;
 
     if (intent.estimatedCostUsd === undefined)
-
       report.costComplete = false;
   }
+
   return report;
 }
 
@@ -179,25 +165,20 @@ function exceeds(value: number, limit: number)
 export function requestBudgetDecision(policy: ScopeBudgetPolicy, report: RequestBudgetReport, intent: Pick<RequestBudgetIntent, 'tokens' | 'estimatedCostUsd'>, records: readonly RequestBudgetRecord[]): RequestBudgetDenial | undefined
 {
   if (records.length >= modelRequestBudgetLimits.requests || report.requests >= modelRequestBudgetLimits.requestsPerScope)
-
     return 'capacity';
 
   if (report.unknown || report.overrun)
-
     return 'usage_unverifiable';
 
   if (policy.limits.tokens !== undefined && exceeds(report.tokens + report.reservedTokens + intent.tokens, policy.limits.tokens))
-
     return 'token_reserve';
 
   if (policy.limits.estimatedCostUsd !== undefined)
   {
     if (!report.costComplete || intent.estimatedCostUsd === undefined)
-
       return 'unpriced';
 
     if (exceeds(report.estimatedCostUsd + report.reservedCostUsd + intent.estimatedCostUsd, policy.limits.estimatedCostUsd))
-
       return 'cost_reserve'
   }
 }

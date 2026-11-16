@@ -67,7 +67,6 @@ export class Win32IsolatedNode
   constructor(readonly profileName: string, koffiPath: string)
   {
     if (process.platform !== 'win32' || process.arch !== 'x64' || !/^CBIM\.Isolated\.[a-f0-9-]{36}$/.test(profileName))
-
       fault('UNSUPPORTED');
 
     this.jobName = 'Local\\' + profileName;
@@ -75,11 +74,8 @@ export class Win32IsolatedNode
     this.k = requireNative(koffiPath);
 
     const kernel = this.k.load('kernel32.dll'),
-
       adv = this.k.load('advapi32.dll'),
-
       user = this.k.load('userenv.dll'),
-
       base = this.k.load('kernelbase.dll');
 
     this.api = {};
@@ -87,11 +83,9 @@ export class Win32IsolatedNode
     const bind = (lib: ReturnType<typeof this.k.load>, key: string, decl: string) => { this.api[key] = lib.func(decl) };
 
     for (const [key, decl] of Object.entries({ last: 'uint32 __stdcall GetLastError()', close: 'int __stdcall CloseHandle(void *)', localFree: 'void * __stdcall LocalFree(void *)', current: 'void * __stdcall GetCurrentProcess()', init: 'int __stdcall InitializeProcThreadAttributeList(void *,uint32,uint32,void *)', attribute: 'int __stdcall UpdateProcThreadAttribute(void *,uint32,uintptr,void *,uintptr,void *,void *)', deleteAttributes: 'void __stdcall DeleteProcThreadAttributeList(void *)', create: 'int __stdcall CreateProcessW(str16,void *,void *,void *,int,uint32,void *,str16,void *,void *)', resume: 'uint32 __stdcall ResumeThread(void *)', wait: 'uint32 __stdcall WaitForSingleObject(void *,uint32)', exitCode: 'int __stdcall GetExitCodeProcess(void *,void *)', jobCreate: 'void * __stdcall CreateJobObjectW(void *,str16)', jobSet: 'int __stdcall SetInformationJobObject(void *,int,void *,uint32)', jobQuery: 'int __stdcall QueryInformationJobObject(void *,int,void *,uint32,void *)', jobTerminate: 'int __stdcall TerminateJobObject(void *,uint32)', inJob: 'int __stdcall IsProcessInJob(void *,void *,void *)', pipe: 'int __stdcall CreatePipe(_Out_ void **,_Out_ void **,void *,uint32)', inherit: 'int __stdcall SetHandleInformation(void *,uint32,uint32)', peek: 'int __stdcall PeekNamedPipe(void *,void *,uint32,void *,void *,void *)', read: 'int __stdcall ReadFile(void *,void *,uint32,void *,void *)', file: 'void * __stdcall CreateFileW(str16,uint32,uint32,void *,uint32,uint32,void *)' }))
-
       bind(kernel, key, decl);
 
     for (const [key, decl] of Object.entries({ freeSid: 'void * __stdcall FreeSid(void *)', sidString: 'int __stdcall ConvertSidToStringSidW(void *,_Out_ void **)', tokenOpen: 'int __stdcall OpenProcessToken(void *,uint32,_Out_ void **)', tokenInfo: 'int __stdcall GetTokenInformation(void *,int,void *,uint32,void *)', equalSid: 'int __stdcall EqualSid(void *,void *)', security: 'int __stdcall ConvertStringSecurityDescriptorToSecurityDescriptorW(str16,uint32,_Out_ void **,void *)', setSecurity: 'int __stdcall SetFileSecurityW(str16,uint32,void *)' }))
-
       bind(adv, key, decl);
 
     bind(user, 'profileCreate', 'int32 __stdcall CreateAppContainerProfile(str16,str16,str16,void *,uint32,_Out_ void **)');
@@ -118,12 +112,11 @@ export class Win32IsolatedNode
       {
         this.Check(this.api.close(token), 'OWNER_CLOSE')
       }
-      const sid = [null],
 
+      const sid = [null],
         hr = this.api.profileCreate(profileName, profileName, 'CBIM temporary isolated execution', null, 0, sid);
 
       if (hr !== 0)
-
         fault('PROFILE_CREATE', hr);
 
       this.sid = sid[0];
@@ -133,11 +126,8 @@ export class Win32IsolatedNode
       this.packageSid = this.StringSid(this.sid);
 
       const groups = [null],
-
         caps = [null],
-
         gc = Buffer.alloc(4),
-
         cc = Buffer.alloc(4);
 
       this.Check(this.api.derive('registryRead', groups, gc, caps, cc), 'CAPABILITY');
@@ -145,13 +135,12 @@ export class Win32IsolatedNode
       for (const [array, count] of [[groups[0], gc.readUInt32LE()], [caps[0], cc.readUInt32LE()]] as const)
       {
         for (let i = 0; i < count; i++)
-
           this.allocated.push(this.k.decode(array, i * 8, 'void *'));
 
         this.allocated.push(array)
       }
-      if (cc.readUInt32LE() !== 1)
 
+      if (cc.readUInt32LE() !== 1)
         fault('CAPABILITY');
 
       this.capability = this.k.decode(caps[0], 0, 'void *');
@@ -166,6 +155,7 @@ export class Win32IsolatedNode
       {
         throw Object.assign(cleanup as Error, { cleanupPending: true, retryCleanup: () => this.Close() })
       }
+
       throw error
     }
   }
@@ -173,14 +163,12 @@ export class Win32IsolatedNode
   private Check(value: unknown, stage: string)
   {
     if (!value)
-
       fault(stage, this.api.last())
   }
 
   private Keep(handle: any)
   {
     if (!handle || this.k.address(handle) === 0xffffffffffffffffn)
-
       fault('HANDLE', this.api.last());
 
     this.handles.push(handle);
@@ -191,7 +179,6 @@ export class Win32IsolatedNode
   private Release(handle: any)
   {
     if (!handle)
-
       return;
 
     this.Check(this.api.close(handle), 'CLOSE');
@@ -218,13 +205,11 @@ export class Win32IsolatedNode
   private Token(handle: any, kind: number)
   {
     const bytes = Buffer.alloc(4096),
-
       length = Buffer.alloc(4);
 
     this.Check(this.api.tokenInfo(handle, kind, bytes, bytes.length, length), 'TOKEN');
 
     if (length.readUInt32LE() > bytes.length)
-
       fault('TOKEN');
 
     return bytes
@@ -234,7 +219,6 @@ export class Win32IsolatedNode
   Grant(directory: string, access: 'traverse' | 'read' | 'write')
   {
     if (this.used)
-
       fault('ALREADY_STARTED');
 
     const acl = [`(A;OICI;FA;;;${this.ownerSid})`, '(A;OICI;FA;;;SY)', '(A;OICI;FA;;;BA)', `(A;${access === 'traverse' ? '' : 'OICI'};${access === 'write' ? '0x1301bf' : '0x1200a9'};;;${this.packageSid})`].join('');
@@ -264,13 +248,11 @@ export class Win32IsolatedNode
   Start(executable: string, args: string[], cwd: string, options: { timeoutMs: number; memoryMiB: number; processLimit: number }, suspendOnly = false): number
   {
     if (this.used)
-
       fault('ALREADY_STARTED');
 
     this.used = true;
 
     const job = this.api.jobCreate(null, this.jobName),
-
       jobError = this.api.last();
 
     if (jobError === 183)
@@ -279,6 +261,7 @@ export class Win32IsolatedNode
 
       fault('JOB_EXISTS')
     }
+
     this.job = this.Keep(job);
 
     const limits = Buffer.alloc(144);
@@ -298,7 +281,6 @@ export class Win32IsolatedNode
     this.Check(this.api.jobQuery(this.job, 9, actual, actual.length, null), 'JOB_QUERY');
 
     if (actual.readUInt32LE(16) !== limits.readUInt32LE(16) || actual.readUInt32LE(40) !== options.processLimit || actual.readBigUInt64LE(120) !== limits.readBigUInt64LE(120))
-
       fault('JOB_LIMIT');
 
     const size = Buffer.alloc(8);
@@ -308,7 +290,6 @@ export class Win32IsolatedNode
     const n = Number(size.readBigUInt64LE());
 
     if (n < 1 || n > 65536)
-
       fault('ATTRIBUTE_SIZE');
 
     this.attributes = Buffer.alloc(n);
@@ -348,7 +329,6 @@ export class Win32IsolatedNode
     sa.writeUInt32LE(1, 16);
 
     const read = [null],
-
       write = [null];
 
     this.Check(this.api.pipe(read, write, sa, 4096), 'PIPE');
@@ -387,15 +367,12 @@ export class Win32IsolatedNode
     const environment = { APPDATA: process.env.APPDATA ?? '', ELECTRON_RUN_AS_NODE: '1', LOCALAPPDATA: process.env.LOCALAPPDATA ?? '', SystemRoot: process.env.SystemRoot ?? '', TEMP: cwd, TMP: cwd, USERPROFILE: process.env.USERPROFILE ?? '' };
 
     if (Object.values(environment).some(v => !v || v.includes('\0')))
-
       fault('ENVIRONMENT');
 
     const env = Buffer.from(Object.entries(environment).map(([k, v]) => k + '=' + v).join('\0') + '\0\0', 'utf16le'),
-
       command = Buffer.from([executable, ...args].map(quoteWindowsArgument).join(' ') + '\0', 'utf16le');
 
     if (command.length > 65534)
-
       fault('ARGUMENT_LIMIT');
 
     const info = Buffer.alloc(24);
@@ -419,19 +396,16 @@ export class Win32IsolatedNode
     try
     {
       if (this.Token(token[0], 29).readUInt32LE() !== 1)
-
         fault('NOT_APPCONTAINER');
 
       const packageInfo = this.Token(token[0], 31);
 
       if (!this.api.equalSid(this.k.decode(packageInfo, 0, 'void *'), this.sid))
-
         fault('PACKAGE_IDENTITY');
 
       const capabilityInfo = this.Token(token[0], 30);
 
       if (capabilityInfo.readUInt32LE() !== 1 || !this.api.equalSid(this.k.decode(capabilityInfo, 8, 'void *'), this.capability) || capabilityInfo.readUInt32LE(16) !== 4)
-
         fault('TOKEN_CAPABILITIES');
 
       const member = Buffer.alloc(4);
@@ -439,15 +413,14 @@ export class Win32IsolatedNode
       this.Check(this.api.inJob(this.process, this.job, member), 'JOB_MEMBER');
 
       if (member.readUInt32LE() !== 1)
-
         fault('JOB_MEMBER');
     }
     finally
     {
       this.Check(this.api.close(token[0]), 'TOKEN_CLOSE')
     }
-    if (!suspendOnly)
 
+    if (!suspendOnly)
       this.Resume();
 
     return info.readUInt32LE(16);
@@ -457,11 +430,9 @@ export class Win32IsolatedNode
   Resume()
   {
     if (!this.thread || this.resumed)
-
       fault('RESUME_STATE');
 
     if (this.api.resume(this.thread) !== 1)
-
       fault('RESUME', this.api.last());
 
     this.resumed = true
@@ -477,19 +448,17 @@ export class Win32IsolatedNode
       const code = this.api.last();
 
       if (code === 109)
-
         return Buffer.alloc(0);
 
       fault('PIPE_PEEK', code)
     }
+
     const n = Math.min(4096, available.readUInt32LE());
 
     if (!n)
-
       return Buffer.alloc(0);
 
     const bytes = Buffer.alloc(n),
-
       count = Buffer.alloc(4);
 
     this.Check(this.api.read(this.pipe, bytes, n, count, null), 'PIPE_READ');
@@ -501,11 +470,9 @@ export class Win32IsolatedNode
   State()
   {
     if (!this.job)
-
       return { active: 0, exited: true, exitCode: 0, totalProcesses: 0, limitTerminations: 0, peakMemoryBytes: 0 };
 
     const accounting = Buffer.alloc(48),
-
       limits = Buffer.alloc(144);
 
     this.Check(this.api.jobQuery(this.job, 1, accounting, 48, null), 'JOB_ACCOUNTING');
@@ -515,13 +482,11 @@ export class Win32IsolatedNode
     const result = this.process ? this.api.wait(this.process, 0) : 0;
 
     if (result !== 0 && result !== 258)
-
       fault('WAIT', this.api.last());
 
     const code = Buffer.alloc(4);
 
     if (this.process)
-
       this.Check(this.api.exitCode(this.process, code), 'EXIT_CODE');
 
     return { active: accounting.readUInt32LE(40), exited: result === 0, exitCode: code.readUInt32LE(), totalProcesses: accounting.readUInt32LE(36), limitTerminations: accounting.readUInt32LE(44), peakMemoryBytes: Number(limits.readBigUInt64LE(136)) }
@@ -531,7 +496,6 @@ export class Win32IsolatedNode
   Terminate()
   {
     if (this.job)
-
       this.Check(this.api.jobTerminate(this.job, 1), 'TERMINATE')
   }
 
@@ -547,27 +511,27 @@ export class Win32IsolatedNode
       this.Check(this.api.jobQuery(this.job, 1, data, 48, null), 'CLOSE_JOB');
 
       if (data.readUInt32LE(40) !== 0)
-
         fault('DRAIN_PENDING')
     }
+
     for (const handle of [...this.handles].reverse())
     {
       this.Release(handle);
 
       if (handle === this.job)
-
         this.job = null
     }
+
     if (this.attributes)
     {
       this.api.deleteAttributes(this.attributes);
 
       this.attributes = undefined
     }
+
     this.pins.length = 0;
 
     for (const address of this.allocated)
-
       this.api.localFree(address);
 
     this.allocated = [];
@@ -577,11 +541,11 @@ export class Win32IsolatedNode
       const hr = this.api.profileDelete(this.profileName);
 
       if (hr !== 0)
-
         fault('PROFILE_DELETE', hr);
 
       this.profileCreated = false
     }
+
     if (this.sid)
     {
       this.api.freeSid(this.sid);

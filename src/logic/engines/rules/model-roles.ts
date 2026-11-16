@@ -25,9 +25,7 @@ export function additionalRoleOperations(declarations: readonly ModelRoleDescrip
   const roles = selection ? modelRolesSelectionSchema.parse(selection).roles : {};
 
   for (const slot of Object.keys(roles))
-
     if (!declarations.some(declaration => declaration.id === slot))
-
       throw Error('引擎未声明模型角色：' + slot);
 
   const operations: RoleOperation[] = [];
@@ -39,20 +37,19 @@ export function additionalRoleOperations(declarations: readonly ModelRoleDescrip
     if (!ref)
     {
       if (declaration.required)
-
         throw Error('请配置模型角色：' + declaration.label);
 
       continue
     }
-    if (ref.kind !== declaration.kind)
 
+    if (ref.kind !== declaration.kind)
       throw Error(declaration.label + ' 的模型能力不匹配');
 
     if (declaration.modelIds && !declaration.modelIds.includes(ref.modelId))
-
       throw Error(declaration.label + ' 不支持所选型号');
 
     operations.push({ slot: declaration.id, ...ref, ...(declaration.kind === 'generation' ? { connection: declaration.connection } : {}) });
   }
+
   return operations;
 }

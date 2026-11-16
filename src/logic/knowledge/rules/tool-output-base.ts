@@ -14,7 +14,6 @@ export type KnowledgeJsonValue = null | boolean | number | string | KnowledgeJso
 function isJsonValue(value: unknown): value is KnowledgeJsonValue
 {
   const active = new Set<object>(),
-
     pending: Array<
       {
         value: unknown;
@@ -25,7 +24,6 @@ function isJsonValue(value: unknown): value is KnowledgeJsonValue
   while (pending.length)
   {
     const item = pending.pop()!,
-
       current = item.value;
 
     if (item.leave)
@@ -34,26 +32,24 @@ function isJsonValue(value: unknown): value is KnowledgeJsonValue
 
       continue
     }
-    if (current === null || typeof current === 'string' || typeof current === 'boolean')
 
+    if (current === null || typeof current === 'string' || typeof current === 'boolean')
       continue;
 
     if (typeof current === 'number')
     {
       if (!Number.isFinite(current))
-
         return false;
 
       continue
     }
-    if (typeof current !== 'object' || active.has(current) || Object.getOwnPropertySymbols(current).length)
 
+    if (typeof current !== 'object' || active.has(current) || Object.getOwnPropertySymbols(current).length)
       return false;
 
     const prototype = Object.getPrototypeOf(current);
 
     if (!Array.isArray(current) && prototype !== Object.prototype && prototype !== null)
-
       return false;
 
     active.add(current);
@@ -61,9 +57,9 @@ function isJsonValue(value: unknown): value is KnowledgeJsonValue
     pending.push({ value: current, leave: true });
 
     for (const child of Array.isArray(current) ? [...current] : Object.values(current))
-
       pending.push({ value: child });
   }
+
   return true;
 }
 

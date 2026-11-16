@@ -48,29 +48,23 @@ export class QueuedDependencyReplacementService
   async Replace(identity: GraphIdentity, scopeId: string, runId: string, commandId: string, raw: ReplaceQueuedDependencyInput, assertCurrent?: () => void): Promise<ReplaceQueuedDependencyReceipt>
   {
     const parsed = replaceQueuedDependencyInputSchema.safeParse(raw),
-
       context = contextSchema.safeParse({ ...identity, scopeId, runId, commandId });
 
     if (!parsed.success || !context.success)
-
       fail('DEPENDENCY_INPUT_INVALID', '前置替换参数或主调度运行身份无效');
 
     const input = parsed.data,
-
       fixed = context.data,
-
       alive = () => { this.owner.Assert(); assertCurrent?.(); if (fixed.workspaceId !== this.owner.entry.id) fail('GRAPH_IDENTITY_MISMATCH', '前置替换不属于当前工作区') };
 
     const command = contextualMainCommand('dispatch.replaceDependency', fixed, input);
 
     if (!this.owners)
-
       fail('OWNER_EXECUTION_UNAVAILABLE', '未装配岗位前置核验');
 
     const old = await this.owners.Replay<ReplaceQueuedDependencyReceipt>(command);
 
     if (old)
-
       return old.receipt;
 
     alive();

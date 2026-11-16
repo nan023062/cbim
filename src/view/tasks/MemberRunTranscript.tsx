@@ -33,7 +33,6 @@ export function MemberRunTranscript({ run, workspaceId, memberName, compact = fa
   const shown = compact ? messages.filter(item => item.kind === 'assistant' || item.kind === 'error').slice(-1) : messages;
 
   if (!run.events.length)
-
     return <p className="member-muted" role="status">{run.status === 'running' ? '正在准备成员执行，尚未收到公开运行事件。' : '本轮没有可展示的公开运行记录。'}</p>;
 
   return <div className={'member-run-transcript' + (compact ? ' compact' : '')}>

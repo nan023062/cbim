@@ -16,7 +16,6 @@ const kinds = { file: '文件', folder: '目录清单', link: '链接指针', we
 function AttachmentImage({ item, workspaceId }: { item: ChatAttachment; workspaceId: string })
 {
   const [image, setImage] = useState<ChatAttachmentPreview['image']>(),
-
     [error, setError] = useState('');
 
   useEffect(() => { let live = true; setImage(undefined); setError(''); if (item.kind === 'file' && /^(图片快照|剪贴板图片)/.test(item.note ?? '')) void window.cbim.call('chat.preview', { id: workspaceId, attachmentId: item.id }).then(value => { if (live) setImage(value.image) }).catch((error: Error) => { if (live) setError(error.message) }); return () => { live = false }; }, [item.id, item.kind, item.note, workspaceId]);
@@ -27,13 +26,10 @@ function AttachmentImage({ item, workspaceId }: { item: ChatAttachment; workspac
 export function ComposerAttachments({ items, workspaceId, disabled, onRemove }: { items: ChatAttachment[]; workspaceId: string; disabled: boolean; onRemove: (id: string) => void })
 {
   const [preview, setPreview] = useState<ChatAttachmentPreview>(),
-
     [error, setError] = useState(''),
-
     [loading, setLoading] = useState('');
 
   const dialog = useRef<HTMLDialogElement>(null),
-
     request = useRef(0);
 
   useEffect(() => { request.current++; setPreview(undefined); setError(''); setLoading(''); return () => { request.current++ } }, [workspaceId]);
@@ -53,19 +49,16 @@ export function ComposerAttachments({ items, workspaceId, disabled, onRemove }: 
       const result = await window.cbim.call('chat.preview', { id: workspaceId, attachmentId: item.id });
 
       if (token === request.current)
-
         setPreview(result)
     }
     catch (e: any)
     {
       if (token === request.current)
-
         setError(e.message)
     }
     finally
     {
       if (token === request.current)
-
         setLoading('')
     }
   }

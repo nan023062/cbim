@@ -19,13 +19,11 @@ export function memberValidationViews(run: RunSummary): MemberValidationView[]
   for (const event of run.events)
   {
     if (event.type !== 'validation.checked' || event.runId !== run.runId || event.taskId !== run.task.taskId || event.workspaceId !== run.task.workspaceId)
-
       continue;
 
     const value = event.data.validation as PublicValidationResult | undefined;
 
     if (!value || typeof value.validationId !== 'string' || typeof value.toolCallId !== 'string' || !value.requirement || !value.artifact || !Array.isArray(value.issues) || !['passed', 'rejected'].includes(value.outcome) || rows.some(row => row.result.validationId === value.validationId))
-
       continue;
 
     const finished = run.events.filter(item => item.type === 'tool.finished' && item.seq > event.seq && item.runId === run.runId && item.workspaceId === run.task.workspaceId && item.taskId === run.task.taskId && item.data.id === value.toolCallId && item.data.name === 'cbim_validation_run');
@@ -54,5 +52,6 @@ export function memberValidationViews(run: RunSummary): MemberValidationView[]
 
     rows.push({ result: value, state: !confirmed ? 'unconfirmed' : stale ? 'stale' : value.outcome });
   }
+
   return rows;
 }

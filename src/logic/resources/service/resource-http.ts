@@ -29,8 +29,8 @@ export function repositoryUrl(input: string)
   {
     fail('URL', '请输入有效的 HTTP 或 HTTPS 仓库地址')
   }
-  if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash || url.pathname !== '/')
 
+  if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash || url.pathname !== '/')
     fail('URL', '地址应为 HTTP(S) 服务根地址，不含路径、查询参数或账号密码');
 
   return url.origin;
@@ -45,7 +45,6 @@ export class RemoteRepository implements RepositoryStore
   private async Request(method = 'GET', body?: unknown, signal?: AbortSignal)
   {
     const timeout = AbortSignal.timeout(8000),
-
       combined = signal ? AbortSignal.any([signal, timeout]) : timeout;
 
     const interrupted = () => { if (signal?.aborted) fail('CANCELLED', '仓库读取已取消；本次调用不会自动重试'); if (timeout.aborted) fail('TIMEOUT', '仓库请求超过 8 秒；本次调用不会自动重试') };
@@ -64,6 +63,7 @@ export class RemoteRepository implements RepositoryStore
 
       fail('CONNECTION', method === 'GET' ? '无法连接远端仓库，请检查地址、网络和服务状态' : '远端写入结果未确认，请刷新仓库核对后再操作')
     }
+
     let bytes: Uint8Array;
 
     try
@@ -73,13 +73,13 @@ export class RemoteRepository implements RepositoryStore
     catch (error)
     {
       if (error instanceof ByteLimitError)
-
         fail('SIZE', '远端响应过大');
 
       interrupted();
 
       fail('CONNECTION', '远端响应中断，请刷新核对结果')
     }
+
     interrupted();
 
     let payload: any;
@@ -92,20 +92,20 @@ export class RemoteRepository implements RepositoryStore
     {
       fail('PROTOCOL', '远端未返回 CBIM 仓库协议数据')
     }
+
     if (!response.ok)
     {
       const code = response.status === 401 ? 'UNAUTHORIZED' : response.status === 403 ? 'FORBIDDEN' : response.status === 409 ? 'CONFLICT' : 'REMOTE_ERROR';
 
       fail(code, code === 'UNAUTHORIZED' ? '远端仓库令牌无效' : code === 'FORBIDDEN' ? '当前仓库凭据不允许该操作' : code === 'CONFLICT' ? '远端仓库已变化，请刷新后重新编辑' : '远端仓库请求失败，请检查服务状态')
     }
+
     const parsed = snapshotSchema.safeParse(payload);
 
     if (!parsed.success)
-
       fail('PROTOCOL', '远端数据不兼容 CBIM Resource Repository v1');
 
     if (this.expectedId && parsed.data.repositoryId !== this.expectedId)
-
       fail('IDENTITY', '远端仓库身份已变化，请重新连接');
 
     return parsed.data;
@@ -132,7 +132,6 @@ export class RemoteRepository implements RepositoryStore
 export async function serveRepository(store: RepositoryStore, token: string, options: { host: '127.0.0.1' | '0.0.0.0'; port: number; readOnlyToken?: string })
 {
   if (options.readOnlyToken === token)
-
     fail('TOKEN_SCOPE', '只读令牌不能复用共享读写令牌');
 
   let closing = false;

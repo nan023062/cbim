@@ -20,7 +20,6 @@ type InsertPort = (request: QueueInsertRequest) => Promise<unknown>;
 export function captureQueueInsertTarget(id: string, taskId: string | undefined, run: Pick<RunSummary, 'runId' | 'task' | 'status'> | undefined, canInsert: boolean): QueueInsertTarget | undefined
 {
   if (!canInsert || !taskId || !run?.runId || run.status !== 'running' || run.task.workspaceId !== id || run.task.taskId !== taskId)
-
     return;
 
   return Object.freeze({ id, taskId, expectedRunId: run.runId });
@@ -40,13 +39,11 @@ export async function enqueueConversationMessage<T extends QueuedReceipt>(ports:
   const receipt = await ports.Enqueue();
 
   if (fixed && (receipt.taskId !== fixed.taskId || typeof receipt.id !== 'string' || !receipt.id))
-
     throw Error('入队回执归属未确认，请先核实原消息队列，不要重复发送。');
 
   ports.Accepted(receipt);
 
   if (fixed)
-
     await insertQueuedMessage(fixed, receipt.id, ports.insert);
 
   return receipt;

@@ -12,9 +12,7 @@ export function toolReceipt(identity: { workspaceId: string; taskId: string; run
 {
   return {
     version: 1, ...identity, toolCallId: call.id, toolName: call.name, outcome,
-
     inputHash: hash(JSON.stringify(call.input)), ...(result === undefined ? {} : { resultHash: hash(JSON.stringify(result)) }),
-
     effects: decision.effects ?? [], scope: decision.scope ?? { kind: 'unknown', workspaceId: identity.workspaceId }, recordedAt: new Date().toISOString()
   };
 }

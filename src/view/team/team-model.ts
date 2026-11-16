@@ -89,7 +89,6 @@ function parent(id: string): string
 function referencePath(owner: string, reference: string): string | undefined
 {
   if (!reference || reference.startsWith('/') || reference.includes('\\') || reference.split('/').some(part => !part || part === '.' || part === '..'))
-
     return;
 
   return `${owner}/${reference}`;
@@ -99,9 +98,7 @@ function referencePath(owner: string, reference: string): string | undefined
 export function buildTeamModel(snapshot: Snapshot | undefined, workspaceName: string): TeamModel
 {
   const nodes: Record<string, TeamNodeView> = {},
-
     skills: TeamSkillView[] = [],
-
     issues: string[] = [];
 
   const files = new Map((snapshot?.files ?? []).map(file => [file.path, file.text]));
@@ -111,13 +108,11 @@ export function buildTeamModel(snapshot: Snapshot | undefined, workspaceName: st
   function group(id: string)
   {
     if (nodes[id] || !(id === TEAM_ROOT || id.startsWith(`${TEAM_ROOT}/`)))
-
       return;
 
     nodes[id] = { id, parentId: id === TEAM_ROOT ? undefined : parent(id), kind: id === TEAM_ROOT ? 'team' : 'group', name: id === TEAM_ROOT ? workspaceName : id.split('/').at(-1)!, summary: '', capabilities: [], limitations: [], body: '', bodyAvailable: false, children: [] };
 
     if (id !== TEAM_ROOT)
-
       group(parent(id));
   }
 
@@ -126,7 +121,6 @@ export function buildTeamModel(snapshot: Snapshot | undefined, workspaceName: st
   for (const [path, raw] of files)
   {
     if (!path.startsWith(`${TEAM_ROOT}/`) || !path.endsWith('/agent.json'))
-
       continue;
 
     const id = path.slice(0, -'/agent.json'.length);
@@ -137,12 +131,12 @@ export function buildTeamModel(snapshot: Snapshot | undefined, workspaceName: st
 
       continue
     }
+
     try
     {
       const data = record(JSON.parse(raw));
 
       if (!text(data.name))
-
         throw new Error('missing name');
 
       definitions.set(id, data);
@@ -158,16 +152,15 @@ export function buildTeamModel(snapshot: Snapshot | undefined, workspaceName: st
       issues.push(`定义无法解析：${path}`)
     }
   }
+
   for (const [path, raw] of files)
   {
     if (!path.startsWith(`${TEAM_ROOT}/`) || !path.endsWith('/skills.json'))
-
       continue;
 
     const owner = path.slice(0, -'/skills.json'.length);
 
     if (nodes[owner]?.kind === 'agent')
-
       continue;
 
     group(owner);
@@ -181,21 +174,20 @@ export function buildTeamModel(snapshot: Snapshot | undefined, workspaceName: st
       issues.push(`定义无法解析：${path}`)
     }
   }
+
   // 与编辑器/导入器使用同一同版本静态组清单，保留真实目录中的空组和只有辅助正文的组。
   if (snapshot)
-
+  {
     for (const id of teamGroupIds(snapshot))
-
       group(id);
+  }
 
   for (const [owner, data] of definitions)
   {
     for (const value of Array.isArray(data.skills) ? data.skills : [])
     {
       const entry = record(value),
-
         reference = text(entry.reference),
-
         path = referencePath(owner, reference);
 
       if (!path || !/^skills\/[^/]+\/SKILL\.md$/.test(reference))
@@ -204,22 +196,22 @@ export function buildTeamModel(snapshot: Snapshot | undefined, workspaceName: st
 
         continue
       }
+
       skills.push({ id: path.slice(0, -'/SKILL.md'.length), ownerId: owner, name: text(entry.name) || reference.split('/')[1], purpose: text(entry.purpose), reference, body: files.get(path) ?? '', available: files.has(path) });
     }
   }
+
   nodes[MAIN_AGENT] = { id: MAIN_AGENT, parentId: TEAM_ROOT, kind: 'builtin', name: 'CBIM 主 Agent', summary: '负责直接实现、验证、团队调度和受控知识治理；模块未指定自定义 Agent 时由主 Agent 执行。角色由应用维护。', capabilities: [], limitations: [], body: '', bodyAvailable: false, children: [] };
 
   for (const node of Object.values(nodes))
   {
     if (node.parentId)
-
       nodes[node.parentId]?.children.push(node.id)
   }
 
   const priority = (id: string) => id === MAIN_AGENT ? 0 : 1;
 
   for (const node of Object.values(nodes))
-
     node.children.sort((a, b) => priority(a) - priority(b) || nodes[a].name.localeCompare(nodes[b].name));
 
   return { nodes, skills, issues };
@@ -232,7 +224,6 @@ export function availableTeamSkills(model: TeamModel, nodeId: string): Array<Tea
   {
     inherited: boolean
   }> = [],
-
     seen = new Set<string>();
 
   let owner = model.nodes[nodeId]?.kind === 'builtin' ? TEAM_ROOT : nodeId;
@@ -245,6 +236,7 @@ export function availableTeamSkills(model: TeamModel, nodeId: string): Array<Tea
 
     owner = model.nodes[owner]?.parentId ?? '';
   }
+
   return result;
 }
 
@@ -252,19 +244,16 @@ export function availableTeamSkills(model: TeamModel, nodeId: string): Array<Tea
 export function visibleTeamNodes(model: TeamModel, query: string, includeBuiltins = true): Set<string>
 {
   const needle = query.trim().toLocaleLowerCase(),
-
     visible = new Set<string>();
 
   for (const node of Object.values(model.nodes))
   {
     if (!includeBuiltins && node.kind === 'builtin')
-
       continue;
 
     const haystack = [node.id, node.name, node.summary, ...node.capabilities, ...node.limitations, ...model.skills.filter(skill => skill.ownerId === node.id).flatMap(skill => [skill.name, skill.purpose])].join(' ').toLocaleLowerCase();
 
     if (needle && !haystack.includes(needle))
-
       continue;
 
     let current: TeamNodeView | undefined = node;
@@ -276,5 +265,6 @@ export function visibleTeamNodes(model: TeamModel, query: string, includeBuiltin
       current = current.parentId ? model.nodes[current.parentId] : undefined
     }
   }
+
   return visible;
 }

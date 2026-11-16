@@ -52,13 +52,11 @@ export class ChannelDraftStore
       if (raw)
       {
         if (raw.length > 512 * 1024)
-
           throw Error('频道草稿过大');
 
         const parsed = JSON.parse(raw);
 
         if (typeof parsed.text !== 'string' || parsed.text.length > 64000 || !Number.isSafeInteger(parsed.revision) || parsed.revision < 0)
-
           throw Error('频道草稿格式无效');
 
         this.value = { text: parsed.text, attachments: continuationAttachments(parsed.attachments), revision: parsed.revision }
@@ -92,13 +90,11 @@ export class ChannelDraftStore
   Edit(patch: Partial<Pick<ChannelDraft, 'text' | 'attachments'>>)
   {
     if (this.blocked)
-
       throw Error('原频道草稿无法读取，请先核实本机记录');
 
     const next = { ...this.value, ...patch, revision: this.value.revision + 1 };
 
     if (next.text.length > 64000)
-
       throw Error('频道草稿最多 64000 字符');
 
     next.attachments = continuationAttachments(next.attachments);
@@ -108,7 +104,6 @@ export class ChannelDraftStore
       const encoded = JSON.stringify(next);
 
       if (encoded.length > 512 * 1024)
-
         throw Error('频道草稿超出本机记录上限，请减少附件后重试');
 
       this.storage.setItem(this.key, encoded);
@@ -133,7 +128,6 @@ export class ChannelDraftStore
   ClearIfUnchanged(revision: number)
   {
     if (this.value.revision === revision)
-
       this.Edit({ text: '', attachments: [] })
   }
 
@@ -151,7 +145,6 @@ export class ChannelDraftStore
   FinishImport(token: number, items: unknown)
   {
     if (token !== this.generation)
-
       return false;
 
     this.Edit({ attachments: appendContinuationAttachments(this.value.attachments, items) });

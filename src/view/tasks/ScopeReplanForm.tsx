@@ -17,13 +17,10 @@ import './scope-replan.css';
 export function ScopeReplanForm({ state }: { state: ScopeReplanView })
 {
   if (!state.visible)
-
     return null;
 
   const attempt = state.record?.attempt,
-
     phase = attempt?.phase,
-
     preview = state.previewState?.result;
 
   return <section className="scope-replan" data-testid="scope-replan-form" data-inspection-scope={state.inspectionScopeId} data-replan-phase={state.pending ? 'pending' : phase ?? 'draft'}>

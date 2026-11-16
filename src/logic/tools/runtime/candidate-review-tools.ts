@@ -44,21 +44,17 @@ export class CandidateReviewTools
     signal.throwIfAborted();
 
     if (!id)
-
       fail('DISPATCH_CALL_ID_REQUIRED', '审阅缺少可信调用身份');
 
     const request = candidateReviewInputSchema.parse(input),
-
       parsed = taskNodeSchema.safeParse(await this.save(request, id, signal));
 
     if (!parsed.success)
-
       fail('TOOL_OUTPUT_INVALID', '审阅回执无效，请查询原任务核实，不重复提交');
 
     const value = parsed.data;
 
     if (value.identity.workspaceId !== this.binding.workspaceId || value.identity.rootSessionId !== this.binding.rootSessionId || value.scopeId !== this.binding.scopeId || value.candidateReview?.mainRunId !== this.binding.runId || value.taskId !== request.taskId || value.revision !== request.expectedRevision + 1 || value.result?.resultId !== request.resultId || value.candidateReview.resultId !== request.resultId || value.candidateReview.decision !== request.decision || value.candidateReview.reason !== request.reason)
-
       fail('TOOL_OUTPUT_INVALID', '审阅回执与请求或当前主运行不一致，请查询原任务核实，不重复提交');
 
     return checkedJsonToolResult(name, value, taskNodeSchema);

@@ -18,23 +18,21 @@ export class GraphUtils
   public static IsDirectedAcyclic(nodes: readonly string[], edges: readonly (readonly [string, string])[]): boolean
   {
     const incoming = new Map(nodes.map((node) => [node, 0])),
-
       outgoing = new Map<string, string[]>();
 
     if (incoming.size !== nodes.length)
-
       throw Error('Duplicate graph node');
 
     for (const [from, to] of edges)
     {
       if (!incoming.has(from) || !incoming.has(to))
-
         throw Error('Missing graph endpoint');
 
       incoming.set(to, incoming.get(to)! + 1);
 
       outgoing.set(from, [...(outgoing.get(from) ?? []), to]);
     }
+
     const queue = nodes.filter((node) => incoming.get(node) === 0);
 
     for (let i = 0; i < queue.length; i++)
@@ -46,10 +44,10 @@ export class GraphUtils
         incoming.set(target, count);
 
         if (count === 0)
-
           queue.push(target);
       }
     }
+
     return queue.length === nodes.length;
   }
 }

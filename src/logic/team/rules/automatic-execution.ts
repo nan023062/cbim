@@ -10,7 +10,6 @@ import { loopEngineSchema, modelRolesSelectionSchema } from '../../engines';
 import { projectRootModuleId } from '../../workspace/rules/project-root';
 
 const id = z.string().min(1).max(512),
-
   digest = z.string().regex(/^[a-f0-9]{64}$/);
 
 const model = z.object({ profileId: z.string().uuid(), modelId: z.string().min(1).max(160), configurationHash: digest, engine: loopEngineSchema.optional(), modelRoles: modelRolesSelectionSchema.optional() }).strict();
@@ -35,13 +34,10 @@ export type AutomaticExecutionBinding = z.infer<typeof automaticExecutionBinding
 export function sameAutomaticExecutionForModules(a: AutomaticExecutionBinding | undefined, b: AutomaticExecutionBinding | undefined, ids: readonly string[]): boolean
 {
   if (!a || !b)
-
     return a === b;
 
   return automaticExecutionBindingSchema.safeParse(a).success && automaticExecutionBindingSchema.safeParse(b).success &&
-
     a.scopeId === b.scopeId && a.workspaceId === b.workspaceId && a.agentId === b.agentId && a.teamId === b.teamId && a.capabilityHash === b.capabilityHash && a.knowledgeRevision === b.knowledgeRevision && a.reason === b.reason &&
-
     a.model.profileId === b.model.profileId && a.model.modelId === b.model.modelId && a.model.configurationHash === b.model.configurationHash && b.moduleIds.length === ids.length && ids.every(id => a.moduleIds.includes(id) && b.moduleIds.includes(id));
 }
 

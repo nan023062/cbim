@@ -52,8 +52,8 @@ function encode(name: string, value: unknown): string
   {
     invalid(name, '结果无法序列化为 JSON')
   }
-  if (typeof encoded !== 'string')
 
+  if (typeof encoded !== 'string')
     invalid(name, '结果不能为 undefined 或不可序列化值');
 
   return encoded;
@@ -92,8 +92,8 @@ export function checkedJsonToolResult(name: string, value: unknown, schema: z.Zo
 
     return reject(issue?.code ?? 'schema', issue?.path)
   }
-  if (!isDeepStrictEqual(wire, checked.data))
 
+  if (!isDeepStrictEqual(wire, checked.data))
     reject('schema_changed_output');
 
   return { content: [{ type: 'text', text: encoded }] };
@@ -108,34 +108,29 @@ export function validateToolResult<T>(name: string, value: T): T
   const wire = JSON.parse(encode(name, value));
 
   if (!wire || typeof wire !== 'object' || Array.isArray(wire) || !Array.isArray(wire.content))
-
     invalid(name, '缺少 content 数组');
 
   if (wire.isError !== undefined && typeof wire.isError !== 'boolean')
-
     invalid(name, 'isError 必须为布尔值');
 
   for (const block of wire.content)
   {
     if (!block || typeof block !== 'object' || Array.isArray(block))
-
       invalid(name, '内容块必须为对象');
 
     if (block.type === 'text')
     {
       if (typeof block.text !== 'string')
-
         invalid(name, 'text 内容块缺少字符串 text');
     }
     else if (block.type === 'image')
     {
       if (typeof block.data !== 'string' || !block.data || typeof block.mimeType !== 'string' || !/^image\/[a-z0-9.+-]+$/i.test(block.mimeType))
-
         invalid(name, '图片内容块缺少 data 或有效 mimeType');
     }
     else
-
       invalid(name, '不支持的内容块类型');
   }
+
   return wire as T;
 }

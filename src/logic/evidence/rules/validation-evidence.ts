@@ -43,7 +43,6 @@ export interface ValidationWorkflowBinding
 function valid(value: unknown, message: string): asserts value
 {
   if (!value)
-
     fail('VALIDATION_EVIDENCE_INVALID', message)
 }
 
@@ -62,7 +61,6 @@ export function validationRequirement(bindings: readonly ValidationWorkflowBindi
   valid(matches.length === 1 && workflowContractSchema.safeParse(matches[0].contract).success, '不存在唯一有效的冻结验证模块');
 
   const binding = matches[0],
-
     requirements = binding.contract.delivery?.requiredValidations?.filter(value => value.id === requirementId) ?? [];
 
   valid(requirements.length === 1, '不存在唯一的冻结产物验证要求');
@@ -84,19 +82,16 @@ export function verifyValidationRecords(events: readonly ArtifactEvidenceEvent[]
     seq = event.seq;
 
     if (event.type === 'run.started')
-
       valid(same(event.data.memberBinding, binding) && !event.data.conversationBinding, '验证来源不是当前正式成员')
   }
+
   const records: ValidationRecord[] = [],
-
     seen = new Set<string>(),
-
     seenCalls = new Set<string>();
 
   for (const event of events.filter(value => value.type === 'validation.checked'))
   {
     const raw = event.data.validation,
-
       parsed = validationResultSchema.safeParse(raw);
 
     valid(parsed.success && same(parsed.data, raw), '验证事件结构无效或发生隐式改写');
@@ -117,11 +112,9 @@ export function verifyValidationRecords(events: readonly ArtifactEvidenceEvent[]
       {
         outcome?: unknown
       } | undefined)?.outcome !== 'succeeded')
-
       continue;
 
     const own = artifactSucceededCall(events, binding, result.toolCallId),
-
       input = validationInputSchema.safeParse(own.allowed.data.input);
 
     valid(input.success && own.receipt.toolName === validationToolName && same(own.receipt.effects, ['read']) && own.receipt.scope.kind === 'workspace', '验证调用参数或可信效果不一致');
@@ -139,6 +132,7 @@ export function verifyValidationRecords(events: readonly ArtifactEvidenceEvent[]
 
         text?: unknown
       };
+
     valid(block?.type === 'text' && typeof block.text === 'string', '验证工具缺少结构化文本');
 
     let body: unknown;
@@ -151,6 +145,7 @@ export function verifyValidationRecords(events: readonly ArtifactEvidenceEvent[]
     {
       valid(false, '验证正文不是有效 JSON')
     }
+
     const output = validationOutputSchema.safeParse(body);
 
     valid(output.success && same(output.data, body) && same(output.data.validation, result), '验证事件与原回包不一致');
@@ -178,15 +173,14 @@ export function verifyValidationRecords(events: readonly ArtifactEvidenceEvent[]
       valid(input.data.baselineId && !result.manifest, '旧文件验证不能补造完整出口');
 
       const baselines = verifyArtifactBaselines(before, binding, knowledgeRevision, normalizePath),
-
         base = baselines.records.find(value => value.baseline.baselineId === result.baselineId),
-
         ref = baselines.refs.find(value => value.baselineId === result.baselineId);
 
       valid(base && ref && !ref.invalidated && base.baseline.progressVersion <= result.taskProgressVersion, '验证没有当前有效的同轮文件基线');
 
       sourceFiles = base.baseline.files;
     }
+
     const files = sourceFiles.filter(file => normalizePath(file.relativePath) === normalizePath(selected.requirement.artifactPath));
 
     valid(files.length === 1 && normalizePath(result.artifact.relativePath) === normalizePath(selected.requirement.artifactPath) && same(result.artifact, { relativePath: files[0].relativePath, byteLength: files[0].byteLength, sha256: files[0].sha256 }), '验证文件与要求和真实基线字节不一致');
@@ -203,15 +197,14 @@ export function verifyValidationRecords(events: readonly ArtifactEvidenceEvent[]
     valid(!events.some(value => value.seq > own.allowed.seq && value.seq < own.finished.seq && ['run.stop_requested', 'run.interrupted', 'tool.allowed', 'task.updated'].includes(value.type)), '验证期间存在停止、并发工具或计划变化');
 
     for (const allowed of before.filter(value => value.type === 'tool.allowed'))
-
       valid(before.some(value => value.type === 'tool.finished' && value.data.id === allowed.data.id && value.seq > allowed.seq), '验证发起时仍有未完成的工具');
 
     records.push(validationRecordSchema.parse({ result, checkedSeq: event.seq, finishedSeq: own.finished.seq, receipt: own.receipt }));
   }
+
   valid(records.length <= jsonValidationLimits.records, '本轮验证记录超过上限');
 
   for (const end of events.filter(value => value.type === 'tool.finished' && value.data.name === validationToolName && (value.data.receipt as { outcome?: unknown } | undefined)?.outcome === 'succeeded'))
-
     valid(records.some(record => record.result.toolCallId === end.data.id), '成功验证调用缺少真实检查事件');
 
   return records;

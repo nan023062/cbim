@@ -21,13 +21,11 @@ const sourceScopeId = z.string().min(1).max(512).refine(value => value.trim() ==
 const text = z.string().max(64_000).refine(value => value.trim().length > 0, '核实说明不能为空');
 
 const digest = z.string().regex(/^[a-f0-9]{64}$/),
-
   revision = z.number().int().positive().safe();
 
 const legacySource = z.object({ scopeId: id, taskId: id, runId: id.optional(), reportBasis: digest }).strict();
 
 const memberSource = effectMemberSubjectSchema.extend({ reportBasis: digest }).strict(),
-
   mainSource = effectMainSubjectSchema.extend({ reportBasis: digest }).strict();
 
 /** 旧无 kind 字段的请求保持原结构；新请求的周期归属由服务派生。 */
@@ -95,11 +93,9 @@ export function isMainRecoverySource<T extends RecoveryRequestSource | ScopeReco
 export function recoveryRequestSource(value: ScopeRecovery['source']): RecoveryRequestSource
 {
   if (!('kind' in value))
-
     return { scopeId: value.scopeId, taskId: value.taskId, ...(value.runId ? { runId: value.runId } : {}), reportBasis: value.reportBasis };
 
   if (value.kind === 'member_run')
-
     return { kind: value.kind, taskId: value.taskId, runId: value.runId, toolCallIds: [...value.toolCallIds], reportBasis: value.reportBasis };
 
   return { kind: value.kind, runId: value.runId, toolCallIds: [...value.toolCallIds], reportBasis: value.reportBasis };

@@ -10,7 +10,6 @@ import { KnowledgeSourceDetails } from '../knowledge/KnowledgeSourceDetails';
 export function ModuleOwnershipDetailView({ detail }: { detail: ModuleOwnershipDetail })
 {
   const view = detail.view,
-
     binding = view.binding;
 
   return <section className="module-ownership-detail" data-testid="module-ownership-detail">

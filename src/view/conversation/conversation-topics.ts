@@ -26,13 +26,11 @@ export function conversationTopics(identity: GraphIdentity, scopes: readonly Sco
   const topics: ConversationTopic[] = scopes.map(scope => ({ scope, runs: [], tasks: local?.tasks.filter(task => task.scopeId === scope.scopeId) ?? [], archived: scope.status === 'closed' && ['completed', 'cancelled'].includes(scope.outcome ?? '') }));
 
   const unassigned: RunSummary[] = [],
-
     conflicts: string[] = [];
 
   for (const run of runs)
   {
     if (run.task.workspaceId !== identity.workspaceId || run.task.taskId !== identity.rootSessionId || run.task.mode !== 'chat' || run.memberBinding)
-
       continue;
 
     let candidates = topics.filter(topic => topic.scope.mainRunIds?.includes(run.runId));
@@ -48,28 +46,25 @@ export function conversationTopics(identity: GraphIdentity, scopes: readonly Sco
       else if (run.source.kind === 'member-results')
       {
         const taskIds = run.source.taskIds,
-
           tasks = taskIds.map(id => local?.tasks.find(task => task.taskId === id));
 
         const ids = new Set(tasks.map(task => task?.scopeId));
 
         if (taskIds.length && tasks.every(Boolean) && ids.size === 1 && !ids.has(undefined))
-
           candidates = topics.filter(topic => ids.has(topic.scope.scopeId));
       }
     }
+
     if (candidates.length === 1)
-
       candidates[0].runs.push(run);
-
     else
     {
       unassigned.push(run);
 
       if (candidates.length > 1)
-
         conflicts.push(run.runId)
     }
   }
+
   return { topics, unassigned, conflicts };
 }

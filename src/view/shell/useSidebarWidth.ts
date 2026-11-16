@@ -15,13 +15,9 @@ export function useSidebarWidth()
   return {
     width, handle: {
       role: 'separator', tabIndex: 0, 'aria-label': '调整侧边栏宽度', 'aria-orientation': 'vertical' as const, 'aria-valuemin': 200, 'aria-valuemax': 420, 'aria-valuenow': width,
-
       onPointerDown: (e: PointerEvent<HTMLDivElement>) => { if (e.button !== 0) return; e.preventDefault(); e.currentTarget.setPointerCapture(e.pointerId) },
-
       onPointerMove: (e: PointerEvent<HTMLDivElement>) => { if (e.currentTarget.hasPointerCapture(e.pointerId)) setWidth(clamp(e.clientX)) },
-
       onPointerUp: (e: PointerEvent<HTMLDivElement>) => { if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId) },
-
       onDoubleClick: () => setWidth(260), onKeyDown: (e: KeyboardEvent<HTMLDivElement>) => { if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); setWidth(w => clamp(w + (e.key === 'ArrowRight' ? 10 : -10))) } else if (e.key === 'Home') { e.preventDefault(); setWidth(260) } },
     }
   };

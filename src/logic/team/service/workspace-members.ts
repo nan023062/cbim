@@ -53,7 +53,6 @@ function input<T>(schema: z.ZodType<T>, raw: unknown): T
   const value = schema.safeParse(raw);
 
   if (!value.success)
-
     fail('MEMBER_INPUT_INVALID', '岗位登记请求不完整或包含不支持的字段');
 
   return value.data
@@ -74,13 +73,11 @@ export class WorkspaceMembers
   private Assert(identity: WorkspaceMemberIdentity)
   {
     if (identity.workspaceId !== this.owner.entry.id || identity.instanceId !== this.owner.instanceId)
-
       fail('MEMBER_IDENTITY', '工作区实例已变化，请重新读取岗位登记');
 
     this.owner.Assert(identity);
 
     if (!this.isCurrent())
-
       fail('MEMBER_UNAVAILABLE', '工作区正在关闭，未接受新的岗位登记');
   }
 
@@ -92,7 +89,6 @@ export class WorkspaceMembers
   private SameWorkspace(workspaceId: string)
   {
     if (workspaceId !== this.owner.entry.id)
-
       fail('MEMBER_IDENTITY', '岗位登记不属于此工作区')
   }
 
@@ -106,7 +102,6 @@ export class WorkspaceMembers
     const member = state.workspaceMembers?.find(value => value.memberId === id);
 
     if (!member)
-
       fail('MEMBER_NOT_FOUND', '岗位不存在');
 
     return member
@@ -124,19 +119,14 @@ export class WorkspaceMembers
     this.Assert(request);
 
     const cursor = this.Cursor(state),
-
       members = state.workspaceMembers ?? [],
-
       offset = request.offset ?? 0,
-
       limit = request.limit ?? 20;
 
     if (request.expectedRegistryCursor && !isDeepStrictEqual(request.expectedRegistryCursor, cursor) || offset > members.length)
-
       fail('MEMBER_REGISTRY_STALE', '岗位列表已变化，请从第一页重新读取');
 
     const items = members.slice(offset, offset + limit).map(summarizeWorkspaceMember),
-
       end = offset + items.length;
 
     return workspaceMemberListSchema.parse({ identity: this.Identity(), registryCursor: cursor, offset, total: members.length, items, ...(end < members.length ? { nextOffset: end } : {}) });
@@ -150,7 +140,6 @@ export class WorkspaceMembers
     this.Assert(request);
 
     const state = await this.store.Read(),
-
       member = this.Member(state, request.memberId);
 
     this.Assert(request);
@@ -164,9 +153,7 @@ export class WorkspaceMembers
     try
     {
       const snapshot = await this.owner.Snapshot(),
-
         configuration = member.adoption.configuration,
-
         pending = knowledgeSourcePending(state);
 
       sourceStatus = pending ? { status: 'pending', transitionId: pending.transitionId } : configuration.source === 'builtin' ? await this.BuiltinStatus(member, snapshot) : this.owner.sources!.Status(state, snapshot, { kind: 'agent', sourceId: configuration.agentId }, member.adoption.sourceRef)
@@ -175,12 +162,12 @@ export class WorkspaceMembers
     {
       sourceStatus = { status: 'invalid', issue: '当前知识无法核实来源，原采纳仍保留' }
     }
+
     const after = await this.store.Read();
 
     this.Assert(request);
 
     if (!isDeepStrictEqual(this.Cursor(state), this.Cursor(after)) || !isDeepStrictEqual(state.sourceCursor, after.sourceCursor))
-
       fail('MEMBER_REGISTRY_STALE', '读取期间岗位或来源登记发生变化，请重新读取');
 
     return workspaceMemberDetailSchema.parse({ identity: this.Identity(), registryCursor: this.Cursor(state), member, currentDiff, sourceStatus });
@@ -194,7 +181,6 @@ export class WorkspaceMembers
     this.Assert(request);
 
     const state = await this.store.Read(),
-
       prepared = await this.Prepare(state, request);
 
     await this.VerifySources(prepared, request);
@@ -204,7 +190,6 @@ export class WorkspaceMembers
     this.Assert(request);
 
     if (!isDeepStrictEqual(this.Cursor(state), this.Cursor(after)) || !isDeepStrictEqual(state.sourceCursor, after.sourceCursor))
-
       fail('MEMBER_REGISTRY_STALE', '预览期间岗位或来源登记已变化，请重新预览');
 
     return prepared.preview;
@@ -227,7 +212,6 @@ export class WorkspaceMembers
     const parsed = workspaceMemberReceiptSchema.safeParse(raw);
 
     if (!parsed.success || parsed.data.identity.workspaceId !== workspaceId || parsed.data.commandId !== commandId)
-
       fail('MEMBER_RECEIPT_INVALID', '原岗位登记回执不完整，请保留原命令核实');
 
     return parsed.data;
@@ -241,11 +225,9 @@ export class WorkspaceMembers
     const event = (await this.store.Read()).workspaceMemberChanges?.find(item => item.request.commandId === commandId);
 
     if (!event)
-
       return undefined;
 
     if (event.actor.kind !== 'main_agent' || event.actor.rootSessionId !== rootSessionId)
-
       fail('MEMBER_ACTOR', '只能查询本根会话主工具的岗位回执');
 
     return this.Receipt({ workspaceId, commandId });
@@ -259,7 +241,6 @@ export class WorkspaceMembers
     const source = workspaceMemberActorSchema.safeParse(actor);
 
     if (!source.success)
-
       fail('MEMBER_ACTOR', '岗位登记需要可信桌面或主运行来源');
 
     actor = source.data;
@@ -269,7 +250,6 @@ export class WorkspaceMembers
     this.SameWorkspace(request.workspaceId);
 
     if (actor.kind === 'main_agent' && (!assertCurrent || request.commandId !== workspaceMemberMainCommandId(request.workspaceId, actor)))
-
       fail('MEMBER_ACTOR', '岗位工具缺少真实运行来源');
 
     const existing = await this.store.CommandReceipt(command.commandId);
@@ -277,11 +257,11 @@ export class WorkspaceMembers
     if (existing)
     {
       if (existing.fingerprint !== command.fingerprint)
-
         fail('MEMBER_COMMAND_CONFLICT', '原命令已用于另一份请求，请查询原回执');
 
       return this.CheckedReceipt(existing.receipt, request.workspaceId, request.commandId)
     }
+
     assertCurrent?.();
 
     this.Assert(request);
@@ -302,7 +282,6 @@ export class WorkspaceMembers
     const parsed = workspaceMemberCapabilitySchema.safeParse(configuration);
 
     if (!parsed.success)
-
       fail('MEMBER_SOURCE_INVALID', '当前角色能力不符合岗位快照协议或超过容量');
 
     return parsed.data;
@@ -320,31 +299,25 @@ export class WorkspaceMembers
     this.Assert(request);
 
     const change = request.change,
-
       old = change.kind === 'register' ? undefined : this.Member(state, change.memberId);
 
     if (old)
     {
       if (old.revision !== ('expectedRevision' in change ? change.expectedRevision : 0))
-
         fail('MEMBER_REVISION_CONFLICT', '岗位版本已变化，请重新读取');
 
       if (old.state === 'retired')
-
         fail('MEMBER_RETIRED', '岗位已退休，历史可读但不能修改或恢复')
     }
+
     let proposed = old ? workspaceMemberProposed(old) : undefined,
-
       knowledgeRevision: string | undefined,
-
       model: WorkspaceMemberRuntimePolicy | undefined,
-
       sourceSelection: SourceSelection | undefined;
 
     const adopting = change.kind === 'register' || change.kind === 'adopt' && change.target === 'capability';
 
     if (adopting && knowledgeSourcePending(state))
-
       fail('MEMBER_SOURCE_PENDING', '来源事务待核实，尚未保存新的岗位采纳');
 
     const snapshot = adopting ? (fixed ?? await this.owner.Snapshot()) : undefined;
@@ -372,7 +345,6 @@ export class WorkspaceMembers
       if (runtimePolicy)
       {
         if (runtimePolicy.profileId === old!.runtimePolicy.profileId && runtimePolicy.modelId === old!.runtimePolicy.modelId && (runtimePolicy.engine ?? 'pi') === (workspaceMemberEngine(old!.runtimePolicy) ?? 'pi') && isDeepStrictEqual(runtimePolicy.modelRoles, old!.runtimePolicy.modelRoles))
-
           fail('MEMBER_NO_CHANGE', '相同模型的配置刷新请使用明确采纳操作');
 
         model = await this.SelectedPolicy(runtimePolicy);
@@ -393,7 +365,6 @@ export class WorkspaceMembers
         const source = old!.adoption.configuration;
 
         if (configuration.workspaceId !== source.workspaceId || configuration.teamId !== source.teamId || configuration.agentId !== source.agentId || configuration.source !== source.source)
-
           fail('MEMBER_SOURCE_CHANGED', '能力来源身份发生变化，不能作为原岗位的能力采纳');
 
         knowledgeRevision = configuration.knowledgeRevision;
@@ -410,7 +381,6 @@ export class WorkspaceMembers
       }
     }
     else
-
       proposed!.state = change.nextState;
 
     if (adopting)
@@ -425,22 +395,21 @@ export class WorkspaceMembers
       {
         fail('MEMBER_SOURCE_INVALID', '当前来源无法明确采纳')
       }
+
       const ref = sourceSelection.kind === 'builtin' ? sourceSelection.ref : sourceSelection.expectedRef;
 
       proposed!.capability = { configuration, capabilityHash: proposed!.capability.capabilityHash, ...(ref ? { sourceRef: ref } : {}) };
     }
+
     const changedFields = workspaceMemberChangedFields(old, proposed!);
 
     if (adopting && sourceSelection?.kind === 'workspace' && !sourceSelection.expectedRef && !changedFields.includes('capability'))
-
       changedFields.push('capability');
 
     if (!changedFields.length)
-
       fail('MEMBER_NO_CHANGE', '本次操作没有改变岗位登记内容');
 
     const registryCursor = this.Cursor(state),
-
       basis = workspaceMemberPreviewBasis({ workspaceId: request.workspaceId, change, registryCursor, previousMember: old, proposed: proposed!, ...(sourceSelection ? { sourceSelection } : {}) });
 
     const preview = workspaceMemberPreviewSchema.parse({ identity: this.Identity(), change, registryCursor, basis, checkedAt: new Date().toISOString(), previousRevision: old?.revision ?? 0, ...(old ? { previousMember: old } : {}), ...(sourceSelection ? { sourceSelection } : {}), proposed, changedFields });
@@ -458,9 +427,9 @@ export class WorkspaceMembers
       this.Assert(identity);
 
       if (current.revision !== prepared.knowledgeRevision)
-
         fail('MEMBER_SOURCE_CHANGED', '读取期间知识来源发生变化，请重新预览')
     }
+
     if (prepared.model)
     {
       const current = await this.SelectedPolicy(prepared.model);
@@ -468,16 +437,15 @@ export class WorkspaceMembers
       this.Assert(identity);
 
       if (current.configurationHash !== prepared.model.configurationHash)
-
         fail('MEMBER_SOURCE_CHANGED', '读取期间模型配置发生变化，请重新预览')
     }
+
     this.Assert(identity);
   }
 
   private async SelectedCapability(agentId: string, snapshot?: Snapshot)
   {
     if (agentId === 'cbim:executor')
-
       fail('AGENT_RETIRED', '内置默认执行 Agent 已退役；主 Agent 默认执行，无需登记岗位');
 
     try
@@ -511,17 +479,14 @@ export class WorkspaceMembers
   private async Diff(member: WorkspaceMember): Promise<WorkspaceMemberCurrentDiff>
   {
     let capability: WorkspaceMemberCurrentDiff['capability'],
-
       model: WorkspaceMemberCurrentDiff['model'];
 
     try
     {
       const current = await this.Capability(member.adoption.configuration.agentId),
-
         after = await this.owner.Read();
 
       if (after.revision !== current.knowledgeRevision)
-
         fail('MEMBER_SOURCE_STALE', '知识来源读取期间变化');
 
       const currentHash = workspaceMemberCapabilityHash(current);
@@ -532,14 +497,13 @@ export class WorkspaceMembers
     {
       capability = { status: issue(error) === 'AGENT_MISSING' ? 'missing' : 'invalid', adoptedHash: member.adoption.capabilityHash, issue: '当前角色能力缺失、无效或读取期间发生变化；已采纳快照仍保留' }
     }
+
     try
     {
       const current = await this.Policy(member.runtimePolicy),
-
         after = await this.Policy(member.runtimePolicy);
 
       if (current.configurationHash !== after.configurationHash)
-
         fail('MEMBER_SOURCE_STALE', '模型配置读取期间变化');
 
       model = { status: current.configurationHash === member.runtimePolicy.configurationHash ? 'same' : 'changed', adoptedHash: member.runtimePolicy.configurationHash, currentHash: current.configurationHash };
@@ -548,6 +512,7 @@ export class WorkspaceMembers
     {
       model = { status: issue(error) === 'LLM_REQUIRED' ? 'missing' : 'invalid', adoptedHash: member.runtimePolicy.configurationHash, issue: '当前公开模型配置缺失、无效或读取期间发生变化；不代表凭据或接口状态' }
     }
+
     return { checkedAt: new Date().toISOString(), capability, model };
   }
 }

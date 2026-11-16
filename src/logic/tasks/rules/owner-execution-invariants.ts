@@ -37,7 +37,6 @@ const equal = (a: unknown, b: unknown) => workspaceMemberCanonical(a) === worksp
 function check(value: unknown, message: string, code = 'OWNER_BINDING_INVALID'): asserts value
 {
   if (!value)
-
     fail(code, message)
 }
 
@@ -54,7 +53,6 @@ function historical(state: DispatchState, binding: OwnerExecutionBinding)
   {
     // 隐式选择不伪造责任审计；核对其原模块来源代次，退役后仍可阅读原任务。
     if (owner.match || owner.inheritedFrom)
-
       check(state.knowledgeSourceGenerations?.some(generation => equal(knowledgeSourceRef(generation), owner.sourceRef)), '执行模块缺少原知识来源审计');
 
     if (owner.match)
@@ -63,10 +61,12 @@ function historical(state: DispatchState, binding: OwnerExecutionBinding)
 
       continue
     }
+
     const record = state.ownershipChanges?.find(change => change.next.bindingId === owner.bindingId && change.next.revision === owner.revision)?.next;
 
     check(record && record.workspaceId === binding.workspaceId && record.moduleId === (owner.inheritedFrom ?? owner.moduleId) && record.ownerMemberId === binding.memberId && (owner.inheritedFrom || equal(record.sourceRef, owner.sourceRef)), '执行模块绑定没有对应的原责任审计');
   }
+
   return member;
 }
 
@@ -85,8 +85,8 @@ function currentTask(previous: DispatchState, task: TaskNode, exactModules = fal
 
     assertCurrentOwnerExecutionBinding(previous, task.ownerBinding, task.modules.map(module => module.moduleId));
   }
-  const scope = previous.scopes?.find(scope => scope.scopeId === task.scopeId && scope.rootSessionId === task.identity.rootSessionId && scope.workspaceId === task.identity.workspaceId),
 
+  const scope = previous.scopes?.find(scope => scope.scopeId === task.scopeId && scope.rootSessionId === task.identity.rootSessionId && scope.workspaceId === task.identity.workspaceId),
     goal = scope?.goal;
 
   check(scope?.status === 'active' && goal?.plan && !goal.blocked && !goal.review && !goalNeedsReplan(goal) && !scopeHasUnresolvedActiveInput(scope), '业务许可需要本周期当前未阻塞且未审阅的目标计划', 'OWNER_PLAN_REQUIRED');
@@ -100,11 +100,9 @@ export function validateOwnerExecutionMutation(previous: DispatchState, next: Di
   check(!Object.hasOwn(mutation, 'executionProtocol'), '调用者不能指定存储执行协议');
 
   for (const scope of next.scopes ?? [])
-
     for (const assignment of scope.goal?.plan?.assignments ?? [])
     {
       if (assignment.fallbackBinding)
-
         assertAutomaticExecution(next, assignment.fallbackBinding, scope.rootSessionId);
 
       if (assignment.ownerBinding)
@@ -118,8 +116,8 @@ export function validateOwnerExecutionMutation(previous: DispatchState, next: Di
         check(assignment.agentName === member.name, '目标负责人名称必须保留原登记岗位名称');
       }
     }
-  for (const graph of next.graphs)
 
+  for (const graph of next.graphs)
     for (const task of graph.tasks)
     {
       const old = taskAt(previous, task);
@@ -127,7 +125,6 @@ export function validateOwnerExecutionMutation(previous: DispatchState, next: Di
       check(!old || equal(old.ownerBinding, task.ownerBinding) && equal(old.fallbackBinding, task.fallbackBinding), '任务负责人不能被补造、移除或更换');
 
       if (task.fallbackBinding)
-
         assertAutomaticExecution(next, task.fallbackBinding, task.identity.rootSessionId);
 
       if (task.ownerBinding)
@@ -139,6 +136,7 @@ export function validateOwnerExecutionMutation(previous: DispatchState, next: Di
         check(task.assignee.name === member.name, '任务负责人名称必须保留原登记岗位名称');
       }
     }
+
   for (const run of mutation.runs ?? [])
   {
     const task = next.graphs.find(graph => graph.identity.rootSessionId === run.binding.rootSessionId)?.tasks.find(task => task.taskId === run.binding.taskId);
@@ -148,7 +146,6 @@ export function validateOwnerExecutionMutation(previous: DispatchState, next: Di
     check(equal(task.fallbackBinding, run.prepared.fallbackBinding), '运行自动兜底必须保留原绑定');
 
     if (task.fallbackBinding)
-
       check(workspaceMemberModelHash(run.model as Parameters<typeof workspaceMemberModelHash>[0]) === task.fallbackBinding.model.configurationHash, '自动执行模型不属于原周期选择');
 
     check(equal(task.ownerBinding, run.prepared.memberContext?.binding), '运行与任务必须使用同一冻结岗位绑定');
@@ -156,24 +153,21 @@ export function validateOwnerExecutionMutation(previous: DispatchState, next: Di
     if (task.ownerBinding)
     {
       const member = historical(next, task.ownerBinding),
-
         context = run.prepared.memberContext!;
 
       check(context.name === member.name && context.position === member.position && equal(context.adaptation, member.adaptation) && workspaceMemberModelHash(run.model as Parameters<typeof workspaceMemberModelHash>[0]) === task.ownerBinding.model.configurationHash, '执行模型或岗位适配不属于原冻结登记');
     }
   }
-  if (protocol === 'legacy')
 
+  if (protocol === 'legacy')
     return;
 
   for (const scope of mutation.scopes ?? [])
   {
     const old = previous.scopes?.find(value => value.scopeId === scope.scopeId),
-
       plan = scope.goal?.plan;
 
     if (!plan || equal(old?.goal?.plan, plan))
-
       continue;
 
     for (const assignment of plan.assignments)
@@ -184,6 +178,7 @@ export function validateOwnerExecutionMutation(previous: DispatchState, next: Di
 
         continue
       }
+
       if (assignment.fallbackBinding)
       {
         check(!assignment.ownerBinding && !assignment.ownerSelection, '自动兜底不能混入岗位选择');
@@ -192,27 +187,24 @@ export function validateOwnerExecutionMutation(previous: DispatchState, next: Di
 
         continue
       }
+
       check(assignment.ownerBinding && assignment.ownerSelection, '新业务计划必须保存负责人选择与可信绑定', 'OWNER_BINDING_REQUIRED');
 
       assertCurrentOwnerExecutionBinding(previous, assignment.ownerBinding, assignment.moduleIds);
     }
   }
-  for (const graph of next.graphs)
 
+  for (const graph of next.graphs)
     for (const task of graph.tasks)
     {
       const old = taskAt(previous, task);
 
       if (!old)
-
         currentTask(previous, task, true);
-
       else if (task.resumeRequest && (!old.resumeRequest || task.resumeRequest.requestId !== old.resumeRequest.requestId))
-
         currentTask(previous, task);
 
       for (const ids of [...(task.dependencyAdditions ?? []).slice(old?.dependencyAdditions?.length ?? 0).map(record => record.trackedTaskIds), ...(task.dependencyReplacements ?? []).slice(old?.dependencyReplacements?.length ?? 0).map(record => record.trackedTaskIds), ...(task.dependencyRevisions ?? []).slice(old?.dependencyRevisions?.length ?? 0).map(record => record.trackedTaskIds)])
-
         for (const id of ids)
         {
           const pending = graph.tasks.find(value => value.taskId === id);
@@ -222,8 +214,8 @@ export function validateOwnerExecutionMutation(previous: DispatchState, next: Di
           currentTask(previous, pending);
         }
     }
-  for (const run of mutation.runs ?? [])
 
+  for (const run of mutation.runs ?? [])
     if (!previous.runs?.some(value => value.binding.runId === run.binding.runId))
     {
       const task = next.graphs.find(graph => graph.identity.rootSessionId === run.binding.rootSessionId)?.tasks.find(value => value.taskId === run.binding.taskId)!;

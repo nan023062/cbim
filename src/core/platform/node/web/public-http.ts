@@ -48,34 +48,22 @@ export function publicUrl(value: string): URL
   {
     return fail('WEB_URL', '网页地址无效');
   }
+
   const host = url.hostname.replace(/^\[|\]$/g, '');
 
   if (
-
     !['http:', 'https:'].includes(url.protocol) ||
-
     url.username ||
-
     url.password ||
-
     (url.port && url.port !== '80' && url.port !== '443') ||
-
     !host ||
-
     host === 'localhost' ||
-
     host.endsWith('.localhost') ||
-
     host.endsWith('.local') ||
-
     host.endsWith('.internal') ||
-
     (!host.includes('.') && !isIP(host)) ||
-
     (isIP(host) && !publicAddress(host))
-
   )
-
     fail('WEB_SSRF', '只能读取公开 HTTP/HTTPS 网页，禁止本机、内网、保留地址和非常规端口');
 
   url.hash = '';
@@ -136,15 +124,12 @@ export class PublicHttp
   async ReadBytes(raw: string, signal: AbortSignal, options: { headers?: Record<string, string>; maxBytes?: number } = {}): Promise<PublicHttpBytes>
   {
     if (options.maxBytes !== undefined && (!Number.isSafeInteger(options.maxBytes) || options.maxBytes < 1))
-
       throw Error('WEB_SIZE: 资源字节上限必须为正整数');
 
     const byteLimit = Math.min(8 * limit, Math.max(1, options.maxBytes ?? limit));
 
     const url = publicUrl(raw),
-
       host = url.hostname.replace(/^\[|\]$/g, ''),
-
       deadline = AbortSignal.any([signal, AbortSignal.timeout(15000)]);
 
     deadline.throwIfAborted();
@@ -159,11 +144,9 @@ export class PublicHttp
     deadline.throwIfAborted();
 
     if (!addresses.length || addresses.some((item) => !publicAddress(item.address)))
-
       fail('WEB_SSRF', '域名解析包含非公开地址，未建立连接');
 
     const address = addresses[0],
-
       request = this.transport?.request ?? (url.protocol === 'https:' ? https.request : http.request);
 
     return new Promise((resolve, reject) => { const req = request(url, { agent: false, family: address.family, signal: deadline, headers: { 'User-Agent': this.userAgent, 'Accept': 'text/html,text/plain,application/json', 'Accept-Encoding': 'identity', ...options.headers, }, lookup: (_host, _options, callback) => callback(null, address.address, address.family), }, (response) => { const chunks: Buffer[] = []; let size = 0; response.on('error', () => reject(Error('WEB_NETWORK: 网页响应中断'))); response.on('data', (chunk: Buffer) => { size += chunk.length; if (size > byteLimit) { req.destroy(); reject(Error('WEB_SIZE: 响应超过读取上限')); } else chunks.push(chunk); }); response.on('end', () => { try { if (deadline.aborted) throw deadline.reason; let bytes = Buffer.concat(chunks); const encoding = response.headers['content-encoding']; if (encoding === 'gzip') bytes = gunzipSync(bytes, { maxOutputLength: byteLimit }); else if (encoding === 'deflate') bytes = inflateSync(bytes, { maxOutputLength: byteLimit }); else if (encoding === 'br') bytes = brotliDecompressSync(bytes, { maxOutputLength: byteLimit }); else if (encoding && encoding !== 'identity') throw Error('WEB_ENCODING: 不支持的内容压缩'); if (bytes.length > byteLimit) throw Error('WEB_SIZE: 解压后响应超过读取上限'); resolve({ status: response.statusCode ?? 0, headers: response.headers, body: bytes }); } catch { reject(Error('WEB_CONTENT: 响应过大、编码无效或不受支持')); } }); }); req.on('error', () => reject(Error(deadline.aborted ? 'WEB_ABORTED: 网页请求已取消或超时' : 'WEB_NETWORK: 网页网络连接失败'))); req.end(); });

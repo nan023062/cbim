@@ -19,9 +19,7 @@ export function waitingHumanDecisions(scope: DispatchScope, waitId = scope.wait?
   const latest = new Map<string, HumanDecisionRecord>();
 
   for (const record of scope.humanDecisions?.records ?? [])
-
     if (record.revision <= decisionRevision)
-
       latest.set(record.criterionId, record);
 
   return [...latest.values()].filter(record => record.proof.source.waitId === waitId).sort((a, b) => a.criterionId < b.criterionId ? -1 : a.criterionId > b.criterionId ? 1 : 0);
@@ -41,13 +39,11 @@ export function referencedHumanDecision(scope: DispatchScope, reference: { decis
   const intent = currentHumanContinuation(scope);
 
   if (!intent || intent.continuationId !== reference.continuationId || !intent.decisionIds.includes(reference.decisionId))
-
     return;
 
   const record = scope.humanDecisions?.records.find(item => item.decisionId === reference.decisionId);
 
   if (!record || record.revision > intent.decisionRevision || record.proof.source.waitId !== intent.wait.waitId || scope.humanDecisions?.records.filter(item => item.criterionId === record.criterionId).at(-1)?.decisionId !== record.decisionId)
-
     return;
 
   return record;
@@ -57,7 +53,6 @@ export function referencedHumanDecision(scope: DispatchScope, reference: { decis
 export function humanContinuationSubjectMatches(scope: DispatchScope): boolean
 {
   const intent = currentHumanContinuation(scope),
-
     plan = scope.goal?.plan;
 
   return !!intent && !!plan && sameGoalValue(humanContinuationSubject(plan), intent.subject);

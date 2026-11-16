@@ -21,7 +21,6 @@ function status(topic: ConversationTopic)
 export function ConversationTopics({ topics, unassigned, conflicts, queued = [], onSelect, renderRun }: { queued?: QueuedMessage[]; topics: ConversationTopic[]; unassigned: RunSummary[]; conflicts: string[]; onSelect: (id?: string) => void; renderRun: (run: RunSummary, scopeId?: string) => ReactNode })
 {
   const current = topics.filter(topic => !topic.archived),
-
     history = topics.filter(topic => topic.archived);
 
   const card = (topic: ConversationTopic) => <article key={topic.scope.scopeId} className="main-channel-entry">{topic.runs.map(run => renderRun(run, topic.scope.scopeId))}<button className="conversation-topic-card" onClick={() => onSelect(topic.scope.scopeId)} data-topic-id={topic.scope.scopeId}><span className="conversation-topic-title">{topic.scope.objective ?? topic.scope.inputPreview ?? '历史任务话题'}</span><span className="conversation-topic-meta">{status(topic)} · {topic.tasks.length} 项派发 · {topic.runs.length} 轮对话</span><span className="conversation-topic-people">{['主 Agent', ...new Set(topic.tasks.map(task => task.assignee.name))].join(' · ')}</span></button></article>;

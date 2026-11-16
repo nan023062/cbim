@@ -101,7 +101,6 @@ export class AgentCallScheduler
   constructor(private readonly limits: AgentCallLimits, private readonly ports: AgentSchedulerPorts)
   {
     if (!Number.isSafeInteger(limits.maxDepth) || limits.maxDepth < 0)
-
       throw Error('Agent 调用限额无效');
 
     this.limits = Object.freeze({ ...limits });
@@ -118,7 +117,6 @@ export class AgentCallScheduler
       GuardEffects: (effects) => this.humanBlocked.has(context.runId) && (!effects?.length || effects.some(effect => !['read', 'preview'].includes(effect))) ? 'AGENT_HUMAN_DECISION_REQUIRED: 意见不授权返工或修改，请等待新的用户执行指令' : undefined, AllowsWhileWaiting: (name) => { const active = [...this.activeCalls].filter(([key]) => key.startsWith(prefix)); return active.length > 0 && active.every(([, call]) => call.exchange.Waiting()) && [agentReplyToolName, agentListToolName, 'cbim_ask_user_question'].includes(name) }, Active: () => pending > 0 || [...this.stranded.keys()].some(key => key.startsWith(prefix)), Stop: async () => { for (const [key, controller] of this.reviewControllers) if (key.startsWith(prefix)) controller.abort(); await Promise.allSettled([...this.reviews].filter(([key]) => key.startsWith(prefix)).map(([, review]) => review.result)); const active = [...this.activeCalls].filter(([key]) => key.startsWith(prefix)).map(([, value]) => value); for (const item of active) item.controller.abort(); await Promise.allSettled(active.map(item => item.done)); await this.Drain(prefix) }, capability: {
         id: 'agent-call', instructions: ['明确业务模块的调用须提供 business.moduleIds 与 acceptance；宿主冻结该模块 Workflow。业务返回的 verification 只证明当时证据与文件一致，不替代人工验收；交付前用 cbim_agent_result_check 按原 callId 复核当前字节，失败不能报告完成。', '调用其他 Agent 与普通工具相同；结果和提问只返回直接调用方。仅可调用本轮实际配置能力。深度、并发或预算错误不是成功，不重复相同调用或绕过权限。'], tools: {
           list: async () => [...(depth === 0 && this.ports.RequestReview ? [{ name: 'cbim_agent_result_review', description: '请用户评价本次子 Agent 交付。保存意见后再明确选择是否继续；文件变化不能接受，意见不授权自动返工。', inputSchema: { type: 'object', properties: { callId: { type: 'string' } }, required: ['callId'], additionalProperties: false } }] : []), { name: 'cbim_agent_result_check', description: '按当前调用者原 callId 重新核验子 Agent 的交付证据及实际文件；不重启执行，不代替用户验收。', inputSchema: { type: 'object', properties: { callId: { type: 'string' } }, required: ['callId'], additionalProperties: false } }, { name: agentReplyToolName, description: '回答原 Agent 调用返回的求助，等待原子运行继续；不创建新任务。result 必须对应原问题。', inputSchema: zodToJsonSchema(replyInput) as Record<string, unknown> }, ...(this.ports.List ? [{ name: agentListToolName, description: '读取已登记可调用 Agent 的真实 ID、名称、模型与可用性。', inputSchema: { type: 'object', properties: {}, additionalProperties: false } }] : []), { name: agentCallToolName, description: '调用一个已配置 Agent，等待其真实执行结果；执行 Agent 也可使用此工具。', inputSchema: zodToJsonSchema(callInput) as Record<string, unknown> }],
-
           call: async (name, args, signal, id) =>
           {
             if (name === 'cbim_agent_result_review')
@@ -126,19 +124,15 @@ export class AgentCallScheduler
               const parsed = z.object({ callId: z.string().min(1) }).strict().safeParse(args);
 
               if (!parsed.success || !id)
-
                 return errorResult('AGENT_REVIEW_INPUT', '需要原 callId');
 
               if (depth !== 0 || !this.ports.RequestReview)
-
                 return errorResult('AGENT_REVIEW_UNAVAILABLE', '只有主 Agent 可以请求真实用户评价');
 
               const key = prefix + id,
-
                 existing = this.reviews.get(key);
 
               if (existing)
-
                 return existing.callId === parsed.data.callId ? existing.result : errorResult('AGENT_REVIEW_CONFLICT', '同一评审调用不能更换交付对象');
 
               const controller = new AbortController();
@@ -151,12 +145,12 @@ export class AgentCallScheduler
 
               return result;
             }
+
             if (name === 'cbim_agent_result_check')
             {
               const parsed = z.object({ callId: z.string().min(1) }).strict().safeParse(args);
 
               if (!parsed.success || !id)
-
                 return errorResult('AGENT_RESULT_INPUT', '需要原 callId');
 
               try
@@ -164,7 +158,6 @@ export class AgentCallScheduler
                 signal.throwIfAborted();
 
                 if (this.closed)
-
                   throw Error('调用已关闭');
 
                 context.AssertExclusive(id);
@@ -172,7 +165,6 @@ export class AgentCallScheduler
                 const check = this.checks.get(prefix + parsed.data.callId);
 
                 if (!check)
-
                   return errorResult('AGENT_RESULT_UNAVAILABLE', '本调用者没有可核验的已完成业务调用');
 
                 return jsonToolResult(name, await check(signal))
@@ -185,16 +177,15 @@ export class AgentCallScheduler
                   }).code ?? 'AGENT_RESULT_FAILED', String(error))
               }
             }
+
             if (name === agentReplyToolName)
             {
               if (!id || signal.aborted || this.closed)
-
                 return errorResult('AGENT_CALL_CANCELLED', '答复调用已停止');
 
               const parsed = replyInput.safeParse(args);
 
               if (!parsed.success)
-
                 return errorResult('AGENT_REPLY_INPUT', '答复必须包含原 callId、questionId 和严格答案');
 
               try
@@ -208,7 +199,6 @@ export class AgentCallScheduler
                 const exchange = entry?.exchange ?? cache;
 
                 if (!exchange)
-
                   return errorResult('AGENT_CALL_IDENTITY', '原调用不属于当前调用者或已丢失，不重建执行');
 
                 const abort = () => entry?.controller.abort(signal.reason);
@@ -232,46 +222,39 @@ export class AgentCallScheduler
                   }).code ?? 'AGENT_REPLY_FAILED', error instanceof Error ? error.message : String(error))
               }
             }
+
             if (name === agentListToolName && this.ports.List)
             {
               if (Object.keys(args).length)
-
                 return errorResult('AGENT_LIST_INPUT', 'Agent 目录不接受身份或权限参数');
 
               signal.throwIfAborted();
 
               return jsonToolResult(agentListToolName, await this.ports.List())
             }
-            if (name !== agentCallToolName || !id)
 
+            if (name !== agentCallToolName || !id)
               return errorResult('AGENT_CALL_IDENTITY', '缺少已授权工具调用身份');
 
             const parsed = callInput.safeParse(args);
 
             if (!parsed.success)
-
               return errorResult('AGENT_CALL_INPUT', '需要有效 agentId 和 message，不能传入调用方或权限字段');
 
             const key = prefix + id,
-
               input = JSON.stringify(parsed.data),
-
               existing = this.attempts.get(key);
 
             if (existing)
-
               return existing.input === input ? existing.result : errorResult('AGENT_CALL_CONFLICT', '原调用身份已用于不同指令');
 
             if (this.humanBlocked.has(context.runId))
-
               return errorResult('AGENT_HUMAN_DECISION_REQUIRED', '负面意见已保存；继续仅处理意见，不授权新子运行。请等待新的用户执行指令', { started: false });
 
             if (this.closed || signal.aborted)
-
               return errorResult('AGENT_CALL_CANCELLED', '调用已停止', { started: false });
 
             if (depth + 1 > this.limits.maxDepth)
-
               return errorResult('AGENT_DEPTH_LIMIT', '递归深度超过限制', { limit: this.limits.maxDepth, current: depth, requested: depth + 1, unit: 'depth', started: false });
 
             try
@@ -282,11 +265,11 @@ export class AgentCallScheduler
             {
               return errorResult('AGENT_CALL_BUSY', error instanceof Error ? error.message : String(error), { started: false })
             }
+
             // 执行额度仅由 prepare 使用全局准入服务领取；这里仅跟踪父工具批次。
             pending++;
 
             const controller = new AbortController(),
-
               abort = () => controller.abort(signal.reason);
 
             signal.addEventListener('abort', abort, { once: true });
@@ -320,7 +303,6 @@ export class AgentCallScheduler
   private async Execute(context: AgentToolContext, depth: number, id: string, input: z.infer<typeof callInput>, signal: AbortSignal, exchange: AgentCallExchange, onReference: (ref: AgentCallReference) => void): Promise<ToolResult>
   {
     let prepared: Awaited<ReturnType<AgentSchedulerPorts['Prepare']>> | undefined,
-
       reference: AgentCallReference | undefined;
 
     const ref = (taskId: string, runId: string): AgentCallReference => ({ version: 1, workspaceId: context.task.workspaceId, callerTaskId: context.task.taskId, callerRunId: context.runId, toolCallId: id, taskId, runId });
@@ -336,6 +318,7 @@ export class AgentCallScheduler
       const control = {
         signal, BeforeRun: async ({ runId }: { runId: string }) => { reference = ref(prepared!.agent.conversation.taskId, runId); onReference(reference); await context.Emit({ type: 'tool.updated', data: { id, name: agentCallToolName, agentCall: reference, limits: { depth: depth + 1, maxDepth: this.limits.maxDepth, ...this.Capacity() } } }); await prepared!.BeforeRun?.(runId) }
       };
+
       const run = prepared.launch ? await prepared.runtime.StartMember!(prepared.task, input.message, prepared.launch, control) : await prepared.runtime.Start(prepared.task, input.message, undefined, undefined, control);
 
       const summary = await run.done;
@@ -352,6 +335,7 @@ export class AgentCallScheduler
 
         this.reviewProofs.set(context.runId + ':' + id, structuredClone(verification))
       }
+
       const output = { agentCall: reference, status: summary.status, summary: this.Message(summary), ...(verification ? { verification } : {}), unresolvedTools: summary.unresolvedTools };
 
       return { ...jsonToolResult(agentCallToolName, output), ...(summary.status !== 'completed' || summary.unresolvedTools.length ? { isError: true } : {}) };
@@ -364,6 +348,7 @@ export class AgentCallScheduler
 
           message?: string
         };
+
       return errorResult(failure.code ?? (signal.aborted ? 'AGENT_CALL_CANCELLED' : 'AGENT_CALL_FAILED'), failure.message ?? String(error), { started: !!reference, ...(error instanceof AgentConstraintError ? error.constraint : {}), ...(reference ? { agentCall: reference } : {}) })
     }
     finally
@@ -390,9 +375,7 @@ export class AgentCallScheduler
   private async Review(context: AgentToolContext, callId: string, id: string, signal: AbortSignal): Promise<ToolResult>
   {
     const key = context.runId + ':' + callId,
-
       check = this.checks.get(key),
-
       original = this.reviewProofs.get(key);
 
     try
@@ -402,11 +385,9 @@ export class AgentCallScheduler
       context.AssertExclusive(id);
 
       if (this.closed || !check || !original)
-
         return errorResult('AGENT_REVIEW_UNAVAILABLE', '没有本调用者原始已验证交付');
 
       let current: unknown,
-
         verified = false;
 
       try
@@ -426,6 +407,7 @@ export class AgentCallScheduler
             }).code ?? 'AGENT_RESULT_FAILED'
         }
       }
+
       const allowedDecisions = verified ? ['accept', 'reject', 'request_evidence'] : ['reject', 'request_evidence'];
 
       const labels: Record<string, string> = { accept: '接受此成果', reject: '不接受此成果', request_evidence: '要求补充证据' };
@@ -437,18 +419,15 @@ export class AgentCallScheduler
       signal.throwIfAborted();
 
       if ('cancelled' in answer)
-
         return jsonToolResult('cbim_agent_result_review', { cancelled: true });
 
       const decision = allowedDecisions.find(value => labels[value] === answer.answers[0].answer);
 
       if (!decision)
-
         return errorResult('AGENT_REVIEW_INPUT', '请选择可用的人工决定；其它输入不等于接受授权');
 
       // 用户阅读期间仍可能发生外部修改；接受前再核原文件，不能沿用展示时的快照。
       if (decision === 'accept')
-
         current = await check(signal);
 
       signal.throwIfAborted();
@@ -460,7 +439,6 @@ export class AgentCallScheduler
       await context.Emit({ type: 'tool.updated', data: { id, name: 'cbim_agent_result_review', humanDecision: record, phase: 'decision_saved' } });
 
       if (decision !== 'accept')
-
         this.humanBlocked.add(context.runId);
 
       const continuation: QuestionInput = { questions: [{ question: '意见已保存。是否让主 Agent 继续处理这条意见？继续不授权自动返工或重放原调用。', options: [{ label: '继续处理意见' }, { label: '只保存意见' }] }] };
@@ -486,14 +464,13 @@ export class AgentCallScheduler
           this.humanBlocked.add(context.runId);
 
           if (!signal.aborted)
-
             await context.Emit({ type: 'tool.updated', data: { id, name: 'cbim_agent_result_review', phase: 'decision_released', continued: false, reason: 'verification_failed' } });
 
           throw error;
         }
       }
-      if (!continued)
 
+      if (!continued)
         this.humanBlocked.add(context.runId);
 
       await context.Emit({ type: 'tool.updated', data: { id, name: 'cbim_agent_result_review', phase: 'decision_released', continued } });
@@ -528,7 +505,6 @@ export class AgentCallScheduler
     for (const [key, value] of this.stranded)
     {
       if (!key.startsWith(prefix))
-
         continue;
 
       await value.runtime.Close();
@@ -544,7 +520,6 @@ export class AgentCallScheduler
     this.closed = true;
 
     for (const controller of this.reviewControllers.values())
-
       controller.abort();
 
     await Promise.allSettled([...this.reviews.values()].map(review => review.result));
@@ -552,7 +527,6 @@ export class AgentCallScheduler
     const active = [...this.activeCalls.values()];
 
     for (const item of active)
-
       item.controller.abort();
 
     await Promise.allSettled(active.map(item => item.done));

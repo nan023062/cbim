@@ -92,25 +92,18 @@ export function MemberTaskDetail({ workspaceId, workspaceInstanceId, rootSession
 function MemberRunDetail({ workspaceId, rootSessionId, task, runId, active }: { workspaceId: string; rootSessionId: string; task: TaskNode; runId: string; active: boolean })
 {
   const identity = { workspaceId, rootSessionId, taskId: task.taskId },
-
     current = task.activeRunId === runId;
 
   const { run, loading, hasMore, error, refresh } = useMemberRun(workspaceId, rootSessionId, task.taskId, runId, true, active);
 
   const [approvals, setApprovals] = useState<ChatApproval[]>([]),
-
     [questions, setQuestions] = useState<PendingQuestion[]>([]),
-
     [interactionError, setInteractionError] = useState(''),
-
     [operationError, setOperationError] = useState(''),
-
     [busy, setBusy] = useState(false);
 
   const lock = useRef(false),
-
     alive = useRef(true),
-
     refreshInteractions = useRef<() => Promise<void>>(async () => { });
 
   // 页签隐藏只改变下一次读取间隔，保留用户尚未提交的问题答案与审批上下文。
@@ -128,7 +121,6 @@ function MemberRunDetail({ workspaceId, rootSessionId, task, runId, active }: { 
   async function operate(action: 'dispatch.executionStop' | 'dispatch.approve' | 'dispatch.answerQuestion', args: Record<string, unknown>)
   {
     if (lock.current)
-
       throw Error('正在处理另一项成员操作，请稍后重试');
 
     lock.current = true;
@@ -148,7 +140,6 @@ function MemberRunDetail({ workspaceId, rootSessionId, task, runId, active }: { 
     catch (cause)
     {
       if (alive.current)
-
         setOperationError(cause instanceof Error ? cause.message : '成员操作失败，请重试');
 
       throw cause
@@ -158,7 +149,6 @@ function MemberRunDetail({ workspaceId, rootSessionId, task, runId, active }: { 
       lock.current = false;
 
       if (alive.current)
-
         setBusy(false)
     }
   }

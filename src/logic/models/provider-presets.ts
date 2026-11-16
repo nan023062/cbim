@@ -29,7 +29,6 @@ export function identifyProvider(baseUrl: string): ProviderPreset | undefined
     const url = new URL(baseUrl);
 
     if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash)
-
       return undefined;
 
     const normalized = url.origin + url.pathname.replace(/\/+$/, '');

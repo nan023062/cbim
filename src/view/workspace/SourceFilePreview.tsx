@@ -9,9 +9,7 @@ import type { SourceTarget, SourceFile } from '../../bridge/contracts/ipc-worksp
 export function SourceFilePreview({ target }: { target: SourceTarget })
 {
   const key = JSON.stringify(target),
-
     [attempt, setAttempt] = useState(0),
-
     [state, setState] = useState<
       {
         key: string;

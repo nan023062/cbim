@@ -28,19 +28,13 @@ const api = window.cbim;
 export function useSoftwareUpdates(): SoftwareUpdateController
 {
   const [status, setStatus] = useState<DesktopUpdateStatus>(),
-
     [readError, setReadError] = useState(''),
-
     [actionError, setActionError] = useState(''),
-
     [pending, setPending] = useState(false);
 
   const alive = useRef(false),
-
     reading = useRef(false),
-
     acting = useRef(false),
-
     revision = useRef(0);
 
   const refresh = useCallback(async () => { if (reading.current) return; reading.current = true; const request = revision.current; try { const next = await api.call('desktop.updates.status'); if (alive.current && request === revision.current) { setStatus(next); setReadError('') } } catch { if (alive.current && request === revision.current) setReadError('无法读取更新状态，请重试。') } finally { reading.current = false } }, []);

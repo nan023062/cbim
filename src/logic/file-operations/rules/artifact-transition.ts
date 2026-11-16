@@ -11,11 +11,8 @@ import { artifactTransitionDefinitionSchema, artifactScopeLimits } from '../../w
 import { artifactBaselineStagedSchema } from '../../evidence/rules/artifact-baseline';
 
 const id = z.string().min(1).max(128).refine(v => v.trim() === v && !/[\x00-\x1f]/.test(v)),
-
   logical = z.string().min(1).max(512),
-
   digest = z.string().regex(/^[a-f0-9]{64}$/),
-
   seq = z.number().int().positive().safe();
 
 export const artifactTransitionToolName = 'cbim_artifact_transition';

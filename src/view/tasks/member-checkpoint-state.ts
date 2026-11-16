@@ -33,23 +33,16 @@ export const checkpointPhaseLabels = { parked: '已保存检查点', queued: '�
 export function memberCheckpointView(task: TaskNode, runId?: string): MemberCheckpointView
 {
   if (task.checkpoints === undefined)
-
     return { invalid: task.status === 'checkpointed' || !!task.resumeRequest || !!task.resumeHistory || task.checkpointAbandonment !== undefined };
 
   if (!validMemberCheckpointChain(task) || !task.scopeId || task.cancelledBeforeStart)
-
     return { invalid: true };
 
   const records = task.checkpoints,
-
     requests = memberResumeRequests(task),
-
     latest = records.at(-1)!,
-
     latestRequest = currentMemberResumeRequest(task),
-
     lastRunId = task.runIds.at(-1),
-
     consumed = lastRunId !== latest.binding.runId;
 
   for (const record of records)
@@ -57,15 +50,13 @@ export function memberCheckpointView(task: TaskNode, runId?: string): MemberChec
     const binding = record.binding;
 
     if (binding.workspaceId !== task.identity.workspaceId || binding.rootSessionId !== task.identity.rootSessionId || binding.taskId !== task.taskId || binding.planRevision !== task.planRevision || binding.agentId !== task.assignee.agentId || binding.agentInstanceId !== task.assignee.agentInstanceId || binding.agentSessionId !== task.assignee.agentSessionId)
-
       return { invalid: true };
   }
-  if (requests.some(request => request.scopeId !== task.scopeId || request.previousTaskRevision >= task.revision || !request.trackedTaskIds.includes(task.taskId)))
 
+  if (requests.some(request => request.scopeId !== task.scopeId || request.previousTaskRevision >= task.revision || !request.trackedTaskIds.includes(task.taskId)))
     return { invalid: true };
 
   if (task.activeRunId && (!consumed || task.activeRunId !== lastRunId) || task.result && (!consumed || task.result.runId !== lastRunId) || task.help && (!consumed || task.help.binding.runId !== lastRunId))
-
     return { invalid: true };
 
   let abandonment: CheckpointAbandonment | undefined;
@@ -75,33 +66,26 @@ export function memberCheckpointView(task: TaskNode, runId?: string): MemberChec
     const audit = checkpointAbandonmentSchema.safeParse(task.checkpointAbandonment);
 
     if (!audit.success)
-
       return { invalid: true };
 
     abandonment = audit.data;
 
     if (task.status !== 'cancelled' || consumed || task.activeRunId || task.result || task.help || task.awaitedChildren.length || abandonment.scopeId !== task.scopeId || abandonment.sourceRunId !== latest.binding.runId || abandonment.checkpointId !== latest.checkpointId || abandonment.planRevision !== task.planRevision || abandonment.previousTaskRevision + 1 !== task.revision || abandonment.previousLeaseEpoch !== latest.binding.leaseEpoch || abandonment.abandonedAt !== task.updatedAt || abandonment.reason !== task.waitReason || abandonment.resumeRequestId !== (latestRequest?.requestId ?? null))
-
       return { invalid: true };
   }
+
   const sealed = ['failed', 'cancelled', 'interrupted'].includes(task.status) || consumed && task.status === 'blocked';
 
   if (!sealed && (consumed ? task.status === 'checkpointed' : latestRequest ? !['queued', 'waiting'].includes(task.status) : task.status !== 'checkpointed'))
-
     return { invalid: true };
 
   if (runId !== undefined && !task.runIds.includes(runId))
-
     return { invalid: false };
 
   const index = runId === undefined ? records.length - 1 : Math.min(task.runIds.indexOf(runId), records.length - 1),
-
     record = records[index],
-
     request = requests[index],
-
     resumedRunId = task.runIds[index + 1],
-
     historical = index < records.length - 1;
 
   return { record, request, invalid: false, resumedRunId, segment: index + 1, total: records.length, abandonment: historical ? undefined : abandonment, phase: historical ? 'resumed' : abandonment ? 'abandoned' : sealed ? 'sealed' : resumedRunId ? 'resumed' : request ? 'queued' : 'parked' };

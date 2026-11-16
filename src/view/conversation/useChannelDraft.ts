@@ -11,19 +11,14 @@ export function useChannelDraft(identity: ChannelDraftIdentity, active: boolean)
   const store = useMemo(() => new ChannelDraftStore(identity, window.localStorage), [identity.workspaceId, identity.rootSessionId, identity.scopeId]);
 
   const [, render] = useState(0),
-
     [busy, setBusy] = useState(false),
-
     [error, setError] = useState('');
 
   const mounted = useRef(false),
-
     selection = useRef({ store, active, generation: 0 }),
-
     lock = useRef(false);
 
   if (selection.current.store !== store || selection.current.active !== active)
-
     selection.current = { store, active, generation: selection.current.generation + 1 };
 
   useEffect(() => { mounted.current = true; const off = store.Subscribe(() => render(value => value + 1)); return () => { mounted.current = false; store.CancelImport(); off() } }, [store]);

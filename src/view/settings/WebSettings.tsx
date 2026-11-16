@@ -14,13 +14,9 @@ const api = window.cbim;
 export function WebSettings({ onDirtyChange }: { onDirtyChange?: (dirty: boolean) => void } = {})
 {
   const [settings, setSettings] = useState<SettingsIpcResponses['web.settings']>(),
-
     [enabled, setEnabled] = useState(false),
-
     [key, setKey] = useState(''),
-
     [busy, setBusy] = useState(false),
-
     [message, setMessage] = useState('');
 
   const [robots, setRobots] = useState<'allow' | 'respect'>('allow');
@@ -43,7 +39,6 @@ export function WebSettings({ onDirtyChange }: { onDirtyChange?: (dirty: boolean
   async function save(clearKey = false)
   {
     if (!settings)
-
       return;
 
     setBusy(true);

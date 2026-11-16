@@ -23,11 +23,9 @@ export class JsonRecordStorage
     const raw = this.storage.getItem(this.key);
 
     if (!raw)
-
       return undefined;
 
     if (new TextEncoder().encode(raw).length > this.maxBytes)
-
       throw Error(limitMessage);
 
     return JSON.parse(raw);
@@ -39,7 +37,6 @@ export class JsonRecordStorage
     const raw = JSON.stringify(value);
 
     if (new TextEncoder().encode(raw).length > this.maxBytes)
-
       throw Error(limitMessage);
 
     this.storage.setItem(this.key, raw);

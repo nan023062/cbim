@@ -112,13 +112,11 @@ export class AgentHistoryService
   Issue(key: string, message: string)
   {
     if (this.diagnostics.get(key) === message)
-
       return;
 
     this.diagnostics.set(key, message);
 
     if (this.diagnostics.size > 100)
-
       this.diagnostics.delete(this.diagnostics.keys().next().value!);
 
     try
@@ -134,11 +132,9 @@ export class AgentHistoryService
   private Check(id: string)
   {
     if (id !== this.workspaceId)
-
       fail('AGENT_HISTORY_IDENTITY', '历史查询属于其他工作区');
 
     if (this.closed)
-
       fail('AGENT_HISTORY_CLOSED', '工作区历史服务已关闭')
   }
 
@@ -150,7 +146,6 @@ export class AgentHistoryService
   private Persist(record: AgentHistoryRecord)
   {
     const snapshot = clone(record),
-
       key = runKey(record.view.taskId, record.view.runId);
 
     this.pending = this.pending.then(async () => { try { await this.ports.store.Put(snapshot) } catch { this.Issue('write:' + key, '部分 Agent 历史索引未能保存；运行日志仍保留，重新打开工作区时回补') } });
@@ -159,19 +154,15 @@ export class AgentHistoryService
   private Put(record: AgentHistoryRecord, persist = true)
   {
     const checked = checkedAgentHistoryRecord(record, this.workspaceId, this.root),
-
       key = runKey(checked.view.taskId, checked.view.runId),
-
       old = this.records.get(key);
 
     if (old && (old.journal !== checked.journal || old.view.agentId !== checked.view.agentId || old.view.sessionId !== checked.view.sessionId || old.view.agentInstanceId !== checked.view.agentInstanceId || JSON.stringify(old.agentCall) !== JSON.stringify(checked.agentCall)))
-
       throw Error('运行历史归属发生冲突');
 
     this.records.set(key, checked);
 
     if (persist && JSON.stringify(old) !== JSON.stringify(checked))
-
       this.Persist(checked);
   }
 
@@ -180,7 +171,6 @@ export class AgentHistoryService
     const task = event.data.task as TaskSpec;
 
     if (event.type !== 'run.started' || event.seq !== 1 || !task || task.workspaceId !== this.workspaceId || task.root !== this.root || task.taskId !== event.taskId || event.workspaceId !== this.workspaceId)
-
       throw Error('运行起始身份无效');
 
     if (typeof task.agentId !== 'string' || !task.agentId.trim())
@@ -189,6 +179,7 @@ export class AgentHistoryService
 
       return
     }
+
     const member = event.data.memberBinding === undefined ? undefined : checkedMemberRunBinding(event.data.memberBinding, task, event.runId);
 
     const main = event.data.conversationBinding === undefined ? undefined : checkedConversationAgentBinding(event.data.conversationBinding, task);
@@ -196,13 +187,10 @@ export class AgentHistoryService
     const agentCall = event.data.agentCall === undefined ? undefined : checkedAgentCallReference(event.data.agentCall, task, event.runId);
 
     if (agentCall && (source !== 'loop' || event.data.executionModel !== 'agent-tools-v1' || main) || member && main || (source === 'member') !== (!!member && !agentCall))
-
       throw Error('运行绑定与日志来源不一致');
 
     const binding = member ?? main,
-
       stamp = date(event.time),
-
       legacy = task.workflowContext?.agent as
         {
           definition?:
@@ -222,21 +210,17 @@ export class AgentHistoryService
   RestoreRun(summary: RunSummary, source: Source)
   {
     if (this.closed)
-
       return;
 
     try
     {
       const first = summary.events[0],
-
         record = first && this.FromStart(first, source);
 
       if (!record)
-
         return;
 
       if (summary.runId !== record.view.runId)
-
         throw Error('恢复运行身份无效');
 
       for (let i = 0; i < summary.events.length; i++)
@@ -244,17 +228,14 @@ export class AgentHistoryService
         const e = summary.events[i];
 
         if (e.seq !== i + 1 || e.taskId !== record.view.taskId || e.runId !== record.view.runId || e.workspaceId !== this.workspaceId)
-
           throw Error('历史日志序号或身份无效')
       }
+
       const key = runKey(record.view.taskId, record.view.runId),
-
         existing = this.records.get(key),
-
         last = summary.events.at(-1)!;
 
       if (existing?.lastSeq && existing.lastSeq > last.seq)
-
         return;
 
       record.lastSeq = last.seq;
@@ -277,6 +258,7 @@ export class AgentHistoryService
 
         record.view.updatedAt = record.view.updatedAt > existing.view.updatedAt ? record.view.updatedAt : existing.view.updatedAt
       }
+
       this.Put(record);
     }
     catch
@@ -289,7 +271,6 @@ export class AgentHistoryService
   ObserveRun(event: StoredEvent, source: Source)
   {
     if (this.closed)
-
       return;
 
     const key = runKey(event.taskId, event.runId);
@@ -297,7 +278,6 @@ export class AgentHistoryService
     try
     {
       if (event.workspaceId !== this.workspaceId || !Number.isSafeInteger(event.seq) || event.seq < 1)
-
         throw Error('事件身份无效');
 
       let record = this.records.get(key);
@@ -307,13 +287,11 @@ export class AgentHistoryService
         const next = this.FromStart(event, source);
 
         if (!next)
-
           return;
 
         if (record?.journalSeen)
         {
           if (record.journal !== source || record.view.agentId !== next.view.agentId || record.view.sessionId !== next.view.sessionId || record.view.agentInstanceId !== next.view.agentInstanceId || JSON.stringify(record.agentCall) !== JSON.stringify(next.agentCall) || JSON.stringify(record.task) !== JSON.stringify(next.task))
-
             throw Error('重复运行起始身份冲突');
         }
         else
@@ -330,6 +308,7 @@ export class AgentHistoryService
 
             next.view.startedAt = record.view.startedAt
           }
+
           this.Put(next);
 
           this.live.add(key);
@@ -343,8 +322,8 @@ export class AgentHistoryService
 
         return
       }
-      if (record.journal !== source)
 
+      if (record.journal !== source)
         throw Error('事件来源不一致');
 
       if (event.seq > record.lastSeq)
@@ -360,7 +339,6 @@ export class AgentHistoryService
           next.view.status = event.type === 'run.interrupted' ? 'interrupted' : ['completed', 'cancelled', 'failed'].includes(String(event.data.status)) ? event.data.status as 'completed' | 'cancelled' | 'failed' : 'interrupted';
 
           if (next.dispatchStatus && terminal(next.dispatchStatus))
-
             next.view.status = next.dispatchStatus;
 
           next.view.updatedAt = date(event.time);
@@ -376,10 +354,10 @@ export class AgentHistoryService
           record.journalSeen = true
         }
       }
+
       const stream = this.streams.get(key);
 
       if (stream)
-
         this.Accept(stream, event, record);
     }
     catch
@@ -389,7 +367,6 @@ export class AgentHistoryService
       const stream = this.streams.get(key);
 
       if (stream)
-
         stream.failure = Error('运行事件身份或序号冲突');
 
       this.Issue('event:' + key, '运行增量无法归档，历史索引可能不完整；原日志仍保留')
@@ -400,7 +377,6 @@ export class AgentHistoryService
   RestoreDispatch(state: DispatchState)
   {
     if (this.closed)
-
       return;
 
     if (state.workspaceId !== this.workspaceId)
@@ -409,14 +385,12 @@ export class AgentHistoryService
 
       return
     }
+
     for (const graph of state.graphs)
-
       for (const task of graph.tasks)
-
         this.tasks.set(task.taskId, clone(task));
 
     for (const run of state.runs ?? [])
-
       this.RecordIntent(run);
   }
 
@@ -424,24 +398,19 @@ export class AgentHistoryService
   DispatchCommitted(mutation: DispatchMutation)
   {
     if (this.closed)
-
       return;
 
     for (const change of mutation.batch?.changes ?? [])
-
       if (change.type === 'task.upserted')
-
         this.tasks.set(change.task.taskId, clone(change.task));
 
     for (const run of mutation.runs ?? [])
-
       this.RecordIntent(run);
   }
 
   private RecordIntent(run: DispatchRun)
   {
     const b = run.binding,
-
       key = runKey(b.taskId, b.runId);
 
     try
@@ -449,7 +418,6 @@ export class AgentHistoryService
       const task = this.tasks.get(b.taskId);
 
       if (!task || task.identity.workspaceId !== this.workspaceId || task.identity.rootSessionId !== b.rootSessionId || task.assignee.agentId !== b.agentId || task.assignee.agentInstanceId !== b.agentInstanceId || task.assignee.agentSessionId !== b.agentSessionId || run.prepared.agent.agentId !== b.agentId)
-
         throw Error('派发运行归属无效');
 
       const spec: TaskSpec = { taskId: task.taskId, workspaceId: this.workspaceId, root: this.root, goal: task.goal, moduleIds: task.modules.map(m => m.moduleId), agentId: b.agentId, acceptance: task.acceptance.map(a => a.text) };
@@ -457,7 +425,6 @@ export class AgentHistoryService
       checkedMemberRunBinding(b, spec, b.runId);
 
       const old = this.records.get(key),
-
         record: AgentHistoryRecord = { version: 1, kind: 'task', journal: 'member', task: spec, lastSeq: old?.lastSeq ?? 0, journalSeen: old?.journalSeen ?? false, dispatchStatus: run.status, view: { workspaceId: this.workspaceId, agentId: b.agentId, sessionId: b.agentSessionId, taskId: b.taskId, runId: b.runId, source: 'member', binding: 'registered', agentName: named(run.prepared.agent.name, b.agentId), goal: spec.goal, moduleIds: [...spec.moduleIds], status: run.status, startedAt: date(run.createdAt), updatedAt: date(run.settledAt ?? run.startedAt ?? run.createdAt), agentSessionId: b.agentSessionId, agentInstanceId: b.agentInstanceId, rootSessionId: b.rootSessionId, configurationRevision: run.prepared.agent.knowledgeRevision } };
 
       this.Put(record);
@@ -477,7 +444,6 @@ export class AgentHistoryService
     await this.Initialize();
 
     const result = new Map<string, AgentHistoryRole>(),
-
       sessions = new Map<string, Set<string>>();
 
     for (const { view: v } of this.records.values())
@@ -492,6 +458,7 @@ export class AgentHistoryService
 
         sessions.set(v.agentId, new Set())
       }
+
       role.runCount++;
 
       sessions.get(v.agentId)!.add(v.sessionId);
@@ -503,8 +470,8 @@ export class AgentHistoryService
         role.name = v.agentName
       }
     }
-    for (const role of result.values())
 
+    for (const role of result.values())
       role.sessionCount = sessions.get(role.agentId)!.size;
 
     return { roles: clone([...result.values()].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt) || a.agentId.localeCompare(b.agentId))), diagnostics: this.Notices() };
@@ -520,13 +487,12 @@ export class AgentHistoryService
       } | undefined;
 
     if (cursor)
-
+    {
       try
       {
         const parsed = JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8'));
 
         if (parsed.v !== 1 || parsed.scope !== scope || typeof parsed.time !== 'string' || typeof parsed.id !== 'string')
-
           throw Error();
 
         after = parsed
@@ -535,12 +501,12 @@ export class AgentHistoryService
       {
         fail('AGENT_HISTORY_CURSOR', '分页游标不属于当前 Agent 会话查询')
       }
-    const sorted = items.sort((a, b) => compare(stamp(b), stamp(a)) || compare(key(a), key(b))),
+    }
 
+    const sorted = items.sort((a, b) => compare(stamp(b), stamp(a)) || compare(key(a), key(b))),
       available = after ? sorted.filter(item => compare(stamp(item), after!.time) < 0 || stamp(item) === after!.time && compare(key(item), after!.id) > 0) : sorted;
 
     const selected = available.slice(0, limit),
-
       last = selected.at(-1);
 
     return { items: clone(selected), ...(available.length > limit && last ? { nextCursor: Buffer.from(JSON.stringify({ v: 1, scope, time: stamp(last), id: key(last) })).toString('base64url') } : {}), diagnostics: this.Notices() };
@@ -557,7 +523,6 @@ export class AgentHistoryService
     const found = new Map<string, AgentHistorySession>();
 
     for (const { view: v, kind } of this.records.values())
-
       if (v.agentId === input.agentId)
       {
         let session = found.get(v.sessionId);
@@ -568,6 +533,7 @@ export class AgentHistoryService
 
           found.set(v.sessionId, session)
         }
+
         session.runCount++;
 
         if (v.startedAt < session.startedAt)
@@ -576,6 +542,7 @@ export class AgentHistoryService
 
           session.title = v.goal.slice(0, 200)
         }
+
         if (v.updatedAt >= session.updatedAt)
         {
           session.updatedAt = v.updatedAt;
@@ -585,6 +552,7 @@ export class AgentHistoryService
           session.agentName = v.agentName
         }
       }
+
     return this.Page([...found.values()], JSON.stringify(['sessions', this.workspaceId, input.agentId]), input.cursor, input.limit, s => s.sessionId, s => s.startedAt);
   }
 
@@ -599,7 +567,6 @@ export class AgentHistoryService
     const matches = [...this.records.values()].map(r => r.view).filter(v => v.agentId === input.agentId && v.sessionId === input.sessionId);
 
     if (!matches.length)
-
       fail('AGENT_HISTORY_NOT_FOUND', '当前 Agent 没有此历史会话');
 
     return this.Page(matches, JSON.stringify(['runs', this.workspaceId, input.agentId, input.sessionId]), input.cursor, input.limit, r => runKey(r.taskId, r.runId), r => r.startedAt);
@@ -608,25 +575,22 @@ export class AgentHistoryService
   private Accept(stream: EventStream, event: StoredEvent, record: AgentHistoryRecord)
   {
     if (stream.failure)
-
       throw stream.failure;
 
     if (event.workspaceId !== this.workspaceId || event.taskId !== record.view.taskId || event.runId !== record.view.runId || !Number.isSafeInteger(event.seq) || event.seq < 1)
-
       throw Error('历史事件归属无效');
 
     const projected = projectRunEvent(event, record.view, record.task),
-
       existing = stream.events[event.seq - 1] ?? stream.pending.get(event.seq);
 
     if (existing)
     {
       if (JSON.stringify(existing) !== JSON.stringify(projected))
-
         throw Error('历史事件序号冲突');
 
       return
     }
+
     stream.pending.set(event.seq, projected);
 
     while (stream.pending.has(stream.events.length + 1))
@@ -638,15 +602,12 @@ export class AgentHistoryService
       stream.events.push(next);
 
       if (next.type === 'tool.allowed')
-
         stream.unresolved.add(String(next.data.id));
 
       if (next.type === 'tool.finished' || next.type === 'tool.denied')
-
         stream.unresolved.delete(String(next.data.id));
 
       if (next.type === 'task.updated' && next.data.progress)
-
         stream.progress = next.data.progress as MemberRunView['taskProgress'];
     }
   }
@@ -656,19 +617,15 @@ export class AgentHistoryService
     try
     {
       const summary = await this.ports.Read(clone(record)),
-
         classified = this.FromStart(summary.events[0], record.journal);
 
       if (!classified || classified.view.agentId !== record.view.agentId || classified.view.sessionId !== record.view.sessionId || classified.view.agentInstanceId !== record.view.agentInstanceId || JSON.stringify(classified.agentCall) !== JSON.stringify(record.agentCall) || summary.runId !== record.view.runId)
-
         throw Error('运行详情归属不一致');
 
       for (const event of summary.events)
-
         this.Accept(stream, event, record);
 
       if (stream.pending.size)
-
         throw Error('运行详情存在事件缺口');
 
       stream.loaded = true;
@@ -684,6 +641,7 @@ export class AgentHistoryService
 
         return
       }
+
       this.Issue('details:' + runKey(record.view.taskId, record.view.runId), '部分运行详情无法读取或身份不一致，原记录需要核实');
 
       fail('AGENT_HISTORY_UNREADABLE', '运行详情无法读取或身份不一致，请核实本机运行记录');
@@ -700,19 +658,15 @@ export class AgentHistoryService
     await this.Initialize();
 
     if (input.cursor && input.cursor.runId !== input.runId)
-
       fail('AGENT_HISTORY_CURSOR', '事件游标属于其他运行');
 
     const key = runKey(input.taskId, input.runId),
-
       record = this.records.get(key);
 
     if (!record || record.view.agentId !== input.agentId || record.view.sessionId !== input.sessionId)
-
       fail('AGENT_HISTORY_NOT_FOUND', '当前 Agent 会话没有此运行');
 
     if (this.brokenStreams.has(key))
-
       fail('AGENT_HISTORY_UNREADABLE', '运行事件存在身份或序号冲突，请重新打开工作区核实原始记录');
 
     let stream = this.streams.get(key);
@@ -729,16 +683,16 @@ export class AgentHistoryService
 
       this.streams.set(key, stream)
     }
+
     for (const [oldest, value] of this.streams)
     {
       if (this.streams.size <= 24)
-
         break;
 
       if (oldest !== key && value.loaded && !this.live.has(oldest))
-
         this.streams.delete(oldest)
     }
+
     const loading = stream.loading ??= this.LoadStream(stream, record);
 
     try
@@ -748,13 +702,12 @@ export class AgentHistoryService
     catch (error)
     {
       if (stream.loading === loading)
-
         stream.loading = undefined;
 
       throw error
     }
-    if (stream.failure || stream.pending.size)
 
+    if (stream.failure || stream.pending.size)
       fail('AGENT_HISTORY_UNREADABLE', '运行事件不连续，请核实历史记录');
 
     this.Check(input.workspaceId);
@@ -764,11 +717,8 @@ export class AgentHistoryService
     const run: MemberRunView = { task: clone(current.task), runId: current.view.runId, status: current.view.status === 'starting' ? 'running' : current.view.status, acceptance: 'not_evaluated', unresolvedTools: [...stream.unresolved], ...(stream.progress ? { taskProgress: stream.progress } : {}) };
 
     const reset = !input.cursor || input.cursor.seq > stream.events.length,
-
       from = reset ? 0 : input.cursor!.seq,
-
       events = stream.events.slice(from, from + input.limit),
-
       cursor = { runId: input.runId, seq: from + events.length };
 
     return clone(!reset && !events.length ? { mode: 'noop', run, cursor } : { mode: reset ? 'reset' : 'delta', run, cursor, events, hasMore: cursor.seq < stream.events.length });

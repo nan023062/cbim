@@ -22,18 +22,17 @@ export function packagedEngineAdapter(id: string, runtime: EngineRuntimePackage)
   const descriptor = runtime.adapter;
 
   if (!descriptor)
-
     throw Error('引擎包缺少统一适配器入口，请准备兼容版本');
 
   const relative = path.relative(path.resolve(runtime.root), path.resolve(descriptor.entry));
 
   if (!relative || relative.startsWith('..') || path.isAbsolute(relative) || !descriptor.entry.endsWith('.cjs') || descriptor.protocol !== 1)
-
     throw Error('引擎包入口路径或协议无效');
 
   const loaded = loadAdapter(descriptor.entry) as
     {
       engineAdapter?: unknown
     };
+
   return checkedEngineAdapter(loaded.engineAdapter, { id, version: descriptor.version, descriptor: engineDescriptor(loopEngineSchema.parse(id)) });
 }

@@ -69,7 +69,6 @@ const shape = z.object({ scopeId: id, workspaceId: id, rootSessionId: id, status
 function valid(condition: unknown, message: string): asserts condition
 {
   if (!condition)
-
     fail('GRAPH_INPUT_INVALID', message)
 }
 
@@ -88,17 +87,11 @@ export function validateDispatchScopes(previous: DispatchState, next: DispatchSt
   const activeSupplements = validateScopeActiveInputs(previous, next, mutation);
 
   const scopes = next.scopes ?? [],
-
     activeRoots = new Set<string>(),
-
     continuationCommands = new Set<string>(),
-
     continuationRuns = new Set<string>(),
-
     recoveryIds = new Set<string>(),
-
     recoveryRuns = new Set<string>(),
-
     recoveryNatives = new Set<string>();
 
   for (const scope of scopes)
@@ -122,11 +115,10 @@ export function validateDispatchScopes(previous: DispatchState, next: DispatchSt
       valid(origin && origin !== scope && origin.workspaceId === scope.workspaceId && origin.rootSessionId === scope.rootSessionId && origin.status === 'closed', '后续话题必须属于同办公室已结束话题');
 
       if (!old)
-
         valid(previous.scopes?.some(value => value.scopeId === scope.followupOf && value.status === 'closed'), '不能在同一提交中关闭原话题并伪造新要求')
     }
-    const interrupts = scope.topicInterruptions ?? [],
 
+    const interrupts = scope.topicInterruptions ?? [],
       beforeInterrupts = old?.topicInterruptions ?? [];
 
     valid(interrupts.length >= beforeInterrupts.length && interrupts.length <= beforeInterrupts.length + 1 && beforeInterrupts.every((item, index) => equal(item, interrupts[index])), '话题补充意图只能原样保留并追加');
@@ -146,25 +138,22 @@ export function validateDispatchScopes(previous: DispatchState, next: DispatchSt
       const accepted = scope.continuations?.find(value => value.continuationId === request.commandId);
 
       if (accepted)
-
         valid(!isHumanContinuation(accepted) && accepted.wait.interruptionId === request.commandId && accepted.inputRevision === request.expectedInputRevision + 1 && equal(accepted.input, request.input) && equal(accepted.options, request.options), '已消费话题补充必须保留原请求和输入版本');
-
       else
-
         valid(item === interrupts.at(-1), '前一话题补充尚未消费，不能新增补充');
     }
+
     if (interrupts.length > beforeInterrupts.length)
     {
       const request = interrupts.at(-1)!.request;
 
       valid(old?.status === 'active' && scope.status === 'active' && !pendingTopicInterruption(old) && old.goal && !old.goal.blocked && request.expectedInputRevision === goalInputRevision(old.goal) && equal({ ...old, topicInterruptions: interrupts }, scope), '补充请求只能追加到当前活动输入版本，不能顺带修改目标');
     }
-    if (old && pendingTopicInterruption(old) && scope.continuations?.length === old.continuations?.length)
 
+    if (old && pendingTopicInterruption(old) && scope.continuations?.length === old.continuations?.length)
       valid(equal({ ...old.goal, blocked: scope.goal?.blocked }, scope.goal), '等待话题排空时不能继续修改原计划或审阅');
 
     if (pendingTopicInterruption(scope))
-
       valid(scope.outcome !== 'completed', '未消费补充的话题不能宣称完成');
 
     validateAutomaticReturns(old, scope, graph);
@@ -172,9 +161,7 @@ export function validateDispatchScopes(previous: DispatchState, next: DispatchSt
     const recovery = scope.recovery;
 
     const replan = scope.replan,
-
       fresh = scopeFreshContext(scope),
-
       intent = recovery ?? replan;
 
     validateEffectDispositionLink(next, scope);
@@ -182,7 +169,6 @@ export function validateDispatchScopes(previous: DispatchState, next: DispatchSt
     valid(!(recovery && replan), '只读核实与正式业务重规划意图互斥');
 
     if (old)
-
       valid(equal(old.replan, replan), '业务重规划意图创建后不可补造、移除或改写');
 
     if (intent && fresh)
@@ -200,11 +186,9 @@ export function validateDispatchScopes(previous: DispatchState, next: DispatchSt
       valid(!next.runs?.some(run => run.binding.runId === fresh.initialRunId), '新主运行不能借用成员身份');
 
       if (scope.wait)
-
         valid(scope.wait.mainRunIds.includes(fresh.initialRunId), '等待不能丢失新周期首轮预算');
 
       for (const item of scope.continuations ?? [])
-
         valid(item.wait.mainRunIds.includes(fresh.initialRunId), '补充历史不能丢失新周期首轮预算');
 
       if (!old)
@@ -214,16 +198,15 @@ export function validateDispatchScopes(previous: DispatchState, next: DispatchSt
         valid(!previous.runs?.some(run => run.binding.rootSessionId === scope.rootSessionId && ['starting', 'running'].includes(run.status)), '不能在成员活动时隔离主上下文');
 
         const prior = (previous.scopes ?? []).filter(item => item.rootSessionId === scope.rootSessionId),
-
           excluded = prior.flatMap(item => { const context = scopeFreshContext(item); return [...(item.runTracking?.mainRunIds ?? []), ...(item.continuations ?? []).map(value => value.runId), ...(context ? [context.initialRunId, ...context.excludedRunIds] : [])] });
 
         valid(excluded.every(runId => fresh.excludedRunIds.includes(runId)), '新上下文不能重新包含此前隔离的运行或无日志意图');
       }
     }
+
     if (replan)
     {
       const inspection = scopes.find(item => item.scopeId === replan.source.inspectionScopeId),
-
         proof = replan.source.proof;
 
       valid(inspection?.recovery && inspection.status === 'closed' && inspection.outcome === 'completed' && inspection.rootSessionId === scope.rootSessionId && inspection.workspaceId === scope.workspaceId && scopes.indexOf(inspection) < scopes.indexOf(scope), '业务重规划必须引用此前完成的本会话只读核实');
@@ -231,7 +214,6 @@ export function validateDispatchScopes(previous: DispatchState, next: DispatchSt
       if ('executionModel' in proof)
       {
         const origin = inspection.recovery.source,
-
           original = scopes.find(item => item.scopeId === proof.sourceScopeId);
 
         valid('executionModel' in origin && origin.executionModel === 'agent-tools-v1' && proof.executionModel === 'agent-tools-v1' && inspection.goal?.revision === proof.inspectionGoalRevision && inspection.recovery.context.initialRunId === proof.inspectionRunId, '递归核实证明与原周期身份不一致');
@@ -253,7 +235,6 @@ export function validateDispatchScopes(previous: DispatchState, next: DispatchSt
         valid(!scope.goal?.plan, '递归业务不能补造旧目标计划');
 
         if (!old)
-
           valid(previous.scopes?.filter(item => item.rootSessionId === scope.rootSessionId).at(-1)?.scopeId === inspection.scopeId, '递归核实必须是最后封存周期');
       }
       else
@@ -261,7 +242,6 @@ export function validateDispatchScopes(previous: DispatchState, next: DispatchSt
         valid(inspection.goal?.review?.decision === 'complete' && inspection.goal.revision === proof.inspectionGoalRevision && inspection.goal.plan?.revision === proof.inspectionPlanRevision && inspection.goal.review.runId === proof.reviewRunId && inspection.goal.review.knowledgeRevision === proof.knowledgeRevision, '业务重规划的核实证明与封存周期不一致');
 
         const original = scopes.find(item => item.scopeId === proof.sourceScopeId),
-
           origin = inspection.recovery.source;
 
         valid(original?.goal?.plan && original.status === 'closed' && original.scopeId === origin.scopeId && proof.sourceRunId === origin.runId, '业务重规划必须继承真实原业务来源，不补造旧计划');
@@ -287,9 +267,9 @@ export function validateDispatchScopes(previous: DispatchState, next: DispatchSt
           valid(('kind' in proof) === ('kind' in origin), '重规划不能隐式更改原来源协议');
 
           if ('kind' in proof && 'kind' in origin)
-
             valid(equal(proof.sourceToolCallIds, origin.toolCallIds), '重规划调用集合与核实来源不一致');
         }
+
         const required = [...new Set([...taskModules, ...original.goal.plan.assignments.flatMap(item => item.moduleIds)])].sort();
 
         valid(required.length > 0 && required.length <= 50, '重规划需要非空的原目标模块集合');
@@ -297,7 +277,6 @@ export function validateDispatchScopes(previous: DispatchState, next: DispatchSt
         valid(equal(required, [...proof.requiredModules.map(item => item.moduleId)].sort()), '重规划必须冻结原业务的完整目标模块集合');
 
         const superseded = new Set(inspection.goal.review.superseded.map(item => item.taskId)),
-
           covered = graph.tasks.filter(item => item.scopeId === inspection.scopeId && item.status === 'result_ready' && item.result && !superseded.has(item.taskId)).flatMap(item => item.modules.map(module => module.moduleId));
 
         valid(required.every(module => covered.includes(module)), '核实周期的成功候选必须覆盖重规划目标模块');
@@ -307,7 +286,6 @@ export function validateDispatchScopes(previous: DispatchState, next: DispatchSt
         valid(equal(humans, proof.inheritedHuman), '重规划不能遗漏或改写原业务人工验收条件');
 
         if (!old)
-
           valid(previous.scopes?.filter(item => item.rootSessionId === scope.rootSessionId).at(-1)?.scopeId === inspection.scopeId && previous.scopes.some(item => item.scopeId === inspection.scopeId && item.status === 'closed' && item.outcome === 'completed'), '核实周期必须是创建新业务意图前最后一个已提交且完成的周期');
 
         if (scope.goal?.plan)
@@ -320,8 +298,8 @@ export function validateDispatchScopes(previous: DispatchState, next: DispatchSt
         }
       }
     }
-    if (old)
 
+    if (old)
       valid(equal(old.recovery, recovery), '核实启动意图创建后不可补造、移除或改写');
 
     if (recovery)
@@ -331,11 +309,9 @@ export function validateDispatchScopes(previous: DispatchState, next: DispatchSt
       valid(!next.runs?.some(run => run.binding.runId === recovery.context.initialRunId), '核实主运行不能借用成员执行身份');
 
       if (scope.wait)
-
         valid(scope.wait.mainRunIds.includes(recovery.context.initialRunId), '核实周期等待不能丢失首次主运行预算');
 
       for (const item of scope.continuations ?? [])
-
         valid(item.wait.mainRunIds.includes(recovery.context.initialRunId), '核实周期补充历史不能丢失首次主运行预算');
 
       const source = scopes.find(item => item.scopeId === recovery.source.scopeId);
@@ -369,6 +345,7 @@ export function validateDispatchScopes(previous: DispatchState, next: DispatchSt
 
         valid(origin.runId ? task.runIds.includes(origin.runId) : !task.runIds.length, '已有执行历史必须明确选择来源运行');
       }
+
       if (!old)
       {
         valid(previous.scopes?.some(item => item.scopeId === source.scopeId && item.status === 'closed'), '来源周期必须在创建核实意图前已经关闭');
@@ -384,10 +361,9 @@ export function validateDispatchScopes(previous: DispatchState, next: DispatchSt
         valid(excluded.every(runId => recovery.context.excludedRunIds.includes(runId)), '新核实上下文不能重新包含此前隔离的旧运行或无日志意图');
       }
     }
+
     const history = scope.continuations ?? [],
-
       priorHistory = old?.continuations ?? [],
-
       supplement = history.length === priorHistory.length + 1;
 
     valid(history.length >= priorHistory.length && history.length <= priorHistory.length + 1 && priorHistory.every((item, index) => equal(item, history[index])), '补充启动意图只能原样保留并一次追加一项');
@@ -399,9 +375,7 @@ export function validateDispatchScopes(previous: DispatchState, next: DispatchSt
     validateScopeInputHistory(scope);
 
     const seenCommands = new Set<string>(),
-
       seenWaits = new Set<string>(),
-
       seenRuns = new Set<string>();
 
     for (const [index, item] of history.entries())
@@ -418,6 +392,7 @@ export function validateDispatchScopes(previous: DispatchState, next: DispatchSt
           valid(false, '补充附件引用与可信快照清单不一致')
         }
       }
+
       valid(!recovery || item.options.permission === 'read', '只读核实周期的后续补充不能提升权限');
 
       valid(!seenCommands.has(item.continuationId) && !seenWaits.has(item.wait.waitId) && !seenRuns.has(item.runId), '补充身份重复');
@@ -438,18 +413,21 @@ export function validateDispatchScopes(previous: DispatchState, next: DispatchSt
 
         valid([...prior.wait.mainRunIds, prior.runId].every(run => item.wait.mainRunIds.includes(run)) && (item.wait.interruptionId ? item.wait.goalRevision >= prior.wait.goalRevision + 1 : item.wait.goalRevision > prior.wait.goalRevision + 1), '后续等待必须累计此前主轮和决策版本');
       }
+
       seenCommands.add(item.continuationId);
 
       seenWaits.add(item.wait.waitId);
 
       seenRuns.add(item.runId);
     }
+
     if (scope.wait && history.length)
     {
       const prior = history.at(-1)!;
 
       valid([...prior.wait.mainRunIds, prior.runId].every(run => scope.wait!.mainRunIds.includes(run)) && (scope.wait.interruptionId ? scope.wait.goalRevision >= prior.wait.goalRevision + 1 : scope.wait.goalRevision > prior.wait.goalRevision + 1), '等待检查点不能丢失已消费预算和输入决策');
     }
+
     if (supplement)
     {
       const item = history.at(-1)!;
@@ -467,6 +445,7 @@ export function validateDispatchScopes(previous: DispatchState, next: DispatchSt
         assertMemberPausePermission(memberPauseSelection(previous, old, old.wait.memberPause).checkpoints, item.options.permission)
       }
     }
+
     if (old)
     {
       valid(equal(old.executionPolicy, scope.executionPolicy), '周期不能改写原始协作模式或兜底模型');
@@ -476,16 +455,13 @@ export function validateDispatchScopes(previous: DispatchState, next: DispatchSt
       validateScopeGoalTransition(old.goal, scope.goal, false, supplement, activeSupplements.has(scope.scopeId), !!old.wait?.interruptionId);
 
       if (old.wait && !supplement)
-
         valid(equal(old.wait, scope.wait) && equal(old.goal, scope.goal), '等待检查点及其目标不能改写或移除');
 
       // 预算与人工决定分别经过精确独立不变量；只允许各自单项追加，不通用忽略字段。
       if (old.status === 'waiting')
-
         valid(supplement || scope.status === 'closed' || equal({ ...old, budget: scope.budget }, scope) || equal({ ...old, humanDecisions: scope.humanDecisions }, scope), '等待周期只能明确补充、追加人工决定/预算拒绝、保留或显式关闭');
 
       if (old.status === 'closed')
-
         valid(equal(old, scope), '已关闭调度周期不能重开或改写结果');
     }
     else
@@ -494,8 +470,8 @@ export function validateDispatchScopes(previous: DispatchState, next: DispatchSt
 
       validateScopeGoalTransition(undefined, scope.goal, true)
     }
-    if (scope.wait && !old?.wait)
 
+    if (scope.wait && !old?.wait)
       valid(old?.status === 'active' && scope.status === 'waiting', '只能从活动周期创建真实等待检查点');
 
     if (scope.status !== 'closed')
@@ -505,19 +481,15 @@ export function validateDispatchScopes(previous: DispatchState, next: DispatchSt
       activeRoots.add(scope.rootSessionId);
     }
     else
-
       valid(scope.closedAt && scope.outcome && Date.parse(scope.closedAt) >= Date.parse(scope.createdAt), '已关闭周期缺少有效结束信息');
 
     if (scope.status === 'active')
-
       valid(!scope.wait, '活动周期不能携带已提交等待检查点');
 
     if (scope.status === 'waiting')
     {
       const goal = scope.goal,
-
         review = goal?.review,
-
         wait = scope.wait;
 
       if (wait?.interruptionId)
@@ -537,29 +509,26 @@ export function validateDispatchScopes(previous: DispatchState, next: DispatchSt
         valid(Date.parse(wait.createdAt) >= Date.parse(scope.createdAt) && Date.parse(wait.createdAt) >= Date.parse(review.recordedAt), '等待检查点时间早于周期或审阅');
 
         if (old?.status === 'active')
-
           valid(equal(old.goal, goal) && equal(wait.graphCursor, { streamId: graph.cursor.streamId, seq: graph.cursor.seq }), '停泊不能顺带修改目标或引用过期任务图');
 
         valid(equal(wait.memberPause, review.memberPause), '持久成员等待必须原样冻结本次审阅的完整清单');
 
         if (wait.memberPause)
-
           memberPauseSelection(next, scope, wait.memberPause);
-
         else
-
           valid(!graph.tasks.some(task => task.scopeId === scope.scopeId && (task.activeRunId || isMemberCheckpointPending(task) || ['planned', 'queued', 'running', 'waiting'].includes(task.status))), '未明确成员清单的等待不能保留待执行或检查点');
       }
-      if (old?.status === 'active')
 
+      if (old?.status === 'active')
         valid(wait && equal(old.goal, goal) && equal(wait.graphCursor, { streamId: graph.cursor.streamId, seq: graph.cursor.seq }), '暂停不得修改目标或引用过期任务图');
 
       valid(!next.runs?.some(run => run.binding.rootSessionId === scope.rootSessionId && ['starting', 'running'].includes(run.status)), '等待主会话不能承载活动成员运行');
     }
-    if (scope.wait && scope.status === 'closed')
 
+    if (scope.wait && scope.status === 'closed')
       valid(scope.outcome !== 'completed', '等待周期不能跳过完成复核直接标为成功');
   }
+
   valid([...continuationCommands].every(id => !recoveryIds.has(id)) && [...continuationRuns].every(id => !recoveryRuns.has(id)), '补充与核实启动意图不能重用命令或主运行身份');
 
   validateScopeRunTracking(previous, next, mutation);
@@ -576,6 +545,7 @@ export function validateDispatchScopes(previous: DispatchState, next: DispatchSt
 
       continue
     }
+
     valid(member.agentId !== 'cbim:main' && id.safeParse(member.executionScopeId).success && id.safeParse(member.executionTaskId).success, '执行实例必须绑定非主角色、明确周期和任务');
 
     const scope = scopes.find(item => item.scopeId === member.executionScopeId);
@@ -587,11 +557,8 @@ export function validateDispatchScopes(previous: DispatchState, next: DispatchSt
     valid(member.agentSessionIds.length === 1 && next.sessions.some(session => session.agentSessionId === member.agentSessionIds[0] && session.rootSessionId === scope.rootSessionId && (session.purpose ?? 'task') === 'task'), '周期执行实例必须具有唯一的本任务通道');
 
     if (scope.status !== 'closed')
-
       valid(member.lifecycle === 'active' && !member.releasedAt, '未关闭周期成员不能提前释放');
-
     else
-
       valid(member.lifecycle === 'released' && member.releasedAt === scope.closedAt && !member.activeRunId && !member.activeTaskId && member.activity === 'idle' && !member.waitingTaskIds.length && !member.communicatingMessageIds.length, '关闭周期必须原子释放全部执行实例');
 
     if (scope.status === 'waiting')
@@ -600,30 +567,26 @@ export function validateDispatchScopes(previous: DispatchState, next: DispatchSt
 
       valid(!member.activeRunId && !member.activeTaskId && !member.communicatingMessageIds.length && (retained ? ['idle', 'waiting'].includes(member.activity) && member.waitingTaskIds.every(id => id === member.executionTaskId) : member.activity === 'idle' && !member.waitingTaskIds.length), '等待周期成员不能占用执行租约或保留未登记工作');
     }
+
     const old = previous.members.find(item => item.agentInstanceId === member.agentInstanceId);
 
     if (old && previous.scopes?.some(item => item.scopeId === member.executionScopeId && item.status === 'waiting') && scope.status === 'waiting')
-
       valid(equal(old, member), '等待周期不能接受成员迟到写入');
 
     if (old?.lifecycle === 'released')
-
       valid(equal(old, member), '已释放实例不能被迟到回调修改或复活');
 
     if (old?.lifecycle === 'active' && member.lifecycle === 'released')
-
       valid(member.leaseEpoch === old.leaseEpoch + 1, '释放实例必须提升租约代际使旧回调失效');
   }
-  for (const graph of next.graphs)
 
+  for (const graph of next.graphs)
     for (const task of graph.tasks)
     {
       if (task.scopeId === undefined)
-
         continue;
 
       const scope = scopes.find(item => item.scopeId === task.scopeId),
-
         member = next.members.find(item => item.agentInstanceId === task.assignee.agentInstanceId);
 
       valid(scope && scope.rootSessionId === graph.identity.rootSessionId && member && task.assignee.agentId !== 'cbim:main' && member.executionScopeId === scope.scopeId && member.executionTaskId === task.taskId && !task.parentTaskId, '周期任务必须由主根派发并属于自己的执行实例和主会话');
@@ -631,17 +594,13 @@ export function validateDispatchScopes(previous: DispatchState, next: DispatchSt
       const old = previous.graphs.find(item => item.identity.rootSessionId === graph.identity.rootSessionId)?.tasks.find(item => item.taskId === task.taskId);
 
       if (task.help && !old?.help)
-
         valid(scope.status === 'active' && previous.scopes?.some(item => item.scopeId === scope.scopeId && item.status === 'active'), '求助只能在原活动周期结算，等待或封存后不能补发');
 
       if (!old)
-
         valid(scope.status === 'active', '已关闭周期不能新增任务');
-
       else if (previous.scopes?.find(item => item.scopeId === scope.scopeId)?.status !== 'active')
       {
         const prior = previous.scopes?.find(item => item.scopeId === scope.scopeId),
-
           retained = prior?.status === 'waiting' && prior.wait?.memberPause?.tasks.some(ref => ref.taskId === old.taskId);
 
         if (retained && scope.status === 'closed')
@@ -652,9 +611,9 @@ export function validateDispatchScopes(previous: DispatchState, next: DispatchSt
           valid(equal(task, { ...old, status: 'cancelled', revision: old.revision + 1, updatedAt: scope.closedAt, waitReason: reason }), '停止成员等待只能封存原待办，不能改写原目标或执行历史');
         }
         else
-
           valid(equal(old, task), '等待或已关闭周期任务不能重新执行或改写历史');
       }
+
       if (scope.status === 'closed')
       {
         valid(!task.activeRunId && !isMemberCheckpointPending(task) && !['planned', 'queued', 'waiting', 'running'].includes(task.status), '关闭周期不能保留尚待执行、可续检查点或运行中的任务');
@@ -662,6 +621,7 @@ export function validateDispatchScopes(previous: DispatchState, next: DispatchSt
         valid(!next.outbox.some(message => message.kind === 'assignment' && message.taskId === task.taskId && message.delivery !== 'processed'), '关闭周期不能保留待领取或活动派发信封');
       }
     }
+
   for (const run of next.runs ?? [])
   {
     const member = next.members.find(item => item.agentInstanceId === run.binding.agentInstanceId);
@@ -669,28 +629,26 @@ export function validateDispatchScopes(previous: DispatchState, next: DispatchSt
     const scope = scopes.find(value => value.scopeId === member?.executionScopeId);
 
     if (scope?.recovery)
-
       valid(run.permission === 'read', '核实周期的成员运行必须保持只读，不能通过直接写事务扩大权限');
 
     if (['starting', 'running'].includes(run.status) && member?.executionScopeId)
-
       valid(scope?.status === 'active' && member.lifecycle === 'active', '已关闭周期或已释放成员不能承载活动运行');
   }
+
   for (const session of mutation.sessions ?? [])
   {
     const member = previous.members.find(item => item.agentInstanceId === session.agentInstanceId);
 
     if (member?.lifecycle === 'released' || previous.scopes?.some(scope => scope.scopeId === member?.executionScopeId && scope.status === 'waiting'))
-
       valid(equal(previous.sessions.find(item => item.agentSessionId === session.agentSessionId), session), '等待或已释放实例的原生通道不能被迟到回调改写')
   }
+
   // 结果或求助信封可以在关闭后确认；除此之外，已释放实例与冻结任务不再接受运行侧变更。
   for (const run of mutation.runs ?? [])
   {
     const member = next.members.find(item => item.agentInstanceId === run.binding.agentInstanceId);
 
     if (member?.lifecycle === 'released' || previous.scopes?.some(scope => scope.scopeId === member?.executionScopeId && scope.status === 'waiting'))
-
       valid(equal(previous.runs?.find(item => item.binding.runId === run.binding.runId), run), '等待或已释放实例不能新增或改写运行')
   }
 }

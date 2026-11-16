@@ -30,21 +30,17 @@ export async function openCodexModelProxy(llm: ResolvedLlm, registered: CodexToo
     const response = await fetch(gate.url + '/ready', { method: 'POST', headers: { authorization: 'Bearer ' + gate.token } });
 
     if (!response.ok)
-
       throw Error('Codex 请求预算准备失败');
 
     gate.AssertReady()
   }
+
   const token = randomBytes(32).toString('hex'),
-
     known = new Set(registered.map(tool => tool.name)),
-
     active = new Map<Promise<void>, AbortController>();
 
   let closing = false,
-
     failure: string | undefined,
-
     closePromise: Promise<void> | undefined;
 
   const totals = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
@@ -64,7 +60,6 @@ export async function openCodexModelProxy(llm: ResolvedLlm, registered: CodexToo
       try
       {
         const supplied = Buffer.from(request.headers.authorization ?? ''),
-
           expected = Buffer.from('Bearer ' + token);
 
         if (request.headers.origin || supplied.length !== expected.length || !timingSafeEqual(supplied, expected))
@@ -73,12 +68,11 @@ export async function openCodexModelProxy(llm: ResolvedLlm, registered: CodexToo
 
           return
         }
-        if (closing || failure)
 
+        if (closing || failure)
           throw Error(failure ?? 'Codex 请求已停止');
 
         if (request.method !== 'POST' || request.url !== '/responses')
-
           throw Error('Codex 请求了未接入的供应商接口');
 
         const chunks: Buffer[] = [];
@@ -90,26 +84,23 @@ export async function openCodexModelProxy(llm: ResolvedLlm, registered: CodexToo
           bytes += chunk.length;
 
           if (bytes > 32 * 1024 * 1024)
-
             throw Error('Codex 请求过大');
 
           chunks.push(Buffer.from(chunk))
         }
+
         const value = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(chunks)));
 
         if (value.model !== llm.profile.model || value.stream !== true || value.background === true || value.previous_response_id)
-
           throw Error('Codex 请求与本轮冻结模型/会话不一致');
 
         // 本版本固定附带 request_user_input；不向模型发布它，交互仍只能走 CBIM 的受管提问工具。
         if (!Array.isArray(value.tools) || value.tools.some((tool: any) => tool.type !== 'function' || !known.has(tool.name) && tool.name !== 'request_user_input'))
-
           throw Error('Codex 请求包含未经 CBIM 注册的工具');
 
         const requested = value.max_output_tokens;
 
         if (requested !== undefined && (!Number.isSafeInteger(requested) || requested < 1))
-
           throw Error('Codex 输出上限无效');
 
         value.max_output_tokens = Math.min(requested ?? llm.profile.maxTokens, llm.profile.maxTokens);
@@ -124,11 +115,8 @@ export async function openCodexModelProxy(llm: ResolvedLlm, registered: CodexToo
         const headers: Record<string, string> = { 'content-type': 'application/json', 'accept': 'text/event-stream' };
 
         if (gate)
-
           headers.authorization = 'Bearer ' + gate.token;
-
         else if (llm.profile.auth === 'api-key')
-
           headers.authorization = 'Bearer ' + llm.apiKey;
 
         const upstream = await fetch(gate ? gate.url + '/request' : requestBudgetEndpoint(llm), { method: 'POST', headers, body: JSON.stringify(value), signal: abort.signal, redirect: 'error' });
@@ -139,6 +127,7 @@ export async function openCodexModelProxy(llm: ResolvedLlm, registered: CodexToo
 
           throw Error(gate?.Error() ?? 'Codex 供应商没有返回可靠流式响应')
         }
+
         response.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-store' });
 
         const parser = new RequestBudgetUsageStream('openai-responses');
@@ -148,11 +137,10 @@ export async function openCodexModelProxy(llm: ResolvedLlm, registered: CodexToo
           abort.signal.throwIfAborted();
 
           for (const frame of parser.Push(chunk))
-
             if (!response.write(frame))
-
               await new Promise<void>((resolve, reject) => { const drained = () => { response.off('close', closed); resolve() }, closed = () => { response.off('drain', drained); reject(Error('Codex 接收端已关闭')) }; response.once('drain', drained); response.once('close', closed) })
         }
+
         // 按本轮实际 HTTP 响应求和，避免把恢复线程的历史累计用量再次记账。
         const result = parser.Finish();
 
@@ -161,9 +149,9 @@ export async function openCodexModelProxy(llm: ResolvedLlm, registered: CodexToo
           totals[key] += result.usage[key];
 
           if (!Number.isSafeInteger(totals[key]))
-
             throw Error('Codex 累计用量超过受管上限')
         }
+
         completed++;
 
         response.end(result.terminal);
@@ -175,11 +163,8 @@ export async function openCodexModelProxy(llm: ResolvedLlm, registered: CodexToo
         abort.abort();
 
         if (response.headersSent)
-
           response.destroy();
-
         else
-
           response.writeHead(409, { 'content-type': 'application/json' }).end(JSON.stringify({ error: { type: 'cbim_engine_denied', message: failure } }))
       }
       finally
@@ -192,6 +177,7 @@ export async function openCodexModelProxy(llm: ResolvedLlm, registered: CodexToo
 
     void work.finally(() => active.delete(work));
   });
+
   server.requestTimeout = 30000;
 
   server.headersTimeout = 10000;
@@ -213,13 +199,11 @@ export async function openCodexModelProxy(llm: ResolvedLlm, registered: CodexToo
     async AssertSettled()
     {
       while (active.size)
-
         await Promise.all([...active.keys()]);
 
       await gate?.AssertSettled();
 
       if (closing || failure)
-
         throw Error(failure ?? 'Codex 请求已停止')
     },
 

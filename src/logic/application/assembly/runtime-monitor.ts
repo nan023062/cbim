@@ -55,9 +55,7 @@ export class WorkspaceRuntimeMonitor
 
     this.dispatchObserver = {
       Loaded: state => { this.history?.RestoreDispatch(state); global.RestoreDispatch(workspaceId, this.epoch, state) },
-
       Committed: mutation => { this.history?.DispatchCommitted(mutation); global.DispatchCommitted(workspaceId, this.epoch, mutation) },
-
       Failed: error => this.Issue('dispatch', '派发记录不可用，成员和任务统计可能不完整', error),
     };
   }
@@ -101,7 +99,6 @@ export class WorkspaceRuntimeMonitor
   async Initialize(workspace: Workspace, dispatch: WorkspaceDispatchService, execution: WorkspaceExecutionManager, members?: MemberExecutionManager)
   {
     const id = this.workspaceId,
-
       epoch = this.epoch;
 
     await this.InitializeHistory();
@@ -109,7 +106,6 @@ export class WorkspaceRuntimeMonitor
     this.unsubscribers.push(execution.Subscribe(event => { this.history?.ObserveRun(event, 'loop'); try { this.global.RunEvent(id, epoch, event) } catch (error) { this.Issue('run', '运行事实无法更新，当前统计可能不完整', error) } }));
 
     if (members)
-
       this.unsubscribers.push(members.Subscribe(event => { this.history?.ObserveRun(event, 'member'); try { this.global.RunEvent(id, epoch, event) } catch (error) { this.Issue('member-run', '成员运行事实无法更新，当前统计可能不完整', error) } }));
 
     this.unsubscribers.push(execution.ObserveQueue(counts => this.global.Queue(id, epoch, counts), error => this.Issue('queue', '对话队列记录不可用，排队统计可能不完整', error)));
@@ -122,11 +118,8 @@ export class WorkspaceRuntimeMonitor
     await dispatch.RecoverScopes().catch(error => this.Issue('dispatch-scopes', '调度周期恢复未完成，执行实例可能仍占用', error));
 
     await Promise.all([
-
       this.RestoreRuns(workspace).catch(error => { this.history?.Issue('runs', '运行历史无法完整读取，Agent 历史可能不完整'); this.Issue('runs', '运行历史无法完整读取，用量统计可能不完整', error) }),
-
       execution.InitializeQueueMonitoring().catch(error => this.Issue('queue', '对话队列记录不可用，排队统计可能不完整', error)),
-
     ]);
 
     await this.history?.Flush();
@@ -139,11 +132,8 @@ export class WorkspaceRuntimeMonitor
     const project = workspace.paths.Project(this.workspaceId);
 
     await Promise.all([
-
       this.RestoreRunDirectory(workspace, path.join(project, 'loop-engine', 'tasks'), 'run'),
-
       this.RestoreRunDirectory(workspace, path.join(project, 'dispatch', 'runs', 'tasks'), 'member-run'),
-
     ]);
   }
 
@@ -162,11 +152,11 @@ export class WorkspaceRuntimeMonitor
     catch (error: any)
     {
       if (error.code === 'ENOENT')
-
         return;
 
       throw error
     }
+
     for (const task of directories)
     {
       if (!task.isDirectory())
@@ -177,10 +167,10 @@ export class WorkspaceRuntimeMonitor
 
         continue
       }
+
       try
       {
         const taskId = safeId(task.name),
-
           runs = await fs.readdir(path.join(root, taskId), { withFileTypes: true });
 
         for (const run of runs)
@@ -188,31 +178,26 @@ export class WorkspaceRuntimeMonitor
           try
           {
             if (!run.isDirectory())
-
               throw Error('invalid directory');
 
             const runId = safeId(run.name),
-
               summary = await storage.Read(path.join(root, taskId, runId));
 
             if (summary.task.workspaceId !== this.workspaceId || summary.task.root !== workspace.entry.path || summary.task.taskId !== taskId || summary.runId !== runId)
-
               throw Error('identity mismatch');
 
             const started = summary.events[0]?.data,
-
               recursive = started?.executionModel === 'agent-tools-v1' && started.agentCall !== undefined;
 
             if (recursive)
             {
               if (source !== 'run')
-
                 throw Error('recursive run source mismatch');
 
               checkedAgentCallReference(started.agentCall, summary.task, summary.runId)
             }
-            if ((source === 'member-run') !== (!!summary.memberBinding && !recursive))
 
+            if ((source === 'member-run') !== (!!summary.memberBinding && !recursive))
               throw Error('run source mismatch');
 
             this.history?.RestoreRun(summary, source === 'member-run' ? 'member' : 'loop');
@@ -240,7 +225,6 @@ export class WorkspaceRuntimeMonitor
   Close()
   {
     for (const unsubscribe of this.unsubscribers)
-
       unsubscribe();
 
     this.unsubscribers = [];

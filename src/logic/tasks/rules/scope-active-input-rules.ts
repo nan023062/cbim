@@ -27,7 +27,6 @@ export function scopedActiveInputHash(input: ScopeActiveInputPayload): string
 function valid(value: unknown, message: string): asserts value
 {
   if (!value)
-
     fail('GRAPH_INPUT_INVALID', message)
 }
 
@@ -42,15 +41,12 @@ function fixed(value: ScopeActiveInput)
 export function validateScopeActiveInputs(previous: DispatchState, next: DispatchState, mutation: DispatchMutation): Set<string>
 {
   const accepted = new Set<string>(),
-
     ids = new Set<string>();
 
   for (const scope of next.scopes ?? [])
   {
     const old = previous.scopes?.find(item => item.scopeId === scope.scopeId),
-
       before = old?.activeInputs ?? [],
-
       after = scope.activeInputs ?? [];
 
     valid(after.length <= scopeActiveInputLimits.attempts && after.length >= before.length && after.length <= before.length + 1 && (!old?.activeInputs || scope.activeInputs !== undefined), '运行补充历史只能追加且不能删除');
@@ -58,7 +54,6 @@ export function validateScopeActiveInputs(previous: DispatchState, next: Dispatc
     let changed = 0;
 
     const queues = new Set<string>(),
-
       acceptedSeqs = new Map<string, number>();
 
     for (const [index, item] of after.entries())
@@ -87,12 +82,12 @@ export function validateScopeActiveInputs(previous: DispatchState, next: Dispatc
 
         acceptedSeqs.set(item.runId, item.acceptedSeq);
       }
+
       const prior = before[index];
 
       if (prior)
       {
         if (sameGoalValue(prior, item))
-
           continue;
 
         changed++;
@@ -119,6 +114,7 @@ export function validateScopeActiveInputs(previous: DispatchState, next: Dispatc
         valid(item.baseInputRevision < 32 && item.baseGoalRevision + 3 <= 65, '补充必须预留输入及后续规划审阅额度');
       }
     }
+
     valid(after.filter(item => item.status === 'pending').length <= 1, '同一周期不能并行准备多次插入');
 
     const text = (scope.continuations ?? []).reduce((sum, item) => sum + (isHumanContinuation(item) ? 0 : item.input.message.length), 0) + after.reduce((sum, item) => sum + (item.status === 'rejected' ? 0 : item.messageCharacters), 0);
@@ -132,15 +128,14 @@ export function validateScopeActiveInputs(previous: DispatchState, next: Dispatc
       valid(old && sameGoalValue({ ...old, activeInputs: scope.activeInputs, goal: scope.goal }, scope), '插入不能改变周期状态、等待、原运行或权限');
 
       if (!accepted.has(scope.scopeId))
-
         valid(sameGoalValue(old.goal, scope.goal), '未确认接受的插入不能改变目标');
     }
+
     if (scopeHasUnresolvedActiveInput(scope))
     {
       valid(scope.status !== 'waiting' && !(scope.status === 'closed' && scope.outcome === 'completed'), '未核实插入不能安全等待或完成');
 
       if (old && (!sameGoalValue(old.goal?.plan, scope.goal?.plan) || !sameGoalValue(old.goal?.review, scope.goal?.review)))
-
         valid(false, '未核实插入不能通过新计划或审阅绕过');
 
       // cause 是批次说明，不是新增事实；只封锁当前活动周期，旧 unknown 不得阻断同根新周期。
@@ -152,17 +147,17 @@ export function validateScopeActiveInputs(previous: DispatchState, next: Dispatc
 
         valid(!(mutation.runs ?? []).some(run => run.binding.rootSessionId === scope.rootSessionId && !previous.runs?.some(prior => prior.binding.runId === run.binding.runId)), '未核实插入不能领取新成员运行');
       }
-      if (old)
 
+      if (old)
         valid(sameGoalValue(old.runTracking, scope.runTracking), '未核实插入不能登记另一个主运行');
     }
-    if (scope.goal && goalNeedsReplan(scope.goal))
 
+    if (scope.goal && goalNeedsReplan(scope.goal))
       valid(scope.status !== 'closed' || scope.outcome !== 'completed', '新输入尚未重新规划，不能沿旧计划完成');
 
     if (scope.goal && goalNeedsReplan(scope.goal))
-
       valid(!(mutation.runs ?? []).some(run => run.binding.rootSessionId === scope.rootSessionId && next.graphs.find(graph => graph.identity.rootSessionId === scope.rootSessionId)?.tasks.some(task => task.taskId === run.binding.taskId && task.scopeId === scope.scopeId) && !previous.runs?.some(prior => prior.binding.runId === run.binding.runId)), '输入尚未重新规划，不能领取新成员运行');
   }
+
   return accepted;
 }

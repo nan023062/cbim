@@ -35,25 +35,20 @@ export function applyExecutionReport(previous: ExecutionReport | undefined, raw:
   const next = executionReportSchema.parse(raw);
 
   if (!sameIdentity(selection, next.identity) || next.basis.scopeId !== selection.scopeId || next.basis.graphCursor.workspaceId !== selection.workspaceId || next.basis.graphCursor.rootSessionId !== selection.rootSessionId)
-
     throw Error('核实报告不属于当前任务或执行轮次');
 
   if (next.candidate && next.candidate.runId !== selection.runId)
-
     throw Error('核实报告包含其他执行轮次的交付候选');
 
   if (next.consistency === 'changed_during_read' && next.execution !== 'unknown')
-
     throw Error('读取中变化的执行记录不能视为确定结果');
 
   const page = next.tools.items;
 
   if (page.length > (request.limit ?? 50))
-
     throw Error('工具报告超过本次读取页大小');
 
   if (Object.values(next.tools.counts).reduce((total, value) => total + value, 0) !== next.tools.total)
-
     throw Error('工具报告数量与分类统计不一致');
 
   let items = page;
@@ -61,13 +56,12 @@ export function applyExecutionReport(previous: ExecutionReport | undefined, raw:
   if (request.cursor && !next.tools.paginationReset && next.consistency === 'stable')
   {
     if (!previous || request.cursor.basis !== previous.basis.key || request.cursor.offset !== previous.tools.items.length || next.basis.key !== previous.basis.key || next.tools.total !== previous.tools.total || JSON.stringify(next.tools.counts) !== JSON.stringify(previous.tools.counts))
-
       throw Error('工具报告分页基线已变化，请重新核实');
 
     items = [...previous.tools.items, ...page];
   }
-  if (new Set(items.map(item => item.toolCallId)).size !== items.length)
 
+  if (new Set(items.map(item => item.toolCallId)).size !== items.length)
     throw Error('工具报告包含重复操作标识');
 
   for (const item of page)
@@ -75,13 +69,12 @@ export function applyExecutionReport(previous: ExecutionReport | undefined, raw:
     const receipt = item.receipt;
 
     if (item.scope.workspaceId !== selection.workspaceId || receipt && (receipt.workspaceId !== selection.workspaceId || receipt.taskId !== selection.taskId || receipt.runId !== selection.runId || receipt.toolCallId !== item.toolCallId || receipt.toolName !== item.toolName || receipt.scope.workspaceId !== selection.workspaceId))
-
       throw Error('工具回执不属于所选执行轮次')
   }
+
   const cursor = next.tools.nextCursor;
 
   if (items.length > next.tools.total || cursor && (cursor.basis !== next.basis.key || cursor.offset !== items.length || cursor.offset >= next.tools.total) || !cursor && next.tools.available && items.length !== next.tools.total)
-
     throw Error('工具报告分页不连续，保留原核实记录');
 
   return { ...next, tools: { ...next.tools, items } };
@@ -91,7 +84,6 @@ export function applyExecutionReport(previous: ExecutionReport | undefined, raw:
 export function executionReportStale(report: ExecutionReport | undefined, task: TaskNode, graphCursor?: GraphCursor, scope?: ScopeSummary): boolean
 {
   if (!report)
-
     return false;
 
   const basis = report.basis;
@@ -152,7 +144,6 @@ export class ExecutionReportController
     const report = this.value.report;
 
     if (!report?.tools.nextCursor || report.consistency !== 'stable')
-
       return;
 
     await this.Pull(report.tools.nextCursor)
@@ -161,15 +152,12 @@ export class ExecutionReportController
   private async Pull(cursor?: NonNullable<ExecutionReportInput['cursor']>)
   {
     if (this.value.loading)
-
       return;
 
     const { workspaceId, rootSessionId, taskId, runId } = this.selection,
-
       request: ExecutionReportInput = { workspaceId, rootSessionId, taskId, ...(runId ? { runId } : {}), limit: this.limit, ...(cursor ? { cursor } : {}) };
 
     const generation = this.generation.Capture(),
-
       previous = this.value.report;
 
     this.Publish({ ...this.value, loading: true, error: '' });
@@ -179,7 +167,6 @@ export class ExecutionReportController
       const response = await this.read(request);
 
       if (!this.generation.IsCurrent(generation))
-
         return;
 
       const report = applyExecutionReport(previous, response, request, this.selection);
@@ -189,7 +176,6 @@ export class ExecutionReportController
     catch (cause)
     {
       if (this.generation.IsCurrent(generation))
-
         this.Publish({ ...this.value, loading: false, error: cause instanceof Error ? cause.message : '执行记录核实失败，请重新读取' })
     }
   }

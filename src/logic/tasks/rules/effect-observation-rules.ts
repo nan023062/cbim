@@ -36,7 +36,6 @@ export function effectDispositionReceipt(record: EffectDispositionRecord): Effec
 export function summarizeEffectDisposition(record: EffectDispositionRecord): EffectDispositionSummary
 {
   const full = record.request.reason,
-
     reason = full.slice(0, 512).replace(/[\uD800-\uDBFF]$/, '');
 
   return { dispositionId: record.dispositionId, revision: record.revision, decision: record.request.decision, reason, reasonTruncated: reason !== full, recordedAt: record.recordedAt, observationBasis: record.observation.basis }

@@ -9,7 +9,6 @@ import { z } from 'zod';
 export const continuationSourceLimits = { directoryEntries: 200, webResponseBytes: 1024 * 1024, savedTextBytes: 64 * 1024, resourceContentBytes: 8 * 1024 * 1024 } as const;
 
 const hash = z.string().regex(/^[a-f0-9]{64}$/),
-
   bytes = z.number().int().nonnegative().safe();
 
 const savedBytes = bytes.max(continuationSourceLimits.savedTextBytes);

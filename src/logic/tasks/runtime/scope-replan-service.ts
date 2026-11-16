@@ -63,7 +63,6 @@ export type AcceptedReplan =
 function check(condition: unknown, code: string, message: string): asserts condition
 {
   if (!condition)
-
     fail(code, message)
 }
 
@@ -78,7 +77,6 @@ export class ScopeReplanService
     const value = schema.safeParse(raw);
 
     if (!value.success)
-
       fail('REPLAN_INPUT_INVALID', '业务重规划请求或启动参数无效');
 
     return value.data
@@ -104,7 +102,6 @@ export class ScopeReplanService
     const scope = state.scopes?.find(item => item.replan?.replanId === input.commandId);
 
     if (scope)
-
       check(scope.workspaceId === input.workspaceId && scope.rootSessionId === input.rootSessionId, 'REPLAN_IDENTITY', '命令属于另一主会话');
 
     return scope
@@ -128,7 +125,6 @@ export class ScopeReplanService
   async Inspect(raw: ReplanLookup): Promise<ReplanReceipt | undefined>
   {
     const input = this.Parse(replanLookupSchema, raw),
-
       scope = this.Found(await this.store.Read(), input);
 
     return scope ? this.Receipt(scope) : undefined
@@ -137,7 +133,6 @@ export class ScopeReplanService
   private async Proof(state: DispatchState, input: ReplanPreviewInput, withinMainRun = false)
   {
     const graph = this.Identity(state, input),
-
       inspection = state.scopes?.find(item => item.scopeId === input.inspectionScopeId && item.rootSessionId === input.rootSessionId && item.workspaceId === input.workspaceId);
 
     check(inspection?.recovery && inspection.status === 'closed' && inspection.outcome === 'completed', 'REPLAN_SOURCE_INVALID', '请选择已经完成的只读核实周期');
@@ -147,13 +142,11 @@ export class ScopeReplanService
     check(state.scopes?.filter(item => item.rootSessionId === input.rootSessionId).at(-1)?.scopeId === inspection.scopeId, 'REPLAN_STALE', '只读核实之后已有新的会话周期，必须重新核实再创建业务目标');
 
     const original = inspection.recovery.source,
-
       main = 'kind' in original && original.kind === 'main_run';
 
     const sourceTaskId = 'taskId' in original ? original.taskId : undefined;
 
     const source = state.scopes?.find(item => item.scopeId === original.scopeId),
-
       task = sourceTaskId ? graph.tasks.find(item => item.taskId === sourceTaskId) : undefined;
 
     if ('executionModel' in original && original.executionModel === 'agent-tools-v1')
@@ -175,13 +168,10 @@ export class ScopeReplanService
       check(snapshot.revision === verified.knowledgeRevision, 'REPLAN_KNOWLEDGE_CHANGED', '知识已变化');
 
       const modules = await resolveDispatchModules(snapshot, required),
-
         subject = { kind: 'member_run' as const, taskId: original.taskId, runId: original.runId, toolCallIds: original.toolCallIds };
 
       const selection = { workspaceId: input.workspaceId, rootSessionId: input.rootSessionId, subject },
-
         observe = () => withinMainRun ? this.effects!.ObserveFromMain(selection) : this.effects!.Observe(selection),
-
         report = await observe();
 
       check(report.consistency === 'stable' && report.source.execution !== 'in_flight' && report.source.scopeId === source.scopeId, 'REPLAN_STALE', '原影响依据已变化');
@@ -194,12 +184,12 @@ export class ScopeReplanService
 
       return { proof, basis: hash(json({ identity: input, graphCursor, proof })), graphCursor };
     }
+
     check(source?.goal?.plan && source.status === 'closed' && source.rootSessionId === input.rootSessionId && (main || task?.scopeId === source.scopeId), 'REPLAN_LEGACY', '原业务缺少可信目标计划，不能推断或补造人工验收条件');
 
     check(this.logs, 'REPLAN_PROOF_INVALID', '没有可用的可信运行核实入口');
 
     const verified = await this.goals.ValidateCompletedInspection(state, inspection),
-
       required = [...new Set([...(task?.modules.map(item => item.moduleId) ?? []), ...source.goal.plan.assignments.flatMap(item => item.moduleIds)])].sort();
 
     check(required.length > 0 && required.length <= 50 && required.every(id => verified.coveredModuleIds.includes(id)), 'REPLAN_PROOF_INVALID', '只读核实的真实成功候选尚未覆盖原业务全部目标模块');
@@ -209,7 +199,6 @@ export class ScopeReplanService
     check(snapshot.revision === verified.knowledgeRevision, 'REPLAN_KNOWLEDGE_CHANGED', '业务图谱已经变化，请重新核实');
 
     const modules = await resolveDispatchModules(snapshot, required),
-
       requiredModules = modules.map(item => ({ moduleId: item.moduleId, name: item.name }));
 
     const inheritedHuman = source.goal.plan.criteria.filter(item => item.kind === 'human').map(item => ({ id: item.id, text: item.text, kind: 'human' as const, sourceScopeId: source.scopeId, sourceGoalRevision: source.goal!.revision }));
@@ -227,9 +216,7 @@ export class ScopeReplanService
 
       // accept 已持有主运行占用；预览和预检仍走公开的独立读取，不借用其他执行。
       const selection = { workspaceId: input.workspaceId, rootSessionId: input.rootSessionId, subject },
-
         observe = () => withinMainRun ? this.effects!.ObserveFromMain(selection) : this.effects!.Observe(selection),
-
         report = await observe();
 
       check(report.consistency === 'stable' && report.source.execution !== 'in_flight' && report.source.scopeId === source.scopeId, 'REPLAN_STALE', '原影响依据不再稳定');
@@ -241,9 +228,7 @@ export class ScopeReplanService
     else
     {
       const reports = new ExecutionReportService(this.owner, { Read: async () => structuredClone(state) }, run => this.logs!.InspectMember(run)),
-
         selection = { workspaceId: input.workspaceId, rootSessionId: input.rootSessionId, taskId: task!.taskId, runId: original.runId },
-
         report = await reports.Read(selection);
 
       check(report.consistency === 'stable' && report.execution !== 'in_flight', 'REPLAN_STALE', '来源执行报告正在变化，请重新核实');
@@ -252,10 +237,10 @@ export class ScopeReplanService
 
       check((await reports.Read(selection)).basis.key === report.basis.key, 'REPLAN_STALE', '核实依据在读取期间变化');
     }
+
     check((await this.owner.Read()).revision === verified.knowledgeRevision, 'REPLAN_STALE', '核实期间知识已变化');
 
     const graphCursor = { streamId: graph.cursor.streamId, seq: graph.cursor.seq },
-
       basis = hash(json({ identity: input, graphCursor, proof }));
 
     return { proof, basis, graphCursor };
@@ -269,7 +254,6 @@ export class ScopeReplanService
     try
     {
       const state = await this.store.Read(),
-
         value = await this.Proof(state, input);
 
       check(sameGoalValue(state, await this.store.Read()), 'REPLAN_STALE', '派发记录在预览期间变化');
@@ -291,7 +275,6 @@ export class ScopeReplanService
   async Preflight(raw: ReplanRequest)
   {
     const input = this.Parse(replanRequestSchema, raw),
-
       value = await this.Proof(await this.store.Read(), { workspaceId: input.workspaceId, rootSessionId: input.rootSessionId, inspectionScopeId: input.source.inspectionScopeId });
 
     check(value.basis === input.source.expectedBasis, 'REPLAN_STALE', '业务重规划依据已变化，请重新预览');
@@ -302,13 +285,11 @@ export class ScopeReplanService
   async Accept(raw: ReplanRequest, trusted: ReplanLaunch): Promise<AcceptedReplan>
   {
     const input = this.Parse(replanRequestSchema, raw),
-
       context = this.Parse(freshContextSchema, { initialRunId: trusted.runId, nativeSessionId: trusted.nativeSessionId, excludedRunIds: trusted.excludedRunIds });
 
     let fresh = false;
 
     const command = { commandId: 'scope-replan-' + input.commandId, fingerprint: hash(json({ operation: 'scope.replan', input })) },
-
       priorReceipt = await this.store.CommandReceipt(command.commandId);
 
     if (priorReceipt)
@@ -323,10 +304,10 @@ export class ScopeReplanService
 
       return { scope, replan: scope.replan, fresh: false }
     }
+
     trusted.signal?.throwIfAborted();
 
     const before = await this.store.Read(),
-
       value = await this.Proof(before, { workspaceId: input.workspaceId, rootSessionId: input.rootSessionId, inspectionScopeId: input.source.inspectionScopeId }, true);
 
     check(value.basis === input.source.expectedBasis, 'REPLAN_STALE', '业务重规划依据已变化，请重新预览');
@@ -334,7 +315,6 @@ export class ScopeReplanService
     if (input.dispositionId)
     {
       const record = before.effectDispositions?.find(r => r.dispositionId === input.dispositionId),
-
         proof = value.proof;
 
       check('kind' in proof, 'REPLAN_DISPOSITION_INVALID', '旧来源不能补造处置关联');
@@ -345,7 +325,6 @@ export class ScopeReplanService
     }
 
     const stamp = effectStateStamp(before, input),
-
       commit = () => this.store.Transact(command, async state => { this.owner.Assert(); trusted.signal?.throwIfAborted(); const old = this.Found(state, input); if (old) { this.SameRequest(old, input); return { receipt: this.Receipt(old) } } check(!state.scopes?.some(item => item.scopeId === input.commandId), 'REPLAN_COMMAND_CONFLICT', '命令标识已经被其它周期使用'); check(effectStateStamp(state, input) === stamp, 'REPLAN_STALE', '取证后原周期或图发生变化，请重新预览'); const contexts = (state.scopes ?? []).map(scopeFreshContext).filter(item => item !== undefined), prior = (state.scopes ?? []).filter(item => item.rootSessionId === input.rootSessionId).flatMap(item => { const c = scopeFreshContext(item); return [...(item.runTracking?.mainRunIds ?? []), ...(item.continuations ?? []).map(c => c.runId), ...(c ? [c.initialRunId, ...c.excludedRunIds] : [])] }); check(!state.runs?.some(item => item.binding.runId === context.initialRunId) && !state.scopes?.some(item => item.runTracking?.mainRunIds.includes(context.initialRunId) || item.continuations?.some(c => c.runId === context.initialRunId)) && !contexts.some(c => c.initialRunId === context.initialRunId || c.nativeSessionId === context.nativeSessionId) && prior.every(id => context.excludedRunIds.includes(id)), 'REPLAN_CONTEXT_CONFLICT', '新的原生上下文身份冲突或没有隔离此前运行'); const acceptedAt = new Date().toISOString(), replan: ScopeReplan = { replanId: input.commandId, acceptedAt, source: { ...input.source, proof: value.proof }, operation: 'business_replan', input: input.input, options: input.options, context, ...(input.dispositionId ? { dispositionId: input.dispositionId } : {}) }, scope: DispatchScope = { workspaceId: input.workspaceId, rootSessionId: input.rootSessionId, scopeId: input.commandId, status: 'active', createdAt: acceptedAt, goal: { revision: 1, input: { message: input.input.message, attachmentIds: [] } }, runTracking: createScopeRunTracking(context.initialRunId), replan }; const budgeted = this.budgets ? this.budgets.Initialize(scope, { kind: 'main', taskId: input.rootSessionId, runId: context.initialRunId }) : scope; fresh = true; return { scopes: [budgeted], receipt: this.Receipt(budgeted) }; });
 
     const locked = async (snapshot: Awaited<ReturnType<Owner['Snapshot']>>) => { trusted.signal?.throwIfAborted(); check(snapshot.revision === value.proof.knowledgeRevision, 'REPLAN_KNOWLEDGE_CHANGED', '保存前知识已变化'); return commit() };

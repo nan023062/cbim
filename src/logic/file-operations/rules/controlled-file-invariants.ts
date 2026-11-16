@@ -19,7 +19,6 @@ import type { DispatchState, DispatchMutation, DispatchCommand } from '../../dis
 function check(value: unknown, message: string): asserts value
 {
   if (!value)
-
     fail('CONTROLLED_FILE_AUDIT', message)
 }
 
@@ -33,9 +32,7 @@ const root = (i: ControlledFileIntent) => i.kind === 'member_write' ? i.origin.b
 function liveMember(state: DispatchState, intent: ControlledWritePrepared): void
 {
   const { origin } = intent,
-
     b = origin.binding,
-
     scope = state.scopes?.find(s => s.scopeId === origin.scopeId && s.workspaceId === b.workspaceId && s.rootSessionId === b.rootSessionId);
 
   const recursive = state.agentBusinessRuns?.find(run => run.binding.runId === b.runId);
@@ -50,14 +47,12 @@ function liveMember(state: DispatchState, intent: ControlledWritePrepared): void
 
     return;
   }
+
   const graph = state.graphs.find(g => g.identity.workspaceId === b.workspaceId && g.identity.rootSessionId === b.rootSessionId),
-
     task = graph?.tasks.find(t => t.taskId === b.taskId),
-
     run = state.runs?.find(r => r.binding.runId === b.runId) ?? state.agentBusinessRuns?.find(r => r.binding.runId === b.runId);
 
   const member = state.members.find(m => m.agentInstanceId === b.agentInstanceId),
-
     session = state.sessions.find(s => s.agentSessionId === b.agentSessionId);
 
   check(scope?.status === 'active' && !scope.recovery, '业务写必须属于当前非只读周期');
@@ -95,11 +90,8 @@ function validateCompensation(state: DispatchState, i: FileCompensationPrepared)
   check(original?.intent.kind === 'member_write' && original.change.phase === 'applied', '补偿必须引用原可靠 applied 成员写入');
 
   const old = original.intent,
-
     b = old.origin.binding,
-
     scope = state.scopes?.find(s => s.scopeId === old.origin.scopeId && s.workspaceId === b.workspaceId && s.rootSessionId === b.rootSessionId),
-
     run = state.runs?.find(r => r.binding.runId === b.runId) ?? state.agentBusinessRuns?.find(r => r.binding.runId === b.runId);
 
   check(i.operationId === fileCompensationId(i.request) && i.requestFingerprint === fileCompensationRequestFingerprint(i.request, i.actor) && i.actor.instanceId === i.request.instanceId, '补偿命令、指纹或本机身份不一致');
@@ -126,14 +118,12 @@ function capacity(changes: ControlledFileChange[], intent: ControlledFileIntent)
   const prepared = changes.filter(c => c.phase === 'prepared');
 
   if (prepared.length > controlledFileLimits.operations || prepared.filter(c => root(c.intent) === root(intent)).length > controlledFileLimits.operationsPerRoot || intent.kind === 'member_write' && prepared.filter(c => c.intent.kind === 'member_write' && c.intent.origin.binding.runId === intent.origin.binding.runId).length > controlledFileLimits.writesPerRun || intent.kind === 'desktop_compensation' && prepared.filter(c => c.intent.kind === 'desktop_compensation' && c.intent.original.operationId === intent.original.operationId).length > controlledFileLimits.compensations)
-
     fail('CONTROLLED_FILE_LIMIT', '受控操作历史达到保存上限，原记录不会被淘汰');
 
   // 为每条未结算链预留后续最大阶段空间；达到容量也不能留下无法保存终态的许可。
   const reserve = prepared.reduce((sum, c) => { const operation = controlledFileOperation({ controlledFileChanges: changes }, c.operationId)!; return sum + (operation.phase === 'prepared' ? 2 : operation.phase === 'executing' ? 1 : 0) * controlledFileLimits.terminalReserveBytes }, 0);
 
   if (new TextEncoder().encode(JSON.stringify(changes)).length + reserve > controlledFileLimits.storedBytes)
-
     fail('CONTROLLED_FILE_LIMIT', '受控操作附录无法同时容纳新意图及终态预留空间');
 }
 
@@ -146,10 +136,10 @@ export function projectControlledFileMutation(previous: DispatchState, mutation:
 
     return previous.controlledFileChanges === undefined ? {} : { controlledFileChanges: previous.controlledFileChanges }
   }
+
   check(Array.isArray(mutation.controlledFileChanges) && mutation.controlledFileChanges.length === 1 && Object.keys(mutation).every(k => k === 'controlledFileChanges' || k === 'receipt'), '文件阶段必须单条追加，不得混入其它变化');
 
   const change = mutation.controlledFileChanges[0],
-
     parsed = controlledFileChangeSchema.safeParse(change);
 
   check(parsed.success && equal(parsed.data, change), '受控文件事件结构无效或需要转换');
@@ -157,7 +147,6 @@ export function projectControlledFileMutation(previous: DispatchState, mutation:
   check(equal(command, controlledFilePhaseCommand(change)) && equal(mutation.receipt, controlledFilePhaseReceipt(change)), '阶段命令或回执与原事件不一致');
 
   const records = previous.controlledFileChanges ?? [],
-
     old = controlledFileOperation(previous, change.operationId);
 
   if (change.phase === 'prepared')
@@ -165,11 +154,8 @@ export function projectControlledFileMutation(previous: DispatchState, mutation:
     check(!old && change.intent.operationId === change.operationId && workspace(change.intent) === previous.workspaceId && change.intent.preparedAt === change.recordedAt, 'prepared 身份重复、跨工作区或时间不符');
 
     if (change.intent.kind === 'member_write')
-
       validateWrite(previous, change.intent);
-
     else
-
       validateCompensation(previous, change.intent);
   }
   else
@@ -181,18 +167,16 @@ export function projectControlledFileMutation(previous: DispatchState, mutation:
     if (change.phase === 'executing')
     {
       if (old.intent.kind === 'member_write')
-
         liveMember(previous, old.intent);
-
       // 本次 prepared 已占补偿编号；复核其它前置时排除自身，不把自己的意图误判为另一条未决恢复。
       else
-
         validateCompensation({ ...previous, controlledFileChanges: records.filter(c => c.operationId !== change.operationId) }, old.intent);
     }
-    if (change.phase === 'applied')
 
+    if (change.phase === 'applied')
       check(equal(change.fileIdentity, old.intent.fileIdentity) && sameFact(change.observedAfter, old.intent.intendedAfter), 'applied 文件身份或实读字节不符');
   }
+
   const next = [...records, structuredClone(change)];
 
   capacity(next, change.phase === 'prepared' ? change.intent : old!.intent);

@@ -25,11 +25,9 @@ export interface TopicInterruptionPorts
 export function checkedTopicInterruptionReceipt(raw: unknown, request: TopicInterruptionRequest, previous?: GoalContinuationReceipt): GoalContinuationReceipt
 {
   const receipt = goalContinuationReceiptSchema.parse(raw),
-
     value = receipt.continuation;
 
   if (receipt.workspaceId !== request.workspaceId || receipt.rootSessionId !== request.rootSessionId || receipt.scopeId !== request.scopeId || value.continuationId !== request.commandId || value.wait.waitId !== request.commandId || value.wait.interruptionId !== request.commandId || value.inputRevision !== request.expectedInputRevision + 1 || !equalJson(value.input, request.input) || !equalJson(value.options, request.options) || previous && !equalJson(value, previous.continuation))
-
     throw Error('回执与原话题补充不一致，请核实原请求');
 
   return receipt;
@@ -88,7 +86,6 @@ export class TopicInterruptionController
     const request = topicInterruptionRequestSchema.parse(raw);
 
     if (request.workspaceId !== this.target.workspaceId || request.rootSessionId !== this.target.rootSessionId || request.scopeId !== this.target.scopeId || request.expectedInputRevision !== this.target.expectedInputRevision)
-
       throw Error('本机补充记录属于其它办公室或输入版本，未发送');
 
     return request;
@@ -97,7 +94,6 @@ export class TopicInterruptionController
   private Run(work: () => Promise<void>): Promise<void>
   {
     if (this.inFlight)
-
       return this.inFlight;
 
     this.Publish({ pending: true, error: '' });
@@ -131,13 +127,11 @@ export class TopicInterruptionController
     const request = this.value.request;
 
     if (!request)
-
       return;
 
     const receipt = await this.ports.lookup({ workspaceId: request.workspaceId, rootSessionId: request.rootSessionId, scopeId: request.scopeId, commandId: request.commandId });
 
     if (receipt !== undefined)
-
       this.Accept(receipt, request);
   }
 

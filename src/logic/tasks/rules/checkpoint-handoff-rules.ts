@@ -21,7 +21,6 @@ import { scopeHasUnresolvedActiveInput } from './scope-active-input';
 function check(value: unknown, code: string, message: string): asserts value
 {
   if (!value)
-
     fail(code, message)
 }
 
@@ -32,9 +31,7 @@ function check(value: unknown, code: string, message: string): asserts value
 export function abandonedCheckpointSource(state: DispatchState, identity: GraphIdentity, scopeId: string, task: TaskNode)
 {
   const code = 'DEPENDENCY_SOURCE_INVALID',
-
     record = task.checkpointAbandonment,
-
     checkpoint = task.checkpoints?.at(-1);
 
   const graph = state.graphs.find(g => g.identity.workspaceId === identity.workspaceId && g.identity.rootSessionId === identity.rootSessionId);
@@ -56,7 +53,6 @@ export function abandonedCheckpointSource(state: DispatchState, identity: GraphI
   check(binding.workspaceId === identity.workspaceId && binding.rootSessionId === identity.rootSessionId && binding.taskId === task.taskId && binding.planRevision === task.planRevision && binding.agentId === task.assignee.agentId && binding.agentInstanceId === task.assignee.agentInstanceId && binding.agentSessionId === task.assignee.agentSessionId && checkpoint.knowledgeRevision === run.prepared.knowledgeRevision, code, '原检查点证明与任务身份或冻结基线不一致');
 
   const member = state.members.find(m => m.agentInstanceId === binding.agentInstanceId),
-
     session = state.sessions.find(s => s.agentSessionId === binding.agentSessionId);
 
   check(member && member.lifecycle === 'active' && member.workspaceId === identity.workspaceId && member.executionScopeId === scopeId && member.executionTaskId === task.taskId && member.agentId === binding.agentId && member.teamId === binding.teamId && member.leaseEpoch === record.nextLeaseEpoch && member.activity === 'idle' && !member.activeRunId && !member.activeTaskId && !member.waitingTaskIds.length && !member.communicatingMessageIds.length, code, '已放弃来源的原成员仍被占用或租约不一致');
@@ -64,7 +60,6 @@ export function abandonedCheckpointSource(state: DispatchState, identity: GraphI
   check(session && session.workspaceId === identity.workspaceId && session.rootSessionId === identity.rootSessionId && session.agentInstanceId === member.agentInstanceId && session.agentId === binding.agentId && member.agentSessionIds.includes(session.agentSessionId) && session.lastRunId === binding.runId && session.lastTaskId === task.taskId && session.nativeSessionId === run.session.nativeSessionId && !!run.session.sessionFile, code, '原检查点通道与完成段不一致');
 
   if (currentRequest)
-
     check(resumeAssignment?.kind === 'assignment' && resumeAssignment.messageId === record.resumeRequestId && resumeAssignment.delivery === 'processed' && !resumeAssignment.claim, code, '已放弃的最新恢复预约必须已处置且从未领取');
 
   return run;
@@ -78,7 +73,6 @@ export function checkpointAbandonmentSelection(state: DispatchState, identity: G
   check(state.workspaceId === identity.workspaceId, 'GRAPH_IDENTITY_MISMATCH', '检查点不属于当前工作区');
 
   const graph = state.graphs.find(value => value.identity.workspaceId === identity.workspaceId && value.identity.rootSessionId === identity.rootSessionId),
-
     scope = state.scopes?.find(value => value.workspaceId === identity.workspaceId && value.rootSessionId === identity.rootSessionId && value.scopeId === scopeId);
 
   check(graph && scope, 'DISPATCH_SCOPE_IDENTITY', '检查点不属于当前主会话周期');
@@ -92,7 +86,6 @@ export function checkpointAbandonmentSelection(state: DispatchState, identity: G
   check(scope.goal?.revision === input.expectedGoalRevision && graph.cursor.streamId === input.expectedGraphCursor.streamId && graph.cursor.seq === input.expectedGraphCursor.seq, 'CHECKPOINT_HANDOFF_STALE', '图或目标依据已变化，请重新核实处置请求');
 
   const task = graph.tasks.find(value => value.taskId === input.taskId),
-
     checkpoint = task?.checkpoints?.at(-1);
 
   check(task?.scopeId === scopeId && checkpoint && !task.checkpointAbandonment && !task.cancelledBeforeStart && !task.activeRunId && !task.result && !task.help && !task.awaitedChildren.length && task.runIds.at(-1) === checkpoint.binding.runId, 'CHECKPOINT_HANDOFF_NOT_ALLOWED', '原任务没有最新且尚未消费的可靠检查点');
@@ -104,7 +97,6 @@ export function checkpointAbandonmentSelection(state: DispatchState, identity: G
   const { runs, run, currentRequest, resumeAssignment } = completedCheckpointLedger(state, task, 'CHECKPOINT_HANDOFF_PROOF_INVALID');
 
   const member = state.members.find(value => value.agentInstanceId === task.assignee.agentInstanceId),
-
     session = state.sessions.find(value => value.agentSessionId === task.assignee.agentSessionId);
 
   check(member && session && member.lifecycle === 'active' && member.executionScopeId === scopeId && member.executionTaskId === task.taskId && member.workspaceId === identity.workspaceId && member.agentId === run.binding.agentId && member.teamId === run.binding.teamId && member.leaseEpoch === run.binding.leaseEpoch && member.activity === 'idle' && !member.activeTaskId && !member.activeRunId && !member.waitingTaskIds.length && !member.communicatingMessageIds.length, 'CHECKPOINT_HANDOFF_NOT_ALLOWED', '原成员已领取、占用、释放或租约已变化');
@@ -112,7 +104,6 @@ export function checkpointAbandonmentSelection(state: DispatchState, identity: G
   check(session.workspaceId === identity.workspaceId && session.rootSessionId === identity.rootSessionId && session.agentInstanceId === member.agentInstanceId && session.agentId === run.binding.agentId && session.agentSessionId === run.binding.agentSessionId && member.agentSessionIds.includes(session.agentSessionId) && session.lastRunId === run.binding.runId && session.lastTaskId === task.taskId && session.nativeSessionId === run.session.nativeSessionId && !!run.session.sessionFile, 'CHECKPOINT_HANDOFF_PROOF_INVALID', '原成员通道与检查点运行不一致');
 
   if (currentRequest)
-
     check(resumeAssignment?.kind === 'assignment' && resumeAssignment.messageId === currentRequest.requestId && resumeAssignment.delivery === 'pending' && !resumeAssignment.claim, 'CHECKPOINT_HANDOFF_NOT_ALLOWED', '最新恢复预约已领取或不再是原待投递信封');
 
   return { graph, scope, task, member, session, runs, run, checkpoint, currentRequest, resumeAssignment };

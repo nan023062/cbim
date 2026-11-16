@@ -26,7 +26,6 @@ export type ModelRolesSnapshot = z.infer<typeof modelRolesSnapshotSchema>;
 export function modelRolesMatch(selection: ModelRolesSelection | undefined, snapshot: ModelRolesSnapshot | undefined): boolean
 {
   if (selection === undefined || snapshot === undefined)
-
     return selection === undefined && snapshot === undefined;
 
   const roles = Object.entries(selection.roles);

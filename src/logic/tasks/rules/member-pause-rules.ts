@@ -24,7 +24,6 @@ import { scopeHasUnresolvedActiveInput } from './scope-active-input';
 function check(value: unknown, message: string): asserts value
 {
   if (!value)
-
     fail('GOAL_MEMBER_PAUSE_INVALID', message)
 }
 
@@ -34,7 +33,6 @@ export function assertMemberPausePermission(checkpoints: readonly { run: Pick<Di
   const ranks = { read: 0, ask: 1, execute: 2 };
 
   if (checkpoints.some(({ run }) => ranks[run.permission] > ranks[permission]))
-
     fail('GOAL_MEMBER_PAUSE_PERMISSION', '保留检查点的原权限高于本次选择；请明确选择允许原任务的权限，或停止等待后重新安排任务');
 }
 
@@ -44,9 +42,7 @@ export function memberPauseSelection(state: DispatchState, scope: DispatchScope,
   check(memberPauseSchema.safeParse(pause).success, '成员等待清单无效');
 
   const graph = state.graphs.find(g => g.identity.workspaceId === scope.workspaceId && g.identity.rootSessionId === scope.rootSessionId),
-
     goal = scope.goal,
-
     plan = goal?.plan;
 
   check(state.workspaceId === scope.workspaceId && graph && ['active', 'waiting'].includes(scope.status) && goal && plan && !goal.blocked && !goalNeedsReplan(goal) && !scopeHasUnresolvedActiveInput(scope), '成员等待没有有效的原周期和当前计划');
@@ -54,7 +50,6 @@ export function memberPauseSelection(state: DispatchState, scope: DispatchScope,
   check(sameGoalValue(pause.expectedGraphCursor, { streamId: graph.cursor.streamId, seq: graph.cursor.seq }), '成员等待的任务图已变化');
 
   const scoped = graph.tasks.filter(t => t.scopeId === scope.scopeId),
-
     tasks = scoped.filter(t => ['planned', 'queued', 'running', 'waiting', 'checkpointed'].includes(t.status) || !t.runIds.length && t.status === 'blocked');
 
   check(tasks.length === pause.tasks.length && tasks.every(t => pause.tasks.some(ref => ref.taskId === t.taskId)), '成员等待必须精确列出全部未完成任务');
@@ -71,9 +66,7 @@ export function memberPauseSelection(state: DispatchState, scope: DispatchScope,
   for (const task of tasks)
   {
     const ref = pause.tasks.find(r => r.taskId === task.taskId)!,
-
       member = state.members.find(m => m.agentInstanceId === task.assignee.agentInstanceId),
-
       session = state.sessions.find(s => s.agentSessionId === task.assignee.agentSessionId);
 
     check(task.revision === ref.expectedRevision && task.planRevision === ref.expectedPlanRevision && !task.activeRunId && !task.result && !task.help && !task.cancelledBeforeStart && !task.checkpointAbandonment && !currentMemberResumeRequest(task) && !task.awaitedChildren.length, '等待任务已领取、预约、结束或版本变化');
@@ -85,9 +78,7 @@ export function memberPauseSelection(state: DispatchState, scope: DispatchScope,
     check(session.workspaceId === scope.workspaceId && session.rootSessionId === scope.rootSessionId && session.agentInstanceId === member.agentInstanceId && session.agentId === member.agentId && member.agentSessionIds.length === 1 && member.agentSessionIds[0] === session.agentSessionId, '等待成员通道身份不一致');
 
     const runs = (state.runs ?? []).filter(r => r.binding.rootSessionId === scope.rootSessionId && r.binding.taskId === task.taskId),
-
       assignments = state.outbox.filter(m => m.kind === 'assignment' && m.identity.rootSessionId === scope.rootSessionId && m.taskId === task.taskId),
-
       assignment = assignments[0];
 
     if (ref.kind === 'unstarted')
@@ -110,20 +101,19 @@ export function memberPauseSelection(state: DispatchState, scope: DispatchScope,
       checkpoints.push({ task, run });
     }
   }
-  const nodes = new Set(checkpoints.map(({ task }) => task.nodeId)),
 
+  const nodes = new Set(checkpoints.map(({ task }) => task.nodeId)),
     queue = [...nodes];
 
   for (let i = 0; i < queue.length; i++)
-
     for (const edge of graph.edges)
-
       if (edge.kind === 'dependency' && edge.enabled && edge.fromNodeId === queue[i] && !nodes.has(edge.toNodeId))
       {
         nodes.add(edge.toNodeId);
 
         queue.push(edge.toNodeId)
       }
+
   check(tasks.every(t => nodes.has(t.nodeId)), '未启动任务必须属于保留检查点的真实依赖后继');
 
   return { graph, tasks, checkpoints };

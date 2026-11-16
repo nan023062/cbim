@@ -26,7 +26,6 @@ export function requestBudgetEndpoint(llm: ResolvedLlm): string
   const base = new URL(llm.profile.baseUrl);
 
   if (base.username || base.password || base.search || base.hash || !(base.protocol === 'https:' || base.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(base.hostname)))
-
     throw Error('模型请求地址不受支持');
 
   const suffix = llm.profile.api === 'openai-completions' ? '/chat/completions' : llm.profile.api === 'openai-responses' ? '/responses' : base.pathname.replace(/\/+$/, '').endsWith('/v1') ? '/messages?beta=true' : '/v1/messages?beta=true';
@@ -42,29 +41,22 @@ export async function openRequestBudgetTransport(llm: ResolvedLlm, port: Request
   const candidate = structuredClone(port.model);
 
   if (candidate.api === 'openai-embeddings')
-
     throw Error('向量模型不能使用生成流式传输');
 
   const model = candidate;
 
   if (model.configurationHash !== workspaceMemberModelHash(llm.profile))
-
     throw Error('模型传输与原预算快照不一致，未启动门禁');
 
   if (llm.apiKey.includes('sk-ant-oat'))
-
     throw Error('逐请求预算当前仅支持配置的 API key，不支持 OAuth 凭据');
 
   const endpoint = requestBudgetEndpoint(llm),
-
     token = randomBytes(32).toString('hex');
 
   let closing = false,
-
     ready = options.anthropicClient === true,
-
     blocked: string | undefined,
-
     closingPromise: Promise<void> | undefined;
 
   const active = new Map<Promise<void>, AbortController>();
@@ -76,13 +68,9 @@ export async function openRequestBudgetTransport(llm: ResolvedLlm, port: Request
   async function handle(req: http.IncomingMessage, res: http.ServerResponse, controller: AbortController)
   {
     let ticket: RequestBudgetTicket | undefined,
-
       issued = false,
-
       sent = false,
-
       terminal = false,
-
       unknownReason: RequestUnknownReason = 'transport_failed';
 
     const abort = () => { if (!res.writableEnded) controller.abort() };
@@ -94,7 +82,6 @@ export async function openRequestBudgetTransport(llm: ResolvedLlm, port: Request
     try
     {
       const auth = Buffer.from(req.headers.authorization ?? (options.anthropicClient && typeof req.headers['x-api-key'] === 'string' ? 'Bearer ' + req.headers['x-api-key'] : '')),
-
         expected = Buffer.from('Bearer ' + token);
 
       if (req.headers.origin || auth.length !== expected.length || !timingSafeEqual(auth, expected))
@@ -103,6 +90,7 @@ export async function openRequestBudgetTransport(llm: ResolvedLlm, port: Request
 
         return
       }
+
       if (req.method === 'POST' && req.url === '/ready' && !ready && !closing)
       {
         ready = true;
@@ -111,18 +99,21 @@ export async function openRequestBudgetTransport(llm: ResolvedLlm, port: Request
 
         return
       }
+
       if (req.method !== 'POST' || !(req.url === '/request' || options.anthropicClient && req.url?.split('?')[0] === '/v1/messages'))
       {
         res.writeHead(404).end();
 
         return
       }
+
       if (!ready || closing || blocked)
       {
         failure(res);
 
         return
       }
+
       const parts: Buffer[] = [];
 
       let size = 0;
@@ -134,13 +125,12 @@ export async function openRequestBudgetTransport(llm: ResolvedLlm, port: Request
         size += part.length;
 
         if (size > 32 * 1024 * 1024)
-
           throw Error('模型请求正文超过受管上限');
 
         parts.push(part)
       }
-      const body = Buffer.concat(parts),
 
+      const body = Buffer.concat(parts),
         value = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(body));
 
       const limits = [value.max_tokens, value.max_completion_tokens, value.max_output_tokens].filter(v => v !== undefined);
@@ -148,17 +138,14 @@ export async function openRequestBudgetTransport(llm: ResolvedLlm, port: Request
       const expectedKey = llm.profile.api === 'openai-responses' ? 'max_output_tokens' : llm.profile.api === 'anthropic-messages' ? 'max_tokens' : undefined;
 
       if (!value || value.model !== model.modelId || value.stream !== true || value.background === true || value.n !== undefined && value.n !== 1 || limits.length !== 1 || expectedKey && value[expectedKey] === undefined)
-
         throw Error('模型请求的协议、模型或输出上限与冻结配置不符');
 
       const maxOutputTokens = limits[0],
-
         reservation = requestBudgetReservation(model, maxOutputTokens);
 
       controller.signal.throwIfAborted();
 
       if (closing || blocked)
-
         throw Error('原运行已停止模型请求');
 
       ticket = await port.reserve({ requestHash: createHash('sha256').update(body).digest('hex'), maxOutputTokens });
@@ -166,7 +153,6 @@ export async function openRequestBudgetTransport(llm: ResolvedLlm, port: Request
       controller.signal.throwIfAborted();
 
       if (closing || blocked)
-
         throw Error('原运行已停止模型请求');
 
       await ticket.issue();
@@ -176,7 +162,6 @@ export async function openRequestBudgetTransport(llm: ResolvedLlm, port: Request
       controller.signal.throwIfAborted();
 
       if (closing || blocked)
-
         throw Error('原运行已停止模型请求');
 
       const headers: Record<string, string> = { 'content-type': 'application/json', 'accept': 'text/event-stream' };
@@ -186,19 +171,17 @@ export async function openRequestBudgetTransport(llm: ResolvedLlm, port: Request
         const v = req.headers[key];
 
         if (typeof v === 'string')
-
           headers[key] = v
       }
+
       if (llm.profile.auth === 'api-key')
       {
         if (llm.profile.api === 'anthropic-messages')
-
           headers['x-api-key'] = llm.apiKey;
-
         else
-
           headers.authorization = 'Bearer ' + llm.apiKey
       }
+
       // 设置 sent 与 fetch 之间没有 await；一旦调用传输，错误不再证明请求免费或未到达供应商。
       ticket.assertSend();
 
@@ -212,6 +195,7 @@ export async function openRequestBudgetTransport(llm: ResolvedLlm, port: Request
 
         throw Error('供应商未返回可核实的流式响应')
       }
+
       const parser = new RequestBudgetUsageStream(model.api);
 
       res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-store' });
@@ -225,10 +209,10 @@ export async function openRequestBudgetTransport(llm: ResolvedLlm, port: Request
         for (const frame of parser.Push(part))
         {
           if (!res.write(frame))
-
             await new Promise<void>((resolve, reject) => { const done = () => { res.off('drain', done); res.off('close', gone); resolve() }, gone = () => { res.off('drain', done); reject(Error('模型请求接收端已关闭')) }; res.once('drain', done); res.once('close', gone) });
         }
       }
+
       unknownReason = 'incomplete_usage';
 
       const result = parser.Finish();
@@ -240,11 +224,9 @@ export async function openRequestBudgetTransport(llm: ResolvedLlm, port: Request
       const cost = requestBudgetCost(model, result.usage);
 
       if (result.usage.input + result.usage.cacheRead + result.usage.cacheWrite > model.contextWindow || result.usage.output > maxOutputTokens || cost !== undefined && reservation.estimatedCostUsd !== undefined && cost > reservation.estimatedCostUsd)
-
         throw Error('供应商报告超过原请求预留，已保存实际用量并停止后续执行');
 
       if (controller.signal.aborted || closing || blocked)
-
         throw Error('模型请求结算后原运行已停止');
 
       res.end(result.terminal);
@@ -258,11 +240,8 @@ export async function openRequestBudgetTransport(llm: ResolvedLlm, port: Request
         try
         {
           if (!sent)
-
             await ticket.notSent(closing ? 'closed_before_send' : 'cancelled_before_send');
-
           else if (issued)
-
             await ticket.unknown(closing ? 'closing' : controller.signal.aborted ? 'cancelled' : unknownReason)
         }
         catch
@@ -270,6 +249,7 @@ export async function openRequestBudgetTransport(llm: ResolvedLlm, port: Request
           block('模型请求结算未能保存，原预留保持未决')
         }
       }
+
       controller.abort();
 
       failure(res);
@@ -300,7 +280,6 @@ export async function openRequestBudgetTransport(llm: ResolvedLlm, port: Request
     AssertReady()
     {
       if (!ready || closing)
-
         throw Error('逐请求预算门禁未完成启动核验')
     },
 
@@ -313,11 +292,9 @@ export async function openRequestBudgetTransport(llm: ResolvedLlm, port: Request
     async AssertSettled()
     {
       while (active.size)
-
         await Promise.all([...active.keys()]);
 
       if (closing || blocked)
-
         throw Error(blocked ?? '模型请求已停止');
     },
 

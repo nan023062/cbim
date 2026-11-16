@@ -16,16 +16,12 @@ export function projectRuntimeScope(scope: DispatchScope): RuntimeScope
 {
   const result: RuntimeScope = {
     workspaceId: scope.workspaceId, rootSessionId: scope.rootSessionId, scopeId: scope.scopeId, status: scope.status, createdAt: scope.createdAt, hasGoal: scope.goal !== undefined,
-
     ...(scope.closedAt !== undefined ? { closedAt: scope.closedAt } : {}), ...(scope.outcome !== undefined ? { outcome: scope.outcome } : {}),
-
     ...(scope.goal ? { goalRevision: scope.goal.revision } : {}), ...(scope.goal?.review ? { reviewDecision: scope.goal.review.decision } : {}),
-
     ...(scope.goal?.blocked ? { goalBlocked: { reason: preview(scope.goal.blocked.reason) } } : {}),
-
     ...(scope.wait ? { wait: { createdAt: scope.wait.createdAt, reason: preview(scope.wait.reason) } } : {}),
-
     ...(scope.budget?.blocked ? { budgetBlocked: { reason: scope.budget.blocked.reason } } : {})
   };
+
   return runtimeScopeSchema.parse(result);
 }

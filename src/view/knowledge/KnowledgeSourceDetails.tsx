@@ -34,7 +34,6 @@ export function KnowledgeSourceDetails({ state, adopted }: { state?: KnowledgeSo
 export function KnowledgeSourceSelection({ selection }: { selection?: SourceSelection })
 {
   if (!selection)
-
     return null;
 
   return <section className="knowledge-source-details" data-testid="knowledge-source-selection"><strong>本次明确采纳的来源</strong>{selection.kind === 'builtin' ? <SourceReference value={selection.ref} /> : selection.expectedRef ? <SourceReference value={selection.expectedRef} /> : <p><code>{selection.source.sourceId}</code> 尚未追踪；保存时建立本次观察的起点。</p>}<p>只更新本次选择的来源采纳，不迁移旧任务或启动执行。</p></section>;

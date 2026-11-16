@@ -33,21 +33,17 @@ export function checkedArtifactReport(raw: unknown, request: ArtifactReportInput
   const value = artifactReportSchema.parse(raw);
 
   if (artifactSelectionKey(value.identity) !== artifactSelectionKey(request))
-
     throw Error('文件基线报告不属于所选任务或执行轮次');
 
   if (new Set(value.baselines.map(item => item.baselineId)).size !== value.baselines.length)
-
     throw Error('文件基线列表包含重复记录');
 
   if (value.log.state !== 'verified' && (value.baselines.length || value.verification && (value.verification.state !== 'unverifiable' || value.verification.files.length)))
-
     throw Error('未核实的日志不能提供可信文件基线');
 
   const verification = value.verification;
 
   if (!request.baselineId && verification)
-
     throw Error('加载列表不能隐式复核文件');
 
   if (verification)
@@ -55,19 +51,15 @@ export function checkedArtifactReport(raw: unknown, request: ArtifactReportInput
     const baseline = value.baselines.find(item => item.baselineId === verification.baselineId);
 
     if (verification.baselineId !== request.baselineId || !baseline && (verification.state !== 'unverifiable' || verification.files.length))
-
       throw Error('文件复核不是本次明确选择的基线');
 
     if (new Set(verification.files.map(file => file.relativePath)).size !== verification.files.length)
-
       throw Error('文件复核包含重复路径');
 
     if (verification.state !== 'unverifiable' && verification.files.length !== baseline!.fileCount)
-
       throw Error('文件复核未覆盖本份基线的全部文件');
 
     if (value.consistency !== 'stable' && verification.state !== 'unverifiable')
-
       throw Error('读取期间变化的文件记录不能作为确定结果');
 
     for (const file of verification.files)
@@ -75,13 +67,13 @@ export function checkedArtifactReport(raw: unknown, request: ArtifactReportInput
       const equal = file.observed?.sha256 === file.expected.sha256 && file.observed?.byteLength === file.expected.byteLength;
 
       if (file.state === 'matches' && !equal || file.state === 'changed' && (!file.observed || equal) || file.state === 'missing' && file.observed)
-
         throw Error('文件状态与实际观察不一致');
     }
-    if (verification.state === 'matches' && verification.files.some(file => file.state !== 'matches') || verification.state === 'changed' && !verification.files.some(file => file.state === 'changed' || file.state === 'missing'))
 
+    if (verification.state === 'matches' && verification.files.some(file => file.state !== 'matches') || verification.state === 'changed' && !verification.files.some(file => file.state === 'changed' || file.state === 'missing'))
       throw Error('文件复核摘要与明细不一致');
   }
+
   return value;
 }
 
@@ -124,11 +116,9 @@ export class ArtifactReportController
   Select(id: string)
   {
     if (id && !this.value.report?.baselines.some(item => item.baselineId === id))
-
       throw Error('所选文件基线不在已核实列表中');
 
     if (id === this.value.selectedId)
-
       return;
 
     this.generation.Advance();
@@ -148,20 +138,16 @@ export class ArtifactReportController
   async Inspect()
   {
     if (this.value.selectedId)
-
       await this.Pull(this.value.selectedId)
   }
 
   private async Pull(baselineId?: string)
   {
     if (this.value.loading)
-
       return;
 
     const token = this.generation.Advance(),
-
       sourceVersion = this.version(),
-
       request = { ...this.identity, ...(baselineId ? { baselineId } : {}) };
 
     this.Publish({ ...this.value, loading: true, error: '' });
@@ -171,11 +157,9 @@ export class ArtifactReportController
       const raw = await this.read(request);
 
       if (!this.generation.IsCurrent(token))
-
         return;
 
       const report = checkedArtifactReport(raw, request),
-
         selectedId = report.baselines.some(item => item.baselineId === this.value.selectedId) ? this.value.selectedId : '';
 
       this.Publish({ report, selectedId, loading: false, error: '', sourceVersion });
@@ -183,7 +167,6 @@ export class ArtifactReportController
     catch (error)
     {
       if (this.generation.IsCurrent(token))
-
         this.Publish({ ...this.value, loading: false, error: error instanceof Error ? error.message : '文件复核失败，请重新读取' })
     }
   }

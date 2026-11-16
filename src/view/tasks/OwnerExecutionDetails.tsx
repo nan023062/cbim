@@ -15,7 +15,6 @@ import './owner-execution.css';
 export function OwnerExecutionDetails({ binding, workspaceId, agentId, moduleIds, compact = false }: { binding: OwnerExecutionBinding; workspaceId: string; agentId: string; moduleIds: string[]; compact?: boolean })
 {
   if (!ownerExecutionBindingMatches(binding, workspaceId, agentId, moduleIds))
-
     return <p className="owner-execution-warning" role="alert" data-testid="owner-binding-invalid">岗位绑定与原任务身份不一致，请重新同步核实。</p>;
 
   const summary = <span>岗位第 {binding.memberRevision} 版 · {binding.model.modelId}</span>;
@@ -36,17 +35,14 @@ export function OwnerExecutionDetails({ binding, workspaceId, agentId, moduleIds
 export function MemberOwnerNotice({ task, compact = false }: { task: TaskNode; compact?: boolean })
 {
   if (task.fallbackBinding)
-
     return <AutomaticExecutionDetails binding={task.fallbackBinding} workspaceId={task.identity.workspaceId} scopeId={task.scopeId} agentId={task.assignee.agentId} moduleIds={task.modules.map(m => m.moduleId)} />;
 
   const view = ownerTaskView(task);
 
   if (view.kind === 'invalid')
-
     return <p className="owner-execution-warning" role="alert" data-testid="owner-binding-invalid">岗位绑定与原任务身份不一致，请重新同步核实。</p>;
 
   if (view.kind === 'bound')
-
     return <OwnerExecutionDetails binding={view.binding} workspaceId={task.identity.workspaceId} agentId={task.assignee.agentId} moduleIds={task.modules.map(module => module.moduleId)} compact={compact} />;
 
   return <p className={view.needsReplan ? 'owner-execution-warning' : 'owner-execution-muted'} data-testid="owner-binding-legacy" data-needs-replan={view.needsReplan}>{view.needsReplan ? '旧任务尚无可信岗位绑定，不能新领取或续执行；请由主 Agent 按当前负责人重新规划。' : '旧执行记录未保存项目岗位绑定；保留当时的角色与结果，不自动补配当前负责人。'}</p>;
@@ -56,7 +52,6 @@ export function MemberOwnerNotice({ task, compact = false }: { task: TaskNode; c
 export function AutomaticExecutionDetails({ binding, workspaceId, scopeId, agentId, moduleIds }: { binding: AutomaticExecutionBinding; workspaceId: string; scopeId?: string; agentId: string; moduleIds: string[] })
 {
   if (!automaticExecutionBindingMatches(binding, workspaceId, scopeId, agentId, moduleIds))
-
     return <p role="alert" className="owner-execution-warning">自动执行记录与当前任务身份不一致，请重新同步核实。</p>;
 
   return <section className="owner-execution" aria-label="自动执行依据" data-testid="automatic-execution-binding"><p>自动模式 · 内置执行员兜底</p><p>{binding.reason === 'no_modules' ? '项目尚无业务模块，临时以全项目为范围。' : '所选模块尚未分配负责人。'}</p><p>原对话模型：{binding.model.modelId}</p><p className="owner-execution-muted">未登记长期负责岗位；执行仍遵守原权限与人工验收要求。</p></section>;

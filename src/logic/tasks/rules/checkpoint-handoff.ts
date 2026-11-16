@@ -8,7 +8,6 @@ import { z } from 'zod';
 const id = z.string().min(1).max(512).refine(value => value.trim() === value && !/[\x00-\x1f]/.test(value));
 
 const revision = z.number().int().positive().safe(),
-
   sequence = z.number().int().nonnegative().safe();
 
 const cursor = z.object({ streamId: id, seq: sequence }).strict();

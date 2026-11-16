@@ -38,12 +38,10 @@ export interface AgentHistoryWorkspace
 export function createAgentHistory(workspace: AgentHistoryWorkspace, diagnostic?: (message: string) => void)
 {
   const project = workspace.paths.Project(workspace.entry.id),
-
     storage = new FileRunStorage();
 
   return new AgentHistoryService(workspace.entry.id, workspace.entry.path, {
     store: new FileAgentHistoryStore(path.join(project, 'agent-history'), workspace.entry.id, workspace.entry.path), Diagnostic: diagnostic,
-
     Read: async record => { workspace.Assert(); const root = record.journal === 'member' ? path.join(project, 'dispatch', 'runs', 'tasks') : path.join(project, 'loop-engine', 'tasks'); const task = path.join(root, safeId(record.view.taskId)), directory = path.join(task, safeId(record.view.runId)); for (const target of [root, task, directory, path.join(directory, 'events.jsonl')]) if ((await fs.lstat(target)).isSymbolicLink()) throw Error('运行日志不能经符号链接定位'); const relative = path.relative(await fs.realpath(project), await fs.realpath(directory)); if (!relative || relative === '..' || relative.startsWith('..' + path.sep) || path.isAbsolute(relative)) throw Error('运行日志不在本工作区应用目录'); const summary = await storage.Read(directory); if (summary.task.workspaceId !== workspace.entry.id || summary.task.root !== workspace.entry.path || summary.task.taskId !== record.view.taskId || summary.runId !== record.view.runId) throw Error('运行日志身份不一致'); return summary; },
   });
 }

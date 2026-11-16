@@ -35,7 +35,6 @@ function declareEngine<const T extends EngineDeclaration>(value: T): Readonly<T>
   for (const role of value.additionalModelRoles ?? [])
   {
     if (role.modelIds)
-
       Object.freeze(role.modelIds);
 
     if (role.kind === 'generation')
@@ -44,14 +43,14 @@ function declareEngine<const T extends EngineDeclaration>(value: T): Readonly<T>
 
       Object.freeze(role.connection)
     }
+
     Object.freeze(role)
   }
-  if (value.additionalModelRoles)
 
+  if (value.additionalModelRoles)
     Object.freeze(value.additionalModelRoles);
 
   if (value.packageDependencies)
-
     Object.freeze(value.packageDependencies);
 
   Object.freeze(value.businessTypes);

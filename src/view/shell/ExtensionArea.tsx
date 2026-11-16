@@ -46,7 +46,6 @@ export function ExtensionArea({ workspace, snapshot, dirty, open, request, onClo
   const key = 'cbim.extensions.' + workspace.id;
 
   const [tabs, setTabs] = useState<Panel[]>(() => { try { const v = JSON.parse(localStorage.getItem(key) || '[]'); return Array.isArray(v) ? v.filter(t => t && typeof t.id === 'string' && Object.hasOwn(names, t.kind)) : [] } catch { return [] } }),
-
     [active, setActive] = useState('');
 
   useEffect(() => { try { localStorage.setItem(key, JSON.stringify(tabs)) } catch { } }, [key, tabs]);
@@ -69,13 +68,11 @@ export function ExtensionArea({ workspace, snapshot, dirty, open, request, onClo
   async function close(t: Panel)
   {
     if (dirty.current.has(t.id) && !confirm('此页有未提交的知识编辑，关闭并丢弃？'))
-
       return;
 
     dirty.current.delete(t.id);
 
     if (t.kind === 'terminal')
-
       await api.call('terminal.close', { id: workspace.id, tabId: t.id });
 
     setTabs(old => old.filter(x => x.id !== t.id))
@@ -93,9 +90,7 @@ function BrowserPane({ workspace }: { workspace: WorkspaceView })
   const workspaceId = workspace.id;
 
   const [value, setValue] = useState('http://localhost:3000'),
-
     [url, setUrl] = useState(''),
-
     [error, setError] = useState('');
 
   function navigate()
@@ -105,7 +100,6 @@ function BrowserPane({ workspace }: { workspace: WorkspaceView })
       const u = new URL(value);
 
       if (!['http:', 'https:'].includes(u.protocol) || u.username || u.password)
-
         throw Error('仅支持不含凭据的 HTTP(S) 地址');
 
       setUrl(u.href);
@@ -131,9 +125,7 @@ function TerminalPane({ workspace, tabId }: { workspace: WorkspaceView; tabId: s
   const [request, setRequest] = useState<'start' | 'stop' | null>(null);
 
   const [command, setCommand] = useState(''),
-
     [state, setState] = useState({ output: '', running: false, exitCode: null as number | null }),
-
     [error, setError] = useState('');
 
   useEffect(() => { let cancelled = false; const tick = () => void api.call('terminal.read', { id: workspaceId, tabId }).then(v => { if (!cancelled) setState(v) }).catch(e => { if (!cancelled) setError(e.message) }); tick(); const timer = setInterval(tick, 500); return () => { cancelled = true; clearInterval(timer); void api.call('terminal.close', { id: workspaceId, tabId }).catch(() => { }) } }, [workspaceId, tabId]);
@@ -142,7 +134,6 @@ function TerminalPane({ workspace, tabId }: { workspace: WorkspaceView; tabId: s
   async function execute(kind: 'start' | 'stop')
   {
     if (pending.current)
-
       return;
 
     pending.current = true;
@@ -154,11 +145,8 @@ function TerminalPane({ workspace, tabId }: { workspace: WorkspaceView; tabId: s
     try
     {
       if (kind === 'start')
-
         setState(await api.call('terminal.start', { id: workspaceId, tabId, command }));
-
       else
-
         await api.call('terminal.close', { id: workspaceId, tabId })
     }
     catch (cause)

@@ -29,7 +29,6 @@ export interface ModuleGovernanceResponseTarget
 function check(value: unknown, code: string, message: string): asserts value
 {
   if (!value)
-
     fail(code, message)
 }
 
@@ -40,9 +39,7 @@ function checkedSource(target: ModuleGovernanceResponseTarget, decisionId: strin
   check(found.length === 1, 'GOVERNANCE_FEEDBACK_SOURCE', '回应必须引用唯一真实本机反馈决定');
 
   const { source } = found[0],
-
     proposal = moduleGovernanceProposalSchema.parse(source.proposal),
-
     decisions = source.decisions.map(value => moduleGovernanceDecisionSchema.parse(value));
 
   check(proposal.workspaceId === target.workspaceId && proposal.protectionId === target.protectionId && proposal.proposalId !== target.proposalId && proposal.basis === moduleGovernanceProposalBasis(proposal), 'GOVERNANCE_FEEDBACK_SOURCE', '回应来源不属于同一保护对象或精确提案依据');
@@ -52,7 +49,6 @@ function checkedSource(target: ModuleGovernanceResponseTarget, decisionId: strin
   validateModuleGovernanceDecisionAppend(decisions.slice(0, -1), decisions.at(-1)!);
 
   const decision = decisions.find(value => value.decisionId === decisionId)!,
-
     latest = decisions.at(-1)!;
 
   check(decision.feedback && (decision.decision === 'defer' || decision.decision === 'reject'), 'GOVERNANCE_FEEDBACK_SOURCE', '所选决定没有明确补证或异议反馈，不能回退猜测旧问题');
@@ -64,7 +60,6 @@ function checkedSource(target: ModuleGovernanceResponseTarget, decisionId: strin
 export function resolveModuleGovernanceResponses(target: ModuleGovernanceResponseTarget, ids: readonly string[] | undefined, sources: readonly ModuleGovernanceResponseSource[]): ModuleGovernanceResponseRef[] | undefined
 {
   if (ids === undefined)
-
     return;
 
   return moduleGovernanceDecisionIdsSchema.parse(ids).map(id => { const { proposal, decision, latest } = checkedSource(target, id, sources); check(latest.decisionId === id, 'GOVERNANCE_FEEDBACK_STALE', '原反馈已被后续决定替代，请读取最新决定并重新准备方案'); return { decisionId: id, proposalId: proposal.proposalId, basis: proposal.basis, decisionRevision: decision.revision }; });
@@ -81,7 +76,6 @@ export function validateModuleGovernanceResponseSources(raw: ModuleGovernancePro
   const proposal = moduleGovernanceProposalSchema.parse(raw);
 
   if (!proposal.respondsTo)
-
     return [];
 
   check(proposal.basis === moduleGovernanceProposalBasis(proposal), 'GOVERNANCE_FEEDBACK_SOURCE', '回应引用未冻结在提案依据中');
@@ -93,11 +87,9 @@ export function validateModuleGovernanceResponseSources(raw: ModuleGovernancePro
 export function validateModuleGovernanceAssessments(proposal: ModuleGovernanceProposal, raw: readonly ModuleGovernanceResponseAssessment[] | undefined): void
 {
   if (raw === undefined)
-
     return;
 
   const values = moduleGovernanceAssessmentsSchema.parse(raw),
-
     refs = moduleGovernanceResponseRefsSchema.optional().parse(proposal.respondsTo) ?? [];
 
   check(values.every(value => refs.some(ref => ref.decisionId === value.decisionId)), 'GOVERNANCE_ASSESSMENT', '本机评价只能针对本提案冻结引用的原意见');

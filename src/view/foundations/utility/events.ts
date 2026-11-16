@@ -33,7 +33,6 @@ export class SubscriptionSet
   Notify(): void
   {
     for (const listener of this.listeners)
-
       listener();
   }
 

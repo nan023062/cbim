@@ -17,11 +17,9 @@ const explanations = { matching: '本次读取与原派发绑定一致；实际�
 export function OwnerExecutionInspection({ task }: { task: TaskNode })
 {
   const [controller] = useState(() => new OwnerInspectionController(task, input => window.cbim.call('dispatch.ownerInspect', input))),
-
     [, refresh] = useState(0);
 
   const key = ownerInspectionKey(task),
-
     state = controller.snapshot;
 
   useEffect(() => controller.Subscribe(() => refresh(value => value + 1)), [controller]);
@@ -33,11 +31,9 @@ export function OwnerExecutionInspection({ task }: { task: TaskNode })
   const shown = state.key === key ? state : undefined;
 
   if (task.fallbackBinding)
-
     return <p className="owner-execution-muted">自动兜底的模块、模型和负责人状态会在实际领取时重新核实；后续登记的负责人不会覆盖这份历史。</p>;
 
   if (ownerTaskView(task).kind === 'invalid')
-
     return null;
 
   return <section className="owner-execution-current" aria-label="当前负责人核实" data-testid="owner-current-inspection">

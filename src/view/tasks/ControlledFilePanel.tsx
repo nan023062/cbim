@@ -33,13 +33,10 @@ export function ControlledFilePanel({ identity, instanceId, anchor, toolStatus }
   const { controller, snapshot, read, draft, attempt, fresh } = useControlledFiles(identity, instanceId, anchor);
 
   const ledger = read?.report?.ledger,
-
     operation = ledger?.state === 'recorded' ? ledger.operation : undefined,
-
     preview = read?.preview;
 
   const pending = controller.IsPending(draft?.commandId),
-
     locked = !!draft?.commandId && attempt?.state !== 'rejected';
 
   const attempts = snapshot.attempts.filter(v => v.identity.taskId === identity.taskId && v.identity.runId === identity.runId && v.identity.toolCallId === identity.toolCallId);
@@ -83,7 +80,6 @@ export function ControlledFilePanel({ identity, instanceId, anchor, toolStatus }
 export function MemberControlledFiles({ report, instanceId, anchor }: { report: ExecutionReport; instanceId?: string; anchor: string })
 {
   if (!report.identity.runId)
-
     return null;
 
   return <>{report.tools.items.filter(item => item.toolName === controlledFileWriteToolName).map(item => <ControlledFilePanel key={item.toolCallId} identity={{ workspaceId: report.identity.workspaceId, rootSessionId: report.identity.rootSessionId, taskId: report.identity.taskId, runId: report.identity.runId!, toolCallId: item.toolCallId }} instanceId={instanceId} anchor={anchor} toolStatus={item.status} />)}</>;

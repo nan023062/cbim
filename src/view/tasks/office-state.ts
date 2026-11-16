@@ -57,29 +57,22 @@ export interface OfficeSceneState
 export function officeScene(graph: GraphSnapshot, sessions: readonly TeamSession[] | undefined, scopes: readonly ScopeSummary[], mainRunning: boolean): OfficeSceneState
 {
   const archived = taskHistoryView(graph, scopes),
-
     current = graph.tasks.filter(task => !archived.taskIds.has(task.taskId));
 
   const open = scopes.find(scope => scope.status !== 'closed'),
-
     desks: OfficeDesk[] = [{ id: 'main', name: '主 Agent 工位' }],
-
     deskNames = new Map<string, string>();
 
   for (const task of current)
-
     for (const module of task.modules)
-
       deskNames.set(module.moduleId, module.name);
 
   for (const [id, name] of deskNames)
-
     desks.push({ id: 'module:' + id, name });
 
   const main = graph.root.agent;
 
   const paused = open?.status === 'waiting',
-
     pausing = open?.interruption?.phase === 'requested';
 
   const actors: OfficeActor[] = [{ id: 'main:' + graph.identity.rootSessionId, agentId: main.agentId, name: main.name, main: true, state: pausing ? '正在暂停' : paused ? '等待补充' : mainRunning ? '执行 / 协调中' : open ? '等待成员反馈' : '空闲', working: mainRunning && !paused, deskId: 'main', scopeId: open?.scopeId, goal: open?.objective ?? open?.inputPreview ?? '等待新任务', queued: 0 }];
@@ -91,7 +84,6 @@ export function officeScene(graph: GraphSnapshot, sessions: readonly TeamSession
     const working = tasks.find(task => task.activeRunId || task.status === 'running');
 
     const next = tasks.find(task => ['queued', 'waiting', 'planned'].includes(task.status)),
-
       task = working ?? next ?? tasks.at(-1);
 
     const inOpen = task?.scopeId === open?.scopeId;
@@ -103,8 +95,8 @@ export function officeScene(graph: GraphSnapshot, sessions: readonly TeamSession
 
     actors.push({ id: member.session.sessionId, sessionId: member.session.sessionId, agentId: member.session.agentId, name: member.name, main: false, state, working: !!working && !(inOpen && paused), deskId, ...(task ? { taskId: task.taskId, scopeId: task.scopeId } : {}), goal: task?.goal ?? '等待主 Agent 安排', queued: tasks.filter(value => value !== working && ['queued', 'waiting', 'planned'].includes(value.status)).length });
   }
-  if (actors.some(actor => actor.deskId === 'lounge'))
 
+  if (actors.some(actor => actor.deskId === 'lounge'))
     desks.push({ id: 'lounge', name: '协作休息区' });
 
   return { actors, desks, current, history: archived.tasks };
@@ -144,11 +136,9 @@ export class OfficeEventTracker
     const key = JSON.stringify([graph.identity.workspaceId, graph.identity.rootSessionId, graph.cursor.streamId]);
 
     if (key === this.key && graph.cursor.seq <= this.seq)
-
       return [];
 
     const entries = facts(graph),
-
       newOffice = key !== this.key;
 
     const result = newOffice || !visible ? [] : entries.filter(event => !this.known.has(event.id));

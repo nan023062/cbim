@@ -64,9 +64,7 @@ export function TeamView({ snapshot, workspace, refresh, dirty, tabId, onStarted
   const model = useMemo(() => buildTeamModel(current, workspace.name), [current, workspace.name]);
 
   const [query, setQuery] = useState(''),
-
     [chosen, setChosen] = useState(TEAM_ROOT),
-
     [skillId, setSkillId] = useState('');
 
   const [file, setFile] = useState('');
@@ -74,9 +72,7 @@ export function TeamView({ snapshot, workspace, refresh, dirty, tabId, onStarted
   const onDirtyChange = useCallback((value: boolean) => { if (dirty && tabId) value ? dirty.current.add(tabId) : dirty.current.delete(tabId) }, [dirty, tabId]);
 
   const [editor, setEditor] = useState<Editor>(),
-
     [transfer, setTransfer] = useState<Transfer>(),
-
     [error, setError] = useState('');
 
   const [history, setHistory] = useState<
@@ -87,7 +83,6 @@ export function TeamView({ snapshot, workspace, refresh, dirty, tabId, onStarted
     }>();
 
   const [members, setMembers] = useState(false),
-
     [mainSettings, setMainSettings] = useState(false);
 
   useEffect(() => { setChosen(TEAM_ROOT); setFile(''); setSkillId(''); setQuery(''); setEditor(undefined); setTransfer(undefined); setHistory(undefined); setMembers(false); setMainSettings(false); setError('') }, [workspace.id]);
@@ -95,7 +90,6 @@ export function TeamView({ snapshot, workspace, refresh, dirty, tabId, onStarted
   const node = model.nodes[chosen] ?? model.nodes[TEAM_ROOT];
 
   const skills = availableTeamSkills(model, node.id),
-
     skill = skills.find(item => item.id === skillId);
 
   const agents = Object.values(model.nodes).filter(item => item.kind === 'agent');
@@ -107,7 +101,6 @@ export function TeamView({ snapshot, workspace, refresh, dirty, tabId, onStarted
   function select(id: string)
   {
     if (dirty && tabId && dirty.current.has(tabId) && !confirm('丢弃未提交的知识草稿并切换？'))
-
       return;
 
     setChosen(id);
@@ -120,7 +113,6 @@ export function TeamView({ snapshot, workspace, refresh, dirty, tabId, onStarted
   function selectPath(path: string, kind: 'folder' | 'file')
   {
     if (dirty && tabId && dirty.current.has(tabId) && !confirm('丢弃未提交的知识草稿并切换？'))
-
       return;
 
     const owner = Object.keys(model.nodes).filter(id => path === id || path.startsWith(id + '/')).sort((a, b) => b.length - a.length)[0] ?? TEAM_ROOT;
@@ -138,51 +130,38 @@ export function TeamView({ snapshot, workspace, refresh, dirty, tabId, onStarted
     const wrap = (work: () => void) => () => { if (dirty && tabId && dirty.current.has(tabId) && !confirm('存在未提交的知识草稿，继续打开节点操作？')) return; work() };
 
     const ownSkill = model.skills.find(item => item.id === target),
-
       item = model.nodes[target];
 
     if (ownSkill)
-
+    {
       return [
-
         { id: 'skill-edit', label: '编辑 Skill', icon: 'edit', disabled: !canEdit, OnSelect: wrap(() => setEditor({ kind: 'skill', id: ownSkill.id })) },
-
         { id: 'skill-delete', label: '删除 Skill', icon: 'trash', disabled: !canEdit, OnSelect: wrap(() => setEditor({ kind: 'skill', id: ownSkill.id, parentId: ownSkill.ownerId, mode: 'delete' })) },
-
         { id: 'skill-publish', label: '发布 Skill 到人才市场', icon: 'upload', disabled: !canEdit, OnSelect: wrap(() => setTransfer({ mode: 'publish', kind: 'skill', objectId: ownSkill.id })) },
-
       ];
+    }
 
     if (!item || item.kind === 'builtin')
-
       return [];
 
     const actions: KnowledgeTreeAction[] = [
-
       { id: 'skill-new', label: '新增 Skill', icon: 'sparkles', disabled: !canEdit, OnSelect: wrap(() => setEditor({ kind: 'skill', parentId: item.id })) },
-
       { id: 'talent-import', label: '从人才市场下载', icon: 'download', disabled: !canEdit, OnSelect: wrap(() => setTransfer({ mode: 'import', kind: item.kind === 'agent' ? 'skill' : undefined, targetParentId: item.id })) },
-
     ];
 
     if (item.kind === 'agent')
-
+    {
       actions.push(
         { id: 'agent-edit', label: '编辑 Agent', icon: 'edit', disabled: !canEdit, OnSelect: wrap(() => setEditor({ kind: 'agent', id: item.id })) },
-
         { id: 'agent-delete', label: '删除 Agent', icon: 'trash', disabled: !canEdit, OnSelect: wrap(() => setEditor({ kind: 'agent', id: item.id, parentId: item.parentId, mode: 'delete' })) },
-
         { id: 'agent-publish', label: '发布 Agent 到人才市场', icon: 'upload', disabled: !canEdit, OnSelect: wrap(() => setTransfer({ mode: 'publish', kind: 'agent', objectId: item.id })) },
-
         { id: 'agent-history', label: '执行历史', icon: 'clock', OnSelect: wrap(() => setHistory({ workspaceId: workspace.id, agentId: item.id })) },
       );
-
+    }
     else
-
       actions.unshift({ id: 'agent-new', label: '新建 Agent', icon: 'plus', disabled: !canEdit, OnSelect: wrap(() => setEditor({ kind: 'agent', parentId: item.id })) });
 
     if (item.kind === 'team')
-
       actions.push({ id: 'team-govern', label: launch.label, icon: 'sparkles', disabled: launch.disabled, OnSelect: wrap(() => void launch.start()) }, { id: 'team-publish', label: '发布整个团队', icon: 'upload', disabled: !canEdit, OnSelect: wrap(() => setTransfer({ mode: 'publish', kind: 'team', objectId: TEAM_ROOT })) });
 
     return actions;
@@ -203,7 +182,6 @@ export function TeamView({ snapshot, workspace, refresh, dirty, tabId, onStarted
   }
 
   if (members)
-
     return <div className="view-page team-management"><WorkspaceMembers key={JSON.stringify([workspace.id, workspace.instanceId])} workspace={workspace} agents={Object.values(model.nodes).filter(item => item.kind === 'agent').map(item => ({ id: item.id, name: item.name, runtime: item.runtime }))} onClose={() => setMembers(false)} /></div>;
 
   return <div className="view-page team-management">

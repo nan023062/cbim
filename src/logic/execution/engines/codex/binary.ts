@@ -18,13 +18,13 @@ export async function codexBinary(runtime?: EngineRuntimePackage)
   if (runtime)
   {
     if (runtime.version !== '0.167.0')
-
       throw Error('当前资源版本尚未验证此 Codex 引擎版本');
 
     await fs.access(runtime.entry);
 
     return runtime.entry;
   }
+
   const local = createRequire(typeof __filename === 'string' ? __filename : import.meta.url);
 
   const resources = (process as NodeJS.Process &
@@ -37,17 +37,14 @@ export async function codexBinary(runtime?: EngineRuntimePackage)
   const pkg = JSON.parse(await fs.readFile(manifest, 'utf8'));
 
   if (pkg.version !== '0.167.0')
-
     throw Error('Codex 运行资源版本不匹配');
 
   const triples: Record<string, string> = { 'win32-x64': 'x86_64-pc-windows-msvc', 'win32-arm64': 'aarch64-pc-windows-msvc', 'linux-x64': 'x86_64-unknown-linux-musl', 'linux-arm64': 'aarch64-unknown-linux-musl', 'darwin-x64': 'x86_64-apple-darwin', 'darwin-arm64': 'aarch64-apple-darwin' };
 
   const target = process.platform + '-' + process.arch,
-
     triple = triples[target];
 
   if (!triple)
-
     throw Error('当前平台没有受支持的 Codex 运行资源');
 
   const platform = createRequire(manifest).resolve('@openai/codex-' + target + '/package.json');

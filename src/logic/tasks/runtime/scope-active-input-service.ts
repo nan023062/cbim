@@ -30,7 +30,6 @@ type Owner = Pick<KnowledgeWorkspace, 'entry' | 'Assert'>;
 function check(value: unknown, code: string, message: string): asserts value
 {
   if (!value)
-
     fail(code, message)
 }
 
@@ -50,17 +49,16 @@ export class ScopeActiveInputService
   async Send(identity: GraphIdentity, scopeId: string, runId: string, queueId: string, input: ScopeActiveInputPayload, signal: AbortSignal, send: (token: ScopeActiveInputToken) => Promise<ScopeActiveInputSendReceipt | undefined>): Promise<void>
   {
     const fixed = structuredClone(input),
-
       prepared = await this.Prepare(identity, scopeId, runId, queueId, fixed, signal);
 
     if (!prepared.fresh)
     {
       if (prepared.record.status === 'accepted')
-
         return;
 
       fail('QUEUE_INSERT_UNKNOWN', '原插入已有记录，请核实原运行，不能再次发送')
     }
+
     let receipt: ScopeActiveInputSendReceipt | undefined;
 
     try
@@ -82,10 +80,11 @@ export class ScopeActiveInputService
       {
         fail('QUEUE_INSERT_UNKNOWN', '插入结算记录未能确认，原尝试保留，请核实后处理')
       }
+
       throw error;
     }
-    if (!receipt)
 
+    if (!receipt)
       fail('QUEUE_INSERT_UNKNOWN', '原生接收缺少可信日志依据，原尝试保留待核实');
 
     try
@@ -123,7 +122,6 @@ export class ScopeActiveInputService
     check(identity.workspaceId === this.owner.entry.id, 'GOAL_ACTIVE_INPUT_IDENTITY', '补充不属于当前工作区');
 
     const state = await this.store.Read(),
-
       records = state.scopes?.filter(scope => scope.workspaceId === identity.workspaceId && scope.rootSessionId === identity.rootSessionId).flatMap(scope => (scope.activeInputs ?? []).filter(item => item.runId === runId && item.queueId === queueId)) ?? [];
 
     check(records.length <= 1, 'GOAL_ACTIVE_INPUT_IDENTITY', '原插入身份存在冲突');
@@ -141,17 +139,13 @@ export class ScopeActiveInputService
     const input = structuredClone(parsed.data);
 
     if (input.attachmentManifest)
-    {
       check(input.attachmentManifest.expandedMessageHash === hash(input.message) && input.attachmentManifest.expandedMessageBytes === Buffer.byteLength(input.message, 'utf8') && JSON.stringify(input.attachmentManifest.items.map(item => item.attachmentId)) === JSON.stringify(input.attachmentIds), 'GOAL_ATTACHMENT_MANIFEST', '补充清单与正文或附件顺序不一致')
-    }
+
     const inputHash = scopedActiveInputHash(input),
-
       insertionId = hash(json({ scopeId, runId, queueId })),
-
       token = { scopeId, insertionId, queueId, runId, inputHash };
 
     const observed = this.Scope(await this.store.Read(), identity, scopeId),
-
       prior = observed.activeInputs?.find(item => item.queueId === queueId && item.runId === runId);
 
     if (prior)
@@ -160,8 +154,8 @@ export class ScopeActiveInputService
 
       return { record: prior, token, fresh: false }
     }
-    const messageBytes = Buffer.byteLength(input.message, 'utf8'),
 
+    const messageBytes = Buffer.byteLength(input.message, 'utf8'),
       messageCharacters = input.message.length;
 
     const alive = () => { this.owner.Assert(); if (signal.aborted) fail('QUEUE_INSERT_STOPPED', '当前运行已停止插入，原消息仍保留在队列') };

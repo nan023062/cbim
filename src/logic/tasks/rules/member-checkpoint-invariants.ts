@@ -34,7 +34,6 @@ const equal = (a: unknown, b: unknown) => JSON.stringify(ordered(a)) === JSON.st
 function valid(value: unknown, message: string): asserts value
 {
   if (!value)
-
     fail('GRAPH_INPUT_INVALID', message)
 }
 
@@ -44,35 +43,28 @@ const fixed = (task: TaskNode) => ({ goal: task.goal, acceptance: task.acceptanc
 export function validateMemberCheckpoints(previous: DispatchState, next: DispatchState, mutation: DispatchMutation, command: DispatchCommand, abandoned: ReadonlySet<string> = new Set()): void
 {
   const checkpointIds = new Set<string>(),
-
     consumed = new Set<string>();
 
   for (const run of mutation.runs ?? [])
-
     if (!previous.runs?.some(prior => prior.binding.runId === run.binding.runId))
     {
       const oldTask = previous.graphs.find(graph => graph.identity.rootSessionId === run.binding.rootSessionId)?.tasks.find(task => task.taskId === run.binding.taskId);
 
       valid(!oldTask?.runIds.length || !!run.resumeFrom, '已经运行的任务只能经明确检查点续执行，不能从失败、求助或旧终态追加运行');
     }
-  for (const graph of next.graphs)
 
+  for (const graph of next.graphs)
     for (const task of graph.tasks)
     {
       const old = previous.graphs.find(graph => graph.identity.rootSessionId === task.identity.rootSessionId)?.tasks.find(item => item.taskId === task.taskId),
-
         records = task.checkpoints ?? [],
-
         requests = memberResumeRequests(task),
-
         oldRecords = old?.checkpoints ?? [],
-
         oldRequests = old ? memberResumeRequests(old) : [];
 
       valid(validMemberCheckpointChain(task), '检查点和预约必须形成有界且不重复的连续原运行链');
 
       if (old?.checkpoints)
-
         valid(equal(fixed(old), fixed(task)), '检查点历史不能改变原目标、岗位或流程');
 
       valid(records.length >= oldRecords.length && records.length <= oldRecords.length + 1 && oldRecords.every((record, i) => equal(record, records[i])), '检查点只能逐段追加并保留完整历史');
@@ -80,13 +72,10 @@ export function validateMemberCheckpoints(previous: DispatchState, next: Dispatc
       valid(requests.length >= oldRequests.length && requests.length <= oldRequests.length + 1 && oldRequests.every((request, i) => equal(request, requests[i])), '预约只能逐段追加，原请求不能删改');
 
       if (!records.length)
-
         continue;
 
       const scope = next.scopes?.find(scope => scope.scopeId === task.scopeId),
-
         member = next.members.find(member => member.agentInstanceId === task.assignee.agentInstanceId),
-
         session = next.sessions.find(session => session.agentSessionId === task.assignee.agentSessionId);
 
       valid(scope && member && session, '检查点缺少原周期、实例或通道');
@@ -94,13 +83,9 @@ export function validateMemberCheckpoints(previous: DispatchState, next: Dispatc
       for (let index = 0; index < records.length; index++)
       {
         const record = records[index],
-
           request = requests[index],
-
           source = next.runs?.find(run => run.binding.runId === record.binding.runId),
-
           followingId = task.runIds[index + 1],
-
           following = followingId ? next.runs?.find(run => run.binding.runId === followingId) : undefined;
 
         valid(memberCheckpointRecordSchema.safeParse(record).success && !checkpointIds.has(record.checkpointId), '检查点身份无效或跨任务重复');
@@ -116,7 +101,6 @@ export function validateMemberCheckpoints(previous: DispatchState, next: Dispatc
         valid(task.runIds[index] === source.binding.runId && task.planRevision === source.binding.planRevision && equal(task.modules, source.prepared.modules.map(module => module.binding)), '检查点不能改变任务计划或知识范围');
 
         if (index === 0)
-
           valid(!source.resumeFrom, '首段不能凭空引用续执行来源');
 
         const messages = next.outbox.filter(message => message.kind === 'checkpoint' && message.checkpointId === record.checkpointId);
@@ -133,8 +117,8 @@ export function validateMemberCheckpoints(previous: DispatchState, next: Dispatc
 
           valid(mutation.messages?.filter(message => message.kind === 'checkpoint' && message.checkpointId === record.checkpointId && !previous.outbox.some(prior => prior.messageId === message.messageId)).length === 1, '新检查点缺少同批可靠交接');
         }
-        const assignments = next.outbox.filter(message => message.kind === 'assignment' && message.taskId === task.taskId && message.identity.rootSessionId === task.identity.rootSessionId && message.resumeFrom?.checkpointId === record.checkpointId),
 
+        const assignments = next.outbox.filter(message => message.kind === 'assignment' && message.taskId === task.taskId && message.identity.rootSessionId === task.identity.rootSessionId && message.resumeFrom?.checkpointId === record.checkpointId),
           assignment = assignments[0];
 
         if (request)
@@ -155,7 +139,6 @@ export function validateMemberCheckpoints(previous: DispatchState, next: Dispatc
           }
         }
         else
-
           valid(!assignments.length, '没有预约的检查点不能补造续执行信封');
 
         if (followingId)
@@ -189,20 +172,19 @@ export function validateMemberCheckpoints(previous: DispatchState, next: Dispatc
         }
       }
     }
+
   for (const run of next.runs ?? [])
   {
     const task = next.graphs.find(graph => graph.identity.rootSessionId === run.binding.rootSessionId)?.tasks.find(task => task.taskId === run.binding.taskId);
 
     if (run.resumeFrom)
-
       valid(task?.checkpoints?.some(record => record.checkpointId === run.resumeFrom!.checkpointId && record.binding.runId === run.resumeFrom!.runId), '续执行不能引用其他任务或凭空来源');
 
     if (run.checkpointProof)
-
       valid(task?.checkpoints?.some(record => record.binding.runId === run.binding.runId && equal(run.checkpointProof!.checkpoint, record)), '私有证明不能脱离本段图记录');
   }
-  for (const message of next.outbox)
 
+  for (const message of next.outbox)
     if (message.kind === 'assignment' && message.resumeFrom)
     {
       const task = next.graphs.find(graph => graph.identity.rootSessionId === message.identity.rootSessionId)?.tasks.find(task => task.taskId === message.taskId);

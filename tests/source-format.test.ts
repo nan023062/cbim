@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { runInNewContext } from 'node:vm';
 import { afterEach, expect, test } from 'vitest';
 import { assertEquivalent, formatSource, formatSources } from '../scripts/source-format.mjs';
 
@@ -27,14 +28,14 @@ function workspace(files: Record<string, string>): string
   return directory;
 }
 
-test('普通代码行间空一行，Allman 大括号前后不重复留白', () => {
+test('独立语句和成员间空一行，Allman 大括号前后不重复留白', () => {
   expect(format('class Counter { private _count=0; Read(): number { this._count++; return this._count; } }')).toBe('class Counter\n{\n  private _count = 0;\n\n  Read(): number\n  {\n    this._count++;\n\n    return this._count;\n  }\n}\n');
 });
 
 test('相邻方法保留空行，空块、嵌套块与 else/catch/finally 内部不加空行', () => {
   const result = format('class A { First() {} Second() { try { if (true) { Run(); } else { Stop(); } } catch (error) { Fail(error); } finally { Done(); } } }');
   expect(result).toContain('First()\n  {\n  }\n\n  Second()');
-  expect(result).toContain('}\n      else\n      {');
+  expect(result).toContain('if (true)\n        Run();\n      else\n        Stop();');
   expect(result).toContain('}\n    catch (error)\n    {');
   expect(result).toContain('}\n    finally\n    {');
   expect(result).not.toMatch(/\{\n\n|\n\n\s*\}/);
@@ -54,11 +55,11 @@ test('方法、属性和字段的分隔空行位于下一成员注释之前', ()
   expect(result).toContain('}\n\n  /** 初始值。 */\n  private _initial = 0;\n}');
 });
 
-test('顶层和嵌套函数分隔，控制块与同一函数的后续语句不额外插空', () => {
+test('顶层、嵌套函数及后续独立语句均留分隔空行', () => {
   const result = format('function First() {}\n/** 第二个函数。 */\nfunction Second() { function Nested() {} function Other() {} if (ready) { Run(); } return 1; }\nclass A {}\ninterface Port { Read(): void; Save(): void; }');
   expect(result).toContain('}\n\n/** 第二个函数。 */\nfunction Second()');
   expect(result).toContain('Nested()\n  {\n  }\n\n  function Other()');
-  expect(result).toContain('Run();\n  }\n  return 1;');
+  expect(result).toContain('if (ready)\n    Run();\n\n  return 1;');
   expect(result).toContain('}\n\nclass A');
   expect(result).toContain('}\n\ninterface Port');
   expect(result).toContain('Read(): void;\n\n  Save(): void;');
@@ -94,8 +95,8 @@ test('导出中的普通函数正文仍展开，箭头正文仍单行', () => {
   expect(result).toContain('other: () => { return 2; }');
 });
 
-test('分行调用每个参数一行且对齐，首尾圆括号内侧不空行', () => {
-  expect(format('SaveDocument(\n\n documentId, content,\noptions, cancellationToken\n\n);')).toBe('SaveDocument(\n  documentId,\n\n  content,\n\n  options,\n\n  cancellationToken\n);\n');
+test('同一调用的参数连续分行对齐，参数之间和括号内侧均不空行', () => {
+  expect(format('SaveDocument(\n\n documentId, content,\noptions, cancellationToken\n\n);')).toBe('SaveDocument(\n  documentId,\n  content,\n  options,\n  cancellationToken\n);\n');
 });
 
 test('调用参数分行不拆方法声明、导出声明及完整箭头，也不猜测数量阈值', () => {
@@ -109,7 +110,7 @@ test('调用参数分行不拆方法声明、导出声明及完整箭头，也�
 
 test('嵌套调用各自对齐，参数内部的逗号和箭头不误作外层参数', () => {
   const result = format('Outer(\nInner(\na,b\n), { first: 1, second: 2 }, (value: number) => value * 2\n);');
-  expect(result).toBe('Outer(\n  Inner(\n    a,\n\n    b\n  ),\n\n  { first: 1, second: 2 },\n\n  (value: number) => value * 2\n);\n');
+  expect(result).toBe('Outer(\n  Inner(\n    a,\n    b\n  ),\n  { first: 1, second: 2 },\n  (value: number) => value * 2\n);\n');
 });
 
 test('调用首参数说明紧贴括号，保留模板、行注释及参数求值顺序', () => {
@@ -119,6 +120,68 @@ test('调用首参数说明紧贴括号，保留模板、行注释及参数求�
   expect(result).toContain('`first\nsecond`');
   expect(result).toContain('...remaining\n);');
   expect(() => assertEquivalent('example.ts', text, result)).not.toThrow();
+});
+
+test('if 的单行执行体紧接条件，不用大括号；不同语句之间仍留空行', () => {
+  expect(format('function Read(value: unknown) { if (!value)\n\nreturn false;\nreturn true; }')).toBe('function Read(value: unknown)\n{\n  if (!value)\n    return false;\n\n  return true;\n}\n');
+  expect(format('if (ready) { Run(); } else { Stop(); }')).toBe('if (ready)\n  Run();\nelse\n  Stop();\n');
+});
+
+test('if 多条语句保留块，块内首尾不空行，后续独立语句另留空行', () => {
+  expect(format('if (ready) { Validate(); Save(); } Next();')).toBe('if (ready)\n{\n  Validate();\n\n  Save();\n}\n\nNext();\n');
+});
+
+test('截图中的多行构造调用属于一条语句，参数连续排列且 if 包裹完整执行体', () => {
+  const original = 'if (platform.engineArtifacts)\n\nthis.enginePackages = new EnginePackages(\n\npath.join(root, "engines.json"),\n\nplatform.engineArtifacts\n\n);\nthis.ready = true;';
+  const result = format(original);
+  expect(result).toBe('if (platform.engineArtifacts)\n{\n  this.enginePackages = new EnginePackages(\n    path.join(root, "engines.json"),\n    platform.engineArtifacts\n  );\n}\n\nthis.ready = true;\n');
+  expect(() => assertEquivalent('example.ts', original, result, { allowIfBraces: true })).not.toThrow();
+});
+
+test('同一条声明、链式表达式、数组和对象内部不按物理行插空', () => {
+  const result = format('const value = Create()\n\n.Next()\n\n.Done();\nconst items = [\n\nfirst,\n\nsecond\n\n];\nconst options = {\nfirst: 1,\n\nsecond: 2\n};');
+  expect(result).toContain('Create()\n  .Next()\n  .Done();');
+  expect(result).toContain('[\n  first,\n  second\n];');
+  expect(result).toContain('{\n  first: 1,\n  second: 2\n};');
+  expect(result).toContain('.Done();\n\nconst items');
+});
+
+test('受控 if 括号比较不能放过作用域变化、else 重绑定或无关 token 改写', () => {
+  const allowed = { allowIfBraces: true };
+  expect(() => assertEquivalent('example.ts', 'if (a) { Hit(); }', 'if (a) Hit();')).toThrow();
+  expect(() => assertEquivalent('example.ts', 'if (a) { Hit(); }', 'if (a) Hit();', allowed)).not.toThrow();
+  expect(() => assertEquivalent('example.ts', 'if (a) { if (b) Hit(); } else Miss();', 'if (a) if (b) Hit(); else Miss();', allowed)).toThrow(/语法树/);
+  expect(() => assertEquivalent('example.ts', 'if (a) { let value = 1; }', 'if (a) let value = 1;', allowed)).toThrow();
+  expect(() => assertEquivalent('example.ts', 'if (a) { Hit(); }', 'if (a) Miss();', allowed)).toThrow(/词法/);
+  const result = formatSource('example.ts', 'let value = 1; if (ready) { let value = 2; }');
+  expect(result.text).toContain('if (ready)\n{\n  let value = 2;\n}');
+  expect(result.protectedRanges.some(item => item.reason === 'scope')).toBe(true);
+});
+
+test('ASI 所需括号不能删除，注释和模板原文不变', () => {
+  const original = 'if (ready) { Run() }\n[1].forEach(Consume);\nif (ok) { /* 保留说明 */ Save(); }\nif (flag) Write(`first\nsecond`);';
+  const result = formatSource('example.ts', original);
+  expect(result.text).toContain('if (ready)\n{\n  Run()\n}');
+  expect(result.protectedRanges.some(item => item.reason === 'if-syntax')).toBe(true);
+  expect(result.text).toContain('/* 保留说明 */');
+  expect(result.text).toContain('`first\nsecond`');
+  expect(() => assertEquivalent('example.ts', original, result.text, { allowIfBraces: true })).not.toThrow();
+  expect(formatSource('example.ts', result.text).text).toBe(result.text);
+});
+
+test('分支重排实际执行保持真假分支、循环跳转、异常和后续独立语句行为', () => {
+  const samples = [
+    'const events = []; if (outer) { events.push("yes"); } else { events.push("no"); } events.push("tail"); events;',
+    'const events = []; if (outer)\nif (inner) events.push("inner"); else events.push("else"); events.push("tail"); events;',
+    'const events = []; for (let i = 0; i < 4; i++) { if (i === 1) { continue; } if (i === 3) { break; } events.push(i); } events;',
+    'const events = []; if (outer)\ntry { if (inner) { throw Error("failure"); } events.push("success"); } catch { events.push("caught"); } finally { events.push("finally"); } events.push("tail"); events;',
+    'function Read(flag) { if (flag) return\n42; return 0; } [Read(outer), Read(inner)];',
+  ];
+  for (const text of samples)
+  {
+    const output = format(text, 'example.js');
+    for (const outer of [false, true]) for (const inner of [false, true]) expect(JSON.stringify(runInNewContext(output, { outer, inner }))).toBe(JSON.stringify(runInNewContext(text, { outer, inner })));
+  }
 });
 
 test('说明紧贴成员，保留行末注释及编译指令的行边界', () => {

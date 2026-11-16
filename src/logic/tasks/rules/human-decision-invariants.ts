@@ -27,7 +27,6 @@ import { outputManifestScopeHash } from '../../evidence/rules/output-manifest-ev
 function valid(value: unknown, message: string): asserts value
 {
   if (!value)
-
     fail('GRAPH_INPUT_INVALID', message)
 }
 
@@ -41,9 +40,7 @@ export function validateHumanDecisions(previous: DispatchState, next: DispatchSt
   for (const scope of next.scopes ?? [])
   {
     const old = previous.scopes?.find(item => item.scopeId === scope.scopeId),
-
       history = scope.humanDecisions,
-
       prior = old?.humanDecisions;
 
     if (history)
@@ -61,8 +58,8 @@ export function validateHumanDecisions(previous: DispatchState, next: DispatchSt
         valid(record.basis === humanDecisionBasis(record.proof), '人工决定依据指纹与固定内容不一致');
       }
     }
-    if (equal(history, prior))
 
+    if (equal(history, prior))
       continue;
 
     valid(old && history && history.revision === (prior?.revision ?? 0) + 1 && history.records.length === (prior?.records.length ?? 0) + 1 && (prior?.records ?? []).every((record, index) => equal(record, history.records[index])), '人工决定只能一次追加一条且旧记录不能移除或改写');
@@ -72,15 +69,10 @@ export function validateHumanDecisions(previous: DispatchState, next: DispatchSt
     valid(mutation.scopes?.length === 1 && mutation.scopes[0].scopeId === scope.scopeId && !mutation.batch && !mutation.runs?.length && !mutation.members?.length && !mutation.sessions?.length && !mutation.messages?.length, '人工决定只能修改本周期历史，不能夹带图、实例、信封或运行变化');
 
     const record = history.records.at(-1)!,
-
       source = record.proof.source,
-
       goal = scope.goal,
-
       wait = scope.wait,
-
       review = goal?.review,
-
       plan = goal?.plan;
 
     valid(goal && plan && review?.decision === 'awaiting_user' && wait && !goal.blocked && !goalNeedsReplan(goal), '人工决定必须基于可信的当前等待计划与审阅');
@@ -124,16 +116,14 @@ export function validateHumanDecisions(previous: DispatchState, next: DispatchSt
 
       expected.set(ref.taskId, value);
     }
+
     valid(record.proof.candidates.length === expected.size, '人工决定不能漏掉或增加当前审阅的成员候选');
 
     for (const candidate of record.proof.candidates)
     {
       const reference = expected.get(candidate.taskId),
-
         task = graph.tasks.find(item => item.taskId === candidate.taskId),
-
         result = task?.result,
-
         run = next.runs?.find(item => item.binding.runId === candidate.runId);
 
       valid(reference && candidate.runId === reference.runId && candidate.resultId === reference.resultId && candidate.planRevision === reference.planRevision && candidate.evidenceToolCallIds.length === reference.toolCallIds.size && candidate.evidenceToolCallIds.every(id => reference.toolCallIds.has(id)), '人工决定候选或工具引用不属于当前验收项');
@@ -143,7 +133,6 @@ export function validateHumanDecisions(previous: DispatchState, next: DispatchSt
       valid(run?.status === 'completed' && run.binding.workspaceId === scope.workspaceId && run.binding.rootSessionId === scope.rootSessionId && run.binding.taskId === task.taskId && run.binding.agentId === task.assignee.agentId && run.binding.agentInstanceId === task.assignee.agentInstanceId && run.binding.agentSessionId === task.assignee.agentSessionId && run.binding.planRevision === task.planRevision && task.runIds.includes(run.binding.runId) && run.prepared.knowledgeRevision === source.knowledgeRevision, '人工决定候选运行或知识绑定无效');
 
       const bindings = preparedWorkflowContracts(run.prepared),
-
         complete = completeOutputRequired(bindings);
 
       valid(complete ? !candidate.selected : !candidate.selectedManifest, '人工决定不能更换原运行的完整或选定文件模式');
@@ -154,9 +143,11 @@ export function validateHumanDecisions(previous: DispatchState, next: DispatchSt
 
         valid(equal(proof.scopes, preparedArtifactScopes(bindings)) && proof.scopeHash === outputManifestScopeHash(proof.scopes) && proof.knowledgeRevision === source.knowledgeRevision, '人工决定完整范围必须属于原运行的冻结约定')
       }
+
       valid(plan.assignments.some(item => item.agentId === task.assignee.agentId && item.moduleIds.length === task.modules.length && task.modules.every(module => item.moduleIds.includes(module.moduleId) && module.knowledgeRevision === source.knowledgeRevision) && sameWorkflowSelectionsForModules(item.workflowSelections, task.workflowSelections, task.modules.map(module => module.moduleId)) && item.criterionIds.includes(record.criterionId)), '人工决定不能跨责任、模块或 Workflow 选择引用候选');
     }
   }
+
   const otherIds = (next.scopes ?? []).flatMap(scope => [...(scope.continuations ?? []).map(item => item.continuationId), ...(scope.recovery ? [scope.recovery.recoveryId] : []), ...(scope.replan ? [scope.replan.replanId] : [])]);
 
   valid(!otherIds.some(id => ids.has(id)), '人工决定不能重用已存在的周期启动或补充命令');
@@ -172,10 +163,9 @@ export function validateHumanDecisionCommand(previous: DispatchState, mutation: 
     const count = previous.scopes?.find(item => item.scopeId === scope.scopeId)?.humanDecisions?.records.length ?? 0;
 
     if ((scope.humanDecisions?.records.length ?? 0) > count)
-
       appended.push(...scope.humanDecisions!.records.slice(count))
   }
-  if (appended.length)
 
+  if (appended.length)
     valid(appended.length === 1 && command.commandId === 'human-decision-' + appended[0].decisionId, '人工决定必须使用本次可信提交的唯一命令');
 }

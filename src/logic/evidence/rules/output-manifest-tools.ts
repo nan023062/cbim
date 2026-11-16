@@ -24,7 +24,6 @@ const inspectInput = z.object({}).strict();
 export function outputManifestTool(name: string, input: unknown)
 {
   if (name !== outputManifestToolName && name !== outputManifestInspectToolName)
-
     return;
 
   return { args: (name === outputManifestToolName ? outputManifestInputSchema : inspectInput).parse(input), effects: ['maintenance'] as const, native: false, contractVersion: 1 };
@@ -44,11 +43,8 @@ export class OutputManifestTools
   async List()
   {
     return [
-
       { name: outputManifestToolName, description: '完整采集本轮冻结 artifactScope 中的全部文件、目录与缺失根。仅传当前计划版本，不能选择路径或裁剪集合；需无其它在途工具。返回原清单引用，不是交付或业务验收。', input: outputManifestInputSchema, output: outputManifestResultSchema, recovery: { mode: 'inspect_before_retry', queryTool: outputManifestInspectToolName, description: '先查询原本轮记录；保存后坏回包不等于未保存，不自动重新采集。' } },
-
       { name: outputManifestInspectToolName, description: '只列本轮已完成可信采集的完整清单引用、冻结范围及失效状态，不重新读取文件或自动选择最新清单。', input: inspectInput, output: outputManifestInspectSchema, recovery: { mode: 'read_again', description: '可显式重读原记录，查询不重采或验收。' } },
-
     ].map(value => ({ name: value.name, description: value.description, version: 1, effects: ['maintenance'] as const, inputSchema: zodToJsonSchema(value.input) as Record<string, unknown>, outputSchema: zodToJsonSchema(value.output) as Record<string, unknown>, cancellation: { mode: 'preflight_only' as const, description: '停止取消尚在进行的读取；已保存的原事件不回滚。' }, recovery: value.recovery }))
   }
 
@@ -58,27 +54,22 @@ export class OutputManifestTools
     const input = outputManifestTool(name, raw);
 
     if (!input || !toolCallId || toolCallId.length > 128 || toolCallId.trim() !== toolCallId || /[\x00-\x1f]/.test(toolCallId))
-
       throw Error('完整清单工具须来自本轮真实调用');
 
     if (name === outputManifestInspectToolName)
     {
       const evidence = this.ports.Inspect(),
-
         value = { binding: structuredClone(this.binding), scopes: structuredClone(this.scopes), manifests: evidence.refs, issues: evidence.issues },
-
         expected = structuredClone(value);
 
       return checkedJsonToolResult(name, value, outputManifestInspectSchema.refine(value => equal(value, expected), '查询结果已变化'));
     }
+
     const args = structuredClone(input.args) as OutputManifestInput,
-
       manifest = await this.ports.Capture(args, toolCallId),
-
       ref = outputManifestReference(manifest);
 
     const value = { state: 'captured' as const, binding: manifest.binding, manifest: ref },
-
       expected = structuredClone(value);
 
     return checkedJsonToolResult(name, value, outputManifestResultSchema.superRefine((value, context) => { if (!equal(value, expected) || !equal(value.binding, this.binding) || !equal(value.manifest.scopes, this.scopes) || value.manifest.knowledgeRevision !== this.knowledgeRevision || value.manifest.progressVersion !== args.expectedTaskProgressVersion || value.manifest.captureToolCallId !== toolCallId) context.addIssue({ code: 'custom', message: '清单回包不属于原运行、范围或请求' }); }));

@@ -109,7 +109,6 @@ function RootTaskDetail({ history, pending, now, busy, stopping, onQueueChange, 
 
   // 身份来自后端保存的绑定；旧日志无该字段时明确未知，不用角色名补造通道。
   const bound = [...history].reverse().find(run => run.conversationBinding),
-
     binding = bound?.conversationBinding;
 
   const conflicting = Boolean(binding && (binding.workspaceId !== bound!.task.workspaceId || binding.rootSessionId !== bound!.task.taskId || graph && binding.agentInstanceId !== graph.root.agent.agentInstanceId));
@@ -117,7 +116,6 @@ function RootTaskDetail({ history, pending, now, busy, stopping, onQueueChange, 
   const instance = graph?.root.agent.agentInstanceId ?? (!conflicting ? binding?.agentInstanceId : undefined);
 
   const openScope = scopeState?.openScope,
-
     waiting = openScope?.status === 'waiting';
 
   return <div className="root-task-detail" aria-label="主 Agent 调度详情" data-testid="root-task-detail">
@@ -144,7 +142,6 @@ export function SessionTaskReview(props: SessionTaskReviewProps)
   const { workspaceId, taskId, runs, queued, graph, selectedTaskId, scopeState } = props;
 
   const history = sessionRuns(runs, workspaceId, taskId),
-
     pending = taskId ? queued.filter(message => message.taskId === taskId) : [];
 
   const matching = graph && graph.identity.workspaceId === workspaceId && graph.identity.rootSessionId === taskId ? graph : undefined;
@@ -154,11 +151,9 @@ export function SessionTaskReview(props: SessionTaskReviewProps)
   const task = matching?.tasks.find(task => task.taskId === selectedTaskId);
 
   if (root && selectedTaskId === root.nodeId)
-
     return <RootTaskDetail {...props} history={history} pending={pending} graph={matching} />;
 
   if (task && taskId)
-
     return <MemberTaskDetail active={props.active} key={workspaceId + ':' + taskId + ':' + task.taskId} workspaceId={workspaceId} workspaceInstanceId={props.workspaceInstanceId} rootSessionId={taskId} task={task} graphCursor={matching?.cursor} scope={scopeState?.scopes.find(scope => scope.scopeId === task.scopeId)} recovery={props.recovery} />;
 
   return <p role="alert">原任务详情暂不可读取。<button onClick={props.onChat}>返回对话</button></p>;

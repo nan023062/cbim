@@ -105,7 +105,6 @@ const memberPauseRejections = new Set(['GOAL_MEMBER_PAUSE_INVALID', 'GOAL_MEMBER
 export function continuationRejected(error: unknown)
 {
   const message = textError(error),
-
     code = /^([A-Z_]+):/.exec(message)?.[1];
 
   return !!code && memberPauseRejections.has(code) || /^(?:CAPACITY_BUSY|SCOPE_BUDGET_EXCEEDED|SCOPE_BUDGET_UNVERIFIABLE|SCOPE_BUDGET_WAITING|GOAL_ATTACHMENT_[A-Z_]+|GOAL_CONTINUATION_INPUT|GOAL_IDENTITY|GOAL_NOT_WAITING|GOAL_CONTINUATION_UNAVAILABLE|GOAL_WAIT_CONFLICT|GOAL_REVISION_CONFLICT|GOAL_CYCLE_LIMIT|GOAL_DECISION_LIMIT|GOAL_RUN_CONFLICT|GOAL_INPUT_LIMIT|GOAL_WORK_PENDING|IDENTITY|CONTINUATION_NOT_READY):/.test(message)
@@ -115,16 +114,13 @@ export function continuationRejected(error: unknown)
 export function checkedContinuationReceipt(raw: unknown, request: GoalContinuationRequest, previous?: GoalContinuationReceipt): GoalContinuationReceipt
 {
   const receipt = goalContinuationReceiptSchema.parse(raw),
-
     value = receipt.continuation;
 
   if (receipt.workspaceId !== request.workspaceId || receipt.rootSessionId !== request.rootSessionId || receipt.scopeId !== request.scopeId || value.continuationId !== request.commandId || value.wait.waitId !== request.waitId || value.wait.goalRevision !== request.expectedGoalRevision || value.inputRevision !== request.expectedInputRevision + 1 || !equal(value.input, request.input) || !equal(value.options, request.options))
-
     throw Error('补充回执与冻结请求不一致，请查询原请求结果');
 
   // 周期可从 active 变为 closed，但已受理的运行、时间和附件清单不能被后来的矛盾回包替换。
   if (previous && !equal(value, previous.continuation))
-
     throw Error('查询回执与已记录的受理事实不一致，原回执已保留');
 
   return receipt;
@@ -162,13 +158,11 @@ export class ScopeContinuationController
       const text = ports.storage.getItem(this.storageKey);
 
       if (!text)
-
         return;
 
       const saved = JSON.parse(text);
 
       if (saved.version !== 1 || saved.workspaceId !== workspaceId || saved.rootSessionId !== rootSessionId || !Array.isArray(saved.records))
-
         throw Error('本地补充记录格式不匹配');
 
       const keys = new Set<string>();
@@ -229,7 +223,6 @@ export class ScopeContinuationController
   private Store()
   {
     if (this.unavailable)
-
       throw Error(this.value.error);
 
     this.ports.storage.setItem(this.storageKey, JSON.stringify({ version: 1, workspaceId: this.workspaceId, rootSessionId: this.rootSessionId, records: this.value.records }));
@@ -238,15 +231,11 @@ export class ScopeContinuationController
   private Update(record: ContinuationDraft): boolean
   {
     const index = this.value.records.findIndex(item => item.scopeId === record.scopeId && item.waitId === record.waitId),
-
       records = [...this.value.records];
 
     if (index < 0)
-
       records.push(record);
-
     else
-
       records[index] = record;
 
     this.value = { records, error: '' };
@@ -263,6 +252,7 @@ export class ScopeContinuationController
 
       this.value = { ...this.value, error: '补充记录未能保存：' + textError(error) }
     }
+
     this.Emit();
 
     return saved;
@@ -272,13 +262,11 @@ export class ScopeContinuationController
   Edit(target: ContinuationTarget, text: string)
   {
     if (this.unavailable || target.workspaceId !== this.workspaceId || target.rootSessionId !== this.rootSessionId)
-
       return;
 
     const old = this.Record(target.scopeId, target.waitId);
 
     if (old?.attempt && old.attempt.phase !== 'rejected')
-
       return;
 
     this.Update({ ...old, scopeId: target.scopeId, waitId: target.waitId, text });
@@ -301,7 +289,6 @@ export class ScopeContinuationController
   private async Source<T>(target: ContinuationTarget, isCurrent: () => boolean, read: (signal: AbortSignal) => Promise<T>, accept?: (result: T) => void): Promise<T | undefined>
   {
     if (this.importing || !this.CanEdit(target) || !isCurrent())
-
       return;
 
     const operation = { target: JSON.stringify(target), abort: new AbortController() };
@@ -317,7 +304,6 @@ export class ScopeContinuationController
       const result = await read(operation.abort.signal);
 
       if (operation.abort.signal.aborted || !isCurrent() || !this.CanEdit(target))
-
         return;
 
       accept?.(result);
@@ -350,7 +336,6 @@ export class ScopeContinuationController
   CancelImport(target?: ContinuationTarget)
   {
     if (!target || this.sourceOperation?.target === JSON.stringify(target))
-
       this.sourceOperation?.abort.abort()
   }
 
@@ -373,13 +358,11 @@ export class ScopeContinuationController
   RemoveFile(target: ContinuationTarget, id: string)
   {
     if (this.importing || !this.CanEdit(target))
-
       return;
 
     const old = this.Record(target.scopeId, target.waitId);
 
     if (!old?.attachments)
-
       return;
 
     const attachments = old.attachments.filter(item => item.id !== id),
@@ -392,21 +375,17 @@ export class ScopeContinuationController
   async SubmitInput(target: ContinuationTarget, options: GoalContinuationRequest['options'], text: string, attachments: readonly ChatAttachment[]): Promise<void>
   {
     if (this.importing || !this.CanEdit(target))
-
       throw Error('本次补充尚不能发送，请查看补充记录并查询原请求状态。');
 
     const items = continuationAttachments(attachments),
-
       old = this.Record(target.scopeId, target.waitId);
 
     if (old && (old.text.trim() || old.attachments?.length) && (!equal(old.text, text) || !equal(old.attachments ?? [], items)))
-
       throw Error('原目标已有补充草稿，请在下方“补充原目标”中核对并发送；聊天草稿已保留。');
 
     const draft = { scopeId: target.scopeId, waitId: target.waitId, text, ...(items.length ? { attachments: items } : {}) };
 
     if (!this.Update(draft))
-
       throw Error(this.value.error);
 
     // 从此正文由可靠补充记录持有；即使请求被拒绝或通信未知，也可在原记录中修正或查询。
@@ -417,13 +396,11 @@ export class ScopeContinuationController
   async Submit(target: ContinuationTarget, options: GoalContinuationRequest['options'])
   {
     if (this.importing || this.unavailable || target.workspaceId !== this.workspaceId || target.rootSessionId !== this.rootSessionId)
-
       return;
 
     const record = this.Record(target.scopeId, target.waitId);
 
     if (!record || record.attempt && record.attempt.phase !== 'rejected')
-
       return;
 
     let request: GoalContinuationRequest;
@@ -440,6 +417,7 @@ export class ScopeContinuationController
 
       return
     }
+
     const next = { ...record, attempt: { request, phase: 'submitting' as const, uncertain: false } };
 
     if (!this.Update(next))
@@ -451,17 +429,16 @@ export class ScopeContinuationController
 
       return;
     }
+
     await this.Send(next);
   }
 
   private async Send(record: ContinuationDraft)
   {
     const attempt = record.attempt!,
-
       request = attempt.request;
 
     if (this.pending.has(request.commandId))
-
       return;
 
     this.pending.add(request.commandId);
@@ -494,11 +471,9 @@ export class ScopeContinuationController
     const record = this.Record(scopeId, waitId);
 
     if (this.unavailable || record?.attempt?.phase !== 'unknown' || this.IsPending(record))
-
       return;
 
     if (!this.Update({ ...record, attempt: { ...record.attempt, uncertain: true } }))
-
       return;
 
     await this.Send(record)
@@ -508,11 +483,9 @@ export class ScopeContinuationController
   async Query(scopeId: string, waitId: string)
   {
     const record = this.Record(scopeId, waitId),
-
       attempt = record?.attempt;
 
     if (this.unavailable || !record || !attempt || this.IsPending(record))
-
       return;
 
     const request = attempt.request;
@@ -528,11 +501,9 @@ export class ScopeContinuationController
       if (raw === undefined)
       {
         if (attempt.phase !== 'accepted')
-
           this.Update({ ...record, attempt: { ...attempt, phase: 'unknown', uncertain: true, error: '尚未查到回执；只能查询或使用原请求重试。' } })
       }
       else
-
         this.Update({ ...record, attempt: { ...attempt, phase: 'accepted', receipt: checkedContinuationReceipt(raw, request, attempt.receipt), error: undefined } });
     }
     catch (error)
@@ -576,13 +547,12 @@ export class ScopeContinuationPool
     for (const [oldKey, old] of this.controllers)
     {
       if (this.controllers.size <= this.idleLimit)
-
         break;
 
       if (oldKey !== key && old.canRelease)
-
         this.controllers.delete(oldKey)
     }
+
     return controller;
   }
 }

@@ -35,13 +35,11 @@ const textLimit = 256 * 1024;
 function segments(value: string, empty = false)
 {
   if (empty && value === '')
-
     return [];
 
   const parts = value.split('/');
 
   if (!value || value.length > 2048 || parts.length > 64 || parts.some(part => !part || part === '.' || part === '..' || /[\\:*?"<>|\x00-\x1f]/.test(part) || /[. ]$/.test(part)))
-
     fail('SOURCE_PATH', '源路径必须是模块绑定目录内的相对路径');
 
   return parts;
@@ -70,7 +68,6 @@ export class ModuleSourceBrowser
     this.Check(snapshot, input);
 
     if (!input.moduleId.startsWith('.cbim/workspace/') || segments(input.moduleId).length < 3)
-
       fail('SOURCE_MODULE', '请选择正式业务模块');
 
     let definition:
@@ -80,6 +77,7 @@ export class ModuleSourceBrowser
           location?: string
         }[]
       };
+
     try
     {
       definition = JSON.parse(snapshot.files.find(file => file.path === input.moduleId + '/module.json')?.text ?? 'null')
@@ -88,15 +86,14 @@ export class ModuleSourceBrowser
     {
       fail('SOURCE_MODULE', '模块定义无法读取，请刷新架构')
     }
+
     const declared = definition && Array.isArray(definition.sources) && definition.sources.some(source => typeof source?.location === 'string' && source.location.replaceAll('\\', '/') === input.source);
 
     if (!declared)
-
       fail('SOURCE_BINDING', '模块未绑定此源目录，请刷新架构');
 
     // 先精确匹配知识中的声明，再兼容既有目录写法；文件相对路径不接受这些别名或父级穿越。
     if (input.source.startsWith('/'))
-
       fail('SOURCE_PATH', '模块源绑定不能是绝对路径');
 
     const sourceParts = segments(input.source.split('/').filter(part => part !== '' && part !== '.').join('/'));
@@ -106,7 +103,6 @@ export class ModuleSourceBrowser
     const ignored = ignore({ ignorecase: true }).add(snapshot.files.find(file => file.path === '.cbim/.cbimignore')?.text ?? '');
 
     if (protectedPath(relative) || ignored.ignores(relative) || ignored.ignores(relative + '/'))
-
       fail('SOURCE_IGNORED', '此路径不属于可浏览的业务源码范围');
 
     const root = await fs.realpath(this.workspace.entry.path);
@@ -116,7 +112,6 @@ export class ModuleSourceBrowser
     const target = await checkPath();
 
     if (!(await fs.stat(path.join(root, ...sourceParts))).isDirectory())
-
       fail('SOURCE_KIND', '模块源绑定必须是目录');
 
     return { target, relative, ignored, checkPath };
@@ -127,7 +122,6 @@ export class ModuleSourceBrowser
     this.workspace.Assert(input);
 
     if (snapshot.workspaceId !== input.workspaceId || snapshot.instanceId !== input.instanceId || snapshot.revision !== input.revision)
-
       fail('SOURCE_STALE', '模块绑定或工作区已变化，请刷新架构后重试');
   }
 
@@ -150,7 +144,6 @@ export class ModuleSourceBrowser
         })?.code;
 
       if (code?.startsWith('SOURCE_') || code === 'STALE_INSTANCE' || code === 'NOT_RUNNING')
-
         throw error;
 
       fail('SOURCE_READ', code === 'ENOENT' ? '源目录或文件不存在，请刷新目录' : code === 'EACCES' || code === 'EPERM' ? '没有权限读取此源目录或文件' : '源目录或文件读取失败，请刷新后重试');

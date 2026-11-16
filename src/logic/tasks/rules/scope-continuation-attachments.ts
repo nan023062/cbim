@@ -37,11 +37,9 @@ const manifest = { expandedMessageHash: digest, expandedMessageBytes: bytes.min(
 function checkItems(value: { items: ContinuationAttachmentItem[] }, context: z.RefinementCtx)
 {
   if (new Set(value.items.map(item => item.attachmentId)).size !== value.items.length)
-
     context.addIssue({ code: 'custom', message: '附件清单不能重复身份' });
 
   if (value.items.reduce((sum, item) => sum + (item.contentKind === 'image' ? item.byteLength : 0), 0) > continuationAttachmentLimits.totalImageBytes)
-
     context.addIssue({ code: 'custom', message: '图片快照合计超过 20 MiB' });
 }
 
@@ -80,16 +78,14 @@ export function assertContinuationAttachmentManifest(input: { message: string; a
   if (input.attachmentIds === undefined)
   {
     if (manifest !== undefined)
-
       fail('GOAL_ATTACHMENT_MANIFEST', '无附件补充不能携带附件清单');
 
     return
   }
-  const ids = continuationAttachmentIdsSchema.safeParse(input.attachmentIds),
 
+  const ids = continuationAttachmentIdsSchema.safeParse(input.attachmentIds),
     parsed = continuationAttachmentManifestSchema.safeParse(manifest);
 
   if (!ids.success || !parsed.success || parsed.data.items.length !== ids.data.length || parsed.data.items.some((item, index) => item.attachmentId !== ids.data[index]) || parsed.data.expandedMessageBytes < new TextEncoder().encode(input.message).byteLength)
-
     fail('GOAL_ATTACHMENT_MANIFEST', '附件清单缺失、无效或与原补充引用不一致');
 }

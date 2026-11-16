@@ -29,11 +29,9 @@ export const outputManifestHash = (snapshot: OutputManifestSnapshot) => hash(JSO
 export function outputManifestReference(manifest: OutputManifestStaged): OutputManifestRef
 {
   const { version: _version, binding: _binding, snapshot, ...ref } = manifest,
-
     files = snapshot.entries.filter(entry => entry.kind === 'file');
 
   if (!equal(ref.scopes, snapshot.scopes) || ref.scopeHash !== outputManifestScopeHash(snapshot.scopes) || ref.manifestHash !== outputManifestHash(snapshot) || ref.entryCount !== snapshot.entries.length || ref.fileCount !== files.length || ref.byteLength !== files.reduce((sum, file) => sum + file.byteLength, 0))
-
     throw Error('完整产物清单的范围、数量或摘要不一致');
 
   return outputManifestRefSchema.parse(ref);

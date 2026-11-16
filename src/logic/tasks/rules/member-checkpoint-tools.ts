@@ -39,11 +39,9 @@ export class MemberCheckpointTools
   async Call(name: string, input: unknown, toolCallId?: string)
   {
     if (name !== memberCheckpointToolName || !toolCallId || !/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/.test(toolCallId))
-
       throw Error('检查点必须来自当前成员的真实一次性调用');
 
     const args = memberCheckpointInputSchema.parse(input),
-
       expectedInput = structuredClone(args);
 
     const checkpoint = await this.ports.Stage(args, toolCallId);

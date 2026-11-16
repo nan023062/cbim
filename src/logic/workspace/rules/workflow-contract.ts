@@ -69,37 +69,30 @@ export interface WorkflowCapabilities
 export function assertWorkflowCapabilities(bindings: readonly { contract: WorkflowContract }[], capabilities: WorkflowCapabilities): void
 {
   const scoped = preparedExecutionScope(bindings),
-
     available = scoped ? capabilities.scopedTools : capabilities.availableTools;
 
   if (scoped && !available)
-
     fail('EXECUTION_SCOPE_UNAVAILABLE', '本机引擎没有实际范围执行能力');
 
   if (!bindings.length)
-
     return;
 
   if (!available)
-
     fail('WORKFLOW_CAPABILITIES_UNAVAILABLE', '本次引擎未提供可信工具能力清单，不能执行带约定的 Workflow');
 
   const missing = [...new Set(bindings.flatMap(binding => binding.contract.delivery?.requiredToolEvidence?.map(item => item.toolName) ?? []))].filter(name => !available.includes(name));
 
   if (missing.length)
-
     fail('WORKFLOW_TOOL_UNAVAILABLE', '当前权限或引擎未提供 Workflow 必需工具：' + missing.join('、'));
 
   const requirements = bindings.flatMap(binding => binding.contract.delivery?.requiredValidations ?? []);
 
   if (requirements.length > jsonValidationLimits.records)
-
     fail('WORKFLOW_VALIDATION_LIMIT', '本任务的结构验证要求超过单轮记录上限，请拆分明确模块任务');
 
   const validators = [...new Set(requirements.map(item => item.validator))];
 
   if (validators.some(validator => !capabilities.availableValidators?.includes(validator)) || validators.length && !capabilities.artifacts)
-
     fail('WORKFLOW_VALIDATION_UNAVAILABLE', '当前引擎或文件端口未提供 Workflow 必需结构验证能力');
 }
 
@@ -116,7 +109,6 @@ function invalid(reason: string): never
 export function parseWorkflowContract(markdown: string): WorkflowContract | undefined
 {
   if (typeof markdown !== 'string')
-
     invalid('正文必须是文本');
 
   let fence:
@@ -129,9 +121,7 @@ export function parseWorkflowContract(markdown: string): WorkflowContract | unde
     } | undefined;
 
   let declared = false,
-
     body: string[] = [],
-
     contract: WorkflowContract | undefined;
 
   for (const line of markdown.replace(/^\uFEFF/, '').split(/\r\n?|\n/))
@@ -147,7 +137,6 @@ export function parseWorkflowContract(markdown: string): WorkflowContract | unde
           const text = body.join('\n');
 
           if (new TextEncoder().encode(text).byteLength > workflowContractLimits.blockBytes)
-
             invalid('条件块超过 64 KiB');
 
           let raw: unknown;
@@ -160,61 +149,59 @@ export function parseWorkflowContract(markdown: string): WorkflowContract | unde
           {
             invalid('条件块必须是无重复字段的严格 JSON')
           }
+
           const parsed = workflowContractSchema.safeParse(raw);
 
           if (!parsed.success)
-
             invalid('版本、字段、工具或证据要求不受支持');
 
           contract = parsed.data;
         }
+
         fence = undefined;
 
         body = [];
       }
       else if (fence.declared)
-
         body.push(line);
 
       continue;
     }
+
     const opening = line.match(/^ {0,3}(`{3,}|~{3,})(.*)$/);
 
     if (!opening)
-
       continue;
 
     const info = opening[2].trim(),
-
       named = info.split(/\s+/)[0].toLowerCase() === 'cbim-workflow';
 
     if (named)
     {
       if (info !== 'cbim-workflow')
-
         invalid('条件块标记必须精确为 cbim-workflow');
 
       if (declared)
-
         invalid('最多允许一个条件块');
 
       declared = true
     }
+
     // Markdown 反引号围栏的 info 不能再含反引号；无效普通语法不遮蔽后续真实声明。
     if (opening[1][0] === '`' && info.includes('`'))
     {
       if (named)
-
         invalid('条件块标记格式无效');
 
       continue
     }
+
     fence = { character: opening[1][0], length: opening[1].length, declared: named };
 
     body = [];
   }
-  if (fence?.declared)
 
+  if (fence?.declared)
     invalid('条件块未闭合');
 
   return contract;

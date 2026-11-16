@@ -101,7 +101,6 @@ export class GlobalRunAdmission
     this.revision++;
 
     if (this.changeScheduled)
-
       return;
 
     this.changeScheduled = true;
@@ -119,7 +118,6 @@ export class GlobalRunAdmission
   private Current(request: AdmissionRequest, port: LocalAdmissionPort)
   {
     if (this.retired.has(ownerKey(request.workspaceId, request.ownerEpoch)))
-
       return false;
 
     try
@@ -151,7 +149,6 @@ export class GlobalRunAdmission
     let removed = false;
 
     for (const [id, item] of this.waiting)
-
       if (!this.Current(item.request, item.port))
       {
         this.waiting.delete(id);
@@ -160,6 +157,7 @@ export class GlobalRunAdmission
 
         removed = true
       }
+
     return removed
   }
 
@@ -171,9 +169,7 @@ export class GlobalRunAdmission
     let free = Math.max(0, this.policy.maxConcurrentRuns - this.occupied.size);
 
     const writers = new Set<string>(),
-
       selectedReaders = new Set<string>(),
-
       selectedAgents = new Set<string>();
 
     const choices = new Map<string,
@@ -186,25 +182,17 @@ export class GlobalRunAdmission
     for (const item of entries)
     {
       const { request } = item,
-
         id = key(request),
-
         workspace = request.workspaceId,
-
         agent = request.agentInstanceId ? JSON.stringify([workspace, request.agentInstanceId]) : undefined;
 
       let reason = this.Local(item.port);
 
       if (writers.has(workspace))
-
         reason = 'fairness';
-
       else if (agent && selectedAgents.has(agent))
-
         reason = 'agent_busy';
-
       else if (request.workspacePermission !== 'read' && selectedReaders.has(workspace))
-
         reason = 'workspace_conflict';
 
       const ready = !reason && free > 0;
@@ -212,7 +200,6 @@ export class GlobalRunAdmission
       choices.set(id, { ready, reason: reason ?? (free > 0 ? 'fairness' : 'global_capacity') });
 
       if (request.workspacePermission !== 'read')
-
         writers.add(workspace);
 
       if (ready)
@@ -220,14 +207,13 @@ export class GlobalRunAdmission
         free--;
 
         if (agent)
-
           selectedAgents.add(agent);
 
         if (request.workspacePermission === 'read')
-
           selectedReaders.add(workspace)
       }
     }
+
     return choices;
   }
 
@@ -253,7 +239,6 @@ export class GlobalRunAdmission
   Attempt(raw: AdmissionRequest, port: LocalAdmissionPort): AdmissionAttempt
   {
     if (this.inAttempt)
-
       fail('ADMISSION_REENTRANT', '准入的同步本地检查不能重入领取');
 
     this.attempted = true;
@@ -261,23 +246,17 @@ export class GlobalRunAdmission
     const parsed = admissionRequestSchema.safeParse(raw);
 
     if (!parsed.success)
-
       fail('ADMISSION_INPUT_INVALID', '执行准入身份或参数无效');
 
     const request = parsed.data,
-
       id = key(request),
-
       old = this.waiting.get(id),
-
       active = this.occupied.get(id);
 
     if ((old && !same(old.request, request)) || (active && !same(active.request, request)))
-
       fail('ADMISSION_REQUEST_CONFLICT', '同一执行准入请求不能改变身份、来源或权限');
 
     if (active)
-
       return { kind: 'denied', reason: 'already_running' };
 
     this.inAttempt = true;
@@ -285,44 +264,40 @@ export class GlobalRunAdmission
     try
     {
       if (this.Prune())
-
         this.Wake();
 
       if (!this.Current(request, port))
       {
         if (this.waiting.delete(id))
-
           this.Changed();
 
         return { kind: 'denied', reason: 'stale_request' }
       }
+
       // 等待者仍由当前调用的可信本地端口负责，身份/来源/权限保持原值，不存储模型正文。
       let item = this.waiting.get(id);
 
       if (item)
-
         item.port = port;
 
       const candidate = item ?? { request, ticket: { ...request, ticketId: randomUUID(), order: this.order + 1, requestedAt: new Date().toISOString(), reason: 'fairness' as const }, port };
 
       const choices = this.Evaluate(item ? undefined : candidate),
-
         choice = choices.get(id)!;
 
       this.UpdateReasons(choices);
 
       if (!choice.ready)
-
         return this.WaitOrDeny(candidate, choice.reason);
 
       if (!this.Current(request, port))
       {
         if (this.waiting.delete(id))
-
           this.Changed();
 
         return { kind: 'denied', reason: 'stale_request' }
       }
+
       let releaseLocal: () => void;
 
       try
@@ -330,7 +305,6 @@ export class GlobalRunAdmission
         releaseLocal = port.Acquire();
 
         if (typeof releaseLocal !== 'function')
-
           throw Error('invalid local release')
       }
       catch (error)
@@ -341,7 +315,6 @@ export class GlobalRunAdmission
           })?.code;
 
         if (code === 'WORKSPACE_EXECUTION_BUSY' || code === 'MEMBER_BUSY')
-
           return this.WaitOrDeny(candidate, code === 'MEMBER_BUSY' ? 'agent_busy' : 'workspace_conflict');
 
         if (this.waiting.delete(id))
@@ -350,19 +323,21 @@ export class GlobalRunAdmission
 
           this.Wake()
         }
+
         return { kind: 'denied', reason: 'local_acquire_failed' };
       }
+
       // acquire 契约要求同步；若它在内部触发停止，立即退回本地占用而不创建全局许可。
       if (!this.Current(request, port))
       {
         releaseLocal();
 
         if (this.waiting.delete(id))
-
           this.Changed();
 
         return { kind: 'denied', reason: 'stale_request' }
       }
+
       this.waiting.delete(id);
 
       const view: AdmissionOccupant = { ...request, acquiredAt: new Date().toISOString() };
@@ -377,7 +352,6 @@ export class GlobalRunAdmission
         kind: 'granted', occupant: clone(view), release: () =>
         {
           if (released)
-
             return;
 
           released = true;
@@ -407,11 +381,9 @@ export class GlobalRunAdmission
   private WaitOrDeny(item: Waiting, reason: AdmissionWaitReason): AdmissionAttempt
   {
     if (item.request.source === 'direct')
-
       return { kind: 'denied', reason };
 
     const id = key(item.request),
-
       old = this.waiting.get(id);
 
     if (!old)
@@ -428,6 +400,7 @@ export class GlobalRunAdmission
 
       this.Changed()
     }
+
     // 排队本身不触发 onReady；只有外部状态变化唤醒，防止无资源重试形成微任务忙循环。
     return { kind: 'waiting', ticket: clone(this.waiting.get(id)!.ticket) };
   }
@@ -438,21 +411,16 @@ export class GlobalRunAdmission
     const parsed = admissionIdentitySchema.safeParse(raw);
 
     if (!parsed.success)
-
       fail('ADMISSION_INPUT_INVALID', '撤票身份无效');
 
     const identity = parsed.data,
-
       id = key(identity),
-
       item = this.waiting.get(id);
 
     if (!item)
-
       return false;
 
     if (Object.entries(identity).some(([field, value]) => (item.request as Record<string, unknown>)[field] !== value))
-
       fail('ADMISSION_REQUEST_CONFLICT', '撤票身份与原执行请求不一致');
 
     this.waiting.delete(id);
@@ -470,7 +438,6 @@ export class GlobalRunAdmission
     const parsed = admissionIdentitySchema.pick({ workspaceId: true, ownerEpoch: true }).safeParse({ workspaceId, ownerEpoch });
 
     if (!parsed.success)
-
       fail('ADMISSION_INPUT_INVALID', '工作区准入代际无效');
 
     this.retired.add(ownerKey(workspaceId, ownerEpoch));
@@ -478,15 +445,14 @@ export class GlobalRunAdmission
     let changed = false;
 
     for (const [id, item] of this.waiting)
-
       if (item.request.workspaceId === workspaceId && item.request.ownerEpoch === ownerEpoch)
       {
         this.waiting.delete(id);
 
         changed = true
       }
-    if (changed)
 
+    if (changed)
       this.Changed();
 
     this.Wake();
@@ -496,7 +462,6 @@ export class GlobalRunAdmission
   Wake(): void
   {
     if (this.wakeScheduled)
-
       return;
 
     this.wakeScheduled = true;
@@ -508,13 +473,11 @@ export class GlobalRunAdmission
   RestorePolicy(raw: AdmissionPolicy): void
   {
     if (this.attempted || this.configured || this.policyRestored || this.occupied.size || this.waiting.size || this.inAttempt)
-
       fail('ADMISSION_RESTORE_FORBIDDEN', '运行准入已经开始，不能覆盖恢复策略');
 
     const parsed = admissionPolicySchema.safeParse(raw);
 
     if (!parsed.success)
-
       fail('ADMISSION_POLICY_INVALID', '执行并发策略无效');
 
     this.policyRestored = true;
@@ -531,17 +494,14 @@ export class GlobalRunAdmission
   Configure(raw: AdmissionPolicy): AdmissionPolicy
   {
     if (this.inAttempt)
-
       fail('ADMISSION_REENTRANT', '准入领取期间不能重入修改策略');
 
     const parsed = admissionConfigureSchema.safeParse(raw);
 
     if (!parsed.success)
-
       fail('ADMISSION_POLICY_INVALID', '执行并发上限必须为 1 至 32');
 
     if (parsed.data.revision !== this.policy.revision || this.policy.revision === Number.MAX_SAFE_INTEGER)
-
       fail('ADMISSION_POLICY_CONFLICT', '执行并发策略版本已变化，请重新读取');
 
     this.configured = true;
@@ -564,11 +524,9 @@ export class GlobalRunAdmission
   Read(cursor?: AdmissionCursor): AdmissionRead
   {
     if (cursor !== undefined && !admissionCursorSchema.safeParse(cursor).success)
-
       fail('ADMISSION_CURSOR_INVALID', '运行准入游标无效');
 
     if (cursor?.streamId === this.streamId && cursor.revision === this.revision)
-
       return { kind: 'noop', cursor: { ...cursor } };
 
     return { kind: 'snapshot', snapshot: this.Snapshot() };

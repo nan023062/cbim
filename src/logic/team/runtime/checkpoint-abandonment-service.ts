@@ -43,17 +43,13 @@ export class CheckpointAbandonmentService
   private Request(identity: GraphIdentity, scopeId: string, mainRunId: string, commandId: string, raw: AbandonCheckpointInput)
   {
     const parsed = abandonCheckpointInputSchema.safeParse(raw),
-
       context = contextSchema.safeParse({ ...identity, scopeId, mainRunId, commandId });
 
     if (!parsed.success || !context.success)
-
       fail('CHECKPOINT_HANDOFF_INPUT', '检查点放弃参数或主运行身份无效');
 
     const input = parsed.data,
-
       fixed = context.data,
-
       command = contextualMainCommand('member.checkpoint.abandon', fixed, input);
 
     return { input, fixed, command };
@@ -66,7 +62,6 @@ export class CheckpointAbandonmentService
     if (prior)
     {
       if (prior.fingerprint !== command.fingerprint)
-
         fail('COMMAND_ID_CONFLICT', '相同命令 ID 已用于不同请求');
 
       return prior.receipt as AbandonCheckpointReceipt
@@ -83,11 +78,9 @@ export class CheckpointAbandonmentService
   async Abandon(identity: GraphIdentity, scopeId: string, mainRunId: string, commandId: string, raw: AbandonCheckpointInput, assertCurrent: () => void): Promise<AbandonCheckpointReceipt>
   {
     const { input, fixed, command } = this.Request(identity, scopeId, mainRunId, commandId, raw),
-
       prior = await this.Lookup(command);
 
     if (prior)
-
       return prior;
 
     const check = () => { this.owner.Assert(); assertCurrent(); if (fixed.workspaceId !== this.owner.entry.id) fail('GRAPH_IDENTITY_MISMATCH', '检查点不属于当前工作区') };
@@ -95,7 +88,6 @@ export class CheckpointAbandonmentService
     check();
 
     if (!this.ports)
-
       fail('CHECKPOINT_HANDOFF_UNAVAILABLE', '未装配检查点历史核实端口');
 
     const observed = structuredClone(checkpointAbandonmentSelection(await this.store.Read(), identity, scopeId, mainRunId, input));
@@ -114,11 +106,9 @@ export class CheckpointAbandonmentService
 
       // selector 不含原 checkpoint 结果信封，迟到的纯 ACK 不会冒充任务/运行变化，也不需要由本操作确认。
       if (!isDeepStrictEqual(selected, observed))
-
         fail('CHECKPOINT_HANDOFF_STALE', '历史核实期间目标、任务、证明或原实例状态已经变化');
 
       const { graph, scope, task, member, run, checkpoint, resumeAssignment } = selected,
-
         now = new Date().toISOString();
 
       const abandonment: CheckpointAbandonment = { kind: 'abandoned_by_handoff', commandId, scopeId, mainRunId, graphCursor: { ...input.expectedGraphCursor }, goalRevision: scope.goal!.revision, previousTaskRevision: task.revision, planRevision: task.planRevision, checkpointId: checkpoint.checkpointId, sourceRunId: run.binding.runId, resumeRequestId: observed.currentRequest?.requestId ?? null, previousLeaseEpoch: member.leaseEpoch, nextLeaseEpoch: member.leaseEpoch + 1, reason: input.reason, abandonedAt: now };

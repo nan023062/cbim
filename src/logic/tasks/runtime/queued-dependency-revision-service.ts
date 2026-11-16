@@ -46,25 +46,19 @@ export class QueuedDependencyRevisionService
   async Revise(identity: GraphIdentity, scopeId: string, runId: string, commandId: string, raw: ReviseQueuedDependenciesInput, assertCurrent?: () => void): Promise<ReviseQueuedDependenciesReceipt>
   {
     const parsed = reviseQueuedDependenciesInputSchema.safeParse(raw),
-
       context = contextSchema.safeParse({ ...identity, scopeId, runId, commandId });
 
     if (!parsed.success || !context.success)
-
       fail('DEPENDENCY_INPUT_INVALID', '前置修订参数或主身份无效');
 
     const input = parsed.data,
-
       fixed = context.data,
-
       alive = () => { this.owner.Assert(); assertCurrent?.(); if (fixed.workspaceId !== this.owner.entry.id) fail('GRAPH_IDENTITY_MISMATCH', '前置修订不属于当前工作区') };
 
     const command = contextualMainCommand('dispatch.reviseDependencies', fixed, input),
-
       old = await this.owners.Replay<ReviseQueuedDependenciesReceipt>(command);
 
     if (old)
-
       return old.receipt;
 
     alive();

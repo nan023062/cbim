@@ -32,32 +32,24 @@ import { isDeepStrictEqual } from 'node:util';
 export function mainModuleOwnershipTools(owner: KnowledgeWorkspace, service: ModuleOwnerships, members: WorkspaceMembers, task: TaskSpec, runId: string, binding: ConversationAgentBinding, context: MainToolContext, execution?: OwnerExecutionService): ModuleOwnershipToolsPort
 {
   const main = checkedConversationAgentBinding(binding, task),
-
     identity = { workspaceId: owner.entry.id, instanceId: owner.instanceId },
-
     publicIdentity = { workspaceId: owner.entry.id, rootSessionId: main.rootSessionId },
-
     fixed = Object.freeze({ ...context.binding });
 
   if (fixed.workspaceId !== owner.entry.id || fixed.rootSessionId !== main.rootSessionId || fixed.runId !== runId || task.root !== owner.entry.path)
-
     fail('OWNERSHIP_ACTOR', '负责人端口与本轮真实主身份不一致');
 
   const current = (signal: AbortSignal) => { signal.throwIfAborted(); owner.Assert(identity); context.AssertCurrent(signal) };
 
   return {
     Inspect: async (raw, signal) => { current(signal); const input = moduleOwnerInspectInputSchema.parse(raw); if ('members' in input) { const { members: _, ...query } = input, memberPage = await members.List({ ...identity, ...query, limit: query.limit ?? 20 }); current(signal); return { identity: publicIdentity, readOnly: true, selection: input, memberPage } } const page = 'moduleIds' in input ? await service.InspectModules(identity, input.moduleIds) : await service.ByMember({ ...identity, ...input }); current(signal); if ('moduleIds' in input) { if (!execution) fail('OWNER_EXECUTION_UNAVAILABLE', '本轮未装配岗位执行发现'); const discovered = await execution.Discover(input.moduleIds, input.matches); current(signal); if (page.basis.knowledgeRevision !== discovered.knowledgeRevision || !isDeepStrictEqual(page.basis.memberRegistryCursor, discovered.registryCursor) || !isDeepStrictEqual(page.basis.ownershipCursor, discovered.ownershipCursor) || !isDeepStrictEqual(page.basis.sourceCursor, discovered.sourceCursor)) fail('OWNER_READ_STALE', '责任和执行选择在查询期间变化，请重新查询'); return { identity: publicIdentity, readOnly: true, selection: input, page, execution: discovered }; } return { identity: publicIdentity, readOnly: true, selection: input, page }; },
-
     Preview: async (raw, signal) => { current(signal); const input = moduleOwnerPreviewInputSchema.parse(raw), preview = await service.Preview({ ...identity, ...input }); current(signal); return { identity: publicIdentity, preview } },
-
     Commit: (raw, toolCallId, signal) =>
     {
       const input = moduleOwnerCommitInputSchema.parse(raw),
-
         actor = moduleOwnershipMainActorSchema.parse({ kind: 'main_agent', rootSessionId: fixed.rootSessionId, scopeId: fixed.scopeId, agentInstanceId: main.agentInstanceId, agentSessionId: main.agentSessionId, runId: fixed.runId, toolCallId, toolName: 'cbim_module_owner_change_commit' });
 
       const commandId = moduleOwnershipMainCommandId(identity.workspaceId, actor),
-
         request = { ...identity, ...input, commandId };
 
       // 先登记 pending Promise 再启动异步查询/保存，关闭必须排空原请求；fresh 的停止检查由服务受理前执行。

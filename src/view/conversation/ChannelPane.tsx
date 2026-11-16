@@ -19,7 +19,6 @@ export function ChannelPane({ topic, visible, onSelect, onClose, ...composer }: 
   const last = useRef(composer.scope);
 
   if (composer.scope)
-
     last.current = composer.scope;
 
   return <section className="channel-pane" aria-label="频道子对话" data-channel-id={topic.scope.scopeId} hidden={!visible}>

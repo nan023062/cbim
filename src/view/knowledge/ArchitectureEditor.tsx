@@ -46,7 +46,6 @@ function read(snapshot: Snapshot, path: string)
 export function editableObject(snapshot: Snapshot, kind: EditableKind, id?: string)
 {
   if (!id)
-
     return { data: {}, body: '' };
 
   if (kind === 'agent' || kind === 'module')
@@ -55,8 +54,8 @@ export function editableObject(snapshot: Snapshot, kind: EditableKind, id?: stri
 
     return { data, body: snapshot.files.find(file => file.path === id + '/' + (kind === 'agent' ? data.work_principles : data.overview))?.text ?? '' };
   }
-  const segment = kind === 'skill' ? '/skills/' : '/workflows/',
 
+  const segment = kind === 'skill' ? '/skills/' : '/workflows/',
     owner = id.slice(0, id.lastIndexOf(segment));
 
   const agent = snapshot.files.some(file => file.path === owner + '/agent.json');
@@ -94,25 +93,19 @@ export interface ArchitectureEditorProps
 export function ArchitectureEditor({ workspaceId, snapshot, kind, id, parentId, mode = 'edit', onClose, onSaved }: ArchitectureEditorProps)
 {
   const base = useRef(snapshot).current,
-
     initial = useRef(editableObject(base, kind, id)).current,
-
     removing = mode === 'delete';
 
   const [owner, setOwner] = useState(parentId ?? (kind === 'agent' ? '.cbim/team' : kind === 'module' ? '.cbim/workspace' : ''));
 
   const [slug, setSlug] = useState(''),
-
     [name, setName] = useState(initial.data.name ?? ''),
-
     [summary, setSummary] = useState(initial.data.summary ?? '');
 
   const [body, setBody] = useState(initial.body || (kind === 'module' ? moduleScaffold : '')),
-
     [purpose, setPurpose] = useState(initial.data.purpose ?? '');
 
   const [capabilities, setCapabilities] = useState((initial.data.capabilities ?? []).join('\n')),
-
     [limitations, setLimitations] = useState((initial.data.limitations ?? []).join('\n'));
 
   const [sources, setSources] = useState<
@@ -123,17 +116,13 @@ export function ArchitectureEditor({ workspaceId, snapshot, kind, id, parentId, 
     }[]>(initial.data.sources ?? []);
 
   const [models, setModels] = useState<LlmSettings>(),
-
     [runtime, setRuntime] = useState<AgentModelSelection | null>(initial.data.runtime ?? null);
 
   useEffect(() => { if (kind !== 'agent' || removing) return; let cancelled = false; void window.cbim.call('models.list').then(value => { if (!cancelled) setModels(value) }).catch(cause => { if (!cancelled) setError(cause.message) }); return () => { cancelled = true } }, [kind, removing]);
 
   const [cascade, setCascade] = useState(false),
-
     [changed, setChanged] = useState(false),
-
     [busy, setBusy] = useState(false),
-
     [error, setError] = useState('');
 
   const [preview, setPreview] = useState<(Preview &
@@ -144,7 +133,6 @@ export function ArchitectureEditor({ workspaceId, snapshot, kind, id, parentId, 
   })>();
 
   const lock = useRef(false),
-
     length = Array.from(summary.replace(/\s/g, '')).length;
 
   function edit(action: () => void)
@@ -161,7 +149,6 @@ export function ArchitectureEditor({ workspaceId, snapshot, kind, id, parentId, 
   function close()
   {
     if (!busy && (!changed || confirm('放弃尚未提交的修改？')))
-
       onClose()
   }
 
@@ -174,7 +161,6 @@ export function ArchitectureEditor({ workspaceId, snapshot, kind, id, parentId, 
   async function prepare()
   {
     if (lock.current)
-
       return;
 
     lock.current = true;
@@ -186,16 +172,13 @@ export function ArchitectureEditor({ workspaceId, snapshot, kind, id, parentId, 
     try
     {
       if (base.workspaceId !== workspaceId)
-
         throw Error('工作区身份已改变，请关闭后重新打开编辑器');
 
       if (!removing && (kind === 'agent' || kind === 'module') && (length < 100 || length > 250))
-
         throw Error('摘要需要 100～250 个非空白字符，请具体描述职责、边界和适用场景');
 
       // 与实际启动共用兼容接口解析，显式接口的型号限制也在编辑时生效。
       if (!removing && kind === 'agent' && runtime && !models?.profiles.some(p => p.id === runtime.profileId && providerSupportsEngine(runtime.engine, p, runtime.modelId) && p.models.some(m => m.id === runtime.modelId && m.enabled)))
-
         throw Error('所选引擎或模型不可用，请重新选择');
 
       const data = kind === 'agent' ? { name, summary, capabilities: lines(capabilities), limitations: lines(limitations), runtime } : kind === 'module' ? { summary, sources } : kind === 'skill' ? { name, purpose } : { name };
@@ -221,7 +204,6 @@ export function ArchitectureEditor({ workspaceId, snapshot, kind, id, parentId, 
   async function commit()
   {
     if (!preview || lock.current)
-
       return;
 
     lock.current = true;

@@ -48,29 +48,23 @@ export class QueuedDependencyAdditionService
   async Add(identity: GraphIdentity, scopeId: string, runId: string, commandId: string, raw: AddQueuedDependencyInput, assertCurrent?: () => void): Promise<AddQueuedDependencyReceipt>
   {
     const parsed = addQueuedDependencyInputSchema.safeParse(raw),
-
       context = contextSchema.safeParse({ ...identity, scopeId, runId, commandId });
 
     if (!parsed.success || !context.success)
-
       fail('DEPENDENCY_INPUT_INVALID', '前置追加参数或主调度运行身份无效');
 
     const input = parsed.data,
-
       fixed = context.data,
-
       alive = () => { this.owner.Assert(); assertCurrent?.(); if (fixed.workspaceId !== this.owner.entry.id) fail('GRAPH_IDENTITY_MISMATCH', '前置追加不属于当前工作区') };
 
     const command = contextualMainCommand('dispatch.addDependency', fixed, input);
 
     if (!this.owners)
-
       fail('OWNER_EXECUTION_UNAVAILABLE', '未装配岗位前置核验');
 
     const old = await this.owners.Replay<AddQueuedDependencyReceipt>(command);
 
     if (old)
-
       return old.receipt;
 
     alive();
@@ -84,7 +78,6 @@ export class QueuedDependencyAdditionService
       const knowledgeRevision = scope.goal!.plan!.knowledgeRevision;
 
       if ((await this.owner.Read()).revision !== knowledgeRevision)
-
         fail('DEPENDENCY_KNOWLEDGE_STALE', '知识基线已变化，不能给旧待办追加前置');
 
       alive();
@@ -106,11 +99,10 @@ export class QueuedDependencyAdditionService
         alive();
 
         if (latest.knowledgeRevision !== knowledgeRevision || latest.agent.teamId !== members.find(member => member.agentInstanceId === task.assignee.agentInstanceId)!.teamId)
-
           fail('DEPENDENCY_KNOWLEDGE_STALE', '待办角色、模块或 Workflow 已经变化');
       }
-      if (!latest)
 
+      if (!latest)
         fail('DEPENDENCY_INPUT_INVALID', '前置追加缺少完整待办范围');
 
       // 所有准备均要求同一全局知识版本；最后读取屏障也覆盖前面任务准备后的并发治理。
@@ -119,9 +111,7 @@ export class QueuedDependencyAdditionService
       alive();
 
       const now = new Date().toISOString(),
-
         edgeId = randomUUID(),
-
         trackedTaskIds = tasks.map(task => task.taskId);
 
       const addition: DependencyAddition = { commandId: fixed.commandId, scopeId, mainRunId: runId, addedAt: now, reason: input.reason, graphCursor: { ...input.expectedGraphCursor }, goalRevision: scope.goal!.revision, goalPlanRevision: scope.goal!.plan!.revision, knowledgeRevision, previousTaskRevision: target.revision, targetPlanRevision: target.planRevision, dependency: { edgeId, sourceTaskId: source.taskId, sourceTaskRevision: source.revision, sourcePlanRevision: source.planRevision }, trackedTaskIds };
@@ -131,7 +121,6 @@ export class QueuedDependencyAdditionService
       const edge: GraphEdge = { edgeId, identity: graph.identity, kind: 'dependency', fromNodeId: source.nodeId, toNodeId: target.nodeId, revision: 1, enabled: true, condition: { kind: 'result_ready', reviewRequired: true, planRevision: source.planRevision } };
 
       const member = members.find(value => value.agentInstanceId === target.assignee.agentInstanceId)!,
-
         nextMember = { ...member, activity: 'waiting' as const, waitingTaskIds: [target.taskId] };
 
       const batch = { ...memberBatch(graph, commandId, 'dependency.changed', [{ type: 'edge.upserted', edge }, { type: 'task.upserted', task: updated }, { type: 'agent.upserted', agent: memberView(graph, nextMember, updated) }]), committedAt: now };

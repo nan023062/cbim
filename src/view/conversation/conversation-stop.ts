@@ -44,7 +44,6 @@ export class ConversationStopGate
     const id = key(target);
 
     if (id !== this.target || this.requests.has(id))
-
       return;
 
     const token = Object.freeze({ ...target, generation: this.generation });
@@ -71,7 +70,6 @@ export class ConversationStopGate
     const id = key(token);
 
     if (this.requests.get(id) !== token)
-
       return false;
 
     this.requests.delete(id);

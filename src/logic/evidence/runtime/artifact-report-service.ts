@@ -55,7 +55,6 @@ export class ArtifactReportService
     const parsed = artifactReportInputSchema.safeParse(raw);
 
     if (!parsed.success)
-
       fail('ARTIFACT_INPUT_INVALID', '文件基线核实参数无效');
 
     const input = parsed.data;
@@ -63,11 +62,9 @@ export class ArtifactReportService
     this.owner.Assert();
 
     if (input.workspaceId !== this.owner.entry.id)
-
       fail('GRAPH_IDENTITY_MISMATCH', '文件基线不属于当前工作区');
 
     const before = await this.store.Read(),
-
       facts = this.Facts(before, input.rootSessionId, input.taskId, input.runId),
       { task, run, recursive } = facts;
 
@@ -78,7 +75,6 @@ export class ArtifactReportService
     const markUnavailable = () => { if (input.baselineId) report.verification = { baselineId: input.baselineId, state: 'unverifiable', files: [] } };
 
     let summary: RunSummary | undefined,
-
       logStamp: unknown;
 
     if (!run || !recursive && !task?.runIds.includes(input.runId))
@@ -108,6 +104,7 @@ export class ArtifactReportService
 
         markUnavailable();
       }
+
       if (summary)
       {
         try
@@ -115,14 +112,11 @@ export class ArtifactReportService
           report.log.lastSeq = summary.events.at(-1)?.seq ?? 0;
 
           const binding = run.binding,
-
             first = summary.events[0],
-
             bounds = summary.events.filter(event => event.type === 'session.bound');
 
           // 有采集事实就必须具备可核对的原生通道；不能同时删掉登记与日志绑定后仍留下有效文件证明。
           if (!recursive && summary.events.some(event => event.type === 'artifact.baseline_captured') && (!(run as DispatchRun).session.sessionFile || !bounds.length))
-
             throw Error('采集日志缺少原生绑定');
 
           if (recursive ? !recursiveEvidenceLogMatches(recursive, summary, this.owner.entry.path) : (binding.workspaceId !== input.workspaceId || binding.rootSessionId !== input.rootSessionId || binding.taskId !== input.taskId || binding.agentId !== task!.assignee.agentId || binding.agentInstanceId !== task!.assignee.agentInstanceId || binding.agentSessionId !== task!.assignee.agentSessionId || binding.planRevision !== task!.planRevision || summary.runId !== binding.runId || !isDeepStrictEqual(summary.memberBinding, binding) || summary.conversationBinding || !isDeepStrictEqual(summary.task, memberPublicTask(task!, this.owner.entry.path)) || first?.type !== 'run.started' || !isDeepStrictEqual(first.data.memberBinding, binding) || !isDeepStrictEqual(first.data.task, summary.task) || summary.sessionFile !== (run as DispatchRun).session.sessionFile || !summary.events.every((event, index) => event.seq === index + 1 && event.workspaceId === input.workspaceId && event.taskId === input.taskId && event.runId === input.runId) || bounds.some(event => event.data.sessionId !== (run as DispatchRun).session.nativeSessionId || event.data.sessionFile !== (run as DispatchRun).session.sessionFile) || (run as DispatchRun).session.sessionFile && !bounds.length))
@@ -152,7 +146,6 @@ export class ArtifactReportService
             report.impact = verified.impact;
 
             for (const item of verified.issues)
-
               issue(item.code, item.message);
 
             if (summary.unresolvedTools.length)
@@ -161,10 +154,10 @@ export class ArtifactReportService
 
               issue('ARTIFACT_UNKNOWN_EFFECT', '本轮仍有未确认工具结果，文件指纹不能替代副作用核实')
             }
+
             logStamp = hash(json(summary.events));
 
             if (!verified.refs.length)
-
               issue('ARTIFACT_BASELINE_MISSING', '本轮没有已确认的文件基线；旧记录不会自动补采');
 
             if (input.baselineId)
@@ -198,7 +191,6 @@ export class ArtifactReportService
                   const current = await this.owner.Read();
 
                   if (current.revision !== record.baseline.knowledgeRevision)
-
                     issue('ARTIFACT_KNOWLEDGE_CHANGED', '当前知识版本与采集时不同；文件相同不代表任务基线仍有效');
 
                   const verification: NonNullable<ArtifactReport['verification']> = { baselineId: input.baselineId, state: 'matches', files: [] };
@@ -216,11 +208,9 @@ export class ArtifactReportService
                     verification.files = (await this.ports.CheckFiles(expected, signal)).map(value => artifactFileCheckSchema.parse(value));
 
                     if (verification.files.length !== expected.length || verification.files.some((file, index) => this.ports.NormalizePath(file.relativePath) !== this.ports.NormalizePath(expected[index].relativePath) || file.expected.byteLength !== expected[index].byteLength || file.expected.sha256 !== expected[index].sha256))
-
                       throw Error('文件端口返回值不匹配');
 
                     if (verification.files.some(file => file.state === 'matches' && (!file.observed || file.observed.byteLength !== file.expected.byteLength || file.observed.sha256 !== file.expected.sha256) || file.state === 'changed' && (!file.observed || file.observed.byteLength === file.expected.byteLength && file.observed.sha256 === file.expected.sha256)))
-
                       throw Error('文件端口比较结论不一致');
 
                     verification.state = verification.files.some(file => file.state === 'unverifiable') ? 'unverifiable' : verification.files.some(file => file.state !== 'matches') ? 'changed' : 'matches';
@@ -235,6 +225,7 @@ export class ArtifactReportService
                   {
                     release?.()
                   }
+
                   report.verification = verification;
 
                   const latest = await this.owner.Read();
@@ -266,6 +257,7 @@ export class ArtifactReportService
         }
       }
     }
+
     const after = await this.store.Read();
 
     this.owner.Assert();
@@ -277,11 +269,11 @@ export class ArtifactReportService
       report.impact = 'unknown';
 
       if (report.verification)
-
         report.verification.state = 'unverifiable';
 
       issue('ARTIFACT_STATE_CHANGED', '读取期间任务或运行事实变化，请重新核实')
     }
+
     if (input.baselineId && run && logStamp)
     {
       try
@@ -289,7 +281,6 @@ export class ArtifactReportService
         const afterLog = await this.Inspect(run);
 
         if (afterLog.logIntegrity?.partialTail !== false || hash(json(afterLog.events)) !== logStamp)
-
           throw Error('日志在文件读取期间变化')
       }
       catch
@@ -299,12 +290,12 @@ export class ArtifactReportService
         report.impact = 'unknown';
 
         if (report.verification)
-
           report.verification.state = 'unverifiable';
 
         issue('ARTIFACT_LOG_CHANGED', '文件复核期间运行日志发生变化或无法再核实，本次观察无效')
       }
     }
+
     report.basis = hash(json({ state: this.Stamp(facts), log: logStamp ?? report.log, baselines: report.baselines, verification: report.verification, issues: report.issues, consistency: report.consistency }));
 
     return artifactReportSchema.parse(report);
@@ -315,28 +306,24 @@ export class ArtifactReportService
     if ('protocol' in run)
     {
       if (!this.ports.InspectAgent)
-
         fail('EVIDENCE_SOURCE_UNAVAILABLE', '未装配递归运行只读日志入口');
 
       return this.ports.InspectAgent(run)
     }
+
     return this.ports.Inspect(run);
   }
 
   private Facts(state: DispatchState, root: string, taskId: string, runId: string)
   {
     const graph = state.graphs.find(g => g.identity.workspaceId === this.owner.entry.id && g.identity.rootSessionId === root),
-
       task = graph?.tasks.find(t => t.taskId === taskId),
-
       recursive = recursiveEvidenceRun(state, this.owner.entry.id, root, taskId, runId);
 
     if (state.workspaceId !== this.owner.entry.id || !graph || !task && !recursive)
-
       fail('TASK_NOT_FOUND', '当前主会话没有此任务');
 
     const run = recursive ?? state.runs?.find(r => r.binding.workspaceId === this.owner.entry.id && r.binding.rootSessionId === root && r.binding.taskId === taskId && r.binding.runId === runId),
-
       scope = state.scopes?.find(s => s.workspaceId === this.owner.entry.id && s.rootSessionId === root && s.scopeId === (recursive?.scopeId ?? task?.scopeId));
 
     return { graph, task, run, scope, recursive };

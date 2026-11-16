@@ -55,21 +55,17 @@ export class ToolRegistry<Context>
   Register(tool: ToolDefinition<Context>)
   {
     if (!/^cbim_[A-Za-z0-9_]+$/.test(tool.name))
-
       fail('TOOL_NAME', 'CBIM 工具名称必须以 cbim_ 开头，后接字母、数字或下划线');
 
     if (this.entries.some(t => t.name === tool.name))
-
       fail('TOOL_DUPLICATE', '工具名称重复');
 
     if (!tool.outputSchema || typeof tool.outputSchema.safeParse !== 'function')
-
       fail('TOOL_CONTRACT', '工具必须声明真实业务输出 Schema');
 
     const metadata = toolMetadataSchema.safeParse({ version: tool.version, effects: tool.effects, cancellation: tool.cancellation, recovery: tool.recovery });
 
     if (!metadata.success)
-
       fail('TOOL_CONTRACT', '工具必须声明完整的版本、副作用与取消/恢复语义');
 
     this.entries.push({ ...tool, ...metadata.data });
@@ -105,7 +101,6 @@ export class ToolRegistry<Context>
     const tool = this.entries.find(t => t.name === name);
 
     if (!tool)
-
       fail('TOOL', '未知知识工具');
 
     return tool
@@ -126,6 +121,7 @@ export class ToolRegistry<Context>
 
       fail('TOOL_INPUT_INVALID', `${name} 参数无效；${fields}。${identity ? '请先调用 cbim_workspace_identity 获取当前 workspaceId/instanceId，再按工具声明补齐参数。' : '请补齐必填字段或修正格式；可选参数可省略，已声明默认值会自动使用。'}本次尚未执行。`);
     }
+
     return { tool, args: parsed.data };
   }
 
@@ -133,7 +129,6 @@ export class ToolRegistry<Context>
   async InvokeResolved(tool: ToolDefinition<Context>, args: unknown, context: Context)
   {
     if (this.Entry(tool.name) !== tool)
-
       fail('TOOL_CONTRACT', '只能执行本注册表解析的实际工具');
 
     const value = await tool.execute(args, context);

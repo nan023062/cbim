@@ -22,19 +22,16 @@ export class AgentArtifactVerification
     signal.throwIfAborted();
 
     if (!events.some(event => event.type === 'artifact.baseline_captured' || event.type === 'tool.finished' && event.data.name === 'cbim_task_artifact_capture'))
-
       return [];
 
     const evidence = verifyArtifactBaselines(events, binding, knowledgeRevision, normalizePath);
 
     if (evidence.issues.some(issue => ['ARTIFACT_LOG_INVALID', 'ARTIFACT_BASELINE_INVALID', 'ARTIFACT_LIMIT'].includes(issue.code)))
-    {
       fail('ARTIFACT_EVIDENCE_INVALID', '原文件采集没有完整可信证据');
-    }
+
     const active = new Set(evidence.refs.filter(ref => !ref.invalidated).map(ref => ref.baselineId));
 
     if (!active.size)
-
       fail('ARTIFACT_BASELINE_STALE', '原采集已失效，不能接受历史文件证明');
 
     const files = new Map<string, ArtifactFileFact>();
@@ -42,7 +39,6 @@ export class AgentArtifactVerification
     for (const record of evidence.records)
     {
       if (!active.has(record.baseline.baselineId))
-
         continue;
 
       for (const captured of record.baseline.files)
@@ -50,41 +46,34 @@ export class AgentArtifactVerification
         const file = { relativePath: captured.relativePath, byteLength: captured.byteLength, sha256: captured.sha256 };
 
         const key = normalizePath(file.relativePath),
-
           previous = files.get(key);
 
         if (previous && (previous.sha256 !== file.sha256 || previous.byteLength !== file.byteLength))
-        {
           fail('ARTIFACT_BASELINE_STALE', '同一文件存在不一致的当前采集证明');
-        }
+
         files.set(key, file);
       }
     }
-    const expected = [...files.values()],
 
+    const expected = [...files.values()],
       checks = await checkFiles(expected, signal);
 
     signal.throwIfAborted();
 
     if (!Array.isArray(checks) || checks.length !== expected.length)
-
       fail('ARTIFACT_BASELINE_STALE', '文件复核没有返回完整结果');
 
     for (let index = 0; index < expected.length; index++)
     {
       const file = expected[index],
-
         parsed = artifactFileCheckSchema.safeParse(checks[index]);
 
       if (!parsed.success || parsed.data.relativePath !== file.relativePath || parsed.data.state !== 'matches' ||
-
         parsed.data.expected.sha256 !== file.sha256 || parsed.data.expected.byteLength !== file.byteLength ||
-
         parsed.data.observed?.sha256 !== file.sha256 || parsed.data.observed?.byteLength !== file.byteLength)
-      {
         fail('ARTIFACT_BASELINE_STALE', '原交付文件已变化、缺失或无法核实');
-      }
     }
+
     return expected;
   }
 }

@@ -66,7 +66,6 @@ export class ManagedEngines
     const old = this.jobs.get(engine);
 
     if (old)
-
       return old;
 
     const job = this.Prepare(engine).catch(error => { this.jobs.delete(engine); throw error });
@@ -85,7 +84,6 @@ export class ManagedEngines
     const descriptor = this.descriptors.find(d => d.kind === engine);
 
     if (!descriptor)
-
       throw Error('此资源版本没有兼容的引擎包');
 
     const state = this.states.get(engine)!;
@@ -101,7 +99,6 @@ export class ManagedEngines
       const root = await this.store.Prepare(descriptor.package, this.signal, progress => { state.progress = progress });
 
       const record = path.join(this.store.root, 'engine-' + engine + '.json'),
-
         temporary = record + '.' + randomUUID() + '.tmp';
 
       await fs.mkdir(this.store.root, { recursive: true });
@@ -116,6 +113,7 @@ export class ManagedEngines
       {
         await fs.unlink(temporary).catch(() => { })
       }
+
       state.state = 'ready';
 
       state.installedVersion = descriptor.version;

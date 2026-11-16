@@ -62,47 +62,38 @@ const inspectInput = z.object({ taskId: z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9
 const definitions = {
   cbim_dispatch_revise_dependencies: {
     description: '一次原子增删当前未领取目标的多条前置。先读取目标和整图，传 expectedGraphCursor/expectedGoalRevision、target 任务/计划版本、remove 原边/版本、add 新来源任务/计划版本及 reason。各至多32条，至少一项；目标、被增删来源和全部启用后继均须未领取/执行且匹配当前岗位、知识、计划。按全部修改后的图判环，原边只退役，新边不预填结果；保留任务、角色、验收、实例和原信封。已执行来源不能删除以掩盖失败或未知；可靠失败替换走 replace_dependency。回执只证明修订，主轮结束后仍按真实结果和预算领取；未知回包查询原命令，不换调用重发。',
-
     schema: reviseQueuedDependenciesInputSchema, effects: ['maintenance'] as const,
   },
   cbim_dispatch_command_report: {
     description: '只读核实同一主会话原 runId/toolCallId 的真实调用与原命令提交事实，支持目标计划/审阅、派发、撤销、加边、换边、恢复预约和检查点放弃。坏输出后先查原调用，不换调用重做。committed 仅表示原领域记录已提交，absent 不证明未执行或可重试；报告不会清除 unknown、恢复任务或通过业务验收，原生工具等无账本族明确未支持。',
-
     schema: commandReportToolInputSchema, effects: ['read'] as const,
   },
   cbim_dispatch_abandon_checkpoint: {
     description: '明确放弃当前活动周期尚未消费的可靠检查点及可选恢复预约，供负责人变更后的交接。先读取原图与目标，提交 expectedGraphCursor、expectedGoalRevision、taskId、expectedRevision、expectedPlanRevision、checkpointId、expectedResumeRequestId（未预约明确 null）和 reason。只取消原待办并保存审计，不迁移原任务、不运行或回滚、不证明业务完成；当前知识/文件/模型变化不阻止历史处置，损坏或缺失原 canonical 则拒绝。旧后继仍阻塞，按需显式撤销完整未启动闭包，再按当前负责岗位重新规划/派发；complete 仍须真实新候选逐项 superseded。未知回包先查原任务 checkpointAbandonment，不换调用重做。',
-
     schema: abandonCheckpointInputSchema, effects: ['maintenance'] as const,
   },
   cbim_dispatch_add_dependency: {
     description: '为当前目标内尚未领取的既有任务追加一条结果前置，可先创建 B/C 再创建 A，并把 A 设为 B 的前置。先读目标及任务图，传 expectedGraphCursor/expectedGoalRevision、source/target 的 taskId/expectedRevision/expectedPlanRevision 和 reason。两端及全部启用依赖后继必须均未领取、未运行且匹配当前计划、知识和 Workflow；自身、重复、成环或未确认输入都拒绝。仅增加这条边并令原目标等待，不改角色、任务目标、权限或信封，不删除旧前置。保存后结束本主轮，仍需真实来源结果和预算准入才会执行；回执不是业务证据，未知时先查原审计，不换调用重加。',
-
     schema: addQueuedDependencyInputSchema, effects: ['maintenance'] as const,
   },
   cbim_dispatch_resume: {
     description: '为当前活动周期中已安全停泊的原成员任务预约一次续执行。先读取当前图与目标；传 expectedGraphCursor、expectedGoalRevision、taskId、expectedRevision、checkpointId、reason。每任务最多16个检查点，每段只允许一次续执行，只有最新未消费段可预约，原目标/模块/角色/权限/模型/知识/前置候选不得改变；旧求助、失败、取消、中断或已关闭实例不可恢复。成功只登记新待领取信封，结束本主轮后再核实文件和原生上下文、预算及名额，等待不消费检查点；不是已经运行或验收。',
-
     schema: resumeMemberInputSchema, effects: ['maintenance'] as const,
   },
   cbim_dispatch_task: {
     description: '按当前目标计划向模块负责岗位派发任务。先用 cbim_module_owner_inspect 的 moduleIds 查询 execution.groups，明确 agentId、ownerSelection、goal、moduleIds、acceptance；不同负责人拆任务，无负责人或配置失效不能回退主模型或默认执行者。workflowSelections 只选对应模块实际挂载流程，与计划一致。成功仅表示排队，结束本轮让调度继续；不能指定实例、权限、知识正文或伪造维护人。',
-
     schema: taskInput, effects: ['maintenance'] as const,
   },
   cbim_dispatch_inspect: {
     description: '只读查询当前主会话的派发图；可传本图 taskId 查看任务、状态及候选。候选尚未验收；不读取其他会话，不启动、重试或确认收件。',
-
     schema: inspectInput, effects: ['read'] as const,
   },
   cbim_dispatch_cancel: {
     description: '可先在参数中加 includeClosure:true，只读返回完整待撤销/待保留清单及阻塞原因；确认后去掉 includeClosure，用返回 cancel 参数提交。预览不撤销、不停止。明确撤销当前目标周期尚未领取/启动的任务。先用 cbim_dispatch_inspect 读取图，expectedGraphCursor 仅传 streamId/seq，targets 列 taskId/expectedRevision 并填写 reason；必须一并列明尚未启动的依赖后继，缺项则整体拒绝且不自动扩展。不能撤销已经有运行、候选或求助的任务，不停止活动执行。记录和节点永久保留；撤销后重新审阅才能等待，完成目标仍须真实新任务候选替代，撤销不是成功证据。',
-
     schema: z.union([cancelQueuedTasksInputSchema, cancelPreviewInput]), effects: ['maintenance'] as const,
   },
   cbim_dispatch_replace_dependency: {
     description: '将当前目标内尚未领取任务的一条明确失败、安全求助或已显式放弃的可靠检查点前置，替换为同周期后续任务的真实交付候选。先读取 cbim_goal_inspect 和 cbim_dispatch_inspect；提供 expectedGraphCursor/expectedGoalRevision、target 节点与计划版本、replace 旧边版本、with 新前置节点/计划/run/result 身份及 reason。B及全部依赖后继必须从未执行，知识和角色不能过期；A2须覆盖原前置模块并有可核实日志。检查点须先由 abandon_checkpoint 明确放弃，原日志/证明/处置和信封完整；普通取消、未消费检查点、已恢复或未知来源不能替换。不删除任意依赖，不恢复原执行、不修改权限或人工验收。成功仅将原待办重新交给本轮协调器，当前主轮结束后仍须按真实前置和运行门禁启动；最终审阅仍须明确原前置被新候选替代。',
-
     schema: replaceQueuedDependencyInputSchema, effects: ['maintenance'] as const,
   },
 };
@@ -200,21 +191,17 @@ export class DispatchTools
   private Parse(name: string, input: unknown)
   {
     if (!Object.hasOwn(definitions, name) || !this.Available(name))
-
       fail('TOOL_NOT_FOUND', '当前运行没有此成员派发工具');
 
     const definition = this.Definition(name as DispatchToolName),
-
       parsed = definition.schema.safeParse(input);
 
     if (!parsed.success)
-
       fail('DISPATCH_TOOL_INPUT_INVALID', '成员工具参数无效：' + parsed.error.issues.map(issue => issue.path.join('.') + ': ' + issue.message).join('；'));
 
     const preview = name === 'cbim_dispatch_cancel' && cancelPreviewInput.safeParse(input).success;
 
     if (preview && !this.port.PreviewCancel)
-
       fail('TOOL_NOT_FOUND', '当前运行未提供撤销清单预览');
 
     return { name: name as DispatchToolName, args: parsed.data, effects: preview ? ['preview'] as const : definition.effects };
@@ -224,15 +211,12 @@ export class DispatchTools
   Describe(name: string, input: unknown)
   {
     if (this.history?.Has(name))
-
       return this.history.Describe(name, input);
 
     if (this.reviews?.Has(name))
-
       return this.reviews.Describe(name, input);
 
     if (this.goals?.Has(name))
-
       return this.goals.Describe(name, input);
 
     const parsed = this.Parse(name, input);
@@ -246,21 +230,17 @@ export class DispatchTools
     signal.throwIfAborted();
 
     if (this.history?.Has(name))
-
       return this.history.Call(name, input, signal);
 
     if (this.reviews?.Has(name))
-
       return this.reviews.Call(name, input, signal, toolCallId);
 
     if (this.goals?.Has(name))
-
       return this.goals.Call(name, input, signal, toolCallId);
 
     const parsed = this.Parse(name, input);
 
     if (typeof toolCallId !== 'string' || !toolCallId.trim() || toolCallId.length > 512)
-
       fail('DISPATCH_CALL_ID_REQUIRED', '成员工具缺少可信调用标识');
 
     // 领域端口不得通过修改传入对象改变回包核验依据；在首次 await 前独立冻结本次原请求。
@@ -276,6 +256,7 @@ export class DispatchTools
 
       return checkedClosurePreview(parsed.name, value, this.binding, input);
     }
+
     if (parsed.name === 'cbim_dispatch_command_report')
     {
       const value = await this.port.CommandReport!(parsed.args as CommandReportToolInput, { toolCallId, signal });
@@ -284,50 +265,37 @@ export class DispatchTools
 
       return checkedCommandReportResult(value, { workspaceId: this.binding.workspaceId, rootSessionId: this.binding.rootSessionId, ...expectedInput as CommandReportToolInput });
     }
+
     try
     {
       let value: unknown;
 
       if (parsed.name === 'cbim_dispatch_inspect')
-
         value = await this.port.Inspect((parsed.args as z.infer<typeof inspectInput>).taskId);
-
       else if (parsed.name === 'cbim_dispatch_cancel')
-
         value = await this.port.Cancel!(parsed.args as CancelQueuedTasksInput, { toolCallId, signal });
-
       else if (parsed.name === 'cbim_dispatch_replace_dependency')
-
         value = await this.port.ReplaceDependency!(parsed.args as ReplaceQueuedDependencyInput, { toolCallId, signal });
-
       else if (parsed.name === 'cbim_dispatch_add_dependency')
-
         value = await this.port.AddDependency!(parsed.args as AddQueuedDependencyInput, { toolCallId, signal });
-
       else if (parsed.name === 'cbim_dispatch_revise_dependencies')
-
         value = await this.port.ReviseDependencies!(parsed.args as ReviseQueuedDependenciesInput, { toolCallId, signal });
-
       else if (parsed.name === 'cbim_dispatch_resume')
-
         value = await this.port.Resume!(parsed.args as ResumeMemberInput, { toolCallId, signal });
-
       else if (parsed.name === 'cbim_dispatch_abandon_checkpoint')
-
         value = await this.port.AbandonCheckpoint!(parsed.args as AbandonCheckpointInput, { toolCallId, signal });
-
       else
       {
         const { agentId, ...task } = parsed.args as z.infer<typeof taskInput>;
 
         value = await this.port.Dispatch({ ...task, assigneeAgentId: agentId }, { toolCallId, signal })
       }
+
       return checkedMainToolResult(parsed.name, value, this.binding, expectedInput, toolCallId);
     }
     catch (error)
     {
       if (error instanceof Error && parsed.name !== 'cbim_dispatch_inspect')
-
         throw withToolReconciliation(error, { tool: 'cbim_receipt_inspect', args: { target: 'dispatch', input: { runId: this.binding.runId, toolCallId } } });
 
       throw error;

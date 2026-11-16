@@ -34,7 +34,6 @@ export class OfficeHistoryTools
   Describe(name: string, input: unknown)
   {
     if (!this.Has(name))
-
       fail('TOOL_NOT_FOUND', '没有此归档工具');
 
     officeHistoryQuerySchema.parse(input);

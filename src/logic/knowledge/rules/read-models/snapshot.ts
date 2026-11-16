@@ -22,7 +22,6 @@ export function data(s: Snapshot, p: string)
   const f = s.files.find(f => f.path === p);
 
   if (!f)
-
     fail('OBJECT_NOT_FOUND', '知识对象不存在，请重新查询注册表');
 
   return parseJson(f.text)
@@ -31,13 +30,11 @@ export function data(s: Snapshot, p: string)
 export function content(s: Snapshot, owner: string, reference: unknown)
 {
   if (typeof reference !== 'string')
-
     return { available: false, reference };
 
   const p = path.posix.normalize(path.posix.join(owner, reference.split('#')[0]));
 
   if (!p.startsWith('.cbim/'))
-
     return { available: false, reference, reason: '引用越界' };
 
   const f = s.files.find(f => f.path === p);

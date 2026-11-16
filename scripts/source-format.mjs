@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
 
-// 只改词法单元之间的空白；字面量、JSX 文本和注释正文属于不可改写的内容。
+// 排版只改词法间隙；if 的作用域中性包裹块另行规范化并验证，其他 token 与注释不可改写。
 function parse(file, text)
 {
   const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
@@ -50,25 +50,57 @@ function lexemes(source)
   return result;
 }
 
-function shape(node)
+function scopeNeutralStatement(node)
 {
+  if (simpleBranch(node) || ts.isEmptyStatement(node)) return true;
+  if (!(ts.isIfStatement(node) || ts.isForStatement(node) || ts.isForInStatement(node) || ts.isForOfStatement(node) || ts.isWhileStatement(node) || ts.isDoStatement(node) || ts.isSwitchStatement(node) || ts.isTryStatement(node) || ts.isLabeledStatement(node))) return false;
+  let functionDeclaration = false;
+  const visit = child => {
+    if (ts.isFunctionDeclaration(child)) functionDeclaration = true;
+    else if (!ts.isFunctionExpression(child) && !ts.isArrowFunction(child)) ts.forEachChild(child, visit);
+  };
+  visit(node);
+  return !functionDeclaration;
+}
+
+function simpleBranch(node)
+{
+  return ts.isExpressionStatement(node) || ts.isReturnStatement(node) || ts.isThrowStatement(node) || ts.isBreakStatement(node) || ts.isContinueStatement(node);
+}
+
+function transparentIfBlock(node)
+{
+  return ts.isBlock(node) && ts.isIfStatement(node.parent) && (node.parent.thenStatement === node || node.parent.elseStatement === node) && node.statements.length === 1 && scopeNeutralStatement(node.statements[0]);
+}
+
+function shape(node, allowIfBraces = false)
+{
+  if (allowIfBraces && transparentIfBlock(node)) return shape(node.statements[0], true);
   const children = [];
-  ts.forEachChild(node, child => { children.push(shape(child)); });
+  ts.forEachChild(node, child => { children.push(shape(child, allowIfBraces)); });
   return [node.kind, ts.isVariableDeclarationList(node) ? node.flags : null, node.operator ?? null, children];
 }
 
-/** 同时核对结构、全部非空白 token 和注释，防止 ASI、正则、JSX 或模板的含义漂移。 */
-export function assertEquivalent(file, before, after)
+/** 默认严格比较；明确允许 if 包裹块时，仍保留作用域声明、分支归属及其他 token 的完整比较。 */
+export function assertEquivalent(file, before, after, options = {})
 {
   const left = parse(file, before), right = parse(file, after);
-  const fingerprint = source => lexemes(source).map(item => [item.kind, item.text]);
+  const fingerprint = source => {
+    const omitted = new Set();
+    const visit = node => {
+      if (options.allowIfBraces && transparentIfBlock(node)) for (const child of node.getChildren(source)) if (child.kind === ts.SyntaxKind.OpenBraceToken || child.kind === ts.SyntaxKind.CloseBraceToken) omitted.add(child.getStart(source));
+      ts.forEachChild(node, visit);
+    };
+    visit(source);
+    return lexemes(source).filter(item => !omitted.has(item.start)).map(item => [item.kind, item.text]);
+  };
   const leftTokens = fingerprint(left), rightTokens = fingerprint(right);
   if (JSON.stringify(leftTokens) !== JSON.stringify(rightTokens))
   {
     const index = leftTokens.findIndex((token, position) => JSON.stringify(token) !== JSON.stringify(rightTokens[position]));
-    throw Error(`${file}: 词法单元、注释或字面量发生变化，token ${index}: ${JSON.stringify(leftTokens[index]).slice(0, 100)} → ${JSON.stringify(rightTokens[index]).slice(0, 100)}`);
+    throw Error(`${file}: 词法单元、注释或字面量发生变化，token ${index}: ${JSON.stringify(leftTokens[index])?.slice(0, 100)} → ${JSON.stringify(rightTokens[index])?.slice(0, 100)}`);
   }
-  if (JSON.stringify(shape(left)) !== JSON.stringify(shape(right))) throw Error(`${file}: 语法树发生变化，可能涉及自动分号插入`);
+  if (JSON.stringify(shape(left, options.allowIfBraces)) !== JSON.stringify(shape(right, options.allowIfBraces))) throw Error(`${file}: 语法树发生变化，可能涉及自动分号插入、作用域或 else 归属`);
 }
 
 function isBraceContainer(node)
@@ -83,7 +115,7 @@ function isSignature(node)
 
 function layout(source)
 {
-  const text = source.text, entries = lexemes(source), breaks = new Map(), groups = [], protectedRanges = [], tightCallEdges = new Set(), memberBoundaries = new Set();
+  const text = source.text, entries = lexemes(source), breaks = new Map(), groups = [], protectedRanges = [], separators = new Set();
   const eol = text.includes('\r\n') ? '\r\n' : '\n';
   const entryAt = new Map(entries.map((entry, index) => [entry.start, index]));
   const mark = (position, priority = 3) => breaks.set(position, Math.max(priority, breaks.get(position) ?? 0));
@@ -105,14 +137,13 @@ function layout(source)
     }
     groups.push({ start, end, priority });
   };
-  const declaration = node => ts.isFunctionDeclaration(node) || ts.isClassDeclaration(node) || ts.isInterfaceDeclaration(node) || ts.isTypeAliasDeclaration(node) || ts.isEnumDeclaration(node) || ts.isModuleDeclaration(node) || ts.isVariableStatement(node) && node.declarationList.declarations.some(item => item.initializer && (ts.isArrowFunction(item.initializer) || ts.isFunctionExpression(item.initializer)));
   const members = nodes => {
     for (let index = 0; index < nodes.length; index++)
     {
       const position = before(nodes[index]);
       // 成员间距属于声明边界；前一个成员的右大括号不能抵消它。
       // 首成员不加空行，说明注释与声明之间也不加空行。
-      if (index > 0) memberBoundaries.add(position);
+      if (index > 0) separators.add(position);
     }
   };
   let sawBody = false;
@@ -127,7 +158,7 @@ function layout(source)
   const visit = node => {
     // 换行由维护者按阅读需要选择；只规整已有分行的实参，不猜测数量阈值。
     // 调用布局优先级低于必须单行的导出、声明头及箭头函数。
-    if (ts.isCallExpression(node) && node.arguments.length > 1)
+    if ((ts.isCallExpression(node) || ts.isNewExpression(node)) && node.arguments?.length > 1)
     {
       const children = node.getChildren(source);
       const open = children.find(child => child.kind === ts.SyntaxKind.OpenParenToken);
@@ -136,9 +167,7 @@ function layout(source)
       if (multiline)
       {
         for (const argument of node.arguments) before(argument, 0.5);
-        tightCallEdges.add(before(node.arguments[0], 0.5));
         mark(close.getStart(source), 0.5);
-        tightCallEdges.add(close.getStart(source));
       }
     }
     if (isBraceContainer(node))
@@ -159,7 +188,7 @@ function layout(source)
     if (node.statements) for (let index = 0; index < node.statements.length; index++)
     {
       const position = before(node.statements[index]);
-      if (index > 0 && (ts.isSourceFile(node) || ts.isModuleBlock(node) || declaration(node.statements[index]) || declaration(node.statements[index - 1]))) memberBoundaries.add(position);
+      if (index > 0) separators.add(position);
     }
     if (ts.isImportDeclaration(node) || ts.isImportEqualsDeclaration(node) || ts.isExportDeclaration(node)) single(node, node.end, 5, 'import-export');
     if (ts.isExportAssignment(node) || ((ts.isVariableStatement(node) || ts.isTypeAliasDeclaration(node)) && node.modifiers?.some(modifier => modifier.kind === ts.SyntaxKind.ExportKeyword))) single(node, node.end, 1, 'export-expression');
@@ -212,16 +241,8 @@ function layout(source)
       output += original + current.text;
       continue;
     }
-    const next = entries[index + 1];
-    // 行内对象参数的左大括号不是独占行，不能抵消参数之间的留白。
-    const openingBraceLine = current.kind === ts.SyntaxKind.OpenBraceToken && (forced >= 3 || next && /[\r\n]/.test(text.slice(current.end, next.start)));
-    const brace = previous.kind === ts.SyntaxKind.OpenBraceToken || openingBraceLine || current.kind === ts.SyntaxKind.CloseBraceToken;
-    // 右大括号后的表达式收尾符号与大括号共同构成一行，不额外留白。
-    const braceEnding = /^\s*}[);,\]]*\s*$/.test(output.slice(output.lastIndexOf('\n') + 1));
-    const previousLine = output.slice(output.lastIndexOf('\n') + 1);
-    const trailingComment = previous.comment && !/[\r\n]/.test(previous.text) && previousLine.slice(0, -previous.text.length).trim().length > 0;
-    const comment = previous.comment && !trailingComment && (lineComment || /[\r\n]/.test(original) || forced);
-    const count = memberBoundaries.has(current.start) ? 2 : tightCallEdges.has(current.start) || brace || braceEnding || comment ? 1 : 2;
+    // 空行只分隔独立语句或成员；同一语句的条件、实参、链式表达式和括号连续排版。
+    const count = separators.has(current.start) ? 2 : 1;
     const indent = /(?:\r?\n)([ \t]*)$/.exec(original)?.[1] ?? '';
     output += eol.repeat(count) + indent + current.text;
   }
@@ -245,14 +266,78 @@ function indent(source)
   return text;
 }
 
+function ifBodies(source)
+{
+  const text = source.text, edits = [], protectedRanges = [];
+  const eol = text.includes('\r\n') ? '\r\n' : '\n';
+  const retain = (node, reason) => protectedRanges.push({ line: source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1, rule: 'if-braces', reason });
+  const visit = node => {
+    if (ts.isIfStatement(node)) for (const body of [node.thenStatement, node.elseStatement].filter(Boolean))
+    {
+      // else if 是同一条件链，不额外套块或改变 else 的绑定。
+      if (body === node.elseStatement && ts.isIfStatement(body)) continue;
+      if (ts.isBlock(body))
+      {
+        if (body.statements.length !== 1) continue;
+        const statement = body.statements[0];
+        if (/[\r\n]/.test(statement.getText(source))) continue;
+        if (!simpleBranch(statement))
+        {
+          retain(body, scopeNeutralStatement(statement) ? 'control-flow' : 'scope');
+          continue;
+        }
+        const braces = body.getChildren(source).filter(child => child.kind === ts.SyntaxKind.OpenBraceToken || child.kind === ts.SyntaxKind.CloseBraceToken);
+        let candidate = text;
+        for (const brace of [...braces].reverse()) candidate = candidate.slice(0, brace.getStart(source)) + eol + candidate.slice(brace.end);
+        try
+        {
+          // 无分号语句可能与下一行的 (、[ 等结合；不能为了删括号改写表达式。
+          assertEquivalent(source.fileName, text, candidate, { allowIfBraces: true });
+          for (const brace of braces) edits.push({ start: brace.getStart(source), end: brace.end, text: eol });
+        }
+        catch
+        {
+          retain(body, 'if-syntax');
+        }
+      }
+      else if (/[\r\n]/.test(body.getText(source)))
+      {
+        if (!scopeNeutralStatement(body))
+        {
+          retain(body, 'scope');
+          continue;
+        }
+        // 只包裹 AST 中原本就属于该分支的语句，绝不按缩进吸入后续语句。
+        edits.push({ start: body.pos, end: body.pos, text: eol + '{' + eol });
+        edits.push({ start: body.end, end: body.end, text: eol + '}' + eol });
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  let result = text;
+  for (const edit of edits.sort((a, b) => b.start - a.start || b.end - a.end)) result = result.slice(0, edit.start) + edit.text + result.slice(edit.end);
+  assertEquivalent(source.fileName, text, result, { allowIfBraces: true });
+  return { text: result, protectedRanges };
+}
+
+function whitespaceLayout(file, text)
+{
+  const expanded = layout(parse(file, text));
+  const indented = indent(parse(file, expanded.text));
+  const result = layout(parse(file, indented));
+  assertEquivalent(file, text, result.text);
+  return result;
+}
+
 /** 返回规范文本及必须保留的多行内容；不写盘，失败时调用方不能提交候选内容。 */
 export function formatSource(file, original)
 {
-  const expanded = layout(parse(file, original));
-  const indented = indent(parse(file, expanded.text));
-  const result = layout(parse(file, indented));
-  assertEquivalent(file, original, result.text);
-  return result;
+  const prepared = whitespaceLayout(file, original);
+  const branches = ifBodies(parse(file, prepared.text));
+  const result = branches.text === prepared.text ? prepared : whitespaceLayout(file, branches.text);
+  assertEquivalent(file, original, result.text, { allowIfBraces: true });
+  return { text: result.text, protectedRanges: [...result.protectedRanges, ...branches.protectedRanges] };
 }
 
 function sourceFiles(directory)

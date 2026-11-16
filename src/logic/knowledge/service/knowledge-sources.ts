@@ -40,7 +40,6 @@ export interface KnowledgeSourceWorkspace extends KnowledgeWorkspace
 export function sourceObservations(snapshot: Snapshot)
 {
   if (!snapshot.validation)
-
     fail('SOURCE_INVALID', '来源观察缺少知识校验');
 
   const result = new Map<string,
@@ -53,25 +52,21 @@ export function sourceObservations(snapshot: Snapshot)
   const add = (kind: 'agent' | 'module', sourceId: string) => { const file = snapshot.files.find(f => f.path === sourceId + (kind === 'agent' ? '/agent.json' : '/module.json')); if (!file || file.hash !== hash(file.text)) fail('SOURCE_INVALID', '来源定义字节不完整'); const source = { kind, sourceId }; result.set(knowledgeSourceKey(source), { source, observation: { knowledgeRevision: snapshot.revision, definitionHash: file.hash, visible: true } }) };
 
   const team = parseJson(snapshot.validation.indexes['.cbim/team/registry.json']),
-
     modules = parseJson(snapshot.validation.indexes['.cbim/workspace/registry.json']);
 
   if (!Array.isArray(team.groups) || !Array.isArray(modules.modules))
-
     fail('SOURCE_INVALID', '来源注册表无效');
 
   for (const group of team.groups)
   {
     if (!Array.isArray(group.agents))
-
       fail('SOURCE_INVALID', '角色注册表无效');
 
     for (const agent of group.agents)
-
       add('agent', agent.id)
   }
-  for (const module of modules.modules)
 
+  for (const module of modules.modules)
     add('module', module.id);
 
   return result;
@@ -91,13 +86,9 @@ export class KnowledgeSources implements KnowledgeSourceAuthority
     this.AssertAvailable(state);
 
     const previous = sourceObservations(current),
-
       next = sourceObservations(projected),
-
       transitionId = sourceTransitionId(request.workspaceId, request.requestId),
-
       time = new Date().toISOString(),
-
       changes: KnowledgeSourceMutationPlan[] = [];
 
     const resetRoots = plan ? ('mode' in plan ? plan.mode === 'replace' ? [plan.targetRoot] : [] : plan.operations.filter(op => op.action === 'delete' && (op.kind === 'agent' || op.kind === 'module')).map(op => op.id)) : [];
@@ -105,23 +96,17 @@ export class KnowledgeSources implements KnowledgeSourceAuthority
     const keys = new Map([...previous, ...next]);
 
     for (const item of state.knowledgeSourceGenerations ?? [])
-
       if (!item.retired)
-
         keys.set(knowledgeSourceKey(item.source), { source: item.source, observation: { knowledgeRevision: current.revision, definitionHash: hash(''), visible: true } });
 
     for (const [key, { source }] of [...keys].sort(([a], [b]) => a.localeCompare(b)))
     {
       const existing = currentKnowledgeSource(state, source),
-
         old = previous.get(key),
-
         value = next.get(key),
-
         reset = resetRoots.some(root => source.sourceId === root || source.sourceId.startsWith(root + '/'));
 
       const definition = source.sourceId + (source.kind === 'agent' ? '/agent.json' : '/module.json'),
-
         hadDefinition = current.files.some(file => file.path === definition);
 
       if (!value)
@@ -132,8 +117,10 @@ export class KnowledgeSources implements KnowledgeSourceAuthority
 
           changes.push({ source, previous: knowledgeSourceRef(existing), next: null, reason: hidden ? 'hidden' : 'deleted' })
         }
+
         continue
       }
+
       // 无效定义会被真实校验器从派生索引省略。普通修复不证明对象曾被删除，不能借 !old 伪造新代次。
       const uncertainBefore = !old && hadDefinition && !current.validation?.structural;
 
@@ -144,6 +131,7 @@ export class KnowledgeSources implements KnowledgeSourceAuthority
         changes.push({ source, previous: existing ? knowledgeSourceRef(existing) : null, next: { version: 1, workspaceId: this.workspaceId, source, generationId: randomUUID(), origin: replaced ? 'controlled_replace' : 'controlled_create', createdAt: time, createdChangeId: transitionId }, reason: replaced ? 'replaced' : 'created' });
       }
     }
+
     const result: KnowledgeSourceJournal = { version: 1, request: structuredClone(request), ...(plan ? { plan: structuredClone(plan) } : {}), beforeHash: hash(json(before)), afterHash: hash(json(after)), transition: { version: 1, transitionId, workspaceId: this.workspaceId, instanceId: request.instanceId, requestId: request.requestId, requestFingerprint: hash(json(request)), journalBindingHash: '0'.repeat(64), expectedSourceCursor: state.sourceCursor ?? null, changes, state: 'pending', preparedAt: time } };
 
     result.transition.journalBindingHash = sourceJournalHash(result);
@@ -158,7 +146,6 @@ export class KnowledgeSources implements KnowledgeSourceAuthority
   async Prepare(source: KnowledgeSourceJournal)
   {
     const state = await this.store.Read(),
-
       event = { version: 1 as const, kind: 'prepared' as const, changeId: randomUUID(), workspaceId: this.workspaceId, sourceCursor: nextKnowledgeSourceCursor(state, randomUUID()), recordedAt: source.transition.preparedAt, transition: source.transition };
 
     await this.store.Transact(knowledgeSourceCommand(event), async current => { if (!isDeepStrictEqual(current.sourceCursor ?? null, source.transition.expectedSourceCursor)) fail('SOURCE_STALE', '来源登记已变化，未写入知识'); return { knowledgeSourceChanges: [event], receipt: knowledgeSourceReceipt(event) } });
@@ -168,25 +155,24 @@ export class KnowledgeSources implements KnowledgeSourceAuthority
   async Settle(source: KnowledgeSourceJournal, outcome: 'committed' | 'rolled_back', proofHash: string, revision?: string)
   {
     const state = await this.store.Read(),
-
       transition = state.knowledgeSourceTransitions?.find(x => x.transitionId === source.transition.transitionId);
 
     if (!transition)
     {
       if (outcome === 'rolled_back')
-
         return;
 
       fail('SOURCE_JOURNAL_INVALID', '知识成功缺少原来源屏障')
     }
+
     if (transition.state !== 'pending')
     {
       if (transition.state !== outcome || transition.resolved?.journalProofHash !== proofHash)
-
         fail('SOURCE_JOURNAL_INVALID', '来源结算与原日志不同');
 
       return
     }
+
     await this.Verify(source, true);
 
     const event = { version: 1 as const, kind: 'resolved' as const, changeId: randomUUID(), workspaceId: this.workspaceId, sourceCursor: nextKnowledgeSourceCursor(state, randomUUID()), recordedAt: new Date().toISOString(), transitionId: transition.transitionId, requestFingerprint: transition.requestFingerprint, journalBindingHash: transition.journalBindingHash, outcome, journalProofHash: proofHash, ...(revision ? { committedRevision: revision } : {}) };
@@ -197,21 +183,19 @@ export class KnowledgeSources implements KnowledgeSourceAuthority
   async Verify(source: KnowledgeSourceJournal, required: boolean)
   {
     const state = await this.store.Read(),
-
       saved = state.knowledgeSourceTransitions?.find(x => x.transitionId === source.transition.transitionId);
 
     if (!saved)
     {
       if (required)
-
         fail('SOURCE_JOURNAL_INVALID', '来源事务缺少持久屏障');
 
       return
     }
+
     const { resolved: _, ...original } = saved;
 
     if (!isDeepStrictEqual({ ...original, state: 'pending' }, source.transition))
-
       fail('SOURCE_JOURNAL_INVALID', '来源屏障与原知识事务不一致')
   }
 
@@ -228,7 +212,6 @@ export class KnowledgeSources implements KnowledgeSourceAuthority
   AssertAvailable(state: DispatchState)
   {
     if (knowledgeSourcePending(state))
-
       fail('SOURCE_PENDING', '来源事务尚未核实，暂不能采纳或建立新责任')
   }
 
@@ -237,13 +220,11 @@ export class KnowledgeSources implements KnowledgeSourceAuthority
     this.AssertAvailable(state);
 
     if (!snapshot.validation?.structural)
-
       fail('SOURCE_INVALID', '来源知识结构尚未通过校验');
 
     const observation = sourceObservations(snapshot).get(knowledgeSourceKey(source));
 
     if (!observation)
-
       fail('SOURCE_MISSING', '当前来源缺失或不可见');
 
     return knowledgeSourceSelection(state, source, observation.observation)
@@ -255,7 +236,6 @@ export class KnowledgeSources implements KnowledgeSourceAuthority
     this.AssertAvailable(state);
 
     if (selection.kind === 'builtin')
-
       return { ref: selection.ref };
 
     const current = currentKnowledgeSource(state, selection.source);
@@ -263,13 +243,12 @@ export class KnowledgeSources implements KnowledgeSourceAuthority
     if (current)
     {
       if (!isDeepStrictEqual(selection.expectedRef, knowledgeSourceRef(current)))
-
         fail('SOURCE_STALE', '来源代次已变化');
 
       return { ref: knowledgeSourceRef(current) }
     }
-    if (selection.expectedRef)
 
+    if (selection.expectedRef)
       fail('SOURCE_STALE', '原来源代次已退役');
 
     const event = createKnowledgeSourceCapture(state, selection, { changeId: randomUUID(), generationId: randomUUID(), streamId: randomUUID(), recordedAt: at, consumer });
@@ -282,17 +261,13 @@ export class KnowledgeSources implements KnowledgeSourceAuthority
     const pending = knowledgeSourcePending(state);
 
     if (pending)
-
       return { status: 'pending', transitionId: pending.transitionId };
 
     if (!snapshot.validation?.structural)
-
       return { status: 'invalid', issue: '当前知识结构无法证明来源' };
 
     const observation = sourceObservations(snapshot).get(knowledgeSourceKey(source)),
-
       current = currentKnowledgeSource(state, source),
-
       ref = current ? knowledgeSourceRef(current) : undefined;
 
     if (saved && !('kind' in saved))
@@ -300,11 +275,10 @@ export class KnowledgeSources implements KnowledgeSourceAuthority
       const original = state.knowledgeSourceGenerations?.find(x => x.generationId === saved.generationId);
 
       if (original?.retired)
-
         return { status: 'retired', ref: saved, ...(ref ? { currentRef: ref } : {}) }
     }
-    if (!observation)
 
+    if (!observation)
       return { status: 'missing', issue: '来源定义缺失或不在当前有效注册表' };
 
     return knowledgeSourceStatus(state, source, saved && !('kind' in saved) ? saved : undefined, observation.observation);

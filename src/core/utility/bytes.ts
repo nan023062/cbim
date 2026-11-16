@@ -40,29 +40,23 @@ export class ByteUtils
     const { maxBytes, signal } = options;
 
     if (!Number.isSafeInteger(maxBytes) || maxBytes < 0)
-
       throw new RangeError('maxBytes must be a non-negative safe integer');
 
     signal?.throwIfAborted();
 
     if (!body)
-
       return new Uint8Array();
 
     const reader = body.getReader(),
-
       chunks: Uint8Array[] = [];
 
     let total = 0,
-
       cancelled = false,
-
       rejectRead: ((reason: unknown) => void) | undefined;
 
     const cancel = (reason: unknown) =>
     {
       if (cancelled)
-
         return;
 
       cancelled = true;
@@ -94,20 +88,18 @@ export class ByteUtils
         signal?.throwIfAborted();
 
         if (part.done)
-
           break;
 
         if (part.value.byteLength > maxBytes - total)
-
           throw new ByteLimitError(maxBytes);
 
         total += part.value.byteLength;
 
         // Buffer 也是 Uint8Array，但其 slice 仍共享存储；显式构造副本防止生产者复用后篡改已读字节。
         if (part.value.byteLength)
-
           chunks.push(new Uint8Array(part.value));
       }
+
       const result = new Uint8Array(total);
 
       let offset = 0;
@@ -118,6 +110,7 @@ export class ByteUtils
 
         offset += chunk.byteLength;
       }
+
       return result;
     }
     catch (error)

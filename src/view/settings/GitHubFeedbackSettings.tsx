@@ -18,17 +18,12 @@ const api = window.cbim;
 export function GitHubFeedbackSettings({ onDirtyChange }: { onDirtyChange?: (dirty: boolean) => void } = {})
 {
   const [status, setStatus] = useState<GitHubFeedbackStatus>(),
-
     [error, setError] = useState(''),
-
     [busy, setBusy] = useState(false);
 
   const [clientId, setClientId] = useState(''),
-
     [owner, setOwner] = useState('nan023062'),
-
     [repo, setRepo] = useState('cbim'),
-
     [visibility, setVisibility] = useState<'public' | 'private'>('public');
 
   useEffect(() => { let live = true; void api.call('github.feedback.status').then((value: GitHubFeedbackStatus) => { if (live) { setStatus(value); setClientId(value.config.clientId); setOwner(value.config.owner); setRepo(value.config.repo); setVisibility(value.config.visibility) } }).catch((e: Error) => { if (live) setError(e.message) }); return () => { live = false } }, []);

@@ -8,7 +8,6 @@ import type { OutputManifestRef } from '../../bridge/contracts/output-manifest';
 export function ArtifactTransitionProofs({ operations }: { operations: OutputManifestRef['operations'] })
 {
   if (!operations?.length)
-
     return null;
 
   return <section data-testid="artifact-transition-proofs" aria-label="原删除与移动证明">

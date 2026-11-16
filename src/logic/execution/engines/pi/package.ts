@@ -19,17 +19,14 @@ import type { EngineAdapter, EngineAdapterOptions } from '../../rules/engine-ada
 function command(options: EngineAdapterOptions)
 {
   if (options.runtime && options.runtime.version !== '1.5.0')
-
     throw Error('此 Pi 适配器尚未验证该 SDK 版本');
 
   if (options.process)
-
     return options.process;
 
   if (options.runtime)
-  {
     return { command: process.execPath, args: [options.runtime.entry], env: { ELECTRON_RUN_AS_NODE: '1' } }
-  }
+
   const locate = createRequire(typeof __filename === 'string' ? __filename : import.meta.url);
 
   const resources = (process as NodeJS.Process &
@@ -52,13 +49,12 @@ function command(options: EngineAdapterOptions)
     catch (error)
     {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT')
-
         continue;
 
       throw error
     }
-    if (JSON.parse(source).version !== '1.5.0')
 
+    if (JSON.parse(source).version !== '1.5.0')
       throw Error('当前 Loop Engine 仅验证过 Pi 1.5.0');
 
     const entry = path.join(directory, 'dist/bundle/rpc-entry.js');
@@ -67,6 +63,7 @@ function command(options: EngineAdapterOptions)
 
     return { command: process.execPath, args: [entry], env: { ELECTRON_RUN_AS_NODE: '1' } };
   }
+
   throw Error('缺少 Pi 运行时，请先安装项目依赖');
 }
 

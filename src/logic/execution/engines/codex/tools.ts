@@ -36,13 +36,10 @@ export interface CodexToolSpec
 export async function codexTools(context: EngineContext, port: EngineToolsPort, native: EngineToolsPort, allowExecution: boolean, settle: () => Promise<void>)
 {
   const controller = new AbortController(),
-
     seen = new Set<string>(),
-
     active = new InFlightOperations();
 
   const internal = await port.list(),
-
     nativeCatalog = nativeToolsDisabled(context) ? [] : await native.list();
 
   const mapping = new Map<string,
@@ -55,11 +52,9 @@ export async function codexTools(context: EngineContext, port: EngineToolsPort, 
     }>();
 
   for (const schema of internal)
-
     mapping.set(schema.name, { name: schema.name, port, schema });
 
   for (const schema of nativeCatalog)
-
     mapping.set('cbim_native_' + schema.name, { name: schema.name, port: native, schema });
 
   const nativeAllowed = new Set(nativeToolNames(allowExecution, 'codex'));
@@ -69,15 +64,12 @@ export async function codexTools(context: EngineContext, port: EngineToolsPort, 
   const spec = ([name, entry]: [string, { schema: EngineToolSchema }]): CodexToolSpec => ({ type: 'function', name, description: entry.schema.description ?? name, inputSchema: entry.schema.inputSchema });
 
   const registered = [...mapping].map(spec),
-
     catalog = available.map(spec),
-
     allowed = new Set(catalog.map(tool => tool.name));
 
   async function invoke(input: { callId: string; tool: string; arguments: unknown })
   {
     if (typeof input.callId !== 'string' || !input.callId || seen.has(input.callId))
-
       throw Error('Codex 工具调用身份无效或重复');
 
     seen.add(input.callId);
@@ -85,7 +77,6 @@ export async function codexTools(context: EngineContext, port: EngineToolsPort, 
     const entry = mapping.get(input.tool);
 
     if (!entry || !allowed.has(input.tool) || !input.arguments || typeof input.arguments !== 'object' || Array.isArray(input.arguments))
-
       return denied('本轮未提供该工具或参数无效');
 
     await settle();
@@ -93,13 +84,11 @@ export async function codexTools(context: EngineContext, port: EngineToolsPort, 
     controller.signal.throwIfAborted();
 
     const args = input.arguments as Record<string, unknown>,
-
       decision = await context.beforeTool({ id: input.callId, name: entry.name, input: args });
 
     controller.signal.throwIfAborted();
 
     if (!decision.allow)
-
       return denied(decision.reason ?? 'CBIM 未授权该调用');
 
     await context.emit({ type: 'tool.started', data: { id: input.callId, name: entry.name } });
@@ -114,6 +103,7 @@ export async function codexTools(context: EngineContext, port: EngineToolsPort, 
     {
       result = toolFailureResult(error)
     }
+
     result = toolReturnedResult(result);
 
     await context.emit({ type: 'tool.finished', data: { id: input.callId, name: entry.name, isError: result.isError === true, result } });

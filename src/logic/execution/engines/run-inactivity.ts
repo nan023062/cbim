@@ -28,7 +28,6 @@ export class RunInactivityTimer
   Progress()
   {
     if (!this.closed)
-
       this.timer.refresh()
   }
 
@@ -36,7 +35,6 @@ export class RunInactivityTimer
   Observe(event: EngineEvent)
   {
     if (this.closed)
-
       return;
 
     if (event.type === 'message.delta' && typeof event.data.text === 'string' && event.data.text.length)
@@ -45,14 +43,15 @@ export class RunInactivityTimer
 
       return
     }
+
     if (event.type === 'message' && event.data.role === 'assistant' && (event.data.text || Array.isArray(event.data.toolCallIds) && event.data.toolCallIds.length))
     {
       this.Progress();
 
       return
     }
-    if (!['tool.started', 'tool.updated', 'tool.finished'].includes(event.type) || typeof event.data.id !== 'string')
 
+    if (!['tool.started', 'tool.updated', 'tool.finished'].includes(event.type) || typeof event.data.id !== 'string')
       return;
 
     if (event.type === 'tool.updated')
@@ -68,13 +67,12 @@ export class RunInactivityTimer
         } | undefined;
 
       if (!result?.content?.some(part => part.text?.length || part.data?.length))
-
         return;
     }
+
     const signature = event.type === 'tool.updated' ? createHash('sha256').update(JSON.stringify(event.data.result)).digest('hex') : event.type;
 
     if (this.toolProgress.get(event.data.id) === signature)
-
       return;
 
     this.toolProgress.set(event.data.id, signature);

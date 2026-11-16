@@ -82,36 +82,29 @@ export function evaluateScopeBudget(rawPolicy: ScopeBudgetPolicy, rawObservation
   const policy = scopeBudgetPolicySchema.parse(rawPolicy);
 
   if (!policy.enabled)
-
     return { kind: 'disabled' };
 
   const value = scopeBudgetObservationSchema.parse(rawObservation);
 
   if (value.liveRunIds.length)
-
     return { kind: 'wait', runIds: [...value.liveRunIds] };
 
   const deny = (reason: ScopeBudgetReason): ScopeBudgetDecision => ({ kind: 'deny', reason, unknownRunIds: [...value.unknownRunIds] });
 
   if (value.coverage !== 'tracked' || value.consistency !== 'stable' || value.unknownRunIds.length)
-
     return deny('usage_unverifiable');
 
   // 首轮没有既有消耗；空集合与“旧记录缺失”不同，后者由归属计数和 coverage 保留。
   if (value.registeredRuns === 0)
-
     return value.tokens === 0 && (value.estimatedCostUsd === undefined || value.estimatedCostUsd === 0) ? { kind: 'allow' } : deny('usage_unverifiable');
 
   if (policy.limits.tokens !== undefined && !value.tokensComplete || policy.limits.estimatedCostUsd !== undefined && (!value.costComplete || value.estimatedCostUsd === undefined))
-
     return deny('usage_unverifiable');
 
   if (policy.limits.tokens !== undefined && value.tokens >= policy.limits.tokens)
-
     return deny('token_limit');
 
   if (policy.limits.estimatedCostUsd !== undefined && costReached(value.estimatedCostUsd!, policy.limits.estimatedCostUsd))
-
     return deny('cost_limit');
 
   return { kind: 'allow' };

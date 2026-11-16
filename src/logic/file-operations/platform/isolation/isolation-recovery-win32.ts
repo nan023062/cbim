@@ -32,7 +32,6 @@ export class Win32IsolationRecovery
   constructor(koffiPath: string)
   {
     if (process.platform !== 'win32' || process.arch !== 'x64')
-
       fault('UNSUPPORTED');
 
     this.k = requireNative(koffiPath);
@@ -49,7 +48,6 @@ export class Win32IsolationRecovery
   private Check(value: unknown, stage: string)
   {
     if (!value)
-
       fault(stage, this.api.last())
   }
 
@@ -67,24 +65,20 @@ export class Win32IsolationRecovery
       const code = this.api.last();
 
       if (code === 87)
-
         return;
 
       fault('PROCESS', code)
     }
+
     return handle
   }
 
   private ProcessFacts(handle: any, pid: number): IsolationProcess
   {
     const created = Buffer.alloc(8),
-
       exit = Buffer.alloc(8),
-
       kernel = Buffer.alloc(8),
-
       user = Buffer.alloc(8),
-
       session = Buffer.alloc(4);
 
     this.Check(this.api.times(handle, created, exit, kernel, user), 'PROCESS_TIME');
@@ -100,7 +94,6 @@ export class Win32IsolationRecovery
     const handle = this.ProcessHandle(pid);
 
     if (!handle)
-
       fault('PROCESS_ABSENT');
 
     try
@@ -118,13 +111,11 @@ export class Win32IsolationRecovery
     try
     {
       if (this.ProcessIdentity().session !== original.session)
-
         return 'unknown';
 
       const handle = this.ProcessHandle(original.pid);
 
       if (!handle)
-
         return 'exited';
 
       try
@@ -132,7 +123,6 @@ export class Win32IsolationRecovery
         const current = this.ProcessFacts(handle, original.pid);
 
         if (current.created !== original.created || current.session !== original.session)
-
           return 'reused';
 
         const state = this.api.wait(handle, 0);
@@ -154,13 +144,11 @@ export class Win32IsolationRecovery
   Job(resource: IsolationResource): 'active' | 'empty' | 'absent' | 'unknown'
   {
     if (!['exited', 'reused'].includes(this.Host(resource.host)))
-
       return 'unknown';
 
     const handle = this.api.job(4, 0, resource.jobName);
 
     if (!handle)
-
       return this.api.last() === 2 ? 'absent' : 'unknown';
 
     try
@@ -168,7 +156,6 @@ export class Win32IsolationRecovery
       const value = Buffer.alloc(48);
 
       if (!this.api.queryJob(handle, 1, value, 48, null))
-
         return 'unknown';
 
       return value.readUInt32LE(40) === 0 ? 'empty' : 'active'
@@ -182,11 +169,9 @@ export class Win32IsolationRecovery
   private Final(handle: any)
   {
     const value = Buffer.alloc(65536),
-
       length = this.api.final(handle, value, 32768, 0);
 
     if (!length || length >= 32768)
-
       fault('PATH');
 
     return value.subarray(0, length * 2).toString('utf16le')
@@ -204,11 +189,9 @@ export class Win32IsolationRecovery
   private Open(file: string, remove: boolean)
   {
     const handle = this.api.file(file, 0x81 | (remove ? 0x10000 : 0), 3, null, 3, 0x2000000 | 0x200000, null),
-
       code = this.api.last();
 
     if (!handle || this.k.address(handle) === 0xffffffffffffffffn)
-
       fault('OPEN', code);
 
     try
@@ -216,11 +199,9 @@ export class Win32IsolationRecovery
       const info = this.Information(handle);
 
       if (info.attributes & 0x400 || normal(this.Final(handle)) !== normal(file))
-
         fault('PATH');
 
       if (!(info.attributes & 0x10) && info.links !== 1)
-
         fault('LINK');
 
       return { handle, file, ...info }
@@ -236,7 +217,6 @@ export class Win32IsolationRecovery
   private Parents(root: string)
   {
     const held: any[] = [],
-
       drive = path.parse(root).root;
 
     let current = drive;
@@ -246,7 +226,6 @@ export class Win32IsolationRecovery
       for (const part of ['', ...path.relative(drive, path.dirname(root)).split(path.sep).filter(Boolean)])
       {
         if (part)
-
           current = path.join(current, part);
 
         const entry = this.Open(current, false);
@@ -254,15 +233,14 @@ export class Win32IsolationRecovery
         held.push(entry.handle);
 
         if (!(entry.attributes & 0x10))
-
           fault('PATH')
       }
+
       return held
     }
     catch (error)
     {
       for (const handle of held.reverse())
-
         this.Close(handle);
 
       throw error
@@ -274,7 +252,6 @@ export class Win32IsolationRecovery
     const temp = fs.realpathSync(os.tmpdir());
 
     if (path.dirname(root) !== temp || !/^cbim-isolated-[A-Za-z0-9]+$/.test(path.basename(root)))
-
       fault('ROOT_PATH')
   }
 
@@ -291,7 +268,6 @@ export class Win32IsolationRecovery
       entry = this.Open(root, false);
 
       if (!(entry.attributes & 0x10))
-
         fault('ROOT_PATH');
 
       return entry.identity
@@ -299,11 +275,9 @@ export class Win32IsolationRecovery
     finally
     {
       if (entry)
-
         this.Close(entry.handle);
 
       for (const handle of parents.reverse())
-
         this.Close(handle)
     }
   }
@@ -314,9 +288,7 @@ export class Win32IsolationRecovery
     this.RootPath(resource.root);
 
     const parents = this.Parents(resource.root),
-
       held: ReturnType<Win32IsolationRecovery['Open']>[] = [],
-
       ordered: typeof held = [];
 
     const release = () => { for (let i = held.length - 1; i >= 0; i--) { this.Close(held[i].handle); held.splice(i, 1) } for (let i = parents.length - 1; i >= 0; i--) { this.Close(parents[i]); parents.splice(i, 1) } };
@@ -328,7 +300,6 @@ export class Win32IsolationRecovery
       held.push(root);
 
       if (!(root.attributes & 0x10) || JSON.stringify(root.identity) !== JSON.stringify(resource.rootIdentity))
-
         fault('ROOT_CHANGED');
 
       const visit = (entry: typeof root, depth: number) => { if (depth > 64 || held.length > 4096) fault('TREE_LIMIT'); if (entry.attributes & 0x10) { const names = fs.readdirSync(entry.file).sort((a, b) => Number(a === 'owner.json') - Number(b === 'owner.json')); for (const name of names) { const target = path.resolve(entry.file, name); if (path.dirname(target) !== entry.file) fault('PATH'); const child = this.Open(target, true); held.push(child); visit(child, depth + 1) } } ordered.push(entry) };
@@ -338,13 +309,12 @@ export class Win32IsolationRecovery
       if (ownerRequired)
       {
         const ownerFile = path.join(resource.root, 'owner.json'),
-
           owner = JSON.parse(fs.readFileSync(ownerFile, 'utf8'));
 
         if (owner.executionId !== resource.executionId || owner.profileName !== resource.profileName || owner.pid !== resource.host.pid || owner.nonce !== resource.nonce)
-
           fault('OWNER_CHANGED')
       }
+
       return {
         remove: () => { for (const entry of ordered) { this.Check(this.api.dispose(entry.handle, 4, Buffer.from([1]), 1), 'DELETE'); this.Close(entry.handle); held.splice(held.indexOf(entry), 1) } }, close: release
       };
@@ -361,13 +331,11 @@ export class Win32IsolationRecovery
   DeleteProfile(resource: IsolationResource)
   {
     if (resource.profileName !== 'CBIM.Isolated.' + resource.executionId)
-
       fault('PROFILE_IDENTITY');
 
     const code = this.api.deleteProfile(resource.profileName);
 
     if (code !== 0)
-
       fault('PROFILE_DELETE', code)
   }
 }

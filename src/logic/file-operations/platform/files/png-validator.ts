@@ -45,75 +45,56 @@ const paeth = (a: number, b: number, c: number) => { const p = a + b - c, pa = M
 export function decodePngRaster(bytes: Uint8Array): PngRasterResult
 {
   if (!(bytes instanceof Uint8Array) || bytes.byteLength > pngValidationLimits.fileBytes)
-
     fail('VALIDATION_LIMIT', 'PNG产物超过1 MiB');
 
   const data = Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength);
 
   if (data.length < 8 || !data.subarray(0, 8).equals(signature))
-
     return invalid('signature');
 
   let offset = 8,
-
     count = 0,
-
     width = 0,
-
     height = 0,
-
     channels = 0,
-
     ended = false,
-
     gamma: number | undefined;
 
   const idat: Buffer[] = [],
-
     metadata = new Set<string>();
 
   while (offset < data.length)
   {
     if (++count > pngValidationLimits.chunks)
-
       fail('VALIDATION_LIMIT', 'PNG块数超过1024');
 
     if (data.length - offset < 12)
-
       return invalid('truncated', '/chunks');
 
     const length = data.readUInt32BE(offset),
-
       end = offset + 12 + length,
-
       typeBytes = data.subarray(offset + 4, offset + 8);
 
     if (length > 0x7fffffff || end > data.length)
-
       return invalid('truncated', '/chunks');
 
     if (!typeBytes.every(byte => byte >= 65 && byte <= 90 || byte >= 97 && byte <= 122) || typeBytes[2] >= 97)
-
       return invalid('chunkType', '/chunks');
 
     if (crc32(data.subarray(offset + 4, end - 4)) !== data.readUInt32BE(end - 4))
-
       return invalid('crc', '/chunks');
 
     const type = typeBytes.toString('ascii'),
-
       body = data.subarray(offset + 8, end - 4);
 
     offset = end;
 
     if (count === 1 && type !== 'IHDR')
-
       return invalid('headerOrder', '/IHDR');
 
     if (type === 'IHDR')
     {
       if (count !== 1 || length !== 13)
-
         return invalid('header', '/IHDR');
 
       width = body.readUInt32BE(0);
@@ -121,27 +102,21 @@ export function decodePngRaster(bytes: Uint8Array): PngRasterResult
       height = body.readUInt32BE(4);
 
       if (!width || !height || width > 0x7fffffff || height > 0x7fffffff)
-
         return invalid('dimensions', '/IHDR');
 
       if (width > pngValidationLimits.dimension || height > pngValidationLimits.dimension || width * height > pngValidationLimits.pixels)
-
         fail('VALIDATION_LIMIT', 'PNG尺寸或实际像素超过解码上限');
 
       if (body[8] !== 8 || ![2, 6].includes(body[9]) || body[10] !== 0 || body[11] !== 0 || body[12] !== 0)
-
         return invalid('profile', '/IHDR', 'png_unsupported');
 
       channels = body[9] === 2 ? 3 : 4;
     }
     else if (type === 'IDAT')
-
       idat.push(body);
-
     else if (type === 'IEND')
     {
       if (length !== 0 || !idat.length || offset !== data.length)
-
         return invalid('end', '/IEND');
 
       ended = true;
@@ -151,35 +126,28 @@ export function decodePngRaster(bytes: Uint8Array): PngRasterResult
     else if (['sRGB', 'gAMA', 'pHYs'].includes(type))
     {
       if (idat.length || metadata.has(type))
-
         return invalid('metadataOrder', '/chunks');
 
       metadata.add(type);
 
       if (type === 'sRGB' && (length !== 1 || body[0] > 3) || type === 'gAMA' && (length !== 4 || body.readUInt32BE(0) === 0 || body.readUInt32BE(0) > 0x7fffffff) || type === 'pHYs' && (length !== 9 || body[8] > 1 || body.readUInt32BE(0) > 0x7fffffff || body.readUInt32BE(4) > 0x7fffffff))
-
         return invalid('metadata', '/chunks');
 
       if (type === 'gAMA')
-
         gamma = body.readUInt32BE(0);
     }
     else
-
       return invalid('chunk', '/chunks', 'png_unsupported');
   }
-  if (!ended)
 
+  if (!ended)
     return invalid('end', '/IEND');
 
   if (metadata.has('sRGB') && gamma !== undefined && gamma !== 45455)
-
     return invalid('colorMetadata', '/chunks');
 
   const packed = Buffer.concat(idat),
-
     stride = width * channels,
-
     expected = (stride + 1) * height;
 
   let raw: Buffer;
@@ -196,8 +164,8 @@ export function decodePngRaster(bytes: Uint8Array): PngRasterResult
           bytesWritten: number
         }
       };
-    if (value.engine.bytesWritten !== packed.length || value.buffer.length !== expected)
 
+    if (value.engine.bytesWritten !== packed.length || value.buffer.length !== expected)
       return invalid('scanlineLength', '/IDAT');
 
     raw = value.buffer;
@@ -206,26 +174,22 @@ export function decodePngRaster(bytes: Uint8Array): PngRasterResult
   {
     return invalid('deflate', '/IDAT')
   }
+
   const pixels = new Uint8Array(stride * height);
 
   for (let row = 0; row < height; row++)
   {
     const start = row * (stride + 1),
-
       filter = raw[start];
 
     if (filter > 4)
-
       return invalid('filter', '/rows/' + row);
 
     for (let column = 0; column < stride; column++)
     {
       const index = row * stride + column,
-
         a = column >= channels ? pixels[index - channels] : 0,
-
         b = row ? pixels[index - stride] : 0,
-
         c = row && column >= channels ? pixels[index - stride - channels] : 0;
 
       const predictor = filter === 0 ? 0 : filter === 1 ? a : filter === 2 ? b : filter === 3 ? Math.floor((a + b) / 2) : paeth(a, b, c);
@@ -233,6 +197,7 @@ export function decodePngRaster(bytes: Uint8Array): PngRasterResult
       pixels[index] = (raw[start + 1 + column] + predictor) & 255;
     }
   }
+
   return { ok: true, width, height, colorType: channels === 3 ? 'rgb' : 'rgba', pixels };
 }
 
@@ -242,25 +207,20 @@ export function validatePngArtifact(rawSchema: PngImageSchema, bytes: Uint8Array
   const parsed = pngImageSchema.safeParse(rawSchema);
 
   if (!parsed.success)
-
     fail('VALIDATION_SCHEMA_INVALID', 'PNG验证声明不受支持或超过边界');
 
   const decoded = decodePngRaster(bytes);
 
   if (!decoded.ok)
-
     return { outcome: 'rejected', issues: [decoded.issue] };
 
   const schema = parsed.data,
-
     issues: PngValidationOutcome['issues'] = [];
 
   if (decoded.width !== schema.width || decoded.height !== schema.height)
-
     issues.push({ code: 'png_dimensions', instancePath: '/IHDR', keyword: 'dimensions' });
 
   if (decoded.colorType !== schema.colorType)
-
     issues.push({ code: 'png_color', instancePath: '/IHDR', keyword: 'colorType' });
 
   return { outcome: issues.length ? 'rejected' : 'passed', issues };

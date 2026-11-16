@@ -10,7 +10,6 @@ import { connectorIdSchema } from './definition';
 import { repositoryToolScopeSchema } from '../../tools/rules/scope-schema';
 
 const revision = z.string().regex(/^[a-f0-9]{64}$/),
-
   offset = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER);
 
 export const repositoryToolLimits = { listItems: 50, contentCharacters: 4096 } as const;

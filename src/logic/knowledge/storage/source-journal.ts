@@ -43,15 +43,12 @@ export function checkedSourceJournal(raw: unknown, before: Record<string, string
   const parsed = knowledgeSourceJournalSchema.safeParse(raw);
 
   if (!parsed.success)
-
     fail('SOURCE_JOURNAL_INVALID', '来源事务记录格式无效');
 
   const value = raw as KnowledgeSourceJournal,
-
     t = value.transition;
 
   if (!isDeepStrictEqual(value.request, request) || t.workspaceId !== request.workspaceId || t.instanceId !== request.instanceId || t.requestId !== request.requestId || t.requestFingerprint !== hash(json(request)) || t.transitionId !== sourceTransitionId(request.workspaceId, request.requestId) || t.state !== 'pending' || value.beforeHash !== hash(json(before)) || value.afterHash !== hash(json(after)) || t.journalBindingHash !== sourceJournalHash(value))
-
     fail('SOURCE_JOURNAL_INVALID', '来源事务与原请求或前后正文不一致');
 
   if (value.plan)
@@ -59,9 +56,9 @@ export function checkedSourceJournal(raw: unknown, before: Record<string, string
     const plan = checkedKnowledgePlan('operations' in value.plan ? 'object_plan' : 'package_plan', value.plan);
 
     if (!isDeepStrictEqual(plan.request, request))
-
       fail('SOURCE_JOURNAL_INVALID', '来源计划未绑定原知识请求')
   }
+
   return value;
 }
 

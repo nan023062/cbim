@@ -20,22 +20,17 @@ export function requestBudgetModelFor(profile: ResolvedEngineModel['profile'], s
   const bindingHash = workspaceMemberModelHash(profile);
 
   if (slot === 'primary')
-
     return requestBudgetModelSchema.parse({ profileId: profile.id, modelId: profile.model, configurationHash: bindingHash, api: profile.api, contextWindow: profile.contextWindow, maxTokens: profile.maxTokens, ...(profile.pricing ? { pricing: profile.pricing } : {}) });
 
   const value = Object.hasOwn(profile.modelRoles?.roles ?? {}, slot) ? profile.modelRoles!.roles[slot] : undefined;
 
   if (!value)
-
     throw Error('执行快照没有模型角色：' + slot);
 
   const p = value.profile,
-
     base = { profileId: p.id, modelId: p.model, configurationHash: hash(workspaceMemberCanonical(p)), role: { slot, bindingHash }, api: p.api };
 
   return requestBudgetModelSchema.parse(value.kind === 'embedding'
-
     ? { ...base, inputTokens: value.profile.inputTokens, dimensions: value.profile.dimensions, ...(value.profile.inputPrice === undefined ? {} : { inputPrice: value.profile.inputPrice }) }
-
     : { ...base, contextWindow: value.profile.contextWindow, maxTokens: value.profile.maxTokens, ...(value.profile.pricing ? { pricing: value.profile.pricing } : {}) });
 }

@@ -45,7 +45,6 @@ export class AutomationScheduler
   private Assert()
   {
     if (this.closing)
-
       fail('AUTOMATION_CLOSED', '自动化服务已关闭')
   }
 
@@ -86,7 +85,6 @@ export class AutomationScheduler
     const job = state.jobs.find(job => job.id === id);
 
     if (!job || job.revision !== revision)
-
       fail('AUTOMATION_STALE', '自动化不存在或版本已变化，请刷新');
 
     return job
@@ -109,19 +107,19 @@ export class AutomationScheduler
       const index = state.runs.findIndex(item => !active(item));
 
       if (index < 0)
-
         fail('AUTOMATION_LIMIT', '未结运行过多');
 
       state.runs.splice(index, 1)
     }
+
     if (trigger === 'schedule')
     {
       job.nextRunAt = nextAutomationAt(job.definition.schedule, this.now(), this.now());
 
       if (job.definition.schedule.kind === 'once')
-
         job.definition.enabled = false
     }
+
     await this.store.Write(state);
 
     const controller = new AbortController();
@@ -181,11 +179,11 @@ export class AutomationScheduler
       const current = (await this.List()).runs.find(item => item.id === run.id);
 
       if (current?.taskId)
-
         await this.runner.Stop(current.taskId);
 
       await this.UpdateRun(run.id, value => { value.status = 'cancelled'; value.finishedAt = this.Stamp() })
     }
+
     return this.List();
   }
 
@@ -195,13 +193,11 @@ export class AutomationScheduler
     this.closing = true;
 
     if (this.timer)
-
       clearInterval(this.timer);
 
     this.timer = undefined;
 
     for (const value of this.pending.values())
-
       value.controller.abort(Error('工作区自动化正在关闭'));
 
     await Promise.allSettled([...this.pending.values()].map(value => value.promise));

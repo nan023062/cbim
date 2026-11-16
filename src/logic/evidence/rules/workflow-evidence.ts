@@ -72,7 +72,6 @@ export interface WorkflowProgressContext
 function valid(value: unknown, code: string, message: string): asserts value
 {
   if (!value)
-
     fail(code, message)
 }
 
@@ -94,7 +93,6 @@ function checkedBindings(bindings: readonly WorkflowContractBinding[])
   valid(bindings.length <= 100 && new Set(bindings.map(item => item.moduleId)).size === bindings.length, 'WORKFLOW_CONTEXT_INVALID', 'Workflow 模块约定数量或归属重复');
 
   for (const item of bindings)
-
     valid(item.moduleId && item.workflowId && item.workflowVersion && workflowContractSchema.safeParse(item.contract).success, 'WORKFLOW_CONTEXT_INVALID', '冻结的 Workflow 约定无效');
 
   valid(bindings.reduce((count, item) => count + (item.contract.delivery?.requiredValidations?.length ?? 0), 0) <= jsonValidationLimits.records, 'WORKFLOW_CONTEXT_INVALID', '一次成员执行最多包含 16 项 产物验证要求');
@@ -106,7 +104,6 @@ function checkedBindings(bindings: readonly WorkflowContractBinding[])
 export function assertWorkflowPlan(bindings: readonly WorkflowContractBinding[], plan: TaskProgress | undefined, task: Pick<TaskSpec, 'goal' | 'acceptance'>): number | undefined
 {
   if (!checkedBindings(bindings).some(item => item.contract.beforeEffects?.requirePlan))
-
     return;
 
   valid(plan && Number.isSafeInteger(plan.version) && plan.version > 0 && plan.steps.length && plan.goal === task.goal && same(plan.acceptance, task.acceptance), 'WORKFLOW_PLAN_REQUIRED', '本模块 Workflow 要求先保存与本任务目标及验收要求一致的执行计划');
@@ -118,7 +115,6 @@ export function assertWorkflowPlan(bindings: readonly WorkflowContractBinding[],
 export function evaluateWorkflowDelivery(bindings: readonly WorkflowContractBinding[], receipts: readonly ToolReceipt[], identity: WorkflowRunIdentity, validations: readonly ValidationRecord[] = [], manifest?: OutputManifestProof, codeChecks: readonly CodeCheckRecord[] = []): WorkflowEvidenceProof
 {
   const values = checkedBindings(bindings),
-
     unique = new Map<string, ToolReceipt>();
 
   for (const receipt of receipts)
@@ -133,10 +129,10 @@ export function evaluateWorkflowDelivery(bindings: readonly WorkflowContractBind
 
     unique.set(receipt.toolCallId, receipt);
   }
+
   const checks: WorkflowEvidenceProof['checks'] = [];
 
   for (const binding of values)
-
     for (const requirement of binding.contract.delivery?.requiredToolEvidence ?? [])
     {
       const ids = [...unique.values()].filter(receipt => receipt.toolName === requirement.toolName && receipt.scope.kind === (['bash', 'cbim_scoped_node'].includes(requirement.toolName) ? 'unknown' : 'workspace') && receipt.effects.includes(['bash', 'cbim_scoped_node'].includes(requirement.toolName) ? 'command' : ['write', 'edit', 'cbim_file_write_controlled'].includes(requirement.toolName) ? 'business-write' : 'read')).map(receipt => receipt.toolCallId).sort();
@@ -145,8 +141,8 @@ export function evaluateWorkflowDelivery(bindings: readonly WorkflowContractBind
 
       checks.push({ moduleId: binding.moduleId, workflowId: binding.workflowId, workflowVersion: binding.workflowVersion, requirementId: requirement.id, toolName: requirement.toolName, toolCallIds: ids });
     }
-  const selected = selectWorkflowValidations(values, receipts, identity, validations),
 
+  const selected = selectWorkflowValidations(values, receipts, identity, validations),
     validationChecks: WorkflowValidationCheck[] = selected.map(({ result }) => ({ ...result.requirement, validator: result.validator, validationId: result.validationId, toolCallId: result.toolCallId, ...(result.manifest ? { manifest: structuredClone(result.manifest) } : { baselineId: result.baselineId! }), artifact: structuredClone(result.artifact) }));
 
   if (completeOutputRequired(values))
@@ -156,7 +152,6 @@ export function evaluateWorkflowDelivery(bindings: readonly WorkflowContractBind
     valid(selected.every(record => same(record.result.manifest, outputManifestIdentity(manifest))), 'MANIFEST_VALIDATION_MISMATCH', '产物验证与交付必须引用同一完整清单，不能混用旧文件基线或其它集合');
   }
   else
-
     valid(!manifest && selected.every(record => !record.result.manifest), 'MANIFEST_UNDECLARED', '本轮未声明完整交付要求，不能补造完整出口证明');
 
   const codeCheck = selectCodeCheck(values, receipts, identity, codeChecks, manifest);
@@ -170,25 +165,22 @@ export function selectWorkflowValidations(bindings: readonly WorkflowContractBin
   const selected: ValidationRecord[] = [];
 
   for (const binding of checkedBindings(bindings))
-
     for (const requirement of binding.contract.delivery?.requiredValidations ?? [])
     {
       const expected = validationRequirement(bindings, binding.moduleId, requirement.id),
-
         matches = records.filter(record => record.result.requirement.moduleId === binding.moduleId && record.result.requirement.requirementId === requirement.id && record.result.outcome === 'passed' && receipts.some(receipt => receipt.toolCallId === record.result.toolCallId));
 
       valid(matches.length === 1, 'WORKFLOW_VALIDATION_REQUIRED', `模块 ${binding.moduleId} 的产物条件 ${requirement.id} 缺少唯一、明确引用的通过记录`);
 
       const record = matches[0],
-
         r = record.result,
-
         receipt = receipts.find(value => value.toolCallId === r.toolCallId)!;
 
       valid(r.validator === requirement.validator && validationRecordSchema.safeParse(record).success && same(receipt, record.receipt) && receipt.toolName === validationToolName && receipt.outcome === 'succeeded' && same(receipt.effects, ['read']) && receipt.scope.kind === 'workspace' && receipt.scope.workspaceId === identity.workspaceId && receipt.workspaceId === identity.workspaceId && receipt.taskId === identity.taskId && receipt.runId === identity.runId && r.binding.workspaceId === identity.workspaceId && r.binding.taskId === identity.taskId && r.binding.runId === identity.runId && same(r.requirement, { moduleId: binding.moduleId, workflowId: binding.workflowId, workflowVersion: binding.workflowVersion, requirementId: requirement.id, schemaHash: expected.schemaHash }) && r.artifact.relativePath === requirement.artifactPath, 'WORKFLOW_VALIDATION_INVALID', '验证器、调用归属、冻结要求或文件不一致');
 
       selected.push(record);
     }
+
   return selected;
 }
 
@@ -207,6 +199,7 @@ function progressResult(event: ArtifactEvidenceEvent): TaskProgress
 
       text?: unknown
     };
+
   valid(block.type === 'text' && typeof block.text === 'string', 'WORKFLOW_LOG_INVALID', '任务工具缺少正文');
 
   try
@@ -223,19 +216,15 @@ function progressResult(event: ArtifactEvidenceEvent): TaskProgress
 function effectFinished(events: readonly ArtifactEvidenceEvent[], identity: WorkflowRunIdentity, allowed: ArtifactEvidenceEvent): ArtifactEvidenceEvent
 {
   const id = String(allowed.data.id),
-
     calls = events.filter(event => ['tool.proposed', 'tool.allowed', 'tool.denied', 'tool.finished'].includes(event.type) && event.data.id === id),
-
     finished = calls.filter(event => event.type === 'tool.finished');
 
   valid(finished.length === 1, 'WORKFLOW_EVIDENCE_INVALID', 'Workflow 副作用缺少唯一的实际结束记录');
 
   const end = finished[0],
-
     receipt = end.data.receipt as ToolReceipt | undefined;
 
   if (receipt?.outcome === 'succeeded')
-
     return artifactSucceededCall(events, identity, id).finished;
 
   const proposed = calls.filter(event => event.type === 'tool.proposed');
@@ -256,15 +245,12 @@ export function validateWorkflowEvidence(events: readonly ArtifactEvidenceEvent[
 {
   // 显式业务 Agent 即使无附加 Workflow，也必须保留真实计划和交付；旧无约定读取保持兼容。
   if (!bindings.length && !options.requireDelivery)
-
     return;
 
   checkedBindings(bindings);
 
   const first = events[0],
-
     last = events.at(-1),
-
     identity = { workspaceId: task.workspaceId, taskId: task.taskId, runId: first?.runId };
 
   valid(first?.type === 'run.started' && first.runId && same(first.data.workflowContracts ?? [], bindings) && last?.type === 'run.settled' && last.data.status === 'completed', 'WORKFLOW_LOG_INVALID', 'Workflow 运行缺少完整来源、冻结约定或正常终态');
@@ -276,7 +262,6 @@ export function validateWorkflowEvidence(events: readonly ArtifactEvidenceEvent[
   valid(taskData?.workspaceId === task.workspaceId && taskData.taskId === task.taskId && taskData.goal === task.goal && same(taskData.acceptance, task.acceptance) && same(taskData.fallbackBinding, task.fallbackBinding) && same(taskData.ownerBinding, task.ownerBinding), 'WORKFLOW_LOG_INVALID', 'Workflow 运行来源与真实任务及冻结岗位不一致');
 
   const candidateEvent = events.filter(event => event.type === 'task.updated').at(-1),
-
     candidate = candidateEvent?.data.progress as TaskProgress | undefined;
 
   valid(candidateEvent && candidate?.state === 'awaiting_review' && candidate.delivery && candidate.steps.length && candidate.goal === task.goal && same(candidate.acceptance, task.acceptance), 'WORKFLOW_LOG_INVALID', 'Workflow 缺少当前任务的待审阅交付记录');
@@ -286,7 +271,6 @@ export function validateWorkflowEvidence(events: readonly ArtifactEvidenceEvent[
   valid(deliveries.length === 1, 'WORKFLOW_LOG_INVALID', 'Workflow 候选没有唯一的成功交付调用');
 
   const delivery = artifactSucceededCall(events, identity, String(deliveries[0].data.id)),
-
     delivered = progressResult(delivery.finished);
 
   valid(delivery.allowed.seq < candidateEvent.seq && same(delivered, candidate) && Number(delivery.allowed.data.input && ((delivery.allowed.data.input as Record<string, unknown>).expectedVersion)) === candidate.version - 1, 'WORKFLOW_LOG_INVALID', 'Workflow 交付事件、版本与成功回执不一致');
@@ -306,34 +290,33 @@ export function validateWorkflowEvidence(events: readonly ArtifactEvidenceEvent[
   for (const event of allowed)
   {
     const effects = event.data.effects,
-
       scope = event.data.scope as
         {
           kind?: unknown;
 
           workspaceId?: unknown
         } | undefined,
-
       native = nativeToolDescriptor(String(event.data.name));
 
     valid(Array.isArray(effects) && effects.length && effects.every(effect => ['read', 'preview', 'maintenance', 'business-write', 'knowledge-write', 'command'].includes(String(effect))) && scope?.workspaceId === identity.workspaceId && scope.kind === (effects.includes('command') ? 'unknown' : effects.includes('knowledge-write') ? 'knowledge' : 'workspace'), 'WORKFLOW_LOG_INVALID', 'Workflow 操作缺少可信副作用分类或范围身份');
 
     valid(!native || same(effects, native.effects), 'WORKFLOW_LOG_INVALID', '原生工具与真实注册的副作用分类不一致');
   }
+
   const effects = allowed.filter(event => (event.data.effects as ToolEffect[]).some(effect => ['business-write', 'knowledge-write', 'command'].includes(effect)));
 
   if (bindings.some(binding => binding.contract.beforeEffects?.requirePlan))
-
+  {
     for (const effect of effects.filter(event => workflowHasEffects(event.data.effects as ToolEffect[])))
     {
       const before = planCalls.filter(call => call.savedSeq < effect.seq).at(-1);
 
       valid(before && before.progress.goal === task.goal && same(before.progress.acceptance, task.acceptance), 'WORKFLOW_PLAN_REQUIRED', 'Workflow 发现计划之前或错误目标下的业务操作')
     }
+  }
+
   const effectEnds = effects.map(effect => ({ allowed: effect, finished: effectFinished(events, identity, effect) })),
-
     lastEffect = effects.at(-1)?.seq ?? 0,
-
     lastEffectEnd = Math.max(0, ...effectEnds.map(effect => effect.finished.seq));
 
   valid(lastEffectEnd < delivery.allowed.seq, 'WORKFLOW_EVIDENCE_INVALID', '交付时仍有未结束或后续副作用，原 Workflow 证据已失效');
@@ -341,7 +324,6 @@ export function validateWorkflowEvidence(events: readonly ArtifactEvidenceEvent[
   valid(candidate.steps.every(step => step.state === 'reported_done' && step.evidence.length), 'WORKFLOW_EVIDENCE_INVALID', 'Workflow 交付仍有未完成或无证据步骤');
 
   const ids = [...new Set(candidate.steps.flatMap(step => step.evidence))],
-
     receipts = ids.map(id => { const call = artifactSucceededCall(events, identity, id), ownEffect = effectEnds.some(effect => effect.allowed.data.id === id); valid(call.allowed.seq > plan.savedSeq && call.allowed.seq >= lastEffect && call.finished.seq < delivery.allowed.seq && (ownEffect || call.allowed.seq > lastEffectEnd), 'WORKFLOW_EVIDENCE_INVALID', 'Workflow 证据必须在当前计划内，读取验证不得与尚未结束的副作用重叠'); return call.receipt; });
 
   const proof = evaluateWorkflowDelivery(bindings, receipts, identity, validations, manifest, verifyCodeChecks(events, bindings, identity));

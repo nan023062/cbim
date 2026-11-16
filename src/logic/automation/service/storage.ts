@@ -24,7 +24,6 @@ export class FileAutomations implements AutomationStorage
     try
     {
       if ((await fs.stat(this.file)).size > 32 * 1024 * 1024)
-
         fail('AUTOMATION_SIZE', '自动化存储超过大小限制');
 
       text = await fs.readFile(this.file, 'utf8')
@@ -32,15 +31,14 @@ export class FileAutomations implements AutomationStorage
     catch (error)
     {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT')
-
         return { version: 1, workspaceId: this.workspaceId, jobs: [], runs: [] };
 
       throw error
     }
+
     const state = automationStateSchema.parse(JSON.parse(text));
 
     if (state.workspaceId !== this.workspaceId)
-
       fail('AUTOMATION_IDENTITY', '自动化存储不属于当前工作区');
 
     return state;
@@ -51,13 +49,11 @@ export class FileAutomations implements AutomationStorage
     const checked = automationStateSchema.parse(state);
 
     if (checked.workspaceId !== this.workspaceId)
-
       fail('AUTOMATION_IDENTITY', '自动化存储不属于当前工作区');
 
     const text = JSON.stringify(checked);
 
     if (Buffer.byteLength(text) > 32 * 1024 * 1024)
-
       fail('AUTOMATION_SIZE', '自动化存储超过大小限制');
 
     await atomic(this.file, text);

@@ -17,7 +17,6 @@ import './software-updates.css';
 export function SoftwareUpdates({ updates, onClose }: { updates: SoftwareUpdateController; onClose: () => void })
 {
   const dialog = useRef<HTMLDialogElement>(null),
-
     title = useId();
 
   const { status, error, pending, act } = updates;
@@ -62,7 +61,6 @@ export function SoftwareUpdateNotice({ status, onOpen }: { status?: DesktopUpdat
   const target = status?.release ? desktopVersionLabel(status.release.version, status.release.resourceVersion) : '';
 
   if (!status?.enabled || !status.release || !['available', 'downloading', 'ready', 'installing'].includes(status.phase) || dismissed === target && status.phase !== 'installing')
-
     return null;
 
   return <div className="software-update-notice" role="status"><span>{status.phase === 'installing' ? '下载已校验，正在准备自动安装重启' : status.phase === 'downloading' ? `正在后台下载更新${status.progress === undefined ? '' : ` ${status.progress}%`}` : status.phase === 'ready' ? (status.error ? '安装未完成，请查看并重试' : '更新已就绪，等待重启安装') : '发现 CBIM 新版'} · {target}</span><button onClick={onOpen}><Icon name="inspect" size={16} />查看更新</button>{status.phase !== 'installing' && <button aria-label="稍后提醒" onClick={() => setDismissed(target)}><Icon name="clock" size={16} />稍后</button>}</div>;

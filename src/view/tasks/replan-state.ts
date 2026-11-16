@@ -101,7 +101,6 @@ const textError = (error: unknown) => error instanceof Error ? error.message : S
 const bytes = (value: unknown) => new TextEncoder().encode(JSON.stringify(value)).length;
 
 export const REPLAN_RECORD_LIMIT = 128,
-
   REPLAN_INDEX_BYTE_LIMIT = 2 * 1024 * 1024;
 
 /** 仅第一次确定未受理的领域拒绝允许修正；曾未知、冲突或取消不能按失败自动换命令。 */
@@ -116,11 +115,9 @@ export function checkedReplanPreview(raw: unknown, input: ReplanPreviewInput): R
   const result = replanPreviewSchema.parse(raw);
 
   if (result.identity.workspaceId !== input.workspaceId || result.identity.rootSessionId !== input.rootSessionId || result.identity.inspectionScopeId !== input.inspectionScopeId)
-
     throw Error('条件核验结果不属于当前核实周期');
 
   if (result.eligible && (!result.basis || !result.graphCursor || !result.knowledgeRevision || result.inspectionGoalRevision === undefined || !result.requiredModules.length))
-
     throw Error('条件核验结果缺少完整依据');
 
   return result;
@@ -130,25 +127,20 @@ export function checkedReplanPreview(raw: unknown, input: ReplanPreviewInput): R
 export function checkedReplanReceipt(raw: unknown, request: ReplanRequest, proof: ReplanPreview, previous?: ReplanReceipt): ReplanReceipt
 {
   const receipt = replanReceiptSchema.parse(raw),
-
     value = receipt.replan;
 
   if (value.dispositionId !== request.dispositionId)
-
     throw Error('新业务周期回执关联了其他处置，请查询原命令');
 
   if (receipt.workspaceId !== request.workspaceId || receipt.rootSessionId !== request.rootSessionId || receipt.scopeId !== request.commandId || receipt.scopeId === request.source.inspectionScopeId || value.replanId !== request.commandId || value.operation !== 'business_replan' || value.source.inspectionScopeId !== request.source.inspectionScopeId || value.source.expectedBasis !== request.source.expectedBasis || value.input.message !== request.input.message || JSON.stringify(value.options) !== JSON.stringify(request.options) || proof.basis !== request.source.expectedBasis)
-
     throw Error('新业务周期回执与冻结请求不一致，请查询原命令');
 
   const facts = value.source.proof;
 
   if (facts.inspectionGoalRevision !== proof.inspectionGoalRevision || facts.knowledgeRevision !== proof.knowledgeRevision || JSON.stringify(facts.requiredModules) !== JSON.stringify(proof.requiredModules) || JSON.stringify(facts.inheritedHuman) !== JSON.stringify(proof.inheritedHuman) || value.runId === ('inspectionRunId' in facts ? facts.inspectionRunId : facts.reviewRunId) || value.runId === facts.sourceRunId)
-
     throw Error('新业务周期回执的前置依据与已核验条件不一致');
 
   if (previous && (JSON.stringify(previous.replan) !== JSON.stringify(value) || previous.scopeStatus === 'closed' && receipt.scopeStatus !== 'closed'))
-
     throw Error('同一业务命令的受理事实发生冲突，保留原回执');
 
   return receipt;
@@ -180,25 +172,20 @@ export class ScopeReplanController
       const text = ports.storage.getItem(this.storageKey);
 
       if (text === null)
-
         return;
 
       if (new TextEncoder().encode(text).length > REPLAN_INDEX_BYTE_LIMIT)
-
         throw Error('本地业务请求超过 2 MiB 读取上限，保留原记录');
 
       const saved = JSON.parse(text);
 
       if (saved.version !== 1 || saved.workspaceId !== workspaceId || saved.rootSessionId !== rootSessionId || !Array.isArray(saved.records))
-
         throw Error('本地业务重规划记录身份或格式不匹配');
 
       if (saved.records.length > REPLAN_RECORD_LIMIT)
-
         throw Error('本地业务请求超过 128 个来源读取上限，保留原记录');
 
       const sources = new Set<string>(),
-
         commands = new Set<string>();
 
       const records: ReplanDraft[] = saved.records.map((raw: any) => { const inspectionScopeId = replanRequestSchema.shape.source.shape.inspectionScopeId.parse(raw.inspectionScopeId); if (sources.has(inspectionScopeId) || typeof raw.message !== 'string' || raw.message.length > 64000 || !['ask', 'execute'].includes(raw.permission)) throw Error('本地业务目标草稿无效或重复'); sources.add(inspectionScopeId); let attempt: ReplanAttempt | undefined; if (raw.attempt) { const savedAttempt = raw.attempt, request = replanRequestSchema.parse(savedAttempt.request); if (request.workspaceId !== workspaceId || request.rootSessionId !== rootSessionId || request.source.inspectionScopeId !== inspectionScopeId || commands.has(request.commandId) || !['submitting', 'unknown', 'accepted', 'rejected'].includes(savedAttempt.phase)) throw Error('本地业务命令身份无效或重复'); commands.add(request.commandId); const proof = checkedReplanPreview(savedAttempt.proof, { workspaceId, rootSessionId, inspectionScopeId }); if (!proof.eligible || proof.basis !== request.source.expectedBasis) throw Error('本地业务命令缺少对应条件核验依据'); const receipt = savedAttempt.receipt ? checkedReplanReceipt(savedAttempt.receipt, request, proof) : undefined; if (savedAttempt.phase === 'accepted' && !receipt) throw Error('已受理业务命令缺少回执'); const unresolved = savedAttempt.phase === 'submitting' || savedAttempt.phase === 'unknown'; attempt = { request, proof, receipt, phase: unresolved ? 'unknown' : savedAttempt.phase, uncertain: unresolved || !!savedAttempt.uncertain, error: typeof savedAttempt.error === 'string' ? savedAttempt.error : undefined }; if (attempt.phase !== 'rejected' && (request.input.message !== raw.message || request.options.permission !== raw.permission)) throw Error('本地草稿与冻结业务命令不一致'); } return { inspectionScopeId, message: raw.message, permission: raw.permission, attempt }; });
@@ -252,11 +239,9 @@ export class ScopeReplanController
   ObserveTarget(target: ReplanTarget | undefined)
   {
     if (target && (target.workspaceId !== this.workspaceId || target.rootSessionId !== this.rootSessionId))
-
       target = undefined;
 
     if (key(target) === key(this.target))
-
       return;
 
     this.target = target;
@@ -271,25 +256,19 @@ export class ScopeReplanController
   private Save(record: ReplanDraft, clearPreview = false): boolean
   {
     const records = [...this.value.records],
-
       index = records.findIndex(item => item.inspectionScopeId === record.inspectionScopeId);
 
     if (index < 0)
-
       records.push(record);
-
     else
-
       records[index] = record;
 
     try
     {
       if (this.unavailable)
-
         throw Error('本地记录不可用');
 
       if (records.length > REPLAN_RECORD_LIMIT)
-
         throw Error('本机业务请求达到 128 个来源上限，原记录保持不变');
 
       const saved = { version: 1, workspaceId: this.workspaceId, rootSessionId: this.rootSessionId, records };
@@ -298,7 +277,6 @@ export class ScopeReplanController
       const reserved = records.reduce((total, item) => total + (item.attempt && !item.attempt.receipt && ['submitting', 'unknown'].includes(item.attempt.phase) ? bytes(item.attempt.request) + bytes(item.attempt.proof) + 16384 : 0), 0);
 
       if (bytes(saved) + reserved > REPLAN_INDEX_BYTE_LIMIT)
-
         throw Error('本机业务请求及未决回执预留超过 2 MiB，原记录保持不变');
 
       this.ports.storage.setItem(this.storageKey, JSON.stringify(saved));
@@ -311,8 +289,8 @@ export class ScopeReplanController
 
       return false
     }
-    if (clearPreview)
 
+    if (clearPreview)
       this.previewGeneration.Advance();
 
     this.value = { records, preview: clearPreview ? undefined : this.value.preview, error: '' };
@@ -326,17 +304,14 @@ export class ScopeReplanController
   Edit(inspectionScopeId: string, message: string, permission: 'ask' | 'execute')
   {
     if (this.unavailable || message.length > 64000 || !['ask', 'execute'].includes(permission) || !replanRequestSchema.shape.source.shape.inspectionScopeId.safeParse(inspectionScopeId).success)
-
       return;
 
     const old = this.Record(inspectionScopeId);
 
     if (old?.attempt && old.attempt.phase !== 'rejected' || this.IsPending(old))
-
       return;
 
     if (old && old.message === message && old.permission === permission)
-
       return;
 
     this.Save({ inspectionScopeId, message, permission, attempt: old?.attempt }, true);
@@ -348,11 +323,9 @@ export class ScopeReplanController
     const record = this.Record(target.inspectionScopeId);
 
     if (this.unavailable || key(target) !== key(this.target) || this.value.preview?.loading || record?.attempt && record.attempt.phase !== 'rejected' || this.IsPending(record))
-
       return;
 
     const generation = this.previewGeneration.Advance(),
-
       fields = draftKey(record);
 
     this.value = { ...this.value, preview: { target, draftKey: fields, loading: true, error: '' } };
@@ -364,11 +337,9 @@ export class ScopeReplanController
       const result = checkedReplanPreview(await this.ports.preview({ workspaceId: this.workspaceId, rootSessionId: this.rootSessionId, inspectionScopeId: target.inspectionScopeId }), target);
 
       if (!this.previewGeneration.IsCurrent(generation) || key(target) !== key(this.target) || fields !== draftKey(this.Record(target.inspectionScopeId)))
-
         return;
 
       if (result.eligible && (result.graphCursor?.streamId !== target.graphCursor.streamId || result.graphCursor.seq !== target.graphCursor.seq || result.inspectionGoalRevision !== target.inspectionGoalRevision))
-
         throw Error('来源或任务图已变化，请同步后重新核验条件');
 
       this.value = { ...this.value, preview: { target, draftKey: fields, loading: false, result, error: '' } };
@@ -397,11 +368,9 @@ export class ScopeReplanController
   async Submit(target: ReplanTarget, model: Omit<ReplanRequest['options'], 'permission'>)
   {
     const record = this.Record(target.inspectionScopeId),
-
       proof = this.Ready(target);
 
     if (this.unavailable || !record || !proof?.basis || record.attempt && record.attempt.phase !== 'rejected' || this.IsPending(record))
-
       return;
 
     let request: ReplanRequest;
@@ -411,7 +380,6 @@ export class ScopeReplanController
       request = replanRequestSchema.parse({ workspaceId: this.workspaceId, rootSessionId: this.rootSessionId, commandId: this.ports.uuid(), source: { inspectionScopeId: target.inspectionScopeId, expectedBasis: proof.basis }, input: { message: record.message }, options: { ...model, permission: record.permission }, ...(target.dispositionId ? { dispositionId: target.dispositionId } : {}) });
 
       if (this.value.records.some(item => item.attempt?.request.commandId === request.commandId))
-
         throw Error('命令标识与已有业务请求重复');
     }
     catch (error)
@@ -422,21 +390,19 @@ export class ScopeReplanController
 
       return
     }
+
     const next = { ...record, attempt: { request, proof, phase: 'submitting' as const, uncertain: false } };
 
     if (this.Save(next))
-
       await this.Send(next);
   }
 
   private async Send(record: ReplanDraft)
   {
     const attempt = record.attempt!,
-
       request = attempt.request;
 
     if (this.pending.has(request.commandId))
-
       return;
 
     this.pending.add(request.commandId);
@@ -467,11 +433,9 @@ export class ScopeReplanController
   async Query(inspectionScopeId: string)
   {
     const record = this.Record(inspectionScopeId),
-
       attempt = record?.attempt;
 
     if (this.unavailable || !record || !attempt || this.IsPending(record))
-
       return;
 
     const request = attempt.request;
@@ -485,11 +449,8 @@ export class ScopeReplanController
       const raw = await this.ports.lookup({ workspaceId: this.workspaceId, rootSessionId: this.rootSessionId, commandId: request.commandId });
 
       if (raw !== undefined)
-
         this.Save({ ...record, attempt: { ...attempt, phase: 'accepted', receipt: checkedReplanReceipt(raw, request, attempt.proof, attempt.receipt), error: undefined } });
-
       else if (attempt.phase !== 'accepted')
-
         this.Save({ ...record, attempt: { ...attempt, phase: 'unknown', uncertain: true, error: '尚未查询到受理回执；保留原请求，不创建另一命令。' } });
     }
     catch (error)
@@ -509,13 +470,11 @@ export class ScopeReplanController
     const record = this.Record(inspectionScopeId);
 
     if (this.unavailable || record?.attempt?.phase !== 'unknown' || this.IsPending(record))
-
       return;
 
     const next = { ...record, attempt: { ...record.attempt, uncertain: true } };
 
     if (this.Save(next))
-
       await this.Send(next)
   }
 
@@ -538,7 +497,6 @@ export class ScopeReplanPool
   Get(workspaceId: string, rootSessionId: string, ports: ReplanPorts)
   {
     const identity = JSON.stringify([workspaceId, rootSessionId]),
-
       controller = this.controllers.get(identity) ?? new ScopeReplanController(workspaceId, rootSessionId, ports);
 
     this.controllers.delete(identity);
@@ -548,13 +506,12 @@ export class ScopeReplanPool
     for (const [oldKey, old] of this.controllers)
     {
       if (this.controllers.size <= this.idleLimit)
-
         break;
 
       if (oldKey !== identity && old.canRelease)
-
         this.controllers.delete(oldKey)
     }
+
     return controller;
   }
 }

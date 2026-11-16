@@ -14,7 +14,6 @@ export function MemberHelpNotice({ task, runId, compact = false }: { task: TaskN
   const help = committedMemberHelp(task, runId);
 
   if (!help)
-
     return null;
 
   const content = <>

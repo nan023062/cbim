@@ -104,7 +104,6 @@ export function isProgressEvidence(receipt: unknown, identity: ProgressToolIdent
   const checked = toolReceiptSchema.safeParse(receipt);
 
   if (!checked.success)
-
     return false;
 
   const value = checked.data;
@@ -120,11 +119,8 @@ export function memberToolContract(name: MemberToolName)
   const cancellation: ToolCancellation = { mode: 'preflight_only', description: '运行时在执行前核对当前调用与停止边界；开始保存后不承诺打断或回滚，失败仍可能已有记录。' };
 
   const recovery: ToolRecovery = name === 'cbim_task_inspect'
-
     ? { mode: 'read_again', description: '可显式重新读取当前执行事实，不启动任务、不补造旧计划或证明。' }
-
     : final ? { mode: 'inspect_before_retry', description: '暂存后必须结束当前轮，不能继续调用工具或自动重试。由主调度或本机界面核实原运行记录；真实安全交接仍待正常结束与结算。' }
-
       : { mode: 'inspect_before_retry', queryTool: 'cbim_task_inspect', description: '先显式核实本轮已保存的计划、版本和可引用事实。输出失败不代表保存回滚；不得自动重复提交或沿旧 expectedVersion 覆盖新状态。' };
 
   return { version: 1, effects: ['maintenance'] as const, outputSchema: zodToJsonSchema(memberToolOutputSchemas[name]) as Record<string, unknown>, cancellation, recovery };

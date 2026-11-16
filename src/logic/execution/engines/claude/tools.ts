@@ -27,7 +27,6 @@ import type { EngineToolsPort } from '../../rules/engine-tools';
 const nativeNames: Record<string, string> = { Read: 'read', Write: 'write', Edit: 'edit', Bash: 'bash', Glob: 'find', Grep: 'grep' };
 
 const prefix = 'mcp__cbim__',
-
   identityField = '__cbim_call_id';
 
 /** Anthropic 不收顶层联合：投影字段，引用则保留在独立原定义下，避免移除分支后悬空；实际调用仍按原协议严格校验。 */
@@ -40,7 +39,6 @@ export function claudeInputSchema(schema: Record<string, unknown>)
     let key = 'cbimOriginalInput';
 
     while (Object.hasOwn(definitions, key))
-
       key += '_';
 
     // 保留完整引用图而非递归展开：递归 Schema、转义指针和重复引用仍指向同一原节点。
@@ -48,6 +46,7 @@ export function claudeInputSchema(schema: Record<string, unknown>)
 
     schema = { ...original, definitions: { ...original.definitions, [key]: original } };
   }
+
   const variants = Array.isArray(schema.anyOf) ? schema.anyOf : Array.isArray(schema.oneOf) ? schema.oneOf : [];
 
   const { anyOf: _anyOf, oneOf: _oneOf, ...object } = schema;
@@ -55,9 +54,7 @@ export function claudeInputSchema(schema: Record<string, unknown>)
   const properties: Record<string, unknown> = {};
 
   for (const variant of variants)
-
     for (const [key, value] of Object.entries(variant.properties ?? {}))
-
       properties[key] = properties[key] === undefined ? value : { anyOf: [properties[key], value] };
 
   const required = variants.length ? (variants[0].required ?? []).filter((key: string) => variants.every(variant => variant.required?.includes(key))) : schema.required;
@@ -71,7 +68,6 @@ export function claudeToolCall(name: string, input: Record<string, unknown>)
   const canonical = nativeNames[name];
 
   if (!canonical)
-
     return { name: name.startsWith(prefix) ? name.slice(prefix.length) : name, input };
 
   const value = { ...input };
@@ -82,6 +78,7 @@ export function claudeToolCall(name: string, input: Record<string, unknown>)
 
     delete value.file_path
   }
+
   if (name === 'Edit')
   {
     value.oldText = value.old_string;
@@ -92,6 +89,7 @@ export function claudeToolCall(name: string, input: Record<string, unknown>)
 
     delete value.new_string
   }
+
   return { name: canonical, input: value };
 }
 
@@ -99,9 +97,7 @@ export function claudeToolCall(name: string, input: Record<string, unknown>)
 export async function claudeTools(context: EngineContext, port: EngineToolsPort, allowExecution: boolean, blocked: () => string | undefined, settle: () => Promise<void> = async () => { })
 {
   const catalog = await port.list(),
-
     names = new Set(catalog.map(t => t.name)),
-
     controller = new AbortController();
 
   const native = nativeToolsDisabled(context) ? [] : allowExecution ? Object.keys(nativeNames) : ['Read', 'Glob', 'Grep'];
@@ -127,19 +123,16 @@ export async function claudeTools(context: EngineContext, port: EngineToolsPort,
   server.server.setRequestHandler(CallToolRequestSchema, async request =>
   {
     const args = { ...request.params.arguments },
-
       id = args[identityField];
 
     delete args[identityField];
 
     if (typeof id !== 'string')
-
       throw Error('内部工具缺少原调用身份');
 
     const call = active.get(id);
 
     if (!call || !call.internal || call.name !== request.params.name || !grants.delete(id) || !isDeepStrictEqual(call.original, args))
-
       throw Error('内部工具没有对应的一次性授权');
 
     controller.signal.throwIfAborted();
@@ -147,7 +140,6 @@ export async function claudeTools(context: EngineContext, port: EngineToolsPort,
     const reason = blocked();
 
     if (reason)
-
       throw Error(reason);
 
     const result = await runToolResult(call.name, () => port.call(call.name, args, controller.signal, id));
@@ -163,7 +155,6 @@ export async function claudeTools(context: EngineContext, port: EngineToolsPort,
   const before: HookCallback = async input =>
   {
     if (input.hook_event_name !== 'PreToolUse')
-
       return {};
 
     const raw = input.tool_input;
@@ -171,28 +162,22 @@ export async function claudeTools(context: EngineContext, port: EngineToolsPort,
     const deny = (reason: string) => ({ hookSpecificOutput: { hookEventName: 'PreToolUse' as const, permissionDecision: 'deny' as const, permissionDecisionReason: reason } });
 
     if (!raw || typeof raw !== 'object' || Array.isArray(raw) || Object.hasOwn(raw, identityField))
-
       return deny('工具参数无效');
 
     const original = raw as Record<string, unknown>,
-
       mapped = claudeToolCall(input.tool_name, original),
-
       internal = input.tool_name.startsWith(prefix) && names.has(mapped.name);
 
     if (!internal && !native.includes(input.tool_name))
-
       return deny('本轮未提供该工具');
 
     if (controller.signal.aborted || blocked())
-
       return deny(blocked() ?? '运行已停止');
 
     // Claude 可在完整工具块到达时提前启动调用；终态帧未交付并不能证明它尚未执行。
     await settle();
 
     if (controller.signal.aborted || blocked())
-
       return deny(blocked() ?? '运行已停止');
 
     const id = input.tool_use_id;
@@ -200,13 +185,11 @@ export async function claudeTools(context: EngineContext, port: EngineToolsPort,
     const decision = await context.beforeTool({ id, ...mapped });
 
     if (!decision.allow || controller.signal.aborted)
-
       return deny(decision.reason ?? '运行已停止');
 
     active.set(id, { ...mapped, original: structuredClone(original), internal });
 
     if (internal)
-
       grants.add(id);
 
     await context.emit({ type: 'tool.started', data: { id, name: mapped.name } });
@@ -217,13 +200,11 @@ export async function claudeTools(context: EngineContext, port: EngineToolsPort,
   const after: HookCallback = async input =>
   {
     if (input.hook_event_name !== 'PostToolUse' && input.hook_event_name !== 'PostToolUseFailure')
-
       return {};
 
     const call = active.get(input.tool_use_id);
 
     if (!call)
-
       return {};
 
     const failed = input.hook_event_name === 'PostToolUseFailure';

@@ -115,14 +115,11 @@ export class ResourceRepositories
         this.config = saved
       }
       else
-      {
         this.configError = '旧版远端配置已停用。未登录时请选择本地目录；服务器仓库将由账号登录后自动提供。'
-      }
     }
     catch (e: any)
     {
       if (e.code !== 'ENOENT')
-
         this.configError = '仓库配置无效，请检查 resource-repository-settings.json 或重新选择仓库'
     }
   }
@@ -135,7 +132,6 @@ export class ResourceRepositories
   private Store(): RepositoryStore
   {
     if (!this.config)
-
       fail('NOT_CONFIGURED', this.session.state === 'signedIn' ? '账号服务器仓库尚未就绪，不能使用本地仓库代替' : '请先设置本地仓库目录');
 
     return this.config.mode === 'local' ? new LocalRepository(this.config.location) : new RemoteRepository(this.config.location, this.config.token, this.config.repositoryId)
@@ -144,7 +140,6 @@ export class ResourceRepositories
   private Identity(id: string)
   {
     if (!this.config || this.config.repositoryId !== id)
-
       fail('REPOSITORY_CHANGED', '当前仓库已切换，请刷新后重新操作')
   }
 
@@ -174,15 +169,12 @@ export class ResourceRepositories
   ReadConnection(repositoryId: string): SharedRepositoryReadConnection
   {
     const sharing = this.sharing,
-
       binding = this.readSharing;
 
     if (!sharing || !binding)
-
       fail('REPOSITORY_CONNECTION_NOT_SHARED', '请先在设置中明确启动本机仓库共享');
 
     if (binding.repositoryId !== repositoryId)
-
       fail('REPOSITORY_CONNECTION_STALE', '当前共享仓库与连接定义不一致');
 
     const assertCurrent = () => { if (this.readSharing !== binding || this.sharing !== sharing || binding.controller.signal.aborted || this.config?.repositoryId !== repositoryId) fail('REPOSITORY_CONNECTION_STALE', '仓库共享代际已失效，请重新核实连接') };
@@ -217,11 +209,9 @@ export class ResourceRepositories
       const root = await fs.realpath(request.location);
 
       if (!(await fs.stat(root)).isDirectory())
-
         fail('PATH', '请选择已有文件夹');
 
       const install = await fs.realpath(this.paths.installRoot),
-
         user = await fs.realpath(this.paths.userRoot);
 
       for (const blocked of [install, user, ...await Promise.all((this.paths.protectedRoots ?? []).map(root => fs.realpath(root).catch(error => { if (error.code === 'ENOENT') return path.resolve(root); throw error })))])
@@ -229,15 +219,13 @@ export class ResourceRepositories
         const rel = path.relative(blocked, root);
 
         if (!rel || (!path.isAbsolute(rel) && rel !== '..' && !rel.startsWith('..' + path.sep)))
-
           fail('PATH', '请将资源仓库放在程序安装、更新缓存和用户运行数据目录之外')
       }
-      if (root.split(/[\\/]/).some(part => part.toLowerCase() === '.cbim'))
 
+      if (root.split(/[\\/]/).some(part => part.toLowerCase() === '.cbim'))
         fail('PATH', '资源仓库不能放在项目 .cbim 正式知识目录中');
 
       const repo = new LocalRepository(root),
-
         snapshot = await repo.Initialize();
 
       config = { mode: 'local', location: root, repositoryId: snapshot.repositoryId };
@@ -245,25 +233,24 @@ export class ResourceRepositories
     else
     {
       const url = repositoryUrl(request.location),
-
         target = new URL(url),
-
         ownHosts = new Set(['localhost', '127.0.0.1', '[::1]', ...Object.values(networkInterfaces()).flatMap(list => list?.map(n => n.address) || [])]);
 
       if (this.sharing && Number(target.port) === this.sharing.port && ownHosts.has(target.hostname))
-
         fail('SELF_CONNECTION', '此地址属于本窗口正在共享的仓库，请继续使用本地模式；可用另一个客户端连接');
 
       const snapshot = await new RemoteRepository(url, request.token).Read();
 
       config = { mode: 'remote', location: url, repositoryId: snapshot.repositoryId, token: request.token }
     }
+
     if (config.mode === 'local')
     {
       await atomic(this.settingsFile, JsonUtils.FormatJson(config));
 
       this.localConfig = config
     }
+
     const oldSharing = this.RetireSharing();
 
     this.config = config;
@@ -304,7 +291,6 @@ export class ResourceRepositories
   Connection()
   {
     if (!this.sharing || !this.shareToken)
-
       fail('NOT_RUNNING', '仓库共享服务未启动');
 
     return { url: this.sharing.url, host: this.sharing.host, port: this.sharing.port, token: this.shareToken }

@@ -30,7 +30,6 @@ export class QuestionQueue
     const parsed = structuredClone(input.parse(args));
 
     if (signal.aborted)
-
       return Promise.resolve({ cancelled: true });
 
     return new Promise(resolve => { const id = randomUUID(); let settled = false; const cancel = () => finish({ cancelled: true }); const finish = (value: QuestionResult) => { if (settled) return; settled = true; this.pending.delete(id); signal.removeEventListener('abort', cancel); resolve(value) }; this.pending.set(id, { view: { id, taskId, ...parsed }, finish }); signal.addEventListener('abort', cancel, { once: true }); if (signal.aborted) cancel(); });
@@ -42,13 +41,11 @@ export class QuestionQueue
     const item = this.pending.get(id);
 
     if (!item || item.view.taskId !== taskId)
-
       throw Error('问题已结束，请刷新对话');
 
     const answers = questionAnswersInputSchema.parse(value);
 
     if (answers.length !== item.view.questions.length)
-
       throw Error('请回答所有问题');
 
     const result = answers.map((answer, i) => { const q = item.view.questions[i]; if (answer.option === null) { if (!answer.other) throw Error('请填写其它补充'); return { question: q.question, answer: answer.other } } const selected = q.options[answer.option]; if (!selected) throw Error('无效选项'); return { question: q.question, answer: selected.label, supplement: answer.other || undefined } });
@@ -59,9 +56,7 @@ export class QuestionQueue
   Cancel(taskId?: string)
   {
     for (const item of [...this.pending.values()])
-
       if (!taskId || item.view.taskId === taskId)
-
         item.finish({ cancelled: true })
   }
 }

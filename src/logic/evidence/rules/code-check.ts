@@ -99,7 +99,6 @@ export function codeCheckOutput(record: CodeCheckRecord)
 function valid(value: unknown, message: string): asserts value
 {
   if (!value)
-
     fail('CODE_CHECK_EVIDENCE', message)
 }
 
@@ -107,9 +106,7 @@ function valid(value: unknown, message: string): asserts value
 export function verifyCodeChecks(events: readonly ArtifactEvidenceEvent[], bindings: readonly CodeCheckBinding[], owner: CodeCheckIdentity): CodeCheckRecord[]
 {
   const checks = frozenCodeChecks(bindings),
-
     records: CodeCheckRecord[] = [],
-
     seen = new Set<string>();
 
   for (const event of events.filter(event => event.type === 'code.validation_checked'))
@@ -123,7 +120,6 @@ export function verifyCodeChecks(events: readonly ArtifactEvidenceEvent[], bindi
     const end = events.find(item => item.type === 'tool.finished' && item.data.id === record.toolCallId);
 
     if (!end || (end.data.receipt as ToolReceipt | undefined)?.outcome !== 'succeeded')
-
       continue;
 
     const call = artifactSucceededCall(events, owner, record.toolCallId);
@@ -154,8 +150,8 @@ export function verifyCodeChecks(events: readonly ArtifactEvidenceEvent[], bindi
 
     records.push(record);
   }
-  for (const end of events.filter(event => event.type === 'tool.finished' && event.data.name === codeCheckToolName && (event.data.receipt as ToolReceipt | undefined)?.outcome === 'succeeded'))
 
+  for (const end of events.filter(event => event.type === 'tool.finished' && event.data.name === codeCheckToolName && (event.data.receipt as ToolReceipt | undefined)?.outcome === 'succeeded'))
     valid(records.some(record => record.toolCallId === end.data.id), '成功代码检查缺少可信事件');
 
   return records;
@@ -165,7 +161,6 @@ export function verifyCodeChecks(events: readonly ArtifactEvidenceEvent[], bindi
 export function selectCodeCheck(bindings: readonly CodeCheckBinding[], receipts: readonly ToolReceipt[], owner: CodeCheckIdentity, records: readonly CodeCheckRecord[], manifest?: OutputManifestProof): CodeCheckProof | undefined
 {
   if (!frozenCodeChecks(bindings).length)
-
     return;
 
   const selected = records.filter(record => receipts.some(receipt => receipt.toolCallId === record.toolCallId && receipt.toolName === codeCheckToolName && receipt.outcome === 'succeeded' && isDeepStrictEqual(receipt.effects, ['command']) && receipt.scope.kind === 'unknown' && receipt.workspaceId === owner.workspaceId && receipt.taskId === owner.taskId && receipt.runId === owner.runId));

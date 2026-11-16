@@ -5,7 +5,6 @@
 import { z } from 'zod';
 
 const id = z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/),
-
   revision = z.number().int().positive().safe();
 
 export const resumeMemberInputSchema = z.object({ expectedGraphCursor: z.object({ streamId: id, seq: z.number().int().nonnegative().safe() }).strict(), expectedGoalRevision: revision, taskId: id, expectedRevision: revision, checkpointId: id, reason: z.string().trim().min(1).max(4000) }).strict();

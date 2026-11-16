@@ -62,25 +62,20 @@ export class RunArtifactCapture
   Guard(name: string, id: string, input: unknown, activeIds: readonly string[]): string | undefined
   {
     if (this.reserved)
-
       return '正在采集文件基线，请等待本次采集结束后再调用工具';
 
     if (name !== artifactCaptureToolName)
-
       return;
 
     if (this.controller.signal.aborted)
-
       return '运行已停止，不能采集文件基线';
 
     const parsed = artifactCaptureInputSchema.safeParse(input);
 
     if (!parsed.success)
-
       return '文件基线参数不符合结构约定';
 
     if (activeIds.length)
-
       return '仍有工具或审批未结束，不能采集文件基线';
 
     this.reserved = { id, input: parsed.data, consumed: false };
@@ -90,11 +85,9 @@ export class RunArtifactCapture
   Observed(event: StoredEvent)
   {
     if (event.type === 'run.started' || event.type.startsWith('tool.') || event.type === 'task.updated' || event.type === 'artifact.baseline_captured' || event.type === 'run.stop_requested')
-
       this.events.push(event);
 
     if ((event.type === 'tool.finished' || event.type === 'tool.denied') && event.data.id === this.reserved?.id)
-
       this.reserved = undefined;
   }
 
@@ -114,7 +107,6 @@ export class RunArtifactCapture
     const reserved = this.reserved;
 
     if (!reserved || reserved.id !== id || reserved.consumed || JSON.stringify(reserved.input) !== JSON.stringify(input))
-
       fail('ARTIFACT_CALL', '文件采集必须来自已授权的一次性调用');
 
     reserved.consumed = true;
@@ -124,11 +116,9 @@ export class RunArtifactCapture
     check();
 
     if (this.Refs().length >= artifactLimits.baselines)
-
       fail('ARTIFACT_LIMIT', '本轮最多保存 8 份成功文件基线');
 
     const facts = artifactSources(this.events, this.binding, input.sourceToolCallIds),
-
       lastEffectSeq = facts.lastEffectSeq;
 
     await this.port.AssertCurrentKnowledge();
@@ -140,7 +130,6 @@ export class RunArtifactCapture
     check();
 
     if (returned.length !== facts.sources.length)
-
       fail('ARTIFACT_FILES_INVALID', '文件端口未返回完整对应结果');
 
     const files = new Map<string, ArtifactCapturedFile>();
@@ -152,7 +141,6 @@ export class RunArtifactCapture
     check();
 
     if (artifactSources(this.events, this.binding, input.sourceToolCallIds).lastEffectSeq !== lastEffectSeq)
-
       fail('ARTIFACT_EFFECT_CHANGED', '采集期间出现了新的副作用');
 
     const baseline = artifactBaselineStagedSchema.parse({ version: 1, baselineId: randomUUID(), captureToolCallId: id, binding: this.binding, knowledgeRevision: this.port.knowledgeRevision, progressVersion: input.expectedTaskProgressVersion, capturedAt: new Date().toISOString(), lastEffectSeq, sourceCalls: facts.sources.map(({ path: _path, ...source }) => source), files: [...files.values()] });

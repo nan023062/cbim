@@ -22,9 +22,7 @@ const check = (v: unknown, message: string) => { if (!v) fail('EFFECT_DISPOSITIO
 function validateSource(state: DispatchState, record: EffectDispositionRecord)
 {
   const { request, observation } = record,
-
     subject = request.subject,
-
     source = observation.source;
 
   const graph = state.graphs.find(g => g.identity.workspaceId === request.workspaceId && g.identity.rootSessionId === request.rootSessionId);
@@ -52,7 +50,6 @@ function validateSource(state: DispatchState, record: EffectDispositionRecord)
       check(source.executionModel === undefined, '旧派工来源不能声明递归协议');
 
       const task = graph!.tasks.find(t => t.taskId === subject.taskId),
-
         run = state.runs?.find(r => r.binding.runId === subject.runId && r.binding.rootSessionId === request.rootSessionId && r.binding.workspaceId === request.workspaceId && r.binding.taskId === subject.taskId);
 
       check(task && task.scopeId === scope!.scopeId && task.runIds.includes(subject.runId) && run, '处置缺少原成员任务及运行归属');
@@ -68,6 +65,7 @@ function validateSource(state: DispatchState, record: EffectDispositionRecord)
 
     check(state.sessions.some(s => s.workspaceId === request.workspaceId && s.rootSessionId === request.rootSessionId && s.purpose === 'conversation' && s.agentInstanceId === graph!.root.agent.agentInstanceId && s.agentId === 'cbim:main'), '处置主运行缺少真实对话通道');
   }
+
   check(source.goalRevision === scope!.goal?.revision && source.inputRevision === (scope!.goal ? (scope!.goal.inputRevision ?? 1) : undefined) && source.goalPlanRevision === scope!.goal?.plan?.revision, '处置目标版本与来源周期不一致');
 }
 
@@ -80,12 +78,12 @@ export function projectEffectDispositionMutation(previous: DispatchState, mutati
 
     return previous.effectDispositions === undefined ? {} : { effectDispositions: previous.effectDispositions }
   }
+
   check(Array.isArray(mutation.effectDispositions) && mutation.effectDispositions.length === 1, '处置事务必须只追加一条记录');
 
   check(Object.keys(mutation).every(k => k === 'effectDispositions' || k === 'receipt'), '处置不能夹带周期、任务图、运行或其它领域写入');
 
   const record = mutation.effectDispositions[0],
-
     parsed = effectDispositionRecordSchema.safeParse(record);
 
   check(parsed.success && isDeepStrictEqual(parsed.data, record), '处置记录结构无效或需要转换');
@@ -107,7 +105,6 @@ export function projectEffectDispositionMutation(previous: DispatchState, mutati
   const next = [...records, structuredClone(record)];
 
   if (next.length > effectObservationLimits.records || record.revision > effectObservationLimits.recordsPerRoot || new TextEncoder().encode(JSON.stringify(next)).length > effectObservationLimits.storedBytes)
-
     fail('EFFECT_DISPOSITION_LIMIT', '处置历史达到保存上限，原记录不删除');
 
   return { effectDispositions: next };
@@ -119,7 +116,6 @@ export function validateEffectDispositionLink(state: DispatchState, scope: Dispa
   const intent = scope.recovery ?? scope.replan;
 
   if (!intent?.dispositionId)
-
     return;
 
   const record = state.effectDispositions?.find(r => r.dispositionId === intent.dispositionId);
@@ -135,7 +131,6 @@ export function validateEffectDispositionLink(state: DispatchState, scope: Dispa
     check('kind' in source, '旧无种类核实不能补造新处置关联');
 
     if (!('kind' in source))
-
       return;
 
     subject = isMainRecoverySource(source) ? { kind: 'main_run', runId: source.runId, toolCallIds: source.toolCallIds } : { kind: 'member_run', taskId: source.taskId, runId: source.runId, toolCallIds: source.toolCallIds };
@@ -149,12 +144,12 @@ export function validateEffectDispositionLink(state: DispatchState, scope: Dispa
     check('kind' in proof, '旧证明不能补造新处置关联');
 
     if (!('kind' in proof))
-
       return;
 
     subject = proof.kind === 'main_run' ? { kind: 'main_run', runId: proof.sourceRunId, toolCallIds: proof.sourceToolCallIds } : { kind: 'member_run', taskId: proof.sourceTaskId, runId: proof.sourceRunId, toolCallIds: proof.sourceToolCallIds };
 
     check(record!.request.decision === 'repair_in_new_cycle' && proof.sourceScopeId === record!.observation.source.scopeId && proof.sourceReportBasis === record!.observation.basis, '业务重规划与修复处置不一致')
   }
+
   check(sameEffectSubject(record!.request.subject, subject), '新周期处置引用不属于相同的原调用集合');
 }

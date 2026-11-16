@@ -43,7 +43,6 @@ export class ScopedExecutionFiles implements ScopedExecutionPort
     this.scope = executionScopeSchema.parse(structuredClone(scope));
 
     if (process.platform !== 'win32' || process.arch !== 'x64')
-
       fail('EXECUTION_SCOPE_UNSUPPORTED', '当前平台未提供冻结范围执行');
 
     const host = process as NodeJS.Process &
@@ -52,6 +51,7 @@ export class ScopedExecutionFiles implements ScopedExecutionPort
 
       defaultApp?: boolean
     };
+
     this.koffiPath = host.resourcesPath && !host.defaultApp ? path.join(host.resourcesPath, 'koffi') : requireRuntime.resolve('koffi');
   }
 
@@ -63,7 +63,6 @@ export class ScopedExecutionFiles implements ScopedExecutionPort
     signal.throwIfAborted();
 
     if (!executionScopeCovers(this.scope.read, relative))
-
       fail('EXECUTION_SCOPE_DENIED', '文件不属于原任务冻结读范围');
 
     const file = new Win32ControlledFile(this.root, relative, this.protectedRoots, this.koffiPath, undefined, true);
@@ -96,7 +95,6 @@ export class ScopedExecutionFiles implements ScopedExecutionPort
     this.assertCurrent();
 
     if (!executionScopeCovers(this.scope.read, relative, 'directory'))
-
       fail('EXECUTION_SCOPE_DENIED', '目录不属于原任务冻结读范围');
 
     const directory = new Win32ControlledFile(this.root, relative, this.protectedRoots, this.koffiPath, undefined, true, true);
@@ -111,7 +109,6 @@ export class ScopedExecutionFiles implements ScopedExecutionPort
   async Read(relative: string, signal: AbortSignal)
   {
     const value = this.Snapshot(relative, signal),
-
       content = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(value.bytes);
 
     return { file: { path: relative, ...value.fact }, encoding: 'utf8' as const, content, acceptance: 'not_evaluated' as const }
@@ -120,26 +117,21 @@ export class ScopedExecutionFiles implements ScopedExecutionPort
   async Node(raw: ScopedNodeInput, signal: AbortSignal, authorization?: ScopedExecutionAuthorization)
   {
     if (this.unsettled.size)
-
       fail('EXECUTION_SCOPE_DRAIN_PENDING', '原隔离资源尚未确认收尾，不能创建新执行');
 
     if (this.lifecycle && !authorization)
-
       fail('EXECUTION_SCOPE_AUTHORIZATION', '正式范围执行缺少原可信授权');
 
     const lifecycle = this.lifecycle ? await this.lifecycle(authorization!) : undefined;
 
     const input = scopedNodeInputSchema.parse(raw),
-
       budget = this.scope.node;
 
     if (!budget)
-
       fail('EXECUTION_SCOPE_DENIED', '原任务未声明隔离Node能力');
 
     // 全部路径先核范围，避免恶意尾部参数使前几个文件先被读取。
     if (input.files.some(file => !executionScopeCovers(this.scope.read, file)))
-
       fail('EXECUTION_SCOPE_DENIED', '输入文件超出原任务冻结范围');
 
     let total = 0;
@@ -157,6 +149,7 @@ export class ScopedExecutionFiles implements ScopedExecutionPort
     const value = await runIsolatedNode({ ...input, files, ...budget }, signal, {
       koffiPath: this.koffiPath, lifecycle, onCleanupPending: retry => { this.cleanupRetries.set(token, retry) }, onSettled: () => { this.unsettled.delete(token); this.cleanupRetries.delete(token) }
     });
+
     this.assertCurrent();
 
     return { executionId: value.executionId, isolation: value.isolation, status: value.status, exitCode: value.exitCode, stdio: value.stdio, runtime: value.runtime, inputs: value.inputs, outputs: value.outputs, allProcessesExited: value.allProcessesExited, cleanup: value.cleanup, acceptance: 'not_evaluated' as const };
@@ -165,11 +158,9 @@ export class ScopedExecutionFiles implements ScopedExecutionPort
   async Drain()
   {
     for (const retry of this.cleanupRetries.values())
-
       await retry();
 
     if (this.unsettled.size)
-
       fail('EXECUTION_SCOPE_DRAIN_PENDING', '原隔离执行尚未确认物理退出与清理，请保留运行占用并核实')
   }
 }

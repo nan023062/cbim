@@ -23,31 +23,27 @@ export class Paths implements StoragePaths
   async Identity(input: string)
   {
     if (!input?.trim())
-
       fail('INVALID_ROOT', '请选择项目目录');
 
     const real = await fs.realpath(input);
 
     if (!(await fs.stat(real)).isDirectory())
-
       fail('INVALID_ROOT', '项目根必须是目录');
 
     const relativeToInstall = path.relative(await fs.realpath(this.installRoot), real);
 
     if (!relativeToInstall || (!path.isAbsolute(relativeToInstall) && relativeToInstall !== '..' && !relativeToInstall.startsWith('..' + path.sep)))
-
       fail('INSTALL_ROOT', '工具安装目录及其子目录不能作为业务工程');
 
     for (const blocked of this.protectedRoots)
     {
       const boundary = await fs.realpath(blocked).catch(error => { if (error.code === 'ENOENT') return path.resolve(blocked); throw error }),
-
         relative = path.relative(boundary, real);
 
       if (!relative || !path.isAbsolute(relative) && relative !== '..' && !relative.startsWith('..' + path.sep))
-
         fail('INSTALL_ROOT', '更新资源和引擎缓存不能作为业务工程');
     }
+
     const canonical = process.platform === 'win32' ? real.replaceAll('\\', '/').toLowerCase() : real;
 
     return { id: hash(canonical), path: real };
@@ -56,7 +52,6 @@ export class Paths implements StoragePaths
   Project(id: string)
   {
     if (!/^[a-f0-9]{64}$/.test(id))
-
       fail('IDENTITY', '无效项目标识');
 
     return path.join(this.userRoot, id)
@@ -70,7 +65,6 @@ export class Paths implements StoragePaths
   async Knowledge(root: string, relative: string)
   {
     if (!relative.startsWith('.cbim/') || relative.includes('\\') || relative.split('/').some(x => !x || x === '.' || x === '..') || /[:\x00]/.test(relative))
-
       fail('PATH', '知识路径必须在 .cbim/ 内');
 
     let current = root;
@@ -84,16 +78,15 @@ export class Paths implements StoragePaths
         const s = await fs.lstat(current);
 
         if (s.isSymbolicLink())
-
           fail('PATH', '知识路径不允许链接或重定向')
       }
       catch (e: any)
       {
         if (e.code !== 'ENOENT')
-
           throw e
       }
     }
+
     return current;
   }
 }

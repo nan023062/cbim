@@ -45,21 +45,17 @@ export class ModelRequestBudgetService
   async Preflight(rootSessionId: string, scopeId: string | undefined, llm: RequestBudgetExecutionModel | undefined): Promise<void>
   {
     if (!scopeId)
-
       return;
 
     this.owner.Assert();
 
     const state = await this.store.ReadBudget(),
-
       scope = state.scopes?.find(s => s.scopeId === scopeId && s.rootSessionId === rootSessionId);
 
     if (!scope?.budget?.policy.enabled || scope.budget.policy.enforcement !== 'request')
-
       return;
 
     if (!llm)
-
       fail('MODEL_REQUEST_CONFIGURATION', '逐请求预算缺少已解析模型，原等待保留');
 
     this.budgets.PreflightRequest(state, scope, llm.profile);
@@ -75,11 +71,9 @@ export class ModelRequestBudgetService
     const scope = input.kind === 'main' ? state.scopes?.find(s => s.rootSessionId === input.rootSessionId && s.runTracking?.mainRunIds.includes(input.runId)) : state.scopes?.find(s => s.scopeId === input.scopeId && s.rootSessionId === input.rootSessionId);
 
     if (!scope?.budget?.policy.enabled || scope.budget.policy.enforcement !== 'request')
-
       return;
 
     if (!llm)
-
       fail('MODEL_REQUEST_CONFIGURATION', '逐请求预算缺少已解析的可信模型，未启动模型请求');
 
     const binding = requestBudgetBindingSchema.parse({ ...input, scopeId: scope.scopeId, workspaceId: this.owner.entry.id, ownerInstanceId: this.owner.instanceId });
@@ -101,7 +95,6 @@ export class ModelRequestBudgetService
     const query = requestBudgetQuerySchema.parse(input);
 
     if (query.workspaceId !== this.owner.entry.id)
-
       fail('MODEL_REQUEST_IDENTITY', '请求账本属于其它工作区');
 
     return this.Summary(await this.store.ReadBudget(), query)
@@ -112,7 +105,6 @@ export class ModelRequestBudgetService
     const scope = state.scopes?.find(s => s.scopeId === b.scopeId && s.rootSessionId === b.rootSessionId && s.workspaceId === b.workspaceId);
 
     if (!scope?.budget?.policy.enabled || scope.budget.policy.enforcement !== 'request')
-
       fail('MODEL_REQUEST_NOT_ENABLED', '本周期没有启用逐请求预算');
 
     return requestBudgetReport(requestBudgetRecords(state.modelRequestBudgetChanges ?? []), { workspaceId: b.workspaceId, rootSessionId: b.rootSessionId, scopeId: b.scopeId, policyRevision: scope.budget.policy.revision }, this.owner.instanceId);
@@ -125,16 +117,13 @@ export class ModelRequestBudgetService
     assertCaller?.();
 
     if (binding.kind === 'main' && !this.budgets.IsMainLive(binding.runId))
-
       fail('MODEL_REQUEST_RUN_STALE', '原主运行已结束，未发送新的模型请求')
   }
 
   private Ticket(intent: RequestBudgetIntent, assertCaller?: () => void): RequestBudgetTicket
   {
     let revision = 1,
-
       phase: 'reserved' | 'issuing' | 'terminal' = 'reserved',
-
       busy = false;
 
     const save = async (next: Omit<ModelRequestBudgetChange, 'requestId' | 'revision' | 'recordedAt'>) => { if (busy || phase === 'terminal') fail('MODEL_REQUEST_STAGE', '同一请求阶段不可并发或重新结算'); busy = true; const change = { ...next, requestId: intent.requestId, revision: revision + 1, recordedAt: new Date().toISOString() } as ModelRequestBudgetChange; try { await this.store.TransactBudget(requestBudgetCommand(change), async () => { if (change.phase === 'issuing') { this.AssertLive(intent.binding, assertCaller); if (this.stoppedScopes.has(intent.binding.scopeId)) fail('MODEL_REQUEST_UNVERIFIED', '本周期已有未核实请求') } return { modelRequestBudgetChanges: [change], receipt: requestBudgetReceipt(change) } }); revision++; phase = change.phase === 'issuing' ? 'issuing' : 'terminal' } catch (error) { if (phase === 'issuing' || change.phase === 'issuing') this.stoppedScopes.add(intent.binding.scopeId); throw error } finally { busy = false } };

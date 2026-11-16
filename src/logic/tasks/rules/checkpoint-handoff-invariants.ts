@@ -20,7 +20,6 @@ import { currentMemberResumeRequest } from './member-checkpoint-chain';
 function valid(value: unknown, message: string): asserts value
 {
   if (!value)
-
     fail('GRAPH_INPUT_INVALID', message)
 }
 
@@ -33,25 +32,19 @@ export function validateCheckpointAbandonment(previous: DispatchState, next: Dis
 
       record: CheckpointAbandonment
     }[] = [],
-
     commands = new Set<string>(),
-
     permitted = new Set<string>();
 
   for (const graph of next.graphs)
-
     for (const task of graph.tasks)
     {
       const old = previous.graphs.find(value => value.identity.rootSessionId === graph.identity.rootSessionId)?.tasks.find(value => value.taskId === task.taskId),
-
         record = task.checkpointAbandonment;
 
       if (old?.checkpointAbandonment)
-
         valid(sameGoalValue(old, task), '已为交接放弃的任务不可改写或恢复');
 
       if (!record)
-
         continue;
 
       valid(checkpointAbandonmentSchema.safeParse(record).success && !commands.has(record.commandId), '交接放弃审计无效或命令重复');
@@ -59,11 +52,8 @@ export function validateCheckpointAbandonment(previous: DispatchState, next: Dis
       commands.add(record.commandId);
 
       const scope = next.scopes?.find(value => value.scopeId === task.scopeId && value.workspaceId === task.identity.workspaceId && value.rootSessionId === task.identity.rootSessionId),
-
         checkpoint = task.checkpoints?.at(-1),
-
         run = next.runs?.find(value => value.binding.runId === record.sourceRunId),
-
         member = next.members.find(value => value.agentInstanceId === task.assignee.agentInstanceId);
 
       valid(scope && record.scopeId === scope.scopeId && scope.runTracking?.mainRunIds.includes(record.mainRunId) && !next.runs?.some(value => value.binding.runId === record.mainRunId), '交接处置缺少本周期真实主运行');
@@ -87,16 +77,14 @@ export function validateCheckpointAbandonment(previous: DispatchState, next: Dis
         added.push({ task, record })
       }
     }
+
   valid(added.length <= 1, '一次命令只能放弃一个检查点');
 
   if (!added.length)
-
     return permitted;
 
   const { task, record } = added[0],
-
     selected = checkpointAbandonmentSelection(previous, task.identity, record.scopeId, record.mainRunId, { expectedGraphCursor: record.graphCursor, expectedGoalRevision: record.goalRevision, taskId: task.taskId, expectedRevision: record.previousTaskRevision, expectedPlanRevision: record.planRevision, checkpointId: record.checkpointId, expectedResumeRequestId: record.resumeRequestId, reason: record.reason }),
-
     batch = mutation.batch;
 
   valid(batch && batch.cause === 'task.cancelled' && batch.commandId === command.commandId && record.commandId === command.commandId && sameGoalValue(batch.identity, task.identity) && batch.committedAt === record.abandonedAt, '放弃必须由同一主命令和提交时间产生');
@@ -116,11 +104,8 @@ export function validateCheckpointAbandonment(previous: DispatchState, next: Dis
   valid(batch.changes.some(value => value.type === 'task.upserted' && sameGoalValue(value.task, task)) && batch.changes.some(value => value.type === 'agent.upserted' && sameGoalValue(value.agent, { ...view, revision: view.revision + 1 })), '处置缺少精确原任务及成员图投影');
 
   if (selected.resumeAssignment)
-
     valid(mutation.messages?.length === 1 && sameGoalValue(mutation.messages[0], { ...selected.resumeAssignment, delivery: 'processed' }), '仅消费原 pending 恢复预约，不领取或改写其它信封');
-
   else
-
     valid(mutation.messages === undefined, '未预约检查点不能夹带任何信封变更');
 
   const expectedReceipt = { workspaceId: task.identity.workspaceId, rootSessionId: task.identity.rootSessionId, scopeId: record.scopeId, mainRunId: record.mainRunId, commandId: record.commandId, taskId: task.taskId, status: 'cancelled', abandonment: record, graphCursor: { streamId: batch.streamId, seq: batch.seq } };

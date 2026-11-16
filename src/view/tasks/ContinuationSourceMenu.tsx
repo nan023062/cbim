@@ -16,21 +16,15 @@ const resourceLabels = { connector: '链接器', team: '团队', agent: 'Agent',
 export function ContinuationSourceMenu({ state }: { state: ScopeContinuationView })
 {
   const [kind, setKind] = useState<'link' | 'web' | 'repository_resource'>(),
-
     [url, setUrl] = useState('');
 
   const [targets, setTargets] = useState<RepositoryToolTarget[]>([]),
-
     [targetId, setTargetId] = useState(''),
-
     [page, setPage] = useState<RepositoryListOutput>(),
-
     [resourceId, setResourceId] = useState('');
 
   const epoch = useRef(0),
-
     stamp = useRef(state.sourceSelectionKey),
-
     mounted = useRef(true);
 
   if (stamp.current !== state.sourceSelectionKey)
@@ -39,12 +33,12 @@ export function ContinuationSourceMenu({ state }: { state: ScopeContinuationView
 
     epoch.current++
   }
+
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; epoch.current++ } }, []);
 
   useEffect(() => { setKind(undefined); setUrl(''); setTargets([]); setTargetId(''); setPage(undefined); setResourceId('') }, [state.sourceSelectionKey]);
 
   const disabled = !state.editable || state.importing,
-
     full = state.attachments.length >= 12;
 
   const target = targets.find(item => item.connectorId === targetId);
@@ -52,7 +46,6 @@ export function ContinuationSourceMenu({ state }: { state: ScopeContinuationView
   async function choose(next: typeof kind)
   {
     if (disabled || full)
-
       return;
 
     const token = ++epoch.current;
@@ -72,7 +65,6 @@ export function ContinuationSourceMenu({ state }: { state: ScopeContinuationView
       const result = await state.materialTargets();
 
       if (mounted.current && token === epoch.current && result)
-
         setTargets(result);
     }
   }
@@ -80,7 +72,6 @@ export function ContinuationSourceMenu({ state }: { state: ScopeContinuationView
   async function load(offset = 0)
   {
     if (disabled || !target)
-
       return;
 
     const token = ++epoch.current;

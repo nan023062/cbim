@@ -7,9 +7,7 @@
 import { z } from 'zod';
 
 const id = z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/),
-
   hash = z.string().regex(/^[a-f0-9]{64}$/),
-
   integer = z.number().int().nonnegative().safe();
 
 const money = z.number().finite().nonnegative().max(Number.MAX_SAFE_INTEGER);

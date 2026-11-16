@@ -22,9 +22,9 @@ export function mergeHistoryPage<T extends HistoryItem>(previous: AgentHistoryPa
   for (const item of page.items)
   {
     if (item.workspaceId !== identity.workspaceId || item.agentId !== identity.agentId || ('sessionId' in identity && item.sessionId !== identity.sessionId))
-
       throw Error('执行历史归属不一致，请重新读取');
   }
+
   const items = append ? [...(previous?.items ?? [])] : [];
 
   for (const item of page.items)
@@ -32,13 +32,11 @@ export function mergeHistoryPage<T extends HistoryItem>(previous: AgentHistoryPa
     const index = items.findIndex(old => itemKey(old) === itemKey(item));
 
     if (index < 0)
-
       items.push(item);
-
     else
-
       items[index] = item
   }
+
   return { items, nextCursor: page.nextCursor, diagnostics: [...new Set([...(append ? previous?.diagnostics ?? [] : []), ...page.diagnostics])] };
 }
 

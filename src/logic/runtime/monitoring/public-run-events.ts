@@ -51,16 +51,17 @@ function publicScope(value: unknown, binding: PublicRunIdentity): ToolReceipt['s
 
     return parsed.success && parsed.data.workspaceId === binding.workspaceId ? parsed.data : { kind: 'unknown', workspaceId: binding.workspaceId };
   }
+
   if (scope.kind === 'repository')
   {
     const parsed = repositoryToolScopeSchema.safeParse({ kind: scope.kind, workspaceId: scope.workspaceId, connectorId: scope.connectorId, repositoryId: scope.repositoryId, connectionId: scope.connectionId, operation: scope.operation });
 
     if (parsed.success && parsed.data.workspaceId === binding.workspaceId)
-
       return parsed.data;
 
     return { kind: 'unknown', workspaceId: binding.workspaceId };
   }
+
   return { kind: ['workspace', 'knowledge', 'unknown'].includes(String(scope.kind)) ? scope.kind as 'workspace' | 'knowledge' | 'unknown' : 'unknown', workspaceId: binding.workspaceId };
 }
 
@@ -69,27 +70,20 @@ const labels = new Set(['正在思考…', '正在生成…', 'Pi 运行配置�
 function usage(value: unknown)
 {
   const input = record(value),
-
     out: Record<string, unknown> = {};
 
   for (const key of ['input', 'output', 'cacheRead', 'cacheWrite', 'totalTokens', 'reasoning'])
-
     if (number(input[key]) !== undefined)
-
       out[key] = input[key];
 
   const cost = record(input.cost),
-
     costs: Record<string, number> = {};
 
   for (const key of ['input', 'output', 'cacheRead', 'cacheWrite', 'total'])
-
     if (number(cost[key]) !== undefined)
-
       costs[key] = cost[key] as number;
 
   if (Object.keys(costs).length)
-
     out.cost = costs;
 
   return out
@@ -100,7 +94,6 @@ function progress(value: unknown): TaskProgress | undefined
   const data = record(value);
 
   if (!Number.isSafeInteger(data.version) || !Array.isArray(data.steps) || !['executing', 'awaiting_review'].includes(String(data.state)))
-
     return;
 
   const delivery = record(data.delivery);
@@ -115,7 +108,6 @@ function receipt(value: unknown, binding: PublicRunIdentity): ToolReceipt | unde
   const data = record(value);
 
   if (data.version !== 1 || data.workspaceId !== binding.workspaceId || data.taskId !== binding.taskId || data.runId !== binding.runId || !['succeeded', 'failed', 'denied', 'unknown'].includes(String(data.outcome)))
-
     return;
 
   return { version: 1, toolCallId: text(data.toolCallId, 128) ?? '', toolName: text(data.toolName, 128) ?? '', workspaceId: binding.workspaceId, taskId: binding.taskId, runId: binding.runId, outcome: data.outcome as ToolReceipt['outcome'], inputHash: text(data.inputHash, 64) ?? '', ...(typeof data.resultHash === 'string' ? { resultHash: data.resultHash.slice(0, 64) } : {}), effects: texts(data.effects, 40).filter((effect): effect is ToolReceipt['effects'][number] => ['read', 'preview', 'maintenance', 'business-write', 'knowledge-write', 'external-write', 'command'].includes(effect)), scope: publicScope(data.scope, binding), recordedAt: text(data.recordedAt, 40) ?? '' };
@@ -125,13 +117,11 @@ function receipt(value: unknown, binding: PublicRunIdentity): ToolReceipt | unde
 function businessPath(value: unknown, root: string)
 {
   if (typeof value !== 'string' || value.length > 4096 || /[\x00-\x1f]/.test(value))
-
     return;
 
   const relative = path.relative(root, path.resolve(root, value));
 
   if (!relative || relative === '..' || relative.startsWith('..' + path.sep) || path.isAbsolute(relative) || relative.split(/[\\/]/).some(part => part.toLowerCase() === '.cbim'))
-
     return;
 
   return relative.replace(/\\/g, '/');
@@ -143,7 +133,6 @@ export function projectRunEvent(event: StoredEvent, identity: PublicRunIdentity,
   const source = record(event.data);
 
   let type = event.type,
-
     data: Record<string, unknown>;
 
   switch (type)
@@ -152,7 +141,6 @@ export function projectRunEvent(event: StoredEvent, identity: PublicRunIdentity,
       {
         // 成员启动 message 可能包含冻结提示词，只展示正式任务目标；主对话保留本轮用户原话，回注正文不冒充用户输入。
         const kind = task.mode === 'chat' ? record(source.source).kind : undefined,
-
           returned = kind === 'member-results' || kind === 'human_decisions' || kind === 'goal-repair';
 
         const message = kind === 'goal-repair' ? '最终验收失败，正在有界返工（系统反馈）' : kind === 'human_decisions' ? '按已保存的人工决定继续（系统转交）' : returned ? '成员任务结果回注（系统数据）' : task.mode === 'chat' ? text(source.message, 16000) ?? task.goal : task.goal;
@@ -162,15 +150,12 @@ export function projectRunEvent(event: StoredEvent, identity: PublicRunIdentity,
         break;
       }
     case 'session.bound':
-
       type = 'engine.status';
 
       data = { label: '成员会话已连接' };
 
       break;
-
     case 'message':
-
       if (!['user', 'assistant'].includes(String(source.role)))
       {
         type = 'engine.status';
@@ -179,20 +164,17 @@ export function projectRunEvent(event: StoredEvent, identity: PublicRunIdentity,
 
         break
       }
+
       data = { role: source.role, text: text(source.text) ?? '', ...(['stop', 'length', 'error', 'aborted', 'toolUse'].includes(String(source.stopReason)) ? { stopReason: source.stopReason } : {}), usage: usage(source.usage), ...(number(source.generationDurationMs) !== undefined ? { generationDurationMs: source.generationDurationMs } : {}), ...(typeof source.pricingKnown === 'boolean' ? { pricingKnown: source.pricingKnown } : {}) };
 
       break;
-
     case 'message.delta':
-
       data = { text: text(source.text) ?? '' };
 
       break;
-
     case 'tool.proposed': case 'tool.allowed': case 'tool.denied': case 'tool.started': case 'tool.updated': case 'tool.finished':
       {
         const safeReceipt = receipt(source.receipt, identity),
-
           locator = businessPath(record(source.input).path, task.root);
 
         data = { id: text(source.id, 128) ?? '', name: text(source.name, 128) ?? safeReceipt?.toolName ?? '', ...(locator ? { input: { path: locator } } : {}), ...(safeReceipt ? { receipt: safeReceipt } : {}) };
@@ -204,15 +186,16 @@ export function projectRunEvent(event: StoredEvent, identity: PublicRunIdentity,
           const scope = publicScope(source.scope, identity);
 
           if (scope.kind === 'repository' || scope.kind === 'github-feedback')
-
             data.scope = scope
         }
+
         if (type === 'tool.denied')
         {
           data.allow = false;
 
           data.reason = '操作未获授权；详细策略信息保留在本机运行记录'
         }
+
         if (type === 'tool.finished' || type === 'tool.updated')
         {
           data.isError = source.isError === true;
@@ -220,9 +203,9 @@ export function projectRunEvent(event: StoredEvent, identity: PublicRunIdentity,
           data.result = { content: [{ type: 'text', text: type === 'tool.updated' ? '工具执行中；进度正文未公开' : source.isError ? '工具执行失败；详细错误正文未公开' : '工具已完成；详细正文未公开' }] };
 
           if (record(source.result).truncated === true)
-
             data.truncated = true;
         }
+
         break;
       }
     case 'task.updated':
@@ -236,7 +219,6 @@ export function projectRunEvent(event: StoredEvent, identity: PublicRunIdentity,
     case 'validation.checked':
       {
         const parsed = validationResultSchema.safeParse(source.validation),
-
           value = parsed.success ? parsed.data : undefined;
 
         if (!value || value.binding.workspaceId !== identity.workspaceId || value.binding.taskId !== identity.taskId || value.binding.runId !== identity.runId)
@@ -247,6 +229,7 @@ export function projectRunEvent(event: StoredEvent, identity: PublicRunIdentity,
 
           break
         }
+
         data = { validation: { validationId: value.validationId, toolCallId: value.toolCallId, validator: value.validator, requirement: { moduleId: value.requirement.moduleId, workflowId: value.requirement.workflowId, workflowVersion: value.requirement.workflowVersion, requirementId: value.requirement.requirementId, schemaHash: value.requirement.schemaHash }, artifact: { relativePath: value.artifact.relativePath, byteLength: value.artifact.byteLength, sha256: value.artifact.sha256 }, ...(value.manifest ? { manifest: { manifestId: value.manifest.manifestId, scopeHash: value.manifest.scopeHash, manifestHash: value.manifest.manifestHash } } : {}), checkedAt: value.checkedAt, outcome: value.outcome, issues: value.issues.map(issue => ({ code: issue.code, instancePath: issue.instancePath, ...(issue.schemaPath !== undefined ? { schemaPath: issue.schemaPath } : {}), ...(issue.keyword !== undefined ? { keyword: issue.keyword } : {}) })) } };
 
         break;
@@ -256,56 +239,42 @@ export function projectRunEvent(event: StoredEvent, identity: PublicRunIdentity,
         data = { label: labels.has(String(source.label)) ? source.label : '运行状态已更新' };
 
         if (['activity', 'context', 'request-limit', 'run-usage', 'insertion'].includes(String(source.metric)))
-
           data.metric = source.metric;
 
         for (const key of ['tokens', 'contextWindow', 'maxTokens', 'workingContextWindow', 'compactionPercent', 'attempt', 'delayMs', 'cost'])
-
           if (number(source[key]) !== undefined)
-
             data[key] = source[key];
 
         if (source.metric === 'run-usage')
-
           data.tokens = usage(source.tokens);
 
         for (const key of ['pricingKnown', 'autoCompaction', 'willRetry'])
-
           if (typeof source[key] === 'boolean')
-
             data[key] = source[key];
 
         for (const key of ['thinkingLevel', 'requestedThinking'])
-
           if (['off', 'minimal', 'low', 'medium', 'high', 'xhigh'].includes(String(source[key])))
-
             data[key] = source[key];
 
         break;
       }
     case 'run.stop_requested':
-
       data = {};
 
       break;
-
     case 'run.settled':
-
       data = { status: ['completed', 'cancelled', 'failed'].includes(String(source.status)) ? source.status : 'failed', acceptance: 'not_evaluated', ...(source.error ? { error: publicRunFailure(source.error) ?? '本轮执行失败，请核实工具状态与产物' } : {}) };
 
       break;
-
     case 'run.interrupted':
-
       data = { error: publicRunFailure(source.error) ?? '执行中断，请核实未确认的操作与产物', unresolvedTools: texts(source.unresolvedTools, 128), receipts: Array.isArray(source.receipts) ? source.receipts.map(item => receipt(item, identity)).filter(Boolean) : [] };
 
       break;
-
     default:
-
       type = 'engine.status';
 
       data = { label: '执行记录已更新' };
   }
+
   return { version: 1, seq: event.seq, taskId: task.taskId, runId: identity.runId, workspaceId: task.workspaceId, time: event.time, type, data };
 }

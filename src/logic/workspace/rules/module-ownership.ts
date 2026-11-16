@@ -15,13 +15,10 @@ export const moduleOwnershipLimits = { bindings: 1024, changes: 4096, eventBytes
 const id = z.string().min(1).max(1024).refine(value => !!value.trim(), '标识不能为空白');
 
 const uuid = z.string().uuid(),
-
   hash = z.string().regex(/^[a-f0-9]{64}$/),
-
   time = z.string().datetime();
 
 const positive = z.number().int().positive().safe(),
-
   count = z.number().int().nonnegative().safe();
 
 const bytes = (value: unknown) => new TextEncoder().encode(JSON.stringify(value)).length;

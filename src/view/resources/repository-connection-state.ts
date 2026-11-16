@@ -26,7 +26,6 @@ export type RepositoryConnectionGrantPending = Exclude<RepositoryConnectionPendi
 export const REPOSITORY_CONNECTION_PENDING_KEY = 'cbim.repository-connections.pending.v1';
 
 export const REPOSITORY_CONNECTION_PENDING_LIMIT = 64,
-
   REPOSITORY_CONNECTION_PENDING_BYTES = 256 * 1024;
 
 const pendingIndex = z.object({ version: z.literal(1), records: z.array(repositoryConnectionPendingSchema).max(REPOSITORY_CONNECTION_PENDING_LIMIT) }).strict();
@@ -66,17 +65,13 @@ export function createRepositoryConnectionPendingStore(storage: PendingStorage):
     Save(raw)
     {
       const pending = repositoryConnectionPendingSchema.parse(raw),
-
         state = load(),
-
         old = state.records.find(record => record.input.workspaceId === pending.input.workspaceId);
 
       if (old && !same(old, pending))
-
         throw Error('此工作区还有未确认的原连接请求，请先查询原回执');
 
       if (state.records.some(record => record.input.workspaceId !== pending.input.workspaceId && pendingId(record) === pendingId(pending)))
-
         throw Error('连接命令标识已属于其他工作区，请核实原请求');
 
       // 即使已有同一请求也重新保存一次，确保存储不可写时不会以“已有记录”为由发起重试。
@@ -86,17 +81,13 @@ export function createRepositoryConnectionPendingStore(storage: PendingStorage):
     Remove(raw)
     {
       const pending = repositoryConnectionPendingSchema.parse(raw),
-
         state = load(),
-
         old = state.records.find(record => record.input.workspaceId === pending.input.workspaceId);
 
       if (!old)
-
         return;
 
       if (!same(old, pending))
-
         throw Error('待确认连接请求已变化，迟到回执不能清除新请求');
 
       write(state.records.filter(record => record.input.workspaceId !== pending.input.workspaceId));
@@ -110,14 +101,12 @@ export function checkedRepositoryConnectionCommit(raw: unknown, pending: Reposit
   const frozen = repositoryConnectionPendingSchema.parse(pending);
 
   if (frozen.action !== 'commit')
-
     throw Error('登记请求类型不匹配');
 
   const receipt = repositoryConnectionCommitSchema.parse(raw),
     { input, expected } = frozen;
 
   if (receipt.identity.workspaceId !== input.workspaceId || receipt.identity.instanceId !== input.instanceId || receipt.planId !== input.planId || receipt.connectorId !== expected.connectorId || receipt.repositoryId !== expected.repositoryId || receipt.definitionHash !== expected.definitionHash)
-
     throw Error('登记回执与原计划不一致，请查询原计划回执');
 
   return receipt;
@@ -129,18 +118,14 @@ export function checkedRepositoryConnectionReceipt(raw: unknown, pending: Reposi
   const frozen = repositoryConnectionPendingSchema.parse(pending);
 
   if (frozen.action === 'commit')
-
     throw Error('授权请求类型不匹配');
 
   const receipt = repositoryConnectionReceiptSchema.parse(raw),
     { input } = frozen,
-
     expected = frozen.action === 'grant' ? frozen.input : frozen.expected,
-
     grant = receipt.grant;
 
   if (receipt.workspaceId !== input.workspaceId || receipt.connectorId !== input.connectorId || receipt.commandId !== input.commandId || receipt.action !== frozen.action || grant.workspaceId !== input.workspaceId || grant.connectorId !== input.connectorId || grant.repositoryId !== expected.repositoryId || grant.definitionHash !== expected.definitionHash || grant.revision !== input.expectedGrantRevision + 1 || grant.enabled !== (frozen.action === 'grant'))
-
     throw Error('授权回执与冻结请求或授权版本不一致，请查询原命令回执');
 
   return receipt;
@@ -150,11 +135,9 @@ export function checkedRepositoryConnectionReceipt(raw: unknown, pending: Reposi
 export function checkedRepositoryConnectionUnaccepted(raw: unknown, pending: RepositoryConnectionPending): boolean
 {
   const frozen = repositoryConnectionPendingSchema.parse(pending),
-
     result = repositoryConnectionUnacceptedSchema.parse(raw);
 
   if (result.identity.workspaceId !== frozen.input.workspaceId || result.identity.instanceId !== frozen.input.instanceId || result.action !== frozen.action || result.id !== pendingId(frozen))
-
     throw Error('未受理核实结果与原连接请求不一致，保留原请求');
 
   return result.unaccepted;
@@ -167,10 +150,8 @@ export function checkedRepositoryConnectionUnaccepted(raw: unknown, pending: Rep
 export function isRepositoryConnectionPreflightRejection(action: RepositoryConnectionPending['action'], cause: unknown): boolean
 {
   const code = typeof cause === 'object' && cause !== null && 'code' in cause && typeof cause.code === 'string' ? cause.code
-
     : /^(?:Error: )?([A-Z][A-Z0-9_]+):/.exec(cause instanceof Error ? cause.message : String(cause))?.[1];
 
   return !!code && (['REPOSITORY_CONNECTION_INPUT', 'REPOSITORY_CONNECTION_PLAN', 'REPOSITORY_CONNECTION_DEFINITION', 'REPOSITORY_CONNECTION_STALE', 'REPOSITORY_CONNECTION_NOT_SHARED', 'REPOSITORY_CONNECTION_NOT_GRANTED', 'STALE_INSTANCE', 'NOT_RUNNING', 'WORKSPACE_STOPPING'].includes(code)
-
     || action === 'grant' && ['TIMEOUT', 'CANCELLED', 'CONNECTION'].includes(code));
 }

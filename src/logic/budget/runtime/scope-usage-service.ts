@@ -70,7 +70,6 @@ export class ScopeUsageService
     const graph = state.graphs.find(value => value.identity.rootSessionId === input.rootSessionId && value.identity.workspaceId === input.workspaceId);
 
     const tasks = graph?.tasks.filter(task => task.scopeId === input.scopeId) ?? [],
-
       ids = new Set(tasks.map(task => task.taskId));
 
     const runs = (state.runs ?? []).filter(run => run.binding.rootSessionId === input.rootSessionId && ids.has(run.binding.taskId));
@@ -93,7 +92,6 @@ export class ScopeUsageService
       for (const runId of new Set([...task.runIds, ...saved.map(run => run.binding.runId)]))
       {
         const found = saved.filter(run => run.binding.runId === runId),
-
           run = found[0];
 
         const bound = run && run.binding.workspaceId === input.workspaceId && run.binding.rootSessionId === input.rootSessionId && run.binding.agentId === task.assignee.agentId && run.binding.agentInstanceId === task.assignee.agentInstanceId && run.binding.agentSessionId === task.assignee.agentSessionId && run.binding.planRevision === task.planRevision;
@@ -101,15 +99,14 @@ export class ScopeUsageService
         output.push({ kind: 'member', taskId: task.taskId, runId, task, run, invalid: found.length !== 1 || !bound || !task.runIds.includes(runId) });
       }
     }
-    if (output.length > 532)
 
+    if (output.length > 532)
       fail('SCOPE_USAGE_LIMIT', '本周期运行来源超过单次核实上限，未截断或显示不完整总数');
 
     // 即使存储端口返回矛盾来源，也不能把同一运行重复计入总数。
     const counts = new Map<string, number>();
 
     for (const source of output)
-
       counts.set(source.runId, (counts.get(source.runId) ?? 0) + 1);
 
     return output.filter((source, index) => output.findIndex(value => value.runId === source.runId) === index).map(source => ({ ...source, invalid: source.invalid || (counts.get(source.runId) ?? 0) > 1 }));
@@ -118,37 +115,31 @@ export class ScopeUsageService
   private Bound(summary: RunSummary, source: Source, facts: ReturnType<ScopeUsageService['Facts']>, input: ScopeUsageInput)
   {
     if (summary.runId !== source.runId || summary.task.workspaceId !== input.workspaceId || summary.task.root !== this.owner.entry.path || summary.task.taskId !== source.taskId)
-
       return false;
 
     if (!Array.isArray(summary.events) || !summary.events.length || summary.events[0].type !== 'run.started' || summary.events.some((event, index) => event.seq !== index + 1 || event.workspaceId !== input.workspaceId || event.taskId !== source.taskId || event.runId !== source.runId))
-
       return false;
 
     const started = summary.events[0].data;
 
     if (!matches(started.task, summary.task) || !matches(started.conversationBinding, summary.conversationBinding) || !matches(started.memberBinding, summary.memberBinding))
-
       return false;
 
     if (source.agent)
     {
       if (started.executionModel !== 'agent-tools-v1' || !matches(started.agentCall, source.agent) || summary.conversationBinding)
-
         return false;
 
       const business = facts.agentRuns.filter(run => run.binding.runId === source.runId);
 
       return summary.memberBinding ? business.length === 1 && matches(summary.memberBinding, business[0].binding) && matches(source.agent, business[0].parent) : business.length === 0;
     }
-    if (source.kind === 'member')
 
+    if (source.kind === 'member')
       return summary.task.agentId === source.task?.assignee.agentId && !summary.conversationBinding && matches(summary.memberBinding, source.run?.binding);
 
     const binding = summary.conversationBinding,
-
       root = facts.root?.agent,
-
       session = facts.sessions.find(item => item.agentSessionId === binding?.agentSessionId && item.purpose === 'conversation');
 
     return summary.task.mode === 'chat' && summary.task.agentId === 'cbim:main' && !summary.memberBinding && binding?.workspaceId === input.workspaceId && binding.rootSessionId === input.rootSessionId && binding.agentId === 'cbim:main' && binding.agentInstanceId === root?.agentInstanceId && session?.workspaceId === input.workspaceId && session.rootSessionId === input.rootSessionId && session.agentId === 'cbim:main' && session.agentInstanceId === root?.agentInstanceId && session.teamId === binding.teamId;
@@ -160,7 +151,6 @@ export class ScopeUsageService
     const parsed = scopeUsageInputSchema.safeParse(raw);
 
     if (!parsed.success)
-
       fail('SCOPE_USAGE_INPUT', '周期消耗查询身份无效');
 
     const input = parsed.data;
@@ -168,19 +158,15 @@ export class ScopeUsageService
     this.owner.Assert();
 
     if (input.workspaceId !== this.owner.entry.id)
-
       fail('SCOPE_USAGE_IDENTITY', '周期消耗不属于当前工作区');
 
     const facts = this.Facts(state, input);
 
     if (state.workspaceId !== input.workspaceId || !facts.scope || !facts.root)
-
       fail('SCOPE_USAGE_IDENTITY', '目标周期不属于当前主会话或缺少可信图根');
 
     const sources = this.Sources(facts, input),
-
       runs: ScopeUsageRun[] = [],
-
       logStamps: unknown[] = [];
 
     for (const source of sources)
@@ -194,11 +180,9 @@ export class ScopeUsageService
         result.usage.issues.push({ code: 'SCOPE_USAGE_IDENTITY', message: '运行来源与持久任务身份不一致，未计入消耗。' })
       }
       else if (!this.logs)
-      {
         result.usage.issues.push({ code: 'SCOPE_USAGE_UNAVAILABLE', message: '当前未装配可信运行日志读取，消耗未知。' })
-      }
       else
-
+      {
         try
         {
           const summary = source.agent ? await (this.logs.InspectAgent?.(source.taskId, source.runId) ?? Promise.reject(Error('Agent log reader unavailable'))) : source.kind === 'main' ? await this.logs.InspectMain(input.rootSessionId, source.runId) : await this.logs.InspectMember(structuredClone(source.run!));
@@ -215,7 +199,6 @@ export class ScopeUsageService
 
             // FileRunStorage 的未结算摘要可能为 interrupted；只有真实终态事件才证明该运行结束。
             if (summary.events[0].data.executionModel === 'agent-tools-v1' && !summary.events.some(event => event.type === 'run.settled' || event.type === 'run.interrupted'))
-
               result.status = 'running';
 
             result.logState = summary.logIntegrity?.partialTail === false ? 'verified' : 'incomplete';
@@ -223,7 +206,6 @@ export class ScopeUsageService
             result.usage = measureScopeRunUsage(summary);
 
             if (!summary.logIntegrity)
-
               result.usage.issues.push({ code: 'SCOPE_USAGE_INTEGRITY_UNKNOWN', message: '日志读取端未报告完整性，当前统计不能视为完整用量。' });
 
             logStamps.push({ runId: source.runId, seq: summary.events.at(-1)?.seq, status: summary.status, integrity: summary.logIntegrity, usage: result.usage });
@@ -236,25 +218,21 @@ export class ScopeUsageService
               for (const event of summary.events.filter(event => event.type === 'tool.updated' && event.data.agentCall !== undefined && event.data.limits !== undefined))
               {
                 const parsed = agentCallReferenceSchema.safeParse(event.data.agentCall),
-
                   ref = parsed.success ? parsed.data : undefined;
 
                 if (!ref || ref.workspaceId !== input.workspaceId || ref.callerTaskId !== source.taskId || ref.callerRunId !== source.runId || ref.toolCallId !== event.data.id || event.data.name !== 'cbim_agent_call' || !summary.events.some(e => e.seq < event.seq && e.type === 'tool.allowed' && e.data.id === ref.toolCallId && e.data.name === 'cbim_agent_call'))
-
                   fail('SCOPE_USAGE_IDENTITY', '递归调用来源不一致');
 
                 if (summary.events.some(e => e.type === 'tool.updated' && e.data.id === ref.toolCallId && e.data.agentCall !== undefined && !matches(e.data.agentCall, ref)))
-
                   fail('SCOPE_USAGE_IDENTITY', '递归调用关联冲突');
 
                 if ([...sources, ...discovered].some(item => item.runId === ref.runId))
-
                   fail('SCOPE_USAGE_IDENTITY', '递归来源重复或循环');
 
                 discovered.push({ kind: 'member', taskId: ref.taskId, runId: ref.runId, agent: ref });
               }
-              if (sources.length + discovered.length > 532)
 
+              if (sources.length + discovered.length > 532)
                 fail('SCOPE_USAGE_LIMIT', '递归运行来源超过单次核实上限');
 
               sources.push(...discovered);
@@ -269,7 +247,6 @@ export class ScopeUsageService
             })?.code;
 
           if (code === 'SCOPE_USAGE_LIMIT')
-
             throw error;
 
           result.logState = code === 'ENOENT' ? 'missing' : code === 'RUN_LOG_EMPTY' ? 'incomplete' : code === 'MEMBER_LOG_IDENTITY' || code === 'SCOPE_USAGE_IDENTITY' ? 'identity_mismatch' : 'invalid';
@@ -278,8 +255,11 @@ export class ScopeUsageService
 
           result.usage.issues.push({ code: 'SCOPE_USAGE_LOG_UNAVAILABLE', message: '该运行日志缺失、不完整或无法核实；不代表没有执行或没有消耗。' });
         }
+      }
+
       runs.push(result);
     }
+
     return { input, facts, runs, logStamps };
   }
 

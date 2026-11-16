@@ -71,11 +71,9 @@ export class OwnerExecutionService
     const old = await this.store.CommandReceipt(command.commandId);
 
     if (!old)
-
       return;
 
     if (old.fingerprint !== command.fingerprint)
-
       fail('COMMAND_ID_CONFLICT', '相同命令 ID 已用于不同请求');
 
     return { receipt: old.receipt as T };
@@ -85,7 +83,6 @@ export class OwnerExecutionService
   WithSnapshot<T>(use: (snapshot: Snapshot, hint: DispatchState) => Promise<T>, alive: () => void = () => { }): Promise<T>
   {
     if (!this.owner.WithSourceSnapshot)
-
       fail('OWNER_EXECUTION_UNAVAILABLE', '未装配受控岗位执行知识端口');
 
     return this.owner.WithSourceSnapshot(async snapshot => { this.owner.Assert(); alive(); const hint = await this.store.Read(); alive(); return use(snapshot, hint) });
@@ -95,7 +92,6 @@ export class OwnerExecutionService
   WithContext<T>(select: (hint: DispatchState) => readonly ExecutionSelection[], use: (context: OwnerExecutionContext) => Promise<T>, alive: () => void = () => { }): Promise<T>
   {
     if (!this.models)
-
       fail('OWNER_EXECUTION_UNAVAILABLE', '未装配岗位模型配置端口');
 
     return this.WithSnapshot(async (snapshot, hint) => { const selections = select(hint), refs = selections.map(selection => { if ('automaticScopeId' in selection) { const policy = hint.scopes?.find(scope => scope.scopeId === selection.automaticScopeId)?.executionPolicy; if (policy?.mode !== 'auto') fail('OWNER_SELECTION_REQUIRED', '团队模式需要人工确认模块及负责岗位'); return policy.model } const member = hint.workspaceMembers?.find(item => item.memberId === selection.memberId); if (!member) fail('OWNER_MEMBER_UNAVAILABLE', '负责岗位不存在'); return { profileId: member.runtimePolicy.profileId, modelId: member.runtimePolicy.modelId, engine: workspaceMemberEngine(member.runtimePolicy), ...(member.runtimePolicy.modelRoles === undefined ? {} : { modelRoles: member.runtimePolicy.modelRoles }) }; }); return this.models!.WithConfigurations(refs, async profiles => { alive(); return use({ snapshot, profiles }) }); }, alive);
@@ -107,27 +103,22 @@ export class OwnerExecutionService
     const binding = resolveOwnerExecutionSelection(state, selection, moduleIds);
 
     if (binding.owners.some(owner => owner.match && owner.match.knowledgeRevision !== context.snapshot.revision))
-
       fail('OWNER_MATCH_STALE', '模块匹配的知识版本已变化，请重新读取模块和团队能力后分析');
 
     if (agentId !== undefined && binding.capability.agentId !== agentId)
-
       fail('OWNER_AGENT_MISMATCH', '派发角色必须与负责岗位实际采纳的能力一致');
 
     if (context.snapshot.workspaceId !== state.workspaceId)
-
       fail('OWNER_IDENTITY', '岗位执行知识不属于当前工作区');
 
     const agent = await resolveDispatchAgent(context.snapshot, binding.capability.agentId);
 
     if (workspaceMemberCapabilityHash(agent) !== binding.capability.capabilityHash)
-
       fail('OWNER_CAPABILITY_CHANGED', '负责岗位的原则或有效 Skill 已变化，请明确采纳后重新规划');
 
     const profile = context.profiles.find(item => item.id === binding.model.profileId && item.model === binding.model.modelId && workspaceMemberModelHash(item) === binding.model.configurationHash);
 
     if (!profile || workspaceMemberModelHash(profile) !== binding.model.configurationHash)
-
       fail('OWNER_MODEL_CHANGED', '负责岗位模型配置已变化，请明确采纳后重新规划');
 
     await resolveDispatchModules(context.snapshot, [...moduleIds]);
@@ -141,11 +132,9 @@ export class OwnerExecutionService
     options = { ...options };
 
     if (options.collaborationMode !== 'auto')
-
       return { mode: 'team' };
 
     if (!options.profileId || !this.models)
-
       fail('AUTO_MODEL_REQUIRED', '自动模式需要明确可用的对话模型');
 
     const profile = await this.models.Configuration(options.profileId, options.model, options.engine, options.modelRoles);
@@ -157,7 +146,6 @@ export class OwnerExecutionService
   Selection(state: DispatchState, scopeId: string, selection?: OwnerExecutionSelection): ExecutionSelection
   {
     if (selection)
-
       return selection;
 
     return fail('MAIN_EXECUTION_REQUIRED', '未指定自定义负责 Agent 时，请由主 Agent 在当前会话直接执行；独立派发需要真实 ownerSelection');
@@ -167,7 +155,6 @@ export class OwnerExecutionService
   async ResolveExecution(state: DispatchState, context: OwnerExecutionContext, scopeId: string, selection: OwnerExecutionSelection | undefined, moduleIds: readonly string[], agentId: string): Promise<{ ownerBinding?: OwnerExecutionBinding; fallbackBinding?: AutomaticExecutionBinding }>
   {
     if (selection)
-
       return { ownerBinding: await this.Resolve(state, context, selection, moduleIds, agentId) };
 
     return fail('MAIN_EXECUTION_REQUIRED', '内置默认执行 Agent 已退役；未指定自定义 Agent 的模块由主 Agent 在当前会话执行，不创建成员任务');
@@ -178,19 +165,17 @@ export class OwnerExecutionService
     if (task.fallbackBinding)
     {
       if (task.ownerBinding)
-
         fail('AUTO_BINDING_INVALID', '自动执行不能兼有登记岗位');
 
       const current = await this.ResolveExecution(state, context, task.scopeId!, undefined, task.modules.map(m => m.moduleId), task.assignee.agentId);
 
       if (!isDeepStrictEqual(current.fallbackBinding, task.fallbackBinding))
-
         fail('AUTO_BINDING_STALE', '自动执行的原知识、范围或能力已经变化，请重新规划');
 
       return current.fallbackBinding!;
     }
-    if (!task.ownerBinding)
 
+    if (!task.ownerBinding)
       fail('OWNER_BINDING_REQUIRED', '旧任务未绑定负责岗位，请重新规划派发；原任务和历史保持不变');
 
     const ids = task.modules.map(module => module.moduleId);
@@ -200,7 +185,6 @@ export class OwnerExecutionService
     const current = await this.Resolve(state, context, ownerExecutionSelectionFor(task.ownerBinding), ids, task.assignee.agentId);
 
     if (!isDeepStrictEqual(current, task.ownerBinding))
-
       fail('OWNER_BINDING_STALE', '原任务岗位绑定已变化，不能刷新旧任务后继续领取');
 
     return current;
@@ -220,7 +204,6 @@ export class OwnerExecutionService
     const current = await this.owner.Read();
 
     if (current.revision !== snapshot.revision)
-
       fail('OWNER_KNOWLEDGE_CHANGED', '准备期间知识发生变化，请重新查询');
 
     alive()
@@ -230,19 +213,16 @@ export class OwnerExecutionService
   async Discover(moduleIds: readonly string[], rawMatches?: ModuleOwnerMatches): Promise<OwnerExecutionDiscovery>
   {
     if (!moduleIds.length || moduleIds.length > 50 || new Set(moduleIds).size !== moduleIds.length)
-
       fail('OWNER_MODULES_INVALID', '请明确选择不重复的模块');
 
     const matches = rawMatches === undefined ? undefined : moduleOwnerMatchesSchema.parse(rawMatches);
 
     if (matches?.choices.some(choice => !moduleIds.includes(choice.moduleId)))
-
       fail('OWNER_MODULES_INVALID', '模型匹配不属于本次模块范围');
 
     return this.WithSnapshot(async (snapshot, state) =>
     {
       if (matches && matches.knowledgeRevision !== snapshot.revision)
-
         fail('OWNER_MATCH_STALE', '知识已变化，请重新读取模块和团队岗位后匹配');
 
       const groups: OwnerExecutionDiscovery['groups'] = [];
@@ -250,9 +230,7 @@ export class OwnerExecutionService
       for (const moduleId of moduleIds)
       {
         const owner = implicitModuleOwner(state.moduleOwnerships, moduleId),
-
           memberId = owner?.ownerMemberId ?? matches?.choices.find(choice => choice.moduleId === moduleId)?.memberId,
-
           member = state.workspaceMembers?.find(item => item.memberId === memberId);
 
         const main = !memberId || member?.adoption.configuration.agentId === 'cbim:executor';
@@ -265,8 +243,10 @@ export class OwnerExecutionService
 
           groups.push(group)
         }
+
         group.moduleIds.push(moduleId);
       }
+
       for (const group of groups)
       {
         // 独立核实可观察门禁，避免模型/能力失败遮住模块问题；最终选择仍走原完整 resolve，不由诊断授予许可。
@@ -278,13 +258,12 @@ export class OwnerExecutionService
         if (group.execution === 'main')
         {
           for (const moduleId of group.moduleIds)
-
             if (moduleId !== implicitProjectModuleId)
-
               await check(() => resolveDispatchModules(snapshot, [moduleId]));
 
           continue;
         }
+
         const member = state.workspaceMembers?.find(item => item.memberId === group.memberId);
 
         if (!member)
@@ -292,17 +271,15 @@ export class OwnerExecutionService
           add('OWNER_UNASSIGNED', '模块尚未设置有效的负责岗位。请在业务架构中设置负责人；有现成岗位时直接选择。');
 
           if (!state.workspaceMembers?.some(item => item.state === 'active'))
-
             add('OWNER_MEMBER_REQUIRED', '尚无启用岗位。请在桌面“团队架构 → 项目岗位 → 登记项目岗位”选择能力和岗位模型后登记。当前工具不提供岗位创建。');
 
           add('OWNER_MODEL_UNRESOLVED', '尚无负责岗位，无法核实本组能力和模型；选定岗位后核对已采纳配置，不会回退主会话模型。');
         }
-        for (const moduleId of group.moduleIds)
 
+        for (const moduleId of group.moduleIds)
           await check(() => resolveDispatchModules(snapshot, [moduleId]));
 
         if (!member)
-
           continue;
 
         const expectedOwners: OwnerExecutionSelection['expectedOwners'] = [];
@@ -312,13 +289,10 @@ export class OwnerExecutionService
           const owner = implicitModuleOwner(state.moduleOwnerships, moduleId);
 
           if (owner)
-
             expectedOwners.push({ moduleId, bindingId: owner.bindingId, revision: owner.revision, ownerMemberId: member.memberId, ...(owner.moduleId === moduleId ? {} : { inheritedFrom: owner.moduleId }) });
-
           else
           {
             const choice = matches?.choices.find(item => item.moduleId === moduleId),
-
               source = currentKnowledgeSource(state, { kind: 'module', sourceId: moduleId });
 
             if (!choice || !source)
@@ -327,11 +301,12 @@ export class OwnerExecutionService
 
               continue
             }
+
             expectedOwners.push({ moduleId, ownerMemberId: member.memberId, match: { reason: choice.reason, knowledgeRevision: snapshot.revision, sourceRef: knowledgeSourceRef(source) } });
           }
         }
-        if (expectedOwners.length !== group.moduleIds.length)
 
+        if (expectedOwners.length !== group.moduleIds.length)
           continue;
 
         const selection: OwnerExecutionSelection = { version: 1, memberId: member.memberId, expectedMemberRevision: member.revision, expectedCapabilityHash: member.adoption.capabilityHash, expectedConfigurationHash: member.runtimePolicy.configurationHash, expectedOwners };
@@ -345,15 +320,14 @@ export class OwnerExecutionService
         await check(async () => { if (!this.models) fail('OWNER_EXECUTION_UNAVAILABLE', '未装配岗位模型配置端口'); profile = await this.models.Configuration(member.runtimePolicy.profileId, member.runtimePolicy.modelId, workspaceMemberEngine(member.runtimePolicy), member.runtimePolicy.modelRoles); if (workspaceMemberModelHash(profile) !== member.runtimePolicy.configurationHash) fail('OWNER_MODEL_CHANGED', '负责岗位模型配置已变化，请在项目岗位明确采纳当前模型配置后重新规划') });
 
         if (!group.issues.length && profile)
-
           await check(async () => { await this.Resolve(state, { snapshot, profiles: [profile!] }, selection, group.moduleIds, group.agentId); group.selection = selection });
       }
+
       await this.Recheck(snapshot);
 
       const latest = await this.store.Read();
 
       if (!isDeepStrictEqual([state.registryCursor, state.ownershipCursor, state.sourceCursor], [latest.registryCursor, latest.ownershipCursor, latest.sourceCursor]))
-
         fail('OWNER_READ_STALE', '岗位、责任或来源在查询期间变化，请重新查询');
 
       return ownerExecutionDiscoverySchema.parse({ workspaceId: this.owner.entry.id, instanceId: this.owner.instanceId, readOnly: true, checkedAt: new Date().toISOString(), knowledgeRevision: snapshot.revision, registryCursor: state.registryCursor ?? null, ownershipCursor: state.ownershipCursor ?? null, sourceCursor: state.sourceCursor ?? null, moduleIds: [...moduleIds], groups });
@@ -368,7 +342,6 @@ export class OwnerExecutionService
     this.owner.Assert();
 
     if (input.workspaceId !== this.owner.entry.id)
-
       fail('OWNER_IDENTITY', '任务不属于当前工作区');
 
     const find = (state: DispatchState) => state.graphs.find(graph => graph.identity.rootSessionId === input.rootSessionId)?.tasks.find(task => task.taskId === input.taskId);
@@ -376,17 +349,14 @@ export class OwnerExecutionService
     const task = find(await this.store.Read());
 
     if (!task)
-
       fail('TASK_NOT_FOUND', '原任务不存在');
 
     const fixed = structuredClone(task),
-
       current = await this.Discover(task.modules.map(module => module.moduleId));
 
     const latest = find(await this.store.Read());
 
     if (!latest || latest.revision !== fixed.revision || !isDeepStrictEqual(latest.ownerBinding, fixed.ownerBinding))
-
       fail('OWNER_READ_STALE', '原任务在查询期间已变化，请刷新后重查');
 
     return { identity: { workspaceId: input.workspaceId, rootSessionId: input.rootSessionId }, taskId: fixed.taskId, taskRevision: fixed.revision, ...(fixed.ownerBinding ? { ownerBinding: fixed.ownerBinding } : {}), current };

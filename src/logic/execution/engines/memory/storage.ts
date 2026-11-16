@@ -27,7 +27,6 @@ async function directory(home: string, name: string)
   await fs.mkdir(root, { recursive: true });
 
   if (await fs.realpath(root) !== root)
-
     throw Error('记忆私有目录不能经过链接');
 
   return root
@@ -36,13 +35,11 @@ async function directory(home: string, name: string)
 async function read(root: string, file: string, limit: number)
 {
   if (path.dirname(file) !== root || await fs.realpath(file) !== file)
-
     throw Error('记忆文件不属于受管私有目录');
 
   const before = await fs.lstat(file);
 
   if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1 || before.size > limit)
-
     throw Error('记忆文件不是有界普通文件');
 
   const handle = await fs.open(file, 'r');
@@ -52,7 +49,6 @@ async function read(root: string, file: string, limit: number)
     const opened = await handle.stat();
 
     if (opened.ino !== before.ino || opened.dev !== before.dev)
-
       throw Error('记忆文件打开期间变化');
 
     const parts: Buffer[] = [];
@@ -64,27 +60,23 @@ async function read(root: string, file: string, limit: number)
       const buffer = Buffer.alloc(Math.min(65536, before.size + 1 - length));
 
       if (!buffer.length)
-
         break;
 
       const { bytesRead } = await handle.read(buffer, 0, buffer.length, length);
 
       if (!bytesRead)
-
         break;
 
       parts.push(buffer.subarray(0, bytesRead));
 
       length += bytesRead
     }
+
     const bytes = Buffer.concat(parts),
-
       after = await handle.stat(),
-
       current = await fs.lstat(file);
 
     if (bytes.length > limit || after.size !== before.size || after.mtimeMs !== before.mtimeMs || current.ino !== before.ino || current.isSymbolicLink())
-
       throw Error('记忆文件读取期间变化');
 
     return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
@@ -128,9 +120,7 @@ export class MemorySession
   static async Open(home: string, context: EngineContext)
   {
     const root = await directory(home, 'sessions'),
-
       id = safeId(context.nativeSessionId ?? randomUUID()),
-
       file = path.join(root, id + '.jsonl');
 
     const header = { type: 'cbim_session', version: 1, engine: 'memory', id, workspaceId: context.task.workspaceId, taskId: context.task.taskId, root: path.resolve(context.task.root) };
@@ -138,7 +128,6 @@ export class MemorySession
     if (context.sessionFile)
     {
       if (!context.nativeSessionId || path.resolve(context.sessionFile) !== file)
-
         throw Error('记忆会话恢复身份不一致');
 
       await context.assertMemberResume?.();
@@ -146,19 +135,16 @@ export class MemorySession
       const text = await read(root, file, 1024 * 1024);
 
       if (!text.endsWith('\n'))
-
         throw Error('记忆会话尾行不完整，不能自动续跑');
 
       const entries = text.trimEnd().split('\n').map(line => JSON.parse(line));
 
       if (!isDeepStrictEqual(entries[0], header))
-
         throw Error('记忆会话不属于当前任务或工作区');
 
       const messages: MemoryMessage[] = [];
 
       let active: string | undefined,
-
         pendingTool: string | undefined;
 
       for (const entry of entries.slice(1))
@@ -166,7 +152,6 @@ export class MemorySession
         if (entry.type === 'turn.started')
         {
           if (active || typeof entry.runId !== 'string')
-
             throw Error('记忆会话存在未结束轮次');
 
           active = safeId(entry.runId)
@@ -174,7 +159,6 @@ export class MemorySession
         else if (entry.type === 'message')
         {
           if (!active)
-
             throw Error('记忆会话消息缺少运行');
 
           const message = memoryMessageSchema.parse(entry.message);
@@ -182,7 +166,6 @@ export class MemorySession
           if (message.role === 'tool')
           {
             if (message.tool_call_id !== pendingTool)
-
               throw Error('记忆会话工具回执身份不一致');
 
             pendingTool = undefined
@@ -190,13 +173,12 @@ export class MemorySession
           else
           {
             if (pendingTool)
-
               throw Error('记忆会话仍有未结束工具');
 
             if (message.role === 'assistant')
-
               pendingTool = message.tool_calls?.[0].id
           }
+
           messages.push(message);
         }
         else if (entry.type === 'turn.completed')
@@ -204,23 +186,22 @@ export class MemorySession
           const last = messages.at(-1);
 
           if (!active || entry.runId !== active || pendingTool || last?.role !== 'assistant' || last.tool_calls)
-
             throw Error('记忆会话终态或原工具结果无法核实');
 
           active = undefined
         }
         else
-
           throw Error('记忆会话存在未知记录');
       }
-      if (active)
 
+      if (active)
         throw Error('记忆会话上轮未可靠完成；请核实原运行后新建上下文，不自动续跑');
 
       await context.assertMemberResume?.();
 
       return new MemorySession(id, file, root, text, messages);
     }
+
     const text = JSON.stringify(header) + '\n';
 
     await create(file, text);
@@ -232,21 +213,17 @@ export class MemorySession
   async Append(entry: { type: 'turn.started'; runId: string } | { type: 'turn.completed'; runId: string } | { type: 'message'; message: MemoryMessage })
   {
     const value = JSON.stringify(entry) + '\n',
-
       size = Buffer.byteLength(value);
 
     if (this.bytes + size > 1024 * 1024)
-
       throw Error('记忆会话达到 1 MiB 上限，请新建上下文并保留来源摘要');
 
     if (await fs.realpath(this.file) !== this.file || path.dirname(this.file) !== this.root)
-
       throw Error('记忆会话路径发生变化');
 
     const before = await fs.lstat(this.file);
 
     if (!before.isFile() || before.nlink !== 1 || before.size !== this.bytes)
-
       throw Error('记忆会话已被其它写入修改');
 
     const handle = await fs.open(this.file, 'a');
@@ -256,7 +233,6 @@ export class MemorySession
       const opened = await handle.stat();
 
       if (opened.ino !== before.ino || opened.dev !== before.dev || opened.size !== before.size)
-
         throw Error('记忆会话写入身份变化');
 
       await handle.writeFile(value);
@@ -267,10 +243,10 @@ export class MemorySession
     {
       await handle.close()
     }
+
     this.bytes += size;
 
     if (entry.type === 'message')
-
       this.messages.push(structuredClone(entry.message));
   }
 }
@@ -285,7 +261,6 @@ export class MemoryIndexCache
   async Load(plan: MemoryIndexPlan): Promise<MemoryIndex | undefined>
   {
     const root = await directory(this.home, 'memory-index'),
-
       file = path.join(root, plan.key + '.json');
 
     let text: string;
@@ -297,15 +272,14 @@ export class MemoryIndexCache
     catch (error)
     {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT')
-
         return;
 
       throw error
     }
+
     const value = JSON.parse(text);
 
     if (value.key !== plan.key || Object.keys(value).some(key => !['key', 'vectors'].includes(key)))
-
       throw Error('记忆索引缓存身份异常');
 
     return finishMemoryIndex(plan, value.vectors);
@@ -315,15 +289,12 @@ export class MemoryIndexCache
   async Save(index: MemoryIndex)
   {
     const root = await directory(this.home, 'memory-index'),
-
       value = JSON.stringify({ key: index.key, vectors: index.vectors });
 
     if (Buffer.byteLength(value) > 16 * 1024 * 1024)
-
       throw Error('记忆索引缓存超过 16 MiB');
 
     if (await this.Load(index))
-
       return;
 
     await atomic(path.join(root, index.key + '.json'), value);

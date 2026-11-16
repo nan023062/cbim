@@ -38,9 +38,7 @@ function Snapshot({ label, value }: { label: string; value: OutputManifestSnapsh
 export function ManifestReportPanel({ state, taskId, runId }: { state: ManifestPanelState; taskId: string; runId: string })
 {
   const { report, selectedId, loading, error, stale } = state,
-
     verification = report?.verification,
-
     selected = report?.manifests.find(item => item.manifestId === selectedId);
 
   return <section className="artifact-report" aria-label="完整产物清单" data-testid="output-manifest-panel" data-task-id={taskId} data-run-id={runId}>
@@ -72,13 +70,11 @@ export function ManifestReportPanel({ state, taskId, runId }: { state: ManifestP
 export function MemberOutputManifest({ identity, task, graphCursor, scope }: { identity: ManifestSelection; task: TaskNode; graphCursor?: GraphCursor; scope?: ScopeSummary })
 {
   const version = JSON.stringify([task.revision, task.planRevision, task.status, graphCursor, scope?.status, scope?.goalRevision]),
-
     current = useRef(version);
 
   current.current = version;
 
   const key = manifestSelectionKey(identity),
-
     controller = useMemo(() => new ManifestReportController(identity, input => window.cbim.call('dispatch.manifestReport', input), () => current.current), [key]);
 
   const state = useSyncExternalStore(controller.subscribe, () => controller.snapshot, () => controller.snapshot);

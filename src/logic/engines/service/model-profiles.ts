@@ -61,7 +61,6 @@ function snapshot(ref: EngineModelReference, profiles: readonly ResolvedModelOpe
   const primary = profiles[0];
 
   if (!primary || 'kind' in primary)
-
     fail('LLM_MODEL_ROLE', '主模型必须支持生成操作');
 
   const profile = profileForEngine(structuredClone(primary), ref.engine);
@@ -74,6 +73,7 @@ function snapshot(ref: EngineModelReference, profiles: readonly ResolvedModelOpe
 
     profile.modelRoles = { version: 2, roles };
   }
+
   return profile;
 }
 
@@ -87,7 +87,6 @@ async function selecting<T>(engine: LoopEngine | undefined, use: () => Promise<T
   catch (error)
   {
     if (error instanceof Fault && error.code === 'LLM_CONNECTION_API')
-
       fail('LLM_ENGINE_API', (engine === undefined ? '所选引擎' : engineLabel(engine)) + ' 没有可用的兼容接口，请在模型设置中配置该供应商的兼容接口');
 
     throw error;
@@ -142,7 +141,6 @@ export class EngineModelProfiles
           const primary = locked.Resolve(0);
 
           if (resolved)
-
             return resolved;
 
           const extra = operations(fixed).map((role, index) => ({ slot: role.slot, value: locked.Resolve(index + 1) }));

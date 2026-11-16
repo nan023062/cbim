@@ -12,7 +12,6 @@ export function RepositoryScopeDetails({ scope }: { scope: unknown })
   const parsed = repositoryToolScopeSchema.safeParse(scope);
 
   if (!parsed.success)
-
     return null;
 
   const value = parsed.data;

@@ -106,7 +106,6 @@ export function checkedHumanDecisionPreview(raw: unknown, input: HumanDecisionPr
   const observedManifests = value.candidates.flatMap(candidate => candidate.selectedManifest ? [{ taskId: candidate.taskId, runId: candidate.runId, manifestId: candidate.selectedManifest.manifest.manifestId }] : []);
 
   if (!equal(value.identity, identity) || value.reconsideration?.decisionId !== reconsidersDecisionId || value.basis && (!equal(selected(observed), selected(baselines)) || !equal(selected(observedManifests), selected(manifests ?? []))))
-
     throw Error('人工决定预览与当前目标、原意见或产物选择不一致');
 
   return value;
@@ -116,11 +115,9 @@ export function checkedHumanDecisionPreview(raw: unknown, input: HumanDecisionPr
 export function checkedHumanDecisionReceipt(raw: unknown, request: HumanDecisionRequest, previous?: HumanDecisionReceipt): HumanDecisionReceipt
 {
   const value = humanDecisionReceiptSchema.parse(raw),
-
     record = value.record;
 
   if (value.workspaceId !== request.workspaceId || value.rootSessionId !== request.rootSessionId || value.scopeId !== request.scopeId || !equal(record.proof.identity, { workspaceId: request.workspaceId, rootSessionId: request.rootSessionId, scopeId: request.scopeId }) || record.decisionId !== request.commandId || record.criterionId !== request.criterionId || record.revision !== request.expectedDecisionRevision + 1 || record.basis !== request.expectedBasis || record.decision !== request.decision || record.comment !== request.comment || record.reconsidersDecisionId !== request.reconsidersDecisionId || !equal(selected(record.baselines), selected(request.baselines)) || !equal(selected(record.manifests ?? []), selected(request.manifests ?? [])) || previous && !equal(previous.record, record))
-
     throw Error('人工决定回执与冻结请求不一致，请查询原命令');
 
   return value;
@@ -150,17 +147,14 @@ export class HumanDecisionController
       const raw = ports.storage.getItem(this.storageKey);
 
       if (!raw)
-
         return;
 
       if (new TextEncoder().encode(raw).length > 2 * 1024 * 1024)
-
         throw Error('本地记录超过容量上限');
 
       const saved = JSON.parse(raw);
 
       if (saved.version !== 1 || saved.workspaceId !== workspaceId || saved.rootSessionId !== rootSessionId || !Array.isArray(saved.records) || saved.records.length > 128)
-
         throw Error('本地记录格式或身份不一致');
 
       const seen = new Set<string>();
@@ -230,15 +224,11 @@ export class HumanDecisionController
   private Update(record: HumanDecisionDraft): boolean
   {
     const records = [...this.value.records],
-
       index = records.findIndex(value => value.scopeId === record.scopeId && value.criterionId === record.criterionId);
 
     if (index < 0)
-
       records.push(record);
-
     else
-
       records[index] = record;
 
     this.value = { records, error: '' };
@@ -246,13 +236,11 @@ export class HumanDecisionController
     try
     {
       if (this.unavailable || records.length > 128)
-
         throw Error('本机人工决定记录不可写或已达上限');
 
       const raw = JSON.stringify({ version: 1, workspaceId: this.workspaceId, rootSessionId: this.rootSessionId, records });
 
       if (new TextEncoder().encode(raw).length > 2 * 1024 * 1024)
-
         throw Error('本地记录超过 2 MiB 上限');
 
       this.ports.storage.setItem(this.storageKey, raw);
@@ -279,7 +267,6 @@ export class HumanDecisionController
     const record = this.Record(target.scopeId, target.criterionId);
 
     if (!this.available || !this.Belongs(target) || this.Locked(record))
-
       return;
 
     this.Update({ scopeId: target.scopeId, criterionId: target.criterionId, baselines: record?.baselines ?? [], ...(record?.manifests ? { manifests: record.manifests } : {}), ...(record?.reconsidersDecisionId && record.attempt?.phase !== 'accepted' ? { reconsidersDecisionId: record.reconsidersDecisionId } : {}), comment: record?.comment ?? '', decision: record?.decision, ...change, attempt: undefined });
@@ -291,7 +278,6 @@ export class HumanDecisionController
     const record = this.Record(target.scopeId, target.criterionId);
 
     if (!this.available || !this.Belongs(target) || this.Locked(record))
-
       return false;
 
     // 使正在回来的旧预览失效，避免新候选菜单再次被旧文件观察覆盖。
@@ -306,7 +292,6 @@ export class HumanDecisionController
     const record = this.Record(target.scopeId, target.criterionId);
 
     if (!this.available || !this.Belongs(target) || this.Locked(record))
-
       return;
 
     const input = humanDecisionPreviewInputSchema.parse({ workspaceId: this.workspaceId, rootSessionId: this.rootSessionId, scopeId: target.scopeId, criterionId: target.criterionId, baselines: [], ...(decisionId ? { reconsidersDecisionId: decisionId } : {}) });
@@ -314,14 +299,12 @@ export class HumanDecisionController
     this.previews.delete(identityKey(target.scopeId, target.criterionId));
 
     if (this.Update({ scopeId: input.scopeId, criterionId: input.criterionId, baselines: [], ...(input.reconsidersDecisionId ? { reconsidersDecisionId: input.reconsidersDecisionId } : {}), comment: '' }))
-
       await this.Preview(target);
   }
 
   CurrentPreview(target: HumanDecisionTarget): HumanDecisionPreview | undefined
   {
     const state = this.PreviewState(target),
-
       record = this.Record(target.scopeId, target.criterionId);
 
     return state && !state.loading && !state.error && state.anchor === target.anchor && state.input.reconsidersDecisionId === record?.reconsidersDecisionId && equal(selected(state.input.baselines), selected(record?.baselines ?? [])) && equal(selected(state.input.manifests ?? []), selected(record?.manifests ?? [])) ? state.result : undefined;
@@ -331,23 +314,19 @@ export class HumanDecisionController
   async Preview(target: HumanDecisionTarget)
   {
     if (!this.available || !this.Belongs(target))
-
       return;
 
     const record = this.Record(target.scopeId, target.criterionId);
 
     if (this.Locked(record))
-
       return;
 
     const key = identityKey(target.scopeId, target.criterionId),
-
       input = humanDecisionPreviewInputSchema.parse({ workspaceId: this.workspaceId, rootSessionId: this.rootSessionId, scopeId: target.scopeId, criterionId: target.criterionId, baselines: record?.baselines ?? [], ...(record?.manifests ? { manifests: record.manifests } : {}), ...(record?.reconsidersDecisionId ? { reconsidersDecisionId: record.reconsidersDecisionId } : {}) });
 
     const old = this.previews.get(key);
 
     if (old?.loading && old.anchor === target.anchor && equal(old.input, input))
-
       return;
 
     const state: HumanDecisionPreviewState = { anchor: target.anchor, input, loading: true, error: '' };
@@ -361,13 +340,11 @@ export class HumanDecisionController
       const result = checkedHumanDecisionPreview(await this.ports.preview(structuredClone(input)), input);
 
       if (this.previews.get(key) === state)
-
         this.previews.set(key, { ...state, result, loading: false })
     }
     catch (error)
     {
       if (this.previews.get(key) === state)
-
         this.previews.set(key, { ...state, loading: false, error: textError(error) })
     }
     finally
@@ -379,11 +356,9 @@ export class HumanDecisionController
   async Submit(target: HumanDecisionTarget)
   {
     const record = this.Record(target.scopeId, target.criterionId),
-
       preview = this.CurrentPreview(target);
 
     if (!this.available || !this.Belongs(target) || !record || this.Locked(record) || record.attempt?.phase === 'accepted' || !preview?.basis || !record.decision || !preview.allowedDecisions.includes(record.decision) || record.reconsidersDecisionId && !preview.reconsideration?.canReconsider)
-
       return;
 
     let request: HumanDecisionRequest;
@@ -400,21 +375,19 @@ export class HumanDecisionController
 
       return
     }
+
     const frozen = { ...record, comment: request.comment, attempt: { request, phase: 'submitting' as const, uncertain: false } };
 
     if (this.Update(frozen))
-
       await this.Send(frozen);
   }
 
   private async Send(record: HumanDecisionDraft)
   {
     const attempt = record.attempt!,
-
       request = attempt.request;
 
     if (this.pending.has(request.commandId))
-
       return;
 
     this.pending.add(request.commandId);
@@ -435,13 +408,12 @@ export class HumanDecisionController
       if (rejected)
       {
         const key = identityKey(record.scopeId, record.criterionId),
-
           preview = this.previews.get(key);
 
         if (preview)
-
           this.previews.set(key, { ...preview, error: '提交未受理，请重新核实当前依据。' })
       }
+
       this.Update({ ...record, attempt: { ...attempt, phase: rejected ? 'rejected' : 'unknown', uncertain: !rejected, error: textError(error) } });
     }
     finally
@@ -458,7 +430,6 @@ export class HumanDecisionController
     const record = this.Record(scopeId, criterionId);
 
     if (!this.available || record?.attempt?.phase !== 'unknown' || this.IsPending(record))
-
       return;
 
     await this.Send(record)
@@ -468,11 +439,9 @@ export class HumanDecisionController
   async Query(scopeId: string, criterionId: string)
   {
     const record = this.Record(scopeId, criterionId),
-
       attempt = record?.attempt;
 
     if (!this.available || !record || !attempt || this.IsPending(record))
-
       return;
 
     const request = attempt.request;
@@ -486,11 +455,8 @@ export class HumanDecisionController
       const raw = await this.ports.lookup({ workspaceId: this.workspaceId, rootSessionId: this.rootSessionId, scopeId, commandId: request.commandId });
 
       if (raw !== undefined)
-
         this.Update({ ...record, attempt: { ...attempt, phase: 'accepted', receipt: checkedHumanDecisionReceipt(raw, request, attempt.receipt), error: undefined } });
-
       else if (attempt.phase !== 'accepted')
-
         this.Update({ ...record, attempt: { ...attempt, phase: 'unknown', uncertain: true, error: '尚未查到回执，请继续查询或用原命令重试。' } });
     }
     catch (error)
@@ -520,7 +486,6 @@ export class HumanDecisionPool
   Get(workspaceId: string, rootSessionId: string, ports: HumanDecisionPorts)
   {
     const key = JSON.stringify([workspaceId, rootSessionId]),
-
       value = this.values.get(key) ?? new HumanDecisionController(workspaceId, rootSessionId, ports);
 
     this.values.delete(key);
@@ -530,13 +495,12 @@ export class HumanDecisionPool
     for (const [oldKey, old] of this.values)
     {
       if (this.values.size <= 16)
-
         break;
 
       if (oldKey !== key && old.canRelease)
-
         this.values.delete(oldKey)
     }
+
     return value;
   }
 }

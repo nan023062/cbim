@@ -14,11 +14,11 @@ export function rejectedToolView(result: unknown): { message: string; invalidInp
     const blocks = value.content.filter(b => b?.type === 'text' && typeof b.text === 'string');
 
     if (blocks.length !== 1)
-
       return;
 
     value = blocks[0].text;
   }
+
   if (typeof value === 'string')
   {
     const text = value;
@@ -32,6 +32,7 @@ export function rejectedToolView(result: unknown): { message: string; invalidInp
       return { message: text, invalidInput: false }
     }
   }
+
   if (value && typeof value === 'object' && !Array.isArray(value) && 'message' in value && typeof value.message === 'string')
   {
     const invalidInput = 'code' in value && value.code === 'TOOL_INPUT_INVALID';
@@ -43,15 +44,16 @@ export function rejectedToolView(result: unknown): { message: string; invalidInp
       const issues = inputIssueMessage(JSON.parse(message));
 
       if (issues)
-
         return { message: `参数无效；${issues}。请补齐必填字段或修正格式；可选参数可省略，已声明默认值会自动使用。本次尚未执行。`, invalidInput: true }
     }
     catch
     {
       /* 普通可读错误不当作 JSON。 */
     }
+
     return { message, invalidInput };
   }
+
   const issues = inputIssueMessage(value);
 
   return issues ? { message: `参数无效；${issues}。本次尚未执行。`, invalidInput: true } : undefined;

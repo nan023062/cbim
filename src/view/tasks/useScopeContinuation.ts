@@ -95,20 +95,16 @@ export interface ScopeContinuationView
 export function continuationTarget(workspaceId: string, rootSessionId: string | undefined, state: ScopeGoalState): ContinuationTarget | undefined
 {
   const scope = state.selectedScope,
-
     waiting = state.waitingScope;
 
   // 用户主动打断已有冻结原文，只能沿其原请求继续，不能在普通等待表单另建命令。
   if (scope?.wait?.interruptionId)
-
     return;
 
   if (!rootSessionId || state.loading || state.detailLoading || state.error || !waiting || waiting.status !== 'waiting' || waiting.scopeId !== state.selectedScopeId || scope?.scopeId !== waiting.scopeId || scope.status !== 'waiting' || !scope.goal || !scope.wait || scope.wait.waitId !== waiting.wait?.waitId || scope.goal.revision !== waiting.goalRevision || scope.goal.revision !== scope.wait.goalRevision || (scope.goal.inputRevision ?? 1) !== (waiting.inputRevision ?? 1))
-
     return;
 
   if (scope.workspaceId !== workspaceId || scope.rootSessionId !== rootSessionId)
-
     return;
 
   return { workspaceId, rootSessionId, scopeId: scope.scopeId, waitId: scope.wait.waitId, expectedGoalRevision: scope.goal.revision, expectedInputRevision: scope.goal.inputRevision ?? 1 };
@@ -120,7 +116,6 @@ export function useScopeContinuation(workspaceId: string, rootSessionId: string 
   const effectiveModel = continuationModel(model, state);
 
   const key = JSON.stringify([workspaceId, rootSessionId]),
-
     keyRef = useRef(key);
 
   keyRef.current = key;
@@ -138,16 +133,13 @@ export function useScopeContinuation(workspaceId: string, rootSessionId: string 
   useEffect(() => { mounted.current = true; if (!controller) return; const unsubscribe = controller.Subscribe(() => changed(value => value + 1)); void controller.Restore().then(() => { if (keyRef.current === key) refreshRef.current() }); return () => { mounted.current = false; unsubscribe() }; }, [controller, key]);
 
   const target = active ? continuationTarget(workspaceId, rootSessionId, state) : undefined,
-
     records = controller?.snapshot.records ?? [];
 
   // 记录发生过的切换，即使选择器返回前又切回相同目标，也不把迟到文件自动附到恢复后的草稿。
   const stamp = JSON.stringify([key, active, target]),
-
     selection = useRef({ stamp, generation: 0 });
 
   if (selection.current.stamp !== stamp)
-
     selection.current = { stamp, generation: selection.current.generation + 1 };
 
   useEffect(() => () => { if (target) controller?.CancelImport(target) }, [controller, stamp]);
@@ -155,9 +147,7 @@ export function useScopeContinuation(workspaceId: string, rootSessionId: string 
   const record = target ? controller?.Record(target.scopeId, target.waitId) : [...records].reverse().find(item => item.scopeId === state.selectedScopeId);
 
   const pending = controller?.IsPending(record) ?? false,
-
     attempt = record?.attempt,
-
     error = controller?.snapshot.error ?? '';
 
   const editable = !!target && !!controller?.available && !pending && (!attempt || attempt.phase === 'rejected');
@@ -170,35 +160,20 @@ export function useScopeContinuation(workspaceId: string, rootSessionId: string 
 
   return {
     workspaceId, attachments: record?.attachments ?? [], importing,
-
     scopeId: target?.scopeId ?? record?.scopeId, waitId: target?.waitId ?? record?.waitId, text: record?.text ?? '', record,
-
     editable, canSubmit: editable && !importing && !!effectiveModel && !!record?.text.trim(), canRetry: !!target && !pending && attempt?.phase === 'unknown', pending, error,
-
     modelLabel: attempt && attempt.phase !== 'rejected' ? `${attempt.request.options.model} · ${{ read: '只读访问', ask: '默认权限', execute: '完全访问' }[attempt.request.options.permission]}（本次提交已固定）` : effectiveModel?.label ?? '请先选择可用模型',
-
     edit: text => { if (editable && target) controller!.Edit(target, text) },
-
     pickFiles: async () => { if (!editable || !target || !controller) return; const generation = selection.current.generation; await controller.PickFiles(target, () => mounted.current && selection.current.generation === generation && selection.current.stamp === stamp) },
-
     sourceSelectionKey: stamp + ':' + selection.current.generation,
-
     importSource: async input => { if (editable && target && controller) await controller.ImportSource(target, input, currentSelection()) },
-
     materialTargets: async () => editable && target && controller ? controller.MaterialTargets(target, currentSelection()) : undefined,
-
     materialList: async input => editable && target && controller ? controller.MaterialList(target, input, currentSelection()) : undefined,
-
     cancelImport: () => { if (target) controller?.CancelImport(target) },
-
     removeFile: id => { if (editable && target) controller!.RemoveFile(target, id) },
-
     submit: () => refreshAfter(async () => { if (editable && target && effectiveModel) await controller!.Submit(target, effectiveModel.options) }),
-
     submitInput: (text, attachments) => refreshAfter(async () => { if (!editable || !target || !effectiveModel) throw Error('当前等待目标尚未就绪，请返回当前目标并核对补充记录。'); await controller!.SubmitInput(target, effectiveModel.options, text, attachments); }),
-
     query: () => refreshAfter(async () => { if (record) await controller!.Query(record.scopeId, record.waitId) }),
-
     retry: () => refreshAfter(async () => { if (target && attempt?.phase === 'unknown') await controller!.Retry(target.scopeId, target.waitId) }),
   };
 }

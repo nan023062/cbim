@@ -23,11 +23,8 @@ import { memberToolEffects, memberToolInputs, memberToolOutputs, memberToolCommi
 
 const descriptions: Record<MemberToolName, string> = {
   cbim_member_inspect: '查询岗位列表；传 memberId 返回版本、当前/已采纳能力和配置哈希及修复入口。能力失配仍返回差异；不读取凭据、不派工。',
-
   cbim_member_change_preview: '预览 register/update/state 或 adopt target=capability。登记继承静态 Agent 已配置模型；模型选型/凭据仍需人工。能力变更用此采纳，模块来源变更才用 owner adopt_source。',
-
   cbim_member_change_commit: '按原 change、basis 和 registryCursor 提交一次岗位变更，经本轮知识写权限。不会改派历史任务或代签验收；结果未知只查原 commandId，不换调用重做。',
-
   cbim_member_receipt: '只读核实本根会话主工具原 commandId；unknown 不表示未执行，不授权重放。',
 };
 
@@ -50,7 +47,6 @@ export class WorkspaceMemberTools
   Describe(name: string, raw: unknown): RunToolDescriptor
   {
     if (!this.Has(name))
-
       fail('MEMBER_TOOL_UNKNOWN', '本轮未提供此岗位工具');
 
     memberToolInputs[name].parse(raw);
@@ -61,7 +57,6 @@ export class WorkspaceMemberTools
   async Call(name: string, raw: unknown, signal: AbortSignal, toolCallId?: string)
   {
     if (!this.Has(name))
-
       fail('MEMBER_TOOL_UNKNOWN', '本轮未提供此岗位工具');
 
     signal.throwIfAborted();
@@ -73,13 +68,13 @@ export class WorkspaceMemberTools
     if (name === 'cbim_member_change_commit')
     {
       if (!toolCallId)
-
         fail('MEMBER_ACTOR', '岗位提交缺少真实调用身份');
 
       const { workspaceId, instanceId: _, ...source } = this.binding;
 
       commandId = workspaceMemberMainCommandId(workspaceId, { kind: 'main_agent', ...source, toolCallId, toolName: name });
     }
+
     try
     {
       const output = await this.port.Call(name, structuredClone(input), signal, toolCallId);
@@ -93,7 +88,6 @@ export class WorkspaceMemberTools
       const result = checkedJsonToolResult(name, output, schema);
 
       if (Buffer.byteLength(result.content[0].text, 'utf8') > 128 * 1024)
-
         fail('TOOL_OUTPUT_INVALID', '岗位工具输出过大，请缩小查询范围');
 
       return result;
@@ -101,7 +95,6 @@ export class WorkspaceMemberTools
     catch (error)
     {
       if (commandId)
-
         throw withToolReconciliation(new Fault(error instanceof Fault ? error.code : 'MEMBER_UNKNOWN', `岗位提交结果未能交付；原 commandId=${commandId}。请用 cbim_member_receipt 核实，不能自动重试。`), { tool: 'cbim_receipt_inspect', args: { target: 'member', input: { commandId } } });
 
       throw error;

@@ -56,13 +56,10 @@ export function initialLayout(): TabLayout
 export function moveTab(layout: TabLayout, from: string, to: string): TabLayout
 {
   const tabs = [...layout.tabs],
-
     a = tabs.findIndex(t => t.id === from),
-
     b = tabs.findIndex(t => t.id === to);
 
   if (a < 0 || b < 0 || a === b)
-
     return layout;
 
   tabs.splice(b, 0, tabs.splice(a, 1)[0]);
@@ -75,17 +72,14 @@ export function readLayouts(text: string | null): Layouts
   try
   {
     const value = JSON.parse(text || '{}'),
-
       result: Layouts = {};
 
     if (!value || typeof value !== 'object' || Array.isArray(value))
-
       return result;
 
     for (const [id, v] of Object.entries(value) as [string, any][])
     {
       if (!/^[a-f0-9]{64}$/.test(id) || !v || !Array.isArray(v.tabs))
-
         continue;
 
       const seen = new Set<string>();
@@ -93,9 +87,7 @@ export function readLayouts(text: string | null): Layouts
       const tabs: ViewTab[] = v.tabs.filter((t: any) => t && typeof t.id === 'string' && !seen.has(t.id) && seen.add(t.id) && Object.hasOwn(tabKinds, t.kind) && typeof t.title === 'string').map((t: any) => ({ id: t.id, kind: t.kind, title: t.title.slice(0, 60), draft: typeof t.draft === 'string' ? t.draft : undefined, attachments: Array.isArray(t.attachments) ? t.attachments.filter((a: any) => a && typeof a.id === 'string' && /^[0-9a-f-]{36}$/.test(a.id) && ['file', 'folder', 'link', 'web', 'connector'].includes(a.kind) && typeof a.name === 'string' && typeof a.source === 'string').slice(0, 12) : [], taskId: typeof t.taskId === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.test(t.taskId) ? t.taskId : undefined }));
 
       for (const tab of tabs)
-
         if (v.tabs.some((raw: any) => raw.id === tab.id && raw.customTitle === true))
-
           tab.customTitle = true;
 
       const hiddenTaskIds = Array.isArray(v.hiddenTaskIds) ? [...new Set(v.hiddenTaskIds.filter((item: unknown) => typeof item === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.test(item)))] as string[] : [];
@@ -104,6 +96,7 @@ export function readLayouts(text: string | null): Layouts
 
       result[id] = { tabs: visible, active: visible.some(t => t.id === v.active) ? v.active : visible[0]?.id || '', ...(hiddenTaskIds.length ? { hiddenTaskIds } : {}) };
     }
+
     return result;
   }
   catch
@@ -118,7 +111,6 @@ export function mergeConversations(layout: TabLayout | undefined, records: { tas
   const tasks = [...new Map(records.filter(r => r.task?.mode === 'chat' && !layout?.hiddenTaskIds?.includes(r.task.taskId)).map(r => [r.task!.taskId, r.task!])).values()];
 
   if (!tasks.length)
-
     return layout;
 
   const base = layout || { tabs: [], active: '' };
@@ -130,7 +122,6 @@ export function mergeConversations(layout: TabLayout | undefined, records: { tas
   for (const task of tasks)
   {
     const title = task.goal.split('\n')[0].slice(0, 60) || '新对话',
-
       index = tabs.findIndex(t => t.kind === 'chat' && t.taskId === task.taskId);
 
     if (index < 0)
@@ -146,6 +137,7 @@ export function mergeConversations(layout: TabLayout | undefined, records: { tas
       changed = true
     }
   }
+
   return changed ? { ...base, tabs, active: base.active || tabs[0].id } : base;
 }
 
@@ -163,13 +155,11 @@ export function removeConversation(layout: TabLayout, id: string): TabLayout
   const removed = layout.tabs.find(tab => tab.id === id);
 
   if (!removed)
-
     return layout;
 
   const tabs = layout.tabs.filter(tab => tab.id !== id && (!removed.taskId || tab.taskId !== removed.taskId));
 
   if (!tabs.some(tab => tab.kind === 'chat'))
-
     tabs.push(newTab('chat'));
 
   return { ...layout, tabs, active: tabs.some(tab => tab.id === layout.active) ? layout.active : tabs[0].id, ...(removed.taskId ? { hiddenTaskIds: [...new Set([...(layout.hiddenTaskIds ?? []), removed.taskId])] } : {}) };

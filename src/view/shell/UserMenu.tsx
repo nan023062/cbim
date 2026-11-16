@@ -16,11 +16,8 @@ import type { SoftwareUpdateController } from '../updates/useSoftwareUpdates';
 export function UserMenu({ theme, toggleTheme, openSettings, updates }: { theme: string; toggleTheme: () => void; openSettings: (section?: SettingsSectionId) => void; updates: SoftwareUpdateController })
 {
   const [open, setOpen] = useState(false),
-
     root = useRef<HTMLDivElement>(null),
-
     trigger = useRef<HTMLButtonElement>(null),
-
     first = useRef<HTMLButtonElement>(null);
 
   const updateStatus = updates.status;

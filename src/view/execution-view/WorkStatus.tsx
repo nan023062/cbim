@@ -24,7 +24,6 @@ export function WorkStatus({ run, now, activityDetails, inline = false }: { run:
   const statusIcon = icons[run.status];
 
   const live = run.status === 'running',
-
     end = live ? now : Date.parse(run.events.at(-1)?.time || '');
 
   const seconds = Math.max(0, Math.round((end - Date.parse(run.events[0]?.time || '')) / 1000)) || 0;
@@ -40,7 +39,6 @@ export function WorkStatus({ run, now, activityDetails, inline = false }: { run:
   const toolCount = new Set(run.events.filter(e => e.type === 'tool.proposed').map(e => e.data.id)).size;
 
   if (inline)
-
     return <div className="chat-run-status chat-inline-status" role="status"><Icon name={statusIcon} size={16} /><span>{live ? '正在工作' : '已工作'} {duration}</span><span className={'work-outcome ' + run.status}>{labels[run.status]}</span>{live && <span className="inline-activity-label">{activity}</span>}</div>;
 
   return <div className="work-status-block"><details className="chat-work"><summary className="chat-run-status"><Icon name={statusIcon} size={16} /><span>{live ? '正在工作' : '已工作'} {duration}</span><span className={'work-outcome ' + run.status}>{labels[run.status]}{toolCount ? ` · ${toolCount} 项操作` : ''}</span><Icon name="chevron" size={14} /></summary><div className="chat-work-content">{activityDetails ?? <ToolTimeline run={run} />}</div></details>{(live || failure) && <div className="work-live-preview" role="status">{live && !failure && <span className="work-live-dot" />}{activity}{failure && ' · 展开工作记录查看原因'}</div>}</div>;

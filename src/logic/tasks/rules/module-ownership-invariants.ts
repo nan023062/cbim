@@ -25,15 +25,12 @@ export function checkModuleOwnershipActor(state: DispatchState, actor: ModuleOwn
   check(moduleOwnershipActorSchema.safeParse(actor).success, '责任来源格式无效');
 
   if (actor.kind === 'local_desktop')
-
     return;
 
   const scope = state.scopes?.find(item => item.scopeId === actor.scopeId),
-
     graph = state.graphs.find(item => item.identity.rootSessionId === actor.rootSessionId);
 
   const member = state.members.find(item => item.agentInstanceId === actor.agentInstanceId),
-
     session = state.sessions.find(item => item.agentSessionId === actor.agentSessionId);
 
   check(scope && scope.workspaceId === state.workspaceId && scope.rootSessionId === actor.rootSessionId && scope.status === 'active' && scope.runTracking?.mainRunIds.at(-1) === actor.runId, '主责任操作缺少当前周期运行');
@@ -66,6 +63,7 @@ export function projectModuleOwnershipMutation(previous: DispatchState, mutation
 
     return { moduleOwnerships: previous.moduleOwnerships ?? [], ownershipChanges: previous.ownershipChanges ?? [], ownershipCursor: previous.ownershipCursor ?? null };
   }
+
   check(Array.isArray(mutation.ownershipChanges) && mutation.ownershipChanges.length === 1, '责任事务必须恰好追加一条审计');
 
   const captureAllowed = sourcePermit?.kind === 'module_ownership' && sourcePermit.changeId === mutation.ownershipChanges[0]?.changeId && sourcePermit.captureChangeId === mutation.knowledgeSourceChanges?.[0]?.changeId;

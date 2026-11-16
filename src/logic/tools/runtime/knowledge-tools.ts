@@ -72,6 +72,7 @@ export class KnowledgeTools
 
       register(name, { description: `读取内置「${skill.title}」流程：${skill.description}。返回正文、版本及引用，由调用方执行；调用本工具不会启动业务或修改文件。`, inputSchema: identity }, wrap(() => builtins.Read(skill.id)))
     }
+
     register('cbim_module_registry', { version: 2, description: '查询当前模块注册表与始终可用的 projectRoot（cbim:project）；关键词仅筛选已定义模块，不改写磁盘。', inputSchema: { ...identity, query: z.string().max(200).optional() } }, wrap(args => queries.Modules(args.query)));
 
     register('cbim_module_get', { version: 2, description: '按 ID 返回 Module 定义、正文及本模块 Workflow；cbim:project 返回内置项目根范围，不伪造文件或继承流程。', inputSchema: { ...identity, id: z.string() } }, wrap(args => queries.Module(args.id)));
@@ -124,6 +125,7 @@ export class KnowledgeTools
 
         instanceId: string
       });
+
     return args;
   }
 
@@ -138,6 +140,7 @@ export class KnowledgeTools
 
         instanceId: string
       });
+
     return { effects: tool.effects, native: false, contractVersion: tool.version };
   }
 
@@ -145,7 +148,6 @@ export class KnowledgeTools
   async CallFromRun(name: string, input: unknown, write: boolean, signal?: AbortSignal)
   {
     if (!write && this.Describe(name, input).effects.includes('knowledge-write'))
-
       fail('FORBIDDEN', '本轮未获得知识写入权限');
 
     return this.Invoke(name, input, write, signal);
@@ -158,17 +160,17 @@ export class KnowledgeTools
     const { tool, args } = this.registry.Resolve(name, input);
 
     if (name === 'cbim_workspace_identity')
-
       this.workspace.Assert();
-
     else
-
+    {
       this.workspace.Assert(args as
         {
           workspaceId: string;
 
           instanceId: string
         });
+    }
+
     return this.registry.InvokeResolved(tool, args, write);
   }
 }
@@ -186,5 +188,6 @@ export function knowledgeTools(workspace: KnowledgeWorkspace)
 
     services.set(workspace, service)
   }
+
   return service
 }

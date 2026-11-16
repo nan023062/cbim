@@ -50,7 +50,6 @@ function checkedInput<T>(schema: z.ZodType<T>, raw: unknown): T
   const result = schema.safeParse(raw);
 
   if (!result.success)
-
     fail('REPOSITORY_CONNECTION_INPUT', '资源仓库连接请求字段无效');
 
   return result.data
@@ -109,7 +108,6 @@ export class RepositoryConnections
   private Current()
   {
     if (this.closed)
-
       fail('REPOSITORY_CONNECTION_UNAVAILABLE', '资源仓库连接服务正在关闭')
   }
 
@@ -127,7 +125,6 @@ export class RepositoryConnections
   private AssertOwner(owner: KnowledgeWorkspace, input: RepositoryConnectionIdentity)
   {
     if (this.Owner(input) !== owner)
-
       fail('REPOSITORY_CONNECTION_STALE', '工作区连接实例已更换')
   }
 
@@ -145,11 +142,9 @@ export class RepositoryConnections
     owner.Assert();
 
     const snapshot = await owner.Read(),
-
       file = snapshot.files.find(file => file.path === registryPath);
 
     if (!file)
-
       fail('REPOSITORY_CONNECTION_DEFINITION', '当前知识缺少链接器注册表');
 
     let entries: ConnectorDefinition[];
@@ -162,6 +157,7 @@ export class RepositoryConnections
     {
       fail('REPOSITORY_CONNECTION_DEFINITION', '链接器注册表无效，请先修复正式知识')
     }
+
     owner.Assert();
 
     return { snapshot, entries };
@@ -170,11 +166,9 @@ export class RepositoryConnections
   private async Definition(owner: KnowledgeWorkspace, connectorId: string)
   {
     const { snapshot, entries } = await this.Definitions(owner),
-
       definition = entries.find(item => item.id === connectorId);
 
     if (!definition || !isResourceRepositoryConnector(definition))
-
       fail('REPOSITORY_CONNECTION_DEFINITION', '该定义不是已登记的资源仓库链接器');
 
     return { snapshot, definition, definitionHash: definitionHash(definition) }
@@ -195,21 +189,17 @@ export class RepositoryConnections
     try
     {
       const file = this.PlanPath(owner, planId),
-
         stat = await fs.lstat(file);
 
       if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 8 * 1024 * 1024)
-
         throw Error('file');
 
       const plan = planSchema.parse(JSON.parse(await fs.readFile(file, 'utf8')));
 
       if (plan.preview.planId !== planId || plan.request.requestId !== planId || plan.request.workspaceId !== owner.entry.id || hash(json({ preview: plan.preview, request: plan.request })) !== plan.fingerprint)
-
         throw Error('fingerprint');
 
       if (requireInstance)
-
         owner.Assert(plan.request);
 
       return plan
@@ -218,26 +208,22 @@ export class RepositoryConnections
     {
       fail('REPOSITORY_CONNECTION_PLAN', '连接定义预览不存在、已过期或损坏，请重新预览')
     }
+
     ;
   }
 
   async List(raw: unknown)
   {
     const input = checkedInput(repositoryConnectionListInputSchema, raw),
-
       owner = this.Owner(input),
       { snapshot, entries } = await this.Definitions(owner),
-
       sharing = this.resources.SharedIdentity(),
-
       grants = this.store.Grants(input.workspaceId);
 
     const connections = entries.map(definition => { const grant = grants.find(item => item.connectorId === definition.id), digest = definitionHash(definition), repository = isResourceRepositoryConnector(definition); const status = !repository ? 'unsupported' : !grant?.enabled ? 'not_granted' : grant.definitionHash !== digest ? 'definition_changed' : grant.repositoryId !== definition.repository.repositoryId ? 'repository_changed' : !sharing ? 'not_shared' : sharing.repositoryId !== grant.repositoryId ? 'repository_changed' : 'ready'; return { connectorId: definition.id, name: definition.name, summary: definition.summary, provider: repository ? 'resource_repository_v1' : 'cindy_plugin', definitionHash: digest, ...(repository ? { repositoryId: definition.repository.repositoryId } : {}), grantRevision: grant?.revision ?? 0, ...(grant ? { grant } : {}), status }; });
 
     for (const grant of grants)
-
       if (!entries.some(definition => definition.id === grant.connectorId))
-
         connections.push({ connectorId: grant.connectorId, name: grant.connectorId, summary: '原定义已删除，仍可撤销本机授权', provider: 'resource_repository_v1', repositoryId: grant.repositoryId, grantRevision: grant.revision, grant, status: 'definition_missing' } as typeof connections[number]);
 
     owner.Assert(input);
@@ -261,18 +247,14 @@ export class RepositoryConnections
     return this.Serial(async () =>
     {
       const owner = this.Owner(input),
-
         plan = await this.ReadPlan(owner, input.planId),
-
         known = await owner.CommittedReceipt(plan.request);
 
       // 计划缓存不是提交证明；真实知识 journal 必须支持缓存回执，损坏缓存不能冒充写入成功。
       if (plan.committed && (!known || !isDeepStrictEqual(plan.committed, this.CommitResult(plan, known))))
-
         fail('REPOSITORY_CONNECTION_DATA', '定义回执缓存与原知识事务不一致，请核实记录');
 
       if (known)
-
         return this.CommitResult(plan, known);
 
       const current = await owner.Read();
@@ -282,11 +264,11 @@ export class RepositoryConnections
         const connection = this.resources.ReadConnection(plan.preview.repositoryId);
 
         if (connection.connectionId !== plan.preview.connectionId)
-
           fail('REPOSITORY_CONNECTION_STALE', '预览所属共享连接已变化，请重新预览');
 
         connection.AssertCurrent()
       }
+
       // 版本已变化时，原知识事务只可返回同请求已提交回执；否则其 CAS 拒绝，不重放旧定义。
       this.AssertOwner(owner, input);
 
@@ -304,6 +286,7 @@ export class RepositoryConnections
       {
         fail('REPOSITORY_CONNECTION_APPLIED', '链接器定义已经登记，回执缓存未保存；请核实或重试同一 planId，尚未授予只读权限')
       }
+
       ;
 
       return result;
@@ -327,7 +310,6 @@ export class RepositoryConnections
     owner.Assert();
 
     const plan = await this.ReadPlan(owner, input.planId, false),
-
       committed = await owner.CommittedReceipt(plan.request);
 
     return committed ? this.CommitResult(plan, committed) : undefined
@@ -344,9 +326,7 @@ export class RepositoryConnections
   private AbortChecks(workspaceId: string, connectorId?: string)
   {
     for (const [controller, target] of this.checks)
-
       if (target.workspaceId === workspaceId && (!connectorId || target.connectorId === connectorId))
-
         controller.abort()
   }
 
@@ -354,7 +334,6 @@ export class RepositoryConnections
   Grant(raw: unknown): Promise<RepositoryConnectionReceipt>
   {
     const input = checkedInput(repositoryConnectionGrantInputSchema, raw),
-
       inputHash = hash(json({ action: 'grant', input }));
 
     return this.Serial(async () => { const replay = this.store.Replay(input.workspaceId, input.commandId, inputHash); if (replay) return replay; const owner = this.Owner(input), old = this.store.Grant(input.workspaceId, input.connectorId); if ((old?.revision ?? 0) !== input.expectedGrantRevision) fail('REPOSITORY_CONNECTION_STALE', '授权版本已变化，请重新读取'); const source = await this.Definition(owner, input.connectorId); if (source.definitionHash !== input.definitionHash || source.definition.repository.repositoryId !== input.repositoryId) fail('REPOSITORY_CONNECTION_STALE', '链接器定义或仓库身份已变化，请重新读取'); const connection = this.resources.ReadConnection(input.repositoryId); await connection.Read(); const after = await this.Definition(owner, input.connectorId); this.AssertOwner(owner, input); connection.AssertCurrent(); if (after.definitionHash !== input.definitionHash) fail('REPOSITORY_CONNECTION_STALE', '授权期间链接器定义发生变化，未保存授权'); const grant: RepositoryConnectionGrant = { workspaceId: input.workspaceId, connectorId: input.connectorId, repositoryId: input.repositoryId, definitionHash: input.definitionHash, revision: input.expectedGrantRevision + 1, enabled: true, updatedAt: new Date().toISOString() }, receipt: RepositoryConnectionReceipt = { workspaceId: input.workspaceId, connectorId: input.connectorId, commandId: input.commandId, action: 'grant', grant }; await this.store.Save(grant, receipt, inputHash); this.AbortChecks(input.workspaceId, input.connectorId); return structuredClone(receipt); })
@@ -364,7 +343,6 @@ export class RepositoryConnections
   Revoke(raw: unknown): Promise<RepositoryConnectionReceipt>
   {
     const input = checkedInput(repositoryConnectionRevokeInputSchema, raw),
-
       inputHash = hash(json({ action: 'revoke', input }));
 
     return this.Serial(async () => { const replay = this.store.Replay(input.workspaceId, input.commandId, inputHash); if (replay) return replay; this.Owner(input); const old = this.store.Grant(input.workspaceId, input.connectorId); if (!old) fail('REPOSITORY_CONNECTION_NOT_GRANTED', '此工作区链接器尚未获得本机授权'); if (old.revision !== input.expectedGrantRevision) fail('REPOSITORY_CONNECTION_STALE', '授权版本已变化，请重新读取'); const grant = { ...old, revision: old.revision + 1, enabled: false, updatedAt: new Date().toISOString() }, receipt: RepositoryConnectionReceipt = { workspaceId: input.workspaceId, connectorId: input.connectorId, commandId: input.commandId, action: 'revoke', grant }; await this.store.Save(grant, receipt, inputHash); this.AbortChecks(input.workspaceId, input.connectorId); return structuredClone(receipt); })
@@ -389,11 +367,9 @@ export class RepositoryConnections
     input = Object.freeze(identity(input));
 
     const owner = this.Owner(input),
-
       sharing = this.resources.SharedIdentity();
 
     if (!sharing)
-
       return undefined;
 
     let entries: ConnectorDefinition[];
@@ -405,39 +381,33 @@ export class RepositoryConnections
     catch (error: any)
     {
       if (error.code === 'REPOSITORY_CONNECTION_DEFINITION')
-
         return undefined;
 
       throw error
     }
+
     this.AssertOwner(owner, input);
 
     if (new Set(entries.map(entry => entry.id)).size !== entries.length)
-
       return undefined;
 
     const grants = this.store.Grants(input.workspaceId),
-
       captured = new Map<string, CapturedRepositoryTarget>();
 
     for (const definition of entries)
     {
       if (!isResourceRepositoryConnector(definition) || definition.repository.repositoryId !== sharing.repositoryId)
-
         continue;
 
       const grant = grants.find(item => item.connectorId === definition.id),
-
         digest = definitionHash(definition);
 
       if (!grant?.enabled || grant.definitionHash !== digest || grant.repositoryId !== sharing.repositoryId)
-
         continue;
 
       const connection = this.resources.ReadConnection(grant.repositoryId);
 
       if (connection.connectionId !== sharing.connectionId)
-
         fail('REPOSITORY_CONNECTION_STALE', '准备期间共享连接已变化');
 
       const target: RepositoryToolTarget = { workspaceId: input.workspaceId, connectorId: definition.id, repositoryId: connection.repositoryId, connectionId: connection.connectionId, name: definition.name.slice(0, 100), summary: definition.summary.slice(0, 1000) };
@@ -448,8 +418,8 @@ export class RepositoryConnections
         target, definitionHash: digest, grantRevision: grant.revision, Verify: verify, Read: signal => { const controller = new AbortController(), combined = AbortSignal.any([signal, controller.signal]); this.checks.set(controller, { workspaceId: input.workspaceId, connectorId: definition.id }); const operation = (async () => { try { await verify(combined); const result = await connection.Read(combined); await verify(combined); return result } finally { this.checks.delete(controller) } })(); this.reads.add(operation); void operation.finally(() => this.reads.delete(operation)).catch(() => { }); return operation; }
       });
     }
-    if (!captured.size)
 
+    if (!captured.size)
       return undefined;
 
     return captured;
@@ -469,7 +439,6 @@ export class RepositoryConnections
     const captured = await this.CaptureTargets(input);
 
     if (!captured)
-
       return undefined;
 
     const tools = this.Tools(captured);
@@ -485,9 +454,7 @@ export class RepositoryConnections
 
     return {
       targets: Object.freeze([...captured.values()].map(item => Object.freeze({ ...item.target }))),
-
       List: async (raw, signal) => { const request = checkedInput(repositoryListInputSchema, raw), entry = selected(request.connectorId), result = await entry.Read(signal); if (request.expectedRevision !== undefined && request.expectedRevision !== result.revision) fail('REPOSITORY_REVISION_CHANGED', '仓库资料已变化，请明确重新读取目录版本'); const offset = request.offset ?? 0, limit = request.limit ?? 20; if (offset > result.items.length) fail('REPOSITORY_PAGE_INVALID', '目录偏移超出当前版本范围'); const items = result.items.slice(offset, offset + limit).map(({ content: _, ...item }) => item), end = offset + items.length; const { workspaceId, connectorId, repositoryId, connectionId } = entry.target; return { scope: { kind: 'repository', workspaceId, connectorId, repositoryId, connectionId, operation: 'list' }, revision: result.revision, offset, totalItems: result.items.length, items, ...(end < result.items.length ? { nextOffset: end } : {}), readOnly: true }; },
-
       Get: async (raw, signal) => { const request = checkedInput(repositoryGetInputSchema, raw), entry = selected(request.connectorId), result = await entry.Read(signal); if (request.expectedRevision !== result.revision) fail('REPOSITORY_REVISION_CHANGED', '仓库资料已变化，请明确重新读取目录版本'); const item = result.items.find(item => item.id === request.resourceId); if (!item) fail('REPOSITORY_RESOURCE_MISSING', '当前仓库版本没有该资源'); const characters = Array.from(item.content), offset = request.offset ?? 0, limit = request.limit ?? repositoryToolLimits.contentCharacters; if (offset > characters.length) fail('REPOSITORY_PAGE_INVALID', '正文偏移超出当前版本范围'); const text = characters.slice(offset, offset + limit).join(''), end = offset + Array.from(text).length, { content: _, ...resource } = item, { workspaceId, connectorId, repositoryId, connectionId } = entry.target; return { scope: { kind: 'repository', workspaceId, connectorId, repositoryId, connectionId, operation: 'get' }, revision: result.revision, resource, content: { text, offset, totalCharacters: characters.length, contentHash: hash(item.content), ...(end < characters.length ? { nextOffset: end } : {}), complete: offset === 0 && end === characters.length }, readOnly: true }; },
     };
   }
@@ -507,23 +474,18 @@ export class RepositoryConnections
   private async CheckOnce(raw: unknown)
   {
     const input = checkedInput(repositoryConnectionCheckInputSchema, raw),
-
       owner = this.Owner(input),
-
       grant = this.store.Grant(input.workspaceId, input.connectorId);
 
     if (!grant?.enabled)
-
       fail('REPOSITORY_CONNECTION_NOT_GRANTED', '请先明确授予当前工作区此链接器的只读权限');
 
     if (grant.revision !== input.expectedGrantRevision)
-
       fail('REPOSITORY_CONNECTION_STALE', '授权版本已变化，请重新读取');
 
     const source = await this.Definition(owner, input.connectorId);
 
     if (source.definitionHash !== grant.definitionHash || source.definition.repository.repositoryId !== grant.repositoryId)
-
       fail('REPOSITORY_CONNECTION_STALE', '正式定义已变化，请重新核实并授权');
 
     this.AssertOwner(owner, input);
@@ -531,11 +493,9 @@ export class RepositoryConnections
     const before = this.store.Grant(input.workspaceId, input.connectorId);
 
     if (!before?.enabled || before.revision !== grant.revision)
-
       fail('REPOSITORY_CONNECTION_STALE', '授权在读取前已变化，未发送仓库请求');
 
     const connection = this.resources.ReadConnection(grant.repositoryId),
-
       controller = new AbortController();
 
     this.checks.set(controller, { workspaceId: input.workspaceId, connectorId: input.connectorId });
@@ -547,7 +507,6 @@ export class RepositoryConnections
       this.AssertOwner(owner, input);
 
       const after = await this.Definition(owner, input.connectorId),
-
         latest = this.store.Grant(input.workspaceId, input.connectorId);
 
       this.AssertOwner(owner, input);
@@ -555,7 +514,6 @@ export class RepositoryConnections
       connection.AssertCurrent();
 
       if (controller.signal.aborted || after.definitionHash !== grant.definitionHash || !latest?.enabled || latest.revision !== grant.revision)
-
         fail('REPOSITORY_CONNECTION_STALE', '核验期间定义、授权或连接已变化，请重新读取');
 
       return repositoryConnectionCheckSchema.parse({ identity: identity(input), connectorId: input.connectorId, repositoryId: grant.repositoryId, definitionHash: grant.definitionHash, grantRevision: grant.revision, connectionId: connection.connectionId, checkedAt: new Date().toISOString(), revision: result.revision, itemCount: result.items.length, items: result.items.slice(0, 20).map(({ content: _, ...item }) => item), truncated: result.items.length > 20, readOnly: true, transport: 'http' });
@@ -577,7 +535,6 @@ export class RepositoryConnections
     this.closed = true;
 
     for (const controller of this.checks.keys())
-
       controller.abort();
 
     await Promise.allSettled([this.queue, ...this.reads])

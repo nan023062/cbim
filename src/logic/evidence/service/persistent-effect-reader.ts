@@ -47,7 +47,6 @@ interface PersistentEffectOwner
 function check(value: unknown): asserts value
 {
   if (!value)
-
     fail('EFFECT_RECORD_INVALID', '原保存记录与调用来源或请求不一致')
 }
 
@@ -55,9 +54,7 @@ function check(value: unknown): asserts value
 export async function observePersistentWrite(owner: PersistentEffectOwner, reference: PersistentWriteReference, signal?: AbortSignal): Promise<PersistentWriteObservation>
 {
   const identity = persistentWriteIdentity(reference),
-
     sourceHash = persistentWriteSourceHash(reference),
-
     base = { identity, sourceHash };
 
   const alive = () => { signal?.throwIfAborted(); owner.Assert() };
@@ -71,7 +68,7 @@ export async function observePersistentWrite(owner: PersistentEffectOwner, refer
     let result: PersistentWriteObservation;
 
     if (reference.kind === 'governance')
-
+    {
       result = await owner.Governed(async () =>
       {
         alive();
@@ -79,11 +76,9 @@ export async function observePersistentWrite(owner: PersistentEffectOwner, refer
         const command = owner.governance.store.Find(identity.commandId);
 
         if (!command)
-
           return { ...base, state: 'absent' };
 
         const receipt = moduleGovernanceReceiptSchema.parse(command.receipt),
-
           schema = reference.action === 'observe' ? moduleGovernanceObserveInputSchema : moduleGovernanceProposeInputSchema;
 
         const input = schema.parse({ ...reference.input, workspaceId: identity.workspaceId, instanceId: command.input.instanceId, commandId: identity.commandId });
@@ -99,6 +94,7 @@ export async function observePersistentWrite(owner: PersistentEffectOwner, refer
 
         return { ...base, state: 'recorded', requestHash: command.fingerprint, evidenceHash: hash(json(command)), record: { ...record, instanceId: input.instanceId } };
       });
+    }
     else
     {
       const state = await owner.dispatchStore.Read();
@@ -114,15 +110,12 @@ export async function observePersistentWrite(owner: PersistentEffectOwner, refer
       alive();
 
       if (!command && !changes.length)
-
         result = { ...base, state: 'absent' };
-
       else
       {
         check(command && changes.length === 1);
 
         const change = moduleOwnershipChangeSchema.parse(changes[0]),
-
           receipt = moduleOwnershipReceiptSchema.parse(command.receipt);
 
         const input = moduleOwnershipCommitInputSchema.parse({ ...reference.input, workspaceId: identity.workspaceId, instanceId: change.request.instanceId, commandId: identity.commandId });
@@ -132,6 +125,7 @@ export async function observePersistentWrite(owner: PersistentEffectOwner, refer
         result = { ...base, state: 'recorded', requestHash: command.fingerprint, evidenceHash: hash(json({ change, command })), record: { kind: 'ownership', recordId: change.changeId, instanceId: input.instanceId, recordedAt: change.committedAt, action: receipt.action, revision: receipt.revision } };
       }
     }
+
     alive();
 
     return persistentWriteObservationSchema.parse(result);

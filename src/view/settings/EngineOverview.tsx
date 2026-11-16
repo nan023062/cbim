@@ -9,11 +9,9 @@ import { supportedEngines, type LoopEngine, type EnginePackageSettings } from '.
 export function EngineOverview({ state, onSelect }: { state?: EnginePackageSettings; onSelect: (kind: LoopEngine) => void })
 {
   if (!state)
-
     return null;
 
   if (!state.managed)
-
     return <p>源码开发模式：当前使用源码引擎，正式包管理在安装版中可用。</p>;
 
   const installed = supportedEngines.flatMap(descriptor => { const item = state.items.find(item => item.kind === descriptor.id); return item?.active ? [{ descriptor, item, active: item.active }] : []; });

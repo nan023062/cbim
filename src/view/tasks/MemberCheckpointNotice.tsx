@@ -15,11 +15,9 @@ export function MemberCheckpointNotice({ task, runId, compact = false }: { task:
   const view = memberCheckpointView(task, runId);
 
   if (view.invalid)
-
     return <p className="member-warning" role="alert" data-testid="member-checkpoint-invalid">检查点记录与任务身份或运行不一致，请重新同步核实。</p>;
 
   if (!view.record || !view.phase)
-
     return null;
 
   const { record, phase, resumedRunId, abandonment, request, segment, total } = view;

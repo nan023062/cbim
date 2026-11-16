@@ -10,7 +10,6 @@ export type ApplicableResourceKind = 'team' | 'agent' | 'skill' | 'architecture'
 export function applicableResourceKind(item: Pick<ResourceDefinition, 'kind' | 'content'>): ApplicableResourceKind | undefined
 {
   if (!['team', 'agent', 'skill', 'architecture'].includes(item.kind))
-
     return;
 
   try
@@ -18,7 +17,6 @@ export function applicableResourceKind(item: Pick<ResourceDefinition, 'kind' | '
     const value = JSON.parse(item.content);
 
     if (value?.format === 'cbim-workspace-package' && value.kind === item.kind)
-
       return item.kind as ApplicableResourceKind
   }
   catch

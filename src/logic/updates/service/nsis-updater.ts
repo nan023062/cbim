@@ -34,7 +34,6 @@ export class NsisUpdateInstaller implements DesktopUpdateInstaller
     this.downloaded = false;
 
     if (this.closed)
-
       throw Error('更新已关闭');
 
     // GitHub 附件重定向后的对象存储不要求支持 multipart Range，逐段下载可保持兼容。
@@ -67,12 +66,11 @@ export class NsisUpdateInstaller implements DesktopUpdateInstaller
 
       throw Error('更新已关闭')
     }
-    const info = result?.updateInfo,
 
+    const info = result?.updateInfo,
       name = desktopInstallerName(release.version);
 
     if (!result?.isUpdateAvailable || !result.cancellationToken || info?.version !== release.version || info.files.length !== 1 || info.files[0].url !== name || !info.files[0].sha512 || ('packages' in info && info.packages))
-
       throw Error('更新清单与桌面发布不一致');
 
     this.pending = result;
@@ -81,7 +79,6 @@ export class NsisUpdateInstaller implements DesktopUpdateInstaller
   async Download(progress: (percent: number) => void)
   {
     if (this.closed || !this.updater || !this.pending)
-
       throw Error('更新尚未准备');
 
     this.updater.on('download-progress', value => progress(value.percent));
@@ -89,7 +86,6 @@ export class NsisUpdateInstaller implements DesktopUpdateInstaller
     await this.updater.downloadUpdate(this.pending.cancellationToken);
 
     if (this.error)
-
       throw this.error;
 
     this.downloaded = true;
@@ -98,7 +94,6 @@ export class NsisUpdateInstaller implements DesktopUpdateInstaller
   Install()
   {
     if (this.closed || !this.updater || !this.downloaded || this.error)
-
       throw Error('安装包尚未就绪');
 
     this.updater.quitAndInstall(true, true)

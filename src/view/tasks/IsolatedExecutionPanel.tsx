@@ -21,21 +21,15 @@ const files = { present: '原目录存在', absent: '原目录已不存在', cha
 export function IsolatedExecutionPanel({ identity, instanceId }: { identity: IsolatedExecutionRun; instanceId?: string })
 {
   const key = JSON.stringify([identity, instanceId]),
-
     current = useRef(key),
-
     alive = useRef(true);
 
   current.current = key;
 
   const [report, setReport] = useState<IsolatedExecutionReport>(),
-
     [busy, setBusy] = useState(false),
-
     [error, setError] = useState(''),
-
     [fresh, setFresh] = useState(false),
-
     [message, setMessage] = useState('');
 
   const pending = useRef(new Map<string, IsolatedExecutionCleanup>());

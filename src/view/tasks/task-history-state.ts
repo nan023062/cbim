@@ -23,7 +23,6 @@ export interface TaskHistoryView
 export function taskHistoryView(graph: GraphSnapshot | undefined, scopes: readonly ScopeSummary[] = []): TaskHistoryView
 {
   const completedScopes = new Set(scopes.filter(scope => scope.stamp.streamId === 'scopes:' + graph?.cursor.streamId && scopeGoalView(scope).phase === 'completed'
-
   ).map(scope => scope.scopeId));
 
   const tasks = graph?.tasks.filter(task => { if (task.activeRunId) return false; if (task.status === 'cancelled') return true; return task.status === 'result_ready' && !!task.scopeId && completedScopes.has(task.scopeId) && !!task.result && task.result.planRevision === task.planRevision && task.candidateReview?.decision !== 'reject'; }) ?? [];

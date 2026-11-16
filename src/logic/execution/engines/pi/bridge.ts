@@ -30,11 +30,9 @@ export async function openBridge(knowledge: KnowledgeBridge, beforeTool: (call: 
   const tools = await knowledge.list();
 
   if (tools.some(t => !/^cbim_[a-z0-9_]+$/.test(t.name)))
-
     throw Error('CBIM 工具名必须使用 cbim_ 前缀');
 
   const names = new Set(tools.map(t => t.name)),
-
     token = randomBytes(32).toString('hex');
 
   // One authorization per tool call, bound to exact input; never infer trust from its name alone.

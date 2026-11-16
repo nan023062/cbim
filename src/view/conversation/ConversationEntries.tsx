@@ -31,7 +31,6 @@ export interface ConversationEntry
 export function ConversationEntries({ items, selected, selectedChild, disabled = false, onSelect, onSelectChild, onRename, onRemove }: { items: ConversationEntry[]; selected?: string; selectedChild?: string; disabled?: boolean; onSelect: (id: string) => void; onSelectChild?: (id: string, childId: string) => void; onRename: (id: string, title: string) => void; onRemove: (id: string) => void })
 {
   const [editing, setEditing] = useState(''),
-
     [name, setName] = useState('');
 
   return <div className="conversation-entries">{items.map(item => <div className="conversation-entry-group" key={item.id}><div className="conversation-entry" data-entry-id={item.id}>

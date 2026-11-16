@@ -12,7 +12,6 @@ import { mainCommandSelection } from '../tasks/command-verification-state';
 function sameMainGraph(run: RunSummary, graph: GraphSnapshot | undefined): graph is GraphSnapshot
 {
   const task = run.task,
-
     binding = run.conversationBinding;
 
   return !!graph && !!task && task.mode === 'chat' && task.agentId === 'cbim:main' && !run.memberBinding && !!binding && binding.agentId === 'cbim:main' && binding.workspaceId === task.workspaceId && binding.rootSessionId === task.taskId && graph.identity.workspaceId === task.workspaceId && graph.identity.rootSessionId === task.taskId && graph.cursor.workspaceId === task.workspaceId && graph.cursor.rootSessionId === task.taskId && graph.root.identity.workspaceId === task.workspaceId && graph.root.identity.rootSessionId === task.taskId && graph.root.agent.agentInstanceId === binding.agentInstanceId;
@@ -22,33 +21,27 @@ function sameMainGraph(run: RunSummary, graph: GraphSnapshot | undefined): graph
 export function inlineDispatchedTask(run: RunSummary, toolCallId: string, graph: GraphSnapshot | undefined): TaskNode | undefined
 {
   if (!sameMainGraph(run, graph))
-
     return;
 
   const name = 'cbim_dispatch_task',
-
     selection = mainCommandSelection(run, toolCallId, name);
 
   if (!selection)
-
     return;
 
   const event = run.events.filter(e => e.type === 'tool.finished' && e.data.id === toolCallId).at(-1);
 
   if (!event || event.data.name !== name || event.data.isError === true || event.workspaceId !== selection.workspaceId || event.taskId !== selection.rootSessionId || event.runId !== run.runId)
-
     return;
 
   const receipt = toolReceiptSchema.safeParse(event.data.receipt);
 
   if (!receipt.success)
-
     return;
 
   const r = receipt.data;
 
   if (r.outcome !== 'succeeded' || r.toolName !== name || r.toolCallId !== toolCallId || r.workspaceId !== selection.workspaceId || r.scope.workspaceId !== selection.workspaceId || r.taskId !== selection.rootSessionId || r.runId !== run.runId)
-
     return;
 
   const result = event.data.result as
@@ -62,7 +55,6 @@ export function inlineDispatchedTask(run: RunSummary, toolCallId: string, graph:
     } | undefined;
 
   if (!Array.isArray(result?.content) || result.content.length !== 1 || result.content[0].type !== 'text' || typeof result.content[0].text !== 'string')
-
     return;
 
   try
@@ -70,19 +62,16 @@ export function inlineDispatchedTask(run: RunSummary, toolCallId: string, graph:
     const parsed = dispatchTaskOutputSchema.safeParse(JSON.parse(result.content[0].text));
 
     if (!parsed.success)
-
       return;
 
     const { cursor, taskId } = parsed.data;
 
     if (cursor.workspaceId !== selection.workspaceId || cursor.rootSessionId !== selection.rootSessionId || cursor.streamId !== graph.cursor.streamId || cursor.seq > graph.cursor.seq)
-
       return;
 
     const tasks = graph.tasks.filter(task => task.taskId === taskId);
 
     if (tasks.length === 1 && tasks[0].identity.workspaceId === selection.workspaceId && tasks[0].identity.rootSessionId === selection.rootSessionId)
-
       return tasks[0];
   }
   catch
@@ -103,7 +92,6 @@ export function inlineHandoffTasks(run: RunSummary, graph: GraphSnapshot | undef
   const source = run.source ?? run.events[0]?.data.source as RunSummary['source'];
 
   if (!sameMainGraph(run, graph) || source?.kind !== 'member-results' || !Array.isArray(source.taskIds))
-
     return [];
 
   return graph.tasks.filter(t => source.taskIds.includes(t.taskId) && t.identity.workspaceId === graph.identity.workspaceId && t.identity.rootSessionId === graph.identity.rootSessionId);

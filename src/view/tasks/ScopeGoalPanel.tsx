@@ -70,11 +70,9 @@ const reviewLabels = { complete: '完成申请', replan: '继续重规划', bloc
 export function goalTaskReference(state: ScopeGoalState, taskId: string)
 {
   const scope = state.selectedScope,
-
     graph = state.graph;
 
   if (!scope || scope.scopeId !== state.selectedScopeId || !graph || graph.identity.workspaceId !== scope.workspaceId || graph.identity.rootSessionId !== scope.rootSessionId)
-
     return;
 
   const matches = graph.tasks.filter(task => task.taskId === taskId);
@@ -82,7 +80,6 @@ export function goalTaskReference(state: ScopeGoalState, taskId: string)
   const task = matches.length === 1 ? matches[0] : undefined;
 
   if (task?.scopeId === scope.scopeId && task.identity.workspaceId === scope.workspaceId && task.identity.rootSessionId === scope.rootSessionId)
-
     return task;
 }
 
@@ -99,11 +96,8 @@ export function ScopeGoalPanel({ state, compact = false, testId = 'scope-goal-pa
   const { scopes, selectedScopeId, historyScopeId, selectedScope: scope, selectedGoalView: view, detailLoading, loading, error } = state;
 
   const summary = scopes.find(value => value.scopeId === selectedScopeId),
-
     goal = scope?.goal,
-
     plan = goal?.plan,
-
     review = goal?.review;
 
   const title = plan?.objective ?? summary?.objective ?? summary?.inputPreview ?? '本轮目标';

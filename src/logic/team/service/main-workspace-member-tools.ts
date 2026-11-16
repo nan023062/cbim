@@ -29,13 +29,10 @@ import type { WorkspaceMembers } from './workspace-members';
 export function mainWorkspaceMemberTools(owner: KnowledgeWorkspace, members: WorkspaceMembers, task: TaskSpec, runId: string, binding: ConversationAgentBinding, context: MainToolContext): WorkspaceMemberToolsPort
 {
   const main = checkedConversationAgentBinding(binding, task),
-
     identity = { workspaceId: owner.entry.id, instanceId: owner.instanceId },
-
     fixed = Object.freeze({ ...context.binding });
 
   if (fixed.workspaceId !== identity.workspaceId || fixed.rootSessionId !== main.rootSessionId || fixed.runId !== runId || task.root !== owner.entry.path)
-
     fail('MEMBER_ACTOR', '岗位端口与真实主运行不一致');
 
   const current = (signal: AbortSignal) => { signal.throwIfAborted(); owner.Assert(identity); context.AssertCurrent(signal) };

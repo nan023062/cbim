@@ -18,7 +18,6 @@ import { continuationSourceLimits, continuationSourceUrlSchema, type Continuatio
 export function sourceExcerpt(text: string)
 {
   let size = 0,
-
     end = 0;
 
   for (const character of text)
@@ -26,13 +25,13 @@ export function sourceExcerpt(text: string)
     const bytes = Buffer.byteLength(character);
 
     if (size + bytes > continuationSourceLimits.savedTextBytes)
-
       break;
 
     size += bytes;
 
     end += character.length
   }
+
   return { text: text.slice(0, end), savedTextBytes: size, truncated: end < text.length };
 }
 
@@ -42,11 +41,9 @@ export async function readDirectorySource(file: string, signal: AbortSignal)
   signal.throwIfAborted();
 
   const directory = await fs.opendir(file),
-
     lines: string[] = [];
 
   let savedTextBytes = 0,
-
     truncated = false;
 
   try
@@ -56,11 +53,9 @@ export async function readDirectorySource(file: string, signal: AbortSignal)
       signal.throwIfAborted();
 
       if (entry.name.toLowerCase() === '.cbim')
-
         continue;
 
       const line = (entry.isDirectory() ? '目录 ' : entry.isSymbolicLink() ? '链接 ' : '文件 ') + entry.name,
-
         size = Buffer.byteLength(line) + (lines.length ? 1 : 0);
 
       if (lines.length === continuationSourceLimits.directoryEntries || savedTextBytes + size > continuationSourceLimits.savedTextBytes)
@@ -69,6 +64,7 @@ export async function readDirectorySource(file: string, signal: AbortSignal)
 
         break
       }
+
       lines.push(line);
 
       savedTextBytes += size;
@@ -78,6 +74,7 @@ export async function readDirectorySource(file: string, signal: AbortSignal)
   {
     await directory.close().catch(error => { if (error.code !== 'ERR_DIR_CLOSED') throw error })
   }
+
   signal.throwIfAborted();
 
   return { text: lines.join('\n'), proof: { kind: 'folder', mode: 'first_level', capturedAt: new Date().toISOString(), savedTextBytes, entryLimit: 200, entryCount: lines.length, truncated } satisfies ContinuationSourceProof };
@@ -89,7 +86,6 @@ export async function readUrlSource(kind: 'link' | 'web', value: string, signal:
   const parsed = continuationSourceUrlSchema.safeParse(value);
 
   if (!parsed.success)
-
     fail('ATTACHMENT_URL', '请输入不含凭据的 HTTP 或 HTTPS 链接');
 
   const url = new URL(parsed.data);
@@ -102,8 +98,8 @@ export async function readUrlSource(kind: 'link' | 'web', value: string, signal:
 
     return { name: url.hostname, source: url.href, text, note: '仅引用链接，未抓取正文', proof: { kind: 'link', mode: 'url_only', url: url.href, capturedAt: new Date().toISOString(), savedTextBytes: Buffer.byteLength(text) } satisfies ContinuationSourceProof };
   }
-  const timeout = AbortSignal.timeout(15000),
 
+  const timeout = AbortSignal.timeout(15000),
     combined = AbortSignal.any([signal, timeout]);
 
   let response: Response | undefined;
@@ -115,19 +111,16 @@ export async function readUrlSource(kind: 'link' | 'web', value: string, signal:
     combined.throwIfAborted();
 
     if (!response.ok)
-
       fail('ATTACHMENT_WEB_HTTP', '网页返回 HTTP ' + response.status);
 
     const mediaType = (response.headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase();
 
     if (!/^(text\/[a-z0-9.+-]+|application\/json)$/.test(mediaType) || mediaType.length > 256)
-
       fail('ATTACHMENT_WEB_TYPE', '此地址不是可读取的文本网页，请添加为链接');
 
     const declared = response.headers.get('content-length');
 
     if (declared && Number(declared) > continuationSourceLimits.webResponseBytes)
-
       fail('ATTACHMENT_WEB_LIMIT', '网页响应超过 1 MiB，请改为添加链接');
 
     let raw: Uint8Array;
@@ -139,11 +132,11 @@ export async function readUrlSource(kind: 'link' | 'web', value: string, signal:
     catch (error)
     {
       if (error instanceof ByteLimitError)
-
         fail('ATTACHMENT_WEB_LIMIT', '网页响应超过 1 MiB，请改为添加链接');
 
       throw error
     }
+
     const total = raw.byteLength;
 
     let decoded: string;
@@ -156,10 +149,10 @@ export async function readUrlSource(kind: 'link' | 'web', value: string, signal:
     {
       fail('ATTACHMENT_WEB_ENCODING', '网页不是有效 UTF-8 文本，请改为添加链接')
     }
+
     const html = mediaType === 'text/html';
 
     if (html)
-
       decoded = decoded.replace(/<(script|style|noscript)\b[^>]*>[\s\S]*?<\/\1>/gi, '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/\s+/g, ' ').trim();
 
     const excerpt = sourceExcerpt(decoded);
@@ -173,11 +166,9 @@ export async function readUrlSource(kind: 'link' | 'web', value: string, signal:
     signal.throwIfAborted();
 
     if (timeout.aborted)
-
       fail('ATTACHMENT_WEB_TIMEOUT', '网页读取超时，未保存资料');
 
     if (error && typeof error === 'object' && 'code' in error)
-
       throw error;
 
     fail('ATTACHMENT_WEB_FETCH', '网页读取失败或发生跳转，请改用最终地址或添加链接')
@@ -186,7 +177,6 @@ export async function readUrlSource(kind: 'link' | 'web', value: string, signal:
   finally
   {
     if (response?.body && !response.body.locked)
-
       void response.body.cancel().catch(() => { })
   }
 }

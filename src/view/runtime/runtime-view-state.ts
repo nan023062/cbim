@@ -43,19 +43,15 @@ export const runtimeAdmissionLabels = { global_capacity: '等待全局名额', w
 export function runtimeScopeLabel(scope: RuntimeScope)
 {
   if (scope.status === 'closed')
-
     return scope.outcome ? ({ completed: scope.reviewDecision === 'complete' ? '目标周期完成' : '周期已结束', failed: '周期失败', cancelled: '周期已取消', interrupted: '周期中断' } as const)[scope.outcome] : '周期已关闭（结果未报告）';
 
   if (scope.status === 'waiting')
-
     return '等待用户';
 
   if (scope.budgetBlocked)
-
     return '额度待处理';
 
   if (scope.goalBlocked || scope.reviewDecision === 'blocked')
-
     return '目标受阻';
 
   return scope.reviewDecision === 'complete' ? '完成申请待核验' : scope.reviewDecision === 'awaiting_user' ? '等待请求待结算' : '调度中';
@@ -85,11 +81,9 @@ export function runtimeTaskTarget(task: RuntimeTask): RuntimeNavigationTarget
 export function runtimeRunTarget(run: RuntimeRun): RuntimeNavigationTarget | undefined
 {
   if (run.memberBinding)
-
     return { workspaceId: run.workspaceId, rootSessionId: run.memberBinding.rootSessionId, taskId: run.memberBinding.taskId };
 
   if (run.conversationBinding)
-
     return { workspaceId: run.workspaceId, rootSessionId: run.conversationBinding.rootSessionId };
 
   return undefined;

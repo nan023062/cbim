@@ -52,14 +52,15 @@ function boot()
       {
         StartDesktop(runtime?: DesktopRuntimeHost): void
       };
+
     implementation.StartDesktop();
 
     return;
   }
+
   const cold: ColdRuntime = JSON.parse(fs.readFileSync(configFile, 'utf8'));
 
   if (cold.schema !== 1 || cold.codeVersion !== app.getVersion() || cold.platform !== process.platform + '-' + process.arch)
-
     throw Error('冷壳版本或平台不匹配');
 
   const userRoot = updateUserRoot(process.argv, process.env.CBIM_USER_DATA_ROOT) ?? path.join(app.getPath('home'), '.cbim');
@@ -85,9 +86,9 @@ function boot()
 
     return;
   }
+
   // 前置校验完成后才导入业务代码；失败分支使用独立恢复 profile。
   const bundledRoot = path.join(process.resourcesPath, 'bundled-resources'),
-
     bundledManifest = path.join(process.resourcesPath, 'runtime-initial.json');
 
   let selection: ReturnType<typeof selectBootResources>;
@@ -106,8 +107,8 @@ function boot()
 
     return;
   }
-  if (selection.pending)
 
+  if (selection.pending)
     selection.journal.AccessData(selection.digest);
 
   app.setPath('userData', path.join(userRoot, 'desktop'));
@@ -117,9 +118,7 @@ function boot()
   const reuseRoots = fs.existsSync(cacheIdentityRoot) ? fs.readdirSync(cacheIdentityRoot, { withFileTypes: true }).filter(entry => entry.isDirectory() && /^\d+\.\d+\.\d+$/.test(entry.name)).map(entry => path.join(cacheIdentityRoot, entry.name)) : [];
 
   const store = new RuntimeStore(cacheRoot, cold),
-
     engineStore = new RuntimeStore(path.join(cacheIdentityRoot, 'engines'), cold, undefined, reuseRoots),
-
     controller = new AbortController();
 
   const preparation = new Map<string,
@@ -163,6 +162,7 @@ function boot()
       selection.journal.Confirm(selection.digest)
     },
   };
+
   app.on('will-quit', () => controller.abort());
 
   const entry = path.join(selection.root, '.vite/build/main.js');
@@ -171,6 +171,7 @@ function boot()
     {
       StartDesktop(runtime?: DesktopRuntimeHost): void
     };
+
   implementation.StartDesktop(host);
 }
 

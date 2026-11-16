@@ -29,11 +29,9 @@ export type OwnerTaskView =
 export function ownerTaskView(task: TaskNode): OwnerTaskView
 {
   if (task.ownerBinding === undefined)
-
     return { kind: 'legacy', needsReplan: !task.activeRunId && ['planned', 'queued', 'waiting', 'checkpointed'].includes(task.status) };
 
   if (!ownerExecutionBindingMatches(task.ownerBinding, task.identity.workspaceId, task.assignee.agentId, task.modules.map(module => module.moduleId)))
-
     return { kind: 'invalid' };
 
   return { kind: 'bound', binding: task.ownerBinding };
@@ -60,35 +58,28 @@ export interface OwnerInspectionView
 export function checkedOwnerInspection(raw: unknown, task: TaskNode): OwnerInspectionView
 {
   const parsed = taskOwnerInspectOutputSchema.safeParse(raw),
-
     modules = task.modules.map(module => module.moduleId);
 
   if (!parsed.success)
-
     throw Error('负责人核实响应无效，请重新读取');
 
   const report = parsed.data,
-
     current = report.current;
 
   if (report.identity.workspaceId !== task.identity.workspaceId || report.identity.rootSessionId !== task.identity.rootSessionId || report.taskId !== task.taskId || report.taskRevision !== task.revision || canonical(report.ownerBinding) !== canonical(task.ownerBinding) || current.workspaceId !== task.identity.workspaceId || current.moduleIds.length !== modules.length || modules.some(id => !current.moduleIds.includes(id)))
-
     throw Error('负责人核实响应不属于当前任务版本，请重新读取');
 
   const previous = ownerTaskView(task);
 
   if (previous.kind === 'invalid')
-
     throw Error('原岗位绑定无效，请先重新同步任务');
 
   const issues = current.groups.flatMap(group => group.issues.map(issue => issue.message));
 
   if (previous.kind === 'legacy')
-
     return { report, comparison: 'legacy', issues };
 
   if (issues.length)
-
     return { report, comparison: 'unavailable', issues };
 
   const binding = previous.binding;
@@ -152,7 +143,6 @@ export class OwnerInspectionController
     const key = ownerInspectionKey(task);
 
     if (key === this.value.key)
-
       return;
 
     this.serial.Advance();
@@ -168,13 +158,10 @@ export class OwnerInspectionController
   Inspect(): Promise<void>
   {
     if (this.inFlight)
-
       return this.inFlight;
 
     const task = this.task,
-
       key = this.value.key,
-
       serial = this.serial.Advance();
 
     this.Publish({ ...this.value, loading: true, error: undefined });

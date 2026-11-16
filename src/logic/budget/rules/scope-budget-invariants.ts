@@ -24,7 +24,6 @@ const equal = (left: unknown, right: unknown) => JSON.stringify(normalize(left))
 function valid(value: unknown, message: string): asserts value
 {
   if (!value)
-
     fail('GRAPH_INPUT_INVALID', message)
 }
 
@@ -54,21 +53,17 @@ export function validateScopeBudgets(previous: DispatchState, next: DispatchStat
   for (const scope of next.scopes ?? [])
   {
     const old = previous.scopes?.find(value => value.scopeId === scope.scopeId),
-
       budget = scope.budget;
 
     if (old)
-
       valid((old.budget === undefined) === (budget === undefined), '旧周期不能补造或移除预算策略');
 
     if (!budget)
-
       continue;
 
     valid(scopeBudgetSchema.safeParse(budget).success, '周期预算结构无效');
 
     if (old)
-
       valid(equal(old.budget!.policy, budget.policy), '周期额度策略创建后不能修改');
 
     if (!budget.policy.enabled)
@@ -77,18 +72,16 @@ export function validateScopeBudgets(previous: DispatchState, next: DispatchStat
 
       continue
     }
+
     valid(scope.runTracking, '启用额度必须有自创建起完整登记的主运行清单');
 
     const before = sources(previous, old),
-
       after = sources(next, scope),
-
       newIds = after.filter(id => !before.includes(id));
 
     valid(newIds.length <= 1, '预算周期每次事务只能受理一个新运行');
 
     if (old?.budget?.blocked)
-
       valid(equal(old.budget.blocked, budget.blocked) && !newIds.length, '预算拒绝不可改写、删除或继续启动');
 
     const admissionChanged = !equal(old?.budget?.lastAdmission, budget.lastAdmission);
@@ -100,11 +93,8 @@ export function validateScopeBudgets(previous: DispatchState, next: DispatchStat
       valid(mutation.scopes?.some(value => value.scopeId === scope.scopeId && equal(value.budget, budget)), '预算证明不能脱离实际周期提交');
 
       const proof = budget.lastAdmission,
-
         runId = newIds[0],
-
         main = scope.runTracking.mainRunIds.includes(runId),
-
         run = memberRuns(next, scope).find(value => value.binding.runId === runId);
 
       valid(proof.runId === runId && proof.policyRevision === budget.policy.revision && proof.kind === (main ? 'main' : 'member') && proof.taskId === (main ? scope.rootSessionId : run?.binding.taskId), '预算证明必须绑定本次真实主运行或成员任务');
@@ -116,11 +106,9 @@ export function validateScopeBudgets(previous: DispatchState, next: DispatchStat
       valid(!old || !memberRuns(previous, old).some(run => run.status === 'starting' || run.status === 'running'), '预算周期必须等待已受理成员结算后再启动');
 
       if (!main)
-
         valid(old && equal({ ...old, budget }, scope) && run?.status === 'starting', '成员准入不能顺带修改周期状态或目标');
     }
     else
-
       valid(!admissionChanged, '预算准入证明只能随真实新运行更换');
 
     if (budget.blocked && !old?.budget?.blocked)

@@ -44,11 +44,8 @@ export function readAppearance(storage: PreferenceStorage): { value: AppearanceP
     return {
       value: {
         theme: ['dark', 'light', 'system'].includes(String(value.theme)) ? value.theme as ThemePreference : defaultAppearance.theme,
-
         textSize: [13, 15, 17].includes(value.textSize as number) ? value.textSize as AppearancePreferences['textSize'] : defaultAppearance.textSize,
-
         codeSize: [12, 14, 16].includes(value.codeSize as number) ? value.codeSize as AppearancePreferences['codeSize'] : defaultAppearance.codeSize,
-
         reduceMotion: value.reduceMotion === true,
       }, error: ''
     };

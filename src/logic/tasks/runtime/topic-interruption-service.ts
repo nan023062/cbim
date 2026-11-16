@@ -35,7 +35,6 @@ export class TopicInterruptionService
     const scope = state.scopes?.find(value => value.scopeId === request.scopeId && value.rootSessionId === request.rootSessionId && value.workspaceId === request.workspaceId);
 
     if (request.workspaceId !== this.owner.entry.id || !scope)
-
       fail('TOPIC_IDENTITY', '补充不属于指定办公室的话题');
 
     return scope;
@@ -47,17 +46,16 @@ export class TopicInterruptionService
     const request = topicInterruptionRequestSchema.parse(raw);
 
     const scope = this.Scope(await this.store.Read(), request),
-
       existing = scope.topicInterruptions?.find(value => value.request.commandId === request.commandId);
 
     if (existing)
     {
       if (!sameGoalValue(existing.request, request))
-
         fail('TOPIC_INPUT_CONFLICT', '同一补充标识已绑定其他正文、话题或配置');
 
       return scope
     }
+
     await this.store.Transact({ commandId: 'topic-interrupt-' + request.commandId, fingerprint: hash(json(request)) }, async state => { const current = this.Scope(state, request); if (current.status !== 'active' || pendingTopicInterruption(current)) fail('TOPIC_NOT_ACTIVE', '话题已结束、正在暂停或已有补充，请刷新原话题'); if (!current.goal || current.goal.blocked || scopeHasUnresolvedActiveInput(current)) fail('TOPIC_NOT_READY', '话题存在未核实记录，不能插入新指令'); if ((current.goal.inputRevision ?? 1) !== request.expectedInputRevision) fail('TOPIC_INPUT_CONFLICT', '话题输入版本已变化，请刷新后补充'); if ((current.topicInterruptions?.length ?? 0) >= 31 || request.expectedInputRevision >= 32) fail('GOAL_INPUT_LIMIT', '话题补充次数已达上限'); if (current.goal.revision > 62 || (current.runTracking?.mainRunIds.length ?? 32) >= 32) fail('GOAL_CYCLE_LIMIT', '当前话题已无重新规划额度，请结束后另建话题'); const text = (current.continuations ?? []).reduce((total, item) => total + ('input' in item ? item.input.message.length : 0), 0) + (current.activeInputs ?? []).reduce((total, item) => total + (item.status === 'rejected' ? 0 : item.messageCharacters), 0); if (text + request.input.message.length > scopeContinuationTotalTextLimit) fail('GOAL_INPUT_LIMIT', '本话题补充正文已达到上限，请结束后另建话题'); const next = { ...current, topicInterruptions: [...(current.topicInterruptions ?? []), { request, requestedAt: new Date().toISOString() }] }; return { scopes: [next], receipt: true }; });
 
     return this.Scope(await this.store.Read(), request);

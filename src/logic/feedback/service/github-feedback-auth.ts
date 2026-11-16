@@ -93,7 +93,6 @@ export class GitHubFeedbackAuth
       const parsed = diskSchema.safeParse(JSON.parse(await fs.readFile(this.filename, 'utf8')));
 
       if (!parsed.success)
-
         throw Error();
 
       return parsed.data
@@ -101,7 +100,6 @@ export class GitHubFeedbackAuth
     catch (error: any)
     {
       if (error.code === 'ENOENT')
-
         return { version: 1 };
 
       return fail('GITHUB_SETTINGS', 'GitHub 设置无法读取，请检查本机配置文件')
@@ -111,7 +109,6 @@ export class GitHubFeedbackAuth
   private Secure()
   {
     if (!this.cipher?.Available())
-
       fail('GITHUB_SECRET_STORAGE', '系统安全存储不可用，未保存 GitHub 凭据')
   }
 
@@ -159,7 +156,6 @@ export class GitHubFeedbackAuth
     const account = z.object({ id: z.number().int().positive(), login: z.string().regex(/^[A-Za-z0-9-]{1,100}$/) }).safeParse(user.data);
 
     if (user.status !== 200 || !account.success)
-
       fail('GITHUB_ACCOUNT', 'GitHub 登录已失效，请在设置中重新连接');
 
     const repository = await this.request(`https://api.github.com/repos/${config.owner}/${config.repo}`, { method: 'GET', token, signal });
@@ -167,7 +163,6 @@ export class GitHubFeedbackAuth
     const parsed = z.object({ id: z.number().int().positive(), full_name: z.string(), has_issues: z.literal(true), archived: z.literal(false), private: z.boolean() }).safeParse(repository.data);
 
     if (repository.status !== 200 || !parsed.success || parsed.data.full_name.toLowerCase() !== `${config.owner}/${config.repo}`.toLowerCase() || parsed.data.private !== (config.visibility === 'private'))
-
       fail('GITHUB_REPOSITORY', 'GitHub 目标仓库未通过核验，请检查仓库、可见性和 Issues 开关');
 
     return { accountId: account.data.id, login: account.data.login, repositoryId: parsed.data.id };

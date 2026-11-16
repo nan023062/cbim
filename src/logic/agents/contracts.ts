@@ -42,7 +42,6 @@ export function checkedAgentCallReference(value: unknown, task: { workspaceId: s
   const ref = agentCallReferenceSchema.parse(value);
 
   if (ref.workspaceId !== task.workspaceId || ref.taskId !== task.taskId || ref.runId !== runId || ref.callerTaskId === ref.taskId || ref.callerRunId === ref.runId)
-
     throw Error('Agent 调用引用与子运行身份不一致');
 
   return ref;

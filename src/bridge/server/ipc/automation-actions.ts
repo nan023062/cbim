@@ -16,15 +16,10 @@ export function automationIpcHandlers(app: Pick<ApplicationServices, 'Automation
 
   return {
     'automation.list': value => service(value).scheduler.List(),
-
     'automation.catalog': value => service(value).Catalog(),
-
     'automation.save': value => service(value).scheduler.Save(value.id, value.expectedRevision, value.definition),
-
     'automation.run': value => service(value).scheduler.RunNow(value.id, value.expectedRevision),
-
     'automation.toggle': value => service(value).scheduler.Change(value.id, value.expectedRevision, value.enabled ? 'resume' : 'pause'),
-
     'automation.remove': value => service(value).scheduler.Change(value.id, value.expectedRevision, 'remove'),
   };
 }

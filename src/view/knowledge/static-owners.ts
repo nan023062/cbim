@@ -8,15 +8,12 @@ import type { Snapshot } from '../../bridge/contracts/workspace';
 export function teamGroupIds(snapshot: Snapshot): string[]
 {
   const root = '.cbim/team',
-
     groups = new Set([root]),
-
     agents = new Set<string>();
 
   function addAncestors(id: unknown)
   {
     if (typeof id !== 'string' || !(id === root || id.startsWith(root + '/')) || id.includes('\\') || id.split('/').some(part => !part || part === '.' || part === '..'))
-
       return;
 
     let owner = id;
@@ -33,33 +30,32 @@ export function teamGroupIds(snapshot: Snapshot): string[]
   const registry = snapshot.validation?.indexes?.[root + '/registry.json'];
 
   if (registry)
-
+  {
     try
     {
       const parsed = JSON.parse(registry);
 
       if (Array.isArray(parsed?.groups))
-
+      {
         for (const group of parsed.groups)
-
           addAncestors(group?.id)
+      }
     }
     catch
     {
       /* 损坏的派生索引不能使编辑界面崩溃，仍显示可从正式定义确认的归属。 */
     }
+  }
+
   for (const file of snapshot.files)
   {
     if (!file.path.startsWith(root + '/'))
-
       continue;
 
     const agent = file.path.endsWith('/agent.json'),
-
       inventory = file.path.endsWith('/skills.json');
 
     if (!agent && !inventory)
-
       continue;
 
     let owner = file.path.slice(0, file.path.lastIndexOf('/'));
@@ -70,7 +66,9 @@ export function teamGroupIds(snapshot: Snapshot): string[]
 
       owner = owner.slice(0, owner.lastIndexOf('/'))
     }
+
     addAncestors(owner);
   }
+
   return [...groups].filter(id => ![...agents].some(agent => id === agent || id.startsWith(agent + '/'))).sort();
 }

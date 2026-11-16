@@ -50,21 +50,19 @@ export async function runtimeEngineTools(context: EngineCapabilities, knowledge:
   const ports: EngineToolsPort[] = [knowledge, ...(context.capabilities ?? []).map(capability => capability.tools)];
 
   const routes = new Map<string, EngineToolsPort>(),
-
     catalog: EngineToolSchema[] = [];
 
   for (const port of ports)
-
     for (const tool of await port.list())
     {
       if (!/^cbim_[a-z0-9_]+$/.test(tool.name) || routes.has(tool.name))
-
         throw Error('运行工具名称无效或重复：' + tool.name);
 
       routes.set(tool.name, port);
 
       catalog.push(structuredClone(tool));
     }
+
   return {
     list: async () => structuredClone(catalog), call: (name, args, signal, id) => { const port = routes.get(name); if (!port) throw Error('本轮未注册该工具'); return port.call(name, args, signal, id); }
   };

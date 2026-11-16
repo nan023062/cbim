@@ -85,13 +85,10 @@ export interface GitHubFeedbackStatus
 export function feedbackIssue(input: FeedbackInput)
 {
   const fields: [string, string | undefined][] = input.kind === 'bug'
-
     ? [['问题', input.summary], ['复现步骤', input.steps], ['实际结果', input.actual], ['预期结果', input.expected], ['环境', input.environment]]
-
     : [['需求', input.summary], ['使用场景', input.scenario], ['当前困难', input.problem], ['期望能力', input.expected], ['使用例子', input.example]];
 
   if (input.extra?.trim())
-
     fields.push(['补充上下文', input.extra]);
 
   return { title: `[${input.kind === 'bug' ? 'BUG' : '需求'}] ${input.summary.replace(/\s+/g, ' ').trim()}`, body: fields.map(([label, value]) => `## ${label}\n\n${value?.trim() || '用户未提供'}`).join('\n\n') };

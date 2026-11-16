@@ -29,7 +29,6 @@ export function useAppearance(): AppearanceController
   const [initial] = useState(() => { try { return readAppearance(window.localStorage) } catch { return { value: { ...defaultAppearance }, error: '本机存储不可用，外观偏好暂时无法读取。' } } });
 
   const [value, setValue] = useState(initial.value),
-
     [error, setError] = useState(initial.error);
 
   const current = useRef(value);

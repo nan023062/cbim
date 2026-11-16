@@ -47,33 +47,26 @@ export function preparedExecutionScope(modules: readonly { contract?: Contract }
   const scopes = modules.flatMap(module => module.contract?.executionScope ? [executionScopeSchema.parse(module.contract.executionScope)] : []);
 
   if (!scopes.length)
-
     return;
 
   if (scopes.length !== modules.length)
-
     throw Error('EXECUTION_SCOPE_MIXED: 范围任务的全部模块必须显式声明 executionScope');
 
   for (const module of modules)
   {
     const contract = module.contract!,
-
       scope = contract.executionScope!;
 
     if (contract.artifactScope?.roots.some(root => !executionScopeCovers(scope.read, root.path, root.kind)) || contract.delivery?.requiredValidations?.some(rule => !executionScopeCovers(scope.read, rule.artifactPath)))
-
       throw Error('EXECUTION_SCOPE_OUTPUT: 产物与验证必须属于本模块冻结读范围');
 
     if (contract.artifactScope?.transitions?.some(operation => artifactTransitionPaths(operation).some(path => !executionScopeCovers(scope.write, path))))
-
       throw Error('EXECUTION_SCOPE_WRITE: 删除/移动两端必须属于本模块冻结写范围');
 
     if (contract.delivery?.requiredToolEvidence?.some(rule => ['read', 'write', 'edit', 'bash', 'grep', 'find', 'ls'].includes(rule.toolName)))
-
       throw Error('EXECUTION_SCOPE_NATIVE: 隔离模式不能要求原生工具证据');
 
     if (contract.delivery?.requiredToolEvidence?.some(rule => rule.toolName === 'cbim_scoped_node') && !scope.node)
-
       throw Error('EXECUTION_SCOPE_NODE: Node证据要求必须同时声明固定预算');
   }
 
@@ -83,7 +76,6 @@ export function preparedExecutionScope(modules: readonly { contract?: Contract }
   const budgets = scopes.map(scope => scope.node);
 
   if (!budgets.every(Boolean) && modules.some(module => module.contract?.delivery?.requiredToolEvidence?.some(rule => rule.toolName === 'cbim_scoped_node')))
-
     throw Error('EXECUTION_SCOPE_NODE: 全部模块必须共同允许隔离Node证据要求');
 
   return executionScopeSchema.parse({ version: 1, profile: 'windows-lpac-node-v1', read: merge('read'), write: merge('write'), ...(budgets.every(Boolean) ? { node: { timeoutMs: Math.min(...budgets.map(b => b!.timeoutMs)), memoryMiB: Math.min(...budgets.map(b => b!.memoryMiB)), processLimit: Math.min(...budgets.map(b => b!.processLimit)) } } : {}) });

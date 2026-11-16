@@ -24,9 +24,7 @@ const tokensState = { reported: '原生汇总', partial: '部分已报告', miss
 export function ScopeUsageSummary({ report }: { report: ScopeUsageReport })
 {
   const { totals } = report,
-
     main = scopeUsageGroup(report.runs.filter(run => run.kind === 'main')),
-
     member = scopeUsageGroup(report.runs.filter(run => run.kind === 'member'));
 
   return <div className="scope-usage-summary" data-testid="scope-usage-summary">
@@ -61,7 +59,6 @@ export function ScopeUsageReadView({ state, OnRead: onRead }: { state: ScopeUsag
 export function ScopeUsagePanel({ identity }: { identity: ScopeUsageInput })
 {
   const key = scopeUsageKey(identity),
-
     controller = useMemo(() => new ScopeUsageController(identity, input => window.cbim.call('dispatch.scopeUsage', input)), [key]);
 
   const state = useSyncExternalStore(controller.subscribe, () => controller.snapshot, () => controller.snapshot);

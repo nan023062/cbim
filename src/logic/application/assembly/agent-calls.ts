@@ -89,13 +89,9 @@ export function createAgentCallAssembly(input: AgentCallAssemblyInput)
   const identity = { workspaceId: rootAgent.conversation.workspaceId, rootSessionId: rootAgent.conversation.taskId };
 
   let rootRunId: string | undefined,
-
     releaseBudget: (() => void) | undefined,
-
     opened = false,
-
     closed = false,
-
     closing = false;
 
   let unsupportedBudget = false;
@@ -117,29 +113,23 @@ export function createAgentCallAssembly(input: AgentCallAssemblyInput)
       request.signal.throwIfAborted();
 
       if (!rootRunId || closed)
-
         fail('AGENT_ROOT_CLOSED', '原调用者已经结束');
 
       if (unsupportedBudget)
-
         fail('AGENT_BUDGET_MODE_UNSUPPORTED', '当前预算按旧运行汇总，不能可靠计量递归子调用；请使用逐请求预算或关闭该预算后创建新任务，本次未启动子 Agent');
 
       if (!members)
-
         fail('AGENT_CATALOG_UNAVAILABLE', '当前宿主没有已配置的 Agent 目录');
 
       if (!admission)
-
         fail('AGENT_ADMISSION_UNAVAILABLE', '当前宿主没有真实子运行准入，未启动 Agent');
 
       const detail = await members.Get({ workspaceId: workspace.entry.id, instanceId: workspace.instanceId, memberId: request.agentId });
 
       if (detail.member.state !== 'active')
-
         fail('AGENT_UNAVAILABLE', '目标 Agent 已暂停或退役');
 
       if (detail.currentDiff.capability.status !== 'same' || detail.currentDiff.model.status !== 'same')
-
         fail('AGENT_CONFIGURATION_CHANGED', '目标 Agent 配置已变化，请先核实并采纳配置');
 
       const policy = detail.member.runtimePolicy;
@@ -149,13 +139,11 @@ export function createAgentCallAssembly(input: AgentCallAssemblyInput)
       const childLlm = input.models ? await input.models.WithRuntimeConfiguration({ profileId: policy.profileId, modelId: policy.modelId, engine: workspaceMemberEngine(policy), modelRoles: policy.modelRoles }, async captured => { if (workspaceMemberModelHash(captured.profile) !== policy.configurationHash) fail('AGENT_CONFIGURATION_CHANGED', '目标模型配置已变化，未启动子运行'); await requestBudgets?.Preflight(task.taskId, scopeId, { profile: captured.profile }); request.signal.throwIfAborted(); return captured.Resolve(); }) : llm;
 
       if (!childLlm || childLlm.profile.id !== policy.profileId || childLlm.profile.model !== policy.modelId || workspaceMemberModelHash(childLlm.profile) !== policy.configurationHash)
-
         fail('AGENT_MODEL_UNAVAILABLE', '目标模型不能按冻结配置解析，未替换为根模型');
 
       request.signal.throwIfAborted();
 
       const childTaskId = randomUUID(),
-
         definition = detail.member.adoption.configuration;
 
       const agent = new Agent({ id: detail.member.memberId, name: detail.member.name, permission: rootAgent.definition.permission, model: { engine: workspaceMemberEngine(policy) ?? 'pi', profileId: policy.profileId, modelId: policy.modelId }, instructions: [definition.principles, detail.member.adaptation.instructions, ...definition.effectiveSkills.map(skill => skill.content)].filter(Boolean).join('\n\n') }, { workspaceId: workspace.entry.id, taskId: childTaskId });
@@ -164,16 +152,17 @@ export function createAgentCallAssembly(input: AgentCallAssemblyInput)
         // 根独占租约仍在；Runtime 已核实父工具批次唯一，不能将此入口暴露给任意任务。
         CanAcquire: () => undefined, Acquire: () => () => { }, IsCurrent: () => admission.IsCurrent() && !closed && !request.signal.aborted,
       });
+
       if (permit.kind !== 'granted')
       {
         const usage = admission.manager.Snapshot();
 
         throw new AgentConstraintError('AGENT_CONCURRENCY_LIMIT', '当前真实运行名额不足，未启动子 Agent；父进程仍计入资源占用', { current: usage.occupied.length, requested: 1, limit: usage.policy.maxConcurrentRuns, unit: 'process' })
       }
+
       try
       {
         if (request.parent.task.moduleIds.length && (!request.business || request.business.moduleIds.some(id => !request.parent.task.moduleIds.includes(id))))
-
           fail('AGENT_BUSINESS_SCOPE', '业务子调用须保留父调用的冻结模块范围');
 
         const business = request.business ? await prepareAgentBusiness({ workspace, dispatch: dispatch ?? fail('AGENT_BUSINESS_UNAVAILABLE', '缺少业务来源核实服务'), member: detail.member, model: childLlm, taskId: childTaskId, rootSessionId: task.taskId, message: request.message, permission: agent.definition.permission, storage, business: request.business, signal: request.signal, artifactTransitions: input.artifactTransitions?.(), scopeId, reference: request.reference, businessServices: input.businessServices }) : undefined;
@@ -181,7 +170,6 @@ export function createAgentCallAssembly(input: AgentCallAssemblyInput)
         const childTask: TaskSpec = business?.task ?? { ...task, taskId: childTaskId, agentId: definition.agentId, goal: request.message, moduleIds: [], acceptance: [], mode: 'chat' };
 
         let childContext: AgentToolContext | undefined,
-
           childAlive = true;
 
         const childBudgets = new Map<string, Promise<RequestBudgetPort | undefined>>();
@@ -192,11 +180,10 @@ export function createAgentCallAssembly(input: AgentCallAssemblyInput)
           ...options, engine, llm: childLlm, profileId: policy.profileId, model: policy.modelId, modelRoles: policy.modelRoles, provider: 'cbim-' + policy.profileId, process: undefined, images: [], attachmentIds: [], RequestQuestion: async (args, signal) => { if (!childContext) fail('AGENT_CALL_NOT_STARTED', '子调用尚未受理'); childContext.AssertQuestionWait?.(); return request.RequestQuestion(args, signal); }
         }, {
           ...business?.services, storage, agent, AgentCall: request.reference, AgentTools: context => { childContext = context; return scheduler.Bind(context, request.parent.depth + 1) }, RequestBudget: (context, role = 'primary') => { assertChild(); let result = childBudgets.get(role); if (!result) { result = requestBudgets?.ForRun({ rootSessionId: task.taskId, taskId: task.taskId, runId: rootRunId!, kind: 'main', agentRun: { taskId: childTaskId, runId: context.runId } }, childLlm, role, assertChild) ?? Promise.resolve(undefined); childBudgets.set(role, result) } return result; },
-
           AcquireLease: async () => { workspace.Assert(); if (closed || request.signal.aborted) fail('AGENT_CALL_CANCELLED', '调用已停止'); return () => { } },
-
           AuthorizeNative: input.authorizeNative,
         });
+
         return {
           agent, task: childTask, runtime: child.runtime, ...(business ? { launch: business.launch, Verify: business.Verify, BeforeRun: business.BeforeRun } : {}), Release: async () => { childAlive = false; await business?.Close(); permit.release() }
         };
@@ -213,7 +200,6 @@ export function createAgentCallAssembly(input: AgentCallAssemblyInput)
   const finish = async (summary?: RunSummary) =>
   {
     if (closed)
-
       return;
 
     closing = true;
@@ -239,7 +225,6 @@ export function createAgentCallAssembly(input: AgentCallAssemblyInput)
             {
               code?: string
             })?.code?.startsWith('GOAL_'))
-
             throw error;
 
           await dispatch.goals.Block(identity, scopeId, error instanceof Error ? error.message : String(error));
@@ -251,6 +236,7 @@ export function createAgentCallAssembly(input: AgentCallAssemblyInput)
           throw error;
         }
       }
+
       closed = true;
     }
     finally
@@ -268,7 +254,6 @@ export function createAgentCallAssembly(input: AgentCallAssemblyInput)
     MainToolContext(currentTask: TaskSpec, runId: string): MainToolContext | undefined
     {
       if (!opened || closed || closing || runId !== rootRunId || currentTask.taskId !== task.taskId || currentTask.workspaceId !== workspace.entry.id || currentTask.root !== workspace.entry.path)
-
         return undefined;
 
       const current = (signal?: AbortSignal) => { signal?.throwIfAborted(); workspace.Assert(); if (closed || closing || runId !== rootRunId || admission && !admission.IsCurrent()) fail('AGENT_ROOT_CLOSED', '原主运行已停止，不能提交控制面操作') };
@@ -286,11 +271,8 @@ export function createAgentCallAssembly(input: AgentCallAssemblyInput)
 
     agentLifecycle: {
       InsertInput: insertInput,
-
       BeforeRun: async (runId: string, context?: Parameters<AgentLifecycle['BeforeRun']>[1]) => { if (rootRunId && rootRunId !== runId) fail('AGENT_ROOT_CONFLICT', '根运行已经绑定'); rootRunId = runId; scopeId = context?.scopeId ?? scopeId; if (dispatch) { releaseBudget = dispatch.budgets.HoldMain(runId); const scope = await dispatch.OpenScope(identity, scopeId, { message: context?.message ?? task.goal, ...(context?.attachmentIds ? { attachmentIds: context.attachmentIds } : {}), }, runId, undefined, context?.followupOf); unsupportedBudget = !!scope.budget?.policy.enabled && scope.budget.policy.enforcement !== 'request'; opened = true; } },
-
       Settled: finish,
-
       Failed: async (_error: unknown) => finish(),
     },
   };

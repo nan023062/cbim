@@ -43,21 +43,17 @@ export class MemberResumeService
     const parsed = resumeMemberInputSchema.safeParse(raw);
 
     if (!parsed.success)
-
       fail('MEMBER_RESUME_INPUT', '续执行预约参数无效');
 
     const input = parsed.data,
-
       command = memberResumeCommand(identity, scopeId, mainRunId, commandId, input);
 
     if (!this.owners)
-
       fail('OWNER_EXECUTION_UNAVAILABLE', '未装配岗位检查点核验');
 
     const old = await this.owners.Replay<ResumeMemberReceipt>(command);
 
     if (old)
-
       return old.receipt;
 
     const check = () => { this.owner.Assert(); assertCurrent(); if (identity.workspaceId !== this.owner.entry.id) fail('GRAPH_IDENTITY_MISMATCH', '检查点不属于当前工作区') };

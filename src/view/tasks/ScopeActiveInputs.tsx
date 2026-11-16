@@ -13,15 +13,12 @@ const labels = { pending: '接收确认中', accepted: '已接收输入快照', 
 export function ScopeActiveInputs({ items }: { items: readonly ScopeActiveInput[] })
 {
   if (!Array.isArray(items as unknown))
-
     return <p className="scope-goal-alert" role="alert" data-testid="scope-active-input-invalid">运行内补充记录无效，请重新同步目标详情。</p>;
 
   if (!items.length)
-
     return null;
 
   if (items.length > 64 || items.some(item => !scopeActiveInputSchema.safeParse(item).success) || new Set(items.map(item => item.insertionId)).size !== items.length)
-
     return <p className="scope-goal-alert" role="alert" data-testid="scope-active-input-invalid">运行内补充记录无效，不能据此判断接收状态；请重新同步目标详情。</p>;
 
   return <div className="scope-goal-section" data-testid="scope-active-inputs">

@@ -42,7 +42,6 @@ type Owner = Pick<KnowledgeWorkspace, 'entry' | 'Assert'>;
 function check(condition: unknown, code: string, message: string): asserts condition
 {
   if (!condition)
-
     fail(code, message)
 }
 
@@ -67,7 +66,6 @@ export class ScopeContinuationService
     const parsed = schema.safeParse(input);
 
     if (!parsed.success)
-
       fail('GOAL_CONTINUATION_INPUT', parsed.error.issues.map(issue => issue.message).join('；'));
 
     return parsed.data
@@ -90,9 +88,7 @@ export class ScopeContinuationService
   async Inspect(raw: ScopeContinuationLookup): Promise<GoalContinuationReceipt | undefined>
   {
     const input = this.Parse(scopeContinuationLookupSchema, raw),
-
       scope = this.Scope(await this.store.Read(), input),
-
       continuation = scope.continuations?.find(item => item.continuationId === input.commandId);
 
     return continuation && !isHumanContinuation(continuation) ? { workspaceId: scope.workspaceId, rootSessionId: scope.rootSessionId, scopeId: scope.scopeId, scopeStatus: scope.status, continuation } : undefined;
@@ -105,7 +101,6 @@ export class ScopeContinuationService
   async Accept(raw: GoalContinuationRequest, trustedRunId: string, trusted: TrustedContinuationInput = {}): Promise<AcceptedScopeContinuation>
   {
     const input = this.Parse(goalContinuationRequestSchema, raw),
-
       runId = safeId(trustedRunId);
 
     this.owner.Assert();
@@ -116,7 +111,6 @@ export class ScopeContinuationService
     const signal = trusted.signal;
 
     let attachmentManifest: unknown,
-
       manifestCopyFailed = false;
 
     try
@@ -131,11 +125,9 @@ export class ScopeContinuationService
     const replay = (scope: DispatchScope): AcceptedScopeContinuation | undefined => { const existing = scope.continuations?.find(item => item.continuationId === input.commandId); if (!existing) return; check(!isHumanContinuation(existing) && existing.wait.waitId === input.waitId && existing.wait.goalRevision === input.expectedGoalRevision && existing.inputRevision === input.expectedInputRevision + 1 && sameGoalValue(existing.input, input.input) && sameGoalValue(existing.options, input.options), 'COMMAND_ID_CONFLICT', '原命令已受理，不能更换补充正文、附件、等待版本或运行选项'); return { scope, continuation: existing, fresh: false }; };
 
     const observed = this.Scope(await this.store.Read(), input),
-
       prior = replay(observed);
 
     if (prior)
-
       return prior;
 
     const alive = () => { this.owner.Assert(); signal?.throwIfAborted() };
@@ -143,7 +135,6 @@ export class ScopeContinuationService
     alive();
 
     if (manifestCopyFailed)
-
       fail('GOAL_ATTACHMENT_MANIFEST', '附件快照清单无法复制，尚未受理补充');
 
     assertContinuationAttachmentManifest(input.input, attachmentManifest);
@@ -155,9 +146,7 @@ export class ScopeContinuationService
       alive();
 
       const scope = this.Scope(state, input),
-
         goal = scope.goal,
-
         wait = scope.wait;
 
       check(scope.status === 'waiting' && wait, 'GOAL_NOT_WAITING', '目标不处于安全等待，不能继续或重复消费等待');
@@ -170,6 +159,7 @@ export class ScopeContinuationService
 
         check(request && input.commandId === request.commandId && sameGoalValue(input.input, request.input) && sameGoalValue(input.options, request.options), 'TOPIC_INPUT_CONFLICT', '整话题暂停只能接收原已保存补充，不能换正文或权限');
       }
+
       check(!scope.recovery || input.options.permission === 'read', 'RECOVERY_READONLY', '只读核实周期不能通过补充输入提升执行权限');
 
       check(wait.waitId === input.waitId, 'GOAL_WAIT_CONFLICT', '等待检查点已变化，请刷新目标');
@@ -196,13 +186,13 @@ export class ScopeContinuationService
 
         alive()
       }
+
       const admitted = await this.budgets?.Admit(state, scope, { kind: 'main', taskId: scope.rootSessionId, runId });
 
       // 额度读取可能等待磁盘；停止后的拒绝结果也不能顺带修改原安全等待。
       alive();
 
       if (admitted?.rejected)
-
         return { scopes: [admitted.scope], receipt: admitted.rejected };
 
       const continuation: ScopeContinuation = { continuationId: input.commandId, acceptedAt: new Date().toISOString(), wait: structuredClone(wait), inputRevision: goalInputRevision(goal) + 1, input: input.input, runId, options: input.options, ...(attachmentManifest === undefined ? {} : { attachmentManifest }) };
@@ -223,7 +213,6 @@ export class ScopeContinuationService
 
     // 先查幂等历史，再取得知识→模型→Store；绝不能从上述事务内部反向取得岗位快照。
     if (observed.wait?.memberPause && !this.memberPauses)
-
       fail('GOAL_MEMBER_PAUSE_UNAVAILABLE', '当前工作区未装配成员等待核实能力');
 
     let receipt: GoalContinuationReceipt | ScopeBudgetRejected;
@@ -239,17 +228,15 @@ export class ScopeContinuationService
       const saved = replay(this.Scope(await this.store.Read(), input));
 
       if (saved)
-
         return saved;
 
       throw error;
     }
-    if ('budgetRejected' in receipt)
 
+    if ('budgetRejected' in receipt)
       rejectBudget(receipt);
 
     const scope = this.Scope(await this.store.Read(), input),
-
       continuation = scope.continuations?.find(item => item.continuationId === input.commandId);
 
     check(continuation && !isHumanContinuation(continuation) && continuation.runId === receipt.continuation.runId, 'GOAL_CONTINUATION_UNAVAILABLE', '已提交补充记录与当前周期不一致，不能启动');

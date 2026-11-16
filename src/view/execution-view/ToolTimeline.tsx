@@ -27,7 +27,6 @@ const states: Record<string, string> = { 'tool.proposed': '等待授权', 'tool.
 function outputText(result: unknown): string
 {
   if (typeof result === 'string')
-
     return result;
 
   if (result && typeof result === 'object' && 'content' in result && Array.isArray(result.content))
@@ -35,9 +34,9 @@ function outputText(result: unknown): string
     const text = result.content.filter(x => x?.type === 'text' && typeof x.text === 'string').map(x => x.text).join('\n');
 
     if (text)
-
       return text;
   }
+
   return JSON.stringify(result, null, 2);
 }
 
@@ -76,7 +75,6 @@ export function ToolTimeline({ run, renderControls, renderDetails, toolCallId }:
   for (const e of run.events)
   {
     if (!e.type.startsWith('tool.') || toolCallId !== undefined && e.data.id !== toolCallId)
-
       continue;
 
     const id = String(e.data.id);
@@ -84,17 +82,14 @@ export function ToolTimeline({ run, renderControls, renderDetails, toolCallId }:
     const call = calls.get(id) || { name: String(e.data.name || '工具'), state: '', input: {} };
 
     if (typeof e.data.agentCallState === 'string')
-
       call.agentState = e.data.agentCallState;
 
     call.state = states[e.type] || e.type;
 
     if (e.data.input)
-
       call.input = e.data.input;
 
     if (e.type === 'tool.allowed' || e.type === 'tool.denied')
-
       call.scope = e.data.scope;
 
     if (e.data.receipt && typeof e.data.receipt === 'object' && 'scope' in e.data.receipt)
@@ -103,24 +98,20 @@ export function ToolTimeline({ run, renderControls, renderDetails, toolCallId }:
 
       call.scope = e.data.receipt.scope
     }
-    if (e.data.outcome && typeof e.data.outcome === 'object' && 'nextStep' in e.data.outcome && typeof e.data.outcome.nextStep === 'string')
 
+    if (e.data.outcome && typeof e.data.outcome === 'object' && 'nextStep' in e.data.outcome && typeof e.data.outcome.nextStep === 'string')
       call.nextStep = e.data.outcome.nextStep;
 
     if (e.data.result !== undefined)
-
       call.result = e.data.result;
 
     if (e.data.reason)
-
       call.result = e.data.reason;
 
     if (e.type === 'tool.denied')
-
       call.denied = true;
 
     if (['tool.allowed', 'tool.started', 'tool.updated'].includes(e.type))
-
       call.allowed = true;
 
     call.error = e.type === 'tool.denied' || e.data.isError === true;
@@ -128,20 +119,18 @@ export function ToolTimeline({ run, renderControls, renderDetails, toolCallId }:
     call.finished = call.agentState ? ['completed', 'failed'].includes(call.agentState) : e.type === 'tool.finished';
 
     if (call.agentState)
-
       call.state = ({ waiting: '等待调用方答复', running: '执行中', completed: '已完成', failed: '执行未完成' } as Record<string, string>)[call.agentState] ?? call.state;
 
     if (call.error && e.type === 'tool.finished')
-
       call.state = '执行失败';
 
     calls.set(id, call);
   }
+
   return <div className="chat-activity">{[...calls].map(([id, c]) =>
   {
     // 只信原事件中的拒绝且没有放行/开始记录；执行后的失败仍保留核实入口。
     const notExecuted = c.denied && !c.allowed,
-
       rejection = notExecuted ? rejectedToolView(c.result) : undefined;
 
     const knowledge = c.finished && !c.error ? knowledgeToolView(c.name, c.result, run.task?.workspaceId ?? '') : undefined;
@@ -153,7 +142,6 @@ export function ToolTimeline({ run, renderControls, renderDetails, toolCallId }:
     const label = rejection?.invalidInput ? '参数待补充或修正' : invalid ? '校验未通过' : knowledge?.kind === 'committed' ? '知识写入已完成' : attention && !c.error ? '结果未核实' : c.state;
 
     const input = c.input as Record<string, unknown>,
-
       target = String(input.command || input.path || input.file_path || input.connectorId || input.agentId || (Array.isArray(input.moduleIds) ? input.moduleIds.join(', ') : ''));
 
     const expanded = opened[id] ?? attention;

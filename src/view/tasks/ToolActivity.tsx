@@ -27,7 +27,6 @@ export function ToolActivity({ run, recovery, toolCallId, renderDetails }: { run
   return <ToolTimeline run={run} toolCallId={toolCallId} renderDetails={renderDetails} renderControls={({ id, name, attention }) =>
   {
     const mainSelection = mainCommandSelection(run, id, name),
-
       selection = isVerifiableMainToolName(name) ? mainSelection : undefined;
 
     return <>{selection && <MainCommandVerification selection={selection} latestSeq={run.events.at(-1)?.seq ?? 0} />}

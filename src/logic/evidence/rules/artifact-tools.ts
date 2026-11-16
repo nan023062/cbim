@@ -40,11 +40,9 @@ export class ArtifactTools
   async Call(name: string, input: unknown, toolCallId?: string)
   {
     if (name !== artifactCaptureToolName || !toolCallId || toolCallId.length > 128 || toolCallId.trim() !== toolCallId || /[\x00-\x1f]/.test(toolCallId))
-
       throw Error('文件基线必须由当前成员的真实工具调用提交');
 
     const args = artifactCaptureInputSchema.parse(input),
-
       expectedInput = structuredClone(args);
 
     const baseline = await this.ports.Capture(args, toolCallId);

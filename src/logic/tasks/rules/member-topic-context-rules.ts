@@ -15,7 +15,6 @@ import { memberTopicContextSchema, type MemberTopicContext } from './member-topi
 function local(task: TaskNode, scope: DispatchScope, graph: GraphSnapshot)
 {
   if (task.scopeId !== scope.scopeId || task.identity.workspaceId !== scope.workspaceId || task.identity.rootSessionId !== scope.rootSessionId || graph.identity.workspaceId !== scope.workspaceId || graph.identity.rootSessionId !== scope.rootSessionId)
-
     fail('MEMBER_TOPIC_CONTEXT_IDENTITY', '成员上下文不属于当前办公室话题');
 }
 
@@ -25,7 +24,6 @@ export function createMemberTopicContext(task: TaskNode, scope: DispatchScope, g
   local(task, scope, graph);
 
   if (session.workspaceId !== scope.workspaceId || session.rootSessionId !== scope.rootSessionId || session.agentId !== task.assignee.agentId)
-
     fail('MEMBER_TOPIC_CONTEXT_IDENTITY', '子会话登记与当前角色不一致');
 
   const prior = graph.tasks.filter(value => value.identity.workspaceId === scope.workspaceId && value.identity.rootSessionId === scope.rootSessionId && value.scopeId === scope.scopeId && value.assignee.agentId === session.agentId && value.taskId !== task.taskId && value.result && !value.activeRunId);
@@ -41,11 +39,9 @@ export function resolveMemberTopicContext(reference: MemberTopicContext, task: T
   local(task, scope, graph);
 
   if (ref.workspaceId !== scope.workspaceId || ref.rootSessionId !== scope.rootSessionId || ref.scopeId !== scope.scopeId || ref.agentId !== task.assignee.agentId || ref.inputRevision !== (scope.goal?.inputRevision ?? 1))
-
     fail('MEMBER_TOPIC_CONTEXT_CHANGED', '话题上下文身份或输入版本已变化，请重新调度');
 
   let remaining = 64_000,
-
     omittedCharacters = 0;
 
   const bounded = (text: string) => { const result = text.slice(0, remaining); remaining -= result.length; omittedCharacters += text.length - result.length; return result };

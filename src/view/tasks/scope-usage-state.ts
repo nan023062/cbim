@@ -26,11 +26,8 @@ const close = (a: number, b: number) => Math.abs(a - b) <= Math.max(1, Math.abs(
 export function scopeUsageGroup(runs: ScopeUsageRun[])
 {
   let tokens = 0,
-
     cost = 0,
-
     priced = 0,
-
     missing = 0;
 
   for (const run of runs)
@@ -43,10 +40,11 @@ export function scopeUsageGroup(runs: ScopeUsageRun[])
 
       priced++
     }
-    if (run.logState !== 'verified' || run.usage.tokensState !== 'reported')
 
+    if (run.logState !== 'verified' || run.usage.tokensState !== 'reported')
       missing++
   }
+
   return { runs: runs.length, tokens, cost: priced ? cost : undefined, missing };
 }
 
@@ -56,17 +54,14 @@ export function checkedScopeUsage(raw: unknown, identity: ScopeUsageInput): Scop
   const report = scopeUsageReportSchema.parse(raw);
 
   if (scopeUsageKey(report.identity) !== scopeUsageKey(identity))
-
     throw Error('用量报告不属于当前任务周期，请重新读取');
 
   if (new Set(report.runs.map(run => run.runId)).size !== report.runs.length || report.runs.some(run => run.kind === 'main' && run.taskId !== identity.rootSessionId))
-
     throw Error('用量报告包含重复或跨会话运行');
 
   const totals = report.totals;
 
   if (totals.registeredRuns !== report.runs.length)
-
     throw Error('用量报告的运行数量不一致');
 
   const fields = ['input', 'output', 'cacheRead', 'cacheWrite', 'reasoning', 'total'] as const;
@@ -76,25 +71,21 @@ export function checkedScopeUsage(raw: unknown, identity: ScopeUsageInput): Scop
     const t = run.usage.tokens;
 
     if (!close(t.total, t.input + t.output + t.cacheRead + t.cacheWrite) || t.reasoning > t.output)
-
       throw Error('运行用量口径不一致');
   }
+
   for (const field of fields)
-
     if (!close(totals.tokens[field], report.runs.reduce((sum, run) => sum + run.usage.tokens[field], 0)))
-
       throw Error('周期用量与逐运行合计不一致');
 
   const group = scopeUsageGroup(report.runs);
 
   if ((group.cost === undefined) !== (totals.estimatedCostUsd === undefined) || group.cost !== undefined && !close(group.cost, totals.estimatedCostUsd!))
-
     throw Error('周期费用与逐运行合计不一致');
 
   const ready = report.coverage === 'tracked' && report.consistency === 'stable' && report.runs.length > 0 && totals.inFlightRuns === 0 && report.runs.every(run => run.logState === 'verified' && run.usage.tokensState === 'reported');
 
   if (totals.tokensComplete && !ready || totals.costComplete && (!ready || report.runs.some(run => run.usage.costState !== 'priced' || run.usage.estimatedCostUsd === undefined)))
-
     throw Error('存在未核实记录，不能标记完整周期用量');
 
   return report;
@@ -140,7 +131,6 @@ export class ScopeUsageController
   async Read()
   {
     if (this.value.loading)
-
       return;
 
     const generation = this.generation.Capture();
@@ -152,7 +142,6 @@ export class ScopeUsageController
       const raw = await this.request({ ...this.identity });
 
       if (!this.generation.IsCurrent(generation))
-
         return;
 
       this.Publish({ report: checkedScopeUsage(raw, this.identity), loading: false, error: '' })
@@ -160,7 +149,6 @@ export class ScopeUsageController
     catch (error)
     {
       if (this.generation.IsCurrent(generation))
-
         this.Publish({ ...this.value, loading: false, error: error instanceof Error ? error.message : '周期用量读取失败，请重新读取' })
     }
   }

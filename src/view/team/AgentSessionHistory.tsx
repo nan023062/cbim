@@ -59,29 +59,21 @@ function Diagnostics({ items }: { items: string[] })
 export function AgentSessionHistory({ workspaceId, initialAgentId, currentDefinitions, knowledgeReady, onClose }: AgentSessionHistoryProps)
 {
   const [selected, setSelected] = useState(initialAgentId ?? ''),
-
     [roles, setRoles] = useState<AgentHistoryRole[]>([]),
-
     [diagnostics, setDiagnostics] = useState<string[]>([]),
-
     [error, setError] = useState(''),
-
     [loading, setLoading] = useState(false);
 
   const [filter, setFilter] = useState(''),
-
     [revision, setRevision] = useState(0),
-
     request = useRef(0);
 
   useEffect(() => { const token = ++request.current; let stopped = false; setLoading(true); setError(''); void window.cbim.call('agentHistory.roles', { workspaceId }).then(reply => { if (stopped || request.current !== token) return; if (reply.roles.some(role => role.workspaceId !== workspaceId)) throw Error('历史角色工作区不一致，请重新读取'); setRoles(reply.roles); setDiagnostics(reply.diagnostics); }).catch(cause => { if (!stopped && request.current === token) setError(cause instanceof Error ? cause.message : '历史角色读取失败，请重试') }).finally(() => { if (!stopped && request.current === token) setLoading(false) }); return () => { stopped = true }; }, [workspaceId, revision]);
 
   const archived = roles.find(role => role.agentId === selected),
-
     name = archived?.name ?? currentDefinitions[selected] ?? selected;
 
   const needle = filter.trim().toLocaleLowerCase(),
-
     shown = roles.filter(role => (role.name + ' ' + role.agentId).toLocaleLowerCase().includes(needle));
 
   return <section className="agent-session-history" aria-label="Agent 执行历史" data-testid="agent-session-history">
@@ -103,7 +95,6 @@ export function AgentSessionHistory({ workspaceId, initialAgentId, currentDefini
 function AgentSessions({ workspaceId, agentId }: { workspaceId: string; agentId: string })
 {
   const sessions = useHistorySessions({ workspaceId, agentId }, true),
-
     [chosen, setChosen] = useState('');
 
   const selected = sessions.page?.items.find(session => session.sessionId === chosen);
@@ -121,7 +112,6 @@ function AgentSessions({ workspaceId, agentId }: { workspaceId: string; agentId:
 function SessionRuns({ session }: { session: AgentHistorySession })
 {
   const runs = useHistoryRuns({ workspaceId: session.workspaceId, agentId: session.agentId, sessionId: session.sessionId }, true),
-
     [chosen, setChosen] = useState('');
 
   const selected = runs.page?.items.find(run => historyRunKey(run) === chosen);

@@ -23,7 +23,6 @@ export function projectCommandReceipt(name: VerifiableMainToolName, raw: unknown
   const parsed = mainToolOutputSchema(name, expected).safeParse(publicValue);
 
   if (!parsed.success || !isDeepStrictEqual(parsed.data, publicValue))
-
     fail('COMMAND_RECEIPT_INVALID', '原命令回执无法按真实请求及归属核实');
 
   const tasks = (ids: string[]) => ({ total: ids.length, taskIds: ids.slice(0, commandVerificationLimits.summaryItems), truncated: ids.length > commandVerificationLimits.summaryItems });
@@ -33,15 +32,11 @@ export function projectCommandReceipt(name: VerifiableMainToolName, raw: unknown
   if (name === 'cbim_goal_plan' || name === 'cbim_goal_review')
   {
     const scope = parsed.data as MainToolOutput<'cbim_goal_plan'>,
-
       goal = scope.goal!,
-
       plan = goal.plan!;
 
     if (name === 'cbim_goal_plan')
-
       result = { toolName: name, goalRevision: goal.revision, inputRevision: goalInputRevision(goal), planRevision: plan.revision, recordedAt: plan.recordedAt, criterionCount: plan.criteria.length, assignmentCount: plan.assignments.length };
-
     else
     {
       const review = goal.review!;
@@ -88,11 +83,11 @@ export function projectCommandReceipt(name: VerifiableMainToolName, raw: unknown
   else
   {
     const r = parsed.data as MainToolOutput<'cbim_dispatch_abandon_checkpoint'>,
-
       a = r.abandonment;
 
     result = { toolName: name, taskId: r.taskId, status: r.status, checkpointId: a.checkpointId, sourceRunId: a.sourceRunId, resumeRequestId: a.resumeRequestId, previousLeaseEpoch: a.previousLeaseEpoch, nextLeaseEpoch: a.nextLeaseEpoch, abandonedAt: a.abandonedAt, graphCursor: r.graphCursor };
   }
+
   // 再核投影自身的有界契约；构造新对象不会把原私有上下文带出。
   return commandResultSummarySchema.parse(result);
 }

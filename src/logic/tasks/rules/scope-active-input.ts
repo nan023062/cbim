@@ -16,7 +16,6 @@ export const scopeActiveInputLimits = { attempts: 64, inputs: 32, messageBytes: 
 const id = z.string().min(1).max(512).refine(value => value.trim() === value && !/[\x00-\x1f]/.test(value));
 
 const hash = z.string().regex(/^[a-f0-9]{64}$/),
-
   positive = z.number().int().positive().safe();
 
 const attachmentIds = z.array(z.string().uuid()).max(12).refine(ids => new Set(ids).size === ids.length);
@@ -52,11 +51,9 @@ export type AcceptedScopeActiveInput = Extract<ScopeActiveInput,
 export function scopeActiveInputStatus(scope: { activeInputs?: readonly ScopeActiveInput[] }): 'pending' | 'unknown' | undefined
 {
   if (scope.activeInputs?.some(item => item.status === 'unknown'))
-
     return 'unknown';
 
   if (scope.activeInputs?.some(item => item.status === 'pending'))
-
     return 'pending';
 }
 
@@ -71,13 +68,10 @@ export function validateScopeInputHistory(scope: { goal?: { inputRevision?: numb
   const revisions = [...(scope.continuations ?? []).map(item => item.inputRevision), ...(scope.activeInputs ?? []).filter((item): item is AcceptedScopeActiveInput => item.status === 'accepted').map(item => item.inputRevision)].sort((a, b) => a - b);
 
   if (revisions.length >= scopeActiveInputLimits.inputs || revisions.some((revision, index) => revision !== index + 2) || revisions.length && !scope.goal || scope.goal && (scope.goal.inputRevision ?? 1) !== revisions.length + 1)
-
     fail('GRAPH_INPUT_INVALID', '输入版本必须对应连续且有界的真实接收历史');
 
   for (let index = 1; index < (scope.continuations?.length ?? 0); index++)
-
     if (scope.continuations![index].inputRevision <= scope.continuations![index - 1].inputRevision)
-
       fail('GRAPH_INPUT_INVALID', '等待接续输入版本不能倒退');
 
   const active = scope.activeInputs ?? [];
@@ -87,11 +81,9 @@ export function validateScopeInputHistory(scope: { goal?: { inputRevision?: numb
     const prior = active[index - 1];
 
     if (prior && (item.baseInputRevision < (prior.status === 'accepted' ? prior.inputRevision : prior.baseInputRevision) || item.baseGoalRevision < (prior.status === 'accepted' ? prior.goalRevision : prior.baseGoalRevision)))
-
       fail('GRAPH_INPUT_INVALID', '运行补充的准备版本不能倒退');
 
     if ((item.status === 'pending' || item.status === 'unknown') && (index !== active.length - 1 || item.baseInputRevision !== (scope.goal?.inputRevision ?? 1)))
-
       fail('GRAPH_INPUT_INVALID', '未核实补充之后不能继续消费输入');
   }
 }

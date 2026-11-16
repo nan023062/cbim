@@ -14,11 +14,9 @@ import './human-continuation.css';
 export function HumanContinuationForm({ state }: { state: HumanContinuationView })
 {
   const attempt = state.record?.attempt,
-
     phase = attempt?.phase;
 
   if (!state.eligible && !attempt)
-
     return null;
 
   return <section className="human-continuation" data-testid="human-continuation" data-phase={state.pending ? 'pending' : phase ?? 'ready'} data-scope-id={state.scopeId} data-wait-id={state.waitId}>

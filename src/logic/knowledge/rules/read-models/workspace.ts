@@ -26,7 +26,6 @@ export class BusinessWorkspace
   async Modules(query = '')
   {
     const s = this.snapshot,
-
       index = parseJson(s.validation!.indexes['.cbim/workspace/registry.json']);
 
     return { ...context(s), workspaceRootId: '.cbim/workspace', projectRoot: { ...projectRootModule, children: [...s.validation!.tree.roots] }, modules: index.modules.filter((m: any) => !query || `${m.id} ${m.summary}`.toLowerCase().includes(query.toLowerCase())), roots: s.validation!.tree.roots, indexSource: 'current-definitions', persistedIndexMatches: s.files.find(f => f.path === '.cbim/workspace/registry.json')?.text === s.validation!.indexes['.cbim/workspace/registry.json'] };
@@ -37,11 +36,9 @@ export class BusinessWorkspace
     const s = this.snapshot;
 
     if (id === projectRootModuleId)
-
       return { ...context(s), id, source: 'builtin' as const, definition: { ...projectRootModule, children: [...(s.validation?.tree.roots ?? [])], workflows: [] }, overview: { available: true as const, text: projectRootOverview }, workflows: [], workflowScope: 'own-only' as const };
 
     if (!Object.hasOwn(s.validation!.tree.nodes, id))
-
       fail('OBJECT_NOT_FOUND', 'Module 不存在或定义未通过校验，请先查询模块注册表与问题清单');
 
     const definition = data(s, id + '/module.json');

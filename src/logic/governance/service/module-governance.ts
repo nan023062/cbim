@@ -84,7 +84,6 @@ export class ModuleGovernanceService implements KnowledgeGovernanceAuthority
     const intent = this.store.Find(intentId)?.intent;
 
     if (!intent)
-
       fail('GOVERNANCE_INTENT', '原实施意图不存在');
 
     return intent.request
@@ -101,17 +100,14 @@ export class ModuleGovernanceService implements KnowledgeGovernanceAuthority
     const intent = this.store.Find(request.requestId)?.intent;
 
     if (!intent && !status.governance)
-
       return;
 
     if (!intent)
-
       fail('GOVERNANCE_DATA', '治理知识日志缺少原私有意图');
 
     const proposal = this.Proposal(intent.proposalId);
 
     if (!same(status.governance, { intentId: intent.intentId, protectionId: intent.protectionId, proposalId: intent.proposalId, decisionId: intent.decisionId }) || intent.requestFingerprint !== hash(json(request)) || status.before[proposal.change.path] !== proposal.change.beforeText || status.after[proposal.change.path] !== proposal.change.afterText)
-
       fail('GOVERNANCE_DATA', '治理知识日志与原提案前后正文或身份不一致');
   }
 
@@ -120,7 +116,6 @@ export class ModuleGovernanceService implements KnowledgeGovernanceAuthority
     const command = this.store.Find(id);
 
     if (command?.receipt.action !== 'propose')
-
       fail('GOVERNANCE_PROPOSAL', '原治理提案不存在');
 
     return command.receipt.record
@@ -143,7 +138,6 @@ export class ModuleGovernanceService implements KnowledgeGovernanceAuthority
   private async Derive(journal: JournalReader): Promise<Derived>
   {
     const protections = new Map<string, protocol.ModuleGovernanceProtection>(),
-
       applications = new Map<string, protocol.ModuleGovernanceApplication>();
 
     for (const command of this.store.All())
@@ -154,32 +148,26 @@ export class ModuleGovernanceService implements KnowledgeGovernanceAuthority
 
         continue
       }
-      if (command.receipt.action !== 'apply')
 
+      if (command.receipt.action !== 'apply')
         continue;
 
       const intent = command.intent!,
-
         record = command.receipt.record,
-
         status = await journal(intent.request);
 
       const expected = { intentId: intent.intentId, protectionId: intent.protectionId, proposalId: intent.proposalId, decisionId: intent.decisionId };
 
       if (status && !same(status.governance, expected))
-
         fail('GOVERNANCE_DATA', '原知识 journal 与治理意图来源不一致');
 
       if (status?.state === 'committed')
       {
         const result = protocol.moduleGovernanceKnowledgeReceiptSchema.parse(status.result),
-
           proposal = this.Proposal(intent.proposalId),
-
           protection = protections.get(intent.protectionId);
 
         if (!protection || protection.revision !== proposal.base.protectionRevision || protection.definition.hash !== proposal.base.definitionHash || protection.overview.hash !== proposal.base.overviewHash || result.requestId !== intent.intentId || result.workspaceId !== intent.workspaceId || result.instanceId !== intent.request.instanceId)
-
           fail('GOVERNANCE_DATA', '已提交治理的保护版本链不一致');
 
         protections.set(protection.protectionId, advanceModuleGovernanceProtection(protection, proposal, result));
@@ -193,6 +181,7 @@ export class ModuleGovernanceService implements KnowledgeGovernanceAuthority
         applications.set(intent.intentId, protocol.moduleGovernanceApplicationSchema.parse({ ...record, state }));
       }
     }
+
     return { protections: [...protections.values()], applications };
   }
 
@@ -201,7 +190,6 @@ export class ModuleGovernanceService implements KnowledgeGovernanceAuthority
     const value = derived.protections.find(item => item.protectionId === id);
 
     if (!value)
-
       fail('GOVERNANCE_PROTECTION', '模块尚未登记保护');
 
     return value
@@ -210,13 +198,11 @@ export class ModuleGovernanceService implements KnowledgeGovernanceAuthority
   private Baseline(snapshot: Snapshot, protection: protocol.ModuleGovernanceProtection, revision?: string, protectionRevision?: number)
   {
     if (revision !== undefined && snapshot.revision !== revision || protectionRevision !== undefined && protection.revision !== protectionRevision)
-
       fail('GOVERNANCE_STALE', '知识或保护版本已经变化，请重新观察');
 
     const actual = moduleGovernanceBinding(protection.moduleId, snapshot.files, visible(snapshot));
 
     if (!same(actual.definition, protection.definition) || !same(actual.overview, protection.overview))
-
       fail('GOVERNANCE_STALE', '受保护模块的定义或正文已漂移，请核实原基线');
   }
 
@@ -230,14 +216,12 @@ export class ModuleGovernanceService implements KnowledgeGovernanceAuthority
     const command = this.store.Find(input.commandId);
 
     if (!command)
-
       return;
 
     // 桌面可继续查询旧无来源请求；主运行不能借相同命令 ID 冒领旧桌面或另一个运行的记录。
     const expectedOrigin = !command.origin && origin?.kind === 'local_desktop' ? undefined : origin;
 
     if (!same(command.origin, expectedOrigin) || command.fingerprint !== governanceCommandFingerprint(action, input, expectedOrigin))
-
       fail('GOVERNANCE_COMMAND_CONFLICT', '该命令已绑定其他请求，必须查询原回执');
 
     return this.Receipt(command, await this.Derive(tx.Journal))
@@ -254,19 +238,14 @@ export class ModuleGovernanceService implements KnowledgeGovernanceAuthority
   async Verify(current: Snapshot, preview: Preview, request: ChangeRequest, journal: JournalReader, intentId?: string): Promise<KnowledgeGovernanceBinding | undefined>
   {
     const derived = await this.Derive(journal),
-
       intent = intentId ? this.store.Find(intentId)?.intent : undefined,
-
       proposal = intent ? this.Proposal(intent.proposalId) : undefined,
-
       decision = proposal ? this.Decisions(proposal.proposalId).at(-1) : undefined;
 
     if (intentId && (!intent || !proposal || !decision))
-
       fail('GOVERNANCE_INTENT', '治理实施来源不完整');
 
     if (proposal)
-
       validateModuleGovernanceResponseSources(proposal, this.ResponseSources(), 'current');
 
     validateModuleGovernanceWrite({ workspaceId: this.owner.entry.id, currentRevision: current.revision, protections: derived.protections, currentFiles: current.files, projectedFiles: projected(current, preview), visibleModuleIds: visible({ ...current, validation: preview.validation }), request, ...(intent && proposal && decision ? { authorized: { intent, proposal, decision, latestDecisionRevision: decision.revision } } : {}) });
@@ -290,11 +269,9 @@ export class ModuleGovernanceService implements KnowledgeGovernanceAuthority
   ObserveFromMain(raw: unknown, source: protocol.ModuleGovernanceMainOrigin, signal: AbortSignal)
   {
     const input = checked(protocol.moduleGovernanceObserveInputSchema, raw),
-
       origin = protocol.moduleGovernanceMainOriginSchema.parse(source);
 
     if (origin.toolName !== 'cbim_governance_observe' || input.commandId !== moduleGovernanceMainCommandId(input.workspaceId, origin))
-
       fail('GOVERNANCE_IDENTITY', '观察与真实工具调用身份不一致');
 
     return this.ObserveWithOrigin(input, origin, signal)
@@ -316,11 +293,9 @@ export class ModuleGovernanceService implements KnowledgeGovernanceAuthority
   ProposeFromMain(raw: unknown, source: protocol.ModuleGovernanceMainOrigin, signal: AbortSignal)
   {
     const input = checked(protocol.moduleGovernanceProposeInputSchema, raw),
-
       origin = protocol.moduleGovernanceMainOriginSchema.parse(source);
 
     if (origin.toolName !== 'cbim_governance_propose' || input.commandId !== moduleGovernanceMainCommandId(input.workspaceId, origin))
-
       fail('GOVERNANCE_IDENTITY', '提案与真实工具调用身份不一致');
 
     return this.ProposeWithOrigin(input, origin, signal)
@@ -361,7 +336,6 @@ export class ModuleGovernanceService implements KnowledgeGovernanceAuthority
     return this.owner.Governed(async tx =>
     {
       if (input.workspaceId !== this.owner.entry.id)
-
         fail('GOVERNANCE_IDENTITY', '治理查询工作区不一致');
 
       const command = this.store.Find(input.commandId);
@@ -380,10 +354,10 @@ export class ModuleGovernanceService implements KnowledgeGovernanceAuthority
         catch (error: any)
         {
           if (error.code !== 'IDEMPOTENCY')
-
             throw error
         }
       }
+
       return protocol.moduleGovernanceUnacceptedSchema.parse({ identity: { workspaceId: input.workspaceId, instanceId: input.instanceId }, commandId: input.commandId, action: input.action, unaccepted });
     })
   }
@@ -410,29 +384,21 @@ export class ModuleGovernanceService implements KnowledgeGovernanceAuthority
     this.owner.Assert(input);
 
     const snapshot = await tx.Snapshot(),
-
       derived = await this.Derive(tx.Journal),
-
       protection = derived.protections.find(item => item.moduleId === input.moduleId),
-
       commands = this.store.All(),
-
       observations = commands.flatMap(command => command.receipt.action === 'observe' && command.receipt.record.protectionId === protection?.protectionId ? [command.receipt.record] : []),
-
       proposals = commands.flatMap(command => command.receipt.action === 'propose' && command.receipt.record.moduleId === input.moduleId ? [command.receipt.record] : []),
-
       selected = input.proposalId ? proposals.find(item => item.proposalId === input.proposalId) : undefined,
-
       selectedObservation = input.observationId ? observations.find(item => item.observationId === input.observationId) : undefined;
 
     if (input.proposalId && !selected || input.observationId && !selectedObservation)
-
       fail('GOVERNANCE_IDENTITY', '所选治理记录不属于此模块');
 
     const issues: protocol.ModuleGovernanceList['issues'] = [];
 
     if (protection)
-
+    {
       try
       {
         this.Baseline(snapshot, protection)
@@ -441,6 +407,8 @@ export class ModuleGovernanceService implements KnowledgeGovernanceAuthority
       {
         issues.push({ severity: 'error', code: String(error.code ?? 'GOVERNANCE_STALE'), message: String(error.message) })
       }
+    }
+
     // 过期仅是当前视图，不改提案 basis、原评价或已经提交的真实历史。
     const responseStates = selected?.respondsTo ? validateModuleGovernanceResponseSources(selected, this.ResponseSources(), 'historical') : undefined;
 

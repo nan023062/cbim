@@ -33,17 +33,13 @@ export function createGovernancePendingStore(storage: Pick<Storage, 'getItem' | 
     Save(raw: GovernancePending)
     {
       const pending = governancePendingSchema.parse(raw),
-
         data = load(),
-
         old = data.records.find(v => v.workspaceId === pending.workspaceId);
 
       if (old && !equal(old, pending))
-
         throw Error('此工作区有尚未确认的治理操作，请先查询原命令');
 
       if (data.records.some(v => v.commandId === pending.commandId && v.workspaceId !== pending.workspaceId))
-
         throw Error('治理命令已属于另一个工作区');
 
       write(old ? data.records : [...data.records, pending])
@@ -52,17 +48,13 @@ export function createGovernancePendingStore(storage: Pick<Storage, 'getItem' | 
     Remove(raw: GovernancePending)
     {
       const pending = governancePendingSchema.parse(raw),
-
         data = load(),
-
         old = data.records.find(v => v.workspaceId === pending.workspaceId);
 
       if (!old)
-
         return;
 
       if (!equal(old, pending))
-
         throw Error('原治理请求已变化，迟到结果不能清除新请求');
 
       write(data.records.filter(v => v.workspaceId !== pending.workspaceId))
@@ -74,31 +66,24 @@ export function createGovernancePendingStore(storage: Pick<Storage, 'getItem' | 
 export function checkedGovernanceReceipt(raw: unknown, pending: GovernancePending)
 {
   const receipt = moduleGovernanceReceiptSchema.parse(raw),
-
     record = receipt.record;
 
   if (receipt.identity.workspaceId !== pending.workspaceId || receipt.identity.instanceId !== pending.instanceId || receipt.commandId !== pending.commandId || receipt.action !== pending.action || record.workspaceId !== pending.workspaceId)
-
     throw Error('治理回执与原命令身份不一致，请核实原命令');
 
   const recordId = receipt.action === 'register' ? receipt.record.protectionId : receipt.action === 'observe' ? receipt.record.observationId : receipt.action === 'propose' ? receipt.record.proposalId : receipt.action === 'decide' ? receipt.record.decisionId : receipt.record.intentId;
 
   if (recordId !== pending.commandId)
-
     throw Error('治理实体不是原命令产生的记录');
 
   if (receipt.action === 'apply' && (receipt.record.requestId !== pending.commandId || receipt.record.state === 'committed' && (receipt.record.result.requestId !== pending.commandId || receipt.record.result.workspaceId !== pending.workspaceId || receipt.record.result.instanceId !== pending.instanceId)))
-
     throw Error('原知识事务回执与治理实施身份不一致');
 
   if ('moduleId' in record && record.moduleId !== pending.moduleId)
-
     throw Error('治理回执模块不匹配');
 
   for (const [key, value] of Object.entries(pending.expected ?? {}))
-
     if (value !== undefined && (record as Record<string, unknown>)[key] !== value)
-
       throw Error('治理回执目标或依据不匹配');
 
   return receipt;
@@ -110,7 +95,6 @@ export function checkedGovernanceUnaccepted(raw: unknown, pending: GovernancePen
   const result = moduleGovernanceUnacceptedSchema.parse(raw);
 
   if (result.identity.workspaceId !== pending.workspaceId || result.identity.instanceId !== pending.instanceId || result.commandId !== pending.commandId || result.action !== pending.action || !result.unaccepted)
-
     throw Error('尚不能证明原治理命令未受理，待确认记录继续保留');
 
   return result;
@@ -120,7 +104,6 @@ export function checkedGovernanceUnaccepted(raw: unknown, pending: GovernancePen
 export function isFirstGovernanceRejection(error: unknown)
 {
   const text = error instanceof Error ? error.message : String(error),
-
     code = /^(?:Error: )?([A-Z][A-Z_]+):/.exec(text)?.[1];
 
   return code !== undefined && new Set(['GOVERNANCE_INPUT', 'GOVERNANCE_IDENTITY', 'GOVERNANCE_PROTECTION', 'GOVERNANCE_EXISTS', 'GOVERNANCE_SOURCE', 'GOVERNANCE_OBSERVATION', 'GOVERNANCE_PROPOSAL', 'GOVERNANCE_STALE', 'GOVERNANCE_DRIFT', 'GOVERNANCE_VALIDATION', 'GOVERNANCE_PROTECTED', 'GOVERNANCE_DECISION', 'GOVERNANCE_FEEDBACK_STALE', 'GOVERNANCE_FEEDBACK_SOURCE', 'GOVERNANCE_ASSESSMENT', 'GOVERNANCE_LIMIT', 'GOVERNANCE_INTENT', 'STALE_INSTANCE', 'NOT_RUNNING', 'SHUTTING_DOWN']).has(code);

@@ -14,7 +14,6 @@ import { ContinuationSourceMenu } from './ContinuationSourceMenu';
 export function ScopeContinuationForm({ state }: { state: ScopeContinuationView })
 {
   const attempt = state.record?.attempt,
-
     phase = attempt?.phase;
 
   return <div className="scope-continuation" data-testid="scope-continuation" data-continuation-phase={state.pending ? 'pending' : phase ?? 'draft'}>

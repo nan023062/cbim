@@ -9,23 +9,19 @@ export async function pastedImage(file: File)
   const mimeType = formats.find(type => type === file.type);
 
   if (!mimeType)
-
     throw Error('剪贴板图片格式不支持，请使用 PNG、JPEG、GIF 或 WebP');
 
   if (!file.size || file.size > 5 * 1024 * 1024)
-
     throw Error('单张剪贴板图片需小于 5 MiB');
 
   const bytes = new Uint8Array(await file.arrayBuffer());
 
   if (bytes.length !== file.size)
-
     throw Error('剪贴板图片读取不完整');
 
   let binary = '';
 
   for (let offset = 0; offset < bytes.length; offset += 8192)
-
     binary += String.fromCharCode(...bytes.subarray(offset, offset + 8192));
 
   return { name: (file.name || '剪贴板图片.png').slice(0, 255), mimeType, data: btoa(binary) };

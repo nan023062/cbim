@@ -16,7 +16,6 @@ import { verifyRuntimeManifest, runtimeRelativePath, type ColdRuntime, type Runt
 export function verifyBootResources(root: string, files: RuntimeFile[])
 {
   if (files.reduce((sum, file) => sum + file.bytes, 0) > 256 * 1024 * 1024 || files.some(file => file.bytes > 64 * 1024 * 1024))
-
     throw Error('启动资源超过冷壳支持的上限');
 
   const expected = new Map(files.map(file => [file.path, file]));
@@ -24,7 +23,6 @@ export function verifyBootResources(root: string, files: RuntimeFile[])
   let count = 0;
 
   if (fs.lstatSync(root).isSymbolicLink())
-
     throw Error('资源目录不能是链接');
 
   function walk(directory: string)
@@ -32,31 +30,27 @@ export function verifyBootResources(root: string, files: RuntimeFile[])
     for (const entry of fs.readdirSync(directory, { withFileTypes: true }))
     {
       const file = path.join(directory, entry.name),
-
         relative = path.relative(root, file).split(path.sep).join('/');
 
       runtimeRelativePath(relative);
 
       if (entry.isSymbolicLink())
-
         throw Error('资源目录包含链接');
 
       if (entry.isDirectory())
       {
         if (!files.some(item => item.path.startsWith(relative + '/')))
-
           throw Error('资源目录包含多余内容');
 
         walk(file);
 
         continue;
       }
-      const target = expected.get(relative),
 
+      const target = expected.get(relative),
         stat = fs.lstatSync(file);
 
       if (!target || !stat.isFile() || stat.nlink > 1 || stat.size !== target.bytes || createHash('sha256').update(fs.readFileSync(file)).digest('hex') !== target.sha256)
-
         throw Error('启动资源校验失败');
 
       count++;
@@ -66,7 +60,6 @@ export function verifyBootResources(root: string, files: RuntimeFile[])
   walk(root);
 
   if (count !== files.length)
-
     throw Error('启动资源不完整');
 }
 
@@ -75,7 +68,6 @@ function readJson(file: string)
   const stat = fs.lstatSync(file);
 
   if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 16 * 1024 * 1024)
-
     throw Error('资源清单文件无效');
 
   return JSON.parse(fs.readFileSync(file, 'utf8'))
@@ -106,7 +98,6 @@ export function selectBootResources(cold: ColdRuntime, cacheRoot: string, bundle
   const state = journal.Read();
 
   if (state.pending?.stage === 'data-access')
-
     throw Error('RESOURCE_RECOVERY_REQUIRED：上次更新已访问用户数据但未确认启动，请从恢复窗口重试原候选。');
 
   function resolve(digest: string)
@@ -114,7 +105,6 @@ export function selectBootResources(cold: ColdRuntime, cacheRoot: string, bundle
     const checked = digest === initial.digest ? initial : verifyRuntimeManifest(readJson(path.join(cacheRoot, 'manifests', digest + '.json')), cold, { installed: true });
 
     if (checked.digest !== digest)
-
       throw Error('启动资源身份不符');
 
     const root = digest === initial.digest ? bundledRoot : path.join(cacheRoot, 'packages', checked.manifest.resource.sha256);
@@ -125,7 +115,6 @@ export function selectBootResources(cold: ColdRuntime, cacheRoot: string, bundle
   }
 
   let selected: ReturnType<typeof resolve>,
-
     pending = !!state.pending;
 
   try
@@ -135,7 +124,6 @@ export function selectBootResources(cold: ColdRuntime, cacheRoot: string, bundle
   catch (error)
   {
     if (!state.pending || state.pending.dataAccessed)
-
       throw error;
 
     journal.RejectBeforeData(state.pending.digest);
@@ -144,5 +132,6 @@ export function selectBootResources(cold: ColdRuntime, cacheRoot: string, bundle
 
     pending = false;
   }
+
   return { root: selected.root, manifest: selected.manifest, envelope: selected.envelope, digest: selected.digest, journal, pending };
 }

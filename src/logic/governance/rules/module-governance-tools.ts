@@ -32,15 +32,11 @@ export function isGovernanceToolName(name: string): name is GovernanceToolName
 const utf8 = (text: string) => new TextEncoder().encode(text).length;
 
 const uuid = z.string().uuid(),
-
   digest = z.string().regex(/^[a-f0-9]{64}$/),
-
   count = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),
-
   positive = count.refine(value => value > 0);
 
 const id = z.string().regex(/^[a-zA-Z0-9_-]{1,100}$/),
-
   timestamp = z.string().datetime();
 
 const moduleId = z.string().max(1024).regex(/^\.cbim\/workspace\/(?:[a-z0-9_]+\/)*[a-z0-9_]+$/);
@@ -48,7 +44,6 @@ const moduleId = z.string().max(1024).regex(/^\.cbim\/workspace\/(?:[a-z0-9_]+\/
 const path = z.string().max(2048).regex(/^\.cbim\/workspace\/(?:[a-z0-9_]+\/)+module\.md$/);
 
 const note = z.string().max(1024).refine(value => value.trim().length > 0),
-
   shortNote = z.string().max(512).refine(value => value.trim().length > 0);
 
 const body = z.string().max(governanceToolBodyLimit).refine(value => utf8(value) <= governanceToolBodyLimit, '模型治理正文超过 16 KiB，请使用桌面完整处理');
@@ -136,7 +131,6 @@ export interface GovernanceToolsPort
 function textPreview(text: string): z.infer<typeof preview>
 {
   const chars = Array.from(text),
-
     shown = chars.slice(0, 256).join('');
 
   return { text: shown, totalCharacters: chars.length, truncated: chars.length > 256 }
@@ -151,7 +145,6 @@ function recent<T>(items: readonly T[])
 export function projectGovernanceBody(text: string, hash: string): GovernanceBodyView
 {
   if (contentHash(text) !== hash)
-
     fail('GOVERNANCE_OUTPUT', '治理原正文与内容指纹不一致');
 
   const bytes = utf8(text);
@@ -163,11 +156,9 @@ export function projectGovernanceBody(text: string, hash: string): GovernanceBod
 export function projectGovernanceGet(raw: ModuleGovernanceList, rawIdentity: GovernanceToolIdentity): GovernanceGetOutput
 {
   const value = moduleGovernanceListSchema.parse(raw),
-
     identity = governanceToolIdentitySchema.parse(rawIdentity);
 
   if (value.identity.workspaceId !== identity.workspaceId)
-
     fail('GOVERNANCE_IDENTITY', '治理读取不属于本轮工作区');
 
   const observation = (item: ModuleGovernanceList['observations'][number]) => ({ observationId: item.observationId, protectionId: item.protectionId, protectionRevision: item.protectionRevision, knowledgeRevision: item.knowledgeRevision, overview: item.overview, statement: textPreview(item.statement), observedAt: item.observedAt, ...(item.origin ? { origin: item.origin } : {}) });
@@ -175,13 +166,11 @@ export function projectGovernanceGet(raw: ModuleGovernanceList, rawIdentity: Gov
   const proposal = (item: ModuleGovernanceList['proposals'][number]) => ({ ...item, reason: textPreview(item.reason) });
 
   const selected = value.selected,
-
     chosen = value.selectedObservation;
 
   const output: GovernanceGetOutput = { identity, moduleId: value.moduleId, knowledgeRevision: value.knowledgeRevision, ...(value.protection ? { protection: { protectionId: value.protection.protectionId, revision: value.protection.revision, definitionHash: value.protection.definition.hash, overview: value.protection.overview } } : {}), observations: recent(value.observations.map(observation)), proposals: recent(value.proposals.map(proposal)), issues: recent(value.issues.map(issue => ({ severity: issue.severity, code: textPreview(issue.code), message: textPreview(issue.message) }))) };
 
   if (chosen)
-
     output.selectedObservation = { ...observation({ ...chosen, overview: { path: chosen.overview.path, hash: chosen.overview.hash } }), body: projectGovernanceBody(chosen.overview.text, chosen.overview.hash), structural: chosen.validation.structural };
 
   if (selected)
@@ -190,18 +179,14 @@ export function projectGovernanceGet(raw: ModuleGovernanceList, rawIdentity: Gov
 
     output.selectedProposal = {
       ...proposal({ proposalId: p.proposalId, protectionId: p.protectionId, observationId: p.observationId, basis: p.basis, reason: p.reason, createdAt: p.createdAt, decisionRevision: selected.decisions.at(-1)?.revision ?? 0, ...(p.origin ? { origin: p.origin } : {}) }),
-
       base: p.base, path: p.change.path, before: projectGovernanceBody(p.change.beforeText, p.change.beforeHash), after: projectGovernanceBody(p.change.afterText, p.change.afterHash),
-
       alternatives: recent(p.alternatives.map(textPreview)), invariants: recent(p.invariants.map(textPreview)), rollbackNotes: textPreview(p.rollbackNotes),
-
       ...(p.respondsTo ? { respondsTo: p.respondsTo } : {}), ...(selected.responseStates ? { responseStates: selected.responseStates.map(state => ({ ...state, comment: textPreview(state.comment) })) } : {}),
-
       decisions: recent(selected.decisions.map(d => ({ decisionId: d.decisionId, revision: d.revision, decision: d.decision, comment: textPreview(d.comment), recordedAt: d.recordedAt, ...(d.feedback ? { feedback: d.feedback } : {}), ...(d.assessments ? { assessments: d.assessments } : {}) }))),
-
       applications: recent(selected.applications.map(a => ({ intentId: a.intentId, decisionId: a.decisionId, state: a.state, createdAt: a.createdAt }))),
     };
   }
+
   const result = governanceGetOutputSchema.parse(output);
 
   // 这里只量度已经由严格 Schema 复制的普通 DTO；真正发送的单次编码仍由工具包装层校验。
@@ -213,13 +198,13 @@ export function projectGovernanceGet(raw: ModuleGovernanceList, rawIdentity: Gov
     const group = groups.filter(item => item.items.length).sort((a, b) => b.items.length - a.items.length)[0];
 
     if (!group)
-
       fail('GOVERNANCE_OUTPUT', '治理选定记录超过模型输出上限，请使用桌面完整处理');
 
     group.items.shift();
 
     group.truncated = group.total > group.items.length;
   }
+
   return result;
 }
 
@@ -229,13 +214,11 @@ export function projectGovernanceReceipt(raw: ModuleGovernanceReceipt | undefine
   const identity = governanceToolIdentitySchema.parse(rawIdentity);
 
   if (!raw)
-
     return governanceReceiptOutputSchema.parse({ identity, status: 'unknown', commandId });
 
   const value = moduleGovernanceReceiptSchema.parse(raw);
 
   if (value.identity.workspaceId !== identity.workspaceId || value.commandId !== commandId || (value.action !== 'observe' && value.action !== 'propose') || value.record.origin?.kind !== 'main_agent' || value.record.origin.rootSessionId !== identity.rootSessionId)
-
     fail('GOVERNANCE_IDENTITY', '治理回执不属于原主调用');
 
   validateModuleGovernanceRecordOrigin(value.record);
@@ -248,6 +231,7 @@ export function projectGovernanceReceipt(raw: ModuleGovernanceReceipt | undefine
 
     return governanceRecordedReceiptSchema.parse({ ...common, record: { observationId: r.observationId, protectionId: r.protectionId, protectionRevision: r.protectionRevision, knowledgeRevision: r.knowledgeRevision, overview: { path: r.overview.path, hash: r.overview.hash }, utf8Bytes: utf8(r.overview.text), observedAt: r.observedAt, origin: r.origin } });
   }
+
   const r = value.record;
 
   return governanceRecordedReceiptSchema.parse({ ...common, record: { proposalId: r.proposalId, moduleId: r.moduleId, protectionId: r.protectionId, observationId: r.observationId, basis: r.basis, base: r.base, change: { path: r.change.path, beforeHash: r.change.beforeHash, afterHash: r.change.afterHash }, createdAt: r.createdAt, origin: r.origin, ...(r.respondsTo ? { respondsTo: r.respondsTo } : {}) } });

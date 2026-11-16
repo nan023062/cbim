@@ -25,7 +25,6 @@ const equal = (a: unknown, b: unknown) => moduleOwnershipCanonical(a) === module
 function check(condition: unknown, code: string, message: string): asserts condition
 {
   if (!condition)
-
     fail(code, message)
 }
 
@@ -37,11 +36,11 @@ export function assertModuleOwnershipExpectedBinding(change: ModuleOwnershipChan
   if (change.expectedBinding === null && previous)
   {
     if (change.nextOwner?.memberId === previous.ownerMemberId)
-
       fail('OWNERSHIP_NO_CHANGE', '模块已绑定该岗位，无需重复设置。请调用 cbim_module_owner_inspect 查询 execution.groups；若来源变化，请明确采纳当前来源。');
 
     fail('OWNERSHIP_ALREADY_EXISTS', '模块已有责任记录。请调用 cbim_module_owner_inspect 读取 binding，将 bindingId、revision、ownerMemberId 作为 expectedBinding 后再预览更换或解除；不要继续传 null。');
   }
+
   const actual = previous ? { bindingId: previous.bindingId, revision: previous.revision, ownerMemberId: previous.ownerMemberId } : null;
 
   check(equal(change.expectedBinding, actual), 'OWNERSHIP_BINDING_STALE', '模块责任已被修改，原 expectedBinding 已过期。请重新 inspect 读取当前 binding 并核对变更意图，再预览；不要原样重试。');
@@ -104,7 +103,6 @@ export function moduleOwnershipBasis(facts: ModuleOwnershipBasisFacts): string
 export function moduleOwnershipReceipt(event: ModuleOwnershipChange): ModuleOwnershipReceipt
 {
   const { request, next } = event,
-
     previousOwnerMemberId = request.change.expectedBinding?.ownerMemberId ?? null;
 
   return { identity: { workspaceId: request.workspaceId, instanceId: request.instanceId }, commandId: request.commandId, action: isModuleOwnershipSourceAdoption(request.change) ? 'adopt_source' : next.ownerMemberId === null ? 'unassign' : previousOwnerMemberId === null ? 'assign' : 'replace', actor: structuredClone(event.actor), changeId: event.changeId, moduleId: next.moduleId, bindingId: next.bindingId, previousRevision: event.previousRevision, revision: next.revision, previousOwnerMemberId, ownerMemberId: next.ownerMemberId, ownershipCursor: structuredClone(event.ownershipCursor), basis: request.expectedBasis, bindingHash: moduleOwnershipHash(next), committedAt: event.committedAt };
@@ -132,19 +130,13 @@ export function applyModuleOwnershipChange(state: ModuleOwnershipRegistry, raw: 
   check(valid.success, 'OWNERSHIP_AUDIT', '责任审计结构无效');
 
   const event = raw,
-
     request = event.request,
-
     input = request.change,
-
     next = event.next;
 
   const heads = state.moduleOwnerships ?? [],
-
     history = state.ownershipChanges ?? [],
-
     cursor = state.ownershipCursor ?? null,
-
     members = state.workspaceMembers ?? [];
 
   check(request.workspaceId === state.workspaceId, 'OWNERSHIP_IDENTITY', '责任操作不属于本工作区');
@@ -158,7 +150,6 @@ export function applyModuleOwnershipChange(state: ModuleOwnershipRegistry, raw: 
   check(!history.some(item => item.changeId === event.changeId || item.request.commandId === request.commandId), 'OWNERSHIP_AUDIT', '责任变更或命令身份重复');
 
   if (event.actor.kind === 'main_agent')
-
     check(request.commandId === moduleOwnershipMainCommandId(state.workspaceId, event.actor), 'OWNERSHIP_ACTOR', '主工具原命令与真实来源不一致');
 
   const previous = heads.find(item => item.moduleId === input.moduleId) ?? null;
@@ -170,9 +161,7 @@ export function applyModuleOwnershipChange(state: ModuleOwnershipRegistry, raw: 
   check(previous ? next.bindingId === previous.bindingId && next.createdAt === previous.createdAt && Date.parse(next.updatedAt) >= Date.parse(previous.updatedAt) : next.createdAt === event.committedAt && !heads.some(item => item.bindingId === next.bindingId), 'OWNERSHIP_AUDIT', '责任身份、创建时间或历史被改写');
 
   const adopting = isModuleOwnershipSourceAdoption(input),
-
     previousOwner = previous?.ownerMemberId ? members.find(member => member.memberId === previous.ownerMemberId) : undefined,
-
     nextOwner = adopting ? previousOwner : input.nextOwner ? members.find(member => member.memberId === input.nextOwner!.memberId) : undefined;
 
   if (input.nextOwner || adopting)
@@ -180,17 +169,14 @@ export function applyModuleOwnershipChange(state: ModuleOwnershipRegistry, raw: 
     check(nextOwner && nextOwner.workspaceId === state.workspaceId, 'OWNERSHIP_MEMBER_CHANGED', '明确目标岗位不存在或不属于工作区');
 
     if (input.nextOwner)
-
       check(nextOwner.revision === input.nextOwner.expectedRevision, 'OWNERSHIP_MEMBER_CHANGED', '目标岗位版本已变化');
 
     check(nextOwner.state === 'active', 'OWNERSHIP_MEMBER_UNAVAILABLE', '只有启用岗位可以作为新负责人');
 
     if (adopting)
-
       check(previous && event.sourceSelection && next.sourceRef && !equal(previous.sourceRef, next.sourceRef), 'OWNERSHIP_NO_CHANGE', '原负责人来源没有可采纳变化');
   }
   else
-
     check(previous && equal(next.observedModule, previous.observedModule) && equal(next.sourceRef, previous.sourceRef) && event.sourceSelection === undefined, 'OWNERSHIP_AUDIT', '解除必须保留原模块观察及来源，不伪造新来源');
 
   check(equal(event.impact, impact), 'OWNERSHIP_BASIS_STALE', '相关任务影响已经变化');

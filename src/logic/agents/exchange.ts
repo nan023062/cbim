@@ -9,7 +9,6 @@ import type { ToolResult } from '../tools/rules/results';
 function deferred<T>()
 {
   let resolve!: (value: T) => void,
-
     reject!: (error: unknown) => void;
 
   const promise = new Promise<T>((a, b) => { resolve = a; reject = b });
@@ -70,13 +69,10 @@ export class AgentCallExchange
     signal.throwIfAborted();
 
     if (this.ended || this.pending)
-
       throw error('AGENT_QUESTION_BUSY', '调用已结束或仍有未答问题');
 
     const input = questionInput.parse(raw),
-
       id = String(++this.sequence),
-
       answer = deferred<QuestionResult>();
 
     this.pending = { id, input, answer };
@@ -103,7 +99,6 @@ export class AgentCallExchange
       signal.removeEventListener('abort', abort);
 
       if (this.pending?.id === id)
-
         this.pending = undefined
     }
   }
@@ -112,23 +107,20 @@ export class AgentCallExchange
   Reply(questionId: string, raw: unknown): Promise<ToolResult>
   {
     const fingerprint = JSON.stringify(raw),
-
       old = this.replies.get(questionId);
 
     if (old)
     {
       if (old.fingerprint !== fingerprint)
-
         return Promise.reject(error('AGENT_REPLY_CONFLICT', '原问题已收到不同答案'));
 
       return old.result
     }
-    if (this.ended || this.pending?.id !== questionId)
 
+    if (this.ended || this.pending?.id !== questionId)
       return Promise.reject(error('AGENT_QUESTION_STALE', '原问题不存在或已结束，未重建执行'));
 
     const pending = this.pending,
-
       answer = questionResultForInput(pending.input).parse(raw);
 
     const next = deferred<ToolResult>();
@@ -139,7 +131,6 @@ export class AgentCallExchange
       await this.publish('running', questionId, undefined, structuredClone(answer));
 
       if (this.ended || this.pending !== pending)
-
         throw error('AGENT_QUESTION_STALE', '原问题已取消');
 
       this.frame = next;

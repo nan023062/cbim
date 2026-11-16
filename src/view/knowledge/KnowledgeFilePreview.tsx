@@ -19,11 +19,9 @@ import './knowledge-files.css';
 export function KnowledgeFilePreview({ snapshot, path, onSaved, onDirtyChange }: { snapshot: Snapshot; path: string; onSaved?: () => Promise<void>; onDirtyChange?: (dirty: boolean) => void })
 {
   const file = snapshot.files.find(item => item.path === path),
-
     [editing, setEditing] = useState(false);
 
   if (!file)
-
     return <p>请选择知识文件。</p>;
 
   const issues = snapshot.validation?.issues.filter(issue => issue.path === path || issue.path === path.replace(/\/[^/]+$/, '')) ?? [];
@@ -40,25 +38,17 @@ export function KnowledgeFilePreview({ snapshot, path, onSaved, onDirtyChange }:
 function FileEditor({ snapshot, path, onDirtyChange, onClose, onSaved }: { snapshot: Snapshot; path: string; onDirtyChange?: (dirty: boolean) => void; onClose: () => void; onSaved?: () => Promise<void> })
 {
   const base = useRef(snapshot).current,
-
     original = base.files.find(file => file.path === path)!.text;
 
   const [draft, setDraft] = useState(original),
-
     [preview, setPreview] = useState<Preview>(),
-
     [checking, setChecking] = useState(true),
-
     [error, setError] = useState(''),
-
     [saving, setSaving] = useState(false),
-
     [attempt, setAttempt] = useState<Preview>();
 
   const dirty = draft !== original,
-
     version = useRef(0),
-
     alive = useRef(true);
 
   useEffect(() => { alive.current = true; return () => { alive.current = false; onDirtyChange?.(false) } }, []);
@@ -72,7 +62,6 @@ function FileEditor({ snapshot, path, onDirtyChange, onClose, onSaved }: { snaps
     const selected = attempt ?? preview;
 
     if (!selected || saving)
-
       return;
 
     setAttempt(selected);
@@ -94,13 +83,11 @@ function FileEditor({ snapshot, path, onDirtyChange, onClose, onSaved }: { snaps
     catch (cause)
     {
       if (alive.current)
-
         setError(`提交或刷新未确认：${cause instanceof Error ? cause.message : String(cause)}。保留原请求 ${selected.request.requestId}，请核实后使用原事务重试。`)
     }
     finally
     {
       if (alive.current)
-
         setSaving(false)
     }
   }
@@ -108,7 +95,6 @@ function FileEditor({ snapshot, path, onDirtyChange, onClose, onSaved }: { snaps
   function close()
   {
     if (!saving && (!dirty && !attempt || confirm('保留已有提交事实，关闭并丢弃本机草稿？')))
-
       onClose()
   }
 

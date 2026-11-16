@@ -21,7 +21,6 @@ import { artifactSources, artifactSucceededCall, verifyArtifactBaselines, type A
 import { memberCheckpointInputSchema, memberCheckpointStagedSchema, memberCheckpointRecordSchema, memberCheckpointResultSchema, type MemberCheckpointInput, type MemberCheckpointStaged, type MemberCheckpointRecord } from './member-checkpoint';
 
 const name = 'cbim_task_checkpoint',
-
   eventName = 'task.checkpoint_requested';
 
 const maintenance = new Set(['cbim_task_plan', 'cbim_task_step', 'cbim_task_inspect', 'cbim_task_artifact_capture']);
@@ -31,7 +30,6 @@ type Binding = MemberCheckpointStaged['binding'];
 function check(value: unknown, message: string): asserts value
 {
   if (!value)
-
     fail('MEMBER_CHECKPOINT_INVALID', message)
 }
 
@@ -46,7 +44,6 @@ function closedTools(events: readonly ArtifactEvidenceEvent[], binding: Binding,
   const groups = new Map<string, ArtifactEvidenceEvent[]>();
 
   for (const event of events)
-
     if (['tool.proposed', 'tool.allowed', 'tool.denied', 'tool.finished', 'tool.started'].includes(event.type))
     {
       const id = event.data?.id;
@@ -55,10 +52,10 @@ function closedTools(events: readonly ArtifactEvidenceEvent[], binding: Binding,
 
       groups.set(id, [...(groups.get(id) ?? []), event]);
     }
+
   for (const [id, items] of groups)
   {
     if (id === pendingId)
-
       continue;
 
     if (items.some(event => event.type === 'tool.allowed'))
@@ -67,16 +64,14 @@ function closedTools(events: readonly ArtifactEvidenceEvent[], binding: Binding,
 
       continue
     }
+
     const proposed = items.filter(event => event.type === 'tool.proposed'),
-
       denied = items.filter(event => event.type === 'tool.denied'),
-
       finished = items.filter(event => event.type === 'tool.finished');
 
     check(proposed.length === 1 && denied.length === 1 && finished.length <= 1, '本轮存在未结束、孤立或重复的工具调用');
 
     const p = proposed[0],
-
       d = denied[0];
 
     check(p.seq < d.seq && typeof p.data.name === 'string' && d.data.name === p.data.name && d.data.allow === false && equal(p.data.input, d.data.input), '工具否决与原调用不一致');
@@ -84,19 +79,16 @@ function closedTools(events: readonly ArtifactEvidenceEvent[], binding: Binding,
     check(p.data.input && typeof p.data.input === 'object' && !Array.isArray(p.data.input), '工具否决缺少结构化原参数');
 
     const call = { id, name: p.data.name, input: p.data.input as Record<string, unknown> },
-
       decision = { allow: false, effects: d.data.effects as ToolReceipt['effects'] | undefined, scope: d.data.scope as ToolReceipt['scope'] | undefined };
 
     for (const event of [d, ...finished])
     {
       const r = event.data.receipt as ToolReceipt | undefined,
-
         expected = toolReceipt({ workspaceId: binding.workspaceId, taskId: binding.taskId, runId: binding.runId }, call, decision, 'denied', event.type === 'tool.finished' ? event.data.result : undefined);
 
       check(r && typeof r.recordedAt === 'string' && Number.isFinite(Date.parse(r.recordedAt)) && equal({ ...r, recordedAt: expected.recordedAt }, expected), '工具否决缺少匹配的可信回执');
 
       if (event.type === 'tool.finished')
-
         check(event.seq > d.seq && event.data.name === p.data.name, '被拒绝工具的结束记录不一致');
     }
   }
@@ -123,9 +115,7 @@ export function validateCheckpointEligibility(events: readonly ArtifactEvidenceE
   check(progress?.version === input.expectedTaskProgressVersion && progress.state === 'executing' && !progress.delivery, '检查点必须保留本轮未交付的当前任务计划');
 
   const verified = verifyArtifactBaselines(events, binding, knowledgeRevision, normalizePath, input.baselineId),
-
     baseline = verified.records.find(record => record.baseline.baselineId === input.baselineId),
-
     ref = verified.refs.find(record => record.baselineId === input.baselineId);
 
   check(baseline && ref && !ref.invalidated && verified.impact === 'selected_files_only' && !verified.issues.length, '所选文件基线不完整、已失效或含未知影响');
@@ -133,13 +123,11 @@ export function validateCheckpointEligibility(events: readonly ArtifactEvidenceE
   check(baseline.baseline.progressVersion === input.expectedTaskProgressVersion, '任务进度已离开文件采集版本，请重新采集');
 
   const paths = new Set<string>(),
-
     ids = new Set<string>();
 
   for (const event of events)
   {
     if (event.type !== 'tool.allowed')
-
       continue;
 
     const id = event.data.id;
@@ -154,8 +142,8 @@ export function validateCheckpointEligibility(events: readonly ArtifactEvidenceE
 
       continue
     }
-    const call = artifactSucceededCall(events, binding, id),
 
+    const call = artifactSucceededCall(events, binding, id),
       tool = call.receipt.toolName;
 
     // 仓库正文即使字面看似文件或维护回执，也不能纳入同实例续执行的本地文件闭包。
@@ -170,9 +158,9 @@ export function validateCheckpointEligibility(events: readonly ArtifactEvidenceE
       check(call.receipt.effects.every(effect => effect === (tool === 'read' || tool === 'cbim_scoped_read' ? 'read' : 'business-write')), '文件来源包含未支持的额外副作用');
     }
     else
-
       check(maintenance.has(tool) && call.receipt.scope.kind === 'workspace' && call.receipt.effects.length === 1 && call.receipt.effects[0] === 'maintenance', '本轮含命令、目录扫描、外部来源或非白名单工具，不能安全续执行');
   }
+
   const files = new Set(baseline.baseline.files.map(file => normalizePath(file.relativePath)));
 
   check(paths.size === files.size && [...paths].every(path => files.has(path)), '文件基线必须覆盖本轮全部 read/write/edit 路径，不能只选输出文件');
@@ -190,7 +178,6 @@ export function verifyMemberCheckpoint(events: readonly ArtifactEvidenceEvent[],
   const requests = events.filter(event => event.type === eventName);
 
   if (!requests.length)
-
     return;
 
   check(requests.length === 1, '同一成员运行只允许一次检查点请求');
@@ -204,13 +191,11 @@ export function verifyMemberCheckpoint(events: readonly ArtifactEvidenceEvent[],
   closedTools(events, binding);
 
   const requested = requests[0],
-
     staged = memberCheckpointStagedSchema.parse(requested.data.checkpoint);
 
   check(equal(staged.binding, binding) && staged.knowledgeRevision === knowledgeRevision, '检查点固定身份或知识版本不一致');
 
   const call = artifactSucceededCall(events, binding, staged.toolCallId),
-
     input = memberCheckpointInputSchema.parse(call.allowed.data.input);
 
   check(call.receipt.toolName === name && equal(input, staged.input) && call.receipt.effects.length === 1 && call.receipt.effects[0] === 'maintenance' && call.receipt.scope.kind === 'workspace', '检查点成功回执与暂存请求不一致');

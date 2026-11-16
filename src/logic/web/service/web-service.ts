@@ -41,17 +41,14 @@ export class WebService implements WebToolsPort
     signal.throwIfAborted();
 
     const now = this.timing.Now(),
-
       next = Math.max(now, this.nextSearchAt);
 
     if (next - now > 5000)
-
       throw Error('WEB_RATE_LIMIT: 搜索排队超过 5 秒，请稍后重试');
 
     this.nextSearchAt = next + this.timing.interval;
 
     if (next > now)
-
       await this.timing.Wait(next - now, signal);
 
     signal.throwIfAborted();
@@ -61,9 +58,7 @@ export class WebService implements WebToolsPort
   async Search(raw: Parameters<WebToolsPort['Search']>[0], signal: AbortSignal)
   {
     const input = webSearchInput.parse(raw),
-
       key = this.settings.Resolve(),
-
       url = new URL('https://api.search.brave.com/res/v1/web/search');
 
     url.searchParams.set('q', input.query);
@@ -77,19 +72,15 @@ export class WebService implements WebToolsPort
     signal.throwIfAborted();
 
     if ([401, 403].includes(response.status))
-
       throw Error('WEB_SEARCH_AUTH: Brave 搜索认证失败，请在设置中核实密钥与订阅权限');
 
     if (response.status === 429)
-
       throw Error('WEB_RATE_LIMIT: 搜索服务限流，请稍后重试');
 
     if (response.status >= 400)
-
       throw Error(`WEB_HTTP_${response.status < 500 ? '4XX' : '5XX'}: 搜索返回 HTTP ${response.status}`);
 
     if (response.status < 200 || response.status >= 300)
-
       throw Error('WEB_REDIRECT: 搜索服务跳转未获允许');
 
     let data: z.infer<typeof resultsSchema>;
@@ -102,6 +93,7 @@ export class WebService implements WebToolsPort
     {
       throw Error('WEB_SEARCH_RESPONSE: 搜索服务返回格式无效')
     }
+
     const results = (data.web?.results ?? []).flatMap(item => { try { const url = publicUrl(item.url); return [{ title: item.title.slice(0, 500), url: url.href, snippet: (item.description ?? '').replace(/<[^>]+>/g, '').slice(0, 2000) }] } catch { return [] } }).slice(0, input.count ?? 5);
 
     return { provider: 'brave' as const, query: input.query, results, untrusted: true as const };

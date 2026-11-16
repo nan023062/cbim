@@ -58,23 +58,16 @@ export interface WorkspaceMemberFormProps
 export function WorkspaceMemberForm({ kind, member, agents, initialAgentId, models, target, nextState, disabled, onEdit, onPreview, onClose }: WorkspaceMemberFormProps)
 {
   const register = kind === 'register',
-
     editable = register || kind === 'update';
 
   const [name, setName] = useState(register ? '' : member?.name ?? ''),
-
     [position, setPosition] = useState(register ? '' : member?.position ?? ''),
-
     [instructions, setInstructions] = useState(register ? '' : member?.adaptation.instructions ?? '');
 
   const [references, setReferences] = useState(register ? '' : member?.adaptation.references.join('\n') ?? ''),
-
     [agent, setAgent] = useState(() => register && agents.some(item => item.id === initialAgentId) ? initialAgentId! : ''),
-
     [model, setModel] = useState<AgentModelSelection | null>(() => register ? agents.find(item => item.id === initialAgentId)?.runtime ?? null : null),
-
     [reason, setReason] = useState(''),
-
     [error, setError] = useState('');
 
   const change = (fn: () => void) => { onEdit(); setError(''); fn() };
@@ -86,7 +79,6 @@ export function WorkspaceMemberForm({ kind, member, agents, initialAgentId, mode
       const runtimePolicy = model ? { engine: model.engine, profileId: model.profileId, modelId: model.modelId } : undefined;
 
       if (model && !models?.profiles.some(p => p.id === model.profileId && providerSupportsEngine(model.engine, p, model.modelId) && p.models.some(m => m.enabled && m.id === model.modelId)))
-
         throw Error('所选引擎或模型不可用，请重新选择');
 
       const adaptation = { instructions, references: references.split('\n').map(line => line.trim()).filter(Boolean) };
@@ -96,7 +88,6 @@ export function WorkspaceMemberForm({ kind, member, agents, initialAgentId, mode
       if (register)
       {
         if (!runtimePolicy)
-
           throw Error('请明确选择岗位模型');
 
         input = { kind, agentId: agent, name, position, adaptation, runtimePolicy, reason }
@@ -104,23 +95,18 @@ export function WorkspaceMemberForm({ kind, member, agents, initialAgentId, mode
       else
       {
         if (!member)
-
           throw Error('请先读取岗位');
 
         const base = { kind, memberId: member.memberId, expectedRevision: member.revision, reason };
 
         if (kind === 'update')
-
           input = { ...base, patch: { ...(name !== member.name ? { name } : {}), ...(position !== member.position ? { position } : {}), ...(JSON.stringify(adaptation) !== JSON.stringify(member.adaptation) ? { adaptation } : {}), ...(runtimePolicy ? { runtimePolicy } : {}) } };
-
         else if (kind === 'adopt')
-
           input = { ...base, target };
-
         else
-
           input = { ...base, nextState }
       }
+
       await onPreview(workspaceMemberChangeInputSchema.parse(input));
     }
     catch (cause)

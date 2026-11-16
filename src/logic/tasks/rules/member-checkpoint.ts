@@ -8,11 +8,8 @@ import { z } from 'zod';
 export const memberCheckpointLimit = 16;
 
 const id = z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/),
-
   logical = z.string().min(1).max(512),
-
   seq = z.number().int().nonnegative().safe(),
-
   digest = z.string().regex(/^[a-f0-9]{64}$/);
 
 /** 模型只能引用本轮已确认的文件基线，不能指定路径、原生会话或恢复权限。 */

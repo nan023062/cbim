@@ -6,7 +6,6 @@
 import { z } from 'zod';
 
 const text = z.string().min(1),
-
   name = z.string().regex(/^cbim_[A-Za-z0-9_]+$/);
 
 export const toolEffectsSchema = z.array(z.enum(['read', 'preview', 'maintenance', 'business-write', 'knowledge-write', 'external-write', 'command'])).min(1).refine(values => new Set(values).size === values.length);

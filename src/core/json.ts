@@ -17,7 +17,6 @@ export function parseJson(text: string)
   catch (error)
   {
     if (error instanceof StrictJsonError)
-
       fail('JSON', error.message);
 
     throw error;

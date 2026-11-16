@@ -12,11 +12,8 @@ export const governanceWorkflow = (kind: GovernanceKind) => ({ title: kind === '
 export function useGovernanceLaunch({ workspaceId, kind, disabled, onStarted }: { workspaceId: string; kind: GovernanceKind; disabled?: boolean; onStarted?: (taskId: string, title: string) => void })
 {
   const epoch = useRef(0),
-
     gate = useRef(false),
-
     [state, setState] = useState<'ready' | 'starting' | 'started' | 'unknown'>('ready'),
-
     [message, setMessage] = useState('');
 
   useEffect(() => { epoch.current++; gate.current = false; setState('ready'); setMessage(''); return () => { epoch.current++ } }, [workspaceId, kind]);
@@ -24,7 +21,6 @@ export function useGovernanceLaunch({ workspaceId, kind, disabled, onStarted }: 
   async function start()
   {
     if (gate.current || disabled)
-
       return;
 
     gate.current = true;
@@ -40,11 +36,9 @@ export function useGovernanceLaunch({ workspaceId, kind, disabled, onStarted }: 
       const result = await window.cbim.call('loop.chat', { id: workspaceId, message: `请立即执行「${workflow.title}」工作流。先调用 ${workflow.tool} 读取流程，再核对当前工作区的真实知识与代码，在当前权限内完成有证据的治理和验证。`, attachments: [], options: { permission: 'ask', collaborationMode: 'team' } });
 
       if (generation !== epoch.current)
-
         return;
 
       if (!result || typeof result.taskId !== 'string')
-
         throw Error('启动回执缺少会话标识');
 
       setState('started');
@@ -56,7 +50,6 @@ export function useGovernanceLaunch({ workspaceId, kind, disabled, onStarted }: 
     catch (cause)
     {
       if (generation !== epoch.current)
-
         return;
 
       setState('unknown');

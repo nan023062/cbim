@@ -20,11 +20,9 @@ export async function runtimeAssetResponse(url: string, signal: AbortSignal)
     const parsed = new URL(url);
 
     if (parsed.protocol !== 'https:' || parsed.username || parsed.password || parsed.port || parsed.hash || !['github.com', 'release-assets.githubusercontent.com', 'objects.githubusercontent.com'].includes(parsed.hostname))
-
       throw Error('更新附件地址无效');
 
     if (parsed.hostname === 'github.com' && !parsed.pathname.startsWith('/nan023062/cbim/releases/download/'))
-
       throw Error('更新附件仓库无效');
 
     const response = await fetch(url, { signal, redirect: 'manual', credentials: 'omit', headers: { 'User-Agent': 'CBIM-runtime-updater' } });
@@ -36,21 +34,23 @@ export async function runtimeAssetResponse(url: string, signal: AbortSignal)
       await response.body?.cancel();
 
       if (!next)
-
         throw Error('更新附件跳转无效');
 
       url = new URL(next, url).href;
 
       continue;
     }
+
     if (response.status !== 200)
     {
       await response.body?.cancel();
 
       throw Object.assign(Error('无法读取更新附件'), { status: response.status });
     }
+
     return response;
   }
+
   throw Error('更新附件跳转过多');
 }
 
@@ -60,7 +60,6 @@ export async function downloadRuntimePackage(pkg: RuntimePackage, file: string, 
   const response = await runtimeAssetResponse(runtimePackageUrl(pkg), AbortSignal.any([signal, AbortSignal.timeout(30 * 60_000)]));
 
   if (!response.body)
-
     throw Error('更新附件为空');
 
   const declared = response.headers.get('content-length');
@@ -71,10 +70,9 @@ export async function downloadRuntimePackage(pkg: RuntimePackage, file: string, 
 
     throw Error('更新附件长度不符');
   }
+
   const output = await fs.open(file, 'wx', 0o600),
-
     reader = response.body.getReader(),
-
     hash = createHash('sha256');
 
   let bytes = 0;
@@ -88,13 +86,11 @@ export async function downloadRuntimePackage(pkg: RuntimePackage, file: string, 
       const chunk = await reader.read();
 
       if (chunk.done)
-
         break;
 
       bytes += chunk.value.byteLength;
 
       if (bytes > pkg.bytes)
-
         throw Error('更新附件超过声明长度');
 
       hash.update(chunk.value);
@@ -103,8 +99,8 @@ export async function downloadRuntimePackage(pkg: RuntimePackage, file: string, 
 
       onProgress(bytes / pkg.bytes * 100);
     }
-    if (bytes !== pkg.bytes || hash.digest('hex') !== pkg.sha256)
 
+    if (bytes !== pkg.bytes || hash.digest('hex') !== pkg.sha256)
       throw Error('更新附件摘要不符');
 
     await output.sync();
@@ -127,7 +123,6 @@ export async function downloadRuntimeManifest(tag: string, name: string, signal:
   const response = await runtimeAssetResponse(runtimePackageUrl({ tag, name }), combined);
 
   if (!response.body)
-
     throw Error('更新清单为空');
 
   let bytes: Uint8Array;
@@ -139,10 +134,10 @@ export async function downloadRuntimeManifest(tag: string, name: string, signal:
   catch (error)
   {
     if (error instanceof ByteLimitError)
-
       throw Error('更新清单超过上限');
 
     throw error
   }
+
   return JSON.parse(Buffer.from(bytes).toString('utf8'));
 }

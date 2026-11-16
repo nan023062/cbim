@@ -16,8 +16,8 @@ export function modelStopError(message: { stopReason?: string; errorMessage?: st
 
     return `模型返回长度限制（length），本次回复被截断。${maxTokens ? `配置的最大输出为 ${maxTokens} token。` : ''}${counts}${requestLimit ? `实际请求的输出额度为 ${requestLimit} token。${maxTokens && requestLimit < maxTokens ? 'Pi 已按配置容量与剩余上下文降低额度；请先核对模型真实容量与压缩设置。' : ''}` : ''}${advice}推理和正文可能共享预算。可在原对话继续，先核实已有文件，再分步实现和验证。`;
   }
-  if (message.stopReason === 'error')
 
+  if (message.stopReason === 'error')
     return message.errorMessage || '模型请求失败，请检查供应商连接与模型配置后重试。';
 
   return undefined;

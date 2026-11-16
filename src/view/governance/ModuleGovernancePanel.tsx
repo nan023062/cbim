@@ -51,39 +51,25 @@ interface Props
 export function ModuleGovernancePanel({ identity, moduleId, OnClose: onClose, OnApplied: onApplied }: Props)
 {
   const target = useRef({ ...identity, moduleId }).current,
-
     alive = useRef(true),
-
     lock = useRef(false),
-
     sequence = useRef(0);
 
   const store = useRef(createGovernancePendingStore(localStorage)).current;
 
   const [view, setView] = useState<ModuleGovernanceList>(),
-
     [pending, setPending] = useState<GovernancePending>(),
-
     [busy, setBusy] = useState(false),
-
     [storageError, setStorageError] = useState(''),
-
     [error, setError] = useState(''),
-
     [notice, setNotice] = useState('');
 
   const [observation, setObservation] = useState<ModuleGovernanceObservation>(),
-
     [statement, setStatement] = useState(''),
-
     [body, setBody] = useState(''),
-
     [reason, setReason] = useState(''),
-
     [alternatives, setAlternatives] = useState(''),
-
     [invariants, setInvariants] = useState(''),
-
     [rollback, setRollback] = useState('');
 
   const [receipt, setReceipt] = useState<ModuleGovernanceReceipt>();
@@ -106,9 +92,7 @@ export function ModuleGovernancePanel({ identity, moduleId, OnClose: onClose, On
     }>({});
 
   const selected = view?.selected,
-
     proposal = selected?.proposal,
-
     latest = selected?.decisions.at(-1);
 
   const blocked = busy || !!pending || !!storageError || !view;
@@ -120,7 +104,6 @@ export function ModuleGovernancePanel({ identity, moduleId, OnClose: onClose, On
     const result = moduleGovernanceListSchema.parse(await window.cbim.call('governance.list', { ...target, ...next }));
 
     if (result.identity.workspaceId !== target.workspaceId || result.identity.instanceId !== target.instanceId || result.moduleId !== target.moduleId || result.selected && result.selected.proposal.proposalId !== next.proposalId || result.selectedObservation && result.selectedObservation.observationId !== next.observationId)
-
       throw Error('治理视图与当前目标不一致，未显示迟到结果');
 
     if (alive.current && seq === sequence.current)
@@ -129,6 +112,7 @@ export function ModuleGovernancePanel({ identity, moduleId, OnClose: onClose, On
 
       setView(result)
     }
+
     return result;
   }
 
@@ -136,7 +120,6 @@ export function ModuleGovernancePanel({ identity, moduleId, OnClose: onClose, On
   {
     // 新操作不能沿用上次成功提示；回复丢失时，只表达当前原命令仍待核实。
     if (lock.current)
-
       return;
 
     lock.current = true;
@@ -154,7 +137,6 @@ export function ModuleGovernancePanel({ identity, moduleId, OnClose: onClose, On
     catch (cause)
     {
       if (alive.current)
-
         setError(message(cause))
     }
     finally
@@ -162,7 +144,6 @@ export function ModuleGovernancePanel({ identity, moduleId, OnClose: onClose, On
       lock.current = false;
 
       if (alive.current)
-
         setBusy(false)
     }
   }
@@ -175,7 +156,6 @@ export function ModuleGovernancePanel({ identity, moduleId, OnClose: onClose, On
     const checked = checkedGovernanceReceipt(raw, original);
 
     if (!alive.current)
-
       return;
 
     setReceipt(checked);
@@ -186,6 +166,7 @@ export function ModuleGovernancePanel({ identity, moduleId, OnClose: onClose, On
 
       return
     }
+
     store.Remove(original);
 
     setPending(undefined);
@@ -200,6 +181,7 @@ export function ModuleGovernancePanel({ identity, moduleId, OnClose: onClose, On
 
       return
     }
+
     let next = selection.current;
 
     if (checked.action === 'observe')
@@ -218,12 +200,14 @@ export function ModuleGovernancePanel({ identity, moduleId, OnClose: onClose, On
 
       next = { observationId: checked.record.observationId };
     }
+
     if (checked.action === 'propose')
     {
       next = { proposalId: checked.record.proposalId };
 
       setResponseChoices([])
     }
+
     if (checked.action === 'apply' && checked.record.state === 'committed')
     {
       try
@@ -236,32 +220,26 @@ export function ModuleGovernancePanel({ identity, moduleId, OnClose: onClose, On
       }
     }
     else
-
       await load(next);
   }
 
   async function submit(action: GovernancePending['action'], fields: Record<string, unknown>)
   {
     if (blocked)
-
       return;
 
     await exclusive(async () =>
     {
       const commandId = crypto.randomUUID(),
-
         request = inputs[action].parse({ ...identity, commandId, ...fields });
 
       const expected: NonNullable<GovernancePending['expected']> = {};
 
       for (const key of ['protectionId', 'observationId', 'proposalId', 'decisionId'] as const)
-
         if (typeof fields[key] === 'string')
-
           expected[key] = fields[key] as string;
 
       if (typeof fields.expectedBasis === 'string')
-
         expected.basis = fields.expectedBasis;
 
       const original: GovernancePending = { ...target, commandId, action, ...(Object.keys(expected).length ? { expected } : {}) };
@@ -285,8 +263,10 @@ export function ModuleGovernancePanel({ identity, moduleId, OnClose: onClose, On
 
           setPending(undefined)
         }
+
         throw cause
       }
+
       await accept(result, original);
     });
   }
@@ -294,7 +274,6 @@ export function ModuleGovernancePanel({ identity, moduleId, OnClose: onClose, On
   async function inspectPending()
   {
     if (!pending)
-
       return;
 
     const original = pending;
@@ -305,7 +284,6 @@ export function ModuleGovernancePanel({ identity, moduleId, OnClose: onClose, On
   async function releaseUnaccepted()
   {
     if (!pending)
-
       return;
 
     const original = pending;

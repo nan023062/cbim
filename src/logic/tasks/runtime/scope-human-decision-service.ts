@@ -46,7 +46,6 @@ type Owner = Pick<KnowledgeWorkspace, 'entry' | 'Assert' | 'Read'> & Partial<Sou
 function check(condition: unknown, code: string, message: string): asserts condition
 {
   if (!condition)
-
     fail(code, message)
 }
 
@@ -63,7 +62,6 @@ export class ScopeHumanDecisionService
     const parsed = schema.safeParse(raw);
 
     if (!parsed.success)
-
       fail('HUMAN_INPUT_INVALID', '人工决定参数无效；请重新选择验收项、文件基线与明确意见');
 
     return parsed.data
@@ -110,7 +108,6 @@ export class ScopeHumanDecisionService
   async History(raw: HumanDecisionHistoryInput): Promise<HumanDecisionHistory>
   {
     const input = this.Parse(humanDecisionHistoryInputSchema, raw),
-
       scope = this.Scope(await this.store.Read(), input);
 
     return { ...input, scopeStatus: scope.status, decisionRevision: scope.humanDecisions?.revision ?? 0, records: structuredClone(scope.humanDecisions?.records ?? []) }
@@ -129,19 +126,16 @@ export class ScopeHumanDecisionService
     const original = scope.humanDecisions?.records.find(record => record.decisionId === input.reconsidersDecisionId && record.criterionId === input.criterionId);
 
     if (!original || !this.logs)
-
       return false;
 
     try
     {
       const proof = original.proof,
-
         main = await this.logs.InspectMain(scope.rootSessionId, proof.source.reviewRunId);
 
       this.Current();
 
       if (!sameGoalValue(proof.identity, { workspaceId: scope.workspaceId, rootSessionId: scope.rootSessionId, scopeId: scope.scopeId }) || main.runId !== proof.source.reviewRunId || main.task.workspaceId !== scope.workspaceId || main.task.taskId !== scope.rootSessionId || main.status !== 'completed' || main.logIntegrity?.partialTail !== false || !sameGoalValue(main.events[0]?.data.task, main.task) || hash(json(main.events)) !== proof.source.reviewLogHash)
-
         return false;
 
       for (const candidate of proof.candidates)
@@ -149,7 +143,6 @@ export class ScopeHumanDecisionService
         const run = state.runs?.find(item => item.binding.runId === candidate.runId && item.binding.taskId === candidate.taskId && item.binding.workspaceId === scope.workspaceId && item.binding.rootSessionId === scope.rootSessionId);
 
         if (!run || run.status !== 'completed')
-
           return false;
 
         const summary = await this.logs.InspectMember(run);
@@ -157,9 +150,9 @@ export class ScopeHumanDecisionService
         this.Current();
 
         if (summary.runId !== candidate.runId || summary.task.taskId !== candidate.taskId || summary.task.workspaceId !== scope.workspaceId || summary.status !== 'completed' || summary.logIntegrity?.partialTail !== false || !sameGoalValue(summary.events[0]?.data.task, summary.task) || !sameGoalValue(summary.memberBinding, run.binding) || hash(json(summary.events)) !== candidate.logHash)
-
           return false;
       }
+
       return true;
     }
     catch
@@ -172,7 +165,6 @@ export class ScopeHumanDecisionService
   private Reconsider(scope: DispatchScope, input: HumanDecisionPreviewInput, preview: HumanDecisionPreview, originalVerified: boolean)
   {
     if (!input.reconsidersDecisionId)
-
       return;
 
     preview.reconsideration = compareHumanReconsideration(scope.humanDecisions?.records ?? [], { criterionId: input.criterionId, reconsidersDecisionId: input.reconsidersDecisionId, waitId: scope.wait?.waitId }, preview, originalVerified);
@@ -199,15 +191,10 @@ export class ScopeHumanDecisionService
     this.Current();
 
     const goal = scope.goal!,
-
       review = goal.review!,
-
       ports = this.ports,
-
       candidates: HumanDecisionCandidate[] = [],
-
       limitations = [humanDecisionCoverageLimitation],
-
       issues: Array<
         {
           code: string;
@@ -222,15 +209,12 @@ export class ScopeHumanDecisionService
     check([...input.baselines, ...input.manifests ?? []].every(selection => value.candidates.some(candidate => candidate.task.taskId === selection.taskId && candidate.run.binding.runId === selection.runId)), 'HUMAN_SOURCE_INVALID', '所选产物依据不属于此验收项的当前成员候选');
 
     const expectedFiles = new Map<string, ArtifactFileFact>(),
-
       manifests = new Map<string, OutputManifestRecord>();
 
     for (const candidate of value.candidates)
     {
       const { task, run, summary, evidenceToolCallIds } = candidate,
-
         result = task.result!,
-
         selection = input.baselines.find(item => item.taskId === task.taskId);
 
       const manifestSelection = input.manifests?.find(item => item.taskId === task.taskId);
@@ -251,16 +235,17 @@ export class ScopeHumanDecisionService
 
           manifests.set(task.taskId, candidate.manifest)
         }
+
         candidates.push(projected);
 
         continue;
       }
+
       check(!manifestSelection, 'HUMAN_SOURCE_INVALID', '旧候选没有完整交付清单，不能补造覆盖范围');
 
       const artifacts = verifyArtifactBaselines(summary.events, run.binding, value.knowledgeRevision, ports.NormalizePath, selection?.baselineId);
 
       const record = selection ? artifacts.records.find(item => item.baseline.baselineId === selection.baselineId) : undefined,
-
         ref = selection ? artifacts.refs.find(item => item.baselineId === selection.baselineId) : undefined;
 
       check(!selection || record && ref, 'HUMAN_SOURCE_INVALID', '所选文件基线缺少同轮完整采集事件和成功回执');
@@ -271,8 +256,8 @@ export class ScopeHumanDecisionService
 
         addLimitation('部分采集记录不可核实，本次只引用有完整来源与成功回执的所选文件基线。')
       }
-      if (artifacts.impact === 'unknown')
 
+      if (artifacts.impact === 'unknown')
         addLimitation('已登记操作的影响范围不能由所选文件完整枚举；本次决定不核实未列出的文件、命令外部影响或其它副作用。');
 
       projected.baselines = artifacts.refs.map(item => ({ baselineId: item.baselineId, capturedAt: item.capturedAt, fileCount: item.fileCount }));
@@ -288,10 +273,10 @@ export class ScopeHumanDecisionService
           const previous = expectedFiles.get(file.relativePath);
 
           if (!previous || previous.byteLength < file.byteLength)
-
             expectedFiles.set(file.relativePath, { relativePath: file.relativePath, byteLength: file.byteLength, sha256: file.sha256 })
         }
       }
+
       candidates.push(projected);
     }
 
@@ -302,11 +287,9 @@ export class ScopeHumanDecisionService
     const selectedReady = (candidate: HumanDecisionCandidate) => candidate.selectedManifest ? candidate.selectedManifest.manifest.knowledgeRevision === value.knowledgeRevision : !!candidate.selected && !candidate.selected.invalidated && candidate.selected.knowledgeRevision === value.knowledgeRevision && !!candidate.selected.files.length;
 
     const workflowFiles = value.candidates.flatMap(candidate => candidate.manifest ? [] : candidate.workflowFiles),
-
       selectedComplete = candidates.every(selectedReady);
 
     let workflowCurrent = workflowFiles.length === 0,
-
       checkWorkflow = false;
 
     // 没有完整显式选择时仍仅列历史，不隐式读文件。可能接受时，所有程序验证文件也进入同一有界读取。
@@ -319,21 +302,20 @@ export class ScopeHumanDecisionService
         const old = combined.get(file.relativePath);
 
         if (!old || old.byteLength < file.byteLength)
-
           combined.set(file.relativePath, file)
       }
+
       if (inBudget(combined))
       {
         for (const [key, file] of combined)
-
           expectedFiles.set(key, file);
 
         checkWorkflow = true
       }
       else
-
         addIssue('HUMAN_WORKFLOW_UNAVAILABLE', '全部程序验证文件与所选基线超过本次核实上限；仍可拒绝或要求补证，不能接受');
     }
+
     assertCompleteOutputBudget([...manifests.values()], [...expectedFiles.values()]);
 
     const signal = AbortSignal.timeout(15000);
@@ -341,7 +323,6 @@ export class ScopeHumanDecisionService
     if (expectedFiles.size)
     {
       const expected = [...expectedFiles.values()].sort((a, b) => compare(a.relativePath, b.relativePath)),
-
         observations = await ports.CheckFiles(expected, signal);
 
       this.Current();
@@ -353,27 +334,25 @@ export class ScopeHumanDecisionService
       for (let index = 0; index < expected.length; index++)
       {
         const parsed = artifactFileCheckSchema.safeParse(observations[index]),
-
           file = expected[index];
 
         check(parsed.success && parsed.data.relativePath === file.relativePath && sameGoalValue(parsed.data.expected, { byteLength: file.byteLength, sha256: file.sha256 }), 'HUMAN_EVIDENCE_INVALID', '文件端口返回了错误路径或期望指纹')
       }
+
       if (checkWorkflow)
       {
         workflowCurrent = workflowFiles.every(file => { const observation = observations.find(item => item.relativePath === file.relativePath); return observation && ['matches', 'changed'].includes(observation.state) && sameGoalValue(observation.observed, { byteLength: file.byteLength, sha256: file.sha256 }) });
 
         if (!workflowCurrent)
-
           addIssue('HUMAN_WORKFLOW_UNAVAILABLE', '程序验证的文件已变化、缺失或无法核实；原验证历史仍保留，当前不能接受');
       }
+
       for (const candidate of candidates)
-
         if (candidate.selected)
-
           candidate.selected.files = candidate.selected.files.map(file => { const observation = observations.find(item => item.relativePath === file.relativePath)!; if (!observation.observed) return { ...observation, expected: file.expected }; const state = observation.state === 'matches' || observation.state === 'changed' ? (sameGoalValue(observation.observed, file.expected) ? 'matches' : 'changed') : observation.state; return { ...observation, state, expected: file.expected }; });
     }
-    for (const candidate of candidates)
 
+    for (const candidate of candidates)
       if (candidate.selectedManifest)
       {
         if (!ports.CheckManifest)
@@ -382,8 +361,8 @@ export class ScopeHumanDecisionService
 
           continue
         }
-        const manifest = manifests.get(candidate.taskId)!,
 
+        const manifest = manifests.get(candidate.taskId)!,
           observed = await ports.CheckManifest(manifest.manifest.snapshot, signal);
 
         this.Current();
@@ -392,6 +371,7 @@ export class ScopeHumanDecisionService
 
         candidate.selectedManifest = { manifest: candidate.selectedManifest.manifest, ...completeOutputObservation(manifest.manifest.snapshot, observed) };
       }
+
     // 业务读占用不能锁住知识事务或外部进程；复读同一 canonical 集合与知识，拒绝拼接跨版本观察。
     for (const candidate of value.candidates)
     {
@@ -401,6 +381,7 @@ export class ScopeHumanDecisionService
 
       check(sameGoalValue(again, candidate.summary), 'HUMAN_STALE', '成员日志在人工核实期间变化，请重新核实')
     }
+
     const main = await this.logs.InspectMain(scope.rootSessionId, review.runId);
 
     this.Current();
@@ -414,7 +395,6 @@ export class ScopeHumanDecisionService
     const complete = workflowCurrent && candidates.every(candidate => selectedReady(candidate) && (candidate.selectedManifest ? candidate.selectedManifest.state === 'matches' : candidate.selected!.files.every(file => file.state === 'matches')));
 
     if (!complete)
-
       addIssue('HUMAN_ACCEPT_UNAVAILABLE', '接受需要为全部候选明确选择原产物依据，并且选定文件或声明的完整集合全部匹配');
 
     const allowedDecisions: HumanDecisionKind[] = complete ? ['accept', 'reject', 'request_evidence'] : ['reject', 'request_evidence'];
@@ -426,11 +406,9 @@ export class ScopeHumanDecisionService
     const latest = scope.humanDecisions?.records.filter(record => record.criterionId === input.criterionId && record.basis === preview.basis).at(-1);
 
     if (latest)
-
       preview.latestDecisionId = latest.decisionId;
 
     if (input.reconsidersDecisionId)
-
       this.Reconsider(scope, input, preview, await this.OriginalVerified(state, scope, input));
 
     return humanDecisionPreviewSchema.parse(preview);
@@ -443,7 +421,7 @@ export class ScopeHumanDecisionService
     let release: (() => void) | undefined;
 
     if (selected)
-
+    {
       try
       {
         release = this.ports?.AcquireRead()
@@ -456,11 +434,12 @@ export class ScopeHumanDecisionService
           })?.code;
 
         if (code === 'WORKSPACE_EXECUTION_BUSY' || code === 'MEMBER_BUSY')
-
           fail('HUMAN_UNAVAILABLE', '工作区当前有写入执行，未受理人工决定；请等待结束后重新核实');
 
         throw error
       }
+    }
+
     try
     {
       return await work()
@@ -491,11 +470,8 @@ export class ScopeHumanDecisionService
   async Preview(raw: HumanDecisionPreviewInput): Promise<HumanDecisionPreview>
   {
     const input = this.Parse(humanDecisionPreviewInputSchema, raw),
-
       before = await this.store.Read(),
-
       scope = this.Scope(before, input),
-
       stamp = this.StateStamp(before, input);
 
     try
@@ -515,7 +491,6 @@ export class ScopeHumanDecisionService
   async Decide(raw: HumanDecisionRequest, trustedActor: HumanDecisionActor): Promise<HumanDecisionReceipt>
   {
     const input = this.Parse(humanDecisionRequestSchema, raw),
-
       actor = this.Parse(humanDecisionActorSchema, trustedActor);
 
     const command = { commandId: 'human-decision-' + input.commandId, fingerprint: hash(json({ operation: 'human.decision', input, actor })) };
@@ -528,10 +503,10 @@ export class ScopeHumanDecisionService
 
       return old.receipt as HumanDecisionReceipt
     }
+
     this.Current();
 
     const before = await this.store.Read(),
-
       stamp = this.StateStamp(before, input);
 
     check(this.owner.WithSourceSnapshot, 'HUMAN_UNAVAILABLE', '人工决定缺少可信知识快照提交入口');
@@ -551,6 +526,7 @@ export class ScopeHumanDecisionService
 
         return settled.receipt as HumanDecisionReceipt
       }
+
       throw error;
     }
   }

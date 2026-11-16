@@ -54,7 +54,6 @@ export class BudgetSettings
   Read(): ScopeBudgetPolicy
   {
     if (!this.policy)
-
       fail('BUDGET_NOT_READY', '目标软限额设置尚未就绪');
 
     return structuredClone(this.policy)

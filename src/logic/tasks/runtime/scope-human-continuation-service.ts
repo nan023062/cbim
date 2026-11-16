@@ -40,7 +40,6 @@ import { humanEvidenceStateStamp } from '../../evidence/runtime/human-evidence-s
 function check(value: unknown, code: string, message: string): asserts value
 {
   if (!value)
-
     fail(code, message)
 }
 
@@ -65,7 +64,6 @@ export class ScopeHumanContinuationService
     const parsed = schema.safeParse(raw);
 
     if (!parsed.success)
-
       fail('HUMAN_CONTINUATION_INPUT', '按人工决定继续的请求无效');
 
     return parsed.data
@@ -95,9 +93,7 @@ export class ScopeHumanContinuationService
   async Inspect(raw: HumanContinuationLookup): Promise<HumanContinuationReceipt | undefined>
   {
     const input = this.Parse(humanContinuationLookupSchema, raw),
-
       scope = this.Scope(await this.store.Read(), input),
-
       continuation = scope.continuations?.find(item => item.continuationId === input.commandId);
 
     return continuation && isHumanContinuation(continuation) ? { workspaceId: scope.workspaceId, rootSessionId: scope.rootSessionId, scopeId: scope.scopeId, scopeStatus: scope.status, continuation } : undefined
@@ -106,11 +102,8 @@ export class ScopeHumanContinuationService
   private async Proof(state: DispatchState, input: HumanContinuationRequest, withinMainRun = false)
   {
     const scope = this.Scope(state, input),
-
       goal = scope.goal,
-
       wait = scope.wait,
-
       history = scope.humanDecisions;
 
     check(scope.status === 'waiting' && wait && goal?.plan && goal.review?.decision === 'awaiting_user' && !goal.blocked, 'HUMAN_CONTINUATION_NOT_WAITING', '当前目标没有可消费的安全等待');
@@ -140,6 +133,7 @@ export class ScopeHumanContinuationService
 
       check(hash(json(verified.main.events)) === record.proof.source.reviewLogHash && verified.knowledgeRevision === record.proof.source.knowledgeRevision && verified.candidates.length === record.proof.candidates.length && verified.candidates.every(candidate => record.proof.candidates.some(saved => saved.taskId === candidate.task.taskId && saved.taskRevision === candidate.task.revision && saved.runId === candidate.run.binding.runId && saved.resultId === candidate.task.result!.resultId && saved.planRevision === candidate.task.planRevision && saved.logHash === hash(json(candidate.summary.events)) && sameGoalValue([...saved.evidenceToolCallIds].sort(), [...candidate.evidenceToolCallIds].sort()))), 'HUMAN_CONTINUATION_STALE', '人工决定的候选或日志依据已变化，请重新核实');
     }
+
     await validateHumanAcceptances(this.owner, state, scope, records.filter(record => record.decision === 'accept'), this.logs, this.artifacts, this.goals.ValidateHistoricalMemberCandidate.bind(this.goals), withinMainRun);
 
     this.Current();
@@ -151,11 +145,8 @@ export class ScopeHumanContinuationService
   async Preflight(raw: HumanContinuationRequest)
   {
     const input = this.Parse(humanContinuationRequestSchema, raw),
-
       state = await this.store.Read(),
-
       value = await this.Proof(state, input),
-
       after = this.Scope(await this.store.Read(), input);
 
     check(sameGoalValue(value.scope, after), 'HUMAN_CONTINUATION_STALE', '人工接续预检期间目标状态变化');
@@ -169,13 +160,11 @@ export class ScopeHumanContinuationService
   async Accept(raw: HumanContinuationRequest, trustedRunId: string, assertCurrent: () => void = () => { }): Promise<AcceptedHumanContinuation>
   {
     const input = this.Parse(humanContinuationRequestSchema, raw),
-
       runId = safeId(trustedRunId);
 
     let fresh = false;
 
     const command = { commandId: 'scope-human-continue-' + input.commandId, fingerprint: hash(json({ operation: 'scope.humanContinue', input })) },
-
       old = await this.store.CommandReceipt(command.commandId);
 
     let receipt: HumanContinuationReceipt | ScopeBudgetRejected;
@@ -193,9 +182,7 @@ export class ScopeHumanContinuationService
         assertCurrent();
 
         const before = await this.store.Read(),
-
           stamp = humanEvidenceStateStamp(before, input),
-
           value = await this.Proof(before, input, true);
 
         this.Current();
@@ -211,7 +198,6 @@ export class ScopeHumanContinuationService
         const settled = await this.store.CommandReceipt(command.commandId);
 
         if (!settled)
-
           throw error;
 
         check(settled.fingerprint === command.fingerprint, 'COMMAND_ID_CONFLICT', '相同命令 ID 已用于不同请求');
@@ -221,12 +207,11 @@ export class ScopeHumanContinuationService
         fresh = false;
       }
     }
-    if ('budgetRejected' in receipt)
 
+    if ('budgetRejected' in receipt)
       rejectBudget(receipt);
 
     const scope = this.Scope(await this.store.Read(), input),
-
       continuation = scope.continuations?.find(item => item.continuationId === input.commandId);
 
     check(continuation && isHumanContinuation(continuation) && continuation.runId === receipt.continuation.runId, 'HUMAN_CONTINUATION_UNKNOWN', '人工接续意图尚无法确认，请查询原命令');

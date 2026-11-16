@@ -98,15 +98,12 @@ export class Workspace implements KnowledgeWorkspace
   Assert(identity?: { workspaceId: string; instanceId: string })
   {
     if (this.state !== 'running')
-
       fail('NOT_RUNNING', `工作区当前状态：${this.state}`);
 
     if (identity && identity.workspaceId !== this.entry.id)
-
       fail('STALE_INSTANCE', '工程身份不匹配。请用 cbim_workspace_identity 核对当前 workspaceId，再选择正确工程；不能把其他工程的请求改绑到这里。');
 
     if (identity && identity.instanceId !== this.instanceId)
-
       fail('STALE_INSTANCE', `运行实例已变化，可能已重启。请调用 cbim_workspace_identity，使用新 instanceId（当前为 ${this.instanceId}）重新读取与预览。未知提交先核实原回执，不自动重放。`);
   }
 
@@ -114,11 +111,9 @@ export class Workspace implements KnowledgeWorkspace
   AttachDispatchStore(store: FileDispatchStore)
   {
     if (this.sharedDispatch && this.sharedDispatch !== store)
-
       fail('SOURCE_UNAVAILABLE', '工作区已有派发存储');
 
     if (store.workspaceId !== this.entry.id)
-
       fail('SOURCE_UNAVAILABLE', '派发存储工作区不匹配');
 
     this.sharedDispatch = store;
@@ -131,7 +126,6 @@ export class Workspace implements KnowledgeWorkspace
   get dispatchStore()
   {
     if (!this.sharedDispatch)
-
       fail('SOURCE_UNAVAILABLE', '工作区来源存储尚未打开');
 
     return this.sharedDispatch
@@ -145,7 +139,6 @@ export class Workspace implements KnowledgeWorkspace
   async Open(hooks: { beforeDispatchLoad?: () => Promise<void> } = {})
   {
     if (this.state === 'running')
-
       return;
 
     this.state = 'opening';
@@ -155,19 +148,16 @@ export class Workspace implements KnowledgeWorkspace
       const identity = await this.paths.Identity(this.entry.path);
 
       if (identity.id !== this.entry.id)
-
         fail('IDENTITY', '工程真实路径已变化，需要重新定位');
 
       this.lock = new KernelLock(identity.path, identity.id);
 
       if (!this.sharedDispatch)
-
         this.AttachDispatchStore(new FileDispatchStore(path.join(this.paths.Project(this.entry.id), 'dispatch'), this.entry.id));
 
       const mapping = path.join(this.paths.Project(identity.id), 'identity.json');
 
       if (await exists(mapping) && (await readJson(mapping)).path !== identity.path)
-
         fail('IDENTITY', '本地历史记录绑定的工程不匹配');
 
       await atomic(mapping, json(identity));
@@ -277,7 +267,6 @@ export class Workspace implements KnowledgeWorkspace
     this.Assert();
 
     const id = randomUUID(),
-
       controller = new AbortController();
 
     this.controllers.set(id, controller);
@@ -302,11 +291,9 @@ export class Workspace implements KnowledgeWorkspace
     const task = this.tasks.get(id);
 
     if (!task || task.workspaceId !== this.entry.id)
-
       fail('TASK_NOT_FOUND', '当前工作区实例中不存在该维护任务；此接口仅支持知识检查或索引维护任务，不接受对话或成员派发任务 ID');
 
     if (task.state === 'running')
-
       this.controllers.get(id)?.abort();
 
     return task;
@@ -339,7 +326,6 @@ export class Workspace implements KnowledgeWorkspace
   async Close()
   {
     if (this.state === 'closed')
-
       return;
 
     await this.PrepareClose();

@@ -77,6 +77,7 @@ export class MemberEventStreams
 
       this.streams.set(run.binding.runId, stream)
     }
+
     return stream;
   }
 
@@ -100,21 +101,19 @@ export class MemberEventStreams
     const binding = stream.run.binding;
 
     if (event.version !== 1 || event.workspaceId !== binding.workspaceId || event.taskId !== binding.taskId || event.runId !== binding.runId || !Number.isSafeInteger(event.seq) || event.seq < 1)
-
       fail('MEMBER_EVENT_STREAM_INVALID', '成员事件身份或序号无效');
 
     const value = projectRunEvent(event, stream.run.binding, stream.task),
-
       old = stream.ordered[event.seq - 1] ?? stream.pending.get(event.seq);
 
     if (old)
     {
       if (JSON.stringify(old) !== JSON.stringify(value))
-
         fail('MEMBER_EVENT_STREAM_INVALID', '同一成员事件序号出现不同内容');
 
       return
     }
+
     stream.pending.set(event.seq, value);
 
     while (stream.pending.has(stream.ordered.length + 1))
@@ -126,15 +125,12 @@ export class MemberEventStreams
       stream.ordered.push(next);
 
       if (next.type === 'tool.allowed')
-
         stream.unresolved.add(String(next.data.id));
 
       if (next.type === 'tool.finished' || next.type === 'tool.denied')
-
         stream.unresolved.delete(String(next.data.id));
 
       if (next.type === 'task.updated' && next.data.progress)
-
         stream.progress = next.data.progress as TaskProgress;
     }
   }
@@ -146,19 +142,15 @@ export class MemberEventStreams
     try
     {
       const summary = await this.inspect(stream.run),
-
         binding = stream.run.binding;
 
       if (summary.runId !== binding.runId || summary.task.workspaceId !== binding.workspaceId || summary.task.taskId !== binding.taskId || summary.task.agentId !== binding.agentId || summary.task.root !== stream.task.root || !summary.memberBinding || Object.entries(binding).some(([key, value]) => summary.memberBinding![key as keyof typeof binding] !== value))
-
         fail('MEMBER_EVENT_STREAM_INVALID', '成员运行记录不属于请求身份');
 
       for (const event of summary.events)
-
         this.Accept(stream, event);
 
       if (stream.pending.size)
-
         fail('MEMBER_EVENT_STREAM_INVALID', '成员事件序号不连续，不能跳过缺失记录');
     }
     catch (error: any)
@@ -169,7 +161,6 @@ export class MemberEventStreams
       const unavailable = error?.code === 'ENOENT' && beforeStart || error?.code === 'RUN_LOG_EMPTY' && stream.live && observed.status === 'starting' && beforeStart;
 
       if (unavailable && initiallyEmpty)
-
         return;
 
       throw error;
@@ -185,7 +176,6 @@ export class MemberEventStreams
     const stream = this.Stream(run, task);
 
     if (stream.failure)
-
       throw stream.failure;
 
     const loading = stream.load ??= this.Restore(stream, structuredClone(run));
@@ -197,27 +187,23 @@ export class MemberEventStreams
     catch (error)
     {
       if (stream.load === loading)
-
         stream.load = undefined;
 
       throw error
     }
-    if (stream.failure)
 
+    if (stream.failure)
       throw stream.failure;
 
     if (stream.pending.size)
-
       fail('MEMBER_EVENT_STREAM_INVALID', '成员事件序号不连续，不能跳过缺失记录');
 
     const view: MemberRunView = { task: stream.task, runId: run.binding.runId, status: run.status === 'starting' ? 'running' : run.status, acceptance: 'not_evaluated', unresolvedTools: [...stream.unresolved], ...(stream.progress ? { taskProgress: stream.progress } : {}) };
 
     const reset = !cursor || cursor.seq > stream.ordered.length,
-
       from = reset ? 0 : cursor.seq;
 
     const events = stream.ordered.slice(from, from + limit),
-
       next = { runId: run.binding.runId, seq: from + events.length };
 
     return structuredClone(!reset && !events.length ? { mode: 'noop', run: view, cursor: next } : { mode: reset ? 'reset' : 'delta', run: view, cursor: next, events, hasMore: next.seq < stream.ordered.length });

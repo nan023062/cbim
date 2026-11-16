@@ -38,51 +38,40 @@ export function currentMemberResumeRequest(task: MemberCheckpointChain): MemberR
 export function validMemberCheckpointChain(task: MemberCheckpointChain): boolean
 {
   const checkpoints = task.checkpoints,
-
     requests = memberResumeRequests(task);
 
   if (!checkpoints)
-
     return !task.resumeRequest && !task.resumeHistory;
 
   if (!checkpoints.length || checkpoints.length > memberCheckpointLimit || task.resumeHistory && (!task.resumeHistory.length || !task.resumeRequest) || new Set(task.runIds).size !== task.runIds.length)
-
     return false;
 
   if (task.runIds.length < checkpoints.length || task.runIds.length > checkpoints.length + 1 || requests.length < checkpoints.length - 1 || requests.length > checkpoints.length || task.runIds.length > requests.length + 1)
-
     return false;
 
   const ids = new Set<string>(),
-
     requestIds = new Set<string>(),
-
     commands = new Set<string>();
 
   for (let i = 0; i < checkpoints.length; i++)
   {
     const cp = checkpoints[i],
-
       request = requests[i];
 
     if (!memberCheckpointRecordSchema.safeParse(cp).success || cp.binding.runId !== task.runIds[i] || ids.has(cp.checkpointId))
-
       return false;
 
     ids.add(cp.checkpointId);
 
     if (i > 0 && (cp.binding.leaseEpoch !== checkpoints[i - 1].binding.leaseEpoch + 1 || Date.parse(cp.requestedAt) < Date.parse(checkpoints[i - 1].requestedAt)))
-
       return false;
 
     if (i > 0 && (!requests[i - 1] || Date.parse(cp.requestedAt) < Date.parse(requests[i - 1].requestedAt) || request && (request.previousTaskRevision <= requests[i - 1].previousTaskRevision || request.graphCursor.streamId !== requests[i - 1].graphCursor.streamId || request.graphCursor.seq <= requests[i - 1].graphCursor.seq)))
-
       return false;
 
     if (request)
     {
       if (!memberResumeRequestSchema.safeParse(request).success || request.checkpointId !== cp.checkpointId || request.runId !== cp.binding.runId || requestIds.has(request.requestId) || commands.has(request.commandId) || Date.parse(request.requestedAt) < Date.parse(cp.requestedAt))
-
         return false;
 
       requestIds.add(request.requestId);
@@ -90,5 +79,6 @@ export function validMemberCheckpointChain(task: MemberCheckpointChain): boolean
       commands.add(request.commandId)
     }
   }
+
   return true;
 }

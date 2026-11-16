@@ -15,7 +15,6 @@ import '../knowledge/knowledge-files.css';
 export function TeamTree({ model, query, selected, onSelect, actions }: { model: TeamModel; query: string; selected: string; onSelect: (id: string) => void; actions: (id: string) => TreeAction[] })
 {
   const [closed, setClosed] = useState(new Set<string>()),
-
     visible = visibleTeamNodes(model, query, false);
 
   const branch = (id: string): React.ReactNode =>
@@ -23,11 +22,9 @@ export function TeamTree({ model, query, selected, onSelect, actions }: { model:
     const node = model.nodes[id];
 
     if (!node || node.kind === 'builtin' || (id !== TEAM_ROOT && !visible.has(id)))
-
       return null;
 
     const children = node.children.filter(child => visible.has(child) && model.nodes[child]?.kind !== 'builtin'),
-
       open = !!query || !closed.has(id);
 
     return <li key={id}><div className={'knowledge-file-row' + (selected === id ? ' selected' : '')}>

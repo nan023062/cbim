@@ -20,11 +20,9 @@ const identity = (value: ModuleOwnershipIdentity, input: ModuleOwnershipIdentity
 function checkView(view: ModuleOwnershipView, workspaceId: string)
 {
   if (view.binding && (view.binding.workspaceId !== workspaceId || view.binding.moduleId !== view.moduleId) || view.owner && (!view.binding || view.owner.memberId !== view.binding.ownerMemberId))
-
     throw Error('模块责任与岗位身份不一致');
 
   if (view.sourceStatus && !sourceReadStateMatches(view.sourceStatus, workspaceId, { kind: 'module', sourceId: view.moduleId }, view.binding?.sourceRef))
-
     throw Error('模块来源不属于当前工作区或责任记录');
 }
 
@@ -32,11 +30,9 @@ function checkView(view: ModuleOwnershipView, workspaceId: string)
 export function checkedModuleOwnershipPage(raw: unknown, input: ModuleOwnershipListInput | ModuleOwnershipByMemberInput): ModuleOwnershipPage
 {
   const value = moduleOwnershipPageSchema.parse(raw),
-
     offset = input.offset ?? 0;
 
   if (!identity(value.identity, input) || value.offset !== offset || value.items.length > (input.limit ?? 20) || new Set(value.items.map(item => item.moduleId)).size !== value.items.length || input.expectedReadBasis && !same(value.basis, input.expectedReadBasis) || value.basis.ownershipCursor && value.basis.ownershipCursor.workspaceId !== input.workspaceId || value.basis.memberRegistryCursor && value.basis.memberRegistryCursor.workspaceId !== input.workspaceId || value.offset + value.items.length > value.total || value.nextOffset !== undefined && (value.nextOffset <= offset || value.nextOffset !== offset + value.items.length || value.nextOffset >= value.total) || value.nextOffset === undefined && offset + value.items.length < value.total)
-
     throw Error('责任列表身份、依据或分页不一致，请重新读取');
 
   for (const item of value.items)
@@ -44,9 +40,9 @@ export function checkedModuleOwnershipPage(raw: unknown, input: ModuleOwnershipL
     checkView(item, input.workspaceId);
 
     if ('memberId' in input && item.binding?.ownerMemberId !== input.memberId)
-
       throw Error('反查结果不属于当前岗位')
   }
+
   return value;
 }
 
@@ -56,7 +52,6 @@ export function checkedModuleOwnershipDetail(raw: unknown, input: ModuleOwnershi
   const value = moduleOwnershipDetailSchema.parse(raw);
 
   if (!identity(value.identity, input) || value.view.moduleId !== input.moduleId)
-
     throw Error('模块责任详情不属于当前选择');
 
   checkView(value.view, input.workspaceId);
@@ -68,29 +63,22 @@ export function checkedModuleOwnershipDetail(raw: unknown, input: ModuleOwnershi
 export function checkedModuleOwnershipPreview(raw: unknown, input: ModuleOwnershipPreviewInput): ModuleOwnershipPreview
 {
   const value = moduleOwnershipPreviewSchema.parse(raw),
-
     change = input.change,
-
     previous = value.previous,
-
     expected = change.expectedBinding;
 
   if (!identity(value.identity, input) || !same(value.change, change) || value.ownershipCursor && value.ownershipCursor.workspaceId !== input.workspaceId || expected === null && previous !== null || expected !== null && (!previous || previous.workspaceId !== input.workspaceId || previous.moduleId !== change.moduleId || previous.bindingId !== expected.bindingId || previous.revision !== expected.revision || previous.ownerMemberId !== expected.ownerMemberId))
-
     throw Error('负责人预览与原关系或选择不一致');
 
   if (isModuleOwnershipSourceAdoption(change))
   {
     if (!previous?.ownerMemberId || !value.previousOwner || !same(value.previousOwner, value.nextOwner) || value.nextOwner?.memberId !== previous.ownerMemberId || !value.observedModule)
-
       throw Error('来源采纳预览改变了原负责人');
   }
   else if (change.nextOwner ? (!value.nextOwner || value.nextOwner.memberId !== change.nextOwner.memberId || value.nextOwner.revision !== change.nextOwner.expectedRevision || value.nextOwner.state !== 'active' || !value.observedModule) : value.nextOwner !== undefined)
-
     throw Error('负责人预览改变了目标岗位');
 
   if (value.previousOwner && value.previousOwner.memberId !== previous?.ownerMemberId)
-
     throw Error('负责人预览改变了原岗位');
 
   return value;
@@ -100,11 +88,8 @@ export function checkedModuleOwnershipPreview(raw: unknown, input: ModuleOwnersh
 export function checkedModuleOwnershipReceipt(raw: unknown, request: ModuleOwnershipCommitInput, previous?: ModuleOwnershipReceipt): ModuleOwnershipReceipt
 {
   const value = moduleOwnershipReceiptSchema.parse(raw),
-
     expected = request.change.expectedBinding,
-
     cursor = request.expectedOwnershipCursor,
-
     revision = expected?.revision ?? 0;
 
   const sourceAdoption = isModuleOwnershipSourceAdoption(request.change);
@@ -114,7 +99,6 @@ export function checkedModuleOwnershipReceipt(raw: unknown, request: ModuleOwner
   const action = sourceAdoption ? 'adopt_source' : owner ? (expected?.ownerMemberId ? 'replace' : 'assign') : 'unassign';
 
   if (!identity(value.identity, request) || value.commandId !== request.commandId || value.action !== action || value.moduleId !== request.change.moduleId || value.basis !== request.expectedBasis || value.previousRevision !== revision || value.revision !== revision + 1 || expected && value.bindingId !== expected.bindingId || value.previousOwnerMemberId !== (expected?.ownerMemberId ?? null) || value.ownerMemberId !== owner || sourceAdoption && !owner || value.ownershipCursor.workspaceId !== request.workspaceId || value.ownershipCursor.seq !== (cursor?.seq ?? 0) + 1 || cursor && value.ownershipCursor.streamId !== cursor.streamId || !same(value.actor, { kind: 'local_desktop', interaction: 'explicit_submit' }) || previous && !same(value, previous))
-
     throw Error('责任回执与原命令不一致，请查询原命令');
 
   return value;
@@ -186,11 +170,9 @@ export class ModuleOwnershipCommands
       const parsed = this.records.Read('超过本机记录容量');
 
       if (parsed === undefined)
-
         return;
 
       if (parsed.version !== 1 || parsed.workspaceId !== workspaceId || Object.keys(parsed).some(key => !['version', 'workspaceId', 'records'].includes(key)) || !Array.isArray(parsed.records) || parsed.records.length > 128)
-
         throw Error('记录格式错误');
 
       const ids = new Set<string>();
@@ -242,15 +224,11 @@ export class ModuleOwnershipCommands
   private Save(record: ModuleOwnershipAttempt)
   {
     const records = [...this.value.records],
-
       index = records.findIndex(item => item.request.commandId === record.request.commandId);
 
     if (index < 0)
-
       records.push(record);
-
     else
-
       records[index] = record;
 
     this.value = { records, error: '' };
@@ -258,7 +236,6 @@ export class ModuleOwnershipCommands
     try
     {
       if (this.corrupt || records.length > 128)
-
         throw Error('本机记录不可写或达到 128 条上限');
 
       this.records.Write({ version: 1, workspaceId: this.workspaceId, records }, '本机记录超过 2 MiB');
@@ -285,7 +262,6 @@ export class ModuleOwnershipCommands
   async Submit(input: ModuleOwnershipPreviewInput, preview: ModuleOwnershipPreview)
   {
     if (this.blocked || input.workspaceId !== this.workspaceId)
-
       return;
 
     let request: ModuleOwnershipCommitInput;
@@ -304,10 +280,10 @@ export class ModuleOwnershipCommands
 
       return
     }
+
     const record: ModuleOwnershipAttempt = { request, phase: 'submitting', uncertain: false };
 
     if (this.Save(record))
-
       await this.Send(record);
 
     return this.value.records.find(item => item.request.commandId === request.commandId);
@@ -318,7 +294,6 @@ export class ModuleOwnershipCommands
     const request = record.request;
 
     if (this.pending.has(request.commandId))
-
       return;
 
     this.pending.add(request.commandId);
@@ -351,7 +326,6 @@ export class ModuleOwnershipCommands
     const record = this.value.records.find(item => item.request.commandId === id);
 
     if (this.unavailable || this.pending.size || record?.phase !== 'unknown')
-
       return;
 
     await this.Send(record)
@@ -363,7 +337,6 @@ export class ModuleOwnershipCommands
     const record = this.value.records.find(item => item.request.commandId === id);
 
     if (this.corrupt || !record || this.pending.has(id))
-
       return;
 
     this.pending.add(id);
@@ -375,11 +348,8 @@ export class ModuleOwnershipCommands
       const raw = await this.ports.lookup({ workspaceId: this.workspaceId, commandId: id });
 
       if (raw !== undefined)
-
         this.Save({ ...record, phase: 'accepted', receipt: checkedModuleOwnershipReceipt(raw, record.request, record.receipt), error: undefined });
-
       else if (record.phase !== 'accepted')
-
         this.Save({ ...record, phase: 'unknown', uncertain: true, error: '尚未查到原回执；不能据此新建命令。' })
     }
     catch (error)
@@ -398,9 +368,7 @@ export class ModuleOwnershipCommands
   async Restore()
   {
     for (const record of this.value.records)
-
       if (record.phase === 'unknown')
-
         await this.Query(record.request.commandId)
   }
 }
@@ -421,13 +389,12 @@ export class ModuleOwnershipCommandPool
     for (const [key, item] of this.values)
     {
       if (this.values.size <= 16)
-
         break;
 
       if (key !== workspaceId && item.canRelease)
-
         this.values.delete(key)
     }
+
     return value
   }
 }

@@ -43,13 +43,11 @@ export class ModelJsonRequests
   Embed(input: readonly string[])
   {
     if (!input.length || input.length > 64 || input.some(text => !text.length))
-
       throw Error('向量输入必须为 1–64 个非空片段');
 
     const model = this.llm.modelRoles?.embedding.profile;
 
     if (model?.api !== 'openai-embeddings' || input.reduce((sum, text) => sum + Buffer.byteLength(text), 0) > model.inputTokens)
-
       throw Error('向量输入超过冻结模型的保守输入上限，请缩短查询或片段');
 
     return this.Request('embedding', { input, encoding_format: 'float' });
@@ -58,17 +56,13 @@ export class ModelJsonRequests
   private async Request(role: 'primary' | 'embedding', payload: Record<string, unknown>): Promise<Record<string, any>>
   {
     if (this.blocked || this.pending)
-
       throw Error('本轮模型请求已停止或尚未结算，不能重复发送');
 
     this.pending = true;
 
     let ticket: RequestBudgetTicket | undefined,
-
       sent = false,
-
       settled = false,
-
       reason: RequestUnknownReason = 'transport_failed';
 
     try
@@ -78,23 +72,18 @@ export class ModelJsonRequests
       const operation = role === 'primary' ? this.llm : this.llm.modelRoles?.embedding;
 
       if (!operation || role === 'primary' && operation.profile.api !== 'openai-completions' || role === 'embedding' && operation.profile.api !== 'openai-embeddings')
-
         throw Error('领域引擎模型角色或协议不匹配');
 
       const expected = requestBudgetModelFor(this.llm.profile, role),
-
         port = await this.budget(role);
 
       if (port && !isDeepStrictEqual(port.model, expected))
-
         throw Error('模型请求与原预算快照不一致');
 
       if (role === 'embedding' && !isDeepStrictEqual(operation.profile, this.llm.profile.modelRoles?.roles.embedding?.profile))
-
         throw Error('向量连接与公开冻结快照不一致');
 
       const maxOutputTokens = role === 'primary' ? this.llm.profile.maxTokens : 0,
-
         reservation = requestBudgetReservation(expected, maxOutputTokens);
 
       const endpoint = modelEndpointSchema.parse(operation.profile.baseUrl).replace(/\/+$/, '') + (role === 'primary' ? '/chat/completions' : '/embeddings');
@@ -102,7 +91,6 @@ export class ModelJsonRequests
       const body = JSON.stringify({ ...payload, model: operation.profile.model });
 
       if (Buffer.byteLength(body) > 4 * 1024 * 1024)
-
         throw Error('领域模型请求正文超过 4 MiB');
 
       this.signal.throwIfAborted();
@@ -118,7 +106,6 @@ export class ModelJsonRequests
       const headers: Record<string, string> = { 'content-type': 'application/json', 'accept': 'application/json' };
 
       if (operation.profile.auth === 'api-key')
-
         headers.authorization = 'Bearer ' + operation.apiKey;
 
       // assertSend 和真正发网之间不让出执行权；任何发送后的错误都不能证明供应商未计费。
@@ -134,6 +121,7 @@ export class ModelJsonRequests
 
         throw Error('供应商未返回可核实的 JSON 响应')
       }
+
       reason = 'protocol_unverifiable';
 
       const parts: Uint8Array[] = [];
@@ -152,12 +140,13 @@ export class ModelJsonRequests
 
           throw Error('领域模型响应超过 8 MiB')
         }
+
         parts.push(part)
       }
+
       const result = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(parts)));
 
       if (!result || typeof result !== 'object' || Array.isArray(result) || result.error)
-
         throw Error('模型响应不是有效操作结果');
 
       reason = 'incomplete_usage';
@@ -171,7 +160,6 @@ export class ModelJsonRequests
       const cost = requestBudgetCost(expected, usage);
 
       if (usage.input + usage.cacheRead + usage.cacheWrite > requestBudgetInputCapacity(expected) || usage.output > maxOutputTokens || cost !== undefined && reservation.estimatedCostUsd !== undefined && cost > reservation.estimatedCostUsd)
-
         throw Error('供应商用量超过原预留，已保存实际用量并停止');
 
       this.signal.throwIfAborted();
@@ -185,16 +173,13 @@ export class ModelJsonRequests
       if (ticket && !settled)
       {
         if (!sent)
-
           await ticket.notSent('cancelled_before_send');
-
         else
-
           await ticket.unknown(this.signal.aborted ? 'cancelled' : reason)
       }
+
       // 发网错误不透传任意供应商正文或包含凭据的底层异常。
       if (sent && !settled)
-
         throw Error('模型请求用量或交付无法确认，本轮已停止；请核实原请求，未自动重试');
 
       throw error;

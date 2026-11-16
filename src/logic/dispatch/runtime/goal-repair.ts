@@ -16,19 +16,16 @@ const repairable = new Set(['GOAL_REVIEW_REQUIRED', 'GOAL_PLAN_REQUIRED', 'GOAL_
 export function goalRepairFeedback(scope: DispatchScope, graph: GraphSnapshot, runId: string, error: { code?: string; message?: string }, history: readonly GoalRepairSource[]): { source: GoalRepairSource; message: string } | undefined
 {
   if (!repairable.has(error.code ?? '') || history.length >= 3 || scope.status !== 'active' || !scope.goal || scope.goal.blocked || scope.recovery || scope.goal.review?.decision === 'awaiting_user' || scope.goal.review?.decision === 'blocked')
-
     return;
 
   const tasks = graph.tasks.filter(task => task.scopeId === scope.scopeId);
 
   if (tasks.some(task => task.activeRunId || ['planned', 'queued', 'running', 'waiting', 'checkpointed'].includes(task.status)))
-
     return;
 
   const fingerprint = hash(json({ code: error.code, criteria: scope.goal.plan?.criteria, tasks: tasks.map(task => ({ taskId: task.taskId, status: task.status, result: task.result, runIds: task.runIds })) }));
 
   if (history.filter(item => item.fingerprint === fingerprint).length >= 2)
-
     return;
 
   const source: GoalRepairSource = { kind: 'goal-repair', scopeId: scope.scopeId, sourceRunId: runId, attempt: history.length + 1, failureCode: error.code!, fingerprint, continuationId: 'goal-repair-' + hash(json({ scopeId: scope.scopeId, runId, fingerprint })) };

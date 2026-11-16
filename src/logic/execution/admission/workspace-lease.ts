@@ -34,11 +34,9 @@ export class WorkspaceExecutionLease
     const active = [...this.leases.values()];
 
     if (agentInstanceId && active.some(lease => lease.agentInstanceId === agentInstanceId))
-
       return 'agent_busy';
 
     if (this.leases.has(runKey) || active.some(lease => lease.permission !== 'read') || (permission !== 'read' && this.leases.size))
-
       return 'workspace_conflict';
   }
 
@@ -48,11 +46,9 @@ export class WorkspaceExecutionLease
     const reason = this.CanAcquire(runKey, permission, agentInstanceId);
 
     if (reason === 'agent_busy')
-
       fail('MEMBER_BUSY', '该成员实例正在执行其他任务，请等待当前运行结束');
 
     if (reason === 'workspace_conflict')
-
       fail('WORKSPACE_EXECUTION_BUSY', '工作区有冲突运行，请等待结束后启动；不同实例的只读任务可以并行');
 
     return this.Hold(runKey, permission, agentInstanceId);
@@ -65,11 +61,9 @@ export class WorkspaceExecutionLease
   AcquireReadWithin(runKey: string, ownerKey: string): () => void
   {
     if (!this.leases.has(ownerKey))
-
       return this.Acquire(runKey, 'read');
 
     if (this.leases.has(runKey) || [...this.leases].some(([key, lease]) => key !== ownerKey && lease.permission !== 'read'))
-
       fail('WORKSPACE_EXECUTION_BUSY', '证据核实与其他工作区运行冲突');
 
     return this.Hold(runKey, 'read');

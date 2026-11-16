@@ -20,7 +20,6 @@ import { sameWorkflowSelectionsForModules } from './workflow-selection';
 function check(value: unknown, code: string, message: string): asserts value
 {
   if (!value)
-
     fail(code, message)
 }
 
@@ -34,7 +33,6 @@ export function queuedDependencyAdditionSelection(state: DispatchState, identity
   check(state.workspaceId === identity.workspaceId, 'GRAPH_IDENTITY_MISMATCH', '追加前置不属于当前工作区');
 
   const graph = state.graphs.find(value => value.identity.workspaceId === identity.workspaceId && value.identity.rootSessionId === identity.rootSessionId),
-
     scope = state.scopes?.find(value => value.scopeId === scopeId && value.workspaceId === identity.workspaceId && value.rootSessionId === identity.rootSessionId);
 
   check(graph && scope, 'DISPATCH_SCOPE_IDENTITY', '追加前置不属于当前主会话周期');
@@ -44,7 +42,6 @@ export function queuedDependencyAdditionSelection(state: DispatchState, identity
   check(!scopeHasUnresolvedActiveInput(scope), 'GOAL_ACTIVE_INPUT_UNRESOLVED', '运行中补充尚未核实，不能修订前置');
 
   const goal = scope.goal,
-
     plan = goal?.plan;
 
   check(goal && plan && !goal.blocked && !goal.review && !goalNeedsReplan(goal), 'GOAL_REPLAN_REQUIRED', '追加前置需要当前有效且未经审阅的目标计划');
@@ -56,7 +53,6 @@ export function queuedDependencyAdditionSelection(state: DispatchState, identity
   check(graph.cursor.streamId === input.expectedGraphCursor.streamId && graph.cursor.seq === input.expectedGraphCursor.seq, 'DEPENDENCY_GRAPH_STALE', '任务图已变化，请重新读取游标');
 
   const source = graph.tasks.find(task => task.taskId === input.source.taskId),
-
     target = graph.tasks.find(task => task.taskId === input.target.taskId);
 
   check(source?.scopeId === scopeId && target?.scopeId === scopeId, 'DEPENDENCY_NOT_ALLOWED', '两端任务必须属于同一当前周期');
@@ -72,9 +68,7 @@ export function queuedDependencyAdditionSelection(state: DispatchState, identity
   const outgoing = new Map<string, string[]>();
 
   for (const edge of graph.edges)
-
     if (edge.enabled && edge.kind === 'dependency')
-
       outgoing.set(edge.fromNodeId, [...(outgoing.get(edge.fromNodeId) ?? []), edge.toNodeId]);
 
   const reachable = (start: string) => { const queue = [start], seen = new Set(queue); for (let index = 0; index < queue.length; index++) for (const id of outgoing.get(queue[index]) ?? []) if (!seen.has(id)) { seen.add(id); queue.push(id) } return seen };
@@ -84,7 +78,6 @@ export function queuedDependencyAdditionSelection(state: DispatchState, identity
   check(!targetNodes.has(source.nodeId), 'GRAPH_CYCLE', '新来源属于目标后继，追加将形成循环');
 
   const nodes = new Set([...targetNodes, ...reachable(source.nodeId)]),
-
     tasks = graph.tasks.filter(task => nodes.has(task.nodeId));
 
   check(tasks.length === nodes.size && tasks.length <= 500, 'DEPENDENCY_NOT_ALLOWED', '依赖闭包包含未知节点或超出范围');
@@ -97,6 +90,7 @@ export function queuedDependencyAdditionSelection(state: DispatchState, identity
 
     check(task.modules.every(module => module.knowledgeRevision === plan.knowledgeRevision) && plan.assignments.some(item => item.agentId === task.assignee.agentId && sameSet(item.moduleIds, task.modules.map(module => module.moduleId)) && sameWorkflowSelectionsForModules(item.workflowSelections, task.workflowSelections, task.modules.map(module => module.moduleId))), 'DEPENDENCY_KNOWLEDGE_STALE', '待办角色、模块或流程不匹配当前计划：' + task.taskId);
   }
+
   const assignments = tasks.map(task => { const values = state.outbox.filter(value => value.kind === 'assignment' && value.taskId === task.taskId && value.identity.rootSessionId === identity.rootSessionId); check(values.length === 1 && values[0].delivery === 'pending' && !values[0].claim, 'DEPENDENCY_NOT_ALLOWED', '待办信封已领取或不完整：' + task.taskId); return values[0] });
 
   const members = tasks.map(task => { const member = state.members.find(value => value.agentInstanceId === task.assignee.agentInstanceId); check(member && member.workspaceId === identity.workspaceId && member.agentId === task.assignee.agentId && member.executionScopeId === scopeId && member.executionTaskId === task.taskId && member.lifecycle === 'active' && ['idle', 'waiting'].includes(member.activity) && !member.activeRunId && !member.activeTaskId && !member.communicatingMessageIds.length && member.waitingTaskIds.every(id => id === task.taskId), 'DEPENDENCY_NOT_ALLOWED', '待办实例被占用或不属于原任务：' + task.taskId); check(member.configurationRevision === plan.knowledgeRevision, 'DEPENDENCY_KNOWLEDGE_STALE', '待办成员配置已经过期：' + task.taskId); return member; });

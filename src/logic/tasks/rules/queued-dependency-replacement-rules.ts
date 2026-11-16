@@ -20,7 +20,6 @@ import { abandonedCheckpointSource } from './checkpoint-handoff-rules';
 function check(value: unknown, code: string, message: string): asserts value
 {
   if (!value)
-
     fail(code, message)
 }
 
@@ -34,7 +33,6 @@ export function queuedDependencyReplacementSelection(state: DispatchState, ident
   check(state.workspaceId === identity.workspaceId, 'GRAPH_IDENTITY_MISMATCH', '替换目标不属于当前工作区');
 
   const graph = state.graphs.find(value => value.identity.workspaceId === identity.workspaceId && value.identity.rootSessionId === identity.rootSessionId),
-
     scope = state.scopes?.find(value => value.scopeId === scopeId && value.workspaceId === identity.workspaceId && value.rootSessionId === identity.rootSessionId);
 
   check(graph && scope, 'DISPATCH_SCOPE_IDENTITY', '替换周期不属于当前主会话');
@@ -42,7 +40,6 @@ export function queuedDependencyReplacementSelection(state: DispatchState, ident
   check(scope.status === 'active' && !scope.budget?.blocked, 'DEPENDENCY_NOT_ALLOWED', '只能修订当前活动且未被预算阻止的周期');
 
   const goal = scope.goal,
-
     plan = goal?.plan;
 
   check(goal && plan && !goal.blocked && !goal.review && !goalNeedsReplan(goal), 'GOAL_REPLAN_REQUIRED', '修订前置前必须具有当前有效目标计划，不能绕过已有审阅或用户补充');
@@ -52,7 +49,6 @@ export function queuedDependencyReplacementSelection(state: DispatchState, ident
   check(graph.cursor.streamId === input.expectedGraphCursor.streamId && graph.cursor.seq === input.expectedGraphCursor.seq, 'DEPENDENCY_GRAPH_STALE', '任务图已变化，请读取最新游标');
 
   const target = graph.tasks.find(task => task.taskId === input.target.taskId),
-
     edge = graph.edges.find(value => value.edgeId === input.replace.edgeId);
 
   check(target?.scopeId === scopeId, 'DEPENDENCY_NOT_ALLOWED', '目标任务不属于本周期');
@@ -66,13 +62,11 @@ export function queuedDependencyReplacementSelection(state: DispatchState, ident
   check(edge.revision === input.replace.expectedRevision, 'DEPENDENCY_EDGE_STALE', '原依赖版本已变化');
 
   const source = graph.tasks.find(task => task.nodeId === edge.fromNodeId),
-
     replacement = graph.tasks.find(task => task.taskId === input.with.taskId);
 
   check(source?.scopeId === scopeId && source.planRevision === edge.condition.planRevision && !source.activeRunId && !source.result && source.runIds.length && (source.status === 'failed' || source.status === 'blocked' && source.help || source.status === 'cancelled' && source.checkpointAbandonment), 'DEPENDENCY_SOURCE_INVALID', '原来源必须是可靠失败、求助或明确放弃的检查点，不能替换未决或仍执行的来源');
 
   if (source.status === 'cancelled')
-
     abandonedCheckpointSource(state, identity, scopeId, source);
 
   const sourceRuns = (state.runs ?? []).filter(run => run.binding.taskId === source.taskId && run.binding.rootSessionId === identity.rootSessionId);
@@ -84,7 +78,6 @@ export function queuedDependencyReplacementSelection(state: DispatchState, ident
   check(replacement.revision === input.with.expectedRevision && replacement.planRevision === input.with.expectedPlanRevision, 'DEPENDENCY_TASK_STALE', '新前置任务版本已变化');
 
   const result = replacement.result,
-
     run = (state.runs ?? []).find(value => value.binding.taskId === replacement.taskId && value.binding.runId === input.with.runId);
 
   check(replacement.status === 'result_ready' && !replacement.activeRunId && !replacement.help && result && result.planRevision === replacement.planRevision && result.runId === input.with.runId && result.resultId === input.with.resultId && replacement.runIds.includes(result.runId), 'DEPENDENCY_CANDIDATE_INVALID', '新前置没有对应当前计划的真实交付候选');
@@ -98,19 +91,14 @@ export function queuedDependencyReplacementSelection(state: DispatchState, ident
   check(!graph.edges.some(value => value.enabled && value.kind === 'dependency' && value.fromNodeId === replacement.nodeId && value.toNodeId === target.nodeId), 'DEPENDENCY_EDGE_DUPLICATE', '目标已经依赖该候选，不能通过重复边删除另一项门禁');
 
   const byNode = new Map(graph.tasks.map(task => [task.nodeId, task])),
-
     outgoing = new Map<string, string[]>();
 
   for (const value of graph.edges)
-
     if (value.enabled && value.kind === 'dependency')
-
       outgoing.set(value.fromNodeId, [...(outgoing.get(value.fromNodeId) ?? []), value.toNodeId]);
 
   const queue = [target.nodeId],
-
     seen = new Set(queue),
-
     tasks: TaskNode[] = [];
 
   for (let index = 0; index < queue.length; index++)
@@ -128,7 +116,6 @@ export function queuedDependencyReplacementSelection(state: DispatchState, ident
     tasks.push(task);
 
     for (const nodeId of outgoing.get(task.nodeId) ?? [])
-
       if (!seen.has(nodeId))
       {
         seen.add(nodeId);
@@ -136,6 +123,7 @@ export function queuedDependencyReplacementSelection(state: DispatchState, ident
         queue.push(nodeId)
       }
   }
+
   const assignments = tasks.map(task => { const items = state.outbox.filter(value => value.kind === 'assignment' && value.taskId === task.taskId); check(items.length === 1 && items[0].delivery === 'pending' && !items[0].claim, 'DEPENDENCY_NOT_ALLOWED', '待办信封已领取或身份不完整：' + task.taskId); return items[0] });
 
   const members = tasks.map(task => { const member = state.members.find(value => value.agentInstanceId === task.assignee.agentInstanceId); check(member && member.executionScopeId === scopeId && member.executionTaskId === task.taskId && member.lifecycle === 'active' && ['idle', 'waiting'].includes(member.activity) && !member.activeRunId && !member.activeTaskId && !member.communicatingMessageIds.length && member.waitingTaskIds.every(id => id === task.taskId), 'DEPENDENCY_NOT_ALLOWED', '待办实例被占用、已释放或身份不一致：' + task.taskId); check(member.configurationRevision === plan.knowledgeRevision, 'DEPENDENCY_KNOWLEDGE_STALE', '待办成员配置已经过期：' + task.taskId); return member });

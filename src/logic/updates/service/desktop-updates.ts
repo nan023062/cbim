@@ -48,7 +48,6 @@ export class DesktopUpdates
   Start()
   {
     if (!this.state.enabled || this.controller.signal.aborted || this.initial || this.timer)
-
       return;
 
     this.initial = setTimeout(() => { void this.Check() }, 10000);
@@ -63,11 +62,9 @@ export class DesktopUpdates
   private Run(action: () => Promise<void>)
   {
     if (this.controller.signal.aborted)
-
       return Promise.resolve(this.Status());
 
     if (this.busy)
-
       return this.busy;
 
     const job = action().then(() => this.Status()).finally(() => { if (this.busy === job) this.busy = undefined });
@@ -80,7 +77,6 @@ export class DesktopUpdates
   Check()
   {
     if (!this.state.enabled || ['downloading', 'ready', 'installing'].includes(this.state.phase))
-
       return Promise.resolve(this.Status());
 
     return this.Run(async () => { const previous = this.state; this.state = { ...this.state, phase: 'checking', error: undefined }; try { const latest = await this.latest(this.controller.signal); if (this.controller.signal.aborted) return; const newer = latest?.delivery === 'resources' ? latest.version === this.state.currentVersion && Number.isSafeInteger(latest.resourceVersion) && latest.resourceVersion! > (this.state.currentResourceVersion ?? 0) : latest && compareDesktopVersions(latest.version, this.state.currentVersion) > 0; const release = newer ? latest : undefined; if (release?.version !== previous.release?.version || release?.resourceVersion !== previous.release?.resourceVersion) this.retryDownloadAfter = 0; this.state = { ...this.state, checkedAt: new Date().toISOString(), release, phase: release ? 'available' : 'current', progress: undefined }; if (release) { if (Date.now() >= this.retryDownloadAfter) await this.DownloadCandidate(release); else this.state = { ...this.state, error: previous.error }; } } catch { if (!this.controller.signal.aborted) this.state = { ...this.state, checkedAt: new Date().toISOString(), release: previous.release, phase: previous.release ? 'available' : 'idle', error: '暂时无法检查更新，将在下一分钟自动重试，也可手动检查。' }; } });
@@ -90,11 +86,9 @@ export class DesktopUpdates
   Download()
   {
     if (this.busy)
-
       return this.busy;
 
     if (this.state.phase !== 'available' || !this.state.release)
-
       return Promise.resolve(this.Status());
 
     const release = this.state.release;
@@ -112,7 +106,6 @@ export class DesktopUpdates
       await this.installer.Prepare(release);
 
       if (this.controller.signal.aborted)
-
         return;
 
       await this.installer.Download(percent => { if (!this.controller.signal.aborted && Number.isFinite(percent)) this.state = { ...this.state, progress: Math.min(100, Math.max(0, Math.round(percent))) }; });
@@ -139,11 +132,9 @@ export class DesktopUpdates
   Install()
   {
     if (this.busy)
-
       return this.busy;
 
     if (this.state.phase !== 'ready')
-
       return Promise.resolve(this.Status());
 
     return this.Run(() => this.InstallReady());
@@ -159,13 +150,11 @@ export class DesktopUpdates
       await new Promise<void>(resolve => setImmediate(resolve));
 
       if (this.controller.signal.aborted)
-
         return;
 
       await this.beforeInstall();
 
       if (this.controller.signal.aborted)
-
         return;
 
       await this.installer.Install();
@@ -173,7 +162,6 @@ export class DesktopUpdates
     catch
     {
       if (!this.controller.signal.aborted)
-
         this.state = { ...this.state, phase: 'ready', error: '重启安装未能完成。请保留当前窗口，处理关闭错误后再试。' }
     }
   }

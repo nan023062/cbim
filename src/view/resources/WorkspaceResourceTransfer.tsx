@@ -75,27 +75,18 @@ export function WorkspaceResourceTransfer({ workspaceId, snapshot, mode, kind, o
   const base = useRef(snapshot).current;
 
   const [status, setStatus] = useState<RepositoryStatus>(),
-
     [library, setLibrary] = useState<ResourceLibrarySnapshot>(),
-
     [busy, setBusy] = useState(false),
-
     [error, setError] = useState('');
 
   const [selected, setSelected] = useState(resourceId ?? ''),
-
     [name, setName] = useState(kind === 'architecture' ? '业务架构' : kind === 'team' ? '团队定义' : objectId?.split('/').at(-1) ?? ''),
-
     [summary, setSummary] = useState('');
 
   const [parent, setParent] = useState(targetParentId ?? '.cbim/team'),
-
     [slug, setSlug] = useState(''),
-
     [replace, setReplace] = useState(false),
-
     [preview, setPreview] = useState<ImportPreview>(),
-
     [result, setResult] = useState<
       {
         message: string;
@@ -106,7 +97,6 @@ export function WorkspaceResourceTransfer({ workspaceId, snapshot, mode, kind, o
       }>();
 
   const lock = useRef(false),
-
     alive = useRef(true);
 
   useEffect(() => { alive.current = true; void load(); return () => { alive.current = false } }, []);
@@ -122,7 +112,6 @@ export function WorkspaceResourceTransfer({ workspaceId, snapshot, mode, kind, o
       const current: RepositoryStatus = await window.cbim.call('resources.status');
 
       if (!alive.current)
-
         return;
 
       setStatus(current);
@@ -141,13 +130,11 @@ export function WorkspaceResourceTransfer({ workspaceId, snapshot, mode, kind, o
     catch (cause)
     {
       if (alive.current)
-
         setError(cause instanceof Error ? cause.message : String(cause))
     }
     finally
     {
       if (alive.current)
-
         setBusy(false)
     }
   }
@@ -155,7 +142,6 @@ export function WorkspaceResourceTransfer({ workspaceId, snapshot, mode, kind, o
   const eligible = (library?.items ?? []).filter(item => applicableResourceKind(item)).filter(item => category === 'templates' || kind === 'architecture' ? item.kind === 'architecture' : ['team', 'agent', 'skill'].includes(item.kind)).filter(item => !kind || item.kind === kind);
 
   const item = eligible.find(item => item.id === selected),
-
     selectedKind = item?.kind as PackageKind | undefined;
 
   const whole = selectedKind === 'team' || selectedKind === 'architecture';
@@ -178,7 +164,6 @@ export function WorkspaceResourceTransfer({ workspaceId, snapshot, mode, kind, o
   async function perform(action: () => Promise<void>)
   {
     if (lock.current)
-
       return;
 
     lock.current = true;
@@ -190,7 +175,6 @@ export function WorkspaceResourceTransfer({ workspaceId, snapshot, mode, kind, o
     try
     {
       if (base.workspaceId !== workspaceId)
-
         throw Error('工作区身份已改变，请重新打开资源操作');
 
       await action()
@@ -198,7 +182,6 @@ export function WorkspaceResourceTransfer({ workspaceId, snapshot, mode, kind, o
     catch (cause)
     {
       if (alive.current)
-
         setError(cause instanceof Error ? cause.message : String(cause))
     }
     finally
@@ -206,7 +189,6 @@ export function WorkspaceResourceTransfer({ workspaceId, snapshot, mode, kind, o
       lock.current = false;
 
       if (alive.current)
-
         setBusy(false)
     }
   }
@@ -216,7 +198,6 @@ export function WorkspaceResourceTransfer({ workspaceId, snapshot, mode, kind, o
   async function publish()
   {
     if (!library || !kind)
-
       return;
 
     await perform(async () => { const receipt = await window.cbim.call('resources.publishWorkspace', { ...identity, repositoryId: library.repositoryId, repositoryRevision: library.revision, kind, ...(objectId ? { objectId } : {}), name, summary }); if (alive.current) { setLibrary(receipt.repository); setResult({ message: '静态定义已发布到当前仓库。', warnings: receipt.warnings ?? [], removedBindings: receipt.removedBindings ?? [] }) } })
@@ -225,7 +206,6 @@ export function WorkspaceResourceTransfer({ workspaceId, snapshot, mode, kind, o
   async function prepare()
   {
     if (!library || !item)
-
       return;
 
     await perform(async () => { const receipt: ImportPreview = await window.cbim.call('resources.importPreview', { ...identity, repositoryId: library.repositoryId, repositoryRevision: library.revision, resourceId: item.id, mode: whole && replace ? 'replace' : 'add', ...(selectedKind !== 'architecture' && !(selectedKind === 'team' && replace) ? { targetParentId: parent, slug } : {}) }); if (alive.current) setPreview(receipt) })
@@ -234,7 +214,6 @@ export function WorkspaceResourceTransfer({ workspaceId, snapshot, mode, kind, o
   async function commit()
   {
     if (!preview)
-
       return;
 
     await perform(async () => { await window.cbim.call('resources.importCommit', { workspaceId, instanceId: base.instanceId, planId: preview.planId }); if (alive.current) { setResult({ message: '资源包已应用到此工作区。', warnings: preview.warnings, removedBindings: preview.removedBindings }); setPreview(undefined); onApplied?.() } })

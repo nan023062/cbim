@@ -25,6 +25,7 @@ export function projectWorkspaceMemberMutation(previous: DispatchState, mutation
 
     return { workspaceMembers: previous.workspaceMembers ?? [], workspaceMemberChanges: previous.workspaceMemberChanges ?? [], registryCursor: previous.registryCursor ?? null };
   }
+
   invalid(!Array.isArray(mutation.workspaceMemberChanges) || mutation.workspaceMemberChanges.length !== 1, '登记事务必须恰好追加一条审计');
 
   const captureAllowed = sourcePermit?.kind === 'workspace_member' && sourcePermit.changeId === mutation.workspaceMemberChanges[0]?.changeId && sourcePermit.captureChangeId === mutation.knowledgeSourceChanges?.[0]?.changeId;
@@ -37,13 +38,9 @@ export function projectWorkspaceMemberMutation(previous: DispatchState, mutation
   if (event.actor.kind === 'main_agent')
   {
     const a = event.actor,
-
       scope = previous.scopes?.find(s => s.scopeId === a.scopeId),
-
       graph = previous.graphs.find(g => g.identity.rootSessionId === a.rootSessionId),
-
       member = previous.members.find(m => m.agentInstanceId === a.agentInstanceId),
-
       session = previous.sessions.find(s => s.agentSessionId === a.agentSessionId);
 
     invalid(!scope || scope.workspaceId !== previous.workspaceId || scope.rootSessionId !== a.rootSessionId || scope.status !== 'active' || scope.runTracking?.mainRunIds.at(-1) !== a.runId, '主岗位操作缺少当前活动运行');
@@ -52,12 +49,11 @@ export function projectWorkspaceMemberMutation(previous: DispatchState, mutation
 
     invalid(session?.workspaceId !== previous.workspaceId || session.rootSessionId !== a.rootSessionId || session.agentInstanceId !== a.agentInstanceId || session.agentId !== 'cbim:main' || session.purpose !== 'conversation' || !member?.agentSessionIds.includes(a.agentSessionId), '主岗位操作通道不一致');
   }
-  const next = applyWorkspaceMemberChange(previous, event),
 
+  const next = applyWorkspaceMemberChange(previous, event),
     expected = workspaceMemberCommand(event.request, event.actor);
 
   if (event.next.state === 'retired' && (previous.moduleOwnerships ?? []).some(binding => binding.ownerMemberId === event.next.memberId))
-
     fail('MEMBER_OWNERSHIP_ACTIVE', '岗位仍负责模块，请先明确解除或更换负责人');
 
   invalid(command.commandId !== expected.commandId || command.fingerprint !== expected.fingerprint, '岗位审计与原命令指纹不一致');

@@ -19,7 +19,6 @@ const pathId = z.string().regex(/^[A-Za-z0-9_-]{1,100}$/);
 const hash = z.string().regex(/^[a-f0-9]{64}$/);
 
 const seq = z.number().int().nonnegative().safe(),
-
   revision = z.number().int().positive().safe();
 
 const graphCursor = z.object({ streamId: id, seq }).strict();

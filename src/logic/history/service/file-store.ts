@@ -32,24 +32,19 @@ export class FileAgentHistoryStore implements AgentHistoryStore
     await fs.mkdir(directory, { recursive: true });
 
     if ((await fs.lstat(directory)).isSymbolicLink())
-
       throw Error('Agent 历史目录不能是符号链接')
   }
 
   async Put(raw: AgentHistoryRecord)
   {
     const record = checkedAgentHistoryRecord(raw, this.workspaceId, this.root),
-
       location = this.Location(record);
 
     const role = path.join(this.directory, location.role),
-
       sessions = path.join(role, 'sessions'),
-
       session = path.join(sessions, location.session);
 
     for (const directory of [this.directory, role, sessions, session])
-
       await this.SafeDirectory(directory);
 
     await atomic(path.join(session, location.file), JSON.stringify(record));
@@ -59,7 +54,6 @@ export class FileAgentHistoryStore implements AgentHistoryStore
   async Load()
   {
     const records: AgentHistoryRecord[] = [],
-
       diagnostics: string[] = [];
 
     const invalid = () => { const message = '部分 Agent 历史索引损坏或目录不受支持，已跳过并等待运行日志回补'; if (!diagnostics.includes(message)) diagnostics.push(message) };
@@ -69,7 +63,6 @@ export class FileAgentHistoryStore implements AgentHistoryStore
     try
     {
       if ((await fs.lstat(this.directory)).isSymbolicLink())
-
         throw Error('invalid root');
 
       roles = await fs.readdir(this.directory, { withFileTypes: true })
@@ -77,11 +70,11 @@ export class FileAgentHistoryStore implements AgentHistoryStore
     catch (error: any)
     {
       if (error.code === 'ENOENT')
-
         return { records, diagnostics };
 
       throw error
     }
+
     for (const role of roles)
     {
       if (!role.isDirectory() || !/^[a-f0-9]{64}$/.test(role.name))
@@ -90,12 +83,12 @@ export class FileAgentHistoryStore implements AgentHistoryStore
 
         continue
       }
+
       try
       {
         const folder = path.join(this.directory, role.name, 'sessions');
 
         if (!(await fs.lstat(folder)).isDirectory() || (await fs.lstat(folder)).isSymbolicLink())
-
           throw Error('invalid sessions');
 
         for (const session of await fs.readdir(folder, { withFileTypes: true }))
@@ -106,10 +99,10 @@ export class FileAgentHistoryStore implements AgentHistoryStore
 
             continue
           }
+
           for (const file of await fs.readdir(path.join(folder, session.name), { withFileTypes: true }))
           {
             if (file.name.endsWith('.tmp'))
-
               continue;
 
             if (!file.isFile() || !/^[a-f0-9]{64}\.json$/.test(file.name))
@@ -118,14 +111,13 @@ export class FileAgentHistoryStore implements AgentHistoryStore
 
               continue
             }
+
             try
             {
               const record = checkedAgentHistoryRecord(JSON.parse(await fs.readFile(path.join(folder, session.name, file.name), 'utf8')), this.workspaceId, this.root),
-
                 expected = this.Location(record);
 
               if (expected.role !== role.name || expected.session !== session.name || expected.file !== file.name)
-
                 throw Error('index location mismatch');
 
               records.push(record);
@@ -142,6 +134,7 @@ export class FileAgentHistoryStore implements AgentHistoryStore
         invalid()
       }
     }
+
     return { records, diagnostics };
   }
 }

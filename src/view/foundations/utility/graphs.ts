@@ -16,25 +16,22 @@ export class GraphTopologyError extends Error
 export function rankDirectedGraph(ids: readonly string[], edges: readonly (readonly [string, string])[]): Map<string, number>
 {
   if (new Set(ids).size !== ids.length)
-
     throw new GraphTopologyError('duplicate-node');
 
   const incoming = new Map(ids.map(id => [id, 0])),
-
     outgoing = new Map(ids.map(id => [id, [] as string[]])),
-
     ranks = new Map(ids.map(id => [id, 0]));
 
   for (const [from, to] of edges)
   {
     if (!incoming.has(from) || !incoming.has(to))
-
       throw new GraphTopologyError('missing-endpoint');
 
     incoming.set(to, incoming.get(to)! + 1);
 
     outgoing.get(from)!.push(to);
   }
+
   const queue = ids.filter(id => incoming.get(id) === 0);
 
   for (let index = 0; index < queue.length; index++)
@@ -48,12 +45,11 @@ export function rankDirectedGraph(ids: readonly string[], edges: readonly (reado
       incoming.set(target, incoming.get(target)! - 1);
 
       if (incoming.get(target) === 0)
-
         queue.push(target);
     }
   }
-  if (queue.length !== ids.length)
 
+  if (queue.length !== ids.length)
     throw new GraphTopologyError('cycle');
 
   return ranks;

@@ -13,11 +13,9 @@ import { applyMemberEvents, emptyMemberEvents, memberEventKey, memberPollDelay, 
 export function useMemberRun(workspaceId: string, rootSessionId: string, taskId: string, runId?: string, enabled = true, active = true)
 {
   const scope = { workspaceId, rootSessionId, taskId, runId: runId ?? '' },
-
     key = memberEventKey(scope);
 
   const [state, setState] = useState<MemberEventState>(() => emptyMemberEvents(scope)),
-
     [error, setError] = useState<
       {
         key: string;
@@ -41,11 +39,8 @@ export function useMemberRun(workspaceId: string, rootSessionId: string, taskId:
   useEffect(() =>
   {
     let stopped = false,
-
       timer: ReturnType<typeof setTimeout> | undefined,
-
       inFlight: Promise<void> | undefined,
-
       projection = emptyMemberEvents(scope);
 
     const controller = { key, refresh: pull };
@@ -59,11 +54,9 @@ export function useMemberRun(workspaceId: string, rootSessionId: string, taskId:
     async function pull(): Promise<void>
     {
       if (stopped || !enabled || !runId)
-
         return;
 
       if (inFlight)
-
         return inFlight;
 
       clearTimeout(timer);
@@ -77,7 +70,6 @@ export function useMemberRun(workspaceId: string, rootSessionId: string, taskId:
           const reply = await window.cbim.call('dispatch.executionEvents', { workspaceId, rootSessionId, taskId, runId, cursor: projection.cursor, limit: 200 });
 
           if (stopped || current.current !== controller)
-
             return;
 
           let next: MemberEventState;
@@ -93,12 +85,14 @@ export function useMemberRun(workspaceId: string, rootSessionId: string, taskId:
 
             throw cause
           }
+
           if (next !== projection)
           {
             projection = next;
 
             setState(next)
           }
+
           setError(old => old.key === key && !old.text ? old : { key, text: '' });
         }
         catch (cause)
@@ -106,7 +100,6 @@ export function useMemberRun(workspaceId: string, rootSessionId: string, taskId:
           failed = true;
 
           if (!stopped && current.current === controller)
-
             setError({ key, text: cause instanceof Error ? cause.message : '成员运行读取失败，请重试' })
         }
         finally
@@ -116,7 +109,6 @@ export function useMemberRun(workspaceId: string, rootSessionId: string, taskId:
           const nextDelay = memberPollDelay(projection, !activeRef.current || document.visibilityState === 'hidden', failed);
 
           if (!stopped && enabled && runId && nextDelay !== undefined)
-
             timer = setTimeout(() => void pull(), nextDelay);
         }
       })();
@@ -127,7 +119,6 @@ export function useMemberRun(workspaceId: string, rootSessionId: string, taskId:
     const visible = () => { if (document.visibilityState === 'visible') void pull() };
 
     if (enabled && runId)
-
       void pull();
 
     document.addEventListener('visibilitychange', visible);

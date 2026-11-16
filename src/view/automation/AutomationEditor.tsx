@@ -11,7 +11,6 @@ import type { AutomationCatalog, AutomationDefinition, AutomationSchedule } from
 export function AutomationEditor({ initial, catalog, busy, onSave, onCancel }: { initial: AutomationDefinition; catalog: AutomationCatalog; busy: boolean; onSave: (value: AutomationDefinition) => void; onCancel: () => void })
 {
   const [value, setValue] = useState(initial),
-
     [error, setError] = useState('');
 
   const changed = JSON.stringify(value) !== JSON.stringify(initial);
@@ -19,18 +18,15 @@ export function AutomationEditor({ initial, catalog, busy, onSave, onCancel }: {
   function cancel()
   {
     if (!changed || confirm('放弃尚未保存的自动化设置？'))
-
       onCancel()
   }
 
   const patch = (part: Partial<AutomationDefinition>) => setValue(old => ({ ...old, ...part }));
 
   const executor = value.executor,
-
     agentId = executor.kind === 'main' ? 'cbim:main' : catalog.agents.find(a => a.memberId === executor.memberId)?.agentId;
 
   const skills = catalog.skills.filter(s => s.agentIds.includes(agentId ?? '')),
-
     schedule = value.schedule;
 
   function setSchedule(kind: AutomationSchedule['kind'])
@@ -46,12 +42,14 @@ export function AutomationEditor({ initial, catalog, busy, onSave, onCancel }: {
 
       return
     }
+
     if (value.executor.kind === 'member' && !value.moduleIds.length)
     {
       setError('团队岗位执行需要至少选择一个模块');
 
       return
     }
+
     setError('');
 
     onSave(value);

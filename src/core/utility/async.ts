@@ -17,7 +17,6 @@ export class SerialQueue
 
     this.tail = result.then(
       () => { },
-
       () => { }
     );
 
@@ -46,9 +45,7 @@ export class PendingRequests<K, T = unknown>
 {
   /** 尚未取出的请求及计时器；计时器触发本身不删除请求。 */
   private readonly entries = new Map<
-
     K,
-
     PendingReply<T> &
     {
       timer: ReturnType<typeof setTimeout>;
@@ -59,7 +56,6 @@ export class PendingRequests<K, T = unknown>
   public Register(id: K, reply: PendingReply<T>, timeoutMs: number, onTimeout: () => void): void
   {
     if (this.entries.has(id))
-
       throw Error('Duplicate pending request');
 
     const timer = setTimeout(onTimeout, timeoutMs);
@@ -73,7 +69,6 @@ export class PendingRequests<K, T = unknown>
     const entry = this.entries.get(id);
 
     if (!entry)
-
       return undefined;
 
     clearTimeout(entry.timer);
@@ -92,6 +87,7 @@ export class PendingRequests<K, T = unknown>
 
       entry.reject(typeof error === 'function' ? error() : error);
     }
+
     this.entries.clear();
   }
 }
@@ -117,10 +113,10 @@ export class InFlightOperations
 
       void operation.then(
         () => { this.pending.delete(operation); },
-
         () => { this.pending.delete(operation); }
       );
     }
+
     return operation;
   }
 

@@ -23,7 +23,6 @@ type Binding = OutputManifestStaged['binding'];
 function valid(value: unknown, message: string): asserts value
 {
   if (!value)
-
     throw Error(message)
 }
 
@@ -31,7 +30,6 @@ function valid(value: unknown, message: string): asserts value
 export function verifyOutputManifests(events: readonly ArtifactEvidenceEvent[], binding: Binding, knowledgeRevision: string, scopes: readonly ArtifactScopeBinding[]): { records: OutputManifestRecord[]; refs: Array<OutputManifestRef & { invalidated: boolean }>; issues: Array<{ code: string; message: string }> }
 {
   const records: OutputManifestRecord[] = [],
-
     issues: Array<
       {
         code: string;
@@ -51,6 +49,7 @@ export function verifyOutputManifests(events: readonly ArtifactEvidenceEvent[], 
 
       previous = event.seq
     }
+
     const head = events.find(event => event.type === 'run.started');
 
     valid(head && equal(head.data.memberBinding, binding) && !head.data.conversationBinding, '缺少原正式成员身份');
@@ -61,10 +60,9 @@ export function verifyOutputManifests(events: readonly ArtifactEvidenceEvent[], 
 
     return { records, refs: [], issues }
   }
+
   const captures = events.filter(event => event.type === 'artifact.manifest_captured'),
-
     seen = new Set<string>(),
-
     calls = new Set<string>();
 
   if (captures.length > artifactScopeLimits.captures)
@@ -73,12 +71,12 @@ export function verifyOutputManifests(events: readonly ArtifactEvidenceEvent[], 
 
     return { records, refs: [], issues }
   }
+
   for (const event of captures)
   {
     try
     {
       const manifest = outputManifestStagedSchema.parse(event.data.manifest),
-
         ref = outputManifestReference(manifest);
 
       valid(scopes.length && equal(manifest.scopes, scopes) && equal(manifest.binding, binding) && manifest.knowledgeRevision === knowledgeRevision, '清单不属于原冻结范围、知识或运行');
@@ -92,7 +90,6 @@ export function verifyOutputManifests(events: readonly ArtifactEvidenceEvent[], 
       valid(captures.filter(item => (item.data.manifest as { manifestId?: unknown })?.manifestId === manifest.manifestId).length === 1 && captures.filter(item => (item.data.manifest as { captureToolCallId?: unknown })?.captureToolCallId === manifest.captureToolCallId).length === 1, '清单引用不唯一');
 
       const own = artifactSucceededCall(events, binding, manifest.captureToolCallId),
-
         input = outputManifestInputSchema.parse(own.allowed.data.input);
 
       valid(own.receipt.toolName === outputManifestToolName && own.allowed.data.contractVersion === 1 && own.receipt.scope.kind === 'workspace' && equal(own.receipt.effects, ['maintenance']) && input.expectedTaskProgressVersion === manifest.progressVersion, '采集授权、契约版本或进度不符');
@@ -114,9 +111,7 @@ export function verifyOutputManifests(events: readonly ArtifactEvidenceEvent[], 
       valid(equal(result.binding, binding) && equal(result.manifest, ref), '回包与原采集不一致');
 
       const before = events.filter(item => item.seq < own.allowed.seq),
-
         lastEffect = before.reduce((seq, event) => artifactEventChangesFiles(event) ? event.seq : seq, 0),
-
         progress = before.filter(item => item.type === 'task.updated').at(-1)?.data.progress as
           {
             version?: unknown
@@ -137,19 +132,19 @@ export function verifyOutputManifests(events: readonly ArtifactEvidenceEvent[], 
       issue()
     }
   }
+
   if (records.length > artifactScopeLimits.captures)
   {
     issue();
 
     return { records: [], refs: [], issues }
   }
-  for (const event of events)
 
+  for (const event of events)
     if (event.type === 'tool.finished' && event.data.name === outputManifestToolName && (event.data.receipt as
       {
         outcome?: unknown
       })?.outcome === 'succeeded' && !records.some(item => item.manifest.captureToolCallId === event.data.id))
-
       issue();
 
   // 重规划获准后即保守失效；保存后坏回包不能因缺少 succeeded 回执而复活旧清单。

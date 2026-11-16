@@ -32,13 +32,9 @@ export function WorkspaceList({ teamChats = {}, selectedChildren = {}, onChild, 
 
       trigger: HTMLButtonElement
     }>(),
-
     [editing, setEditing] = useState(''),
-
     [name, setName] = useState(''),
-
     [removing, setRemoving] = useState(''),
-
     [collapsed, setCollapsed] = useState<string[]>([]);
 
   const menuRef = useRef<HTMLDivElement>(null);

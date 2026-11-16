@@ -13,15 +13,11 @@ import type { DispatchState } from '../../dispatch/rules/dispatch-storage';
 export function assertAutomaticExecution(state: DispatchState, binding: AutomaticExecutionBinding, rootSessionId: string, current = false): void
 {
   const scope = state.scopes?.find(item => item.scopeId === binding.scopeId && item.rootSessionId === rootSessionId && item.workspaceId === binding.workspaceId),
-
     policy = scope?.executionPolicy;
 
   if (!automaticExecutionBindingMatches(binding, state.workspaceId, scope?.scopeId, 'cbim:executor', binding.moduleIds) || policy?.mode !== 'auto' || policy.model.profileId !== binding.model.profileId || policy.model.modelId !== binding.model.modelId || policy.model.configurationHash !== binding.model.configurationHash)
-
     fail('AUTO_BINDING_INVALID', '自动兜底没有对应的原始用户模式与模型配置');
 
   if (current)
-  {
     fail('AGENT_RETIRED', '内置默认执行 Agent 已退役；保留历史记录，请由主 Agent 在当前会话执行未配置自定义岗位的工作');
-  }
 }

@@ -15,15 +15,10 @@ import '../tasks/admission.css';
 export function AdmissionSettings({ active = true, onDirtyChange }: { active?: boolean; onDirtyChange?: (dirty: boolean) => void })
 {
   const feed = useAdmission(active),
-
     [policy, setPolicy] = useState<AdmissionPolicy>(),
-
     [value, setValue] = useState('4'),
-
     [busy, setBusy] = useState(false),
-
     [error, setError] = useState(''),
-
     [notice, setNotice] = useState('');
 
   const unsaved = !!policy && value !== String(policy.maxConcurrentRuns);
@@ -35,7 +30,6 @@ export function AdmissionSettings({ active = true, onDirtyChange }: { active?: b
   async function reload()
   {
     if (unsaved && !confirm('刷新会放弃未保存的并发设置，继续吗？'))
-
       return;
 
     setBusy(true);
@@ -67,7 +61,6 @@ export function AdmissionSettings({ active = true, onDirtyChange }: { active?: b
   async function save()
   {
     if (!policy || busy)
-
       return;
 
     setBusy(true);
@@ -99,7 +92,6 @@ export function AdmissionSettings({ active = true, onDirtyChange }: { active?: b
   }
 
   const count = Number(value),
-
     valid = /^\d+$/.test(value) && Number.isInteger(count) && count >= 1 && count <= 32;
 
   return <section className="repository-settings" aria-label="运行并发设置" data-testid="admission-settings"><h2>运行并发</h2>

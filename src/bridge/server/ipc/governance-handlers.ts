@@ -13,19 +13,12 @@ export function governanceIpcHandlers(app: ApplicationServices): IpcHandlers<key
 {
   return {
     'governance.list': async args => { return app.Governance(args.workspaceId).List(args); },
-
     'governance.receipt': async args => { return app.Governance(args.workspaceId).Lookup(args); },
-
     'governance.unaccepted': async args => { return app.Governance(args.workspaceId).Unaccepted(args); },
-
     'governance.register': async args => { return governanceCommandReceipts.register.parse(await app.Governance(args.workspaceId).Register(args, { kind: 'local_desktop', interaction: 'explicit_submit' })); },
-
     'governance.observe': async args => { return governanceCommandReceipts.observe.parse(await app.Governance(args.workspaceId).Observe(args)); },
-
     'governance.propose': async args => { return governanceCommandReceipts.propose.parse(await app.Governance(args.workspaceId).Propose(args)); },
-
     'governance.decide': async args => { return governanceCommandReceipts.decide.parse(await app.Governance(args.workspaceId).Decide(args, { kind: 'local_desktop', interaction: 'explicit_submit' })); },
-
     'governance.apply': async args => { return governanceCommandReceipts.apply.parse(await app.Governance(args.workspaceId).Apply(args)); },
   };
 }

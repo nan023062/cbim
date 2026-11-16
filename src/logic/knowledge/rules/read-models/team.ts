@@ -25,7 +25,6 @@ export class Team
   async Agents(query = '')
   {
     const s = this.snapshot,
-
       index = parseJson(s.validation!.indexes['.cbim/team/registry.json']);
 
     return {
@@ -38,11 +37,9 @@ export class Team
     const s = this.snapshot;
 
     if (!Object.hasOwn(s.validation!.skills || {}, id))
-
       fail('OBJECT_NOT_FOUND', 'Agent 不存在或定义未通过校验，请先查询团队注册表与问题清单');
 
     const definition = data(s, id + '/agent.json'),
-
       effective = s.validation!.skills![id];
 
     const conflicts = s.validation!.issues.filter(i => i.severity === 'error' && i.code === 'skill_conflict' && i.path === id + '/agent.json');

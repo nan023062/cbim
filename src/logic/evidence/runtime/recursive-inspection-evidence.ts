@@ -46,7 +46,6 @@ interface Ports
 function check(condition: unknown, message: string): asserts condition
 {
   if (!condition)
-
     fail('REPLAN_PROOF_INVALID', message)
 }
 
@@ -68,7 +67,6 @@ export class RecursiveInspectionEvidence
     check(scope.runTracking?.mainRunIds.length === 1 && scope.runTracking.mainRunIds[0] === recovery.context.initialRunId, '核实根身份不唯一');
 
     const knowledge = await owner.Read(),
-
       main = await ports.InspectMain(scope.rootSessionId, recovery.context.initialRunId);
 
     const audit = (summary: RunSummary) => { check(summary.status === 'completed' && summary.logIntegrity?.partialTail === false && !summary.unresolvedTools.length && summary.events.at(-1)?.type === 'run.settled', '核实日志缺失、未完成或有未决操作'); const facts = executionToolFacts(summary, { binding: { workspaceId: scope.workspaceId, taskId: summary.task.taskId, runId: summary.runId } }); check(!facts.invalid && !facts.counts.unknown && !facts.counts.failed && !facts.counts.denied, '核实工具含失败或未知结果'); check(!facts.items.some(item => item.allowedSeq !== undefined && (item.effects.some(effect => ['business-write', 'knowledge-write', 'external-write', 'command'].includes(effect)) || ['write', 'edit', 'bash'].includes(item.toolName))), '只读核实含写入或命令授权'); };
@@ -78,7 +76,6 @@ export class RecursiveInspectionEvidence
     ports.ValidateActiveInputs(main);
 
     const head = main.events[0],
-
       fresh = head?.data.freshMain as
         {
           nativeSessionId?: unknown;
@@ -95,7 +92,6 @@ export class RecursiveInspectionEvidence
     check(!!main.sessionFile && bounds.length > 0 && bounds.every(event => event.data.sessionId === recovery.context.nativeSessionId && event.data.sessionFile === main.sessionFile), '核实根原生绑定无效');
 
     const runs = (state.agentBusinessRuns ?? []).filter(run => run.scopeId === scope.scopeId),
-
       recorded: RunSummary[] = [];
 
     check(runs.length > 0, '核实缺少实际业务子调用');
@@ -113,11 +109,9 @@ export class RecursiveInspectionEvidence
       check(recursiveEvidenceLogMatches(run, summary, owner.entry.path), '核实子调用日志不匹配原登记');
 
       if (run.request)
-
         check(run.request.message === summary.task.goal && json(run.request.acceptance) === json(summary.task.acceptance), '核实要求与原登记不一致');
 
       if (!preparedWorkflowContracts(run.prepared).length)
-
         validateWorkflowEvidence(summary.events, summary.task, [], [], undefined, { requireDelivery: true });
 
       await validateBusinessWorkflow(summary.task, { prepared: run.prepared, binding: run.binding, session: { nativeSessionId: String(summary.events[0].data.nativeSessionId), sessionFile: summary.sessionFile } }, summary, { NormalizePath: ports.normalizeValidationPath, CheckFiles: ports.checkValidationFiles, CheckManifest: ports.checkManifest });
@@ -126,10 +120,10 @@ export class RecursiveInspectionEvidence
 
       recorded.push(summary);
     }
+
     check(json(await ports.InspectMain(scope.rootSessionId, main.runId)) === json(main), '核实根读取期间变化');
 
     for (const summary of recorded)
-
       check(json(await ports.InspectAgent(summary.task.taskId, summary.runId)) === json(summary), '核实子调用读取期间变化');
 
     check((await owner.Read()).revision === knowledge.revision, '核实期间知识变化');

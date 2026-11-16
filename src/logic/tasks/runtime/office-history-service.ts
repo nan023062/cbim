@@ -47,7 +47,6 @@ export class OfficeHistoryService
     const scope = state.scopes?.find(value => value.scopeId === scopeId && value.rootSessionId === identity.rootSessionId && value.workspaceId === identity.workspaceId);
 
     if (!scope)
-
       fail('OFFICE_HISTORY_IDENTITY', '话题不属于当前办公室');
 
     const tasks = state.graphs.find(value => value.identity.rootSessionId === identity.rootSessionId)?.tasks.filter(task => task.scopeId === scopeId) ?? [];
@@ -55,10 +54,10 @@ export class OfficeHistoryService
     const entries: Entry[] = [{ reference: { refId: 'goal', kind: 'goal', actorId: 'cbim:main', inputRevision: scope.goal?.inputRevision ?? 1 }, read: async () => projectMainScope(scope) }];
 
     for (const runId of scope.runTracking?.mainRunIds ?? [])
-
       entries.push({
         reference: { refId: 'main:' + runId, kind: 'main-run', actorId: 'cbim:main', taskId: identity.rootSessionId, runId }, read: async () => { if (!this.ports) fail('OFFICE_HISTORY_UNAVAILABLE', '原对话日志读取尚未装配'); return this.PublicRun(await this.ports.InspectMain(identity.rootSessionId, runId), identity, identity.rootSessionId, runId); }
       });
+
     for (const task of tasks)
     {
       entries.push({ reference: { refId: 'assignment:' + task.taskId, kind: 'assignment', actorId: task.requester.agentId, taskId: task.taskId }, read: async () => task });
@@ -68,7 +67,6 @@ export class OfficeHistoryService
         const run = state.runs?.find(value => value.binding.runId === runId && value.binding.taskId === task.taskId && value.binding.workspaceId === identity.workspaceId && value.binding.rootSessionId === identity.rootSessionId);
 
         if (!run)
-
           continue; // 旧缺失归属不按最新任务推造。
 
         entries.push({
@@ -76,17 +74,18 @@ export class OfficeHistoryService
         });
       }
     }
+
     for (const message of state.outbox.filter(value => value.kind !== 'assignment' && value.identity.rootSessionId === identity.rootSessionId && value.identity.workspaceId === identity.workspaceId && tasks.some(task => task.taskId === value.taskId)))
     {
       entries.push({ reference: { refId: 'feedback:' + message.messageId, kind: 'feedback', actorId: message.from.agentId, taskId: message.taskId, ...('runId' in message ? { runId: message.runId } : {}) }, read: async () => ({ message, task: tasks.find(task => task.taskId === message.taskId) }) });
     }
+
     return entries;
   }
 
   private PublicRun(run: RunSummary, identity: GraphIdentity, taskId: string, runId: string)
   {
     if (run.task.workspaceId !== identity.workspaceId || run.task.taskId !== taskId || run.runId !== runId || run.events.some(event => event.workspaceId !== identity.workspaceId || event.taskId !== taskId || event.runId !== runId))
-
       fail('OFFICE_HISTORY_IDENTITY', '原日志身份与话题引用不一致');
 
     const task = { taskId, workspaceId: identity.workspaceId, root: run.task.root, goal: run.task.goal, mode: run.task.mode, moduleIds: run.task.moduleIds, agentId: run.task.agentId, acceptance: run.task.acceptance };
@@ -98,11 +97,9 @@ export class OfficeHistoryService
 
         // 正文按外层内容版本分块，不截断公开 user/assistant 文本；其它内部/推理/工具字段沿白名单。
         if (event.type === 'run.started' && run.task.mode === 'chat' && !['member-results', 'human_decisions', 'goal-repair'].includes(run.source?.kind ?? '') && typeof event.data.message === 'string')
-
           projected.data.message = event.data.message;
 
         if (event.type === 'message' && ['user', 'assistant'].includes(String(event.data.role)) && typeof event.data.text === 'string')
-
           projected.data.text = event.data.text;
 
         return projected;
@@ -116,70 +113,57 @@ export class OfficeHistoryService
     signal.throwIfAborted();
 
     if (identity.workspaceId !== this.workspaceId)
-
       fail('OFFICE_HISTORY_IDENTITY', '归档不属于当前工作区');
 
     const query: OfficeHistoryQuery = officeHistoryQuerySchema.parse(raw),
-
       state = await this.store.Read();
 
     signal.throwIfAborted();
 
     if (state.workspaceId !== identity.workspaceId || !state.graphs.some(graph => graph.identity.workspaceId === identity.workspaceId && graph.identity.rootSessionId === identity.rootSessionId))
-
       fail('OFFICE_HISTORY_IDENTITY', '办公室归档不存在');
 
     let payload: unknown;
 
     if (query.action === 'topics')
-
       payload = (state.scopes ?? []).filter(scope => scope.rootSessionId === identity.rootSessionId && scope.workspaceId === identity.workspaceId).map(scope => ({ scopeId: scope.scopeId, status: scope.status, title: (scope.goal?.plan?.objective ?? scope.goal?.input.message ?? '历史话题').slice(0, 240), ...(scope.followupOf ? { followupOf: scope.followupOf } : {}) }));
-
     else
     {
       const index = this.Index(state, identity, query.scopeId);
 
       if (query.action === 'topic')
-
         payload = index.map(entry => entry.reference);
-
       else
       {
         const entry = index.find(value => value.reference.refId === query.refId);
 
         if (!entry)
-
           fail('OFFICE_HISTORY_REFERENCE', '内容引用不属于原话题');
 
         payload = json(await entry.read())
       }
     }
+
     signal.throwIfAborted();
 
     const version = hash(json(payload));
 
     if (query.offset > 0 && !query.version || query.version !== undefined && query.version !== version)
-
       fail('OFFICE_HISTORY_CHANGED', '归档内容版本已变化，请从第一页重新读取');
 
     const size = query.action === 'content' ? query.maxChars : query.limit,
-
       length = (payload as unknown[] | string).length;
 
     if (query.offset > length)
-
       fail('OFFICE_HISTORY_OFFSET', '归档读取位置超出内容');
 
     const end = Math.min(length, query.offset + size),
-
       common = { ...identity, version, offset: query.offset, ...(end < length ? { nextOffset: end } : {}) };
 
     if (query.action === 'content')
-
       return { ...common, action: 'content', scopeId: query.scopeId, refId: query.refId, totalChars: length, text: (payload as string).slice(query.offset, end) };
 
     if (query.action === 'topic')
-
       return { ...common, action: 'topic', scopeId: query.scopeId, items: (payload as OfficeHistoryEntry[]).slice(query.offset, end) };
 
     return {

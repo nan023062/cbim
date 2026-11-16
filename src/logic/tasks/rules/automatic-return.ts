@@ -13,7 +13,6 @@ import { sameGoalValue } from './scope-goal';
 import { loopEngineSchema, modelRolesSelectionSchema } from '../../engines';
 
 const id = z.string().min(1).max(512),
-
   digest = z.string().regex(/^[a-f0-9]{64}$/);
 
 export const automaticReturnSchema = z.object({ mainRunId: id, taskIds: z.array(id).min(1).max(100).refine(ids => new Set(ids).size === ids.length), sourceLogHash: digest, modelHash: digest, recordedAt: z.string().datetime(), options: z.object({ engine: loopEngineSchema.optional(), modelRoles: modelRolesSelectionSchema.optional(), collaborationMode: z.enum(['auto', 'team']).optional(), provider: id, model: id, profileId: id, permission: z.enum(['read', 'ask', 'execute']), allowNativeExecution: z.boolean(), turnTimeoutMs: z.number().positive().optional() }).strict() }).strict();
@@ -38,7 +37,6 @@ type ReturnScope =
 export function validateAutomaticReturns(previous: ReturnScope | undefined, next: ReturnScope, graph: GraphSnapshot): void
 {
   const before = previous?.automaticReturns ?? [],
-
     after = next.automaticReturns ?? [];
 
   const valid = (condition: unknown) => { if (!condition) fail('GRAPH_INPUT_INVALID', '自动回传批次必须保留原身份、选项和不可变历史') };
@@ -51,7 +49,7 @@ export function validateAutomaticReturns(previous: ReturnScope | undefined, next
   {
     valid(automaticReturnSchema.safeParse(entry).success && entry.options.allowNativeExecution === (entry.options.permission !== 'read') && next.runTracking?.mainRunIds.includes(entry.mainRunId) && entry.taskIds.every(id => graph.tasks.some(task => task.taskId === id && task.scopeId === next.scopeId)))
   }
-  if (after.length > before.length)
 
+  if (after.length > before.length)
     valid(previous?.status === 'active' && next.status === 'active' && after.at(-1)!.mainRunId === previous.runTracking?.mainRunIds.at(-1));
 }

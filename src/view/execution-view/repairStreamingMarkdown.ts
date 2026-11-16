@@ -55,15 +55,12 @@ function scanFences(md: string): { open: boolean; outside: string; fenceMarker: 
 
         continue;
       }
+
       // 闭合围栏须与开围栏同字符。
       if (
-
         marker === fenceMarker[0] &&
-
         m[1].length >= fenceMarker.length &&
-
         /^[ \t]*$/.test(m[2])
-
       )
       {
         open = false;
@@ -72,12 +69,14 @@ function scanFences(md: string): { open: boolean; outside: string; fenceMarker: 
 
         continue;
       }
+
       continue;
     }
-    if (!open)
 
+    if (!open)
       outside.push(line);
   }
+
   return { open, outside: outside.join('\n'), fenceMarker };
 }
 
@@ -86,7 +85,6 @@ function isEscaped(text: string, index: number): boolean
   let backslashes = 0;
 
   for (let i = index - 1; i >= 0 && text[i] === '\\'; i--)
-
     backslashes++;
 
   return backslashes % 2 === 1;
@@ -98,7 +96,6 @@ function isBulletMarker(text: string, index: number): boolean
   const next = text[index + 1];
 
   if (next !== ' ' && next !== '\t')
-
     return false;
 
   for (let i = index - 1; i >= 0; i--)
@@ -106,13 +103,12 @@ function isBulletMarker(text: string, index: number): boolean
     const c = text[i];
 
     if (c === '\n')
-
       return true;
 
     if (c !== ' ' && c !== '\t')
-
       return false;
   }
+
   return true;
 }
 
@@ -133,21 +129,19 @@ function scanDelim(text: string, delim: '**' | '*',): { count: number; last: num
 
       continue;
     }
+
     // 按连续星号 run 归类:run=1 是斜体符,run=2 是加粗符;run≥3 是加粗+斜体
     // 复合(`***`),配对语义随上下文变化,超出保守修复范围 —— 整个 delimiter
     // 放弃修复,交给终版渲染。
     let runEnd = i;
 
     while (runEnd < text.length && text[runEnd] === '*')
-
       runEnd++;
 
     const runLen = runEnd - i;
 
     if (runLen >= 3)
-
       mixed = true;
-
     else if (delim === '**' && runLen === 2)
     {
       count += 1;
@@ -160,8 +154,10 @@ function scanDelim(text: string, delim: '**' | '*',): { count: number; last: num
 
       last = i;
     }
+
     i = runEnd;
   }
+
   return { count, last, mixed };
 }
 
@@ -169,35 +165,28 @@ function scanDelim(text: string, delim: '**' | '*',): { count: number; last: num
 function balanceEmphasis(md: string, delim: '**' | '*'): string
 {
   if (!md.includes(delim === '**' ? '**' : '*'))
-
     return md;
 
   const { count, last, mixed } = scanDelim(md, delim);
 
   if (mixed || count % 2 === 0 || last < 0)
-
     return md;
 
   const rest = md.slice(last + delim.length);
 
   if (rest.length === 0)
-
     return md; // 开符悬在文末,下一 chunk 才有正文
 
   if (!rest.trim())
-
     return md;
 
   if (rest.includes('\n'))
-
     return md; // 只修同一行内正在生长的强调
 
   if (rest.includes('`'))
-
     return md;
 
   if (/^\s/.test(rest))
-
     return md; // 开符后接空白不构成 opener,补闭合会变字面量
 
   return md + delim;
@@ -207,9 +196,7 @@ function balanceEmphasis(md: string, delim: '**' | '*'): string
 function repairTrailingImage(md: string): string
 {
   return md
-
     .replace(/!\[([^\]\n]*)\]\([^)\n]*$/, '$1')
-
     .replace(/!\[([^\]\n]*)$/, '$1');
 }
 
@@ -222,37 +209,32 @@ function repairTrailingLink(md: string): string
 export function repairStreamingMarkdown(md: string): string
 {
   if (md.length === 0)
-
     return md;
 
   const { open, outside, fenceMarker } = scanFences(md);
 
   if (open)
-  {
     // 围栏内是代码:补闭合即可,行内修复不适用。
     return md.endsWith('\n') ? `${md}${fenceMarker}` : `${md}\n${fenceMarker}`;
-  }
+
   // inline code 半开(围栏外反引号计数为奇数):后续星号可能在代码里,不修。
   let backticks = 0;
 
   for (let i = 0; i < outside.length; i++)
   {
     if (outside[i] === '`' && !isEscaped(outside, i))
-
       backticks++;
   }
-  if (backticks % 2 === 1)
 
+  if (backticks % 2 === 1)
     return md;
 
   let t = md;
 
   if (t.includes('!['))
-
     t = repairTrailingImage(t);
 
   if (t.includes(']('))
-
     t = repairTrailingLink(t);
 
   t = balanceEmphasis(t, '**');

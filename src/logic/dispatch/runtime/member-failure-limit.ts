@@ -17,7 +17,6 @@ export function memberFailureStopReason(graph: Pick<GraphSnapshot, 'tasks'>, sco
   const failed = graph.tasks.filter(task => task.scopeId === scopeId && !task.activeRunId && task.runIds.length > 0 && (task.status === 'failed' || task.status === 'interrupted'));
 
   if (failed.length < memberFailureLimit)
-
     return;
 
   return `本次目标累计 ${failed.length} 次成员执行失败或中断，已达到 ${memberFailureLimit} 次自动接续上限。已停止自动派发、重试和返工；请查看任务卡的具体原因，核实未确认的操作与产物后再由用户决定下一步。`;

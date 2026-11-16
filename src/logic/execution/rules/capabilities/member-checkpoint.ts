@@ -54,25 +54,20 @@ export class RunMemberCheckpoint
   Guard(name: string, id: string, input: unknown, active: readonly string[]): string | undefined
   {
     if (this.staged || this.reserved)
-
       return '成员检查点正在交接，请结束本轮；不能再调用工具';
 
     if (name !== memberCheckpointToolName)
-
       return;
 
     if (this.controller.signal.aborted)
-
       return '成员运行已停止，不能申请检查点';
 
     const parsed = memberCheckpointInputSchema.safeParse(input);
 
     if (!parsed.success)
-
       return '成员检查点参数无效';
 
     if (active.length)
-
       return '其它工具或审批尚未结束，不能申请成员检查点';
 
     this.reserved = { id, input: parsed.data, consumed: false };
@@ -81,11 +76,9 @@ export class RunMemberCheckpoint
   Observed(event: StoredEvent)
   {
     if (event.type === 'run.started' || event.type.startsWith('tool.') || event.type === 'task.updated' || event.type === 'artifact.baseline_captured' || event.type === 'task.checkpoint_requested' || event.type === 'run.stop_requested')
-
       this.events.push(event);
 
     if (!this.staged && (event.type === 'tool.finished' || event.type === 'tool.denied') && event.data.id === this.reserved?.id)
-
       this.reserved = undefined;
   }
 
@@ -97,7 +90,6 @@ export class RunMemberCheckpoint
   private async Stage(input: MemberCheckpointInput, id: string): Promise<MemberCheckpointStaged>
   {
     if (!this.reserved || this.reserved.id !== id || this.reserved.consumed || !isDeepStrictEqual(this.reserved.input, input))
-
       fail('MEMBER_CHECKPOINT_CALL', '检查点必须来自本轮授权的一次性调用');
 
     this.reserved.consumed = true;
@@ -113,13 +105,11 @@ export class RunMemberCheckpoint
     const eligible = validateCheckpointEligibility(this.events, this.binding, this.port.knowledgeRevision, this.port.NormalizePath, input, id);
 
     const expected = eligible.baseline.baseline.files,
-
       files = await this.port.CaptureFiles(expected.map(file => file.relativePath), this.controller.signal);
 
     check();
 
     if (files.length !== expected.length || files.some((file, index) => this.port.NormalizePath(file.relativePath) !== this.port.NormalizePath(expected[index].relativePath) || file.sha256 !== expected[index].sha256 || file.byteLength !== expected[index].byteLength))
-
       fail('MEMBER_CHECKPOINT_ARTIFACT_CHANGED', '文件已偏离所选基线，不能建立检查点');
 
     await this.port.AssertCurrentKnowledge();

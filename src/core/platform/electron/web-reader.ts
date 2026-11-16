@@ -41,20 +41,14 @@ const snapshotScript = `(() => {
 
 const frameSnapshot = z.object({
   title: z.string().max(500),
-
   text: z.string().max(40000),
-
   cut: z.boolean(),
-
   password: z.boolean(),
-
   ready: z.boolean(),
-
   challenge: z.boolean(),
 });
 
 const policy =
-
   "default-src http: https: data: blob: 'unsafe-inline' 'unsafe-eval'; connect-src http: https:; object-src 'none'; worker-src 'none'; form-action 'none'";
 
 /** 由 Electron ready 后的桌面入口创建；不会被 CLI、模型工具参数或前端直接构造。 */
@@ -78,21 +72,17 @@ export class ElectronBrowserReader implements BrowserReader
     const slot = [0, 1].find((value) => !this.busy.has(value));
 
     if (slot === undefined)
-
       throw Error('WEB_BROWSER_BUSY: 浏览器读取已达并发上限，请稍后再试');
 
     this.busy.add(slot);
 
     const stop = new AbortController(),
-
       active = AbortSignal.any([signal, stop.signal, AbortSignal.timeout(30000)]);
 
     const ses = session.fromPartition(`${this.prefix}-${slot}`, { cache: false });
 
     let window: BrowserWindow | undefined,
-
       requests = 0,
-
       navigations = 0;
 
     let documentFailure: Error | undefined;
@@ -120,19 +110,16 @@ export class ElectronBrowserReader implements BrowserReader
     {
       proxy = await openBrowserProxy(
         active,
-
         (error) => { documentFailure ??= error; },
-
         this.transport
       );
 
       await ses.setProxy({
         mode: 'fixed_servers',
-
         proxyRules: `127.0.0.1:${proxy.port}`,
-
         proxyBypassRules: '<-loopback>',
       });
+
       active.throwIfAborted();
 
       ses.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
@@ -153,27 +140,19 @@ export class ElectronBrowserReader implements BrowserReader
 
       window = new BrowserWindow({
         show: false,
-
         width: 1280,
-
         height: 900,
-
         webPreferences: {
           session: ses,
-
           contextIsolation: true,
-
           nodeIntegration: false,
-
           sandbox: true,
-
           webSecurity: true,
-
           backgroundThrottling: false,
-
           disableDialogs: true,
         },
       });
+
       window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
 
       window.webContents.setAudioMuted(true);
@@ -197,15 +176,14 @@ export class ElectronBrowserReader implements BrowserReader
             {
               code?: string
             }).code !== 'ERR_ABORTED')
-
             throw error;
 
           active.throwIfAborted();
         }
+
         const started = Date.now();
 
         let previous = '',
-
           stableSince = started;
 
         while (true)
@@ -213,24 +191,20 @@ export class ElectronBrowserReader implements BrowserReader
           active.throwIfAborted();
 
           if (documentFailure)
-
             throw documentFailure;
 
           const frames = window!.webContents.mainFrame.framesInSubtree;
 
           if (frames.length > 32)
-
             throw Error('WEB_BROWSER_LIMIT: 页面框架数量超过读取上限');
 
           const snapshots = await Promise.all(
-
             frames.map(async (frame) =>
             {
               try
               {
                 return {
                   url: frame.url,
-
                   value: frameSnapshot.parse(await frame.executeJavaScript(snapshotScript)),
                 };
               }
@@ -244,9 +218,7 @@ export class ElectronBrowserReader implements BrowserReader
           const available = snapshots.filter((item): item is NonNullable<typeof item> => !!item);
 
           const text = available
-
             .map((item, index) => `${index ? '\n\n嵌入页面：' + item.url + '\n\n' : ''}${item.value.text}`)
-
             .join('\n\n');
 
           const now = Date.now();
@@ -257,48 +229,38 @@ export class ElectronBrowserReader implements BrowserReader
 
             stableSince = now;
           }
+
           if (
-
             now - started >= 3000 &&
-
             now - stableSince >= 1000 &&
-
             pending.size === 0 &&
-
             available.length === frames.length &&
-
             available.every((item) => item.value.ready)
-
           )
           {
             if (available.some((item) => item.value.challenge))
-
               throw Error('WEB_ANTIBOT: 浏览器页面要求验证码或挑战，未尝试绕过');
 
             if (!available.some((item) => item.value.text.trim()))
             {
               if (available.some((item) => item.value.password))
-
                 throw Error('WEB_LOGIN: 浏览器仅显示登录表单，未取得正文');
 
               throw Error('WEB_CONTENT_EMPTY: 浏览器执行脚本后仍未取得可读正文');
             }
-            const points = Array.from(text),
 
+            const points = Array.from(text),
               truncated = points.length > 20000 || available.some((item) => item.value.cut);
 
             return {
               url: publicUrl(window!.webContents.getURL()).href,
-
               title: available[0]?.value.title ?? '',
-
               markdown: points.slice(0, 20000).join(''),
-
               truncated,
             };
           }
-          if (now - started > 10000)
 
+          if (now - started > 10000)
             throw Error('WEB_BROWSER_TIMEOUT: 页面内容仍在变化或加载，未取得稳定正文');
 
           await delay(250, undefined, { signal: active });
@@ -314,15 +276,12 @@ export class ElectronBrowserReader implements BrowserReader
         signal.throwIfAborted();
 
         if (active.aborted)
-
           throw Error('WEB_BROWSER_TIMEOUT: 浏览器读取超过 30 秒');
 
         if (documentFailure)
-
           throw documentFailure;
 
         if (error instanceof Error && error.message.startsWith('WEB_'))
-
           throw error;
 
         throw Error('WEB_BROWSER_LOAD: 浏览器页面未能完成加载', { cause: error });

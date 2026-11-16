@@ -42,23 +42,18 @@ export type PublicDispatchScope = z.infer<typeof publicDispatchScopeSchema>;
 export function projectMainScope(scope: DispatchScope): PublicDispatchScope
 {
   if (!scope || typeof scope !== 'object' || Array.isArray(scope))
-
     return scope as unknown as PublicDispatchScope;
 
   const result: PublicDispatchScope = { scopeId: scope.scopeId, workspaceId: scope.workspaceId, rootSessionId: scope.rootSessionId, status: scope.status, createdAt: scope.createdAt };
 
   for (const key of ['followupOf', 'executionPolicy', 'goal', 'runTracking', 'budget', 'humanDecisions', 'wait', 'continuations', 'activeInputs', 'topicInterruptions', 'closedAt', 'outcome'] as const)
-
     if (scope[key] !== undefined)
-
       Object.assign(result, { [key]: scope[key] });
 
   if (scope.recovery !== undefined)
   {
     if (!scope.recovery || typeof scope.recovery !== 'object' || Array.isArray(scope.recovery))
-
       result.recovery = scope.recovery;
-
     else
     {
       const { recoveryId, acceptedAt, source, operation, observation, input, options, dispositionId } = scope.recovery;
@@ -66,12 +61,11 @@ export function projectMainScope(scope: DispatchScope): PublicDispatchScope
       result.recovery = { recoveryId, acceptedAt, source, operation, observation, input, options, ...(dispositionId !== undefined ? { dispositionId } : {}) }
     }
   }
+
   if (scope.replan !== undefined)
   {
     if (!scope.replan || typeof scope.replan !== 'object' || Array.isArray(scope.replan))
-
       result.replan = scope.replan;
-
     else
     {
       const { replanId, acceptedAt, source, operation, input, options, dispositionId } = scope.replan;
@@ -79,5 +73,6 @@ export function projectMainScope(scope: DispatchScope): PublicDispatchScope
       result.replan = { replanId, acceptedAt, source, operation, input, options, ...(dispositionId !== undefined ? { dispositionId } : {}) }
     }
   }
+
   return result;
 }

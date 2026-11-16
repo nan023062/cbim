@@ -45,7 +45,6 @@ export class Catalog
       await run('icacls', [this.paths.userRoot, '/inheritance:r', '/grant:r', `${who}:(OI)(CI)F`], { windowsHide: true });
     }
     else
-
       await fs.chmod(this.paths.userRoot, 0o700);
   }
 
@@ -54,7 +53,6 @@ export class Catalog
     const p = path.join(this.paths.userRoot, 'workspaces.json');
 
     if (!await exists(p))
-
       return empty();
 
     try
@@ -62,7 +60,6 @@ export class Catalog
       const value = await readJson<Data>(p);
 
       if (value.version !== 1 || !Array.isArray(value.entries) || !Array.isArray(value.recent))
-
         throw Error('invalid');
 
       // 兼容旧登记文件，只返回当前字段；读取不写盘，下次受锁保护的更新自然移除旧字段。
@@ -97,14 +94,13 @@ export class Catalog
       catch (e: any)
       {
         if (e.code !== 'LOCKED')
-
           throw e;
 
         await new Promise(r => setTimeout(r, 30))
       }
     }
-    if (!lock)
 
+    if (!lock)
       fail('BUSY', '工作区列表正在被其他窗口更新，请重试');
 
     try
@@ -112,7 +108,6 @@ export class Catalog
       const data = await this.Read();
 
       if (this.warning && await exists(path.join(canonical, 'workspaces.json')))
-
         await fs.copyFile(path.join(canonical, 'workspaces.json'), path.join(canonical, `workspaces.corrupt-${Date.now()}.json`));
 
       edit(data);
@@ -140,11 +135,9 @@ export class Catalog
     if (await exists(mapping))
     {
       if ((await readJson(mapping)).path !== entry.path)
-
         fail('IDENTITY', '项目标识与保存的路径不一致')
     }
     else
-
       await atomic(mapping, json(identity));
 
     return entry;
@@ -154,7 +147,6 @@ export class Catalog
   async Rename(id: string, name: string)
   {
     if (typeof name !== 'string' || !name.trim() || name.trim().length > 80 || /[\r\n\x00-\x1f]/.test(name))
-
       fail('NAME', '项目名称须为 1 至 80 个字符的单行文字');
 
     let entry!: WorkspaceEntry;
@@ -172,7 +164,6 @@ export class Catalog
   async Relocate(id: string, newPath: string, confirm: boolean)
   {
     if (!confirm)
-
       fail('CONFIRM', '重新定位需确认新路径；旧历史保留并通过 previousIds 关联，不合并或搬移');
 
     const identity = await this.paths.Identity(newPath);
@@ -182,11 +173,9 @@ export class Catalog
     const old = data.entries.find(x => x.id === id);
 
     if (!old)
-
       fail('NOT_FOUND', '工作区不存在');
 
     if (await exists(old.path) && identity.id !== id)
-
       fail('RELOCATE', '原项目仍存在，请将新目录作为独立工作区添加');
 
     const entry = await this.Add(newPath);

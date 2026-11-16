@@ -22,17 +22,13 @@ import { jsonValidationLimits } from '../../workspace/rules/json-validation-sche
 import { outputManifestProofSchema } from './output-manifest';
 
 const text = z.string().min(1).max(4000).refine(value => !!value.trim()),
-
   planText = z.string().min(1).max(16000).refine(value => !!value.trim()),
-
   id = z.string().min(1).max(512);
 
 const unique = (values: string[]) => new Set(values).size === values.length;
 
 const inputText = z.string().trim().min(1).max(4000),
-
   inputPlanText = z.string().trim().min(1).max(16000),
-
   version = z.number().int().nonnegative();
 
 /** 输入仍按既有规则规范化；输出绝不复用输入默认值或把实际 wire 改写为另一份正文。 */

@@ -22,17 +22,12 @@ import { Icon } from '../components/Icon';
 export function useInlineModuleOwners(identity: ModuleOwnershipIdentity | undefined, agents: InlineOwnerAgent[], revision?: string)
 {
   const [data, setData] = useState<InlineOwnerData>(),
-
     [loading, setLoading] = useState(false),
-
     [error, setError] = useState(''),
-
     [message, setMessage] = useState(''),
-
     [, tick] = useState(0);
 
   const epoch = useRef(0),
-
     lock = useRef(false);
 
   const controllers = useMemo(() => identity ? { members: workspaceMemberCommands.Get(identity.workspaceId, { storage: window.localStorage, uuid: () => crypto.randomUUID(), commit: input => window.cbim.call('workspace.members.commit', input), lookup: input => window.cbim.call('workspace.members.receipt', input) }), ownerships: moduleOwnershipCommands.Get(identity.workspaceId, { storage: window.localStorage, uuid: () => crypto.randomUUID(), commit: input => window.cbim.call('workspace.ownerships.commit', input), lookup: input => window.cbim.call('workspace.ownerships.receipt', input) }), } : undefined, [identity?.workspaceId]);
@@ -42,7 +37,6 @@ export function useInlineModuleOwners(identity: ModuleOwnershipIdentity | undefi
   async function load(token: number)
   {
     if (!identity)
-
       return;
 
     try
@@ -50,7 +44,6 @@ export function useInlineModuleOwners(identity: ModuleOwnershipIdentity | undefi
       const value = await readInlineOwners(identity, call);
 
       if (epoch.current === token)
-
         setData(value)
     }
     catch (cause)
@@ -69,7 +62,6 @@ export function useInlineModuleOwners(identity: ModuleOwnershipIdentity | undefi
   async function choose(moduleId: string, value: string)
   {
     if (!identity || !controllers || lock.current)
-
       return;
 
     const token = epoch.current;
@@ -87,13 +79,11 @@ export function useInlineModuleOwners(identity: ModuleOwnershipIdentity | undefi
       await assignInlineOwner(identity, moduleId, value, agents, { ...controllers, call, isCurrent: () => token === epoch.current });
 
       if (token === epoch.current)
-
         setMessage('负责人已保存。')
     }
     catch (cause)
     {
       if (token === epoch.current)
-
         setError(String(cause))
     }
     finally
@@ -112,7 +102,6 @@ export function useInlineModuleOwners(identity: ModuleOwnershipIdentity | undefi
   async function refresh()
   {
     if (lock.current || !controllers)
-
       return;
 
     const token = epoch.current;
@@ -136,7 +125,6 @@ export function useInlineModuleOwners(identity: ModuleOwnershipIdentity | undefi
       lock.current = false;
 
       if (token === epoch.current)
-
         setLoading(false)
     }
   }
@@ -152,7 +140,6 @@ export type InlineModuleOwners = ReturnType<typeof useInlineModuleOwners>;
 export function InlineModuleOwner({ moduleId, name, owners }: { moduleId: string; name: string; owners: InlineModuleOwners })
 {
   const view = owners.data?.views.find(item => item.moduleId === moduleId),
-
     value = view?.binding?.ownerMemberId && view.owner?.agentId !== 'cbim:executor' ? 'member:' + view.binding.ownerMemberId : '';
 
   return <label className="module-owner-inline"><Icon name="team" size={15} /><select aria-label={name + ' 负责人'} value={value} disabled={owners.disabled} title="未显式设置时，先继承最近父级负责人，再由主模型匹配团队岗位，无匹配时由主 Agent 执行。选择自定义 Agent 会保存显式分工。" onChange={event => void owners.choose(moduleId, event.target.value)}>

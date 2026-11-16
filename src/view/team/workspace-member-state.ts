@@ -19,11 +19,9 @@ const identity = (value: WorkspaceMemberIdentity, input: WorkspaceMemberIdentity
 export function checkedWorkspaceMemberList(raw: unknown, input: WorkspaceMemberListInput): WorkspaceMemberList
 {
   const value = workspaceMemberListSchema.parse(raw),
-
     offset = input.offset ?? 0;
 
   if (!identity(value.identity, input) || value.offset !== offset || value.items.length > (input.limit ?? 20) || new Set(value.items.map(item => item.memberId)).size !== value.items.length || input.expectedRegistryCursor && !same(value.registryCursor, input.expectedRegistryCursor) || value.registryCursor && value.registryCursor.workspaceId !== input.workspaceId || value.offset + value.items.length > value.total || value.nextOffset !== undefined && (value.nextOffset !== offset + value.items.length || value.nextOffset >= value.total) || value.nextOffset === undefined && offset + value.items.length < value.total)
-
     throw Error('岗位列表身份、版本或分页不一致，请重新读取');
 
   return value;
@@ -35,7 +33,6 @@ export function checkedWorkspaceMemberDetail(raw: unknown, input: WorkspaceMembe
   const value = workspaceMemberDetailSchema.parse(raw);
 
   if (!identity(value.identity, input) || value.registryCursor.workspaceId !== input.workspaceId || value.member.workspaceId !== input.workspaceId || value.member.memberId !== input.memberId)
-
     throw Error('岗位详情身份不一致，请重新读取');
 
   return value;
@@ -45,31 +42,24 @@ export function checkedWorkspaceMemberDetail(raw: unknown, input: WorkspaceMembe
 export function checkedWorkspaceMemberPreview(raw: unknown, input: WorkspaceMemberPreviewInput): WorkspaceMemberPreview
 {
   const value = workspaceMemberPreviewSchema.parse(raw),
-
     change = input.change,
-
     old = value.previousMember,
-
     p = value.proposed;
 
   const wrong = !identity(value.identity, input) || !same(value.change, change) || !!value.registryCursor && value.registryCursor.workspaceId !== input.workspaceId || p.capability.configuration.workspaceId !== input.workspaceId || value.previousRevision !== (change.kind === 'register' ? 0 : change.expectedRevision);
 
   if (wrong || (change.kind === 'register' ? !!old : !old || old.workspaceId !== input.workspaceId || old.memberId !== change.memberId || old.revision !== change.expectedRevision))
-
     throw Error('岗位预览与当前身份或版本不一致');
 
   if (change.kind === 'register' && (p.state !== 'active' || p.name !== change.name || p.position !== change.position || !same(p.adaptation, change.adaptation) || p.capability.configuration.agentId !== change.agentId || p.runtimePolicy.profileId !== change.runtimePolicy.profileId || p.runtimePolicy.modelId !== change.runtimePolicy.modelId))
-
     throw Error('岗位预览与登记内容不一致');
 
   if (old && change.kind !== 'register')
   {
     const source = old.adoption.configuration,
-
       next = p.capability.configuration;
 
     if (source.agentId !== next.agentId || source.teamId !== next.teamId || source.source !== next.source)
-
       throw Error('岗位预览不能更换静态能力身份');
 
     const expected = { name: old.name, position: old.position, adaptation: old.adaptation, state: old.state, capability: { configuration: source, capabilityHash: old.adoption.capabilityHash, ...(old.adoption.sourceRef ? { sourceRef: old.adoption.sourceRef } : {}) }, runtimePolicy: old.runtimePolicy };
@@ -81,45 +71,39 @@ export function checkedWorkspaceMemberPreview(raw: unknown, input: WorkspaceMemb
       Object.assign(expected, patch);
 
       if (runtimePolicy)
-
         expected.runtimePolicy = p.runtimePolicy
     }
     else if (change.kind === 'state')
-
       expected.state = change.nextState;
-
     else if (change.target === 'capability')
-
       expected.capability = p.capability;
-
     else
     {
       if (p.runtimePolicy.profileId !== old.runtimePolicy.profileId || p.runtimePolicy.modelId !== old.runtimePolicy.modelId)
-
         throw Error('采纳模型不能改换原模型选择');
 
       expected.runtimePolicy = p.runtimePolicy
     }
-    if (!same(expected, p))
 
+    if (!same(expected, p))
       throw Error('岗位预览改变了未选择的配置');
   }
-  if (change.kind === 'update')
 
+  if (change.kind === 'update')
+  {
     for (const [key, item] of Object.entries(change.patch))
     {
       if (key === 'runtimePolicy')
       {
         if (p.runtimePolicy.profileId !== change.patch.runtimePolicy?.profileId || p.runtimePolicy.modelId !== change.patch.runtimePolicy?.modelId)
-
           throw Error('岗位预览模型选择不一致')
       }
       else if (!same(p[key as 'name' | 'position' | 'adaptation'], item))
-
         throw Error('岗位预览与修改内容不一致')
     }
-  if (change.kind === 'state' && p.state !== change.nextState)
+  }
 
+  if (change.kind === 'state' && p.state !== change.nextState)
     throw Error('岗位预览状态不一致');
 
   return value;
@@ -129,13 +113,10 @@ export function checkedWorkspaceMemberPreview(raw: unknown, input: WorkspaceMemb
 export function checkedWorkspaceMemberReceipt(raw: unknown, request: WorkspaceMemberCommitInput, previous?: WorkspaceMemberReceipt): WorkspaceMemberReceipt
 {
   const value = workspaceMemberReceiptSchema.parse(raw),
-
     revision = request.change.kind === 'register' ? 0 : request.change.expectedRevision,
-
     cursor = request.expectedRegistryCursor;
 
   if (!identity(value.identity, request) || value.commandId !== request.commandId || value.action !== request.change.kind || value.basis !== request.expectedBasis || value.previousRevision !== revision || value.memberRevision !== revision + 1 || request.change.kind !== 'register' && value.memberId !== request.change.memberId || value.registryCursor.workspaceId !== request.workspaceId || value.registryCursor.seq !== (cursor?.seq ?? 0) + 1 || cursor && value.registryCursor.streamId !== cursor.streamId || previous && !same(value, previous))
-
     throw Error('岗位回执与原命令不一致，请查询原命令');
 
   return value;
@@ -207,11 +188,9 @@ export class WorkspaceMemberCommands
       const parsed = this.records.Read('超过本机记录容量');
 
       if (parsed === undefined)
-
         return;
 
       if (parsed.version !== 1 || parsed.workspaceId !== workspaceId || Object.keys(parsed).some(key => !['version', 'workspaceId', 'records'].includes(key)) || !Array.isArray(parsed.records) || parsed.records.length > 128)
-
         throw Error('记录格式错误');
 
       const ids = new Set<string>();
@@ -263,15 +242,11 @@ export class WorkspaceMemberCommands
   private Save(record: WorkspaceMemberAttempt)
   {
     const records = [...this.value.records],
-
       index = records.findIndex(item => item.request.commandId === record.request.commandId);
 
     if (index < 0)
-
       records.push(record);
-
     else
-
       records[index] = record;
 
     this.value = { records, error: '' };
@@ -279,7 +254,6 @@ export class WorkspaceMemberCommands
     try
     {
       if (this.corrupt || records.length > 128)
-
         throw Error('本机记录不可写或达到 128 条上限');
 
       this.records.Write({ version: 1, workspaceId: this.workspaceId, records }, '本机记录超过 2 MiB');
@@ -306,7 +280,6 @@ export class WorkspaceMemberCommands
   async Submit(input: WorkspaceMemberPreviewInput, preview: WorkspaceMemberPreview)
   {
     if (this.blocked || input.workspaceId !== this.workspaceId)
-
       return;
 
     let request: WorkspaceMemberCommitInput;
@@ -325,10 +298,10 @@ export class WorkspaceMemberCommands
 
       return
     }
+
     const record: WorkspaceMemberAttempt = { request, phase: 'submitting', uncertain: false };
 
     if (this.Save(record))
-
       await this.Send(record);
 
     return this.value.records.find(item => item.request.commandId === request.commandId);
@@ -339,7 +312,6 @@ export class WorkspaceMemberCommands
     const request = record.request;
 
     if (this.pending.has(request.commandId))
-
       return;
 
     this.pending.add(request.commandId);
@@ -372,7 +344,6 @@ export class WorkspaceMemberCommands
     const record = this.value.records.find(item => item.request.commandId === id);
 
     if (this.unavailable || this.pending.size || record?.phase !== 'unknown')
-
       return;
 
     await this.Send(record)
@@ -384,7 +355,6 @@ export class WorkspaceMemberCommands
     const record = this.value.records.find(item => item.request.commandId === id);
 
     if (this.corrupt || !record || this.pending.has(id))
-
       return;
 
     this.pending.add(id);
@@ -396,11 +366,8 @@ export class WorkspaceMemberCommands
       const raw = await this.ports.lookup({ workspaceId: this.workspaceId, commandId: id });
 
       if (raw !== undefined)
-
         this.Save({ ...record, phase: 'accepted', receipt: checkedWorkspaceMemberReceipt(raw, record.request, record.receipt), error: undefined });
-
       else if (record.phase !== 'accepted')
-
         this.Save({ ...record, phase: 'unknown', uncertain: true, error: '尚未查到原回执；不能据此新建命令。' })
     }
     catch (error)
@@ -419,9 +386,7 @@ export class WorkspaceMemberCommands
   async Restore()
   {
     for (const record of this.value.records)
-
       if (record.phase === 'unknown')
-
         await this.Query(record.request.commandId)
   }
 }
@@ -442,13 +407,12 @@ export class WorkspaceMemberCommandPool
     for (const [key, item] of this.values)
     {
       if (this.values.size <= 16)
-
         break;
 
       if (key !== workspaceId && item.canRelease)
-
         this.values.delete(key)
     }
+
     return value
   }
 }

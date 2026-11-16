@@ -19,13 +19,10 @@ export const workspaceMemberLimits = { members: 256, changes: 4096, capabilityBy
 const id = z.string().min(1).max(512).refine(value => !!value.trim(), '身份不能为空白');
 
 const uuid = z.string().uuid(),
-
   digest = z.string().regex(/^[a-f0-9]{64}$/),
-
   time = z.string().datetime();
 
 const revision = z.number().int().positive().safe(),
-
   seq = z.number().int().positive().safe();
 
 const text = (max: number) => z.string().min(1).max(max).refine(value => !!value.trim(), '文本不能为空白');

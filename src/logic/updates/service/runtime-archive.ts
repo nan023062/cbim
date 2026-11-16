@@ -30,7 +30,6 @@ export async function extractRuntimeArchive(archive: string, destination: string
   const zip = await new Promise<ZipFile>((resolve, reject) => open(archive, { lazyEntries: true, autoClose: true, validateEntrySizes: true, strictFileNames: true }, (error, value) => error ? reject(error) : resolve(value!)));
 
   const expected = new Map(files.map(file => [file.path, file])),
-
     seen = new Set<string>();
 
   const total = files.reduce((sum, file) => sum + file.bytes, 0);
@@ -52,7 +51,6 @@ export async function verifyRuntimeDirectory(root: string, files: RuntimeFile[],
   const rootStat = await fs.lstat(root);
 
   if (!rootStat.isDirectory() || rootStat.isSymbolicLink())
-
     throw Error('运行目录不是普通目录');
 
   async function walk(directory: string)
@@ -62,35 +60,31 @@ export async function verifyRuntimeDirectory(root: string, files: RuntimeFile[],
       signal?.throwIfAborted();
 
       const absolute = path.join(directory, entry.name),
-
         relative = path.relative(root, absolute).split(path.sep).join('/');
 
       runtimeRelativePath(relative);
 
       if (entry.isSymbolicLink())
-
         throw Error('运行目录包含链接');
 
       if (entry.isDirectory())
       {
         if (!files.some(file => file.path.startsWith(relative + '/')))
-
           throw Error('运行目录包含未声明目录');
 
         await walk(absolute);
 
         continue;
       }
+
       const file = expected.get(relative);
 
       if (!entry.isFile() || !file)
-
         throw Error('运行目录文件集合不符');
 
       const stat = await fs.lstat(absolute);
 
       if (stat.size !== file.bytes || stat.nlink > 1)
-
         throw Error('运行文件大小或链接数不符');
 
       const hash = createHash('sha256');
@@ -101,8 +95,8 @@ export async function verifyRuntimeDirectory(root: string, files: RuntimeFile[],
 
         hash.update(chunk);
       }
-      if (hash.digest('hex') !== file.sha256)
 
+      if (hash.digest('hex') !== file.sha256)
         throw Error('运行文件已改变');
 
       count++;
@@ -112,6 +106,5 @@ export async function verifyRuntimeDirectory(root: string, files: RuntimeFile[],
   await walk(root);
 
   if (count !== expected.size)
-
     throw Error('运行文件不完整');
 }

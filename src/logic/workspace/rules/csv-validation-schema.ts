@@ -45,13 +45,10 @@ function parseTable(text: string): string[][] | undefined
   const rows: string[][] = [];
 
   let row: string[] = [],
-
     field = '',
-
     state: 'plain' | 'quoted' | 'closed' = 'plain';
 
   let chars = 0,
-
     recordStarted = false;
 
   const append = (value: string) => { field += value; if (++chars > csvValidationLimits.fieldChars) fail('VALIDATION_LIMIT', 'CSV 字段超过 4096 字符') };
@@ -65,11 +62,9 @@ function parseTable(text: string): string[][] | undefined
     const char = String.fromCodePoint(text.codePointAt(index)!);
 
     if (char.length === 2)
-
       index++;
 
     if (char === '\0')
-
       return;
 
     if (state === 'quoted')
@@ -83,13 +78,11 @@ function parseTable(text: string): string[][] | undefined
           index++
         }
         else
-
           state = 'closed'
       }
       else if (char === '\r')
       {
         if (text[index + 1] !== '\n')
-
           return;
 
         append('\r');
@@ -99,11 +92,11 @@ function parseTable(text: string): string[][] | undefined
         index++
       }
       else
-
         append(char);
 
       continue;
     }
+
     if (char === ',')
     {
       finishField();
@@ -112,28 +105,28 @@ function parseTable(text: string): string[][] | undefined
 
       continue
     }
+
     if (char === '\r' || char === '\n')
     {
       if (char === '\r')
       {
         if (text[index + 1] !== '\n')
-
           return;
 
         index++
       }
+
       finishRow();
 
       continue
     }
-    if (state === 'closed')
 
+    if (state === 'closed')
       return;
 
     if (char === '"')
     {
       if (field.length)
-
         return;
 
       state = 'quoted';
@@ -142,16 +135,16 @@ function parseTable(text: string): string[][] | undefined
 
       continue
     }
+
     append(char);
 
     recordStarted = true;
   }
-  if (state === 'quoted')
 
+  if (state === 'quoted')
     return;
 
   if (recordStarted || row.length || field.length || state === 'closed')
-
     finishRow();
 
   return rows;
@@ -163,17 +156,13 @@ export function validateCsvArtifact(rawSchema: CsvTableSchema, bytes: Uint8Array
   const parsed = csvTableSchema.safeParse(rawSchema);
 
   if (!parsed.success)
-
     fail('VALIDATION_SCHEMA_INVALID', 'CSV 验证声明不受支持或超过边界');
 
   if (!(bytes instanceof Uint8Array) || bytes.byteLength > csvValidationLimits.fileBytes)
-
     fail('VALIDATION_LIMIT', 'CSV 产物超过 1 MiB');
 
   const schema = parsed.data,
-
     issues: CsvValidationOutcome['issues'] = [],
-
     add = (code: CsvValidationIssueCode, instancePath: string, keyword?: string) => { if (issues.length < csvValidationLimits.issues) issues.push({ code, instancePath, ...(keyword ? { keyword } : {}) }) };
 
   let text: string;
@@ -186,28 +175,24 @@ export function validateCsvArtifact(rawSchema: CsvTableSchema, bytes: Uint8Array
   {
     return { outcome: 'rejected', issues: [{ code: 'csv_invalid', instancePath: '', keyword: 'utf8' }] }
   }
+
   const rows = parseTable(text);
 
   if (!rows)
-
     return { outcome: 'rejected', issues: [{ code: 'csv_invalid', instancePath: '', keyword: 'syntax' }] };
 
   if (!rows.length || rows[0].length !== schema.columns.length || schema.columns.some((item, index) => rows[0][index] !== item.name))
-
     return { outcome: 'rejected', issues: [{ code: 'csv_header', instancePath: '/header' }] };
 
   if (rows.length - 1 < (schema.minRows ?? 0) || rows.length - 1 > (schema.maxRows ?? csvValidationLimits.rows))
-
     add('csv_rows', '', 'rowCount');
 
   const keyIndexes = schema.uniqueBy?.map(key => schema.columns.findIndex(item => item.name === key)),
-
     keys = new Set<string>();
 
   for (let index = 1; index < rows.length; index++)
   {
     const row = rows[index],
-
       position = '/rows/' + index;
 
     if (row.length !== schema.columns.length)
@@ -216,12 +201,11 @@ export function validateCsvArtifact(rawSchema: CsvTableSchema, bytes: Uint8Array
 
       continue
     }
+
     for (let col = 0; col < row.length; col++)
     {
       const rule = schema.columns[col],
-
         value = row[col],
-
         at = position + '/' + col;
 
       if (rule.type === 'string')
@@ -229,11 +213,9 @@ export function validateCsvArtifact(rawSchema: CsvTableSchema, bytes: Uint8Array
         const length = [...value].length;
 
         if (length < (rule.minLength ?? 0) || length > (rule.maxLength ?? csvValidationLimits.fieldChars))
-
           add('csv_value', at, 'length');
 
         if (rule.enum && !rule.enum.includes(value))
-
           add('csv_value', at, 'enum');
       }
       else
@@ -244,24 +226,22 @@ export function validateCsvArtifact(rawSchema: CsvTableSchema, bytes: Uint8Array
         const number = Number(value);
 
         if (!syntax.test(value) || !Number.isFinite(number) || rule.type === 'integer' && !Number.isSafeInteger(number))
-
           add('csv_value', at, rule.type);
-
         else if (rule.minimum !== undefined && number < rule.minimum || rule.maximum !== undefined && number > rule.maximum)
-
           add('csv_value', at, 'range');
       }
     }
+
     if (keyIndexes)
     {
       const key = JSON.stringify(keyIndexes.map(col => row[col]));
 
       if (keys.has(key))
-
         add('csv_duplicate', position, 'uniqueBy');
 
       keys.add(key)
     }
   }
+
   return { outcome: issues.length ? 'rejected' : 'passed', issues };
 }

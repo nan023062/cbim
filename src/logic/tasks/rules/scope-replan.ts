@@ -12,9 +12,7 @@ import { scopeContinuationOptionsSchema } from './scope-continuation';
 import { freshContextSchema } from './fresh-context';
 
 const id = z.string().min(1).max(512),
-
   digest = z.string().regex(/^[a-f0-9]{64}$/),
-
   revision = z.number().int().positive().safe();
 
 const source = z.object({ inspectionScopeId: id, expectedBasis: digest }).strict();

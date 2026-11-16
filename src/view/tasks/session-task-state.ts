@@ -18,7 +18,6 @@ export function sessionRuns(runs: RunSummary[], workspaceId: string, taskId?: st
 export function sessionRoot(history: RunSummary[], taskId: string, pending: number, graph?: GraphSnapshot, scopeState?: ScopeGoalState, historyIssueCount = 0)
 {
   const latest = history.at(-1),
-
     status = latest ? { running: '正在工作', completed: '本轮结束', cancelled: '已停止', failed: '执行失败', interrupted: '执行中断' }[latest.status] : historyIssueCount ? '主会话记录待核实' : '尚无可读记录';
 
   const selected = scopeState?.scopes.find(scope => scope.scopeId === scopeState.selectedScopeId);

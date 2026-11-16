@@ -62,6 +62,7 @@ export class EngineArtifacts implements EngineArtifactsPort
         {
         }
       }
+
       throw error;
     }
   }
@@ -71,13 +72,11 @@ export class EngineArtifacts implements EngineArtifactsPort
     for (const pkg of packages)
     {
       if (!pkg.adapter)
-
         continue;
 
       const existing = [...target.values()].find(item => item.kind === pkg.kind && item.adapter?.version === pkg.adapter!.version);
 
       if (existing && JSON.stringify(existing) !== JSON.stringify(pkg))
-
         throw Error('同一引擎版本对应不同制品，请开发者发布新版本');
 
       target.set(pkg.kind + ':' + pkg.package.sha256, pkg);
@@ -87,14 +86,12 @@ export class EngineArtifacts implements EngineArtifactsPort
   private async Init()
   {
     if (this.initialized)
-
       return;
 
     // 当前启动来源始终必须使用当前身份；历史公钥不能将旧签名提升为新资源授权。
     verifyRuntimeManifest(this.seed, this.store.cold, { installed: true });
 
     const available = new Map<string, EnginePackage>(),
-
       current = new Map<string, string>();
 
     let raw:
@@ -111,7 +108,6 @@ export class EngineArtifacts implements EngineArtifactsPort
       const stat = await fs.lstat(this.stateFile);
 
       if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 128 * 1024 * 1024)
-
         throw Error('本机引擎索引无效');
 
       raw = JSON.parse(await fs.readFile(this.stateFile, 'utf8'))
@@ -119,17 +115,15 @@ export class EngineArtifacts implements EngineArtifactsPort
     catch (error: any)
     {
       if (error.code !== 'ENOENT')
-
         throw error
     }
-    if (raw.schema !== 1 || !Array.isArray(raw.indexes) || raw.indexes.length > 128 || !Array.isArray(raw.seeds) || raw.seeds.length > 128)
 
+    if (raw.schema !== 1 || !Array.isArray(raw.indexes) || raw.indexes.length > 128 || !Array.isArray(raw.seeds) || raw.seeds.length > 128)
       throw Error('本机引擎索引格式无效');
 
     const seeds = raw.seeds.some(value => value.payload === this.seed.payload) ? raw.seeds : [...raw.seeds, this.seed];
 
     if (seeds.length > 128)
-
       throw Error('引擎来源保留数量达到上限');
 
     for (const envelope of seeds)
@@ -142,15 +136,14 @@ export class EngineArtifacts implements EngineArtifactsPort
       this.Add(checked.manifest.engines, available);
 
       if (envelope.payload === this.seed.payload)
-
+      {
         for (const pkg of checked.manifest.engines)
-
           if (pkg.adapter)
-
             current.set(pkg.kind, pkg.package.sha256);
+      }
     }
-    let head = 0,
 
+    let head = 0,
       digest = '';
 
     for (const envelope of raw.indexes)
@@ -158,21 +151,19 @@ export class EngineArtifacts implements EngineArtifactsPort
       const checked = this.VerifyHistory(publicKey => verifyEngineIndex(envelope, { ...this.store.cold, publicKey }, true));
 
       if (checked.index.sequence <= head)
-
         throw Error('本机引擎索引序号无效');
 
       this.Add(checked.index.releases, available);
 
       for (const ref of checked.index.current)
-
         current.set(ref.kind, ref.identity);
 
       head = checked.index.sequence;
 
       digest = checked.digest
     }
-    if (seeds.length !== raw.seeds.length)
 
+    if (seeds.length !== raw.seeds.length)
       await atomic(this.stateFile, JSON.stringify({ schema: 1, seeds, indexes: raw.indexes }));
 
     this.seeds = seeds;

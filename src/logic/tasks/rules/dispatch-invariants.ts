@@ -70,32 +70,21 @@ const claim = z.object({ runId: id, leaseEpoch: z.number().int().nonnegative().s
 const messageBase = z.object({ messageId: id, commandId: id, identity, from: agent, to: agent, taskId: id, planRevision: z.number().int().positive().safe(), createdAt: time, delivery: z.enum(['pending', 'claimed', 'processed']), claim: claim.optional() });
 
 const messageShape = z.discriminatedUnion('kind', [
-
   messageBase.extend({ kind: z.literal('assignment'), resumeFrom: memberResumeFromSchema.optional() }).strict(),
-
   messageBase.extend({ kind: z.literal('result'), replyTo: id, resultId: id, runId: id }).strict(),
-
   messageBase.extend({ kind: z.literal('help'), replyTo: id, helpId: id, runId: id }).strict(),
-
   messageBase.extend({ kind: z.literal('checkpoint'), replyTo: id, checkpointId: id, runId: id }).strict(),
-
 ]);
 
 const resultShape = z.object({ resultId: id, runId: id, planRevision: z.number().int().positive().safe(), summary: z.string().trim().min(1).max(100000), evidenceRefs: z.array(id), limitations: z.array(z.string().trim().min(1).max(100000)), acceptance: z.literal('not_evaluated') }).strict();
 
 const runShape = z.object({
   binding: z.object({ workspaceId: id, teamId: id, agentId: id, agentInstanceId: id, agentSessionId: id, rootSessionId: id, taskId: id, runId: id, leaseEpoch: z.number().int().nonnegative().safe(), planRevision: z.number().int().positive().safe() }).strict(), assignmentMessageId: id,
-
   resumeFrom: memberResumeFromSchema.optional(), checkpointProof: memberCheckpointProofSchema.optional(),
-
   topicContext: memberTopicContextSchema.optional(),
-
   status: z.enum(['starting', 'running', 'completed', 'failed', 'cancelled', 'interrupted']), prepared: z.unknown(), model: z.record(z.unknown()), permission: z.enum(['read', 'ask', 'execute']),
-
   prerequisites: z.array(z.object({ taskId: id, planRevision: z.number().int().positive().safe(), result: resultShape }).strict()).optional(),
-
   turnTimeoutMs: z.number().int().positive().safe().optional(), session: z.object({ nativeSessionId: id, sessionFile: z.string().min(1).max(32768).optional() }).strict(),
-
   createdAt: time, startedAt: time.optional(), settledAt: time.optional(), error: z.string().min(1).max(10000).optional(),
 }).strict();
 
@@ -114,7 +103,6 @@ const equal = (a: unknown, b: unknown) => JSON.stringify(ordered(a)) === JSON.st
 function valid(condition: unknown, message: string): asserts condition
 {
   if (!condition)
-
     fail('GRAPH_INPUT_INVALID', message)
 }
 
@@ -159,7 +147,6 @@ function validateRun(previous: DispatchRun | undefined, run: DispatchRun, state:
   validateModel(run.model);
 
   const binding = run.binding,
-
     member = state.members.find(item => item.agentInstanceId === binding.agentInstanceId);
 
   const session = state.sessions.find(item => item.agentSessionId === binding.agentSessionId);
@@ -191,7 +178,6 @@ function validateRun(previous: DispatchRun | undefined, run: DispatchRun, state:
     const firstCodexBinding = previous.model.engine === 'codex' && previous.status === 'starting' && run.status === 'running' && !previous.resumeFrom && !previous.session.sessionFile && previous.session.nativeSessionId === binding.agentSessionId;
 
     if (firstCodexBinding)
-
       valid(!state.runs?.some(other => other.binding.agentSessionId !== binding.agentSessionId && other.session.nativeSessionId === run.session.nativeSessionId), 'Codex 原生身份已属于另一成员通道');
 
     const fixed = (item: DispatchRun) => { const { status: _, startedAt: __, settledAt: ___, error: ____, session: sessionValue, checkpointProof: _proof, ...rest } = item; return { ...rest, session: { nativeSessionId: sessionValue.nativeSessionId } } };
@@ -203,15 +189,10 @@ function validateRun(previous: DispatchRun | undefined, run: DispatchRun, state:
     valid(!previous.startedAt || previous.startedAt === run.startedAt, '不能改写实际启动时间');
 
     if (!active(previous))
-
       valid(equal(previous, run), '已结算运行不能由迟到回调修改');
-
     else if (previous.status === 'running')
-
       valid(run.status !== 'starting', '运行不能退回启动意图');
-
     else
-
       valid(run.status !== 'completed', '尚无真实启动事实的执行不能直接完成');
   }
   else
@@ -229,15 +210,14 @@ function validateRun(previous: DispatchRun | undefined, run: DispatchRun, state:
     if (run.topicContext)
     {
       const scope = state.scopes?.find(value => value.scopeId === task.scopeId && sameGraph(value, binding)),
-
         logical = state.teamSessions?.find(value => value.sessionId === run.topicContext!.sessionId);
 
       valid(scope && logical && equal(run.topicContext, createMemberTopicContext(task, scope, graph, logical)), '成员话题引用必须来自当前话题与角色');
 
       valid(!state.runs?.some(other => other.binding.runId !== binding.runId && other.session.nativeSessionId === run.session.nativeSessionId && other.binding.taskId !== binding.taskId), '成员原生上下文不能跨任务复用');
     }
-    const dependencies = graph.edges.filter(edge => edge.enabled && edge.kind === 'dependency' && edge.toNodeId === task.nodeId),
 
+    const dependencies = graph.edges.filter(edge => edge.enabled && edge.kind === 'dependency' && edge.toNodeId === task.nodeId),
       prerequisites = run.prerequisites ?? [];
 
     valid(prerequisites.length === dependencies.length && new Set(prerequisites.map(item => item.taskId)).size === prerequisites.length, '冻结前置候选须完整对应任务入向依赖');
@@ -245,26 +225,22 @@ function validateRun(previous: DispatchRun | undefined, run: DispatchRun, state:
     for (const edge of dependencies)
     {
       if (edge.kind !== 'dependency')
-
         continue;
 
       const source = graph.tasks.find(item => item.nodeId === edge.fromNodeId),
-
         frozen = prerequisites.find(item => item.taskId === source?.taskId);
 
       if (run.topicContext)
-
         valid(source?.scopeId === task.scopeId, '成员话题前置候选不能来自其他话题');
 
       valid(source?.status === 'result_ready' && frozen && frozen.planRevision === source.planRevision && frozen.planRevision === edge.condition.planRevision && frozen.result.resultId === edge.condition.resultId && equal(frozen.result, source.result), '领取时须锁定当前计划下的前置候选及结果内容');
 
       if (edge.condition.reviewRequired)
-
         valid(candidateAccepted(source), '领取时前置候选尚未通过主 Agent 审阅');
     }
   }
-  for (const prerequisite of run.prerequisites ?? [])
 
+  for (const prerequisite of run.prerequisites ?? [])
     valid(prerequisite.result.planRevision === prerequisite.planRevision, '冻结前置候选的计划版本不一致');
 
   valid(!run.startedAt || Date.parse(run.startedAt) >= Date.parse(run.createdAt), '实际启动时间不能早于领取意图');
@@ -287,9 +263,7 @@ function validateRun(previous: DispatchRun | undefined, run: DispatchRun, state:
 
     // 旧检查点轮次可靠结束后保留原状；当前节点可处于续执行或封存，不能反向改写该历史轮次。
     if (run.checkpointProof)
-
       valid(run.status === 'completed' && task.checkpoints?.some(cp => cp.binding.runId === binding.runId), '检查点证明只能属于原已完成轮次');
-
     else
     {
       const expected = run.status === 'completed' ? ['result_ready', 'blocked'] : [run.status];
@@ -297,11 +271,9 @@ function validateRun(previous: DispatchRun | undefined, run: DispatchRun, state:
       valid(expected.includes(task.status), '运行终态与任务事实不一致');
 
       if (task.result)
-
         valid(run.status === 'completed' && task.result.runId === binding.runId, '候选结果必须来自本次完成的运行');
 
       if (task.help)
-
         valid(run.status === 'completed' && equal(task.help.binding, binding), '求助必须来自本次正常结束的固定执行身份');
     }
   }
@@ -313,7 +285,6 @@ function validateMessage(previous: DispatchMessage | undefined, message: Dispatc
   valid(messageShape.safeParse(message).success, '派发消息结构无效');
 
   if (message.identity.workspaceId !== state.workspaceId)
-
     fail('GRAPH_IDENTITY_MISMATCH', '消息不属于当前工作区');
 
   const task = lookupTask(state, message.identity, message.taskId);
@@ -333,7 +304,6 @@ function validateMessage(previous: DispatchMessage | undefined, message: Dispatc
     valid(!previous.claim || equal(previous.claim, message.claim), '已领取消息必须保留原运行与租约');
   }
   else
-
     valid(message.delivery === 'pending' && !message.claim && message.commandId === command.commandId, '新消息只能是当前命令的待投递信封');
 
   if (message.kind === 'assignment')
@@ -344,9 +314,7 @@ function validateMessage(previous: DispatchMessage | undefined, message: Dispatc
     valid(changedTask(mutation, message.identity, message.taskId), '任务信封变化须与任务节点同批提交');
 
     if (message.delivery === 'pending')
-
       valid(!message.claim, '待投递信封不能预置领取者');
-
     else if (message.claim)
     {
       const run = (state.runs ?? []).find(item => item.binding.runId === message.claim!.runId);
@@ -356,11 +324,9 @@ function validateMessage(previous: DispatchMessage | undefined, message: Dispatc
       valid(message.delivery === 'claimed' ? active(run) : !active(run), '信封消费状态与运行生命周期不一致');
 
       if (previous?.delivery === 'pending')
-
         valid(mutation.runs?.some(item => item.binding.runId === run.binding.runId && item.status === 'starting'), '领取与 starting 意图必须原子提交');
     }
     else
-
       valid(message.delivery === 'processed' && task.status === 'cancelled', '没有领取的任务信封只能随取消消费');
   }
   else
@@ -376,11 +342,9 @@ function validateMessage(previous: DispatchMessage | undefined, message: Dispatc
     valid(run && run.assignmentMessageId === message.replyTo && run.status === 'completed' && run.binding.planRevision === message.planRevision, '结果消息缺少对应的完成运行');
 
     if (message.kind === 'help')
-
       valid(task.help?.helpId === message.helpId && task.status === 'blocked' && task.help.binding.runId === message.runId && task.planRevision === message.planRevision, '求助信封只能引用自己的冻结求助记录');
 
     if (message.kind === 'checkpoint')
-
       valid(task.checkpoints?.some(cp => cp.checkpointId === message.checkpointId && cp.binding.runId === message.runId) && task.planRevision === message.planRevision, '检查点信封只能引用本任务冻结的可靠交接');
 
     if (!previous)
@@ -388,7 +352,6 @@ function validateMessage(previous: DispatchMessage | undefined, message: Dispatc
       valid(changedTask(mutation, message.identity, message.taskId) && mutation.runs?.some(item => item.binding.runId === message.runId && item.status === 'completed'), '交接信封须与正常完成运行原子提交');
 
       if (message.kind === 'result')
-
         valid(task.status === 'result_ready' && task.result?.resultId === message.resultId && task.result.runId === message.runId && task.result.planRevision === message.planRevision, '结果信封须与候选结果原子提交');
     }
   }
@@ -403,17 +366,13 @@ export function validateDispatchExecution(previous: DispatchState, next: Dispatc
   for (const change of mutation.batch?.changes ?? [])
   {
     if (change.type !== 'task.upserted')
-
       continue;
 
     const task = change.task,
-
       old = lookupTask(previous, task.identity, task.taskId),
-
       review = task.candidateReview;
 
     if (!review || equal(old?.candidateReview, review))
-
       continue;
 
     const scope = previous.scopes?.find(s => s.scopeId === task.scopeId && s.rootSessionId === task.identity.rootSessionId && s.workspaceId === task.identity.workspaceId);
@@ -428,6 +387,7 @@ export function validateDispatchExecution(previous: DispatchState, next: Dispatc
 
     valid(command.fingerprint === hash(json({ identity: task.identity, scopeId: task.scopeId, runId: review.mainRunId, input })), '审阅命令必须匹配当前任务与主运行');
   }
+
   validateHumanDecisionCommand(previous, mutation, command);
 
   validateHumanContinuationCommand(previous, mutation, command);
@@ -448,11 +408,9 @@ export function validateDispatchExecution(previous: DispatchState, next: Dispatc
   const runs = next.runs ?? [];
 
   for (const run of mutation.runs ?? [])
-
     validateRun((previous.runs ?? []).find(item => item.binding.runId === run.binding.runId), run, next, mutation);
 
   for (const message of mutation.messages ?? [])
-
     validateMessage(previous.outbox.find(item => item.messageId === message.messageId), message, next, mutation, command);
 
   const occupied = new Set<string>();
@@ -464,7 +422,6 @@ export function validateDispatchExecution(previous: DispatchState, next: Dispatc
     occupied.add(run.binding.agentInstanceId);
 
     const member = next.members.find(item => item.agentInstanceId === run.binding.agentInstanceId),
-
       task = lookupTask(next, run.binding, run.binding.taskId);
 
     valid(member?.activeRunId === run.binding.runId && member.activeTaskId === run.binding.taskId && member.leaseEpoch === run.binding.leaseEpoch && task?.activeRunId === run.binding.runId, '事务不能绕开运行记录改写活动占用');
@@ -473,32 +430,28 @@ export function validateDispatchExecution(previous: DispatchState, next: Dispatc
 
     valid(run.status === 'starting' ? task.status === 'queued' && member.activity === 'communicating' : task.status === 'running' && member.activity === 'working', '活动任务与成员状态必须和运行阶段一致');
   }
+
   for (const member of next.members)
   {
     valid(Boolean(member.activeTaskId) === Boolean(member.activeRunId), '成员活动任务与运行必须同时绑定或释放');
 
     if (member.activeRunId)
-
       valid(runs.some(run => active(run) && run.binding.runId === member.activeRunId && run.binding.agentInstanceId === member.agentInstanceId), '成员占用没有对应的活动运行');
 
     if (member.activity === 'working')
-
       valid(Boolean(member.activeRunId), '工作中成员必须有真实运行占用');
   }
-  const helpIds = new Set<string>(),
 
+  const helpIds = new Set<string>(),
     helpRuns = new Set<string>();
 
   for (const graph of next.graphs)
-
     for (const task of graph.tasks)
     {
       if (task.activeRunId)
-
         valid(runs.some(run => active(run) && run.binding.runId === task.activeRunId && sameGraph(run.binding, graph.identity) && run.binding.taskId === task.taskId), '任务占用没有对应的活动运行');
 
       if (task.status === 'running')
-
         valid(Boolean(task.activeRunId), '执行中任务必须有真实运行占用');
 
       if (task.result && !previous.graphs.find(item => sameGraph(item.identity, graph.identity))?.tasks.some(old => old.taskId === task.taskId && equal(old.result, task.result)))
@@ -507,16 +460,15 @@ export function validateDispatchExecution(previous: DispatchState, next: Dispatc
 
         valid(mutation.messages?.some(message => message.kind === 'result' && !previous.outbox.some(old => old.messageId === message.messageId) && sameGraph(message.identity, graph.identity) && message.taskId === task.taskId && message.planRevision === task.planRevision && message.resultId === task.result!.resultId && message.runId === task.result!.runId), '候选结果必须原子新增对应的结果信封');
       }
+
       const old = lookupTask(previous, graph.identity, task.taskId);
 
       if (old?.help)
-
         valid(equal(old.help, task.help), '已经交接的求助不能移除、替换或改写');
 
       if (task.help)
       {
         const help = task.help,
-
           run = runs.find(item => item.binding.runId === help.binding.runId);
 
         valid(!helpIds.has(help.helpId) && !helpRuns.has(help.binding.runId), '求助身份和运行不能重复交接');

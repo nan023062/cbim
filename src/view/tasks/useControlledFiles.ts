@@ -15,9 +15,7 @@ export function controlledFileController(workspaceId: string, rootSessionId: str
 {
   return controllers.Get(workspaceId, rootSessionId, {
     storage: { getItem: name => window.localStorage.getItem(name), setItem: (name, value) => window.localStorage.setItem(name, value) }, uuid: () => crypto.randomUUID(),
-
     report: input => window.cbim.call('dispatch.controlledFileReport', input), preview: input => window.cbim.call('dispatch.fileCompensationPreview', input),
-
     apply: input => window.cbim.call('dispatch.fileCompensate', input), receipt: input => window.cbim.call('dispatch.fileCompensationReceipt', input),
   })
 }
@@ -28,9 +26,7 @@ export function useControlledFiles(identity: ControlledFileReportInput, instance
   const controller = useMemo(() => controlledFileController(identity.workspaceId, identity.rootSessionId), [identity.workspaceId, identity.rootSessionId]);
 
   const snapshot = useSyncExternalStore(controller.subscribe, () => controller.snapshot, () => controller.snapshot),
-
     key = controlledFileSelectionKey(identity),
-
     currentAnchor = JSON.stringify([instanceId ?? null, anchor]);
 
   useLayoutEffect(() => controller.ObserveAnchor(identity, currentAnchor), [controller, key, currentAnchor]);

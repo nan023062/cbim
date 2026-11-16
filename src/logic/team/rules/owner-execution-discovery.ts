@@ -13,7 +13,6 @@ import { moduleOwnershipCursorSchema } from '../../workspace/rules/module-owners
 import { knowledgeSourceCursorSchema } from '../../workspace/rules/knowledge-source';
 
 const id = z.string().min(1).max(1024),
-
   modules = z.array(id).min(1).max(50).refine(items => new Set(items).size === items.length);
 
 const issue = z.object({ code: z.string().min(1).max(100), message: z.string().min(1).max(1000) }).strict();

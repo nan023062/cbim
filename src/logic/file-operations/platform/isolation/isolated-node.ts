@@ -57,14 +57,11 @@ export interface IsolatedNodeOptions
 export async function runIsolatedNode(raw: IsolatedNodeRequest, signal: AbortSignal, options: IsolatedNodeOptions = {}): Promise<IsolatedNodeResult>
 {
   let request: ReturnType<typeof isolatedNodeRequestSchema.parse>,
-
     snapshots: (IsolatedNodeRequest['files'][number] &
     {
       bytes: Buffer
     })[],
-
     temp: string,
-
     root: string;
 
   // 分配前失败没有平台资源；仍释放调用方的等待标记，不能误报为进程清理未知。
@@ -73,7 +70,6 @@ export async function runIsolatedNode(raw: IsolatedNodeRequest, signal: AbortSig
     signal.throwIfAborted();
 
     if (process.platform !== 'win32' || process.arch !== 'x64')
-
       fail('UNSUPPORTED');
 
     request = isolatedNodeRequestSchema.parse(raw);
@@ -81,7 +77,6 @@ export async function runIsolatedNode(raw: IsolatedNodeRequest, signal: AbortSig
     snapshots = request.files.map(file => ({ ...file, bytes: Buffer.from(file.base64, 'base64') }));
 
     if (snapshots.some(file => file.bytes.toString('base64') !== file.base64))
-
       fail('ENCODING');
 
     temp = await fs.realpath(os.tmpdir());
@@ -94,26 +89,19 @@ export async function runIsolatedNode(raw: IsolatedNodeRequest, signal: AbortSig
 
     throw error
   }
-  const executionId = randomUUID(),
 
+  const executionId = randomUUID(),
     profileName = 'CBIM.Isolated.' + executionId;
 
   const runtime = path.join(root, 'runtime'),
-
     input = path.join(root, 'input'),
-
     output = path.join(root, 'output');
 
   let native: Win32IsolatedNode | undefined,
-
     cleaned = false,
-
     retainOwner = false,
-
     retryNativeCleanup: (() => void) | undefined,
-
     prepared = false,
-
     notified = false;
 
   const platform = (process as NodeJS.Process &
@@ -140,6 +128,7 @@ export async function runIsolatedNode(raw: IsolatedNodeRequest, signal: AbortSig
 
       prepared = true
     }
+
     try
     {
       native = new Win32IsolatedNode(profileName, koffiPath)
@@ -152,12 +141,14 @@ export async function runIsolatedNode(raw: IsolatedNodeRequest, signal: AbortSig
 
           retryCleanup?: () => void
         };
+
       retainOwner = !!failure.cleanupPending;
 
       retryNativeCleanup = failure.retryCleanup;
 
       throw error
     }
+
     native.Grant(root, 'traverse');
 
     for (const [directory, access] of [[runtime, 'read'], [input, 'read'], [output, 'write']] as const)
@@ -166,15 +157,14 @@ export async function runIsolatedNode(raw: IsolatedNodeRequest, signal: AbortSig
 
       native.Grant(directory, access)
     }
-    const source = await fs.realpath(options.executable ?? process.execPath),
 
+    const source = await fs.realpath(options.executable ?? process.execPath),
       executable = path.join(runtime, 'executor.exe');
 
     // 使用当前宿主同一可执行器及必要 Electron 数据文件；不搜索 PATH，不允许业务参数选择执行器。
     const sourceStat = await fs.lstat(source);
 
     if (!sourceStat.isFile() || sourceStat.nlink !== 1 || sourceStat.size > 256 * 1024 * 1024)
-
       fail('RUNTIME');
 
     await fs.copyFile(source, executable);
@@ -200,7 +190,6 @@ export async function runIsolatedNode(raw: IsolatedNodeRequest, signal: AbortSig
         const stat = await fs.lstat(original);
 
         if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1 || stat.size > 32 * 1024 * 1024)
-
           fail('RUNTIME_ASSET');
 
         await fs.copyFile(original, path.join(runtime, name));
@@ -210,10 +199,10 @@ export async function runIsolatedNode(raw: IsolatedNodeRequest, signal: AbortSig
       catch (error)
       {
         if ((error as NodeJS.ErrnoException).code !== 'ENOENT')
-
           throw error
       }
     }
+
     for (const file of snapshots)
     {
       signal.throwIfAborted();
@@ -224,6 +213,7 @@ export async function runIsolatedNode(raw: IsolatedNodeRequest, signal: AbortSig
 
       await fs.writeFile(target, file.bytes, { flag: 'wx' })
     }
+
     // Electron 的 Node 入口会额外以读写方式打开 NUL；部分 Windows LPAC 环境拒绝该权限。
     // 只对当前 Electron 执行器跳过重复初始化，继续使用 start 显式继承的只读输入与输出管道；不放宽 ACL 或 capability。
     const runtimeArgs = process.versions.electron && source === await fs.realpath(process.execPath) ? ['--no-stdio-init'] : [];
@@ -240,8 +230,8 @@ export async function runIsolatedNode(raw: IsolatedNodeRequest, signal: AbortSig
 
       native.Resume()
     }
-    let status: IsolatedNodeResult['status'] = 'exited',
 
+    let status: IsolatedNodeResult['status'] = 'exited',
       terminating = false;
 
     const chunks: Buffer[] = [];
@@ -259,7 +249,6 @@ export async function runIsolatedNode(raw: IsolatedNodeRequest, signal: AbortSig
     signal.addEventListener('abort', abort, { once: true });
 
     if (signal.aborted)
-
       abort();
 
     let state: ReturnType<Win32IsolatedNode['State']>;
@@ -271,7 +260,6 @@ export async function runIsolatedNode(raw: IsolatedNodeRequest, signal: AbortSig
       for (; ;)
       {
         if (signal.aborted)
-
           terminate();
 
         for (let i = 0; i < 16; i++)
@@ -279,23 +267,23 @@ export async function runIsolatedNode(raw: IsolatedNodeRequest, signal: AbortSig
           const bytes = native.Read();
 
           if (!bytes.length)
-
             break;
 
           if (received + bytes.length > 65536)
           {
             if (status === 'exited')
-
               status = 'output_limit';
 
             terminate();
 
             break
           }
+
           chunks.push(bytes);
 
           received += bytes.length
         }
+
         state = native.State();
 
         if (status === 'exited' && state.limitTerminations > 0)
@@ -304,13 +292,12 @@ export async function runIsolatedNode(raw: IsolatedNodeRequest, signal: AbortSig
 
           terminate()
         }
-        if (state.exited && state.active === 0)
 
+        if (state.exited && state.active === 0)
           break;
 
         // 主程序退出仍有后代时，立即收束同一 Job；不等后代自行完成或让输出继续变化。
         if (state.exited)
-
           terminate();
 
         if (!terminating && performance.now() >= deadline)
@@ -319,8 +306,8 @@ export async function runIsolatedNode(raw: IsolatedNodeRequest, signal: AbortSig
 
           terminate()
         }
-        if (terminating && performance.now() > drainDeadline)
 
+        if (terminating && performance.now() > drainDeadline)
           fail('DRAIN_PENDING');
 
         await pause();
@@ -330,33 +317,34 @@ export async function runIsolatedNode(raw: IsolatedNodeRequest, signal: AbortSig
     {
       signal.removeEventListener('abort', abort)
     }
+
     // 主进程退出时管道可能仍有尾部字节；在全部后代退出后排空同一管道。
     for (; ;)
     {
       const bytes = native.Read();
 
       if (!bytes.length)
-
         break;
 
       if (received + bytes.length > 65536)
       {
         if (status === 'exited')
-
           status = 'output_limit';
 
         break
       }
+
       chunks.push(bytes);
 
       received += bytes.length
     }
+
     const outputs: IsolatedNodeResult['outputs'] = [];
 
     let total = 0;
 
     if (status === 'exited' && state!.exitCode === 0)
-
+    {
       for (const relative of request.outputs)
       {
         let current = output;
@@ -368,15 +356,13 @@ export async function runIsolatedNode(raw: IsolatedNodeRequest, signal: AbortSig
           const stat = await fs.lstat(current);
 
           if (!stat.isDirectory() || stat.isSymbolicLink())
-
             fail('OUTPUT_PATH')
         }
-        const file = path.join(output, ...relative.split('/')),
 
+        const file = path.join(output, ...relative.split('/')),
           before = await fs.lstat(file);
 
         if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1)
-
           fail('OUTPUT_PATH');
 
         if (before.size > 1024 * 1024 || total + before.size > 4 * 1024 * 1024)
@@ -387,6 +373,7 @@ export async function runIsolatedNode(raw: IsolatedNodeRequest, signal: AbortSig
 
           break
         }
+
         const handle = await fs.open(file, 'r');
 
         try
@@ -394,7 +381,6 @@ export async function runIsolatedNode(raw: IsolatedNodeRequest, signal: AbortSig
           const actual = await handle.stat();
 
           if (actual.dev !== before.dev || actual.ino !== before.ino || actual.size !== before.size)
-
             fail('OUTPUT_CHANGED');
 
           const bytes = Buffer.alloc(before.size);
@@ -406,17 +392,15 @@ export async function runIsolatedNode(raw: IsolatedNodeRequest, signal: AbortSig
             const result = await handle.read(bytes, read, bytes.length - read, read);
 
             if (!result.bytesRead)
-
               fail('OUTPUT_CHANGED');
 
             read += result.bytesRead
           }
-          const after = await handle.stat(),
 
+          const after = await handle.stat(),
             named = await fs.lstat(file);
 
           if (after.size !== before.size || after.mtimeMs !== before.mtimeMs || after.ctimeMs !== before.ctimeMs || named.ino !== before.ino || named.isSymbolicLink() || after.nlink !== 1)
-
             fail('OUTPUT_CHANGED');
 
           total += bytes.length;
@@ -428,8 +412,9 @@ export async function runIsolatedNode(raw: IsolatedNodeRequest, signal: AbortSig
           await handle.close()
         }
       }
-    if (prepared)
+    }
 
+    if (prepared)
       await options.lifecycle!.Settled();
 
     await cleanup();
@@ -440,6 +425,7 @@ export async function runIsolatedNode(raw: IsolatedNodeRequest, signal: AbortSig
 
       outputs.length = 0
     }
+
     return { executionId, pid, isolation: 'windows-lpac-registry-read-v1', status, exitCode: state!.exitCode, stdio: Buffer.concat(chunks).toString('utf8'), runtime: runtimeFacts, inputs: snapshots.map(file => ({ path: file.path, sha256: hash(file.bytes), byteLength: file.bytes.length })), outputs, resources: { totalProcesses: state!.totalProcesses, limitTerminations: state!.limitTerminations, peakMemoryBytes: state!.peakMemoryBytes }, allProcessesExited: true, cleanup: 'complete' };
   }
   finally
@@ -461,31 +447,27 @@ export async function runIsolatedNode(raw: IsolatedNodeRequest, signal: AbortSig
 async function removeOwnedRoot(root: string, temp: string)
 {
   if (path.dirname(root) !== temp || !/^cbim-isolated-[A-Za-z0-9]+$/.test(path.basename(root)))
-
     fail('CLEANUP_PATH');
 
   const stat = await fs.lstat(root);
 
   if (!stat.isDirectory() || stat.isSymbolicLink() || await fs.realpath(root) !== root)
-
     fail('CLEANUP_PATH');
 
   const ownerFile = path.join(root, 'owner.json'),
-
     owner = await fs.readFile(ownerFile);
 
   for (const name of await fs.readdir(root))
-
     if (name !== 'owner.json')
     {
       const target = path.resolve(root, name);
 
       if (path.dirname(target) !== root)
-
         fail('CLEANUP_PATH');
 
       await fs.rm(target, { recursive: true, force: true, maxRetries: 8, retryDelay: 100 });
     }
+
   await fs.unlink(ownerFile);
 
   try

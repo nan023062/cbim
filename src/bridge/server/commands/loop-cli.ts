@@ -16,11 +16,9 @@ async function main()
   const { values } = parseArgs({ options: { root: { type: 'string' }, 'user-data': { type: 'string' }, provider: { type: 'string' }, model: { type: 'string' }, goal: { type: 'string' }, module: { type: 'string' }, agent: { type: 'string' }, workflow: { type: 'string' }, person: { type: 'string' }, acceptance: { type: 'string', multiple: true }, 'allow-execution': { type: 'boolean' }, task: { type: 'string' }, resume: { type: 'string' }, message: { type: 'string' }, 'reconciled-tool': { type: 'string', multiple: true } } });
 
   if (!values.root || !values.provider || !values.model)
-
     throw Error('需要 --root、--provider 和 --model；CLI 独立打开工作区，请先关闭占用该工程的 CBIM');
 
   if (Boolean(values.task) !== Boolean(values.resume))
-
     throw Error('--task 与 --resume 必须同时提供');
 
   const application = new Application(new Paths(values['user-data'], path.resolve('.')), path.resolve('assets'));
@@ -42,9 +40,7 @@ async function main()
     const options = { provider: values.provider, model: values.model, allowNativeExecution: values['allow-execution'] ?? false };
 
     const run = values.task && values.resume
-
       ? await manager.Resume(values.task, values.resume, values.message || '', options, values['reconciled-tool'])
-
       : await manager.Start({ goal: values.goal!, moduleId: values.module!, agentId: values.agent!, workflowId: values.workflow!, responsiblePerson: values.person, acceptance: values.acceptance || [] }, options);
 
     stop = () => { void manager.Stop(run.taskId) };
@@ -61,10 +57,10 @@ async function main()
 
       result = await manager.Inspect(run.taskId, run.runId)
     }
+
     process.stdout.write(JSON.stringify({ taskId: run.taskId, runId: run.runId, status: result.status, acceptance: result.acceptance }) + '\n');
 
     if (result.status !== 'completed')
-
       process.exitCode = 1;
   }
   finally
@@ -75,6 +71,7 @@ async function main()
 
       process.off('SIGTERM', stop)
     }
+
     await application.Shutdown()
   }
 }

@@ -34,21 +34,17 @@ export interface BudgetSettingsState extends BudgetSettingsDraft
 export function budgetSettingsInput(draft: BudgetSettingsDraft, revision: number): ScopeBudgetPolicy
 {
   const tokens = draft.tokens.trim(),
-
     cost = draft.estimatedCostUsd.trim();
 
   if (draft.enabled && tokens && !/^\d+$/.test(tokens))
-
     throw Error('Token 额度必须是正整数。');
 
   if (draft.enabled && cost && !/^(?:\d+\.?\d*|\.\d+)$/.test(cost))
-
     throw Error('美元额度必须是正数。');
 
   const parsed = scopeBudgetPolicySchema.safeParse({ revision, enabled: draft.enabled, ...(draft.enforcement === 'request' ? { enforcement: 'request' } : {}), limits: draft.enabled ? { ...(tokens ? { tokens: Number(tokens) } : {}), ...(cost ? { estimatedCostUsd: Number(cost) } : {}) } : {} });
 
   if (!parsed.success)
-
     throw Error('启用时至少填写一项：正整数 Token 或正数美元额度。');
 
   return parsed.data;
@@ -85,7 +81,6 @@ export class BudgetSettingsController
   Edit(value: Partial<BudgetSettingsDraft>)
   {
     if (!this.state.busy)
-
       this.Publish({ ...value, error: '', notice: '' })
   }
 
@@ -99,7 +94,6 @@ export class BudgetSettingsController
   async Load()
   {
     if (this.state.busy)
-
       return;
 
     const ticket = this.generation.Advance();
@@ -111,19 +105,16 @@ export class BudgetSettingsController
       const policy = scopeBudgetPolicySchema.parse(await this.call('budget.settings'));
 
       if (this.generation.IsCurrent(ticket))
-
         this.Publish({ policy, ...fields(policy) })
     }
     catch (error)
     {
       if (this.generation.IsCurrent(ticket))
-
         this.Publish({ error: error instanceof Error ? error.message : String(error) })
     }
     finally
     {
       if (this.generation.IsCurrent(ticket))
-
         this.Publish({ busy: false })
     }
   }
@@ -131,7 +122,6 @@ export class BudgetSettingsController
   async Save()
   {
     if (this.state.busy || !this.state.policy)
-
       return;
 
     let input: ScopeBudgetPolicy;
@@ -146,6 +136,7 @@ export class BudgetSettingsController
 
       return
     }
+
     const ticket = this.generation.Advance();
 
     this.Publish({ busy: true, error: '', notice: '' });
@@ -155,19 +146,16 @@ export class BudgetSettingsController
       const policy = scopeBudgetPolicySchema.parse(await this.call('budget.configure', input));
 
       if (this.generation.IsCurrent(ticket))
-
         this.Publish({ policy, ...fields(policy), notice: '已保存，仅对之后创建的新目标生效。当前目标继续使用原来的额度。' })
     }
     catch (error)
     {
       if (this.generation.IsCurrent(ticket))
-
         this.Publish({ error: (error instanceof Error ? error.message : String(error)) + '；草稿已保留。若保存结果未知，请刷新设置核实后再提交。' })
     }
     finally
     {
       if (this.generation.IsCurrent(ticket))
-
         this.Publish({ busy: false })
     }
   }

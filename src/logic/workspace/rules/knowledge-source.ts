@@ -8,15 +8,10 @@ import { z } from 'zod';
 export const knowledgeSourceLimits = { generations: 4096, events: 8192, affected: 512, eventBytes: 512 * 1024, historyBytes: 16 * 1024 * 1024, terminalReserveBytes: 16 * 1024 } as const;
 
 const id = z.string().min(1).max(1024).refine(value => !!value.trim()),
-
   workspace = z.string().min(1).max(512),
-
   uuid = z.string().uuid(),
-
   digest = z.string().regex(/^[a-f0-9]{64}$/),
-
   time = z.string().max(40).datetime(),
-
   seq = z.number().int().positive().safe();
 
 export const knowledgeSourceKeySchema = z.object({ kind: z.enum(['agent', 'module']), sourceId: id }).strict().refine(value => value.sourceId.startsWith(value.kind === 'agent' ? '.cbim/team/' : '.cbim/workspace/') && !value.sourceId.split('/').some(part => !part || part === '.' || part === '..') && !value.sourceId.includes('\\'), '来源必须是对应领域的明确逻辑对象');
@@ -59,12 +54,10 @@ export type KnowledgeSourceGeneration = z.infer<typeof knowledgeSourceGeneration
 export const knowledgeSourceMutationPlanSchema = z.object({ source: knowledgeSourceKeySchema, previous: knowledgeSourceRefSchema.nullable(), next: knowledgeSourceGenerationSchema.nullable(), reason: z.enum(['created', 'deleted', 'moved', 'replaced', 'hidden', 'visible_again']) }).strict().superRefine((value, ctx) =>
 {
   if (value.previous && !sameKnowledgeSourceKey(value.previous.source, value.source) || value.next && (!sameKnowledgeSourceKey(value.next.source, value.source) || value.next.retired || value.next.origin === 'observed_existing') || value.previous && value.next && (value.previous.workspaceId !== value.next.workspaceId || value.previous.generationId === value.next.generationId))
-
     ctx.addIssue({ code: 'custom', message: '来源生命周期前后引用无效' });
 
   // 未追踪对象也可能被真实删除/隐藏；只记录计划事实，不为它补造旧 generation。
   if (['created', 'visible_again'].includes(value.reason) ? !!value.previous || !value.next : ['deleted', 'hidden', 'moved'].includes(value.reason) ? !!value.next : !value.next)
-
     ctx.addIssue({ code: 'custom', message: '来源操作与前后对象不一致' });
 });
 
@@ -125,23 +118,18 @@ export function sourceReadStateMatches(value: KnowledgeSourceReadState, workspac
   const same = (a: CapabilitySourceRef | undefined, b: CapabilitySourceRef) => !!a && ('kind' in a ? 'kind' in b && a.contentHash === b.contentHash : !('kind' in b) && a.workspaceId === b.workspaceId && a.generationId === b.generationId && sameKnowledgeSourceKey(a.source, b.source));
 
   if (adopted && !sourceRefMatches(adopted, workspaceId, source))
-
     return false;
 
   if (value.status === 'untracked')
-
     return !adopted && source !== 'cbim:executor' && sameKnowledgeSourceKey(value.source, source);
 
   if (value.status === 'current')
-
     return sourceRefMatches(value.ref, workspaceId, source) && same(adopted, value.ref);
 
   if (value.status === 'needs_adoption')
-
     return sourceRefMatches(value.currentRef, workspaceId, source) && !same(adopted, value.currentRef);
 
   if (value.status === 'retired')
-
     return sourceRefMatches(value.ref, workspaceId, source) && same(adopted, value.ref) && (!value.currentRef || sourceRefMatches(value.currentRef, workspaceId, source) && !same(value.ref, value.currentRef));
 
   return true;

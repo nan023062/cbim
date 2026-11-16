@@ -24,7 +24,6 @@ export class PiRpc
   /** 保留 Pi 的 UTF-16 长度与完整行去 CR/忽略空白规则，不改为字节限制。 */
   private readonly frames = new LineFramer({
     checkLine: raw => { const line = raw.replace(/\r$/, ''); if (line.trim() && line.length > 32 * 1024 * 1024) throw Error('Pi 事件超过大小限制') },
-
     checkRemainder: text => { if (text.length > 32 * 1024 * 1024) throw Error('Pi 事件超过大小限制') },
   });
 
@@ -70,7 +69,6 @@ export class PiRpc
   Request(type: string, data: Record<string, unknown> = {}, timeoutMs = 30000): Promise<any>
   {
     if (this.dead || !this.child)
-
       return Promise.reject(Error('Pi 进程不可用'));
 
     const id = randomUUID();
@@ -81,7 +79,6 @@ export class PiRpc
   Send(value: unknown)
   {
     if (this.dead || !this.child)
-
       throw Error('Pi 进程不可用');
 
     this.child.stdin.write(JSON.stringify(value) + '\n')
@@ -92,7 +89,6 @@ export class PiRpc
     error = Error(this.redact(error.message));
 
     if (this.dead)
-
       return;
 
     this.dead = true;
@@ -106,7 +102,6 @@ export class PiRpc
   async Close()
   {
     if (!this.child)
-
       return;
 
     this.child.stdin.end();

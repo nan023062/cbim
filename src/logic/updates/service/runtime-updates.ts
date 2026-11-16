@@ -55,7 +55,6 @@ export class RuntimeUpdates implements DesktopUpdateInstaller
     const coldJob = this.sources.Cold(signal).then(value => ({ value }), error => ({ error }));
 
     let candidate: Candidate | undefined,
-
       resourceError: unknown;
 
     try
@@ -67,11 +66,10 @@ export class RuntimeUpdates implements DesktopUpdateInstaller
     catch (error: any)
     {
       if (error.status !== 404)
-
         resourceError = error;
     }
-    const cold = await coldJob,
 
+    const cold = await coldJob,
       highest = this.journal.Read().highestResource;
 
     if (candidate && candidate.manifest.resourceVersion > Math.max(this.current.resourceVersion, highest))
@@ -82,16 +80,14 @@ export class RuntimeUpdates implements DesktopUpdateInstaller
 
       return { version: manifest.codeVersion, resourceVersion: manifest.resourceVersion, delivery: 'resources', tag: manifest.resource.tag, notes: manifest.notes, publishedAt: manifest.createdAt };
     }
-    if ('value' in cold && cold.value && compareDesktopVersions(cold.value.version, this.current.codeVersion) > 0)
 
+    if ('value' in cold && cold.value && compareDesktopVersions(cold.value.version, this.current.codeVersion) > 0)
       return cold.value;
 
     if (resourceError)
-
       throw resourceError;
 
     if ('error' in cold)
-
       throw cold.error;
 
     return undefined;
@@ -113,10 +109,10 @@ export class RuntimeUpdates implements DesktopUpdateInstaller
 
       return;
     }
+
     const candidate = this.candidate;
 
     if (!candidate || candidate.manifest.codeVersion !== release.version || candidate.manifest.resourceVersion !== release.resourceVersion || candidate.manifest.resource.tag !== release.tag)
-
       throw Error('资源候选已变化');
 
     await this.store.SaveManifest(candidate.envelope);
@@ -127,7 +123,6 @@ export class RuntimeUpdates implements DesktopUpdateInstaller
   async Download(progress: (percent: number) => void)
   {
     if (!this.selected)
-
       throw Error('更新尚未准备');
 
     if (this.selected.delivery !== 'resources')
@@ -138,14 +133,13 @@ export class RuntimeUpdates implements DesktopUpdateInstaller
 
       return;
     }
-    if (!this.prepared)
 
+    if (!this.prepared)
       throw Error('资源候选尚未验证');
 
     const engines = this.prepared.manifest.engines.filter(engine => this.usedEngines().includes(engine.kind));
 
     const packages = [this.prepared.manifest.resource, ...engines.map(engine => engine.package)],
-
       total = packages.reduce((sum, pkg) => sum + pkg.bytes, 0);
 
     let completed = 0;
@@ -156,6 +150,7 @@ export class RuntimeUpdates implements DesktopUpdateInstaller
 
       completed += pkg.bytes;
     }
+
     this.ready = true;
   }
 
@@ -164,7 +159,6 @@ export class RuntimeUpdates implements DesktopUpdateInstaller
     this.controller.signal.throwIfAborted();
 
     if (!this.ready)
-
       throw Error('更新尚未准备完成');
 
     if (this.selected?.delivery !== 'resources')
@@ -173,10 +167,10 @@ export class RuntimeUpdates implements DesktopUpdateInstaller
 
       return;
     }
+
     const candidate = this.prepared;
 
     if (!candidate)
-
       throw Error('资源尚未准备');
 
     // 点击到退出之间可能有磁盘变化；持久授权前复核候选目录，不触碰活动版本。

@@ -20,23 +20,16 @@ const labels: Record<ManagedEngineStatus['state'], string> = { install: '可安�
 export function EnginePicker({ value, onChange, onConfigure, disabled = false }: { onConfigure?: () => void; value: LoopEngine; onChange: (value: string) => void; disabled?: boolean })
 {
   const [open, setOpen] = useState(false),
-
     [items, setItems] = useState<ManagedEngineStatus[]>([]),
-
     [error, setError] = useState('');
 
   const [pending, setPending] = useState<LoopEngine[]>([]);
 
   const root = useRef<HTMLDivElement>(null),
-
     trigger = useRef<HTMLButtonElement>(null),
-
     alive = useRef(true),
-
     locks = useRef(new Set<LoopEngine>()),
-
     epoch = useRef(0),
-
     id = useId();
 
   useEffect(() => { alive.current = true; return () => { alive.current = false; epoch.current++ } }, []);
@@ -44,11 +37,9 @@ export function EnginePicker({ value, onChange, onConfigure, disabled = false }:
   useEffect(() =>
   {
     if (!open)
-
       return;
 
     let cancelled = false,
-
       reading = false;
 
     const read = async () => { if (reading) return; reading = true; const revision = epoch.current; try { const result = await api.call('desktop.engines.status'); if (!cancelled && revision === epoch.current) { setItems(result); setError('') } } catch { if (!cancelled && revision === epoch.current) setError('无法读取引擎状态，请关闭菜单后重新打开。') } finally { reading = false } };
@@ -74,7 +65,6 @@ export function EnginePicker({ value, onChange, onConfigure, disabled = false }:
   async function prepare(engine: LoopEngine)
   {
     if (locks.current.has(engine))
-
       return;
 
     locks.current.add(engine);
@@ -90,13 +80,11 @@ export function EnginePicker({ value, onChange, onConfigure, disabled = false }:
       const result = await api.call('desktop.engines.prepare', { engine });
 
       if (alive.current)
-
         setItems(current => [...current.filter(s => s.engine !== engine), result])
     }
     catch
     {
       if (alive.current)
-
         setError(engineLabel(engine) + ' 准备未完成，请核对该行状态后重试。')
     }
     finally
@@ -106,7 +94,6 @@ export function EnginePicker({ value, onChange, onConfigure, disabled = false }:
       epoch.current++;
 
       if (alive.current)
-
         setPending([...locks.current])
     }
   }
@@ -125,11 +112,8 @@ export function EnginePicker({ value, onChange, onConfigure, disabled = false }:
       {loopEngineSchema.options.map(engine =>
       {
         const item = items.find(s => s.engine === engine),
-
           working = pending.includes(engine) || item?.state === 'preparing',
-
           available = !!item && ['ready', 'bundled'].includes(item.state),
-
           progress = item?.progress;
 
         return <div className="engine-picker-row" key={engine}>

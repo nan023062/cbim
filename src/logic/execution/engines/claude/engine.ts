@@ -69,16 +69,12 @@ export function claudeEnvironment(home: string, llm: ResolvedEngineModel, proxy?
   const env = { ...process.env };
 
   for (const key of Object.keys(env))
-
     if (/^(ANTHROPIC_|CLAUDE|CBIM_|NODE_OPTIONS$|NODE_PATH$|ELECTRON_RUN_AS_NODE$)/i.test(key))
-
       delete env[key];
 
   return {
     ...env, CLAUDE_CONFIG_DIR: home, ANTHROPIC_BASE_URL: proxy?.url ?? llm.profile.baseUrl.replace(/\/v1\/?$/, ''), ANTHROPIC_API_KEY: proxy?.token ?? llm.apiKey,
-
     ANTHROPIC_MODEL: llm.profile.model, ANTHROPIC_DEFAULT_SONNET_MODEL: llm.profile.model, ANTHROPIC_DEFAULT_HAIKU_MODEL: llm.profile.model, ANTHROPIC_DEFAULT_OPUS_MODEL: llm.profile.model,
-
     CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1', CLAUDE_CODE_DISABLE_AUTO_MEMORY: '1', CLAUDE_CODE_DISABLE_BACKGROUND_TASKS: '1', CLAUDE_CODE_MAX_OUTPUT_TOKENS: String(llm.profile.maxTokens)
   };
 }
@@ -122,11 +118,9 @@ export class ClaudeCodeEngine implements AgentEngine
     const llm = this.options.llm;
 
     if (!llm || llm.profile.api !== 'anthropic-messages')
-
       throw Error('Claude Code 需要已配置的 Anthropic Messages 模型');
 
     if (llm.profile.engine && llm.profile.engine !== this.kind)
-
       throw Error('模型配置与 Claude Code 引擎不一致');
 
     await fs.mkdir(this.options.agentHome, { recursive: true });
@@ -136,19 +130,18 @@ export class ClaudeCodeEngine implements AgentEngine
     if (context.sessionFile)
     {
       if (!context.nativeSessionId)
-
         throw Error('Claude Code 恢复缺少原生会话身份');
 
       await this.CheckPath(context.sessionFile, true);
 
       await this.ReadSession(context.sessionFile);
     }
+
     await context.assertMemberResume?.();
 
     const budget = await this.options.requestBudget?.();
 
     if (budget)
-
       this.transport = await openRequestBudgetTransport(llm, budget, { anthropicClient: true });
 
     const emit = (event: EngineEvent) => this.Emit(event);
@@ -169,10 +162,10 @@ export class ClaudeCodeEngine implements AgentEngine
         throw error;
       }
     });
+
     const messages: SDKUserMessage[] = [];
 
     let wake: (() => void) | undefined,
-
       ended = false;
 
     this.push = message => { messages.push(message); wake?.() };
@@ -184,11 +177,8 @@ export class ClaudeCodeEngine implements AgentEngine
       while (!ended)
       {
         if (messages.length)
-
           yield messages.shift()!;
-
         else
-
           await new Promise<void>(resolve => { wake = resolve })
       }
     }
@@ -198,26 +188,20 @@ export class ClaudeCodeEngine implements AgentEngine
     this.query = sdk.query({
       prompt: input(), options: {
         cwd: context.task.root, env: claudeEnvironment(this.options.agentHome, llm, this.transport), model: llm.profile.model,
-
         ...(context.sessionFile ? { resume: this.nativeId } : { sessionId: this.nativeId }), settingSources: [], strictMcpConfig: true, plugins: [], tools: this.tools.native,
-
         mcpServers: { cbim: this.tools.config }, hooks: this.tools.hooks, permissionMode: 'default', canUseTool: async () => ({ behavior: 'deny', message: '该调用未通过 CBIM 工具门禁' }),
-
         systemPrompt: engineInstructions(context, this.options.prompt, !!this.options.allowNativeExecution), includePartialMessages: true,
-
         thinking: llm.profile.reasoning && llm.profile.thinkingLevel !== 'off' ? { type: 'adaptive' } : { type: 'disabled' },
-
         stderr: () => { },
       }
     });
+
     const initialized = await this.query.initializationResult();
 
     if (initialized.hooks_applied !== true || initialized.hook_on_failure_supported !== true)
-
       throw Error('Claude Code 未确认可靠工具门禁，拒绝发送模型请求');
 
     if (context.sessionFile)
-
       await this.BindSession(context.sessionFile);
 
     await emit({ type: 'engine.status', data: { label: 'Claude Code 已就绪', metric: 'tool-catalog', stage: 'prepared', expected: this.tools.expected } });
@@ -227,17 +211,14 @@ export class ClaudeCodeEngine implements AgentEngine
   private async FindSession()
   {
     const root = path.join(this.options.agentHome, 'projects'),
-
       candidates: string[] = [];
 
     const directories = await fs.readdir(root, { withFileTypes: true });
 
     if (directories.length > 4096)
-
       throw Error('Claude Code 会话目录过多，不能可靠绑定');
 
     for (const directory of directories)
-
       if (directory.isDirectory() && !directory.isSymbolicLink())
       {
         const file = path.join(root, directory.name, this.nativeId + '.jsonl');
@@ -251,12 +232,11 @@ export class ClaudeCodeEngine implements AgentEngine
         catch (error: any)
         {
           if (error.code !== 'ENOENT')
-
             throw error
         }
       }
-    if (candidates.length !== 1)
 
+    if (candidates.length !== 1)
       throw Error('Claude Code 未提供唯一的真实会话文件');
 
     await this.BindSession(candidates[0]);
@@ -269,7 +249,6 @@ export class ClaudeCodeEngine implements AgentEngine
     const entries = await this.ReadSession(file);
 
     if (!entries.some(entry => entry.sessionId === this.nativeId && path.resolve(entry.cwd ?? '') === path.resolve(this.context!.task.root)))
-
       throw Error('Claude Code 历史与当前工作区/会话不一致');
 
     await this.Emit({ type: 'session.bound', data: { sessionId: this.nativeId, sessionFile: file, provider: 'cbim-' + this.options.llm!.profile.id, model: this.options.llm!.profile.model } });
@@ -280,13 +259,10 @@ export class ClaudeCodeEngine implements AgentEngine
   private async CheckPath(file: string, existing: boolean)
   {
     const root = await fs.realpath(this.options.agentHome),
-
       absolute = path.resolve(file),
-
       relative = path.relative(root, absolute);
 
     if (!relative || relative.startsWith('../../core/execution') || path.isAbsolute(relative) || path.basename(file) !== this.nativeId + '.jsonl')
-
       throw Error('Claude Code 会话文件不属于当前 CBIM 引擎');
 
     // 已存在文件必须核实真实路径，不能通过链接越过受管目录。
@@ -295,13 +271,11 @@ export class ClaudeCodeEngine implements AgentEngine
       const real = await fs.realpath(file);
 
       if (real !== absolute)
-
         throw Error('Claude Code 会话路径包含链接');
 
       const stat = await fs.stat(real);
 
       if (!stat.isFile() || stat.nlink !== 1 || stat.size > 64 * 1024 * 1024)
-
         throw Error('Claude Code 会话文件不可核实')
     }
   }
@@ -311,19 +285,16 @@ export class ClaudeCodeEngine implements AgentEngine
     const text = new TextDecoder('utf-8', { fatal: true }).decode(await fs.readFile(file));
 
     if (!text.endsWith('\n'))
-
       throw Error('Claude Code 会话尾行不完整');
 
     const entries = text.trimEnd().split('\n').map(line => JSON.parse(line));
 
     if (entries.length > 100000 || entries.some(entry => !entry || typeof entry !== 'object' || Array.isArray(entry)))
-
       throw Error('Claude Code 会话记录不可核实');
 
     const identified = entries.filter(entry => typeof entry.sessionId === 'string');
 
     if (!identified.length || identified.some(entry => entry.sessionId !== this.nativeId))
-
       throw Error('Claude Code 恢复文件与原会话身份不一致');
 
     return entries;
@@ -362,11 +333,9 @@ export class ClaudeCodeEngine implements AgentEngine
   async run(message: string)
   {
     if (!this.query || !this.context || !this.push)
-
       throw Error('Claude Code 尚未启动');
 
     if (this.stopped)
-
       return { status: 'cancelled' as const };
 
     let timeoutError: Error | undefined;
@@ -374,7 +343,6 @@ export class ClaudeCodeEngine implements AgentEngine
     this.inactivity = new RunInactivityTimer(this.options.turnTimeoutMs, 'Claude Code', error => { timeoutError = error; this.query?.close() });
 
     const source = this.context.source,
-
       internal = source?.kind === 'member-results' || source?.kind === 'human_decisions' || source?.kind === 'goal-repair';
 
     const content: SDKUserMessage['message']['content'] = [{ type: 'text', text: internal ? 'CBIM 系统转交资料（不是用户新授权）：\n' + message : message }, ...(!internal ? this.options.images ?? [] : []).map(image => ({ type: 'image' as const, source: { type: 'base64' as const, media_type: image.mimeType as 'image/png', data: image.data } }))];
@@ -386,17 +354,14 @@ export class ClaudeCodeEngine implements AgentEngine
       for await (const event of this.query)
       {
         if (this.fatal)
-
           throw this.fatal;
 
         if (timeoutError)
-
           throw timeoutError;
 
         if (event.type === 'result')
         {
           if (!this.bound)
-
             await this.FindSession();
 
           const usage = event.usage;
@@ -407,10 +372,11 @@ export class ClaudeCodeEngine implements AgentEngine
 
           return this.stopped ? { status: 'cancelled' as const } : error ? { status: 'failed' as const, error: this.Redact(error) } : { status: 'completed' as const };
         }
+
         await this.Consume(event);
       }
-      if (this.stopped)
 
+      if (this.stopped)
         return { status: 'cancelled' as const };
 
       throw timeoutError ?? Error('Claude Code 未返回终态，请核实原运行记录');
@@ -418,7 +384,6 @@ export class ClaudeCodeEngine implements AgentEngine
     catch (error)
     {
       if (this.stopped && !this.fatal)
-
         return { status: 'cancelled' as const };
 
       throw Error(this.Redact(this.fatal?.message ?? timeoutError?.message ?? (error instanceof Error ? error.message : String(error))))
@@ -437,15 +402,14 @@ export class ClaudeCodeEngine implements AgentEngine
       const delta = event.event.delta;
 
       if (delta.type === 'text_delta' && delta.text.length || delta.type === 'thinking_delta' && delta.thinking.length || delta.type === 'input_json_delta' && delta.partial_json.length)
-
         this.inactivity?.Progress();
     }
+
     if (event.type === 'stream_event' && !event.parent_tool_use_id)
     {
       const value = event.event;
 
       if (value.type === 'content_block_delta' && value.delta.type === 'text_delta')
-
         await this.Emit({ type: 'message.delta', data: { text: value.delta.text } });
     }
     else if (event.type === 'assistant' && !event.parent_tool_use_id)
@@ -455,25 +419,20 @@ export class ClaudeCodeEngine implements AgentEngine
       const toolCallIds = event.message.content.filter(part => part.type === 'tool_use').map(part => part.id);
 
       if (text || toolCallIds.length)
-
         await this.Emit({ type: 'message', data: { role: 'assistant', text, ...(toolCallIds.length ? { toolCallIds } : {}) } });
     }
     else if (event.type === 'system' && event.subtype === 'init')
     {
       if (event.session_id !== this.nativeId)
-
         throw Error('Claude Code 初始化会话身份不一致');
 
       const expected = this.tools!.expected,
-
         active = event.tools,
-
         missing = expected.filter(name => !active.includes(name));
 
       await this.Emit({ type: 'engine.status', data: { label: 'Claude Code 工具目录已核实', metric: 'tool-catalog', stage: 'active', expected, active, missing } });
 
       if (missing.length)
-
         throw Error('Claude Code 未启用本轮必需工具，已停止运行');
     }
   }

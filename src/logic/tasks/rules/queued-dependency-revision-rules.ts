@@ -22,7 +22,6 @@ import { usableResult } from './graph-rules';
 function check(v: unknown, code: string, message: string): asserts v
 {
   if (!v)
-
     fail(code, message)
 }
 
@@ -36,13 +35,11 @@ export function queuedDependencyRevisionSelection(state: DispatchState, identity
   check(state.workspaceId === identity.workspaceId, 'GRAPH_IDENTITY_MISMATCH', '前置修订不属于当前工作区');
 
   const graph = state.graphs.find(g => g.identity.rootSessionId === identity.rootSessionId && g.identity.workspaceId === identity.workspaceId),
-
     scope = state.scopes?.find(s => s.scopeId === scopeId && s.rootSessionId === identity.rootSessionId && s.workspaceId === identity.workspaceId);
 
   check(graph && scope, 'DISPATCH_SCOPE_IDENTITY', '前置修订不属于当前主周期');
 
   const goal = scope.goal,
-
     plan = goal?.plan;
 
   check(scope.status === 'active' && !scope.budget?.blocked, 'DEPENDENCY_NOT_ALLOWED', '只能修订活动且预算未阻止的周期');
@@ -70,7 +67,6 @@ export function queuedDependencyRevisionSelection(state: DispatchState, identity
   const added = input.add.map(ref => { const t = graph.tasks.find(t => t.taskId === ref.taskId); check(t && t.scopeId === scopeId && t.taskId !== target.taskId, 'DEPENDENCY_EDGE_INVALID', '新来源无效或自引用'); check(t.revision === ref.expectedRevision && t.planRevision === ref.expectedPlanRevision, 'DEPENDENCY_TASK_STALE', '新来源版本已变化'); check(!graph.edges.some(e => e.kind === 'dependency' && e.enabled && e.fromNodeId === t.nodeId && e.toNodeId === target.nodeId), 'DEPENDENCY_EDGE_DUPLICATE', '新来源已为原前置，不能退役后原样添加'); return t });
 
   const prior = graph.edges.filter((e): e is Extract<GraphEdge, { kind: 'dependency' }> => e.kind === 'dependency' && e.enabled),
-
     removedIds = new Set(removed.map(e => e.edgeId));
 
   const after = prior.filter(e => !removedIds.has(e.edgeId)).map(e => [e.fromNodeId, e.toNodeId] as const).concat(added.map(t => [t.nodeId, target.nodeId] as const));
@@ -78,47 +74,40 @@ export function queuedDependencyRevisionSelection(state: DispatchState, identity
   const outgoing = new Map<string, string[]>();
 
   for (const [from, to] of after)
-
     outgoing.set(from, [...(outgoing.get(from) ?? []), to]);
 
   const degree = new Map(graph.tasks.map(t => [t.nodeId, 0]));
 
   for (const [, to] of after)
-
     degree.set(to, (degree.get(to) ?? 0) + 1);
 
   const queue = [...degree].filter(([, n]) => !n).map(([n]) => n);
 
   for (let i = 0; i < queue.length; i++)
-
     for (const to of outgoing.get(queue[i]) ?? [])
     {
       degree.set(to, degree.get(to)! - 1);
 
       if (!degree.get(to))
-
         queue.push(to)
     }
+
   check(queue.length === degree.size, 'GRAPH_CYCLE', '修订后的完整依赖图存在环');
 
   const seeds = [target.nodeId, ...removed.map(e => e.fromNodeId), ...added.map(t => t.nodeId)],
-
     nodes = new Set(seeds),
-
     pending = [...nodes],
-
     both = [...prior.map(e => [e.fromNodeId, e.toNodeId] as const), ...after];
 
   for (let i = 0; i < pending.length; i++)
-
     for (const [from, to] of both)
-
       if (from === pending[i] && !nodes.has(to))
       {
         nodes.add(to);
 
         pending.push(to)
       }
+
   const tasks = graph.tasks.filter(t => nodes.has(t.nodeId));
 
   check(tasks.length === nodes.size && tasks.length <= 500, 'DEPENDENCY_NOT_ALLOWED', '前置闭包缺节点或超限');
@@ -133,6 +122,7 @@ export function queuedDependencyRevisionSelection(state: DispatchState, identity
 
     check(messages.length === 1 && messages[0].delivery === 'pending' && !messages[0].claim, 'DEPENDENCY_NOT_ALLOWED', '待办信封已经领取或缺失');
   }
+
   const members = tasks.map(t => { const m = state.members.find(m => m.agentInstanceId === t.assignee.agentInstanceId); check(m && m.workspaceId === identity.workspaceId && m.agentId === t.assignee.agentId && m.executionScopeId === scopeId && m.executionTaskId === t.taskId && m.lifecycle === 'active' && ['idle', 'waiting'].includes(m.activity) && !m.activeRunId && !m.activeTaskId && !m.communicatingMessageIds.length && m.waitingTaskIds.every(id => id === t.taskId), 'DEPENDENCY_NOT_ALLOWED', '原执行实例被占用或身份错误'); check(m.configurationRevision === plan.knowledgeRevision, 'DEPENDENCY_KNOWLEDGE_STALE', '原实例配置已过期'); return m });
 
   check(new Set(members.map(m => m.agentInstanceId)).size === members.length, 'DEPENDENCY_NOT_ALLOWED', '待办实例不能复用');

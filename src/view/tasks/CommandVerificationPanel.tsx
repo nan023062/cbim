@@ -31,39 +31,22 @@ function ResultSummary({ result }: { result: CommandResultSummary })
   switch (result.toolName)
   {
     case 'cbim_goal_plan':
-
       return <p>已保存计划第 {result.planRevision} 版，{result.criterionCount} 项验收条件、{result.assignmentCount} 项分工。</p>;
-
     case 'cbim_goal_review':
-
       return <p>已保存审阅第 {result.reviewRevision} 版，决定：{({ complete: '完成', replan: '重新规划', blocked: '阻塞', awaiting_user: '等待用户' })[result.decision]}。本次查询不重新验收。</p>;
-
     case 'cbim_dispatch_task':
-
       return <p>已登记任务 <code>{result.taskId}</code>（原状态：{result.disposition === 'queued' ? '排队' : '等待前置'}），不代表成员已经执行。</p>;
-
     case 'cbim_dispatch_cancel':
-
       return <p>原撤销事务包含 {result.cancelled.total} 个待执行任务；不表示撤回已有业务影响。</p>;
-
     case 'cbim_dispatch_replace_dependency':
-
       return <p>已保存任务 <code>{result.taskId}</code> 的前置替换，原结果来自 <code>{result.sourceTaskId}</code>。</p>;
-
     case 'cbim_dispatch_add_dependency':
-
       return <p>已为任务 <code>{result.taskId}</code> 追加前置 <code>{result.sourceTaskId}</code>，原状态为等待。</p>;
-
     case 'cbim_dispatch_revise_dependencies':
-
       return <p>已保存任务 <code>{result.taskId}</code> 的前置修订：退役 {result.removedCount} 条，新增 {result.addedCount} 条，原状态为{result.status === 'waiting' ? '等待前置' : '排队'}。不代表成员已执行。</p>;
-
     case 'cbim_dispatch_resume':
-
       return <p>已保存任务 <code>{result.taskId}</code> 的检查点续执行预约；预约不代表已经启动。</p>;
-
     case 'cbim_dispatch_abandon_checkpoint':
-
       return <p>已放弃任务 <code>{result.taskId}</code> 的原检查点，原租约 {result.previousLeaseEpoch} → {result.nextLeaseEpoch}；不是回滚或交付成功。</p>;
   }
 }
@@ -96,7 +79,6 @@ export function CommandVerificationPanel({ selection, state }: { selection: Comm
 export function MainCommandVerification({ selection, latestSeq }: { selection: CommandVerificationSelection; latestSeq: number })
 {
   const key = commandVerificationKey(selection),
-
     controller = useMemo(() => new CommandVerificationController(selection, request => window.cbim.call('dispatch.commandReport', request)), [key]);
 
   const state = useSyncExternalStore(controller.subscribe, () => controller.snapshot, () => controller.snapshot);

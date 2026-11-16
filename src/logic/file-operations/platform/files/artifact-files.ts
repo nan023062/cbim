@@ -39,25 +39,21 @@ const normal = (value: string) => process.platform === 'win32' ? value.toLowerCa
 export function normalizeArtifactPath(root: string, raw: string): string
 {
   if (typeof raw !== 'string' || !raw.length || raw.length > 4096 || /[\x00-\x1f]/.test(raw) || /^(?:\\\\|\/\/|[a-z]+:\/\/|~)/i.test(raw))
-
     fail('ARTIFACT_PATH', '文件路径不属于可核实的业务文件');
 
   const parts = raw.replaceAll('\\', '/').split('/');
 
   if (parts.some(part => part === '..' || part.toLowerCase() === '.cbim' || /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(part) || /[. ]$/.test(part)))
-
     fail('ARTIFACT_PATH', '文件路径包含受保护目录、跳转或设备名称');
 
   const noDrive = process.platform === 'win32' ? raw.replace(/^[a-z]:[\\/]/i, '') : raw;
 
   if (noDrive.includes(':'))
-
     fail('ARTIFACT_PATH', '文件路径不允许设备路径或备用数据流');
 
   const file = path.resolve(root, raw);
 
   if (!inside(root, file))
-
     fail('ARTIFACT_PATH', '文件必须位于当前工作区内');
 
   return path.relative(root, file).split(path.sep).join('/');
@@ -77,13 +73,10 @@ export class ArtifactFiles
     signal.throwIfAborted();
 
     const relativePath = normalizeArtifactPath(this.root, raw),
-
       root = await fs.realpath(this.root),
-
       file = path.resolve(root, raw);
 
     if (normal(root) !== normal(path.resolve(this.root)))
-
       fail('ARTIFACT_PATH', '工作区实际位置已经变化');
 
     const relative = path.relative(root, file);
@@ -99,13 +92,12 @@ export class ArtifactFiles
       signal.throwIfAborted();
 
       if (stat.isSymbolicLink())
-
         fail('ARTIFACT_PATH', '产物路径不能经过符号链接或目录联接');
     }
+
     const real = await fs.realpath(file);
 
     if (normal(real) !== normal(file) || !inside(root, real))
-
       fail('ARTIFACT_PATH', '文件实际位置与工作区路径不一致');
 
     return { file, relativePath };
@@ -121,11 +113,9 @@ export class ArtifactFiles
   async ObserveFiles(paths: readonly string[], signal: AbortSignal): Promise<EffectFileObservation[]>
   {
     if (!paths.length || paths.length > artifactFileLimits.files)
-
       fail('ARTIFACT_LIMIT', '一次最多观察 16 个文件');
 
     const budget = { readBytes: 0 },
-
       result: EffectFileObservation[] = [];
 
     for (const raw of paths)
@@ -152,6 +142,7 @@ export class ArtifactFiles
         result.push({ relativePath, state: code === 'ENOENT' ? 'missing' : 'unverifiable', reason: code === 'ENOENT' ? '当前文件不存在' : code === 'ARTIFACT_CHANGED' ? '读取期间文件发生变化' : code === 'ARTIFACT_LIMIT' ? '文件超过本次观察的字节上限' : '文件不能安全读取，未取得当前内容证明' });
       }
     }
+
     return result;
   }
 
@@ -161,7 +152,6 @@ export class ArtifactFiles
     const { fact, bytes } = await this.ReadFile(expected.relativePath, signal, { readBytes: 0 }, jsonValidationLimits.fileBytes, true);
 
     if (fact.relativePath !== normalizeArtifactPath(this.root, expected.relativePath) || fact.byteLength !== expected.byteLength || fact.sha256 !== expected.sha256)
-
       fail('VALIDATION_BASELINE_CHANGED', 'JSON 文件已偏离明确基线，请重新读取与采集');
 
     const result = validateJsonArtifact(schema, bytes!);
@@ -179,7 +169,6 @@ export class ArtifactFiles
     const { fact, bytes } = await this.ReadFile(expected.relativePath, signal, { readBytes: 0 }, csvValidationLimits.fileBytes, true);
 
     if (fact.relativePath !== normalizeArtifactPath(this.root, expected.relativePath) || fact.byteLength !== expected.byteLength || fact.sha256 !== expected.sha256)
-
       fail('VALIDATION_BASELINE_CHANGED', 'CSV 文件已偏离明确基线，请重新读取与采集');
 
     const result = validateCsvArtifact(schema, bytes!);
@@ -197,7 +186,6 @@ export class ArtifactFiles
     const { fact, bytes } = await this.ReadFile(expected.relativePath, signal, { readBytes: 0 }, pngValidationLimits.fileBytes, true);
 
     if (fact.relativePath !== normalizeArtifactPath(this.root, expected.relativePath) || fact.byteLength !== expected.byteLength || fact.sha256 !== expected.sha256)
-
       fail('VALIDATION_BASELINE_CHANGED', 'PNG文件已偏离明确基线，请重新读取与采集');
 
     const result = validatePngArtifact(schema, bytes!);
@@ -213,11 +201,9 @@ export class ArtifactFiles
   async CheckFiles(files: readonly ArtifactFileFact[], signal: AbortSignal): Promise<ArtifactFileCheck[]>
   {
     if (!files.length || files.length > artifactFileLimits.files)
-
       fail('ARTIFACT_LIMIT', '一次最多核实 16 个文件');
 
     const result: ArtifactFileCheck[] = [],
-
       budget = { readBytes: 0 };
 
     for (const file of files)
@@ -240,19 +226,18 @@ export class ArtifactFiles
         result.push({ relativePath: file.relativePath, state: missing ? 'missing' : 'unverifiable', expected, reason: missing ? '文件已不存在' : '文件无法安全读取、超过本次上限或读取期间发生变化' })
       }
     }
+
     return result;
   }
 
   private async ReadFiles(paths: readonly string[], signal: AbortSignal, budget: { readBytes: number }): Promise<ArtifactFileFact[]>
   {
     if (!paths.length || paths.length > artifactFileLimits.files)
-
       fail('ARTIFACT_LIMIT', '一次最多核实 16 个文件');
 
     const result: ArtifactFileFact[] = [];
 
     for (const raw of paths)
-
       result.push((await this.ReadFile(raw, signal, budget, artifactFileLimits.bytesPerFile, false)).fact);
 
     return result;
@@ -269,31 +254,26 @@ export class ArtifactFiles
       signal.throwIfAborted();
 
       const relativePath = normalizeArtifactPath(this.root, raw),
-
         value = this.secureRead(relativePath, signal);
 
       budget.readBytes += value.bytes.length;
 
       if (value.bytes.length > maxBytes || budget.readBytes > artifactFileLimits.totalBytes)
-
         fail('ARTIFACT_LIMIT', '文件超过本次读取上限');
 
       return { fact: { relativePath, ...value.fact }, ...(retainBytes ? { bytes: value.bytes } : {}) }
     }
-    const target = await this.Resolve(raw, signal),
 
+    const target = await this.Resolve(raw, signal),
       before = await fs.lstat(target.file);
 
     if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1)
-
       fail('ARTIFACT_PATH', '只核实未链接的普通业务文件');
 
     if (before.size > maxBytes || budget.readBytes + before.size > artifactFileLimits.totalBytes)
-
       fail(retainBytes ? 'VALIDATION_LIMIT' : 'ARTIFACT_LIMIT', retainBytes ? '产物超过单文件 1 MiB 的验证上限' : '文件超过单文件 8 MiB 或总计 32 MiB 的核实上限');
 
     const flags = constants.O_RDONLY | (process.platform === 'win32' ? 0 : constants.O_NOFOLLOW | constants.O_NONBLOCK),
-
       handle = await fs.open(target.file, flags);
 
     try
@@ -303,13 +283,10 @@ export class ArtifactFiles
       signal.throwIfAborted();
 
       if (!opened.isFile() || opened.nlink !== 1 || !sameFile(before, opened))
-
         fail('ARTIFACT_CHANGED', '打开文件期间产物已经变化，请重新核实');
 
       const digest = createHash('sha256'),
-
         buffer = Buffer.alloc(64 * 1024),
-
         chunks: Buffer[] = [];
 
       let length = 0;
@@ -327,7 +304,6 @@ export class ArtifactFiles
         signal.throwIfAborted();
 
         if (!bytesRead)
-
           break;
 
         length += bytesRead;
@@ -335,17 +311,14 @@ export class ArtifactFiles
         digest.update(buffer.subarray(0, bytesRead));
 
         if (retainBytes)
-
           chunks.push(Buffer.from(buffer.subarray(0, bytesRead)));
       }
+
       const after = await handle.stat(),
-
         again = await this.Resolve(raw, signal),
-
         current = await fs.lstat(again.file);
 
       if (length !== opened.size || after.nlink !== 1 || current.nlink !== 1 || !sameFile(opened, after) || !sameFile(after, current) || normal(again.file) !== normal(target.file))
-
         fail('ARTIFACT_CHANGED', '读取期间产物已经变化，请重新核实');
 
       this.assert();

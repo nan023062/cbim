@@ -15,11 +15,8 @@ import { jsonValidationLimits } from '../../workspace/rules/json-validation-sche
 import { outputManifestIdentitySchema } from './output-manifest';
 
 const id = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/),
-
   logical = z.string().min(1).max(512),
-
   seq = z.number().int().nonnegative().safe(),
-
   hash = z.string().regex(/^[a-f0-9]{64}$/);
 
 const binding = artifactBaselineStagedSchema.innerType().shape.binding;

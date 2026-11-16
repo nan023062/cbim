@@ -22,13 +22,11 @@ export function recursiveEvidenceRun(state: DispatchState, workspaceId: string, 
   const matches = state.agentBusinessRuns?.filter(r => r.binding.workspaceId === workspaceId && r.binding.rootSessionId === rootSessionId && r.binding.taskId === taskId && r.binding.runId === runId) ?? [];
 
   if (!matches.length)
-
     return undefined;
 
   const run = matches[0];
 
   if (state.workspaceId !== workspaceId || matches.length !== 1 || state.runs?.some(r => r.binding.runId === runId) || state.graphs.some(g => g.tasks.some(t => t.taskId === taskId)) || (state.scopes?.filter(s => s.workspaceId === workspaceId && s.rootSessionId === rootSessionId && s.scopeId === run.scopeId).length ?? 0) !== 1)
-
     fail('EVIDENCE_SOURCE_IDENTITY', '递归运行的登记、周期或来源不唯一');
 
   return run;
@@ -38,11 +36,8 @@ export function recursiveEvidenceRun(state: DispatchState, workspaceId: string, 
 export function recursiveEvidenceLogMatches(run: AgentBusinessRun, summary: RunSummary, root: string): boolean
 {
   const b = run.binding,
-
     first = summary.events[0],
-
     bounds = summary.events.filter(e => e.type === 'session.bound'),
-
     terminal = summary.events.filter(e => e.type === 'run.settled' || e.type === 'run.interrupted');
 
   try

@@ -55,9 +55,11 @@
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### model-json-requests.ts
+
+[查看源码](model-json-requests.ts)。
 
 ```mermaid
 classDiagram
@@ -68,7 +70,7 @@ class N_src_logic_execution_engines_transport_model_json_requests_ts_ModelJsonRe
   +constructor()
   +Chat()
   +Embed()
-  -budget
+  -budget : function
   -signal
   -blocked
   -pending
@@ -82,6 +84,8 @@ N_src_logic_execution_engines_transport_model_json_requests_ts ..> N_src_logic_e
 
 ### request-budget-transport.ts
 
+[查看源码](request-budget-transport.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_execution_engines_transport_request_budget_transport_ts["request-budget-transport.ts"] {
@@ -94,6 +98,8 @@ class N_src_logic_execution_engines_transport_request_budget_transport_ts["reque
 直接依赖：[../../../../core/errors.ts](../../../../core/errors.ts)、[../../../budget/rules/model-request-budget-rules.ts](../../../budget/rules/model-request-budget-rules.ts)、[../../../budget/rules/request-budget.ts](../../../budget/rules/request-budget.ts)、[request-budget-usage.ts](request-budget-usage.ts)、[../../../models/index.ts](../../../models/index.ts)、[../../../team/rules/workspace-member-rules.ts](../../../team/rules/workspace-member-rules.ts)。
 
 ### request-budget-usage.ts
+
+[查看源码](request-budget-usage.ts)。
 
 ```mermaid
 classDiagram

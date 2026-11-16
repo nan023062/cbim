@@ -103,9 +103,11 @@ validateBusinessWorkflow 以原 TaskSpec 及冻结 binding/prepared/session 核�
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### agent-manager.ts
+
+[查看源码](agent-manager.ts)。
 
 ```mermaid
 classDiagram
@@ -118,6 +120,8 @@ class N_src_logic_team_runtime_agent_manager_ts["agent-manager.ts"] {
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../rules/agent-types.ts](../rules/agent-types.ts)、[../rules/team-session.ts](../rules/team-session.ts)。
 
 ### checkpoint-abandonment-service.ts
+
+[查看源码](checkpoint-abandonment-service.ts)。
 
 ```mermaid
 classDiagram
@@ -140,6 +144,8 @@ N_src_logic_team_runtime_checkpoint_abandonment_service_ts ..> N_src_logic_team_
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../tasks/rules/checkpoint-handoff-rules.ts](../../tasks/rules/checkpoint-handoff-rules.ts)、[../../tasks/rules/checkpoint-handoff.ts](../../tasks/rules/checkpoint-handoff.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../tasks/runtime/main-command-request.ts](../../tasks/runtime/main-command-request.ts)、[member-checkpoint-verifier.ts](member-checkpoint-verifier.ts)。
 
 ### member-checkpoint-verifier.ts
+
+[查看源码](member-checkpoint-verifier.ts)。
 
 ```mermaid
 classDiagram
@@ -174,6 +180,8 @@ N_src_logic_team_runtime_member_checkpoint_verifier_ts ..> N_src_logic_team_runt
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../evidence/rules/artifact-baseline.ts](../../evidence/rules/artifact-baseline.ts)、[../../execution/context/execution-context.ts](../../execution/context/execution-context.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../runtime/monitoring/member-events.ts](../../runtime/monitoring/member-events.ts)、[../../tasks/rules/dispatch-execution.ts](../../tasks/rules/dispatch-execution.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../tasks/rules/member-checkpoint-evidence.ts](../../tasks/rules/member-checkpoint-evidence.ts)、[../../tasks/rules/member-checkpoint.ts](../../tasks/rules/member-checkpoint.ts)。
 
 ### member-execution.ts
+
+[查看源码](member-execution.ts)。
 
 成员 1/3（同名节点为同一声明，跨图合并阅读）。
 
@@ -211,7 +219,7 @@ class N_src_logic_team_runtime_member_execution_ts_Handle["Handle"] {
   +IsCurrent()
   +controller
   +done
-  +finishDrain
+  +finishDrain : function
 }
 N_src_logic_team_runtime_member_execution_ts ..> N_src_logic_team_runtime_member_execution_ts_Handle : 声明
 class N_src_logic_team_runtime_member_execution_ts_MemberExecutionManager["MemberExecutionManager"] {
@@ -291,6 +299,8 @@ N_src_logic_team_runtime_member_execution_ts ..> N_src_logic_team_runtime_member
 
 ### member-help-state.ts
 
+[查看源码](member-help-state.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_team_runtime_member_help_state_ts["member-help-state.ts"] {
@@ -303,6 +313,8 @@ class N_src_logic_team_runtime_member_help_state_ts["member-help-state.ts"] {
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../evidence/runtime/execution-report-facts.ts](../../evidence/runtime/execution-report-facts.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../tasks/rules/dispatch-execution.ts](../../tasks/rules/dispatch-execution.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../tasks/rules/member-help.ts](../../tasks/rules/member-help.ts)。
 
 ### member-pause-service.ts
+
+[查看源码](member-pause-service.ts)。
 
 ```mermaid
 classDiagram
@@ -335,10 +347,12 @@ class N_src_logic_team_runtime_member_pause_service_ts_MemberPauseService["Membe
 N_src_logic_team_runtime_member_pause_service_ts ..> N_src_logic_team_runtime_member_pause_service_ts_MemberPauseService : 声明
 ```
 
-继承／实现来源：`MemberCheckpointVerificationPorts` → [member-checkpoint-verifier.ts](member-checkpoint-verifier.ts)。
+继承／实现来源：`MemberCheckpointVerificationPorts` → [member-checkpoint-verifier.ts](member-checkpoint-verifier.ts)（声明 `MemberCheckpointVerificationPorts`）。
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../../dispatch/runtime/owner-execution-service.ts](../../dispatch/runtime/owner-execution-service.ts)、[../../execution/context/execution-context.ts](../../execution/context/execution-context.ts)、[../../tasks/rules/dispatch-scope.ts](../../tasks/rules/dispatch-scope.ts)、[../../tasks/rules/member-pause-rules.ts](../../tasks/rules/member-pause-rules.ts)、[../../tasks/rules/member-pause.ts](../../tasks/rules/member-pause.ts)、[../../tasks/rules/scope-continuation.ts](../../tasks/rules/scope-continuation.ts)、[member-checkpoint-verifier.ts](member-checkpoint-verifier.ts)。
 
 ### member-resume-service.ts
+
+[查看源码](member-resume-service.ts)。
 
 ```mermaid
 classDiagram
@@ -360,6 +374,8 @@ N_src_logic_team_runtime_member_resume_service_ts ..> N_src_logic_team_runtime_m
 
 ### member-state.ts
 
+[查看源码](member-state.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_team_runtime_member_state_ts["member-state.ts"] {
@@ -369,12 +385,16 @@ class N_src_logic_team_runtime_member_state_ts["member-state.ts"] {
   +memberView()
   +dependenciesReady()
   +memberCandidate()
+  +memberHelpCandidate()
+  +hasMemberHelp()
 }
 ```
 
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../tasks/rules/candidate-review.ts](../../tasks/rules/candidate-review.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../tasks/rules/member-tool-output.ts](../../tasks/rules/member-tool-output.ts)、[../rules/agent-types.ts](../rules/agent-types.ts)、[member-help-state.ts](member-help-state.ts)。
 
 ### member-workflow.ts
+
+[查看源码](member-workflow.ts)。
 
 ```mermaid
 classDiagram

@@ -91,9 +91,11 @@ RuntimeOverview 用目标与任务、成员实例、运行与用量、项目与�
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### runtime-feed.ts
+
+[查看源码](runtime-feed.ts)。
 
 ```mermaid
 classDiagram
@@ -116,10 +118,10 @@ class N_src_view_runtime_runtime_feed_ts_RuntimeFeedState["RuntimeFeedState"] {
 N_src_view_runtime_runtime_feed_ts ..> N_src_view_runtime_runtime_feed_ts_RuntimeFeedState : 声明
 class N_src_view_runtime_runtime_feed_ts_RuntimeFeed["RuntimeFeed"] {
   +constructor()
-  +snapshot
+  +snapshot : get
   +Subscribe()
   +Refresh()
-  -read
+  -read : function
   -intervalMs
   -value
   -listeners
@@ -135,6 +137,8 @@ N_src_view_runtime_runtime_feed_ts ..> N_src_view_runtime_runtime_feed_ts_Runtim
 
 ### runtime-overview.css
 
+[查看源码](runtime-overview.css)。
+
 ```mermaid
 classDiagram
 class N_src_view_runtime_runtime_overview_css["runtime-overview.css"] {
@@ -143,6 +147,8 @@ class N_src_view_runtime_runtime_overview_css["runtime-overview.css"] {
 ```
 
 ### runtime-view-state.ts
+
+[查看源码](runtime-view-state.ts)。
 
 ```mermaid
 classDiagram
@@ -183,6 +189,8 @@ N_src_view_runtime_runtime_view_state_ts ..> N_src_view_runtime_runtime_view_sta
 
 ### RuntimeOverview.tsx
 
+[查看源码](RuntimeOverview.tsx)。
+
 ```mermaid
 classDiagram
 class N_src_view_runtime_RuntimeOverview_tsx["RuntimeOverview.tsx"] {
@@ -196,12 +204,14 @@ class N_src_view_runtime_RuntimeOverview_tsx["RuntimeOverview.tsx"] {
 
 ### RuntimeRows.tsx
 
+[查看源码](RuntimeRows.tsx)。
+
 ```mermaid
 classDiagram
 class N_src_view_runtime_RuntimeRows_tsx["RuntimeRows.tsx"] {
   <<component>>
-  +shortRuntimeId()
-  +runtimePrice()
+  +shortRuntimeId : function
+  +runtimePrice : function
 }
 ```
 
@@ -212,21 +222,24 @@ class N_src_view_runtime_RuntimeRows_tsx["RuntimeRows.tsx"] {
 }
 class N_src_view_runtime_RuntimeRows_tsx_RuntimeOpen["RuntimeOpen"] {
   <<type>>
-
+  +调用签名()
 }
 N_src_view_runtime_RuntimeRows_tsx ..> N_src_view_runtime_RuntimeRows_tsx_RuntimeOpen : 声明
 class N_src_view_runtime_RuntimeRows_tsx_RowProps["RowProps"] {
   <<interface>>
   +workspace
   +canOpen
-  +onOpen
+  +onOpen : function
 }
 N_src_view_runtime_RuntimeRows_tsx ..> N_src_view_runtime_RuntimeRows_tsx_RowProps : 声明
 ```
 
+匿名签名（RuntimeOpen，不是具名方法）：`(target: RuntimeNavigationTarget) => void`。
 直接依赖：[../../bridge/contracts/admission.ts](../../bridge/contracts/admission.ts)、[../../bridge/contracts/runtime.ts](../../bridge/contracts/runtime.ts)、[../../bridge/contracts/usage.ts](../../bridge/contracts/usage.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../components/state-labels.ts](../components/state-labels.ts)、[runtime-view-state.ts](runtime-view-state.ts)。
 
 ### useRuntime.ts
+
+[查看源码](useRuntime.ts)。
 
 ```mermaid
 classDiagram

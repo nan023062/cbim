@@ -57,9 +57,11 @@ WebSettings 拥有实例队列、revision 与配置状态。加密和写盘成�
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### index.ts
+
+[查看源码](index.ts)。
 
 ```mermaid
 classDiagram
@@ -70,6 +72,8 @@ class N_src_logic_web_service_index_ts["index.ts"] {
 直接依赖：[web-service.ts](web-service.ts)、[web-settings.ts](web-settings.ts)。
 
 ### web-service.ts
+
+[查看源码](web-service.ts)。
 
 ```mermaid
 classDiagram
@@ -94,10 +98,12 @@ class N_src_logic_web_service_web_service_ts_external_WebToolsPort["WebToolsPort
 N_src_logic_web_service_web_service_ts_external_WebToolsPort <|.. N_src_logic_web_service_web_service_ts_WebService
 ```
 
-继承／实现来源：`WebToolsPort` → [../index.ts](../index.ts)。
+继承／实现来源：`WebToolsPort` → [../contracts.ts](../contracts.ts)（声明 `WebToolsPort`）。
 直接依赖：[../../../core/platform/node/web/index.ts](../../../core/platform/node/web/index.ts)、[../index.ts](../index.ts)、[web-settings.ts](web-settings.ts)。
 
 ### web-settings.ts
+
+[查看源码](web-settings.ts)。
 
 ```mermaid
 classDiagram

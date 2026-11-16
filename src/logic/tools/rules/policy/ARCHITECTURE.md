@@ -96,9 +96,11 @@ cbim_scoped_read 固定read、cbim_scoped_node固定command，两者要求内部
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### tool-policy.ts
+
+[查看源码](tool-policy.ts)。
 
 ```mermaid
 classDiagram
@@ -135,6 +137,8 @@ N_src_logic_tools_rules_policy_tool_policy_ts ..> N_src_logic_tools_rules_policy
 直接依赖：[../../../feedback/index.ts](../../../feedback/index.ts)、[../../../governance/rules/module-governance-tools.ts](../../../governance/rules/module-governance-tools.ts)、[../../../team/rules/workspace-member-tools.ts](../../../team/rules/workspace-member-tools.ts)、[types.ts](types.ts)、[../scope-schema.ts](../scope-schema.ts)、[../types.ts](../types.ts)、[../../../workspace/rules/module-ownership-tool-policy.ts](../../../workspace/rules/module-ownership-tool-policy.ts)。
 
 ### types.ts
+
+[查看源码](types.ts)。
 
 ```mermaid
 classDiagram

@@ -134,9 +134,11 @@ humanBlocked 同时约束新子调用与原运行的直接工具。guardEffects 
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### agent-call-scheduler.ts
+
+[查看源码](agent-call-scheduler.ts)。
 
 成员 1/2（同名节点为同一声明，跨图合并阅读）。
 
@@ -194,6 +196,8 @@ N_src_logic_execution_assembly_agent_call_scheduler_ts ..> N_src_logic_execution
 
 ### engine-adapters.ts
 
+[查看源码](engine-adapters.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_execution_assembly_engine_adapters_ts["engine-adapters.ts"] {
@@ -206,6 +210,8 @@ class N_src_logic_execution_assembly_engine_adapters_ts["engine-adapters.ts"] {
 
 ### engine-package-loader.ts
 
+[查看源码](engine-package-loader.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_execution_assembly_engine_package_loader_ts["engine-package-loader.ts"] {
@@ -217,6 +223,8 @@ class N_src_logic_execution_assembly_engine_package_loader_ts["engine-package-lo
 直接依赖：[../../engines/index.ts](../../engines/index.ts)、[engine-adapters.ts](engine-adapters.ts)、[../rules/engine-adapter.ts](../rules/engine-adapter.ts)、[../rules/engine-runtime.ts](../rules/engine-runtime.ts)。
 
 ### loop-engine.ts
+
+[查看源码](loop-engine.ts)。
 
 ```mermaid
 classDiagram
@@ -323,6 +331,8 @@ N_src_logic_execution_assembly_loop_engine_ts ..> N_src_logic_execution_assembly
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../agents/contracts.ts](../../agents/contracts.ts)、[../../agents/index.ts](../../agents/index.ts)、[../../budget/rules/request-budget.ts](../../budget/rules/request-budget.ts)、[../../connectors/rules/repository-tools.ts](../../connectors/rules/repository-tools.ts)、[../../conversation/runtime/main-agent.ts](../../conversation/runtime/main-agent.ts)、[../../engines/index.ts](../../engines/index.ts)、[../../evidence/rules/artifact-tools.ts](../../evidence/rules/artifact-tools.ts)、[../../evidence/rules/code-check.ts](../../evidence/rules/code-check.ts)、[../../evidence/rules/output-manifest-tools.ts](../../evidence/rules/output-manifest-tools.ts)、[../../evidence/rules/progress-tools.ts](../../evidence/rules/progress-tools.ts)、[../../evidence/rules/validation-tools.ts](../../evidence/rules/validation-tools.ts)、[engine-adapters.ts](engine-adapters.ts)、[engine-package-loader.ts](engine-package-loader.ts)、[../context/team-workflow.ts](../context/team-workflow.ts)、[../engines/runtime-binding.ts](../engines/runtime-binding.ts)、[../rules/capabilities/artifact-capture.ts](../rules/capabilities/artifact-capture.ts)、[../rules/capabilities/output-manifest-capture.ts](../rules/capabilities/output-manifest-capture.ts)、[../rules/capabilities/run-artifact-transition.ts](../rules/capabilities/run-artifact-transition.ts)、[../rules/capabilities/run-controlled-file.ts](../rules/capabilities/run-controlled-file.ts)、[../rules/capabilities/run-scoped-execution.ts](../rules/capabilities/run-scoped-execution.ts)、[../rules/capabilities/run-validation.ts](../rules/capabilities/run-validation.ts)、[../rules/engine-adapter.ts](../rules/engine-adapter.ts)、[../rules/engine-runtime.ts](../rules/engine-runtime.ts)、[../rules/index.ts](../rules/index.ts)、[../rules/storage.ts](../rules/storage.ts)、[../rules/types.ts](../rules/types.ts)、[../../feedback/index.ts](../../feedback/index.ts)、[../../file-operations/rules/artifact-transition.ts](../../file-operations/rules/artifact-transition.ts)、[../../file-operations/rules/controlled-file-operation.ts](../../file-operations/rules/controlled-file-operation.ts)、[../../file-operations/rules/scoped-execution.ts](../../file-operations/rules/scoped-execution.ts)、[../../governance/rules/module-governance-tools.ts](../../governance/rules/module-governance-tools.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../tasks/rules/execution-context.ts](../../tasks/rules/execution-context.ts)、[../../tasks/rules/member-checkpoint-tools.ts](../../tasks/rules/member-checkpoint-tools.ts)、[../../tasks/rules/member-help-tools.ts](../../tasks/rules/member-help-tools.ts)、[../../team/rules/workspace-member-tools.ts](../../team/rules/workspace-member-tools.ts)、[../../tools/rules/native-tools.ts](../../tools/rules/native-tools.ts)、[../../tools/rules/policy/tool-policy.ts](../../tools/rules/policy/tool-policy.ts)、[../../tools/runtime/coordination-tools.ts](../../tools/runtime/coordination-tools.ts)、[../../tools/runtime/dispatch-tools.ts](../../tools/runtime/dispatch-tools.ts)、[../../tools/runtime/feedback-status-tool.ts](../../tools/runtime/feedback-status-tool.ts)、[../../tools/runtime/feedback-tools.ts](../../tools/runtime/feedback-tools.ts)、[../../tools/runtime/governance-tools.ts](../../tools/runtime/governance-tools.ts)、[../../tools/runtime/knowledge-tools.ts](../../tools/runtime/knowledge-tools.ts)、[../../tools/runtime/module-ownership-tools.ts](../../tools/runtime/module-ownership-tools.ts)、[../../tools/runtime/office-history-tools.ts](../../tools/runtime/office-history-tools.ts)、[../../tools/runtime/question-tools.ts](../../tools/runtime/question-tools.ts)、[../../tools/runtime/repository-tools.ts](../../tools/runtime/repository-tools.ts)、[../../tools/runtime/web-tools.ts](../../tools/runtime/web-tools.ts)、[../../tools/runtime/workspace-member-tools.ts](../../tools/runtime/workspace-member-tools.ts)、[../../web/index.ts](../../web/index.ts)、[../../workspace/ports/paths.ts](../../workspace/ports/paths.ts)、[../../workspace/rules/execution-scope.ts](../../workspace/rules/execution-scope.ts)、[../../workspace/rules/module-ownership-tools.ts](../../workspace/rules/module-ownership-tools.ts)、[../../workspace/rules/workflow-contract.ts](../../workspace/rules/workflow-contract.ts)。
 
 ### packaged-engine-adapters.ts
+
+[查看源码](packaged-engine-adapters.ts)。
 
 ```mermaid
 classDiagram

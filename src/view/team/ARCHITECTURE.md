@@ -162,18 +162,20 @@ Agent 履历与团队定义共享界面字号；身份说明使用普通字号�
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### agent-history-state.ts
+
+[查看源码](agent-history-state.ts)。
 
 ```mermaid
 classDiagram
 class N_src_view_team_agent_history_state_ts["agent-history-state.ts"] {
   <<module>>
-  +historyScopeKey()
-  +historyRunKey()
   +mergeHistoryPage()
   +historyEventScope()
+  +historyScopeKey : function
+  +historyRunKey : function
 }
 ```
 
@@ -193,6 +195,8 @@ N_src_view_team_agent_history_state_ts ..> N_src_view_team_agent_history_state_t
 
 ### agent-history.css
 
+[查看源码](agent-history.css)。
+
 ```mermaid
 classDiagram
 class N_src_view_team_agent_history_css["agent-history.css"] {
@@ -201,6 +205,8 @@ class N_src_view_team_agent_history_css["agent-history.css"] {
 ```
 
 ### AgentSessionHistory.tsx
+
+[查看源码](AgentSessionHistory.tsx)。
 
 ```mermaid
 classDiagram
@@ -227,7 +233,7 @@ class N_src_view_team_AgentSessionHistory_tsx_AgentSessionHistoryProps["AgentSes
   +initialAgentId
   +currentDefinitions
   +knowledgeReady
-  +onClose
+  +onClose : function
 }
 N_src_view_team_AgentSessionHistory_tsx ..> N_src_view_team_AgentSessionHistory_tsx_AgentSessionHistoryProps : 声明
 ```
@@ -235,6 +241,8 @@ N_src_view_team_AgentSessionHistory_tsx ..> N_src_view_team_AgentSessionHistory_
 直接依赖：[../../bridge/contracts/agent-history.ts](../../bridge/contracts/agent-history.ts)、[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../execution-view/MarkdownMessage.tsx](../execution-view/MarkdownMessage.tsx)、[../execution-view/transcript.ts](../execution-view/transcript.ts)、[../tasks/MemberRunTranscript.tsx](../tasks/MemberRunTranscript.tsx)、[../tasks/member-activity.css](../tasks/member-activity.css)、[agent-history-state.ts](agent-history-state.ts)、[agent-history.css](agent-history.css)、[useAgentHistory.ts](useAgentHistory.ts)。
 
 ### MainAgentEditor.tsx
+
+[查看源码](MainAgentEditor.tsx)。
 
 ```mermaid
 classDiagram
@@ -247,6 +255,8 @@ class N_src_view_team_MainAgentEditor_tsx["MainAgentEditor.tsx"] {
 直接依赖：[../../bridge/contracts/agent-settings.ts](../../bridge/contracts/agent-settings.ts)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../components/EngineModelPicker.tsx](../components/EngineModelPicker.tsx)、[../components/Icon.tsx](../components/Icon.tsx)、[../components/ModalFrame.tsx](../components/ModalFrame.tsx)、[useMainAgentSettings.ts](useMainAgentSettings.ts)。
 
 ### team-model.ts
+
+[查看源码](team-model.ts)。
 
 ```mermaid
 classDiagram
@@ -302,6 +312,8 @@ N_src_view_team_team_model_ts ..> N_src_view_team_team_model_ts_TeamModel : 声�
 
 ### team-view.css
 
+[查看源码](team-view.css)。
+
 ```mermaid
 classDiagram
 class N_src_view_team_team_view_css["team-view.css"] {
@@ -310,6 +322,8 @@ class N_src_view_team_team_view_css["team-view.css"] {
 ```
 
 ### TeamTree.tsx
+
+[查看源码](TeamTree.tsx)。
 
 ```mermaid
 classDiagram
@@ -322,6 +336,8 @@ class N_src_view_team_TeamTree_tsx["TeamTree.tsx"] {
 直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../components/TreeActions.tsx](../components/TreeActions.tsx)、[../knowledge/knowledge-files.css](../knowledge/knowledge-files.css)、[team-model.ts](team-model.ts)。
 
 ### TeamView.tsx
+
+[查看源码](TeamView.tsx)。
 
 ```mermaid
 classDiagram
@@ -358,6 +374,8 @@ N_src_view_team_TeamView_tsx ..> N_src_view_team_TeamView_tsx_Transfer : 声明
 
 ### useAgentHistory.ts
 
+[查看源码](useAgentHistory.ts)。
+
 ```mermaid
 classDiagram
 class N_src_view_team_useAgentHistory_ts["useAgentHistory.ts"] {
@@ -384,6 +402,8 @@ N_src_view_team_useAgentHistory_ts ..> N_src_view_team_useAgentHistory_ts_Item :
 
 ### useMainAgentSettings.ts
 
+[查看源码](useMainAgentSettings.ts)。
+
 ```mermaid
 classDiagram
 class N_src_view_team_useMainAgentSettings_ts["useMainAgentSettings.ts"] {
@@ -395,6 +415,8 @@ class N_src_view_team_useMainAgentSettings_ts["useMainAgentSettings.ts"] {
 直接依赖：[../../bridge/contracts/agent-settings.ts](../../bridge/contracts/agent-settings.ts)。
 
 ### workspace-member-state.ts
+
+[查看源码](workspace-member-state.ts)。
 
 ```mermaid
 classDiagram
@@ -433,18 +455,18 @@ N_src_view_team_workspace_member_state_ts ..> N_src_view_team_workspace_member_s
 class N_src_view_team_workspace_member_state_ts_WorkspaceMemberCommandPorts["WorkspaceMemberCommandPorts"] {
   <<interface>>
   +storage
-  +commit
-  +lookup
-  +uuid
+  +commit : function
+  +lookup : function
+  +uuid : function
 }
 N_src_view_team_workspace_member_state_ts ..> N_src_view_team_workspace_member_state_ts_WorkspaceMemberCommandPorts : 声明
 class N_src_view_team_workspace_member_state_ts_WorkspaceMemberCommands["WorkspaceMemberCommands"] {
   +workspaceId
   +storageKey
   +constructor()
-  +snapshot
-  +blocked
-  +canRelease
+  +snapshot : get
+  +blocked : get
+  +canRelease : get
   +Subscribe()
   +IsPending()
   +Submit()
@@ -493,6 +515,8 @@ N_src_view_team_workspace_member_state_ts ..> N_src_view_team_workspace_member_s
 
 ### workspace-members.css
 
+[查看源码](workspace-members.css)。
+
 ```mermaid
 classDiagram
 class N_src_view_team_workspace_members_css["workspace-members.css"] {
@@ -501,6 +525,8 @@ class N_src_view_team_workspace_members_css["workspace-members.css"] {
 ```
 
 ### WorkspaceMemberDetail.tsx
+
+[查看源码](WorkspaceMemberDetail.tsx)。
 
 ```mermaid
 classDiagram
@@ -513,6 +539,8 @@ class N_src_view_team_WorkspaceMemberDetail_tsx["WorkspaceMemberDetail.tsx"] {
 直接依赖：[../../bridge/contracts/engines.ts](../../bridge/contracts/engines.ts)、[../../bridge/contracts/workspace-members.ts](../../bridge/contracts/workspace-members.ts)、[../knowledge/KnowledgeSourceDetails.tsx](../knowledge/KnowledgeSourceDetails.tsx)。
 
 ### WorkspaceMemberForm.tsx
+
+[查看源码](WorkspaceMemberForm.tsx)。
 
 ```mermaid
 classDiagram
@@ -537,9 +565,9 @@ class N_src_view_team_WorkspaceMemberForm_tsx_WorkspaceMemberFormProps["Workspac
   +target
   +nextState
   +disabled
-  +onEdit
-  +onPreview
-  +onClose
+  +onEdit : function
+  +onPreview : function
+  +onClose : function
 }
 N_src_view_team_WorkspaceMemberForm_tsx ..> N_src_view_team_WorkspaceMemberForm_tsx_WorkspaceMemberFormProps : 声明
 ```
@@ -547,6 +575,8 @@ N_src_view_team_WorkspaceMemberForm_tsx ..> N_src_view_team_WorkspaceMemberForm_
 直接依赖：[../../bridge/contracts/agent-settings.ts](../../bridge/contracts/agent-settings.ts)、[../../bridge/contracts/engines.ts](../../bridge/contracts/engines.ts)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../../bridge/contracts/workspace-members.ts](../../bridge/contracts/workspace-members.ts)、[../components/EngineModelPicker.tsx](../components/EngineModelPicker.tsx)、[../components/Icon.tsx](../components/Icon.tsx)。
 
 ### WorkspaceMembers.tsx
+
+[查看源码](WorkspaceMembers.tsx)。
 
 ```mermaid
 classDiagram
@@ -572,11 +602,11 @@ class N_src_view_team_WorkspaceMembers_tsx_WorkspaceMembersProps["WorkspaceMembe
   <<interface>>
   +workspace
   +agents
-  +onClose
+  +onClose : function
   +initialRegistration
-  +onRegistered
+  +onRegistered : function
   +returnLabel
-  +onDirtyChange
+  +onDirtyChange : function
 }
 N_src_view_team_WorkspaceMembers_tsx ..> N_src_view_team_WorkspaceMembers_tsx_WorkspaceMembersProps : 声明
 ```

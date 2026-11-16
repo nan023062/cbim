@@ -49,19 +49,27 @@ Node 单文件 I/O 基础方案：存在探测、JSON 读取、内容 fsync 后�
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### index.ts
+
+[查看源码](index.ts)。
 
 ```mermaid
 classDiagram
 class N_src_core_platform_node_files_index_ts["index.ts"] {
   <<module>>
+  +exists()
+  +atomic()
+  +readJson()
 }
 ```
+
 直接依赖：[text-files.ts](text-files.ts)。
 
 ### text-files.ts
+
+[查看源码](text-files.ts)。
 
 ```mermaid
 classDiagram

@@ -123,9 +123,11 @@ KnowledgeFilePreview 的 FileEditor 采用同一模态边界；Escape 复用脏�
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### architecture-editor.css
+
+[查看源码](architecture-editor.css)。
 
 ```mermaid
 classDiagram
@@ -135,6 +137,8 @@ class N_src_view_knowledge_architecture_editor_css["architecture-editor.css"] {
 ```
 
 ### ArchitectureEditor.tsx
+
+[查看源码](ArchitectureEditor.tsx)。
 
 ```mermaid
 classDiagram
@@ -163,8 +167,8 @@ class N_src_view_knowledge_ArchitectureEditor_tsx_ArchitectureEditorProps["Archi
   +id
   +parentId
   +mode
-  +onClose
-  +onSaved
+  +onClose : function
+  +onSaved : function
 }
 N_src_view_knowledge_ArchitectureEditor_tsx ..> N_src_view_knowledge_ArchitectureEditor_tsx_ArchitectureEditorProps : 声明
 ```
@@ -173,14 +177,16 @@ N_src_view_knowledge_ArchitectureEditor_tsx ..> N_src_view_knowledge_Architectur
 
 ### GovernanceLaunch.tsx
 
+[查看源码](GovernanceLaunch.tsx)。
+
 ```mermaid
 classDiagram
 class N_src_view_knowledge_GovernanceLaunch_tsx["GovernanceLaunch.tsx"] {
   <<component>>
-  +governanceWorkflow()
   +useGovernanceLaunch()
   +GovernanceStatus()
   +GovernanceLaunch()
+  +governanceWorkflow : function
 }
 ```
 
@@ -198,6 +204,8 @@ N_src_view_knowledge_GovernanceLaunch_tsx ..> N_src_view_knowledge_GovernanceLau
 
 
 ### knowledge-file-tree.ts
+
+[查看源码](knowledge-file-tree.ts)。
 
 ```mermaid
 classDiagram
@@ -226,6 +234,8 @@ N_src_view_knowledge_knowledge_file_tree_ts ..> N_src_view_knowledge_knowledge_f
 
 ### knowledge-files.css
 
+[查看源码](knowledge-files.css)。
+
 ```mermaid
 classDiagram
 class N_src_view_knowledge_knowledge_files_css["knowledge-files.css"] {
@@ -235,6 +245,8 @@ class N_src_view_knowledge_knowledge_files_css["knowledge-files.css"] {
 
 ### knowledge-source.css
 
+[查看源码](knowledge-source.css)。
+
 ```mermaid
 classDiagram
 class N_src_view_knowledge_knowledge_source_css["knowledge-source.css"] {
@@ -243,6 +255,8 @@ class N_src_view_knowledge_knowledge_source_css["knowledge-source.css"] {
 ```
 
 ### KnowledgeFilePreview.tsx
+
+[查看源码](KnowledgeFilePreview.tsx)。
 
 ```mermaid
 classDiagram
@@ -255,6 +269,8 @@ class N_src_view_knowledge_KnowledgeFilePreview_tsx["KnowledgeFilePreview.tsx"] 
 直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../components/ModalFrame.tsx](../components/ModalFrame.tsx)、[../execution-view/MarkdownMessage.tsx](../execution-view/MarkdownMessage.tsx)、[knowledge-files.css](knowledge-files.css)。
 
 ### KnowledgeFileTree.tsx
+
+[查看源码](KnowledgeFileTree.tsx)。
 
 ```mermaid
 classDiagram
@@ -280,6 +296,8 @@ N_src_view_knowledge_KnowledgeFileTree_tsx ..> N_src_view_knowledge_KnowledgeFil
 
 ### KnowledgeSourceDetails.tsx
 
+[查看源码](KnowledgeSourceDetails.tsx)。
+
 ```mermaid
 classDiagram
 class N_src_view_knowledge_KnowledgeSourceDetails_tsx["KnowledgeSourceDetails.tsx"] {
@@ -292,6 +310,8 @@ class N_src_view_knowledge_KnowledgeSourceDetails_tsx["KnowledgeSourceDetails.ts
 直接依赖：[../../bridge/contracts/knowledge-source.ts](../../bridge/contracts/knowledge-source.ts)、[knowledge-source.css](knowledge-source.css)。
 
 ### static-owners.ts
+
+[查看源码](static-owners.ts)。
 
 ```mermaid
 classDiagram

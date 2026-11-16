@@ -374,9 +374,11 @@ knowledge-tools 的 Builtins 通过 workspace.rules.assetsRoot 获取只读资�
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### candidate-review-tools.ts
+
+[查看源码](candidate-review-tools.ts)。
 
 ```mermaid
 classDiagram
@@ -390,7 +392,7 @@ class N_src_logic_tools_runtime_candidate_review_tools_ts_CandidateReviewTools["
   +Describe()
   +Call()
   -binding
-  -save
+  -save : function
 }
 N_src_logic_tools_runtime_candidate_review_tools_ts ..> N_src_logic_tools_runtime_candidate_review_tools_ts_CandidateReviewTools : 声明
 ```
@@ -398,6 +400,8 @@ N_src_logic_tools_runtime_candidate_review_tools_ts ..> N_src_logic_tools_runtim
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../tasks/rules/candidate-review.ts](../../tasks/rules/candidate-review.ts)、[../../tasks/rules/graph-rules.ts](../../tasks/rules/graph-rules.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../tasks/rules/main-tool-output.ts](../../tasks/rules/main-tool-output.ts)、[../rules/results.ts](../rules/results.ts)。
 
 ### command-report-contract.ts
+
+[查看源码](command-report-contract.ts)。
 
 ```mermaid
 classDiagram
@@ -412,6 +416,8 @@ class N_src_logic_tools_runtime_command_report_contract_ts["command-report-contr
 
 ### coordination-contracts.ts
 
+[查看源码](coordination-contracts.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tools_runtime_coordination_contracts_ts["coordination-contracts.ts"] {
@@ -423,6 +429,8 @@ class N_src_logic_tools_runtime_coordination_contracts_ts["coordination-contract
 直接依赖：[../../tasks/rules/coordination-preview.ts](../../tasks/rules/coordination-preview.ts)、[../../tasks/rules/main-tool-output.ts](../../tasks/rules/main-tool-output.ts)、[../../tasks/rules/queued-task-cancel.ts](../../tasks/rules/queued-task-cancel.ts)、[../rules/results.ts](../rules/results.ts)。
 
 ### coordination-tools.ts
+
+[查看源码](coordination-tools.ts)。
 
 ```mermaid
 classDiagram
@@ -460,6 +468,8 @@ N_src_logic_tools_runtime_coordination_tools_ts ..> N_src_logic_tools_runtime_co
 
 ### dispatch-tools.ts
 
+[查看源码](dispatch-tools.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tools_runtime_dispatch_tools_ts["dispatch-tools.ts"] {
@@ -494,7 +504,7 @@ class N_src_logic_tools_runtime_dispatch_tools_ts_DispatchToolsPort["DispatchToo
 N_src_logic_tools_runtime_dispatch_tools_ts ..> N_src_logic_tools_runtime_dispatch_tools_ts_DispatchToolsPort : 声明
 class N_src_logic_tools_runtime_dispatch_tools_ts_DispatchTools["DispatchTools"] {
   +constructor()
-  +collaborationMode
+  +collaborationMode : get
   +List()
   +Has()
   +Describe()
@@ -515,6 +525,8 @@ N_src_logic_tools_runtime_dispatch_tools_ts ..> N_src_logic_tools_runtime_dispat
 
 ### feedback-status-tool.ts
 
+[查看源码](feedback-status-tool.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tools_runtime_feedback_status_tool_ts["feedback-status-tool.ts"] {
@@ -529,7 +541,7 @@ class N_src_logic_tools_runtime_feedback_status_tool_ts_FeedbackStatusTool["Feed
   +Call()
   -workspaceId
   -registered
-  -check
+  -check : function
   -Parse()
 }
 N_src_logic_tools_runtime_feedback_status_tool_ts ..> N_src_logic_tools_runtime_feedback_status_tool_ts_FeedbackStatusTool : 声明
@@ -538,6 +550,8 @@ N_src_logic_tools_runtime_feedback_status_tool_ts ..> N_src_logic_tools_runtime_
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../feedback/index.ts](../../feedback/index.ts)、[../rules/policy/tool-policy.ts](../rules/policy/tool-policy.ts)、[../rules/results.ts](../rules/results.ts)。
 
 ### feedback-tools.ts
+
+[查看源码](feedback-tools.ts)。
 
 ```mermaid
 classDiagram
@@ -560,6 +574,8 @@ N_src_logic_tools_runtime_feedback_tools_ts ..> N_src_logic_tools_runtime_feedba
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../feedback/index.ts](../../feedback/index.ts)、[../rules/policy/tool-policy.ts](../rules/policy/tool-policy.ts)、[../rules/results.ts](../rules/results.ts)、[../rules/scope-schema.ts](../rules/scope-schema.ts)。
 
 ### goal-tools.ts
+
+[查看源码](goal-tools.ts)。
 
 ```mermaid
 classDiagram
@@ -605,6 +621,8 @@ N_src_logic_tools_runtime_goal_tools_ts ..> N_src_logic_tools_runtime_goal_tools
 
 ### governance-tools.ts
 
+[查看源码](governance-tools.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tools_runtime_governance_tools_ts["governance-tools.ts"] {
@@ -637,6 +655,8 @@ N_src_logic_tools_runtime_governance_tools_ts ..> N_src_logic_tools_runtime_gove
 
 ### knowledge-contracts.ts
 
+[查看源码](knowledge-contracts.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tools_runtime_knowledge_contracts_ts["knowledge-contracts.ts"] {
@@ -648,6 +668,8 @@ class N_src_logic_tools_runtime_knowledge_contracts_ts["knowledge-contracts.ts"]
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../knowledge/rules/builtins.ts](../../knowledge/rules/builtins.ts)、[../../knowledge/rules/tool-output-base.ts](../../knowledge/rules/tool-output-base.ts)、[../../knowledge/rules/tool-output-builtins.ts](../../knowledge/rules/tool-output-builtins.ts)、[../../knowledge/rules/tool-output-queries.ts](../../knowledge/rules/tool-output-queries.ts)、[../../knowledge/rules/tool-output-transactions.ts](../../knowledge/rules/tool-output-transactions.ts)、[../rules/contracts.ts](../rules/contracts.ts)。
 
 ### knowledge-tools.ts
+
+[查看源码](knowledge-tools.ts)。
 
 ```mermaid
 classDiagram
@@ -681,6 +703,8 @@ N_src_logic_tools_runtime_knowledge_tools_ts ..> N_src_logic_tools_runtime_knowl
 
 ### main-tool-contracts.ts
 
+[查看源码](main-tool-contracts.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tools_runtime_main_tool_contracts_ts["main-tool-contracts.ts"] {
@@ -694,6 +718,8 @@ class N_src_logic_tools_runtime_main_tool_contracts_ts["main-tool-contracts.ts"]
 直接依赖：[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../tasks/rules/main-tool-output.ts](../../tasks/rules/main-tool-output.ts)、[../rules/contracts.ts](../rules/contracts.ts)、[../rules/results.ts](../rules/results.ts)。
 
 ### module-ownership-tools.ts
+
+[查看源码](module-ownership-tools.ts)。
 
 ```mermaid
 classDiagram
@@ -717,6 +743,8 @@ N_src_logic_tools_runtime_module_ownership_tools_ts ..> N_src_logic_tools_runtim
 
 ### office-history-tools.ts
 
+[查看源码](office-history-tools.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tools_runtime_office_history_tools_ts["office-history-tools.ts"] {
@@ -728,7 +756,7 @@ class N_src_logic_tools_runtime_office_history_tools_ts_OfficeHistoryTools["Offi
   +List()
   +Describe()
   +Call()
-  -read
+  -read : function
   -identity
 }
 N_src_logic_tools_runtime_office_history_tools_ts ..> N_src_logic_tools_runtime_office_history_tools_ts_OfficeHistoryTools : 声明
@@ -737,6 +765,8 @@ N_src_logic_tools_runtime_office_history_tools_ts ..> N_src_logic_tools_runtime_
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../tasks/rules/office-history.ts](../../tasks/rules/office-history.ts)、[../rules/results.ts](../rules/results.ts)。
 
 ### question-tools.ts
+
+[查看源码](question-tools.ts)。
 
 ```mermaid
 classDiagram
@@ -749,7 +779,7 @@ class N_src_logic_tools_runtime_question_tools_ts_QuestionTools["QuestionTools"]
   +List()
   +Describe()
   +Call()
-  -request
+  -request : function
   -Parse()
 }
 N_src_logic_tools_runtime_question_tools_ts ..> N_src_logic_tools_runtime_question_tools_ts_QuestionTools : 声明
@@ -758,6 +788,8 @@ N_src_logic_tools_runtime_question_tools_ts ..> N_src_logic_tools_runtime_questi
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../rules/contracts.ts](../rules/contracts.ts)、[../rules/policy/tool-policy.ts](../rules/policy/tool-policy.ts)、[../rules/questions.ts](../rules/questions.ts)、[../rules/results.ts](../rules/results.ts)。
 
 ### repository-tools.ts
+
+[查看源码](repository-tools.ts)。
 
 ```mermaid
 classDiagram
@@ -783,6 +815,8 @@ N_src_logic_tools_runtime_repository_tools_ts ..> N_src_logic_tools_runtime_repo
 
 ### web-tools.ts
 
+[查看源码](web-tools.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tools_runtime_web_tools_ts["web-tools.ts"] {
@@ -803,6 +837,8 @@ N_src_logic_tools_runtime_web_tools_ts ..> N_src_logic_tools_runtime_web_tools_t
 直接依赖：[../rules/policy/tool-policy.ts](../rules/policy/tool-policy.ts)、[../rules/results.ts](../rules/results.ts)、[../../web/index.ts](../../web/index.ts)。
 
 ### workspace-member-tools.ts
+
+[查看源码](workspace-member-tools.ts)。
 
 ```mermaid
 classDiagram

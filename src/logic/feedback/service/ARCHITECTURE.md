@@ -90,15 +90,17 @@ reader 取消不依赖 fetch 转发信号；中断、超限或坏 JSON 均沿原
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### github-api.ts
+
+[查看源码](github-api.ts)。
 
 ```mermaid
 classDiagram
 class N_src_logic_feedback_service_github_api_ts["github-api.ts"] {
   <<module>>
-  +githubRequest()
+  +githubRequest : function
 }
 ```
 
@@ -115,14 +117,17 @@ class N_src_logic_feedback_service_github_api_ts_GitHubReply["GitHubReply"] {
 N_src_logic_feedback_service_github_api_ts ..> N_src_logic_feedback_service_github_api_ts_GitHubReply : 声明
 class N_src_logic_feedback_service_github_api_ts_GitHubRequest["GitHubRequest"] {
   <<type>>
-
+  +调用签名()
 }
 N_src_logic_feedback_service_github_api_ts ..> N_src_logic_feedback_service_github_api_ts_GitHubRequest : 声明
 ```
 
+匿名签名（GitHubRequest，不是具名方法）：`(endpoint: string, options: { method: 'GET' | 'POST'; token?: string; body?: Record<string, unknown>; signal: AbortSignal }) => Promise<GitHubReply>`。
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/utility/index.ts](../../../core/utility/index.ts)。
 
 ### github-feedback-auth.ts
+
+[查看源码](github-feedback-auth.ts)。
 
 ```mermaid
 classDiagram
@@ -180,8 +185,8 @@ class N_src_logic_feedback_service_github_feedback_auth_ts_GitHubFeedbackAuth["G
   +Close()
   -filename
   -cipher
-  -request
-  -now
+  -request : function
+  -now : function
   -queue
 }
 N_src_logic_feedback_service_github_feedback_auth_ts ..> N_src_logic_feedback_service_github_feedback_auth_ts_GitHubFeedbackAuth : 声明
@@ -212,6 +217,8 @@ N_src_logic_feedback_service_github_feedback_auth_ts ..> N_src_logic_feedback_se
 
 ### github-feedback.ts
 
+[查看源码](github-feedback.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_feedback_service_github_feedback_ts["github-feedback.ts"] {
@@ -239,7 +246,7 @@ class N_src_logic_feedback_service_github_feedback_ts_GitHubFeedback["GitHubFeed
   +Prepare()
   +Close()
   -directory
-  -request
+  -request : function
   -queue
   -Serial()
   -Filename()
@@ -257,6 +264,8 @@ N_src_logic_feedback_service_github_feedback_ts ..> N_src_logic_feedback_service
 直接依赖：[../../../core/contracts/secrets.ts](../../../core/contracts/secrets.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/digest.ts](../../../core/platform/node/digest.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/platform/node/locking.ts](../../../core/platform/node/locking.ts)、[../index.ts](../index.ts)、[github-api.ts](github-api.ts)、[github-feedback-auth.ts](github-feedback-auth.ts)。
 
 ### index.ts
+
+[查看源码](index.ts)。
 
 ```mermaid
 classDiagram

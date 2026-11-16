@@ -65,9 +65,11 @@ ScopeUsageService 从已登记主 run 出发，沿 canonical 日志中有前置�
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### model-request-budget-service.ts
+
+[查看源码](model-request-budget-service.ts)。
 
 ```mermaid
 classDiagram
@@ -100,6 +102,8 @@ N_src_logic_budget_runtime_model_request_budget_service_ts ..> N_src_logic_budge
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../rules/model-request-budget-rules.ts](../rules/model-request-budget-rules.ts)、[../rules/model-request-budget-storage.ts](../rules/model-request-budget-storage.ts)、[../rules/model-request-budget.ts](../rules/model-request-budget.ts)、[../rules/model-request-configuration.ts](../rules/model-request-configuration.ts)、[../rules/request-budget.ts](../rules/request-budget.ts)。
 
 ### scope-budget-service.ts
+
+[查看源码](scope-budget-service.ts)。
 
 ```mermaid
 classDiagram
@@ -135,7 +139,7 @@ class N_src_logic_budget_runtime_scope_budget_service_ts_ScopeBudgetService["Sco
   +Admit()
   +PreflightRequest()
   -usage
-  -policy
+  -policy : function
   -liveMain
   -RequestObservation()
   -LegacyObservation()
@@ -146,6 +150,8 @@ N_src_logic_budget_runtime_scope_budget_service_ts ..> N_src_logic_budget_runtim
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../rules/model-request-budget-rules.ts](../rules/model-request-budget-rules.ts)、[../rules/model-request-budget-storage.ts](../rules/model-request-budget-storage.ts)、[../rules/model-request-budget.ts](../rules/model-request-budget.ts)、[../rules/scope-budget.ts](../rules/scope-budget.ts)、[scope-usage-service.ts](scope-usage-service.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../../execution/rules/scope-usage.ts](../../execution/rules/scope-usage.ts)、[../../tasks/rules/dispatch-scope.ts](../../tasks/rules/dispatch-scope.ts)。
 
 ### scope-usage-service.ts
+
+[查看源码](scope-usage-service.ts)。
 
 ```mermaid
 classDiagram

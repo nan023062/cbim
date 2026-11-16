@@ -125,9 +125,11 @@ taskConversationTarget 只把当前 workspace/root 下唯一任务映射为已�
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### agent-call-details.css
+
+[查看源码](agent-call-details.css)。
 
 ```mermaid
 classDiagram
@@ -137,6 +139,8 @@ class N_src_view_execution_view_agent_call_details_css["agent-call-details.css"]
 ```
 
 ### AgentCallDetails.tsx
+
+[查看源码](AgentCallDetails.tsx)。
 
 ```mermaid
 classDiagram
@@ -152,6 +156,8 @@ class N_src_view_execution_view_AgentCallDetails_tsx["AgentCallDetails.tsx"] {
 
 ### ComposerAttachments.tsx
 
+[查看源码](ComposerAttachments.tsx)。
+
 ```mermaid
 classDiagram
 class N_src_view_execution_view_ComposerAttachments_tsx["ComposerAttachments.tsx"] {
@@ -164,6 +170,8 @@ class N_src_view_execution_view_ComposerAttachments_tsx["ComposerAttachments.tsx
 
 ### knowledge-tool-view.css
 
+[查看源码](knowledge-tool-view.css)。
+
 ```mermaid
 classDiagram
 class N_src_view_execution_view_knowledge_tool_view_css["knowledge-tool-view.css"] {
@@ -172,6 +180,8 @@ class N_src_view_execution_view_knowledge_tool_view_css["knowledge-tool-view.css
 ```
 
 ### knowledge-tool-view.ts
+
+[查看源码](knowledge-tool-view.ts)。
 
 ```mermaid
 classDiagram
@@ -185,6 +195,8 @@ class N_src_view_execution_view_knowledge_tool_view_ts["knowledge-tool-view.ts"]
 
 ### MarkdownMessage.tsx
 
+[查看源码](MarkdownMessage.tsx)。
+
 ```mermaid
 classDiagram
 class N_src_view_execution_view_MarkdownMessage_tsx["MarkdownMessage.tsx"] {
@@ -195,6 +207,8 @@ class N_src_view_execution_view_MarkdownMessage_tsx["MarkdownMessage.tsx"] {
 
 ### message-queue.css
 
+[查看源码](message-queue.css)。
+
 ```mermaid
 classDiagram
 class N_src_view_execution_view_message_queue_css["message-queue.css"] {
@@ -203,6 +217,8 @@ class N_src_view_execution_view_message_queue_css["message-queue.css"] {
 ```
 
 ### MessageQueue.tsx
+
+[查看源码](MessageQueue.tsx)。
 
 ```mermaid
 classDiagram
@@ -216,6 +232,8 @@ class N_src_view_execution_view_MessageQueue_tsx["MessageQueue.tsx"] {
 
 ### QuestionCard.tsx
 
+[查看源码](QuestionCard.tsx)。
+
 ```mermaid
 classDiagram
 class N_src_view_execution_view_QuestionCard_tsx["QuestionCard.tsx"] {
@@ -228,6 +246,8 @@ class N_src_view_execution_view_QuestionCard_tsx["QuestionCard.tsx"] {
 
 ### questions.css
 
+[查看源码](questions.css)。
+
 ```mermaid
 classDiagram
 class N_src_view_execution_view_questions_css["questions.css"] {
@@ -236,6 +256,8 @@ class N_src_view_execution_view_questions_css["questions.css"] {
 ```
 
 ### repairStreamingMarkdown.ts
+
+[查看源码](repairStreamingMarkdown.ts)。
 
 ```mermaid
 classDiagram
@@ -248,14 +270,16 @@ class N_src_view_execution_view_repairStreamingMarkdown_ts["repairStreamingMarkd
 
 ### team-conversations.ts
 
+[查看源码](team-conversations.ts)。
+
 ```mermaid
 classDiagram
 class N_src_view_execution_view_team_conversations_ts["team-conversations.ts"] {
   <<module>>
   +teamConversations()
   +memberConversationTasks()
-  +teamConversationKey()
   +taskConversationTarget()
+  +teamConversationKey : function
 }
 ```
 
@@ -278,6 +302,8 @@ N_src_view_execution_view_team_conversations_ts ..> N_src_view_execution_view_te
 
 ### tool-failure-view.ts
 
+[查看源码](tool-failure-view.ts)。
+
 ```mermaid
 classDiagram
 class N_src_view_execution_view_tool_failure_view_ts["tool-failure-view.ts"] {
@@ -290,6 +316,8 @@ class N_src_view_execution_view_tool_failure_view_ts["tool-failure-view.ts"] {
 
 ### tool-labels.ts
 
+[查看源码](tool-labels.ts)。
+
 ```mermaid
 classDiagram
 class N_src_view_execution_view_tool_labels_ts["tool-labels.ts"] {
@@ -300,6 +328,8 @@ class N_src_view_execution_view_tool_labels_ts["tool-labels.ts"] {
 
 
 ### ToolTimeline.tsx
+
+[查看源码](ToolTimeline.tsx)。
 
 ```mermaid
 classDiagram
@@ -312,6 +342,8 @@ class N_src_view_execution_view_ToolTimeline_tsx["ToolTimeline.tsx"] {
 直接依赖：[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../components/RepositoryScopeDetails.tsx](../components/RepositoryScopeDetails.tsx)、[knowledge-tool-view.css](knowledge-tool-view.css)、[knowledge-tool-view.ts](knowledge-tool-view.ts)、[tool-failure-view.ts](tool-failure-view.ts)、[tool-labels.ts](tool-labels.ts)。
 
 ### transcript.ts
+
+[查看源码](transcript.ts)。
 
 ```mermaid
 classDiagram
@@ -343,6 +375,8 @@ N_src_view_execution_view_transcript_ts ..> N_src_view_execution_view_transcript
 直接依赖：[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)。
 
 ### WorkStatus.tsx
+
+[查看源码](WorkStatus.tsx)。
 
 ```mermaid
 classDiagram

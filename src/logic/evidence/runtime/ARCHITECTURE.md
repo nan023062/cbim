@@ -89,9 +89,11 @@ RecursiveInspectionEvidence 只读核证完整递归核实周期。精确 root f
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### agent-artifact-verification.ts
+
+[查看源码](agent-artifact-verification.ts)。
 
 ```mermaid
 classDiagram
@@ -108,6 +110,8 @@ N_src_logic_evidence_runtime_agent_artifact_verification_ts ..> N_src_logic_evid
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../rules/artifact-baseline.ts](../rules/artifact-baseline.ts)、[../rules/artifact-evidence.ts](../rules/artifact-evidence.ts)。
 
 ### artifact-report-service.ts
+
+[查看源码](artifact-report-service.ts)。
 
 ```mermaid
 classDiagram
@@ -139,6 +143,8 @@ N_src_logic_evidence_runtime_artifact_report_service_ts ..> N_src_logic_evidence
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../rules/artifact-baseline.ts](../rules/artifact-baseline.ts)、[../rules/artifact-evidence.ts](../rules/artifact-evidence.ts)、[recursive-evidence-source.ts](recursive-evidence-source.ts)、[../../execution/rules/business-run.ts](../../execution/rules/business-run.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../runtime/monitoring/member-events.ts](../../runtime/monitoring/member-events.ts)、[../../tasks/rules/dispatch-execution.ts](../../tasks/rules/dispatch-execution.ts)。
 
 ### command-verification-service.ts
+
+[查看源码](command-verification-service.ts)。
 
 ```mermaid
 classDiagram
@@ -196,6 +202,8 @@ N_src_logic_evidence_runtime_command_verification_service_ts ..> N_src_logic_evi
 
 ### effect-controlled-file.ts
 
+[查看源码](effect-controlled-file.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_evidence_runtime_effect_controlled_file_ts["effect-controlled-file.ts"] {
@@ -222,6 +230,8 @@ N_src_logic_evidence_runtime_effect_controlled_file_ts ..> N_src_logic_evidence_
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../file-operations/rules/controlled-file-operation.ts](../../file-operations/rules/controlled-file-operation.ts)、[../../file-operations/rules/controlled-file-rules.ts](../../file-operations/rules/controlled-file-rules.ts)。
 
 ### effect-observation-service.ts
+
+[查看源码](effect-observation-service.ts)。
 
 成员 1/2（同名节点为同一声明，跨图合并阅读）。
 
@@ -287,10 +297,12 @@ class N_src_logic_evidence_runtime_effect_observation_service_ts_EffectObservati
 N_src_logic_evidence_runtime_effect_observation_service_ts ..> N_src_logic_evidence_runtime_effect_observation_service_ts_EffectObservationService : 声明
 ```
 
-继承／实现来源：`EffectSourcePorts` → [effect-source.ts](effect-source.ts)。
+继承／实现来源：`EffectSourcePorts` → [effect-source.ts](effect-source.ts)（声明 `EffectSourcePorts`）。
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../rules/artifact-baseline.ts](../rules/artifact-baseline.ts)、[../rules/artifact-evidence.ts](../rules/artifact-evidence.ts)、[command-verification-service.ts](command-verification-service.ts)、[effect-controlled-file.ts](effect-controlled-file.ts)、[effect-source.ts](effect-source.ts)、[../../file-operations/rules/controlled-file-operation.ts](../../file-operations/rules/controlled-file-operation.ts)、[../../knowledge/rules/knowledge-write-input.ts](../../knowledge/rules/knowledge-write-input.ts)、[../../knowledge/rules/knowledge-write-observation.ts](../../knowledge/rules/knowledge-write-observation.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../tasks/rules/command-verification.ts](../../tasks/rules/command-verification.ts)、[../../tasks/rules/effect-observation-rules.ts](../../tasks/rules/effect-observation-rules.ts)、[../../tasks/rules/effect-observation.ts](../../tasks/rules/effect-observation.ts)、[../../tasks/rules/persistent-write-input.ts](../../tasks/rules/persistent-write-input.ts)、[../../tasks/rules/persistent-write-observation.ts](../../tasks/rules/persistent-write-observation.ts)。
 
 ### effect-source.ts
+
+[查看源码](effect-source.ts)。
 
 ```mermaid
 classDiagram
@@ -326,6 +338,8 @@ N_src_logic_evidence_runtime_effect_source_ts ..> N_src_logic_evidence_runtime_e
 
 ### execution-report-facts.ts
 
+[查看源码](execution-report-facts.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_evidence_runtime_execution_report_facts_ts["execution-report-facts.ts"] {
@@ -350,6 +364,8 @@ N_src_logic_evidence_runtime_execution_report_facts_ts ..> N_src_logic_evidence_
 
 ### execution-report-service.ts
 
+[查看源码](execution-report-service.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_evidence_runtime_execution_report_service_ts["execution-report-service.ts"] {
@@ -360,8 +376,8 @@ class N_src_logic_evidence_runtime_execution_report_service_ts_ExecutionReportSe
   +Read()
   -owner
   -store
-  -inspect
-  -inspectAgent
+  -inspect : function
+  -inspectAgent : function
   -ReadRecursive()
   -Page()
   -Facts()
@@ -376,6 +392,8 @@ N_src_logic_evidence_runtime_execution_report_service_ts ..> N_src_logic_evidenc
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[execution-report-facts.ts](execution-report-facts.ts)、[recursive-evidence-source.ts](recursive-evidence-source.ts)、[../../execution/rules/business-run.ts](../../execution/rules/business-run.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../tasks/rules/dispatch-execution.ts](../../tasks/rules/dispatch-execution.ts)、[../../tasks/rules/execution-report.ts](../../tasks/rules/execution-report.ts)、[../../tasks/rules/queued-task-cancel.ts](../../tasks/rules/queued-task-cancel.ts)。
 
 ### human-decision-evidence.ts
+
+[查看源码](human-decision-evidence.ts)。
 
 ```mermaid
 classDiagram
@@ -410,14 +428,17 @@ class N_src_logic_evidence_runtime_human_decision_evidence_ts_HumanEvidenceLogs[
 N_src_logic_evidence_runtime_human_decision_evidence_ts ..> N_src_logic_evidence_runtime_human_decision_evidence_ts_HumanEvidenceLogs : 声明
 class N_src_logic_evidence_runtime_human_decision_evidence_ts_HumanCandidateValidator["HumanCandidateValidator"] {
   <<type>>
-
+  +调用签名()
 }
 N_src_logic_evidence_runtime_human_decision_evidence_ts ..> N_src_logic_evidence_runtime_human_decision_evidence_ts_HumanCandidateValidator : 声明
 ```
 
+匿名签名（HumanCandidateValidator，不是具名方法）：`(state: DispatchState, scope: DispatchScope, graph: GraphSnapshot, task: TaskNode, knowledgeRevision: string) => Promise<RunSummary>`。
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../rules/artifact-baseline.ts](../rules/artifact-baseline.ts)、[../rules/artifact-evidence.ts](../rules/artifact-evidence.ts)、[../rules/complete-output-evidence.ts](../rules/complete-output-evidence.ts)、[../rules/output-manifest.ts](../rules/output-manifest.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../tasks/rules/dispatch-execution.ts](../../tasks/rules/dispatch-execution.ts)、[../../tasks/rules/dispatch-scope.ts](../../tasks/rules/dispatch-scope.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../tasks/rules/human-continuation-rules.ts](../../tasks/rules/human-continuation-rules.ts)、[../../tasks/rules/human-continue.ts](../../tasks/rules/human-continue.ts)、[../../tasks/rules/human-decisions.ts](../../tasks/rules/human-decisions.ts)、[../../tasks/rules/scope-goal.ts](../../tasks/rules/scope-goal.ts)、[../../team/runtime/member-workflow.ts](../../team/runtime/member-workflow.ts)。
 
 ### human-evidence-state.ts
+
+[查看源码](human-evidence-state.ts)。
 
 ```mermaid
 classDiagram
@@ -430,6 +451,8 @@ class N_src_logic_evidence_runtime_human_evidence_state_ts["human-evidence-state
 直接依赖：[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)。
 
 ### output-manifest-report-service.ts
+
+[查看源码](output-manifest-report-service.ts)。
 
 ```mermaid
 classDiagram
@@ -461,6 +484,8 @@ N_src_logic_evidence_runtime_output_manifest_report_service_ts ..> N_src_logic_e
 
 ### recursive-evidence-source.ts
 
+[查看源码](recursive-evidence-source.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_evidence_runtime_recursive_evidence_source_ts["recursive-evidence-source.ts"] {
@@ -474,6 +499,8 @@ class N_src_logic_evidence_runtime_recursive_evidence_source_ts["recursive-evide
 
 ### recursive-inspection-evidence.ts
 
+[查看源码](recursive-inspection-evidence.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_evidence_runtime_recursive_inspection_evidence_ts["recursive-inspection-evidence.ts"] {
@@ -484,9 +511,9 @@ class N_src_logic_evidence_runtime_recursive_inspection_evidence_ts_Ports["Ports
   +ValidateActiveInputs()
   +InspectMain()
   +InspectAgent()
-  +normalizeValidationPath
-  +checkValidationFiles
-  +checkManifest
+  +normalizeValidationPath : function
+  +checkValidationFiles : function
+  +checkManifest : function
 }
 N_src_logic_evidence_runtime_recursive_inspection_evidence_ts ..> N_src_logic_evidence_runtime_recursive_inspection_evidence_ts_Ports : 声明
 class N_src_logic_evidence_runtime_recursive_inspection_evidence_ts_RecursiveInspectionEvidence["RecursiveInspectionEvidence"] {

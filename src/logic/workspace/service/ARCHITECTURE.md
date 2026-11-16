@@ -218,9 +218,11 @@ main-module-ownership-tools 使用 execution 的 MainToolContext，主上下文�
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### architecture-service.ts
+
+[查看源码](architecture-service.ts)。
 
 ```mermaid
 classDiagram
@@ -240,6 +242,8 @@ N_src_logic_workspace_service_architecture_service_ts ..> N_src_logic_workspace_
 直接依赖：[../../knowledge/rules/object-crud.ts](../../knowledge/rules/object-crud.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)。
 
 ### catalog.ts
+
+[查看源码](catalog.ts)。
 
 ```mermaid
 classDiagram
@@ -265,6 +269,8 @@ N_src_logic_workspace_service_catalog_ts ..> N_src_logic_workspace_service_catal
 
 ### main-module-ownership-tools.ts
 
+[查看源码](main-module-ownership-tools.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_workspace_service_main_module_ownership_tools_ts["main-module-ownership-tools.ts"] {
@@ -276,6 +282,8 @@ class N_src_logic_workspace_service_main_module_ownership_tools_ts["main-module-
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../dispatch/runtime/owner-execution-service.ts](../../dispatch/runtime/owner-execution-service.ts)、[../../execution/rules/conversation-binding.ts](../../execution/rules/conversation-binding.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../tasks/rules/types.ts](../../tasks/rules/types.ts)、[../../team/service/workspace-members.ts](../../team/service/workspace-members.ts)、[../rules/module-ownership-rules.ts](../rules/module-ownership-rules.ts)、[../rules/module-ownership-tools.ts](../rules/module-ownership-tools.ts)、[../rules/module-ownership.ts](../rules/module-ownership.ts)、[module-ownerships.ts](module-ownerships.ts)。
 
 ### module-ownerships.ts
+
+[查看源码](module-ownerships.ts)。
 
 成员 1/2（同名节点为同一声明，跨图合并阅读）。
 
@@ -302,7 +310,7 @@ class N_src_logic_workspace_service_module_ownerships_ts_ModuleOwnerships["Modul
   +Commit()
   -owner
   -store
-  -isCurrent
+  -isCurrent : function
   -Identity()
   -Assert()
   -Workspace()
@@ -336,6 +344,8 @@ N_src_logic_workspace_service_module_ownerships_ts ..> N_src_logic_workspace_ser
 
 ### paths.ts
 
+[查看源码](paths.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_workspace_service_paths_ts["paths.ts"] {
@@ -358,10 +368,12 @@ class N_src_logic_workspace_service_paths_ts_external_StoragePaths["StoragePaths
 N_src_logic_workspace_service_paths_ts_external_StoragePaths <|.. N_src_logic_workspace_service_paths_ts_Paths
 ```
 
-继承／实现来源：`StoragePaths` → [../ports/paths.ts](../ports/paths.ts)。
+继承／实现来源：`StoragePaths` → [../ports/paths.ts](../ports/paths.ts)（声明 `StoragePaths`）。
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../ports/paths.ts](../ports/paths.ts)。
 
 ### source-browser.ts
+
+[查看源码](source-browser.ts)。
 
 ```mermaid
 classDiagram
@@ -392,6 +404,8 @@ N_src_logic_workspace_service_source_browser_ts ..> N_src_logic_workspace_servic
 
 ### workspace.ts
 
+[查看源码](workspace.ts)。
+
 成员 1/3（同名节点为同一声明，跨图合并阅读）。
 
 ```mermaid
@@ -403,7 +417,7 @@ class N_src_logic_workspace_service_workspace_ts_Workspace["Workspace"] {
   +entry
   +paths
   +rules
-  +fault
+  +fault : function
   +objects
   +governance
   +instanceId
@@ -434,7 +448,7 @@ class N_src_logic_workspace_service_workspace_ts["workspace.ts"] {
 class N_src_logic_workspace_service_workspace_ts_Workspace["Workspace"] {
   +Assert()
   +AttachDispatchStore()
-  +dispatchStore
+  +dispatchStore : get
   +Open()
   +Read()
   +Snapshot()
@@ -483,7 +497,7 @@ class N_src_logic_workspace_service_workspace_ts_external_KnowledgeWorkspace["Kn
 N_src_logic_workspace_service_workspace_ts_external_KnowledgeWorkspace <|.. N_src_logic_workspace_service_workspace_ts_Workspace
 ```
 
-继承／实现来源：`KnowledgeWorkspace` → [../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)。
+继承／实现来源：`KnowledgeWorkspace` → [../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)（声明 `KnowledgeWorkspace`）。
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/platform/node/locking.ts](../../../core/platform/node/locking.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../dispatch/storage/dispatch-store.ts](../../dispatch/storage/dispatch-store.ts)、[../../governance/service/module-governance.ts](../../governance/service/module-governance.ts)、[../../knowledge/rules/knowledge.ts](../../knowledge/rules/knowledge.ts)、[../../knowledge/rules/planned-commit.ts](../../knowledge/rules/planned-commit.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../knowledge/rules/types.ts](../../knowledge/rules/types.ts)、[../../knowledge/service/knowledge-sources.ts](../../knowledge/service/knowledge-sources.ts)、[../../knowledge/storage/governance-port.ts](../../knowledge/storage/governance-port.ts)、[../../knowledge/storage/knowledge-store.ts](../../knowledge/storage/knowledge-store.ts)、[../../knowledge/storage/object-storage.ts](../../knowledge/storage/object-storage.ts)、[../contracts.ts](../contracts.ts)、[paths.ts](paths.ts)。
 
 ### 本目录调用边界

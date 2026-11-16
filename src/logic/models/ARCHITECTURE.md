@@ -88,7 +88,7 @@ snapshot.ts 持有生成模型的公开历史快照字段和容量约束，embed
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ```mermaid
 classDiagram
@@ -159,6 +159,8 @@ N_src_logic_models_provider_connections_ts ..> N_src_logic_models_provider_prese
 
 ### catalog.ts
 
+[查看源码](catalog.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_models_catalog_ts["catalog.ts"] {
@@ -187,6 +189,8 @@ N_src_logic_models_catalog_ts ..> N_src_logic_models_catalog_ts_DiscoveredModel 
 
 
 ### config.ts
+
+[查看源码](config.ts)。
 
 ```mermaid
 classDiagram
@@ -244,6 +248,8 @@ N_src_logic_models_config_ts ..> N_src_logic_models_config_ts_LlmSettings : 声�
 
 ### embedding.ts
 
+[查看源码](embedding.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_models_embedding_ts["embedding.ts"] {
@@ -277,6 +283,8 @@ N_src_logic_models_embedding_ts ..> N_src_logic_models_embedding_ts_ResolvedEmbe
 
 ### endpoint.ts
 
+[查看源码](endpoint.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_models_endpoint_ts["endpoint.ts"] {
@@ -287,16 +295,25 @@ class N_src_logic_models_endpoint_ts["endpoint.ts"] {
 
 ### index.ts
 
+[查看源码](index.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_models_index_ts["index.ts"] {
   <<module>>
+  +parseModelCatalog()
+  +selectProviderConnection()
+  +identifyProvider()
+  +checkGenerationSnapshot : function
 }
 ```
+
 直接依赖：[catalog.ts](catalog.ts)、[config.ts](config.ts)、[embedding.ts](embedding.ts)、[endpoint.ts](endpoint.ts)、[ports.ts](ports.ts)、[provider-connections.ts](provider-connections.ts)、[provider-presets.ts](provider-presets.ts)、[snapshot.ts](snapshot.ts)。
 
 
 ### ports.ts
+
+[查看源码](ports.ts)。
 
 ```mermaid
 classDiagram
@@ -321,6 +338,8 @@ N_src_logic_models_ports_ts ..> N_src_logic_models_ports_ts_ResolvedModelOperati
 
 
 ### provider-connections.ts
+
+[查看源码](provider-connections.ts)。
 
 ```mermaid
 classDiagram
@@ -360,6 +379,8 @@ N_src_logic_models_provider_connections_ts ..> N_src_logic_models_provider_conne
 
 ### provider-presets.ts
 
+[查看源码](provider-presets.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_models_provider_presets_ts["provider-presets.ts"] {
@@ -389,11 +410,13 @@ N_src_logic_models_provider_presets_ts ..> N_src_logic_models_provider_presets_t
 
 ### snapshot.ts
 
+[查看源码](snapshot.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_models_snapshot_ts["snapshot.ts"] {
   <<module>>
-  +checkGenerationSnapshot()
+  +checkGenerationSnapshot : function
 }
 ```
 

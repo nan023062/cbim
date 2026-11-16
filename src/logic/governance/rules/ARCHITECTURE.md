@@ -103,9 +103,11 @@
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### module-governance-feedback.ts
+
+[查看源码](module-governance-feedback.ts)。
 
 ```mermaid
 classDiagram
@@ -140,6 +142,8 @@ N_src_logic_governance_rules_module_governance_feedback_ts ..> N_src_logic_gover
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[module-governance-rules.ts](module-governance-rules.ts)、[module-governance.ts](module-governance.ts)。
 
 ### module-governance-rules.ts
+
+[查看源码](module-governance-rules.ts)。
 
 ```mermaid
 classDiagram
@@ -203,6 +207,8 @@ N_src_logic_governance_rules_module_governance_rules_ts ..> N_src_logic_governan
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[module-governance.ts](module-governance.ts)。
 
 ### module-governance-tools.ts
+
+[查看源码](module-governance-tools.ts)。
 
 ```mermaid
 classDiagram
@@ -302,6 +308,8 @@ N_src_logic_governance_rules_module_governance_tools_ts ..> N_src_logic_governan
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[module-governance-rules.ts](module-governance-rules.ts)、[module-governance.ts](module-governance.ts)。
 
 ### module-governance.ts
+
+[查看源码](module-governance.ts)。
 
 ```mermaid
 classDiagram

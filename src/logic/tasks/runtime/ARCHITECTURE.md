@@ -98,9 +98,11 @@ ScopeReplanService 对递归来源要求原 AgentBusinessRun.request，缺少原
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### main-command-request.ts
+
+[查看源码](main-command-request.ts)。
 
 ```mermaid
 classDiagram
@@ -132,6 +134,8 @@ N_src_logic_tasks_runtime_main_command_request_ts ..> N_src_logic_tasks_runtime_
 
 ### office-history-service.ts
 
+[查看源码](office-history-service.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tasks_runtime_office_history_service_ts["office-history-service.ts"] {
@@ -146,7 +150,7 @@ N_src_logic_tasks_runtime_office_history_service_ts ..> N_src_logic_tasks_runtim
 class N_src_logic_tasks_runtime_office_history_service_ts_Entry["Entry"] {
   <<interface>>
   +reference
-  +read
+  +read : function
 }
 N_src_logic_tasks_runtime_office_history_service_ts ..> N_src_logic_tasks_runtime_office_history_service_ts_Entry : 声明
 class N_src_logic_tasks_runtime_office_history_service_ts_OfficeHistoryService["OfficeHistoryService"] {
@@ -164,6 +168,8 @@ N_src_logic_tasks_runtime_office_history_service_ts ..> N_src_logic_tasks_runtim
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../runtime/monitoring/public-run-events.ts](../../runtime/monitoring/public-run-events.ts)、[../rules/dispatch-execution.ts](../rules/dispatch-execution.ts)、[../rules/graph-types.ts](../rules/graph-types.ts)、[../rules/office-history.ts](../rules/office-history.ts)、[../rules/scope-public.ts](../rules/scope-public.ts)。
 
 ### queued-dependency-addition-service.ts
+
+[查看源码](queued-dependency-addition-service.ts)。
 
 ```mermaid
 classDiagram
@@ -185,6 +191,8 @@ N_src_logic_tasks_runtime_queued_dependency_addition_service_ts ..> N_src_logic_
 
 ### queued-dependency-replacement-service.ts
 
+[查看源码](queued-dependency-replacement-service.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tasks_runtime_queued_dependency_replacement_service_ts["queued-dependency-replacement-service.ts"] {
@@ -204,6 +212,8 @@ N_src_logic_tasks_runtime_queued_dependency_replacement_service_ts ..> N_src_log
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../../dispatch/runtime/owner-execution-service.ts](../../dispatch/runtime/owner-execution-service.ts)、[../../execution/context/execution-context.ts](../../execution/context/execution-context.ts)、[../rules/graph-types.ts](../rules/graph-types.ts)、[../rules/queued-dependency-replacement-rules.ts](../rules/queued-dependency-replacement-rules.ts)、[../rules/queued-dependency-replacement.ts](../rules/queued-dependency-replacement.ts)、[main-command-request.ts](main-command-request.ts)、[scope-goal-service.ts](scope-goal-service.ts)、[../../team/rules/member-execution-binding.ts](../../team/rules/member-execution-binding.ts)、[../../team/runtime/member-state.ts](../../team/runtime/member-state.ts)。
 
 ### queued-dependency-revision-service.ts
+
+[查看源码](queued-dependency-revision-service.ts)。
 
 ```mermaid
 classDiagram
@@ -225,6 +235,8 @@ N_src_logic_tasks_runtime_queued_dependency_revision_service_ts ..> N_src_logic_
 
 ### queued-task-cancel-service.ts
 
+[查看源码](queued-task-cancel-service.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tasks_runtime_queued_task_cancel_service_ts["queued-task-cancel-service.ts"] {
@@ -243,6 +255,8 @@ N_src_logic_tasks_runtime_queued_task_cancel_service_ts ..> N_src_logic_tasks_ru
 
 ### scope-active-input-evidence.ts
 
+[查看源码](scope-active-input-evidence.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tasks_runtime_scope_active_input_evidence_ts["scope-active-input-evidence.ts"] {
@@ -254,6 +268,8 @@ class N_src_logic_tasks_runtime_scope_active_input_evidence_ts["scope-active-inp
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../rules/dispatch-scope.ts](../rules/dispatch-scope.ts)、[../rules/scope-active-input-rules.ts](../rules/scope-active-input-rules.ts)、[../rules/scope-active-input.ts](../rules/scope-active-input.ts)、[../rules/scope-goal.ts](../rules/scope-goal.ts)。
 
 ### scope-active-input-service.ts
+
+[查看源码](scope-active-input-service.ts)。
 
 ```mermaid
 classDiagram
@@ -289,6 +305,8 @@ N_src_logic_tasks_runtime_scope_active_input_service_ts ..> N_src_logic_tasks_ru
 
 ### scope-continuation-service.ts
 
+[查看源码](scope-continuation-service.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tasks_runtime_scope_continuation_service_ts["scope-continuation-service.ts"] {
@@ -323,6 +341,8 @@ N_src_logic_tasks_runtime_scope_continuation_service_ts ..> N_src_logic_tasks_ru
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../budget/runtime/scope-budget-service.ts](../../budget/runtime/scope-budget-service.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../../dispatch/runtime/owner-execution-service.ts](../../dispatch/runtime/owner-execution-service.ts)、[../../execution/ports/identity.ts](../../execution/ports/identity.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../rules/dispatch-scope.ts](../rules/dispatch-scope.ts)、[../rules/scope-active-input.ts](../rules/scope-active-input.ts)、[../rules/scope-continuation-attachments.ts](../rules/scope-continuation-attachments.ts)、[../rules/scope-continuation-record.ts](../rules/scope-continuation-record.ts)、[../rules/scope-continuation.ts](../rules/scope-continuation.ts)、[../rules/scope-goal.ts](../rules/scope-goal.ts)、[../rules/scope-run-tracking.ts](../rules/scope-run-tracking.ts)、[../../team/runtime/member-pause-service.ts](../../team/runtime/member-pause-service.ts)。
 
 ### scope-goal-service.ts
+
+[查看源码](scope-goal-service.ts)。
 
 成员 1/3（同名节点为同一声明，跨图合并阅读）。
 
@@ -415,6 +435,8 @@ N_src_logic_tasks_runtime_scope_goal_service_ts ..> N_src_logic_tasks_runtime_sc
 
 ### scope-human-continuation-service.ts
 
+[查看源码](scope-human-continuation-service.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tasks_runtime_scope_human_continuation_service_ts["scope-human-continuation-service.ts"] {
@@ -450,6 +472,8 @@ N_src_logic_tasks_runtime_scope_human_continuation_service_ts ..> N_src_logic_ta
 
 ### scope-human-decision-service.ts
 
+[查看源码](scope-human-decision-service.ts)。
+
 成员 1/2（同名节点为同一声明，跨图合并阅读）。
 
 ```mermaid
@@ -473,7 +497,7 @@ class N_src_logic_tasks_runtime_scope_human_decision_service_ts_ScopeHumanDecisi
   -goals
   -logs
   -ports
-  -assertCurrent
+  -assertCurrent : function
   -Parse()
   -Current()
   -Scope()
@@ -503,6 +527,8 @@ N_src_logic_tasks_runtime_scope_human_decision_service_ts ..> N_src_logic_tasks_
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../../evidence/rules/artifact-baseline.ts](../../evidence/rules/artifact-baseline.ts)、[../../evidence/rules/artifact-evidence.ts](../../evidence/rules/artifact-evidence.ts)、[../../evidence/rules/complete-output-evidence.ts](../../evidence/rules/complete-output-evidence.ts)、[../../evidence/rules/output-manifest.ts](../../evidence/rules/output-manifest.ts)、[../../evidence/runtime/human-decision-evidence.ts](../../evidence/runtime/human-decision-evidence.ts)、[../../evidence/runtime/human-evidence-state.ts](../../evidence/runtime/human-evidence-state.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../rules/dispatch-scope.ts](../rules/dispatch-scope.ts)、[../rules/human-decision-proof.ts](../rules/human-decision-proof.ts)、[../rules/human-decisions.ts](../rules/human-decisions.ts)、[../rules/human-reconsideration.ts](../rules/human-reconsideration.ts)、[../rules/scope-goal.ts](../rules/scope-goal.ts)、[scope-goal-service.ts](scope-goal-service.ts)。
 
 ### scope-recovery-service.ts
+
+[查看源码](scope-recovery-service.ts)。
 
 成员 1/2（同名节点为同一声明，跨图合并阅读）。
 
@@ -570,6 +596,8 @@ N_src_logic_tasks_runtime_scope_recovery_service_ts ..> N_src_logic_tasks_runtim
 
 ### scope-replan-service.ts
 
+[查看源码](scope-replan-service.ts)。
+
 成员 1/2（同名节点为同一声明，跨图合并阅读）。
 
 ```mermaid
@@ -634,6 +662,8 @@ N_src_logic_tasks_runtime_scope_replan_service_ts ..> N_src_logic_tasks_runtime_
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../budget/runtime/scope-budget-service.ts](../../budget/runtime/scope-budget-service.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../../evidence/runtime/effect-observation-service.ts](../../evidence/runtime/effect-observation-service.ts)、[../../evidence/runtime/effect-source.ts](../../evidence/runtime/effect-source.ts)、[../../evidence/runtime/execution-report-service.ts](../../evidence/runtime/execution-report-service.ts)、[../../execution/context/dispatch-context.ts](../../execution/context/dispatch-context.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../rules/dispatch-scope.ts](../rules/dispatch-scope.ts)、[../rules/effect-observation.ts](../rules/effect-observation.ts)、[../rules/fresh-context.ts](../rules/fresh-context.ts)、[../rules/scope-goal.ts](../rules/scope-goal.ts)、[../rules/scope-replan.ts](../rules/scope-replan.ts)、[../rules/scope-run-tracking.ts](../rules/scope-run-tracking.ts)、[scope-goal-service.ts](scope-goal-service.ts)。
 
 ### topic-interruption-service.ts
+
+[查看源码](topic-interruption-service.ts)。
 
 ```mermaid
 classDiagram

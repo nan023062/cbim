@@ -48,9 +48,11 @@
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### isolated-node-protocol.ts
+
+[查看源码](isolated-node-protocol.ts)。
 
 ```mermaid
 classDiagram
@@ -82,6 +84,8 @@ N_src_logic_file_operations_platform_isolation_isolated_node_protocol_ts ..> N_s
 
 
 ### isolated-node-win32.ts
+
+[查看源码](isolated-node-win32.ts)。
 
 ```mermaid
 classDiagram
@@ -165,6 +169,8 @@ N_src_logic_file_operations_platform_isolation_isolated_node_win32_ts ..> N_src_
 
 ### isolated-node.ts
 
+[查看源码](isolated-node.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_file_operations_platform_isolation_isolated_node_ts["isolated-node.ts"] {
@@ -182,10 +188,10 @@ class N_src_logic_file_operations_platform_isolation_isolated_node_ts_IsolatedNo
   <<interface>>
   +executable
   +koffiPath
-  +onStarted
+  +onStarted : function
   +lifecycle
-  +onCleanupPending
-  +onSettled
+  +onCleanupPending : function
+  +onSettled : function
 }
 N_src_logic_file_operations_platform_isolation_isolated_node_ts ..> N_src_logic_file_operations_platform_isolation_isolated_node_ts_IsolatedNodeOptions : 声明
 ```
@@ -193,6 +199,8 @@ N_src_logic_file_operations_platform_isolation_isolated_node_ts ..> N_src_logic_
 直接依赖：[isolated-node-protocol.ts](isolated-node-protocol.ts)、[isolated-node-win32.ts](isolated-node-win32.ts)、[isolation-record.ts](isolation-record.ts)、[isolation-recovery-win32.ts](isolation-recovery-win32.ts)。
 
 ### isolation-record.ts
+
+[查看源码](isolation-record.ts)。
 
 ```mermaid
 classDiagram
@@ -244,6 +252,8 @@ N_src_logic_file_operations_platform_isolation_isolation_record_ts ..> N_src_log
 直接依赖：[../../rules/controlled-file-operation.ts](../../rules/controlled-file-operation.ts)、[../../rules/isolated-execution-recovery.ts](../../rules/isolated-execution-recovery.ts)。
 
 ### isolation-records.ts
+
+[查看源码](isolation-records.ts)。
 
 ```mermaid
 classDiagram
@@ -297,6 +307,8 @@ N_src_logic_file_operations_platform_isolation_isolation_records_ts ..> N_src_lo
 直接依赖：[../../../../core/errors.ts](../../../../core/errors.ts)、[../../../../core/platform/node/serialization.ts](../../../../core/platform/node/serialization.ts)、[../../../execution/ports/identity.ts](../../../execution/ports/identity.ts)、[isolation-record.ts](isolation-record.ts)。
 
 ### isolation-recovery-win32.ts
+
+[查看源码](isolation-recovery-win32.ts)。
 
 成员 1/2（同名节点为同一声明，跨图合并阅读）。
 

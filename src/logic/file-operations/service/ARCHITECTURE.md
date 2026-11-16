@@ -53,9 +53,11 @@ ControlledFiles 的 operations 组合 utility.InFlightOperations，只跟踪原�
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### artifact-transitions.ts
+
+[查看源码](artifact-transitions.ts)。
 
 ```mermaid
 classDiagram
@@ -68,6 +70,8 @@ class N_src_logic_file_operations_service_artifact_transitions_ts["artifact-tran
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../execution/rules/capabilities/run-artifact-transition.ts](../../execution/rules/capabilities/run-artifact-transition.ts)、[../platform/files/controlled-file-protocol.ts](../platform/files/controlled-file-protocol.ts)、[../../workspace/service/workspace.ts](../../workspace/service/workspace.ts)。
 
 ### controlled-files.ts
+
+[查看源码](controlled-files.ts)。
 
 成员 1/2（同名节点为同一声明，跨图合并阅读）。
 
@@ -89,8 +93,8 @@ class N_src_logic_file_operations_service_controlled_files_ts_ControlledFiles["C
   -store
   -lease
   -transport
-  -inspect
-  -isCurrent
+  -inspect : function
+  -isCurrent : function
   -blobs
   -closed
 }
@@ -126,6 +130,8 @@ N_src_logic_file_operations_service_controlled_files_ts ..> N_src_logic_file_ope
 
 ### isolated-executions.ts
 
+[查看源码](isolated-executions.ts)。
+
 成员 1/2（同名节点为同一声明，跨图合并阅读）。
 
 ```mermaid
@@ -143,8 +149,8 @@ class N_src_logic_file_operations_service_isolated_executions_ts_IsolatedExecuti
   -owner
   -store
   -lease
-  -inspect
-  -isCurrent
+  -inspect : function
+  -isCurrent : function
   -tail
   -closed
   -Assert()

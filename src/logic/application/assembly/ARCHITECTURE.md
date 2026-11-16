@@ -168,9 +168,11 @@ Agent 业务装配将原 message/acceptance 冻结到实际登记。新修复调
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### agent-business.ts
+
+[查看源码](agent-business.ts)。
 
 ```mermaid
 classDiagram
@@ -198,6 +200,8 @@ N_src_logic_application_assembly_agent_business_ts ..> N_src_logic_application_a
 
 ### agent-calls.ts
 
+[查看源码](agent-calls.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_application_assembly_agent_calls_ts["agent-calls.ts"] {
@@ -224,8 +228,8 @@ class N_src_logic_application_assembly_agent_calls_ts_AgentCallAssemblyInput["Ag
   +dispatch
   +requestBudgets
   +models
-  +authorizeNative
-  +artifactTransitions
+  +authorizeNative : function
+  +artifactTransitions : function
 }
 N_src_logic_application_assembly_agent_calls_ts ..> N_src_logic_application_assembly_agent_calls_ts_AgentCallAssemblyInput : 声明
 ```
@@ -233,6 +237,8 @@ N_src_logic_application_assembly_agent_calls_ts ..> N_src_logic_application_asse
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../agents/contracts.ts](../../agents/contracts.ts)、[../../agents/index.ts](../../agents/index.ts)、[agent-business.ts](agent-business.ts)、[execution-admission.ts](execution-admission.ts)、[../../budget/rules/request-budget.ts](../../budget/rules/request-budget.ts)、[../../budget/runtime/model-request-budget-service.ts](../../budget/runtime/model-request-budget-service.ts)、[../../dispatch/runtime/dispatch-service.ts](../../dispatch/runtime/dispatch-service.ts)、[../../engines/index.ts](../../engines/index.ts)、[../../engines/service/index.ts](../../engines/service/index.ts)、[../../execution/assembly/agent-call-scheduler.ts](../../execution/assembly/agent-call-scheduler.ts)、[../../execution/assembly/loop-engine.ts](../../execution/assembly/loop-engine.ts)、[../../execution/rules/conversation-binding.ts](../../execution/rules/conversation-binding.ts)、[../../execution/rules/storage.ts](../../execution/rules/storage.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../team/rules/workspace-member-rules.ts](../../team/rules/workspace-member-rules.ts)、[../../team/rules/workspace-member.ts](../../team/rules/workspace-member.ts)、[../../team/service/workspace-members.ts](../../team/service/workspace-members.ts)、[../../tools/runtime/office-history-tools.ts](../../tools/runtime/office-history-tools.ts)、[../../workspace/service/workspace.ts](../../workspace/service/workspace.ts)。
 
 ### execution-admission.ts
+
+[查看源码](execution-admission.ts)。
 
 ```mermaid
 classDiagram
@@ -262,6 +268,8 @@ N_src_logic_application_assembly_execution_admission_ts ..> N_src_logic_applicat
 
 ### execution.ts
 
+[查看源码](execution.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_application_assembly_execution_ts["execution.ts"] {
@@ -273,6 +281,8 @@ class N_src_logic_application_assembly_execution_ts["execution.ts"] {
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/locking.ts](../../../core/platform/node/locking.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[agent-business.ts](agent-business.ts)、[agent-calls.ts](agent-calls.ts)、[execution-admission.ts](execution-admission.ts)、[../../budget/runtime/model-request-budget-service.ts](../../budget/runtime/model-request-budget-service.ts)、[../../connectors/service/repository-connections.ts](../../connectors/service/repository-connections.ts)、[../../conversation/runtime/execution-manager.ts](../../conversation/runtime/execution-manager.ts)、[../../dispatch/runtime/auto-collaboration.ts](../../dispatch/runtime/auto-collaboration.ts)、[../../dispatch/runtime/dispatch-service.ts](../../dispatch/runtime/dispatch-service.ts)、[../../engines/service/index.ts](../../engines/service/index.ts)、[../../execution/admission/workspace-lease.ts](../../execution/admission/workspace-lease.ts)、[../../execution/assembly/loop-engine.ts](../../execution/assembly/loop-engine.ts)、[../../execution/platform/tool-guard.ts](../../execution/platform/tool-guard.ts)、[../../execution/rules/engine-runtime.ts](../../execution/rules/engine-runtime.ts)、[../../execution/storage/run-storage.ts](../../execution/storage/run-storage.ts)、[../../feedback/service/index.ts](../../feedback/service/index.ts)、[../../file-operations/platform/files/controlled-file-protocol.ts](../../file-operations/platform/files/controlled-file-protocol.ts)、[../../file-operations/service/artifact-transitions.ts](../../file-operations/service/artifact-transitions.ts)、[../../governance/service/main-governance-tools.ts](../../governance/service/main-governance-tools.ts)、[../../materials/service/chat-inputs.ts](../../materials/service/chat-inputs.ts)、[../../team/service/main-workspace-member-tools.ts](../../team/service/main-workspace-member-tools.ts)、[../../team/service/workspace-members.ts](../../team/service/workspace-members.ts)、[../../web/index.ts](../../web/index.ts)、[../../workspace/service/main-module-ownership-tools.ts](../../workspace/service/main-module-ownership-tools.ts)、[../../workspace/service/module-ownerships.ts](../../workspace/service/module-ownerships.ts)、[../../workspace/service/workspace.ts](../../workspace/service/workspace.ts)。
 
 ### member-dispatch.ts
+
+[查看源码](member-dispatch.ts)。
 
 ```mermaid
 classDiagram
@@ -286,6 +296,8 @@ class N_src_logic_application_assembly_member_dispatch_ts["member-dispatch.ts"] 
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[execution-admission.ts](execution-admission.ts)、[../../budget/rules/scope-budget.ts](../../budget/rules/scope-budget.ts)、[../../budget/runtime/model-request-budget-service.ts](../../budget/runtime/model-request-budget-service.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../../dispatch/runtime/dispatch-service.ts](../../dispatch/runtime/dispatch-service.ts)、[../../dispatch/storage/request-budget-store.ts](../../dispatch/storage/request-budget-store.ts)、[../../engines/index.ts](../../engines/index.ts)、[../../engines/service/index.ts](../../engines/service/index.ts)、[../../evidence/service/knowledge-effect-reader.ts](../../evidence/service/knowledge-effect-reader.ts)、[../../evidence/service/persistent-effect-reader.ts](../../evidence/service/persistent-effect-reader.ts)、[../../execution/admission/workspace-lease.ts](../../execution/admission/workspace-lease.ts)、[../../execution/assembly/loop-engine.ts](../../execution/assembly/loop-engine.ts)、[../../execution/context/execution-context.ts](../../execution/context/execution-context.ts)、[../../execution/platform/native-session-files.ts](../../execution/platform/native-session-files.ts)、[../../execution/platform/tool-guard.ts](../../execution/platform/tool-guard.ts)、[../../execution/ports/identity.ts](../../execution/ports/identity.ts)、[../../execution/rules/business-run.ts](../../execution/rules/business-run.ts)、[../../execution/rules/engine-runtime.ts](../../execution/rules/engine-runtime.ts)、[../../execution/storage/business-runs.ts](../../execution/storage/business-runs.ts)、[../../execution/storage/run-storage.ts](../../execution/storage/run-storage.ts)、[../../file-operations/platform/files/artifact-files.ts](../../file-operations/platform/files/artifact-files.ts)、[../../file-operations/platform/files/code-check-runner.ts](../../file-operations/platform/files/code-check-runner.ts)、[../../file-operations/platform/files/controlled-file-protocol.ts](../../file-operations/platform/files/controlled-file-protocol.ts)、[../../file-operations/platform/files/output-manifest-files.ts](../../file-operations/platform/files/output-manifest-files.ts)、[../../file-operations/platform/files/scoped-execution-files.ts](../../file-operations/platform/files/scoped-execution-files.ts)、[../../file-operations/service/artifact-transitions.ts](../../file-operations/service/artifact-transitions.ts)、[../../file-operations/service/controlled-files.ts](../../file-operations/service/controlled-files.ts)、[../../file-operations/service/isolated-executions.ts](../../file-operations/service/isolated-executions.ts)、[../../tasks/rules/execution-context.ts](../../tasks/rules/execution-context.ts)、[../../tasks/rules/member-checkpoint.ts](../../tasks/rules/member-checkpoint.ts)、[../../tasks/rules/member-commands.ts](../../tasks/rules/member-commands.ts)、[../../tasks/rules/member-topic-context-rules.ts](../../tasks/rules/member-topic-context-rules.ts)、[../../team/rules/workspace-member-rules.ts](../../team/rules/workspace-member-rules.ts)、[../../team/runtime/member-checkpoint-verifier.ts](../../team/runtime/member-checkpoint-verifier.ts)、[../../team/runtime/member-execution.ts](../../team/runtime/member-execution.ts)、[../../team/service/workspace-members.ts](../../team/service/workspace-members.ts)、[../../tools/rules/native-tools.ts](../../tools/rules/native-tools.ts)、[../../workspace/rules/artifact-scope.ts](../../workspace/rules/artifact-scope.ts)、[../../workspace/rules/execution-scope.ts](../../workspace/rules/execution-scope.ts)、[../../workspace/service/module-ownerships.ts](../../workspace/service/module-ownerships.ts)、[../../workspace/service/workspace.ts](../../workspace/service/workspace.ts)。
 
 ### runtime-monitor.ts
+
+[查看源码](runtime-monitor.ts)。
 
 ```mermaid
 classDiagram

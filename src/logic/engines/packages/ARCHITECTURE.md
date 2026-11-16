@@ -59,9 +59,11 @@ EnginePackages 为每次真实 prepare 登记独立短期进度；显式安装�
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### engine-packages.ts
+
+[查看源码](engine-packages.ts)。
 
 成员 1/2（同名节点为同一声明，跨图合并阅读）。
 
@@ -123,10 +125,12 @@ class N_src_logic_engines_packages_engine_packages_ts_external_EngineRuntimeReso
 N_src_logic_engines_packages_engine_packages_ts_external_EngineRuntimeResolver <|.. N_src_logic_engines_packages_engine_packages_ts_EnginePackages
 ```
 
-继承／实现来源：`EngineRuntimeResolver` → [../../execution/rules/engine-runtime.ts](../../execution/rules/engine-runtime.ts)。
+继承／实现来源：`EngineRuntimeResolver` → [../../execution/rules/engine-runtime.ts](../../execution/rules/engine-runtime.ts)（声明 `EngineRuntimeResolver`）。
 直接依赖：[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../index.ts](../index.ts)、[../../execution/rules/engine-runtime.ts](../../execution/rules/engine-runtime.ts)、[../../updates/engine-artifacts.ts](../../updates/engine-artifacts.ts)。
 
 ### index.ts
+
+[查看源码](index.ts)。
 
 ```mermaid
 classDiagram

@@ -138,9 +138,11 @@ EngineArtifacts.Prepare 通过可选第三参报告 0–100 的准备进度，�
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### desktop-releases.ts
+
+[查看源码](desktop-releases.ts)。
 
 ```mermaid
 classDiagram
@@ -157,6 +159,8 @@ class N_src_logic_updates_service_desktop_releases_ts["desktop-releases.ts"] {
 直接依赖：[../contracts.ts](../contracts.ts)、[release-http.ts](release-http.ts)。
 
 ### desktop-updates.ts
+
+[查看源码](desktop-updates.ts)。
 
 成员 1/2（同名节点为同一声明，跨图合并阅读）。
 
@@ -181,10 +185,10 @@ class N_src_logic_updates_service_desktop_updates_ts_DesktopUpdates["DesktopUpda
   +Download()
   +Install()
   +Close()
-  -latest
+  -latest : function
   -installer
-  -beforeInstall
-  -enginePreparations
+  -beforeInstall : function
+  -enginePreparations : function
   -state
   -busy
   -retryDownloadAfter
@@ -214,6 +218,8 @@ N_src_logic_updates_service_desktop_updates_ts ..> N_src_logic_updates_service_d
 
 ### engine-artifacts.ts
 
+[查看源码](engine-artifacts.ts)。
+
 成员 1/2（同名节点为同一声明，跨图合并阅读）。
 
 ```mermaid
@@ -230,8 +236,8 @@ class N_src_logic_updates_service_engine_artifacts_ts_EngineArtifacts["EngineArt
   -store
   -seed
   -signal
-  -fetchIndex
-  -progress
+  -fetchIndex : function
+  -progress : function
   -historicalKeys
   -queue
   -initialized
@@ -269,10 +275,12 @@ class N_src_logic_updates_service_engine_artifacts_ts_external_EngineArtifactsPo
 N_src_logic_updates_service_engine_artifacts_ts_external_EngineArtifactsPort <|.. N_src_logic_updates_service_engine_artifacts_ts_EngineArtifacts
 ```
 
-继承／实现来源：`EngineArtifactsPort` → [../engine-artifacts.ts](../engine-artifacts.ts)。
+继承／实现来源：`EngineArtifactsPort` → [../engine-artifacts.ts](../engine-artifacts.ts)（声明 `EngineArtifactsPort`）。
 直接依赖：[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../engine-artifacts.ts](../engine-artifacts.ts)、[engine-index.ts](engine-index.ts)、[runtime-download.ts](runtime-download.ts)、[runtime-manifest.ts](runtime-manifest.ts)、[runtime-store.ts](runtime-store.ts)。
 
 ### engine-index.ts
+
+[查看源码](engine-index.ts)。
 
 ```mermaid
 classDiagram
@@ -298,6 +306,8 @@ N_src_logic_updates_service_engine_index_ts ..> N_src_logic_updates_service_engi
 直接依赖：[runtime-manifest.ts](runtime-manifest.ts)。
 
 ### managed-engines.ts
+
+[查看源码](managed-engines.ts)。
 
 ```mermaid
 classDiagram
@@ -326,6 +336,8 @@ N_src_logic_updates_service_managed_engines_ts ..> N_src_logic_updates_service_m
 
 ### nsis-updater.ts
 
+[查看源码](nsis-updater.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_updates_service_nsis_updater_ts["nsis-updater.ts"] {
@@ -349,16 +361,18 @@ class N_src_logic_updates_service_nsis_updater_ts_external_DesktopUpdateInstalle
 N_src_logic_updates_service_nsis_updater_ts_external_DesktopUpdateInstaller <|.. N_src_logic_updates_service_nsis_updater_ts_NsisUpdateInstaller
 ```
 
-继承／实现来源：`DesktopUpdateInstaller` → [desktop-updates.ts](desktop-updates.ts)。
+继承／实现来源：`DesktopUpdateInstaller` → [desktop-updates.ts](desktop-updates.ts)（声明 `DesktopUpdateInstaller`）。
 直接依赖：[../contracts.ts](../contracts.ts)、[desktop-releases.ts](desktop-releases.ts)、[desktop-updates.ts](desktop-updates.ts)。
 
 ### release-http.ts
+
+[查看源码](release-http.ts)。
 
 ```mermaid
 classDiagram
 class N_src_logic_updates_service_release_http_ts["release-http.ts"] {
   <<module>>
-  +releaseRequest()
+  +releaseRequest : function
 }
 ```
 
@@ -369,14 +383,17 @@ class N_src_logic_updates_service_release_http_ts["release-http.ts"] {
 }
 class N_src_logic_updates_service_release_http_ts_ReleaseRequest["ReleaseRequest"] {
   <<type>>
-
+  +调用签名()
 }
 N_src_logic_updates_service_release_http_ts ..> N_src_logic_updates_service_release_http_ts_ReleaseRequest : 声明
 ```
 
+匿名签名（ReleaseRequest，不是具名方法）：`(endpoint: string, options: { method: 'GET'; signal: AbortSignal }) => Promise<{ status: number; data: unknown }>`。
 直接依赖：[../../../core/utility/index.ts](../../../core/utility/index.ts)。
 
 ### restart-profile.ts
+
+[查看源码](restart-profile.ts)。
 
 ```mermaid
 classDiagram
@@ -388,6 +405,8 @@ class N_src_logic_updates_service_restart_profile_ts["restart-profile.ts"] {
 
 
 ### runtime-archive.ts
+
+[查看源码](runtime-archive.ts)。
 
 ```mermaid
 classDiagram
@@ -402,6 +421,8 @@ class N_src_logic_updates_service_runtime_archive_ts["runtime-archive.ts"] {
 
 ### runtime-download.ts
 
+[查看源码](runtime-download.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_updates_service_runtime_download_ts["runtime-download.ts"] {
@@ -415,6 +436,8 @@ class N_src_logic_updates_service_runtime_download_ts["runtime-download.ts"] {
 直接依赖：[../../../core/utility/index.ts](../../../core/utility/index.ts)、[runtime-manifest.ts](runtime-manifest.ts)。
 
 ### runtime-host.ts
+
+[查看源码](runtime-host.ts)。
 
 ```mermaid
 classDiagram
@@ -438,6 +461,8 @@ N_src_logic_updates_service_runtime_host_ts ..> N_src_logic_updates_service_runt
 直接依赖：[../engine-artifacts.ts](../engine-artifacts.ts)、[desktop-updates.ts](desktop-updates.ts)。
 
 ### runtime-journal.ts
+
+[查看源码](runtime-journal.ts)。
 
 ```mermaid
 classDiagram
@@ -466,6 +491,8 @@ N_src_logic_updates_service_runtime_journal_ts ..> N_src_logic_updates_service_r
 
 
 ### runtime-manifest.ts
+
+[查看源码](runtime-manifest.ts)。
 
 ```mermaid
 classDiagram
@@ -532,6 +559,8 @@ N_src_logic_updates_service_runtime_manifest_ts ..> N_src_logic_updates_service_
 
 ### runtime-store.ts
 
+[查看源码](runtime-store.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_updates_service_runtime_store_ts["runtime-store.ts"] {
@@ -551,7 +580,7 @@ class N_src_logic_updates_service_runtime_store_ts_RuntimeStore["RuntimeStore"] 
   +SaveManifest()
   +ReadManifest()
   +Prepare()
-  -download
+  -download : function
   -reuseRoots
   -preparing
   -PreparePackage()
@@ -562,6 +591,8 @@ N_src_logic_updates_service_runtime_store_ts ..> N_src_logic_updates_service_run
 直接依赖：[runtime-archive.ts](runtime-archive.ts)、[runtime-download.ts](runtime-download.ts)、[runtime-manifest.ts](runtime-manifest.ts)。
 
 ### runtime-updates.ts
+
+[查看源码](runtime-updates.ts)。
 
 成员 1/2（同名节点为同一声明，跨图合并阅读）。
 
@@ -594,9 +625,9 @@ class N_src_logic_updates_service_runtime_updates_ts_RuntimeUpdates["RuntimeUpda
   -journal
   -current
   -installer
-  -restart
+  -restart : function
   -sources
-  -usedEngines
+  -usedEngines : function
   -candidate
   -selected
   -prepared
@@ -626,7 +657,7 @@ class N_src_logic_updates_service_runtime_updates_ts_external_DesktopUpdateInsta
 N_src_logic_updates_service_runtime_updates_ts_external_DesktopUpdateInstaller <|.. N_src_logic_updates_service_runtime_updates_ts_RuntimeUpdates
 ```
 
-继承／实现来源：`DesktopUpdateInstaller` → [desktop-updates.ts](desktop-updates.ts)。
+继承／实现来源：`DesktopUpdateInstaller` → [desktop-updates.ts](desktop-updates.ts)（声明 `DesktopUpdateInstaller`）。
 直接依赖：[../contracts.ts](../contracts.ts)、[desktop-releases.ts](desktop-releases.ts)、[desktop-updates.ts](desktop-updates.ts)、[runtime-download.ts](runtime-download.ts)、[runtime-journal.ts](runtime-journal.ts)、[runtime-manifest.ts](runtime-manifest.ts)、[runtime-store.ts](runtime-store.ts)。
 
 ### 本目录调用边界

@@ -148,9 +148,11 @@ GlobalRuntimeManager ..> RuntimeSnapshot : 返回隔离副本
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### global-runtime.ts
+
+[查看源码](global-runtime.ts)。
 
 成员 1/2（同名节点为同一声明，跨图合并阅读）。
 
@@ -227,6 +229,8 @@ N_src_logic_runtime_monitoring_global_runtime_ts ..> N_src_logic_runtime_monitor
 
 ### member-events.ts
 
+[查看源码](member-events.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_runtime_monitoring_member_events_ts["member-events.ts"] {
@@ -259,7 +263,7 @@ class N_src_logic_runtime_monitoring_member_events_ts_MemberEventStreams["Member
   +Append()
   +Read()
   +Clear()
-  -inspect
+  -inspect : function
   -streams
   -Stream()
   -Accept()
@@ -271,6 +275,8 @@ N_src_logic_runtime_monitoring_member_events_ts ..> N_src_logic_runtime_monitori
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../evidence/rules/progress.ts](../../evidence/rules/progress.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[public-run-events.ts](public-run-events.ts)、[../../tasks/rules/dispatch-execution.ts](../../tasks/rules/dispatch-execution.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../tasks/rules/member-events.ts](../../tasks/rules/member-events.ts)。
 
 ### public-run-events.ts
+
+[查看源码](public-run-events.ts)。
 
 ```mermaid
 classDiagram

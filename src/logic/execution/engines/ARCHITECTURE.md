@@ -103,7 +103,7 @@ pi/claude/codex/memory 各有 package.ts，当前适配器版本 1.1.0，与厂�
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ```mermaid
 classDiagram
@@ -156,6 +156,8 @@ class N_src_logic_execution_engines_runtime_binding_ts["runtime-binding.ts"] {
 
 ### native-tools.ts
 
+[查看源码](native-tools.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_execution_engines_native_tools_ts["native-tools.ts"] {
@@ -169,6 +171,8 @@ class N_src_logic_execution_engines_native_tools_ts["native-tools.ts"] {
 
 
 ### run-inactivity.ts
+
+[查看源码](run-inactivity.ts)。
 
 ```mermaid
 classDiagram
@@ -191,6 +195,8 @@ N_src_logic_execution_engines_run_inactivity_ts ..> N_src_logic_execution_engine
 
 
 ### runtime-binding.ts
+
+[查看源码](runtime-binding.ts)。
 
 ```mermaid
 classDiagram

@@ -271,9 +271,11 @@ loop.enqueue 只解析原始文本和模型/附件选择，由 Logic 会话服�
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### agent-history.ts
+
+[查看源码](agent-history.ts)。
 
 ```mermaid
 classDiagram
@@ -307,6 +309,8 @@ N_src_bridge_server_ipc_agent_history_ts ..> N_src_bridge_server_ipc_agent_histo
 
 ### automation-actions.ts
 
+[查看源码](automation-actions.ts)。
+
 ```mermaid
 classDiagram
 class N_src_bridge_server_ipc_automation_actions_ts["automation-actions.ts"] {
@@ -318,6 +322,8 @@ class N_src_bridge_server_ipc_automation_actions_ts["automation-actions.ts"] {
 直接依赖：[../../contracts/automation.ts](../../contracts/automation.ts)、[../../contracts/ipc-call.ts](../../contracts/ipc-call.ts)、[services.ts](services.ts)。
 
 ### chat-handlers.ts
+
+[查看源码](chat-handlers.ts)。
 
 ```mermaid
 classDiagram
@@ -331,6 +337,8 @@ class N_src_bridge_server_ipc_chat_handlers_ts["chat-handlers.ts"] {
 
 ### dispatch-handlers.ts
 
+[查看源码](dispatch-handlers.ts)。
+
 ```mermaid
 classDiagram
 class N_src_bridge_server_ipc_dispatch_handlers_ts["dispatch-handlers.ts"] {
@@ -342,6 +350,8 @@ class N_src_bridge_server_ipc_dispatch_handlers_ts["dispatch-handlers.ts"] {
 直接依赖：[../../contracts/ipc-call.ts](../../contracts/ipc-call.ts)、[../../contracts/ipc-dispatch.ts](../../contracts/ipc-dispatch.ts)、[services.ts](services.ts)。
 
 ### dispatch.ts
+
+[查看源码](dispatch.ts)。
 
 ```mermaid
 classDiagram
@@ -355,6 +365,8 @@ class N_src_bridge_server_ipc_dispatch_ts["dispatch.ts"] {
 
 ### governance-handlers.ts
 
+[查看源码](governance-handlers.ts)。
+
 ```mermaid
 classDiagram
 class N_src_bridge_server_ipc_governance_handlers_ts["governance-handlers.ts"] {
@@ -366,6 +378,8 @@ class N_src_bridge_server_ipc_governance_handlers_ts["governance-handlers.ts"] {
 直接依赖：[../../contracts/ipc-call.ts](../../contracts/ipc-call.ts)、[../../contracts/ipc-governance.ts](../../contracts/ipc-governance.ts)、[services.ts](services.ts)。
 
 ### loop-handlers.ts
+
+[查看源码](loop-handlers.ts)。
 
 ```mermaid
 classDiagram
@@ -379,6 +393,8 @@ class N_src_bridge_server_ipc_loop_handlers_ts["loop-handlers.ts"] {
 
 ### people-handlers.ts
 
+[查看源码](people-handlers.ts)。
+
 ```mermaid
 classDiagram
 class N_src_bridge_server_ipc_people_handlers_ts["people-handlers.ts"] {
@@ -390,6 +406,8 @@ class N_src_bridge_server_ipc_people_handlers_ts["people-handlers.ts"] {
 直接依赖：[../../contracts/ipc-call.ts](../../contracts/ipc-call.ts)、[../../contracts/ipc-people.ts](../../contracts/ipc-people.ts)、[services.ts](services.ts)。
 
 ### request.ts
+
+[查看源码](request.ts)。
 
 ```mermaid
 classDiagram
@@ -403,6 +421,8 @@ class N_src_bridge_server_ipc_request_ts["request.ts"] {
 
 ### resources-handlers.ts
 
+[查看源码](resources-handlers.ts)。
+
 ```mermaid
 classDiagram
 class N_src_bridge_server_ipc_resources_handlers_ts["resources-handlers.ts"] {
@@ -414,6 +434,8 @@ class N_src_bridge_server_ipc_resources_handlers_ts["resources-handlers.ts"] {
 直接依赖：[../../contracts/ipc-call.ts](../../contracts/ipc-call.ts)、[../../contracts/ipc-resources.ts](../../contracts/ipc-resources.ts)、[services.ts](services.ts)、[../../../logic/resources/packages/workspace-packages.ts](../../../logic/resources/packages/workspace-packages.ts)。
 
 ### services.ts
+
+[查看源码](services.ts)。
 
 成员 1/3（同名节点为同一声明，跨图合并阅读）。
 
@@ -493,6 +515,8 @@ N_src_bridge_server_ipc_services_ts ..> N_src_bridge_server_ipc_services_ts_Appl
 
 ### settings-handlers.ts
 
+[查看源码](settings-handlers.ts)。
+
 ```mermaid
 classDiagram
 class N_src_bridge_server_ipc_settings_handlers_ts["settings-handlers.ts"] {
@@ -504,6 +528,8 @@ class N_src_bridge_server_ipc_settings_handlers_ts["settings-handlers.ts"] {
 直接依赖：[../../contracts/ipc-call.ts](../../contracts/ipc-call.ts)、[../../contracts/ipc-settings.ts](../../contracts/ipc-settings.ts)、[services.ts](services.ts)。
 
 ### workspace-handlers.ts
+
+[查看源码](workspace-handlers.ts)。
 
 ```mermaid
 classDiagram

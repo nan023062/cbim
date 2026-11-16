@@ -845,9 +845,11 @@ ExecutionReportPanel 根据 basis.executionModel 显示原调用登记及冻结�
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### admission-state.ts
+
+[查看源码](admission-state.ts)。
 
 ```mermaid
 classDiagram
@@ -870,10 +872,10 @@ class N_src_view_tasks_admission_state_ts_AdmissionFeedState["AdmissionFeedState
 N_src_view_tasks_admission_state_ts ..> N_src_view_tasks_admission_state_ts_AdmissionFeedState : 声明
 class N_src_view_tasks_admission_state_ts_AdmissionFeed["AdmissionFeed"] {
   +constructor()
-  +snapshot
+  +snapshot : get
   +Subscribe()
   +Refresh()
-  -read
+  -read : function
   -intervalMs
   -value
   -listeners
@@ -889,6 +891,8 @@ N_src_view_tasks_admission_state_ts ..> N_src_view_tasks_admission_state_ts_Admi
 
 ### admission.css
 
+[查看源码](admission.css)。
+
 ```mermaid
 classDiagram
 class N_src_view_tasks_admission_css["admission.css"] {
@@ -897,6 +901,8 @@ class N_src_view_tasks_admission_css["admission.css"] {
 ```
 
 ### AdmissionNotice.tsx
+
+[查看源码](AdmissionNotice.tsx)。
 
 ```mermaid
 classDiagram
@@ -910,12 +916,14 @@ class N_src_view_tasks_AdmissionNotice_tsx["AdmissionNotice.tsx"] {
 
 ### artifact-report-state.ts
 
+[查看源码](artifact-report-state.ts)。
+
 ```mermaid
 classDiagram
 class N_src_view_tasks_artifact_report_state_ts["artifact-report-state.ts"] {
   <<module>>
-  +artifactSelectionKey()
   +checkedArtifactReport()
+  +artifactSelectionKey : function
 }
 ```
 
@@ -941,14 +949,14 @@ N_src_view_tasks_artifact_report_state_ts ..> N_src_view_tasks_artifact_report_s
 class N_src_view_tasks_artifact_report_state_ts_ArtifactReportController["ArtifactReportController"] {
   +identity
   +constructor()
-  +snapshot
-  +subscribe
+  +snapshot : get
+  +subscribe : function
   +Cancel()
   +Select()
   +List()
   +Inspect()
-  -read
-  -version
+  -read : function
+  -version : function
   -value
   -generation
   -listeners
@@ -962,6 +970,8 @@ N_src_view_tasks_artifact_report_state_ts ..> N_src_view_tasks_artifact_report_s
 
 ### artifact-report.css
 
+[查看源码](artifact-report.css)。
+
 ```mermaid
 classDiagram
 class N_src_view_tasks_artifact_report_css["artifact-report.css"] {
@@ -970,6 +980,8 @@ class N_src_view_tasks_artifact_report_css["artifact-report.css"] {
 ```
 
 ### ArtifactTransitionProofs.tsx
+
+[查看源码](ArtifactTransitionProofs.tsx)。
 
 ```mermaid
 classDiagram
@@ -983,14 +995,16 @@ class N_src_view_tasks_ArtifactTransitionProofs_tsx["ArtifactTransitionProofs.ts
 
 ### command-verification-state.ts
 
+[查看源码](command-verification-state.ts)。
+
 ```mermaid
 classDiagram
 class N_src_view_tasks_command_verification_state_ts["command-verification-state.ts"] {
   <<module>>
-  +commandVerificationKey()
   +mainCommandSelection()
   +applyCommandVerification()
   +commandVerificationStale()
+  +commandVerificationKey : function
 }
 ```
 
@@ -1014,11 +1028,11 @@ N_src_view_tasks_command_verification_state_ts ..> N_src_view_tasks_command_veri
 class N_src_view_tasks_command_verification_state_ts_CommandVerificationController["CommandVerificationController"] {
   +selection
   +constructor()
-  +snapshot
-  +subscribe
+  +snapshot : get
+  +subscribe : function
   +Cancel()
   +Inspect()
-  -read
+  -read : function
   -value
   -generation
   -listeners
@@ -1031,6 +1045,8 @@ N_src_view_tasks_command_verification_state_ts ..> N_src_view_tasks_command_veri
 
 ### command-verification.css
 
+[查看源码](command-verification.css)。
+
 ```mermaid
 classDiagram
 class N_src_view_tasks_command_verification_css["command-verification.css"] {
@@ -1039,6 +1055,8 @@ class N_src_view_tasks_command_verification_css["command-verification.css"] {
 ```
 
 ### CommandVerificationPanel.tsx
+
+[查看源码](CommandVerificationPanel.tsx)。
 
 ```mermaid
 classDiagram
@@ -1057,7 +1075,7 @@ class N_src_view_tasks_CommandVerificationPanel_tsx["CommandVerificationPanel.ts
 class N_src_view_tasks_CommandVerificationPanel_tsx_CommandVerificationView["CommandVerificationView"] {
   <<interface>>
   +stale
-  +inspect
+  +inspect : function
 }
 N_src_view_tasks_CommandVerificationPanel_tsx ..> N_src_view_tasks_CommandVerificationPanel_tsx_CommandVerificationView : 声明
 class N_src_view_tasks_CommandVerificationPanel_tsx_external_CommandVerificationState["CommandVerificationState (./command-verification-state)"] {
@@ -1066,10 +1084,12 @@ class N_src_view_tasks_CommandVerificationPanel_tsx_external_CommandVerification
 N_src_view_tasks_CommandVerificationPanel_tsx_external_CommandVerificationState <|-- N_src_view_tasks_CommandVerificationPanel_tsx_CommandVerificationView
 ```
 
-继承／实现来源：`CommandVerificationState` → [command-verification-state.ts](command-verification-state.ts)。
+继承／实现来源：`CommandVerificationState` → [command-verification-state.ts](command-verification-state.ts)（声明 `CommandVerificationState`）。
 直接依赖：[../../bridge/contracts/command-verification.ts](../../bridge/contracts/command-verification.ts)、[command-verification-state.ts](command-verification-state.ts)、[command-verification.css](command-verification.css)。
 
 ### continuation-attachments.ts
+
+[查看源码](continuation-attachments.ts)。
 
 ```mermaid
 classDiagram
@@ -1086,6 +1106,8 @@ class N_src_view_tasks_continuation_attachments_ts["continuation-attachments.ts"
 
 ### continuation-source-io.ts
 
+[查看源码](continuation-source-io.ts)。
+
 ```mermaid
 classDiagram
 class N_src_view_tasks_continuation_source_io_ts["continuation-source-io.ts"] {
@@ -1101,14 +1123,17 @@ class N_src_view_tasks_continuation_source_io_ts["continuation-source-io.ts"] {
 }
 class N_src_view_tasks_continuation_source_io_ts_Call["Call"] {
   <<type>>
-
+  +调用签名()
 }
 N_src_view_tasks_continuation_source_io_ts ..> N_src_view_tasks_continuation_source_io_ts_Call : 声明
 ```
 
+匿名签名（Call，不是具名方法）：`(action: 'chat.importCancel' | 'chat.pick' | 'chat.import' | 'chat.materialTargets' | 'chat.materialList', args: unknown) => Promise<any>`。
 直接依赖：[continuation-state.ts](continuation-state.ts)。
 
 ### continuation-source-state.ts
+
+[查看源码](continuation-source-state.ts)。
 
 ```mermaid
 classDiagram
@@ -1122,6 +1147,8 @@ class N_src_view_tasks_continuation_source_state_ts["continuation-source-state.t
 直接依赖：[../../bridge/contracts/repository-connections.ts](../../bridge/contracts/repository-connections.ts)。
 
 ### continuation-state.ts
+
+[查看源码](continuation-state.ts)。
 
 ```mermaid
 classDiagram
@@ -1193,13 +1220,13 @@ N_src_view_tasks_continuation_state_ts ..> N_src_view_tasks_continuation_state_t
 class N_src_view_tasks_continuation_state_ts_ContinuationPorts["ContinuationPorts"] {
   <<interface>>
   +storage
-  +submit
-  +lookup
-  +uuid
-  +pickFiles
-  +importSource
-  +materialTargets
-  +materialList
+  +submit : function
+  +lookup : function
+  +uuid : function
+  +pickFiles : function
+  +importSource : function
+  +materialTargets : function
+  +materialList : function
 }
 N_src_view_tasks_continuation_state_ts ..> N_src_view_tasks_continuation_state_ts_ContinuationPorts : 声明
 ```
@@ -1216,10 +1243,10 @@ class N_src_view_tasks_continuation_state_ts_ScopeContinuationController["ScopeC
   +rootSessionId
   +storageKey
   +constructor()
-  +snapshot
-  +available
-  +canRelease
-  +isImporting
+  +snapshot : get
+  +available : get
+  +canRelease : get
+  +isImporting : get
   +Subscribe()
   +Record()
   +IsPending()
@@ -1287,6 +1314,8 @@ N_src_view_tasks_continuation_state_ts ..> N_src_view_tasks_continuation_state_t
 
 ### ContinuationAttachmentHistory.tsx
 
+[查看源码](ContinuationAttachmentHistory.tsx)。
+
 ```mermaid
 classDiagram
 class N_src_view_tasks_ContinuationAttachmentHistory_tsx["ContinuationAttachmentHistory.tsx"] {
@@ -1298,6 +1327,8 @@ class N_src_view_tasks_ContinuationAttachmentHistory_tsx["ContinuationAttachment
 直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)。
 
 ### ContinuationSourceMenu.tsx
+
+[查看源码](ContinuationSourceMenu.tsx)。
 
 ```mermaid
 classDiagram
@@ -1311,13 +1342,15 @@ class N_src_view_tasks_ContinuationSourceMenu_tsx["ContinuationSourceMenu.tsx"] 
 
 ### controlled-file-state.ts
 
+[查看源码](controlled-file-state.ts)。
+
 ```mermaid
 classDiagram
 class N_src_view_tasks_controlled_file_state_ts["controlled-file-state.ts"] {
   <<module>>
-  +controlledFileSelectionKey()
   +checkedControlledFileReport()
   +checkedFileCompensationReceipt()
+  +controlledFileSelectionKey : function
 }
 ```
 
@@ -1372,11 +1405,11 @@ class N_src_view_tasks_controlled_file_state_ts["controlled-file-state.ts"] {
 class N_src_view_tasks_controlled_file_state_ts_ControlledFilePorts["ControlledFilePorts"] {
   <<interface>>
   +storage
-  +uuid
-  +report
-  +preview
-  +apply
-  +receipt
+  +uuid : function
+  +report : function
+  +preview : function
+  +apply : function
+  +receipt : function
 }
 N_src_view_tasks_controlled_file_state_ts ..> N_src_view_tasks_controlled_file_state_ts_ControlledFilePorts : 声明
 class N_src_view_tasks_controlled_file_state_ts_ControlledFileController["ControlledFileController"] {
@@ -1384,10 +1417,10 @@ class N_src_view_tasks_controlled_file_state_ts_ControlledFileController["Contro
   +rootSessionId
   +storageKey
   +constructor()
-  +snapshot
-  +available
-  +canRelease
-  +subscribe
+  +snapshot : get
+  +available : get
+  +canRelease : get
+  +subscribe : function
   +Read()
   +Draft()
   +Attempt()
@@ -1438,6 +1471,8 @@ N_src_view_tasks_controlled_file_state_ts ..> N_src_view_tasks_controlled_file_s
 
 ### controlled-file.css
 
+[查看源码](controlled-file.css)。
+
 ```mermaid
 classDiagram
 class N_src_view_tasks_controlled_file_css["controlled-file.css"] {
@@ -1446,6 +1481,8 @@ class N_src_view_tasks_controlled_file_css["controlled-file.css"] {
 ```
 
 ### ControlledFilePanel.tsx
+
+[查看源码](ControlledFilePanel.tsx)。
 
 ```mermaid
 classDiagram
@@ -1460,14 +1497,16 @@ class N_src_view_tasks_ControlledFilePanel_tsx["ControlledFilePanel.tsx"] {
 
 ### effect-observation-state.ts
 
+[查看源码](effect-observation-state.ts)。
+
 ```mermaid
 classDiagram
 class N_src_view_tasks_effect_observation_state_ts["effect-observation-state.ts"] {
   <<module>>
-  +effectPreacceptRejected()
-  +effectSelectionKey()
   +checkedEffectReport()
   +checkedEffectReceipt()
+  +effectPreacceptRejected : function
+  +effectSelectionKey : function
 }
 ```
 
@@ -1528,12 +1567,12 @@ N_src_view_tasks_effect_observation_state_ts ..> N_src_view_tasks_effect_observa
 class N_src_view_tasks_effect_observation_state_ts_EffectPorts["EffectPorts"] {
   <<interface>>
   +storage
-  +uuid
-  +observe
-  +list
-  +record
-  +receipt
-  +relations
+  +uuid : function
+  +observe : function
+  +list : function
+  +record : function
+  +receipt : function
+  +relations : function
 }
 N_src_view_tasks_effect_observation_state_ts ..> N_src_view_tasks_effect_observation_state_ts_EffectPorts : 声明
 class N_src_view_tasks_effect_observation_state_ts_EffectObservationController["EffectObservationController"] {
@@ -1541,10 +1580,10 @@ class N_src_view_tasks_effect_observation_state_ts_EffectObservationController["
   +rootSessionId
   +storageKey
   +constructor()
-  +snapshot
-  +available
-  +canRelease
-  +subscribe
+  +snapshot : get
+  +available : get
+  +canRelease : get
+  +subscribe : function
   +Draft()
   +Attempt()
   +Read()
@@ -1611,6 +1650,8 @@ N_src_view_tasks_effect_observation_state_ts ..> N_src_view_tasks_effect_observa
 
 ### effect-observation.css
 
+[查看源码](effect-observation.css)。
+
 ```mermaid
 classDiagram
 class N_src_view_tasks_effect_observation_css["effect-observation.css"] {
@@ -1619,6 +1660,8 @@ class N_src_view_tasks_effect_observation_css["effect-observation.css"] {
 ```
 
 ### effect-recovery-state.ts
+
+[查看源码](effect-recovery-state.ts)。
 
 ```mermaid
 classDiagram
@@ -1632,6 +1675,8 @@ class N_src_view_tasks_effect_recovery_state_ts["effect-recovery-state.ts"] {
 直接依赖：[../../bridge/contracts/effect-observation.ts](../../bridge/contracts/effect-observation.ts)、[recovery-state.ts](recovery-state.ts)、[scope-state.ts](scope-state.ts)。
 
 ### EffectObservationPanel.tsx
+
+[查看源码](EffectObservationPanel.tsx)。
 
 ```mermaid
 classDiagram
@@ -1647,13 +1692,15 @@ class N_src_view_tasks_EffectObservationPanel_tsx["EffectObservationPanel.tsx"] 
 
 ### execution-report-state.ts
 
+[查看源码](execution-report-state.ts)。
+
 ```mermaid
 classDiagram
 class N_src_view_tasks_execution_report_state_ts["execution-report-state.ts"] {
   <<module>>
-  +executionReportKey()
   +applyExecutionReport()
   +executionReportStale()
+  +executionReportKey : function
 }
 ```
 
@@ -1677,13 +1724,13 @@ N_src_view_tasks_execution_report_state_ts ..> N_src_view_tasks_execution_report
 class N_src_view_tasks_execution_report_state_ts_ExecutionReportController["ExecutionReportController"] {
   +selection
   +constructor()
-  +snapshot
-  +subscribe
+  +snapshot : get
+  +subscribe : function
   +Cancel()
   +Invalidate()
   +Inspect()
   +More()
-  -read
+  -read : function
   -limit
   -value
   -generation
@@ -1698,6 +1745,8 @@ N_src_view_tasks_execution_report_state_ts ..> N_src_view_tasks_execution_report
 
 ### execution-report.css
 
+[查看源码](execution-report.css)。
+
 ```mermaid
 classDiagram
 class N_src_view_tasks_execution_report_css["execution-report.css"] {
@@ -1706,6 +1755,8 @@ class N_src_view_tasks_execution_report_css["execution-report.css"] {
 ```
 
 ### ExecutionRecoveryForm.tsx
+
+[查看源码](ExecutionRecoveryForm.tsx)。
 
 ```mermaid
 classDiagram
@@ -1719,6 +1770,8 @@ class N_src_view_tasks_ExecutionRecoveryForm_tsx["ExecutionRecoveryForm.tsx"] {
 
 ### graph-state.ts
 
+[查看源码](graph-state.ts)。
+
 ```mermaid
 classDiagram
 class N_src_view_tasks_graph_state_ts["graph-state.ts"] {
@@ -1727,8 +1780,8 @@ class N_src_view_tasks_graph_state_ts["graph-state.ts"] {
 class N_src_view_tasks_graph_state_ts_SessionGraphProjection["SessionGraphProjection"] {
   +identity
   +constructor()
-  +snapshot
-  +cursor
+  +snapshot : get
+  +cursor : get
   +Fork()
   +Apply()
   -value
@@ -1739,6 +1792,8 @@ N_src_view_tasks_graph_state_ts ..> N_src_view_tasks_graph_state_ts_SessionGraph
 直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)。
 
 ### human-continuation-state.ts
+
+[查看源码](human-continuation-state.ts)。
 
 ```mermaid
 classDiagram
@@ -1793,9 +1848,9 @@ class N_src_view_tasks_human_continuation_state_ts["human-continuation-state.ts"
 class N_src_view_tasks_human_continuation_state_ts_HumanContinuationPorts["HumanContinuationPorts"] {
   <<interface>>
   +storage
-  +submit
-  +lookup
-  +uuid
+  +submit : function
+  +lookup : function
+  +uuid : function
 }
 N_src_view_tasks_human_continuation_state_ts ..> N_src_view_tasks_human_continuation_state_ts_HumanContinuationPorts : 声明
 class N_src_view_tasks_human_continuation_state_ts_HumanContinuationController["HumanContinuationController"] {
@@ -1803,9 +1858,9 @@ class N_src_view_tasks_human_continuation_state_ts_HumanContinuationController["
   +rootSessionId
   +storageKey
   +constructor()
-  +snapshot
-  +available
-  +canRelease
+  +snapshot : get
+  +available : get
+  +canRelease : get
   +Subscribe()
   +Record()
   +IsPending()
@@ -1846,6 +1901,8 @@ N_src_view_tasks_human_continuation_state_ts ..> N_src_view_tasks_human_continua
 
 ### human-continuation.css
 
+[查看源码](human-continuation.css)。
+
 ```mermaid
 classDiagram
 class N_src_view_tasks_human_continuation_css["human-continuation.css"] {
@@ -1854,6 +1911,8 @@ class N_src_view_tasks_human_continuation_css["human-continuation.css"] {
 ```
 
 ### human-decision-state.ts
+
+[查看源码](human-decision-state.ts)。
 
 ```mermaid
 classDiagram
@@ -1927,10 +1986,10 @@ N_src_view_tasks_human_decision_state_ts ..> N_src_view_tasks_human_decision_sta
 class N_src_view_tasks_human_decision_state_ts_HumanDecisionPorts["HumanDecisionPorts"] {
   <<interface>>
   +storage
-  +preview
-  +submit
-  +lookup
-  +uuid
+  +preview : function
+  +submit : function
+  +lookup : function
+  +uuid : function
 }
 N_src_view_tasks_human_decision_state_ts ..> N_src_view_tasks_human_decision_state_ts_HumanDecisionPorts : 声明
 class N_src_view_tasks_human_decision_state_ts_HumanDecisionController["HumanDecisionController"] {
@@ -1938,9 +1997,9 @@ class N_src_view_tasks_human_decision_state_ts_HumanDecisionController["HumanDec
   +rootSessionId
   +storageKey
   +constructor()
-  +snapshot
-  +available
-  +canRelease
+  +snapshot : get
+  +available : get
+  +canRelease : get
   +Subscribe()
   +Record()
   +PreviewState()
@@ -1991,6 +2050,8 @@ N_src_view_tasks_human_decision_state_ts ..> N_src_view_tasks_human_decision_sta
 
 ### human-decisions.css
 
+[查看源码](human-decisions.css)。
+
 ```mermaid
 classDiagram
 class N_src_view_tasks_human_decisions_css["human-decisions.css"] {
@@ -1999,6 +2060,8 @@ class N_src_view_tasks_human_decisions_css["human-decisions.css"] {
 ```
 
 ### HumanContinuationForm.tsx
+
+[查看源码](HumanContinuationForm.tsx)。
 
 ```mermaid
 classDiagram
@@ -2012,6 +2075,8 @@ class N_src_view_tasks_HumanContinuationForm_tsx["HumanContinuationForm.tsx"] {
 
 ### HumanDecisionPanel.tsx
 
+[查看源码](HumanDecisionPanel.tsx)。
+
 ```mermaid
 classDiagram
 class N_src_view_tasks_HumanDecisionPanel_tsx["HumanDecisionPanel.tsx"] {
@@ -2023,6 +2088,8 @@ class N_src_view_tasks_HumanDecisionPanel_tsx["HumanDecisionPanel.tsx"] {
 直接依赖：[../../bridge/contracts/human-decisions.ts](../../bridge/contracts/human-decisions.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[ArtifactTransitionProofs.tsx](ArtifactTransitionProofs.tsx)、[human-decisions.css](human-decisions.css)、[useHumanDecisions.ts](useHumanDecisions.ts)。
 
 ### IsolatedExecutionPanel.tsx
+
+[查看源码](IsolatedExecutionPanel.tsx)。
 
 ```mermaid
 classDiagram
@@ -2036,6 +2103,8 @@ class N_src_view_tasks_IsolatedExecutionPanel_tsx["IsolatedExecutionPanel.tsx"] 
 
 ### member-activity.css
 
+[查看源码](member-activity.css)。
+
 ```mermaid
 classDiagram
 class N_src_view_tasks_member_activity_css["member-activity.css"] {
@@ -2044,6 +2113,8 @@ class N_src_view_tasks_member_activity_css["member-activity.css"] {
 ```
 
 ### member-cancellation-state.ts
+
+[查看源码](member-cancellation-state.ts)。
 
 ```mermaid
 classDiagram
@@ -2068,6 +2139,8 @@ N_src_view_tasks_member_cancellation_state_ts ..> N_src_view_tasks_member_cancel
 直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)。
 
 ### member-checkpoint-state.ts
+
+[查看源码](member-checkpoint-state.ts)。
 
 ```mermaid
 classDiagram
@@ -2100,6 +2173,8 @@ N_src_view_tasks_member_checkpoint_state_ts ..> N_src_view_tasks_member_checkpoi
 
 ### member-checkpoint.css
 
+[查看源码](member-checkpoint.css)。
+
 ```mermaid
 classDiagram
 class N_src_view_tasks_member_checkpoint_css["member-checkpoint.css"] {
@@ -2108,6 +2183,8 @@ class N_src_view_tasks_member_checkpoint_css["member-checkpoint.css"] {
 ```
 
 ### member-dependency-state.ts
+
+[查看源码](member-dependency-state.ts)。
 
 ```mermaid
 classDiagram
@@ -2148,6 +2225,8 @@ N_src_view_tasks_member_dependency_state_ts ..> N_src_view_tasks_member_dependen
 
 ### member-dependency.css
 
+[查看源码](member-dependency.css)。
+
 ```mermaid
 classDiagram
 class N_src_view_tasks_member_dependency_css["member-dependency.css"] {
@@ -2157,14 +2236,16 @@ class N_src_view_tasks_member_dependency_css["member-dependency.css"] {
 
 ### member-event-state.ts
 
+[查看源码](member-event-state.ts)。
+
 ```mermaid
 classDiagram
 class N_src_view_tasks_member_event_state_ts["member-event-state.ts"] {
   <<module>>
-  +memberEventKey()
   +emptyMemberEvents()
   +memberPollDelay()
   +applyMemberEvents()
+  +memberEventKey : function
 }
 ```
 
@@ -2195,6 +2276,8 @@ N_src_view_tasks_member_event_state_ts ..> N_src_view_tasks_member_event_state_t
 
 ### member-help-state.ts
 
+[查看源码](member-help-state.ts)。
+
 ```mermaid
 classDiagram
 class N_src_view_tasks_member_help_state_ts["member-help-state.ts"] {
@@ -2219,6 +2302,8 @@ N_src_view_tasks_member_help_state_ts ..> N_src_view_tasks_member_help_state_ts_
 
 ### member-review-state.ts
 
+[查看源码](member-review-state.ts)。
+
 ```mermaid
 classDiagram
 class N_src_view_tasks_member_review_state_ts["member-review-state.ts"] {
@@ -2230,6 +2315,8 @@ class N_src_view_tasks_member_review_state_ts["member-review-state.ts"] {
 直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)。
 
 ### member-validation-state.ts
+
+[查看源码](member-validation-state.ts)。
 
 ```mermaid
 classDiagram
@@ -2256,6 +2343,8 @@ N_src_view_tasks_member_validation_state_ts ..> N_src_view_tasks_member_validati
 
 ### member-validation.css
 
+[查看源码](member-validation.css)。
+
 ```mermaid
 classDiagram
 class N_src_view_tasks_member_validation_css["member-validation.css"] {
@@ -2264,6 +2353,8 @@ class N_src_view_tasks_member_validation_css["member-validation.css"] {
 ```
 
 ### MemberActivity.tsx
+
+[查看源码](MemberActivity.tsx)。
 
 ```mermaid
 classDiagram
@@ -2278,6 +2369,8 @@ class N_src_view_tasks_MemberActivity_tsx["MemberActivity.tsx"] {
 直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../components/state-labels.ts](../components/state-labels.ts)、[MemberCancellationNotice.tsx](MemberCancellationNotice.tsx)、[MemberCheckpointNotice.tsx](MemberCheckpointNotice.tsx)、[MemberDependencyNotice.tsx](MemberDependencyNotice.tsx)、[MemberHelpNotice.tsx](MemberHelpNotice.tsx)、[MemberRunTranscript.tsx](MemberRunTranscript.tsx)、[OwnerExecutionDetails.tsx](OwnerExecutionDetails.tsx)、[member-activity.css](member-activity.css)、[member-cancellation-state.ts](member-cancellation-state.ts)、[member-checkpoint-state.ts](member-checkpoint-state.ts)、[member-help-state.ts](member-help-state.ts)、[member-review-state.ts](member-review-state.ts)、[useMemberRun.ts](useMemberRun.ts)。
 
 ### MemberArtifactReport.tsx
+
+[查看源码](MemberArtifactReport.tsx)。
 
 ```mermaid
 classDiagram
@@ -2296,9 +2389,9 @@ class N_src_view_tasks_MemberArtifactReport_tsx["MemberArtifactReport.tsx"] {
 class N_src_view_tasks_MemberArtifactReport_tsx_ArtifactPanelState["ArtifactPanelState"] {
   <<interface>>
   +stale
-  +list
-  +inspect
-  +select
+  +list : function
+  +inspect : function
+  +select : function
 }
 N_src_view_tasks_MemberArtifactReport_tsx ..> N_src_view_tasks_MemberArtifactReport_tsx_ArtifactPanelState : 声明
 class N_src_view_tasks_MemberArtifactReport_tsx_external_ArtifactReportState["ArtifactReportState (./artifact-report-state)"] {
@@ -2307,10 +2400,12 @@ class N_src_view_tasks_MemberArtifactReport_tsx_external_ArtifactReportState["Ar
 N_src_view_tasks_MemberArtifactReport_tsx_external_ArtifactReportState <|-- N_src_view_tasks_MemberArtifactReport_tsx_ArtifactPanelState
 ```
 
-继承／实现来源：`ArtifactReportState` → [artifact-report-state.ts](artifact-report-state.ts)。
+继承／实现来源：`ArtifactReportState` → [artifact-report-state.ts](artifact-report-state.ts)（声明 `ArtifactReportState`）。
 直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[artifact-report-state.ts](artifact-report-state.ts)、[artifact-report.css](artifact-report.css)。
 
 ### MemberCancellationNotice.tsx
+
+[查看源码](MemberCancellationNotice.tsx)。
 
 ```mermaid
 classDiagram
@@ -2324,6 +2419,8 @@ class N_src_view_tasks_MemberCancellationNotice_tsx["MemberCancellationNotice.ts
 
 ### MemberCheckpointNotice.tsx
 
+[查看源码](MemberCheckpointNotice.tsx)。
+
 ```mermaid
 classDiagram
 class N_src_view_tasks_MemberCheckpointNotice_tsx["MemberCheckpointNotice.tsx"] {
@@ -2336,6 +2433,8 @@ class N_src_view_tasks_MemberCheckpointNotice_tsx["MemberCheckpointNotice.tsx"] 
 
 ### MemberDependencyNotice.tsx
 
+[查看源码](MemberDependencyNotice.tsx)。
+
 ```mermaid
 classDiagram
 class N_src_view_tasks_MemberDependencyNotice_tsx["MemberDependencyNotice.tsx"] {
@@ -2347,6 +2446,8 @@ class N_src_view_tasks_MemberDependencyNotice_tsx["MemberDependencyNotice.tsx"] 
 直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[member-dependency-state.ts](member-dependency-state.ts)、[member-dependency.css](member-dependency.css)。
 
 ### MemberExecutionReport.tsx
+
+[查看源码](MemberExecutionReport.tsx)。
 
 ```mermaid
 classDiagram
@@ -2365,8 +2466,8 @@ class N_src_view_tasks_MemberExecutionReport_tsx["MemberExecutionReport.tsx"] {
 class N_src_view_tasks_MemberExecutionReport_tsx_ExecutionReportView["ExecutionReportView"] {
   <<interface>>
   +stale
-  +inspect
-  +more
+  +inspect : function
+  +more : function
 }
 N_src_view_tasks_MemberExecutionReport_tsx ..> N_src_view_tasks_MemberExecutionReport_tsx_ExecutionReportView : 声明
 class N_src_view_tasks_MemberExecutionReport_tsx_external_ExecutionReportState["ExecutionReportState (./execution-report-state)"] {
@@ -2375,10 +2476,12 @@ class N_src_view_tasks_MemberExecutionReport_tsx_external_ExecutionReportState["
 N_src_view_tasks_MemberExecutionReport_tsx_external_ExecutionReportState <|-- N_src_view_tasks_MemberExecutionReport_tsx_ExecutionReportView
 ```
 
-继承／实现来源：`ExecutionReportState` → [execution-report-state.ts](execution-report-state.ts)。
+继承／实现来源：`ExecutionReportState` → [execution-report-state.ts](execution-report-state.ts)（声明 `ExecutionReportState`）。
 直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../components/RepositoryScopeDetails.tsx](../components/RepositoryScopeDetails.tsx)、[ControlledFilePanel.tsx](ControlledFilePanel.tsx)、[EffectObservationPanel.tsx](EffectObservationPanel.tsx)、[ExecutionRecoveryForm.tsx](ExecutionRecoveryForm.tsx)、[IsolatedExecutionPanel.tsx](IsolatedExecutionPanel.tsx)、[MemberArtifactReport.tsx](MemberArtifactReport.tsx)、[MemberOutputManifest.tsx](MemberOutputManifest.tsx)、[effect-recovery-state.ts](effect-recovery-state.ts)、[execution-report-state.ts](execution-report-state.ts)、[execution-report.css](execution-report.css)、[useExecutionRecovery.ts](useExecutionRecovery.ts)、[useExecutionReport.ts](useExecutionReport.ts)。
 
 ### MemberHelpNotice.tsx
+
+[查看源码](MemberHelpNotice.tsx)。
 
 ```mermaid
 classDiagram
@@ -2391,6 +2494,8 @@ class N_src_view_tasks_MemberHelpNotice_tsx["MemberHelpNotice.tsx"] {
 直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[member-activity.css](member-activity.css)、[member-help-state.ts](member-help-state.ts)。
 
 ### MemberOutputManifest.tsx
+
+[查看源码](MemberOutputManifest.tsx)。
 
 ```mermaid
 classDiagram
@@ -2420,10 +2525,12 @@ class N_src_view_tasks_MemberOutputManifest_tsx_external_ManifestReportState["Ma
 N_src_view_tasks_MemberOutputManifest_tsx_external_ManifestReportState <|-- N_src_view_tasks_MemberOutputManifest_tsx_ManifestPanelState
 ```
 
-继承／实现来源：`ManifestReportState` → [output-manifest-state.ts](output-manifest-state.ts)。
+继承／实现来源：`ManifestReportState` → [output-manifest-state.ts](output-manifest-state.ts)（声明 `ManifestReportState`）。
 直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[../../bridge/contracts/output-manifest.ts](../../bridge/contracts/output-manifest.ts)、[ArtifactTransitionProofs.tsx](ArtifactTransitionProofs.tsx)、[artifact-report.css](artifact-report.css)、[output-manifest-state.ts](output-manifest-state.ts)。
 
 ### MemberProgressSummary.tsx
+
+[查看源码](MemberProgressSummary.tsx)。
 
 ```mermaid
 classDiagram
@@ -2437,6 +2544,8 @@ class N_src_view_tasks_MemberProgressSummary_tsx["MemberProgressSummary.tsx"] {
 
 ### MemberRunTranscript.tsx
 
+[查看源码](MemberRunTranscript.tsx)。
+
 ```mermaid
 classDiagram
 class N_src_view_tasks_MemberRunTranscript_tsx["MemberRunTranscript.tsx"] {
@@ -2448,6 +2557,8 @@ class N_src_view_tasks_MemberRunTranscript_tsx["MemberRunTranscript.tsx"] {
 直接依赖：[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../execution-view/AgentCallDetails.tsx](../execution-view/AgentCallDetails.tsx)、[../execution-view/MarkdownMessage.tsx](../execution-view/MarkdownMessage.tsx)、[../execution-view/ToolTimeline.tsx](../execution-view/ToolTimeline.tsx)、[../execution-view/WorkStatus.tsx](../execution-view/WorkStatus.tsx)、[../execution-view/transcript.ts](../execution-view/transcript.ts)、[MemberProgressSummary.tsx](MemberProgressSummary.tsx)。
 
 ### MemberTaskDetail.tsx
+
+[查看源码](MemberTaskDetail.tsx)。
 
 ```mermaid
 classDiagram
@@ -2461,6 +2572,8 @@ class N_src_view_tasks_MemberTaskDetail_tsx["MemberTaskDetail.tsx"] {
 
 ### MemberValidationPanel.tsx
 
+[查看源码](MemberValidationPanel.tsx)。
+
 ```mermaid
 classDiagram
 class N_src_view_tasks_MemberValidationPanel_tsx["MemberValidationPanel.tsx"] {
@@ -2473,6 +2586,8 @@ class N_src_view_tasks_MemberValidationPanel_tsx["MemberValidationPanel.tsx"] {
 
 ### office-scene.css
 
+[查看源码](office-scene.css)。
+
 ```mermaid
 classDiagram
 class N_src_view_tasks_office_scene_css["office-scene.css"] {
@@ -2481,6 +2596,8 @@ class N_src_view_tasks_office_scene_css["office-scene.css"] {
 ```
 
 ### office-state.ts
+
+[查看源码](office-state.ts)。
 
 ```mermaid
 classDiagram
@@ -2555,6 +2672,8 @@ N_src_view_tasks_office_state_ts ..> N_src_view_tasks_office_state_ts_OfficeEven
 
 ### OfficeScene.tsx
 
+[查看源码](OfficeScene.tsx)。
+
 ```mermaid
 classDiagram
 class N_src_view_tasks_OfficeScene_tsx["OfficeScene.tsx"] {
@@ -2578,8 +2697,8 @@ class N_src_view_tasks_OfficeScene_tsx_OfficeSceneProps["OfficeSceneProps"] {
   +active
   +selectedTaskId
   +selectedAgentSessionId
-  +onChat
-  +onTask
+  +onChat : function
+  +onTask : function
 }
 N_src_view_tasks_OfficeScene_tsx ..> N_src_view_tasks_OfficeScene_tsx_OfficeSceneProps : 声明
 ```
@@ -2588,12 +2707,14 @@ N_src_view_tasks_OfficeScene_tsx ..> N_src_view_tasks_OfficeScene_tsx_OfficeScen
 
 ### output-manifest-state.ts
 
+[查看源码](output-manifest-state.ts)。
+
 ```mermaid
 classDiagram
 class N_src_view_tasks_output_manifest_state_ts["output-manifest-state.ts"] {
   <<module>>
-  +manifestSelectionKey()
   +checkedManifestReport()
+  +manifestSelectionKey : function
 }
 ```
 
@@ -2619,14 +2740,14 @@ N_src_view_tasks_output_manifest_state_ts ..> N_src_view_tasks_output_manifest_s
 class N_src_view_tasks_output_manifest_state_ts_ManifestReportController["ManifestReportController"] {
   +identity
   +constructor()
-  +snapshot
-  +subscribe
+  +snapshot : get
+  +subscribe : function
   +Cancel()
   +Select()
   +List()
   +Inspect()
-  -read
-  -version
+  -read : function
+  -version : function
   -value
   -generation
   -listeners
@@ -2639,6 +2760,8 @@ N_src_view_tasks_output_manifest_state_ts ..> N_src_view_tasks_output_manifest_s
 直接依赖：[../../bridge/contracts/output-manifest.ts](../../bridge/contracts/output-manifest.ts)、[../foundations/utility/index.ts](../foundations/utility/index.ts)。
 
 ### owner-execution-state.ts
+
+[查看源码](owner-execution-state.ts)。
 
 ```mermaid
 classDiagram
@@ -2677,12 +2800,12 @@ class N_src_view_tasks_owner_execution_state_ts_OwnerInspectionState["OwnerInspe
 N_src_view_tasks_owner_execution_state_ts ..> N_src_view_tasks_owner_execution_state_ts_OwnerInspectionState : 声明
 class N_src_view_tasks_owner_execution_state_ts_OwnerInspectionController["OwnerInspectionController"] {
   +constructor()
-  +snapshot
+  +snapshot : get
   +Subscribe()
   +Observe()
   +Inspect()
   +Dispose()
-  -read
+  -read : function
   -task
   -serial
   -inFlight
@@ -2697,6 +2820,8 @@ N_src_view_tasks_owner_execution_state_ts ..> N_src_view_tasks_owner_execution_s
 
 ### owner-execution.css
 
+[查看源码](owner-execution.css)。
+
 ```mermaid
 classDiagram
 class N_src_view_tasks_owner_execution_css["owner-execution.css"] {
@@ -2705,6 +2830,8 @@ class N_src_view_tasks_owner_execution_css["owner-execution.css"] {
 ```
 
 ### OwnerExecutionDetails.tsx
+
+[查看源码](OwnerExecutionDetails.tsx)。
 
 ```mermaid
 classDiagram
@@ -2720,6 +2847,8 @@ class N_src_view_tasks_OwnerExecutionDetails_tsx["OwnerExecutionDetails.tsx"] {
 
 ### OwnerExecutionInspection.tsx
 
+[查看源码](OwnerExecutionInspection.tsx)。
+
 ```mermaid
 classDiagram
 class N_src_view_tasks_OwnerExecutionInspection_tsx["OwnerExecutionInspection.tsx"] {
@@ -2732,12 +2861,15 @@ class N_src_view_tasks_OwnerExecutionInspection_tsx["OwnerExecutionInspection.ts
 
 ### recovery-state.ts
 
+[查看源码](recovery-state.ts)。
+
 ```mermaid
 classDiagram
 class N_src_view_tasks_recovery_state_ts["recovery-state.ts"] {
   <<module>>
   +recoveryRejected()
   +checkedRecoveryReceipt()
+  +recoverySourceKey()
 }
 ```
 
@@ -2798,9 +2930,9 @@ N_src_view_tasks_recovery_state_ts ..> N_src_view_tasks_recovery_state_ts_Recove
 class N_src_view_tasks_recovery_state_ts_RecoveryPorts["RecoveryPorts"] {
   <<interface>>
   +storage
-  +submit
-  +lookup
-  +uuid
+  +submit : function
+  +lookup : function
+  +uuid : function
 }
 N_src_view_tasks_recovery_state_ts ..> N_src_view_tasks_recovery_state_ts_RecoveryPorts : 声明
 class N_src_view_tasks_recovery_state_ts_ExecutionRecoveryController["ExecutionRecoveryController"] {
@@ -2809,9 +2941,9 @@ class N_src_view_tasks_recovery_state_ts_ExecutionRecoveryController["ExecutionR
   +storageKey
   +legacyStorageKey
   +constructor()
-  +snapshot
-  +available
-  +canRelease
+  +snapshot : get
+  +available : get
+  +canRelease : get
   +Subscribe()
   +SubscribeSource()
   +Record()
@@ -2863,6 +2995,8 @@ N_src_view_tasks_recovery_state_ts ..> N_src_view_tasks_recovery_state_ts_Execut
 直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[../foundations/utility/index.ts](../foundations/utility/index.ts)。
 
 ### replan-state.ts
+
+[查看源码](replan-state.ts)。
 
 ```mermaid
 classDiagram
@@ -2937,10 +3071,10 @@ N_src_view_tasks_replan_state_ts ..> N_src_view_tasks_replan_state_ts_ReplanStat
 class N_src_view_tasks_replan_state_ts_ReplanPorts["ReplanPorts"] {
   <<interface>>
   +storage
-  +preview
-  +submit
-  +lookup
-  +uuid
+  +preview : function
+  +submit : function
+  +lookup : function
+  +uuid : function
 }
 N_src_view_tasks_replan_state_ts ..> N_src_view_tasks_replan_state_ts_ReplanPorts : 声明
 class N_src_view_tasks_replan_state_ts_ScopeReplanController["ScopeReplanController"] {
@@ -2948,9 +3082,9 @@ class N_src_view_tasks_replan_state_ts_ScopeReplanController["ScopeReplanControl
   +rootSessionId
   +storageKey
   +constructor()
-  +snapshot
-  +available
-  +canRelease
+  +snapshot : get
+  +available : get
+  +canRelease : get
   +Subscribe()
   +Record()
   +IsPending()
@@ -2995,10 +3129,12 @@ class N_src_view_tasks_replan_state_ts_ScopeReplanController["ScopeReplanControl
 N_src_view_tasks_replan_state_ts ..> N_src_view_tasks_replan_state_ts_ScopeReplanController : 声明
 ```
 
-继承／实现来源：`ReplanPreviewInput` → [../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)。
+继承／实现来源：`ReplanPreviewInput` → [../../logic/tasks/rules/scope-replan.ts](../../logic/tasks/rules/scope-replan.ts)（声明 `ReplanPreviewInput`）。
 直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[../foundations/utility/index.ts](../foundations/utility/index.ts)。
 
 ### request-budget-state.ts
+
+[查看源码](request-budget-state.ts)。
 
 ```mermaid
 classDiagram
@@ -3021,13 +3157,13 @@ class N_src_view_tasks_request_budget_state_ts_RequestBudgetState["RequestBudget
 N_src_view_tasks_request_budget_state_ts ..> N_src_view_tasks_request_budget_state_ts_RequestBudgetState : 声明
 class N_src_view_tasks_request_budget_state_ts_RequestBudgetController["RequestBudgetController"] {
   +constructor()
-  +snapshot
-  +subscribe
+  +snapshot : function
+  +subscribe : function
   +Dispose()
   +Load()
   -query
   -revision
-  -call
+  -call : function
   -state
   -generation
   -listeners
@@ -3040,18 +3176,22 @@ N_src_view_tasks_request_budget_state_ts ..> N_src_view_tasks_request_budget_sta
 
 ### RequestBudgetPanel.tsx
 
+[查看源码](RequestBudgetPanel.tsx)。
+
 ```mermaid
 classDiagram
 class N_src_view_tasks_RequestBudgetPanel_tsx["RequestBudgetPanel.tsx"] {
   <<component>>
-  +requestBudgetMoney()
   +RequestBudgetPanel()
+  +requestBudgetMoney : function
 }
 ```
 
 直接依赖：[../../bridge/contracts/scope-budget.ts](../../bridge/contracts/scope-budget.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[request-budget-state.ts](request-budget-state.ts)。
 
 ### scope-goal.css
+
+[查看源码](scope-goal.css)。
 
 ```mermaid
 classDiagram
@@ -3062,6 +3202,8 @@ class N_src_view_tasks_scope_goal_css["scope-goal.css"] {
 
 ### scope-replan.css
 
+[查看源码](scope-replan.css)。
+
 ```mermaid
 classDiagram
 class N_src_view_tasks_scope_replan_css["scope-replan.css"] {
@@ -3070,6 +3212,8 @@ class N_src_view_tasks_scope_replan_css["scope-replan.css"] {
 ```
 
 ### scope-state.ts
+
+[查看源码](scope-state.ts)。
 
 ```mermaid
 classDiagram
@@ -3089,8 +3233,8 @@ class N_src_view_tasks_scope_state_ts["scope-state.ts"] {
 class N_src_view_tasks_scope_state_ts_SessionScopeProjection["SessionScopeProjection"] {
   +identity
   +constructor()
-  +snapshot
-  +cursor
+  +snapshot : get
+  +cursor : get
   +Fork()
   +Apply()
   -value
@@ -3106,11 +3250,11 @@ N_src_view_tasks_scope_state_ts ..> N_src_view_tasks_scope_state_ts_GoalView : �
 class N_src_view_tasks_scope_state_ts_SessionReadProjection["SessionReadProjection"] {
   +identity
   +constructor()
-  +graph
-  +scopes
-  +teamSessions
-  +graphCursor
-  +scopeCursor
+  +graph : get
+  +scopes : get
+  +teamSessions : get
+  +graphCursor : get
+  +scopeCursor : get
   +Selected()
   +DetailStamp()
   +Detail()
@@ -3137,7 +3281,7 @@ class N_src_view_tasks_scope_state_ts_ScopeGoalState["ScopeGoalState"] {
   +loading
   +detailLoading
   +error
-  +selectScope
+  +selectScope : function
 }
 N_src_view_tasks_scope_state_ts ..> N_src_view_tasks_scope_state_ts_ScopeGoalState : 声明
 ```
@@ -3146,13 +3290,15 @@ N_src_view_tasks_scope_state_ts ..> N_src_view_tasks_scope_state_ts_ScopeGoalSta
 
 ### scope-usage-state.ts
 
+[查看源码](scope-usage-state.ts)。
+
 ```mermaid
 classDiagram
 class N_src_view_tasks_scope_usage_state_ts["scope-usage-state.ts"] {
   <<module>>
-  +scopeUsageKey()
   +scopeUsageGroup()
   +checkedScopeUsage()
+  +scopeUsageKey : function
 }
 ```
 
@@ -3171,11 +3317,11 @@ N_src_view_tasks_scope_usage_state_ts ..> N_src_view_tasks_scope_usage_state_ts_
 class N_src_view_tasks_scope_usage_state_ts_ScopeUsageController["ScopeUsageController"] {
   +identity
   +constructor()
-  +snapshot
-  +subscribe
+  +snapshot : get
+  +subscribe : function
   +Cancel()
   +Read()
-  -request
+  -request : function
   -value
   -generation
   -listeners
@@ -3188,6 +3334,8 @@ N_src_view_tasks_scope_usage_state_ts ..> N_src_view_tasks_scope_usage_state_ts_
 
 ### scope-usage.css
 
+[查看源码](scope-usage.css)。
+
 ```mermaid
 classDiagram
 class N_src_view_tasks_scope_usage_css["scope-usage.css"] {
@@ -3196,6 +3344,8 @@ class N_src_view_tasks_scope_usage_css["scope-usage.css"] {
 ```
 
 ### ScopeActiveInputs.tsx
+
+[查看源码](ScopeActiveInputs.tsx)。
 
 ```mermaid
 classDiagram
@@ -3209,6 +3359,8 @@ class N_src_view_tasks_ScopeActiveInputs_tsx["ScopeActiveInputs.tsx"] {
 
 ### ScopeBudgetPanel.tsx
 
+[查看源码](ScopeBudgetPanel.tsx)。
+
 ```mermaid
 classDiagram
 class N_src_view_tasks_ScopeBudgetPanel_tsx["ScopeBudgetPanel.tsx"] {
@@ -3221,6 +3373,8 @@ class N_src_view_tasks_ScopeBudgetPanel_tsx["ScopeBudgetPanel.tsx"] {
 
 ### ScopeContinuationForm.tsx
 
+[查看源码](ScopeContinuationForm.tsx)。
+
 ```mermaid
 classDiagram
 class N_src_view_tasks_ScopeContinuationForm_tsx["ScopeContinuationForm.tsx"] {
@@ -3232,6 +3386,8 @@ class N_src_view_tasks_ScopeContinuationForm_tsx["ScopeContinuationForm.tsx"] {
 直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../execution-view/ComposerAttachments.tsx](../execution-view/ComposerAttachments.tsx)、[ContinuationSourceMenu.tsx](ContinuationSourceMenu.tsx)、[useScopeContinuation.ts](useScopeContinuation.ts)。
 
 ### ScopeGoalPanel.tsx
+
+[查看源码](ScopeGoalPanel.tsx)。
 
 ```mermaid
 classDiagram
@@ -3252,7 +3408,7 @@ class N_src_view_tasks_ScopeGoalPanel_tsx_ScopeGoalPanelProps["ScopeGoalPanelPro
   +state
   +compact
   +testId
-  +onSelectTask
+  +onSelectTask : function
   +continuation
   +replan
   +humanDecisions
@@ -3265,6 +3421,8 @@ N_src_view_tasks_ScopeGoalPanel_tsx ..> N_src_view_tasks_ScopeGoalPanel_tsx_Scop
 
 ### ScopeReplanForm.tsx
 
+[查看源码](ScopeReplanForm.tsx)。
+
 ```mermaid
 classDiagram
 class N_src_view_tasks_ScopeReplanForm_tsx["ScopeReplanForm.tsx"] {
@@ -3276,6 +3434,8 @@ class N_src_view_tasks_ScopeReplanForm_tsx["ScopeReplanForm.tsx"] {
 直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[EffectObservationPanel.tsx](EffectObservationPanel.tsx)、[effect-observation-state.ts](effect-observation-state.ts)、[scope-replan.css](scope-replan.css)、[useScopeReplan.ts](useScopeReplan.ts)。
 
 ### ScopeUsagePanel.tsx
+
+[查看源码](ScopeUsagePanel.tsx)。
 
 ```mermaid
 classDiagram
@@ -3291,6 +3451,8 @@ class N_src_view_tasks_ScopeUsagePanel_tsx["ScopeUsagePanel.tsx"] {
 
 ### session-task-state.ts
 
+[查看源码](session-task-state.ts)。
+
 ```mermaid
 classDiagram
 class N_src_view_tasks_session_task_state_ts["session-task-state.ts"] {
@@ -3303,6 +3465,8 @@ class N_src_view_tasks_session_task_state_ts["session-task-state.ts"] {
 直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[scope-state.ts](scope-state.ts)。
 
 ### SessionTaskReview.tsx
+
+[查看源码](SessionTaskReview.tsx)。
 
 ```mermaid
 classDiagram
@@ -3331,10 +3495,10 @@ class N_src_view_tasks_SessionTaskReview_tsx_SessionTaskReviewProps["SessionTask
   +now
   +busy
   +stopping
-  +onQueueChange
-  +onQueueContinue
-  +onChat
-  +onStop
+  +onQueueChange : function
+  +onQueueContinue : function
+  +onChat : function
+  +onStop : function
   +graph
   +scopeState
   +continuation
@@ -3357,7 +3521,7 @@ class N_src_view_tasks_SessionTaskReview_tsx_SessionTaskReviewProps["SessionTask
   +recovery
   +active
   +selectedTaskId
-  +onSelectTask
+  +onSelectTask : function
 }
 N_src_view_tasks_SessionTaskReview_tsx ..> N_src_view_tasks_SessionTaskReview_tsx_SessionTaskReviewProps : 声明
 ```
@@ -3365,6 +3529,8 @@ N_src_view_tasks_SessionTaskReview_tsx ..> N_src_view_tasks_SessionTaskReview_ts
 直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../execution-view/MessageQueue.tsx](../execution-view/MessageQueue.tsx)、[../execution-view/WorkStatus.tsx](../execution-view/WorkStatus.tsx)、[MemberTaskDetail.tsx](MemberTaskDetail.tsx)、[ScopeGoalPanel.tsx](ScopeGoalPanel.tsx)、[ToolActivity.tsx](ToolActivity.tsx)、[scope-state.ts](scope-state.ts)、[session-task-state.ts](session-task-state.ts)、[task-graph.css](task-graph.css)、[useExecutionRecovery.ts](useExecutionRecovery.ts)、[useHumanContinuation.ts](useHumanContinuation.ts)、[useHumanDecisions.ts](useHumanDecisions.ts)、[useScopeContinuation.ts](useScopeContinuation.ts)、[useScopeReplan.ts](useScopeReplan.ts)。
 
 ### SessionTaskView.tsx
+
+[查看源码](SessionTaskView.tsx)。
 
 ```mermaid
 classDiagram
@@ -3394,9 +3560,9 @@ class N_src_view_tasks_SessionTaskView_tsx_SessionTaskViewProps["SessionTaskView
   +scopeState
   +active
   +selectedTaskId
-  +onSelectTask
-  +onAgentChat
-  +onChat
+  +onSelectTask : function
+  +onAgentChat : function
+  +onChat : function
 }
 N_src_view_tasks_SessionTaskView_tsx ..> N_src_view_tasks_SessionTaskView_tsx_SessionTaskViewProps : 声明
 ```
@@ -3404,6 +3570,8 @@ N_src_view_tasks_SessionTaskView_tsx ..> N_src_view_tasks_SessionTaskView_tsx_Se
 直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[OfficeScene.tsx](OfficeScene.tsx)、[ScopeUsagePanel.tsx](ScopeUsagePanel.tsx)、[scope-state.ts](scope-state.ts)、[session-task-state.ts](session-task-state.ts)、[task-graph.css](task-graph.css)。
 
 ### task-graph.css
+
+[查看源码](task-graph.css)。
 
 ```mermaid
 classDiagram
@@ -3413,6 +3581,8 @@ class N_src_view_tasks_task_graph_css["task-graph.css"] {
 ```
 
 ### task-history-state.ts
+
+[查看源码](task-history-state.ts)。
 
 ```mermaid
 classDiagram
@@ -3440,6 +3610,8 @@ N_src_view_tasks_task_history_state_ts ..> N_src_view_tasks_task_history_state_t
 
 ### ToolActivity.tsx
 
+[查看源码](ToolActivity.tsx)。
+
 ```mermaid
 classDiagram
 class N_src_view_tasks_ToolActivity_tsx["ToolActivity.tsx"] {
@@ -3451,6 +3623,8 @@ class N_src_view_tasks_ToolActivity_tsx["ToolActivity.tsx"] {
 直接依赖：[../../bridge/contracts/command-verification.ts](../../bridge/contracts/command-verification.ts)、[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../execution-view/ToolTimeline.tsx](../execution-view/ToolTimeline.tsx)、[CommandVerificationPanel.tsx](CommandVerificationPanel.tsx)、[EffectObservationPanel.tsx](EffectObservationPanel.tsx)、[command-verification-state.ts](command-verification-state.ts)、[effect-recovery-state.ts](effect-recovery-state.ts)、[useExecutionRecovery.ts](useExecutionRecovery.ts)。
 
 ### useAdmission.ts
+
+[查看源码](useAdmission.ts)。
 
 ```mermaid
 classDiagram
@@ -3465,6 +3639,8 @@ class N_src_view_tasks_useAdmission_ts["useAdmission.ts"] {
 
 ### useControlledFiles.ts
 
+[查看源码](useControlledFiles.ts)。
+
 ```mermaid
 classDiagram
 class N_src_view_tasks_useControlledFiles_ts["useControlledFiles.ts"] {
@@ -3478,6 +3654,8 @@ class N_src_view_tasks_useControlledFiles_ts["useControlledFiles.ts"] {
 
 ### useEffectObservation.ts
 
+[查看源码](useEffectObservation.ts)。
+
 ```mermaid
 classDiagram
 class N_src_view_tasks_useEffectObservation_ts["useEffectObservation.ts"] {
@@ -3490,6 +3668,8 @@ class N_src_view_tasks_useEffectObservation_ts["useEffectObservation.ts"] {
 直接依赖：[../../bridge/contracts/effect-observation.ts](../../bridge/contracts/effect-observation.ts)、[effect-observation-state.ts](effect-observation-state.ts)。
 
 ### useExecutionRecovery.ts
+
+[查看源码](useExecutionRecovery.ts)。
 
 ```mermaid
 classDiagram
@@ -3519,8 +3699,8 @@ class N_src_view_tasks_useExecutionRecovery_ts_ExecutionRecoveryContext["Executi
   <<interface>>
   +state
   +model
-  +refresh
-  +showScope
+  +refresh : function
+  +showScope : function
 }
 N_src_view_tasks_useExecutionRecovery_ts ..> N_src_view_tasks_useExecutionRecovery_ts_ExecutionRecoveryContext : 声明
 class N_src_view_tasks_useExecutionRecovery_ts_ExecutionRecoveryView["ExecutionRecoveryView"] {
@@ -3536,11 +3716,11 @@ class N_src_view_tasks_useExecutionRecovery_ts_ExecutionRecoveryView["ExecutionR
   +error
   +reason
   +modelLabel
-  +edit
-  +submit
-  +prepare
-  +query
-  +retry
+  +edit : function
+  +submit : function
+  +prepare : function
+  +query : function
+  +retry : function
 }
 N_src_view_tasks_useExecutionRecovery_ts ..> N_src_view_tasks_useExecutionRecovery_ts_ExecutionRecoveryView : 声明
 ```
@@ -3554,7 +3734,7 @@ class N_src_view_tasks_useExecutionRecovery_ts["useExecutionRecovery.ts"] {
 }
 class N_src_view_tasks_useExecutionRecovery_ts_ExecutionRecoveryView["ExecutionRecoveryView"] {
   <<interface>>
-  +showCreated
+  +showCreated : function
 }
 N_src_view_tasks_useExecutionRecovery_ts ..> N_src_view_tasks_useExecutionRecovery_ts_ExecutionRecoveryView : 声明
 ```
@@ -3562,6 +3742,8 @@ N_src_view_tasks_useExecutionRecovery_ts ..> N_src_view_tasks_useExecutionRecove
 直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[execution-report-state.ts](execution-report-state.ts)、[recovery-state.ts](recovery-state.ts)、[scope-state.ts](scope-state.ts)。
 
 ### useExecutionReport.ts
+
+[查看源码](useExecutionReport.ts)。
 
 ```mermaid
 classDiagram
@@ -3574,6 +3756,8 @@ class N_src_view_tasks_useExecutionReport_ts["useExecutionReport.ts"] {
 直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[execution-report-state.ts](execution-report-state.ts)。
 
 ### useHumanContinuation.ts
+
+[查看源码](useHumanContinuation.ts)。
 
 ```mermaid
 classDiagram
@@ -3603,9 +3787,9 @@ class N_src_view_tasks_useHumanContinuation_ts_HumanContinuationView["HumanConti
   +canRetry
   +error
   +modelLabel
-  +submit
-  +query
-  +retry
+  +submit : function
+  +query : function
+  +retry : function
 }
 N_src_view_tasks_useHumanContinuation_ts ..> N_src_view_tasks_useHumanContinuation_ts_HumanContinuationView : 声明
 ```
@@ -3613,6 +3797,8 @@ N_src_view_tasks_useHumanContinuation_ts ..> N_src_view_tasks_useHumanContinuati
 直接依赖：[../../bridge/contracts/human-decisions.ts](../../bridge/contracts/human-decisions.ts)、[human-continuation-state.ts](human-continuation-state.ts)、[scope-state.ts](scope-state.ts)、[useScopeContinuation.ts](useScopeContinuation.ts)。
 
 ### useHumanDecisions.ts
+
+[查看源码](useHumanDecisions.ts)。
 
 ```mermaid
 classDiagram
@@ -3646,8 +3832,8 @@ class N_src_view_tasks_useHumanDecisions_ts_HumanDecisionsView["HumanDecisionsVi
   +canSubmit
   +canRetry
   +error
-  +select
-  +chooseBaseline
+  +select : function
+  +chooseBaseline : function
 }
 N_src_view_tasks_useHumanDecisions_ts ..> N_src_view_tasks_useHumanDecisions_ts_HumanDecisionsView : 声明
 ```
@@ -3661,15 +3847,15 @@ class N_src_view_tasks_useHumanDecisions_ts["useHumanDecisions.ts"] {
 }
 class N_src_view_tasks_useHumanDecisions_ts_HumanDecisionsView["HumanDecisionsView"] {
   <<interface>>
-  +chooseManifest
-  +chooseDecision
-  +comment
-  +inspect
-  +clearBaselines
-  +submit
-  +query
-  +retry
-  +reconsider
+  +chooseManifest : function
+  +chooseDecision : function
+  +comment : function
+  +inspect : function
+  +clearBaselines : function
+  +submit : function
+  +query : function
+  +retry : function
+  +reconsider : function
 }
 N_src_view_tasks_useHumanDecisions_ts ..> N_src_view_tasks_useHumanDecisions_ts_HumanDecisionsView : 声明
 ```
@@ -3677,6 +3863,8 @@ N_src_view_tasks_useHumanDecisions_ts ..> N_src_view_tasks_useHumanDecisions_ts_
 直接依赖：[../../bridge/contracts/human-decisions.ts](../../bridge/contracts/human-decisions.ts)、[human-decision-state.ts](human-decision-state.ts)、[scope-state.ts](scope-state.ts)。
 
 ### useMemberRun.ts
+
+[查看源码](useMemberRun.ts)。
 
 ```mermaid
 classDiagram
@@ -3689,6 +3877,8 @@ class N_src_view_tasks_useMemberRun_ts["useMemberRun.ts"] {
 直接依赖：[member-event-state.ts](member-event-state.ts)。
 
 ### useScopeContinuation.ts
+
+[查看源码](useScopeContinuation.ts)。
 
 ```mermaid
 classDiagram
@@ -3728,9 +3918,9 @@ class N_src_view_tasks_useScopeContinuation_ts_ScopeContinuationView["ScopeConti
   +pending
   +error
   +modelLabel
-  +edit
-  +submit
-  +query
+  +edit : function
+  +submit : function
+  +query : function
 }
 N_src_view_tasks_useScopeContinuation_ts ..> N_src_view_tasks_useScopeContinuation_ts_ScopeContinuationView : 声明
 ```
@@ -3744,15 +3934,15 @@ class N_src_view_tasks_useScopeContinuation_ts["useScopeContinuation.ts"] {
 }
 class N_src_view_tasks_useScopeContinuation_ts_ScopeContinuationView["ScopeContinuationView"] {
   <<interface>>
-  +retry
-  +submitInput
-  +pickFiles
-  +removeFile
+  +retry : function
+  +submitInput : function
+  +pickFiles : function
+  +removeFile : function
   +sourceSelectionKey
-  +importSource
-  +materialTargets
-  +materialList
-  +cancelImport
+  +importSource : function
+  +materialTargets : function
+  +materialList : function
+  +cancelImport : function
 }
 N_src_view_tasks_useScopeContinuation_ts ..> N_src_view_tasks_useScopeContinuation_ts_ScopeContinuationView : 声明
 ```
@@ -3760,6 +3950,8 @@ N_src_view_tasks_useScopeContinuation_ts ..> N_src_view_tasks_useScopeContinuati
 直接依赖：[../../bridge/contracts/chat.ts](../../bridge/contracts/chat.ts)、[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[../../bridge/contracts/ipc-call.ts](../../bridge/contracts/ipc-call.ts)、[../../bridge/contracts/repository-connections.ts](../../bridge/contracts/repository-connections.ts)、[continuation-source-io.ts](continuation-source-io.ts)、[continuation-state.ts](continuation-state.ts)、[scope-state.ts](scope-state.ts)。
 
 ### useScopeReplan.ts
+
+[查看源码](useScopeReplan.ts)。
 
 ```mermaid
 classDiagram
@@ -3814,12 +4006,12 @@ class N_src_view_tasks_useScopeReplan_ts["useScopeReplan.ts"] {
 }
 class N_src_view_tasks_useScopeReplan_ts_ScopeReplanView["ScopeReplanView"] {
   <<interface>>
-  +edit
-  +preview
-  +submit
-  +query
-  +retry
-  +showCreated
+  +edit : function
+  +preview : function
+  +submit : function
+  +query : function
+  +retry : function
+  +showCreated : function
 }
 N_src_view_tasks_useScopeReplan_ts ..> N_src_view_tasks_useScopeReplan_ts_ScopeReplanView : 声明
 ```
@@ -3827,6 +4019,8 @@ N_src_view_tasks_useScopeReplan_ts ..> N_src_view_tasks_useScopeReplan_ts_ScopeR
 直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[../../bridge/contracts/effect-observation.ts](../../bridge/contracts/effect-observation.ts)、[effect-recovery-state.ts](effect-recovery-state.ts)、[replan-state.ts](replan-state.ts)、[scope-state.ts](scope-state.ts)、[useEffectObservation.ts](useEffectObservation.ts)。
 
 ### useSessionGraph.ts
+
+[查看源码](useSessionGraph.ts)。
 
 ```mermaid
 classDiagram

@@ -166,9 +166,11 @@ textSize 控制全部普通界面与对话文字（13/15/17）；codeSize 独立
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### AboutSettings.tsx
+
+[查看源码](AboutSettings.tsx)。
 
 ```mermaid
 classDiagram
@@ -182,6 +184,8 @@ class N_src_view_settings_AboutSettings_tsx["AboutSettings.tsx"] {
 
 ### AccountSettings.tsx
 
+[查看源码](AccountSettings.tsx)。
+
 ```mermaid
 classDiagram
 class N_src_view_settings_AccountSettings_tsx["AccountSettings.tsx"] {
@@ -194,6 +198,8 @@ class N_src_view_settings_AccountSettings_tsx["AccountSettings.tsx"] {
 
 ### AdmissionSettings.tsx
 
+[查看源码](AdmissionSettings.tsx)。
+
 ```mermaid
 classDiagram
 class N_src_view_settings_AdmissionSettings_tsx["AdmissionSettings.tsx"] {
@@ -205,6 +211,8 @@ class N_src_view_settings_AdmissionSettings_tsx["AdmissionSettings.tsx"] {
 直接依赖：[../../bridge/contracts/admission.ts](../../bridge/contracts/admission.ts)、[../tasks/admission.css](../tasks/admission.css)、[../tasks/useAdmission.ts](../tasks/useAdmission.ts)。
 
 ### appearance-state.ts
+
+[查看源码](appearance-state.ts)。
 
 ```mermaid
 classDiagram
@@ -245,6 +253,8 @@ N_src_view_settings_appearance_state_ts ..> N_src_view_settings_appearance_state
 
 ### appearance.css
 
+[查看源码](appearance.css)。
+
 ```mermaid
 classDiagram
 class N_src_view_settings_appearance_css["appearance.css"] {
@@ -253,6 +263,8 @@ class N_src_view_settings_appearance_css["appearance.css"] {
 ```
 
 ### AppearanceSettings.tsx
+
+[查看源码](AppearanceSettings.tsx)。
 
 ```mermaid
 classDiagram
@@ -265,6 +277,8 @@ class N_src_view_settings_AppearanceSettings_tsx["AppearanceSettings.tsx"] {
 直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[appearance-state.ts](appearance-state.ts)、[useAppearance.ts](useAppearance.ts)。
 
 ### budget-settings-state.ts
+
+[查看源码](budget-settings-state.ts)。
 
 ```mermaid
 classDiagram
@@ -298,18 +312,18 @@ N_src_view_settings_budget_settings_state_ts ..> N_src_view_settings_budget_sett
 N_src_view_settings_budget_settings_state_ts_BudgetSettingsDraft <|-- N_src_view_settings_budget_settings_state_ts_BudgetSettingsState
 class N_src_view_settings_budget_settings_state_ts_Call["Call"] {
   <<type>>
-
+  +调用签名()
 }
 N_src_view_settings_budget_settings_state_ts ..> N_src_view_settings_budget_settings_state_ts_Call : 声明
 class N_src_view_settings_budget_settings_state_ts_BudgetSettingsController["BudgetSettingsController"] {
   +constructor()
-  +snapshot
-  +subscribe
+  +snapshot : function
+  +subscribe : function
   +Edit()
   +Cancel()
   +Load()
   +Save()
-  -call
+  -call : function
   -state
   -generation
   -listeners
@@ -318,9 +332,12 @@ class N_src_view_settings_budget_settings_state_ts_BudgetSettingsController["Bud
 N_src_view_settings_budget_settings_state_ts ..> N_src_view_settings_budget_settings_state_ts_BudgetSettingsController : 声明
 ```
 
+匿名签名（Call，不是具名方法）：`(action: 'budget.settings' | 'budget.configure', input?: unknown) => Promise<unknown>`。
 直接依赖：[../../bridge/contracts/scope-budget.ts](../../bridge/contracts/scope-budget.ts)、[../foundations/utility/index.ts](../foundations/utility/index.ts)。
 
 ### budget-settings.css
+
+[查看源码](budget-settings.css)。
 
 ```mermaid
 classDiagram
@@ -330,6 +347,8 @@ class N_src_view_settings_budget_settings_css["budget-settings.css"] {
 ```
 
 ### BudgetSettings.tsx
+
+[查看源码](BudgetSettings.tsx)。
 
 ```mermaid
 classDiagram
@@ -343,6 +362,8 @@ class N_src_view_settings_BudgetSettings_tsx["BudgetSettings.tsx"] {
 
 ### EmbeddingModels.tsx
 
+[查看源码](EmbeddingModels.tsx)。
+
 ```mermaid
 classDiagram
 class N_src_view_settings_EmbeddingModels_tsx["EmbeddingModels.tsx"] {
@@ -354,6 +375,8 @@ class N_src_view_settings_EmbeddingModels_tsx["EmbeddingModels.tsx"] {
 直接依赖：[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)。
 
 ### EngineOverview.tsx
+
+[查看源码](EngineOverview.tsx)。
 
 ```mermaid
 classDiagram
@@ -367,6 +390,8 @@ class N_src_view_settings_EngineOverview_tsx["EngineOverview.tsx"] {
 
 ### EngineSettings.tsx
 
+[查看源码](EngineSettings.tsx)。
+
 ```mermaid
 classDiagram
 class N_src_view_settings_EngineSettings_tsx["EngineSettings.tsx"] {
@@ -378,6 +403,8 @@ class N_src_view_settings_EngineSettings_tsx["EngineSettings.tsx"] {
 直接依赖：[../../bridge/contracts/engines.ts](../../bridge/contracts/engines.ts)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../foundations/utility/index.ts](../foundations/utility/index.ts)、[EngineOverview.tsx](EngineOverview.tsx)。
 
 ### GitHubFeedbackSettings.tsx
+
+[查看源码](GitHubFeedbackSettings.tsx)。
 
 ```mermaid
 classDiagram
@@ -391,6 +418,8 @@ class N_src_view_settings_GitHubFeedbackSettings_tsx["GitHubFeedbackSettings.tsx
 
 ### models.css
 
+[查看源码](models.css)。
+
 ```mermaid
 classDiagram
 class N_src_view_settings_models_css["models.css"] {
@@ -399,6 +428,8 @@ class N_src_view_settings_models_css["models.css"] {
 ```
 
 ### ModelSettings.tsx
+
+[查看源码](ModelSettings.tsx)。
 
 ```mermaid
 classDiagram
@@ -411,6 +442,8 @@ class N_src_view_settings_ModelSettings_tsx["ModelSettings.tsx"] {
 直接依赖：[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[EmbeddingModels.tsx](EmbeddingModels.tsx)、[ProviderConnections.tsx](ProviderConnections.tsx)、[models.css](models.css)。
 
 ### ProviderConnections.tsx
+
+[查看源码](ProviderConnections.tsx)。
 
 ```mermaid
 classDiagram
@@ -426,6 +459,8 @@ class N_src_view_settings_ProviderConnections_tsx["ProviderConnections.tsx"] {
 
 ### ResourceSettings.tsx
 
+[查看源码](ResourceSettings.tsx)。
+
 ```mermaid
 classDiagram
 class N_src_view_settings_ResourceSettings_tsx["ResourceSettings.tsx"] {
@@ -437,6 +472,8 @@ class N_src_view_settings_ResourceSettings_tsx["ResourceSettings.tsx"] {
 直接依赖：[../../bridge/contracts/resources.ts](../../bridge/contracts/resources.ts)。
 
 ### settings-sections.ts
+
+[查看源码](settings-sections.ts)。
 
 ```mermaid
 classDiagram
@@ -461,6 +498,8 @@ N_src_view_settings_settings_sections_ts ..> N_src_view_settings_settings_sectio
 
 ### settings.css
 
+[查看源码](settings.css)。
+
 ```mermaid
 classDiagram
 class N_src_view_settings_settings_css["settings.css"] {
@@ -469,6 +508,8 @@ class N_src_view_settings_settings_css["settings.css"] {
 ```
 
 ### SettingsView.tsx
+
+[查看源码](SettingsView.tsx)。
 
 ```mermaid
 classDiagram
@@ -485,14 +526,14 @@ class N_src_view_settings_SettingsView_tsx["SettingsView.tsx"] {
 }
 class N_src_view_settings_SettingsView_tsx_SettingsViewProps["SettingsViewProps"] {
   <<interface>>
-  +onDirtyChange
+  +onDirtyChange : function
   +sidebarResize
   +section
-  +onSectionChange
-  +onBack
+  +onSectionChange : function
+  +onBack : function
   +appearance
   +updates
-  +onOpenUpdates
+  +onOpenUpdates : function
 }
 N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_SettingsView_tsx_SettingsViewProps : 声明
 ```
@@ -500,6 +541,8 @@ N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_SettingsView_tsx_Se
 直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../components/sidebar.css](../components/sidebar.css)、[AboutSettings.tsx](AboutSettings.tsx)、[AccountSettings.tsx](AccountSettings.tsx)、[AdmissionSettings.tsx](AdmissionSettings.tsx)、[AppearanceSettings.tsx](AppearanceSettings.tsx)、[BudgetSettings.tsx](BudgetSettings.tsx)、[ModelSettings.tsx](ModelSettings.tsx)、[ResourceSettings.tsx](ResourceSettings.tsx)、[WebSettings.tsx](WebSettings.tsx)、[settings-sections.ts](settings-sections.ts)、[settings.css](settings.css)、[useAppearance.ts](useAppearance.ts)、[../updates/useSoftwareUpdates.ts](../updates/useSoftwareUpdates.ts)。
 
 ### useAppearance.ts
+
+[查看源码](useAppearance.ts)。
 
 ```mermaid
 classDiagram
@@ -519,9 +562,9 @@ class N_src_view_settings_useAppearance_ts_AppearanceController["AppearanceContr
   +value
   +resolvedTheme
   +error
-  +update
-  +reset
-  +retry
+  +update : function
+  +reset : function
+  +retry : function
 }
 N_src_view_settings_useAppearance_ts ..> N_src_view_settings_useAppearance_ts_AppearanceController : 声明
 ```
@@ -529,6 +572,8 @@ N_src_view_settings_useAppearance_ts ..> N_src_view_settings_useAppearance_ts_Ap
 直接依赖：[appearance-state.ts](appearance-state.ts)、[appearance.css](appearance.css)。
 
 ### WebSettings.tsx
+
+[查看源码](WebSettings.tsx)。
 
 ```mermaid
 classDiagram

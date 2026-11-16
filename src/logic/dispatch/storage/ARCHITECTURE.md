@@ -259,9 +259,11 @@ DispatchStore 在追加及回放时调用 projectAgentBusinessRuns 校验独立�
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### dispatch-store.ts
+
+[查看源码](dispatch-store.ts)。
 
 成员 1/3（同名节点为同一声明，跨图合并阅读）。
 
@@ -363,10 +365,12 @@ class N_src_logic_dispatch_storage_dispatch_store_ts_external_DispatchStore["Dis
 N_src_logic_dispatch_storage_dispatch_store_ts_external_DispatchStore <|.. N_src_logic_dispatch_storage_dispatch_store_ts_FileDispatchStore
 ```
 
-继承／实现来源：`DispatchStore` → [../rules/dispatch-storage.ts](../rules/dispatch-storage.ts)。
+继承／实现来源：`DispatchStore` → [../rules/dispatch-storage.ts](../rules/dispatch-storage.ts)（声明 `DispatchStore`）。
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../budget/rules/model-request-budget-invariants.ts](../../budget/rules/model-request-budget-invariants.ts)、[../rules/dispatch-storage.ts](../rules/dispatch-storage.ts)、[../../execution/rules/business-run-invariants.ts](../../execution/rules/business-run-invariants.ts)、[../../file-operations/rules/controlled-file-invariants.ts](../../file-operations/rules/controlled-file-invariants.ts)、[../../tasks/rules/dispatch-invariants.ts](../../tasks/rules/dispatch-invariants.ts)、[../../tasks/rules/dispatch-scope-invariants.ts](../../tasks/rules/dispatch-scope-invariants.ts)、[../../tasks/rules/dispatch-scope.ts](../../tasks/rules/dispatch-scope.ts)、[../../tasks/rules/effect-observation-invariants.ts](../../tasks/rules/effect-observation-invariants.ts)、[../../tasks/rules/graph-reducer.ts](../../tasks/rules/graph-reducer.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../tasks/rules/knowledge-source-invariants.ts](../../tasks/rules/knowledge-source-invariants.ts)、[../../tasks/rules/module-ownership-invariants.ts](../../tasks/rules/module-ownership-invariants.ts)、[../../tasks/rules/owner-execution-invariants.ts](../../tasks/rules/owner-execution-invariants.ts)、[../../tasks/rules/scope-view.ts](../../tasks/rules/scope-view.ts)、[../../tasks/rules/workspace-member-invariants.ts](../../tasks/rules/workspace-member-invariants.ts)、[../../team/rules/team-session.ts](../../team/rules/team-session.ts)。
 
 ### request-budget-store.ts
+
+[查看源码](request-budget-store.ts)。
 
 ```mermaid
 classDiagram

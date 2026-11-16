@@ -51,9 +51,11 @@
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### assembly.ts
+
+[查看源码](assembly.ts)。
 
 ```mermaid
 classDiagram
@@ -81,6 +83,8 @@ N_src_logic_history_service_assembly_ts ..> N_src_logic_history_service_assembly
 
 ### file-store.ts
 
+[查看源码](file-store.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_history_service_file_store_ts["file-store.ts"] {
@@ -103,7 +107,7 @@ class N_src_logic_history_service_file_store_ts_external_AgentHistoryStore["Agen
 N_src_logic_history_service_file_store_ts_external_AgentHistoryStore <|.. N_src_logic_history_service_file_store_ts_FileAgentHistoryStore
 ```
 
-继承／实现来源：`AgentHistoryStore` → [../../team/rules/session-history-storage.ts](../../team/rules/session-history-storage.ts)。
+继承／实现来源：`AgentHistoryStore` → [../../team/rules/session-history-storage.ts](../../team/rules/session-history-storage.ts)（声明 `AgentHistoryStore`）。
 直接依赖：[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../team/rules/session-history-storage.ts](../../team/rules/session-history-storage.ts)。
 
 ### 本目录调用边界

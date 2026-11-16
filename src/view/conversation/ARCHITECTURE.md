@@ -407,9 +407,11 @@ ConversationTopics 的长目标使用正文段落或 span，不作为整段粗�
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### AttachmentMenu.tsx
+
+[查看源码](AttachmentMenu.tsx)。
 
 ```mermaid
 classDiagram
@@ -435,6 +437,8 @@ N_src_view_conversation_AttachmentMenu_tsx ..> N_src_view_conversation_Attachmen
 
 ### brain-status.ts
 
+[查看源码](brain-status.ts)。
+
 ```mermaid
 classDiagram
 class N_src_view_conversation_brain_status_ts["brain-status.ts"] {
@@ -446,6 +450,8 @@ class N_src_view_conversation_brain_status_ts["brain-status.ts"] {
 直接依赖：[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)。
 
 ### channel-draft.ts
+
+[查看源码](channel-draft.ts)。
 
 成员 1/2（同名节点为同一声明，跨图合并阅读）。
 
@@ -473,8 +479,8 @@ class N_src_view_conversation_channel_draft_ts_ChannelDraftStore["ChannelDraftSt
   +error
   +key
   +constructor()
-  +writable
-  +snapshot
+  +writable : get
+  +snapshot : get
   +Subscribe()
   +Edit()
   +ClearIfUnchanged()
@@ -506,6 +512,8 @@ N_src_view_conversation_channel_draft_ts ..> N_src_view_conversation_channel_dra
 
 ### ChannelComposer.tsx
 
+[查看源码](ChannelComposer.tsx)。
+
 ```mermaid
 classDiagram
 class N_src_view_conversation_ChannelComposer_tsx["ChannelComposer.tsx"] {
@@ -517,6 +525,8 @@ class N_src_view_conversation_ChannelComposer_tsx["ChannelComposer.tsx"] {
 直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[ChannelDraftInput.tsx](ChannelDraftInput.tsx)、[TopicInterruptionForm.tsx](TopicInterruptionForm.tsx)、[channel-draft.ts](channel-draft.ts)、[useChannelDraft.ts](useChannelDraft.ts)、[../tasks/ScopeContinuationForm.tsx](../tasks/ScopeContinuationForm.tsx)、[../tasks/useScopeContinuation.ts](../tasks/useScopeContinuation.ts)。
 
 ### ChannelDraftInput.tsx
+
+[查看源码](ChannelDraftInput.tsx)。
 
 ```mermaid
 classDiagram
@@ -530,6 +540,8 @@ class N_src_view_conversation_ChannelDraftInput_tsx["ChannelDraftInput.tsx"] {
 
 ### ChannelPane.tsx
 
+[查看源码](ChannelPane.tsx)。
+
 ```mermaid
 classDiagram
 class N_src_view_conversation_ChannelPane_tsx["ChannelPane.tsx"] {
@@ -542,6 +554,8 @@ class N_src_view_conversation_ChannelPane_tsx["ChannelPane.tsx"] {
 
 ### ChatMessages.tsx
 
+[查看源码](ChatMessages.tsx)。
+
 ```mermaid
 classDiagram
 class N_src_view_conversation_ChatMessages_tsx["ChatMessages.tsx"] {
@@ -551,6 +565,8 @@ class N_src_view_conversation_ChatMessages_tsx["ChatMessages.tsx"] {
 直接依赖：[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[MessageCard.tsx](MessageCard.tsx)、[../execution-view/MarkdownMessage.tsx](../execution-view/MarkdownMessage.tsx)、[../execution-view/transcript.ts](../execution-view/transcript.ts)。
 
 ### ComposerCard.tsx
+
+[查看源码](ComposerCard.tsx)。
 
 ```mermaid
 classDiagram
@@ -562,6 +578,8 @@ class N_src_view_conversation_ComposerCard_tsx["ComposerCard.tsx"] {
 
 
 ### ComposerPicker.tsx
+
+[查看源码](ComposerPicker.tsx)。
 
 ```mermaid
 classDiagram
@@ -591,6 +609,8 @@ N_src_view_conversation_ComposerPicker_tsx ..> N_src_view_conversation_ComposerP
 
 ### conversation-activity.ts
 
+[查看源码](conversation-activity.ts)。
+
 ```mermaid
 classDiagram
 class N_src_view_conversation_conversation_activity_ts["conversation-activity.ts"] {
@@ -603,6 +623,8 @@ class N_src_view_conversation_conversation_activity_ts["conversation-activity.ts
 
 ### conversation-entries.css
 
+[查看源码](conversation-entries.css)。
+
 ```mermaid
 classDiagram
 class N_src_view_conversation_conversation_entries_css["conversation-entries.css"] {
@@ -611,6 +633,8 @@ class N_src_view_conversation_conversation_entries_css["conversation-entries.css
 ```
 
 ### conversation-state.ts
+
+[查看源码](conversation-state.ts)。
 
 ```mermaid
 classDiagram
@@ -623,6 +647,8 @@ class N_src_view_conversation_conversation_state_ts["conversation-state.ts"] {
 直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)。
 
 ### conversation-stop.ts
+
+[查看源码](conversation-stop.ts)。
 
 ```mermaid
 classDiagram
@@ -656,6 +682,8 @@ N_src_view_conversation_conversation_stop_ts ..> N_src_view_conversation_convers
 
 ### conversation-topics.css
 
+[查看源码](conversation-topics.css)。
+
 ```mermaid
 classDiagram
 class N_src_view_conversation_conversation_topics_css["conversation-topics.css"] {
@@ -664,6 +692,8 @@ class N_src_view_conversation_conversation_topics_css["conversation-topics.css"]
 ```
 
 ### conversation-topics.ts
+
+[查看源码](conversation-topics.ts)。
 
 ```mermaid
 classDiagram
@@ -692,6 +722,8 @@ N_src_view_conversation_conversation_topics_ts ..> N_src_view_conversation_conve
 
 ### conversation.css
 
+[查看源码](conversation.css)。
+
 ```mermaid
 classDiagram
 class N_src_view_conversation_conversation_css["conversation.css"] {
@@ -700,6 +732,8 @@ class N_src_view_conversation_conversation_css["conversation.css"] {
 ```
 
 ### Conversation.tsx
+
+[查看源码](Conversation.tsx)。
 
 ```mermaid
 classDiagram
@@ -724,6 +758,8 @@ N_src_view_conversation_Conversation_tsx ..> N_src_view_conversation_Conversatio
 直接依赖：[../../bridge/contracts/agent-settings.ts](../../bridge/contracts/agent-settings.ts)、[../../bridge/contracts/chat.ts](../../bridge/contracts/chat.ts)、[../../bridge/contracts/engines.ts](../../bridge/contracts/engines.ts)、[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../../bridge/contracts/ipc-call.ts](../../bridge/contracts/ipc-call.ts)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../automation/AutomationView.tsx](../automation/AutomationView.tsx)、[../components/AgentModelForm.tsx](../components/AgentModelForm.tsx)、[../components/Icon.tsx](../components/Icon.tsx)、[AttachmentMenu.tsx](AttachmentMenu.tsx)、[ComposerCard.tsx](ComposerCard.tsx)、[ComposerPicker.tsx](ComposerPicker.tsx)、[ConversationEntries.tsx](ConversationEntries.tsx)、[ConversationTurn.tsx](ConversationTurn.tsx)、[EnginePicker.tsx](EnginePicker.tsx)、[MemberConversation.tsx](MemberConversation.tsx)、[SendButton.tsx](SendButton.tsx)、[ThreadHistoryNotice.tsx](ThreadHistoryNotice.tsx)、[TopicInterruptionForm.tsx](TopicInterruptionForm.tsx)、[UsageStatus.tsx](UsageStatus.tsx)、[conversation-state.ts](conversation-state.ts)、[conversation-stop.ts](conversation-stop.ts)、[conversation.css](conversation.css)、[pasted-images.ts](pasted-images.ts)、[session-tabs.css](session-tabs.css)、[useMessageQueue.ts](useMessageQueue.ts)、[../execution-view/ComposerAttachments.tsx](../execution-view/ComposerAttachments.tsx)、[../execution-view/MessageQueue.tsx](../execution-view/MessageQueue.tsx)、[../execution-view/QuestionCard.tsx](../execution-view/QuestionCard.tsx)、[../execution-view/team-conversations.ts](../execution-view/team-conversations.ts)、[../shell/runtime-navigation.ts](../shell/runtime-navigation.ts)、[../shell/tabs.ts](../shell/tabs.ts)、[../tasks/AdmissionNotice.tsx](../tasks/AdmissionNotice.tsx)、[../tasks/ScopeContinuationForm.tsx](../tasks/ScopeContinuationForm.tsx)、[../tasks/ScopeGoalPanel.tsx](../tasks/ScopeGoalPanel.tsx)、[../tasks/SessionTaskView.tsx](../tasks/SessionTaskView.tsx)、[../tasks/admission-state.ts](../tasks/admission-state.ts)、[../tasks/useAdmission.ts](../tasks/useAdmission.ts)、[../tasks/useExecutionRecovery.ts](../tasks/useExecutionRecovery.ts)、[../tasks/useHumanContinuation.ts](../tasks/useHumanContinuation.ts)、[../tasks/useHumanDecisions.ts](../tasks/useHumanDecisions.ts)、[../tasks/useScopeContinuation.ts](../tasks/useScopeContinuation.ts)、[../tasks/useScopeReplan.ts](../tasks/useScopeReplan.ts)、[../tasks/useSessionGraph.ts](../tasks/useSessionGraph.ts)、[../team/useMainAgentSettings.ts](../team/useMainAgentSettings.ts)。
 
 ### ConversationEntries.tsx
+
+[查看源码](ConversationEntries.tsx)。
 
 ```mermaid
 classDiagram
@@ -752,6 +788,8 @@ N_src_view_conversation_ConversationEntries_tsx ..> N_src_view_conversation_Conv
 
 ### ConversationToolCall.tsx
 
+[查看源码](ConversationToolCall.tsx)。
+
 ```mermaid
 classDiagram
 class N_src_view_conversation_ConversationToolCall_tsx["ConversationToolCall.tsx"] {
@@ -763,6 +801,8 @@ class N_src_view_conversation_ConversationToolCall_tsx["ConversationToolCall.tsx
 直接依赖：[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[inline-task-state.ts](inline-task-state.ts)、[../execution-view/AgentCallDetails.tsx](../execution-view/AgentCallDetails.tsx)、[../tasks/MemberActivity.tsx](../tasks/MemberActivity.tsx)、[../tasks/ToolActivity.tsx](../tasks/ToolActivity.tsx)、[../tasks/useExecutionRecovery.ts](../tasks/useExecutionRecovery.ts)。
 
 ### ConversationTopics.tsx
+
+[查看源码](ConversationTopics.tsx)。
 
 ```mermaid
 classDiagram
@@ -777,6 +817,8 @@ class N_src_view_conversation_ConversationTopics_tsx["ConversationTopics.tsx"] {
 
 ### ConversationTurn.tsx
 
+[查看源码](ConversationTurn.tsx)。
+
 ```mermaid
 classDiagram
 class N_src_view_conversation_ConversationTurn_tsx["ConversationTurn.tsx"] {
@@ -787,6 +829,8 @@ class N_src_view_conversation_ConversationTurn_tsx["ConversationTurn.tsx"] {
 
 ### engine-picker.css
 
+[查看源码](engine-picker.css)。
+
 ```mermaid
 classDiagram
 class N_src_view_conversation_engine_picker_css["engine-picker.css"] {
@@ -795,6 +839,8 @@ class N_src_view_conversation_engine_picker_css["engine-picker.css"] {
 ```
 
 ### EnginePicker.tsx
+
+[查看源码](EnginePicker.tsx)。
 
 ```mermaid
 classDiagram
@@ -808,6 +854,8 @@ class N_src_view_conversation_EnginePicker_tsx["EnginePicker.tsx"] {
 
 ### inline-conversation.css
 
+[查看源码](inline-conversation.css)。
+
 ```mermaid
 classDiagram
 class N_src_view_conversation_inline_conversation_css["inline-conversation.css"] {
@@ -816,6 +864,8 @@ class N_src_view_conversation_inline_conversation_css["inline-conversation.css"]
 ```
 
 ### inline-task-state.ts
+
+[查看源码](inline-task-state.ts)。
 
 ```mermaid
 classDiagram
@@ -831,6 +881,8 @@ class N_src_view_conversation_inline_task_state_ts["inline-task-state.ts"] {
 
 ### InteractionModeToggle.tsx
 
+[查看源码](InteractionModeToggle.tsx)。
+
 ```mermaid
 classDiagram
 class N_src_view_conversation_InteractionModeToggle_tsx["InteractionModeToggle.tsx"] {
@@ -842,6 +894,8 @@ class N_src_view_conversation_InteractionModeToggle_tsx["InteractionModeToggle.t
 直接依赖：[../components/Icon.tsx](../components/Icon.tsx)。
 
 ### MemberConversation.tsx
+
+[查看源码](MemberConversation.tsx)。
 
 ```mermaid
 classDiagram
@@ -855,6 +909,8 @@ class N_src_view_conversation_MemberConversation_tsx["MemberConversation.tsx"] {
 
 ### MessageCard.tsx
 
+[查看源码](MessageCard.tsx)。
+
 ```mermaid
 classDiagram
 class N_src_view_conversation_MessageCard_tsx["MessageCard.tsx"] {
@@ -866,6 +922,8 @@ class N_src_view_conversation_MessageCard_tsx["MessageCard.tsx"] {
 
 ### pasted-images.ts
 
+[查看源码](pasted-images.ts)。
+
 ```mermaid
 classDiagram
 class N_src_view_conversation_pasted_images_ts["pasted-images.ts"] {
@@ -876,6 +934,8 @@ class N_src_view_conversation_pasted_images_ts["pasted-images.ts"] {
 
 
 ### queue-insertion.ts
+
+[查看源码](queue-insertion.ts)。
 
 ```mermaid
 classDiagram
@@ -905,14 +965,17 @@ class N_src_view_conversation_queue_insertion_ts_QueuedReceipt["QueuedReceipt"] 
 N_src_view_conversation_queue_insertion_ts ..> N_src_view_conversation_queue_insertion_ts_QueuedReceipt : 声明
 class N_src_view_conversation_queue_insertion_ts_InsertPort["InsertPort"] {
   <<type>>
-
+  +调用签名()
 }
 N_src_view_conversation_queue_insertion_ts ..> N_src_view_conversation_queue_insertion_ts_InsertPort : 声明
 ```
 
+匿名签名（InsertPort，不是具名方法）：`(request: QueueInsertRequest) => Promise<unknown>`。
 直接依赖：[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)。
 
 ### queue-sync.ts
+
+[查看源码](queue-sync.ts)。
 
 ```mermaid
 classDiagram
@@ -931,6 +994,8 @@ N_src_view_conversation_queue_sync_ts ..> N_src_view_conversation_queue_sync_ts_
 
 ### ReadingPane.tsx
 
+[查看源码](ReadingPane.tsx)。
+
 ```mermaid
 classDiagram
 class N_src_view_conversation_ReadingPane_tsx["ReadingPane.tsx"] {
@@ -942,6 +1007,8 @@ class N_src_view_conversation_ReadingPane_tsx["ReadingPane.tsx"] {
 
 ### SendButton.tsx
 
+[查看源码](SendButton.tsx)。
+
 ```mermaid
 classDiagram
 class N_src_view_conversation_SendButton_tsx["SendButton.tsx"] {
@@ -950,7 +1017,7 @@ class N_src_view_conversation_SendButton_tsx["SendButton.tsx"] {
 class N_src_view_conversation_SendButton_tsx_SendButtonProps["SendButtonProps"] {
   <<interface>>
   +disabled
-  +onClick
+  +onClick : function
   +isStreaming
   +queued
   +continuing
@@ -962,6 +1029,8 @@ N_src_view_conversation_SendButton_tsx ..> N_src_view_conversation_SendButton_ts
 
 ### session-tabs.css
 
+[查看源码](session-tabs.css)。
+
 ```mermaid
 classDiagram
 class N_src_view_conversation_session_tabs_css["session-tabs.css"] {
@@ -970,6 +1039,8 @@ class N_src_view_conversation_session_tabs_css["session-tabs.css"] {
 ```
 
 ### ThreadHistoryNotice.tsx
+
+[查看源码](ThreadHistoryNotice.tsx)。
 
 ```mermaid
 classDiagram
@@ -985,6 +1056,8 @@ class N_src_view_conversation_ThreadHistoryNotice_tsx["ThreadHistoryNotice.tsx"]
 直接依赖：[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../components/Icon.tsx](../components/Icon.tsx)。
 
 ### topic-interruption-state.ts
+
+[查看源码](topic-interruption-state.ts)。
 
 ```mermaid
 classDiagram
@@ -1009,9 +1082,9 @@ N_src_view_conversation_topic_interruption_state_ts ..> N_src_view_conversation_
 class N_src_view_conversation_topic_interruption_state_ts_TopicInterruptionPorts["TopicInterruptionPorts"] {
   <<interface>>
   +storage
-  +uuid
-  +submit
-  +lookup
+  +uuid : function
+  +submit : function
+  +lookup : function
 }
 N_src_view_conversation_topic_interruption_state_ts ..> N_src_view_conversation_topic_interruption_state_ts_TopicInterruptionPorts : 声明
 class N_src_view_conversation_topic_interruption_state_ts_TopicInterruptionState["TopicInterruptionState"] {
@@ -1026,7 +1099,7 @@ N_src_view_conversation_topic_interruption_state_ts ..> N_src_view_conversation_
 class N_src_view_conversation_topic_interruption_state_ts_TopicInterruptionController["TopicInterruptionController"] {
   +target
   +constructor()
-  +snapshot
+  +snapshot : get
   +Subscribe()
   +Restore()
   +Submit()
@@ -1063,6 +1136,8 @@ N_src_view_conversation_topic_interruption_state_ts ..> N_src_view_conversation_
 
 ### TopicInterruptionForm.tsx
 
+[查看源码](TopicInterruptionForm.tsx)。
+
 ```mermaid
 classDiagram
 class N_src_view_conversation_TopicInterruptionForm_tsx["TopicInterruptionForm.tsx"] {
@@ -1076,6 +1151,8 @@ class N_src_view_conversation_TopicInterruptionForm_tsx["TopicInterruptionForm.t
 
 ### usage.css
 
+[查看源码](usage.css)。
+
 ```mermaid
 classDiagram
 class N_src_view_conversation_usage_css["usage.css"] {
@@ -1085,17 +1162,25 @@ class N_src_view_conversation_usage_css["usage.css"] {
 
 ### usage.ts
 
+[查看源码](usage.ts)。
+
 ```mermaid
 classDiagram
 class N_src_view_conversation_usage_ts["usage.ts"] {
   <<module>>
   +conversationUsage()
+  +taskUsage()
+  +runDuration()
+  +tokenCount()
+  +durationText()
 }
 ```
 
 直接依赖：[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../../bridge/contracts/usage.ts](../../bridge/contracts/usage.ts)。
 
 ### UsageStatus.tsx
+
+[查看源码](UsageStatus.tsx)。
 
 ```mermaid
 classDiagram
@@ -1124,6 +1209,8 @@ N_src_view_conversation_UsageStatus_tsx ..> N_src_view_conversation_UsageStatus_
 
 ### useChannelDraft.ts
 
+[查看源码](useChannelDraft.ts)。
+
 ```mermaid
 classDiagram
 class N_src_view_conversation_useChannelDraft_ts["useChannelDraft.ts"] {
@@ -1147,6 +1234,8 @@ N_src_view_conversation_useChannelDraft_ts ..> N_src_view_conversation_useChanne
 直接依赖：[channel-draft.ts](channel-draft.ts)。
 
 ### useMessageQueue.ts
+
+[查看源码](useMessageQueue.ts)。
 
 ```mermaid
 classDiagram

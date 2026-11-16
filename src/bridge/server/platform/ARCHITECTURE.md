@@ -37,9 +37,11 @@ Electron utility 文件传输和子进程入口；处理可信私有协议，业
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### controlled-file-child.ts
+
+[查看源码](controlled-file-child.ts)。
 
 ```mermaid
 classDiagram
@@ -50,6 +52,8 @@ class N_src_bridge_server_platform_controlled_file_child_ts["controlled-file-chi
 直接依赖：[../../../logic/file-operations/platform/files/controlled-file-protocol.ts](../../../logic/file-operations/platform/files/controlled-file-protocol.ts)、[../../../logic/file-operations/platform/files/controlled-file-win32.ts](../../../logic/file-operations/platform/files/controlled-file-win32.ts)。
 
 ### controlled-file-transport.ts
+
+[查看源码](controlled-file-transport.ts)。
 
 ```mermaid
 classDiagram
@@ -84,14 +88,14 @@ class N_src_bridge_server_platform_controlled_file_transport_ts_UtilityControlle
   -WithSession()
 }
 N_src_bridge_server_platform_controlled_file_transport_ts ..> N_src_bridge_server_platform_controlled_file_transport_ts_UtilityControlledFiles : 声明
-class N_src_bridge_server_platform_controlled_file_transport_ts_external_ControlledFileTransport["ControlledFileTransport (../../../logic/file-operations/platform/files/controlled-file-protocol"] {
+class N_src_bridge_server_platform_controlled_file_transport_ts_external_ControlledFileTransport["ControlledFileTransport (../../../logic/file-operations/platform/files/controlled-file-protocol)"] {
   <<boundary>>
 }
 N_src_bridge_server_platform_controlled_file_transport_ts_external_ControlledFileTransport <|.. N_src_bridge_server_platform_controlled_file_transport_ts_UtilityControlledFiles
 class N_src_bridge_server_platform_controlled_file_transport_ts_UtilityFileSession["UtilityFileSession"] {
   +exited
   +constructor()
-  +writeIssued
+  +writeIssued : get
   +Open()
   +ReadBefore()
   +RecheckIdentity()
@@ -107,11 +111,11 @@ class N_src_bridge_server_platform_controlled_file_transport_ts_UtilityFileSessi
   -pending
 }
 N_src_bridge_server_platform_controlled_file_transport_ts ..> N_src_bridge_server_platform_controlled_file_transport_ts_UtilityFileSession : 声明
-class N_src_bridge_server_platform_controlled_file_transport_ts_external_ExclusiveControlledFile["ExclusiveControlledFile (../../../logic/file-operations/platform/files/controlled-file-protocol"] {
+class N_src_bridge_server_platform_controlled_file_transport_ts_external_ExclusiveControlledFile["ExclusiveControlledFile (../../../logic/file-operations/platform/files/controlled-file-protocol)"] {
   <<boundary>>
 }
 N_src_bridge_server_platform_controlled_file_transport_ts_external_ExclusiveControlledFile <|.. N_src_bridge_server_platform_controlled_file_transport_ts_UtilityFileSession
-class N_src_bridge_server_platform_controlled_file_transport_ts_external_ExclusiveControlledTransition["ExclusiveControlledTransition (../../../logic/file-operations/platform/files/controlled-file-pr"] {
+class N_src_bridge_server_platform_controlled_file_transport_ts_external_ExclusiveControlledTransition["ExclusiveControlledTransition (../../../logic/file-operations/platform/files/controlled-file-protocol)"] {
   <<boundary>>
 }
 N_src_bridge_server_platform_controlled_file_transport_ts_external_ExclusiveControlledTransition <|.. N_src_bridge_server_platform_controlled_file_transport_ts_UtilityFileSession
@@ -127,25 +131,25 @@ class N_src_bridge_server_platform_controlled_file_transport_ts["controlled-file
 class N_src_bridge_server_platform_controlled_file_transport_ts_UtilityFileSession["UtilityFileSession"] {
   -before
   -issued
-  -resolveExit
-  -abort
+  -resolveExit : function
+  -abort : function
   -Reject()
   -Request()
 }
 N_src_bridge_server_platform_controlled_file_transport_ts ..> N_src_bridge_server_platform_controlled_file_transport_ts_UtilityFileSession : 声明
-class N_src_bridge_server_platform_controlled_file_transport_ts_external_ExclusiveControlledFile["ExclusiveControlledFile (../../../logic/file-operations/platform/files/controlled-file-protocol"] {
+class N_src_bridge_server_platform_controlled_file_transport_ts_external_ExclusiveControlledFile["ExclusiveControlledFile (../../../logic/file-operations/platform/files/controlled-file-protocol)"] {
   <<boundary>>
 }
 N_src_bridge_server_platform_controlled_file_transport_ts_external_ExclusiveControlledFile <|.. N_src_bridge_server_platform_controlled_file_transport_ts_UtilityFileSession
-class N_src_bridge_server_platform_controlled_file_transport_ts_external_ExclusiveControlledTransition["ExclusiveControlledTransition (../../../logic/file-operations/platform/files/controlled-file-pr"] {
+class N_src_bridge_server_platform_controlled_file_transport_ts_external_ExclusiveControlledTransition["ExclusiveControlledTransition (../../../logic/file-operations/platform/files/controlled-file-protocol)"] {
   <<boundary>>
 }
 N_src_bridge_server_platform_controlled_file_transport_ts_external_ExclusiveControlledTransition <|.. N_src_bridge_server_platform_controlled_file_transport_ts_UtilityFileSession
 ```
 
-继承／实现来源：`ControlledFileTransport` → [../../../logic/file-operations/platform/files/controlled-file-protocol.ts](../../../logic/file-operations/platform/files/controlled-file-protocol.ts)。
-继承／实现来源：`ExclusiveControlledFile` → [../../../logic/file-operations/platform/files/controlled-file-protocol.ts](../../../logic/file-operations/platform/files/controlled-file-protocol.ts)。
-继承／实现来源：`ExclusiveControlledTransition` → [../../../logic/file-operations/platform/files/controlled-file-protocol.ts](../../../logic/file-operations/platform/files/controlled-file-protocol.ts)。
+继承／实现来源：`ControlledFileTransport` → [../../../logic/file-operations/platform/files/controlled-file-protocol.ts](../../../logic/file-operations/platform/files/controlled-file-protocol.ts)（声明 `ControlledFileTransport`）。
+继承／实现来源：`ExclusiveControlledFile` → [../../../logic/file-operations/platform/files/controlled-file-protocol.ts](../../../logic/file-operations/platform/files/controlled-file-protocol.ts)（声明 `ExclusiveControlledFile`）。
+继承／实现来源：`ExclusiveControlledTransition` → [../../../logic/file-operations/platform/files/controlled-file-protocol.ts](../../../logic/file-operations/platform/files/controlled-file-protocol.ts)（声明 `ExclusiveControlledTransition`）。
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../logic/file-operations/platform/files/controlled-file-protocol.ts](../../../logic/file-operations/platform/files/controlled-file-protocol.ts)。
 
 

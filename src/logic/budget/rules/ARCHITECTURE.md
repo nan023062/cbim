@@ -79,9 +79,11 @@ model-request-configuration.ts 从原执行快照投影预算模型；primary �
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### model-request-budget-invariants.ts
+
+[查看源码](model-request-budget-invariants.ts)。
 
 ```mermaid
 classDiagram
@@ -95,24 +97,28 @@ class N_src_logic_budget_rules_model_request_budget_invariants_ts["model-request
 
 ### model-request-budget-rules.ts
 
+[查看源码](model-request-budget-rules.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_budget_rules_model_request_budget_rules_ts["model-request-budget-rules.ts"] {
   <<module>>
   +requestBudgetReservation()
   +requestBudgetCost()
-  +requestBudgetInputCapacity()
   +requestBudgetRecords()
   +requestBudgetReport()
   +requestBudgetDecision()
-  +requestBudgetCommand()
-  +requestBudgetReceipt()
+  +requestBudgetInputCapacity : function
+  +requestBudgetCommand : function
+  +requestBudgetReceipt : function
 }
 ```
 
 直接依赖：[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[model-request-budget.ts](model-request-budget.ts)、[scope-budget.ts](scope-budget.ts)。
 
 ### model-request-budget-storage.ts
+
+[查看源码](model-request-budget-storage.ts)。
 
 ```mermaid
 classDiagram
@@ -164,6 +170,8 @@ N_src_logic_budget_rules_model_request_budget_storage_ts ..> N_src_logic_budget_
 直接依赖：[model-request-budget.ts](model-request-budget.ts)、[scope-budget.ts](scope-budget.ts)。
 
 ### model-request-budget.ts
+
+[查看源码](model-request-budget.ts)。
 
 ```mermaid
 classDiagram
@@ -245,6 +253,8 @@ N_src_logic_budget_rules_model_request_budget_ts ..> N_src_logic_budget_rules_mo
 
 ### model-request-configuration.ts
 
+[查看源码](model-request-configuration.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_budget_rules_model_request_configuration_ts["model-request-configuration.ts"] {
@@ -268,6 +278,8 @@ N_src_logic_budget_rules_model_request_configuration_ts ..> N_src_logic_budget_r
 直接依赖：[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[model-request-budget.ts](model-request-budget.ts)、[../../engines/index.ts](../../engines/index.ts)、[../../team/rules/workspace-member-rules.ts](../../team/rules/workspace-member-rules.ts)。
 
 ### request-budget.ts
+
+[查看源码](request-budget.ts)。
 
 ```mermaid
 classDiagram
@@ -301,6 +313,8 @@ N_src_logic_budget_rules_request_budget_ts ..> N_src_logic_budget_rules_request_
 
 ### scope-budget-invariants.ts
 
+[查看源码](scope-budget-invariants.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_budget_rules_scope_budget_invariants_ts["scope-budget-invariants.ts"] {
@@ -312,6 +326,8 @@ class N_src_logic_budget_rules_scope_budget_invariants_ts["scope-budget-invarian
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/utility/index.ts](../../../core/utility/index.ts)、[scope-budget.ts](scope-budget.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../../tasks/rules/dispatch-scope.ts](../../tasks/rules/dispatch-scope.ts)。
 
 ### scope-budget.ts
+
+[查看源码](scope-budget.ts)。
 
 ```mermaid
 classDiagram
@@ -378,6 +394,8 @@ N_src_logic_budget_rules_scope_budget_ts ..> N_src_logic_budget_rules_scope_budg
 
 
 ### scope-usage.ts
+
+[查看源码](scope-usage.ts)。
 
 ```mermaid
 classDiagram

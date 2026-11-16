@@ -249,9 +249,11 @@ WorkspaceExecutionManager 从可信 recoveryPreflight 返回值选择新核实�
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### approvals.ts
+
+[查看源码](approvals.ts)。
 
 ```mermaid
 classDiagram
@@ -272,6 +274,8 @@ N_src_logic_conversation_runtime_approvals_ts ..> N_src_logic_conversation_runti
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../tools/rules/policy/types.ts](../../tools/rules/policy/types.ts)、[../../tools/rules/types.ts](../../tools/rules/types.ts)。
 
 ### execution-manager.ts
+
+[查看源码](execution-manager.ts)。
 
 成员 1/5（同名节点为同一声明，跨图合并阅读）。
 
@@ -390,9 +394,9 @@ class N_src_logic_conversation_runtime_execution_manager_ts_WorkspaceExecutionMa
   +List()
   +Close()
   -storage
-  -factory
-  -inputImages
-  -prepareContinuationInput
+  -factory : function
+  -inputImages : function
+  -prepareContinuationInput : function
   -collaboration
   -resultContinuationStopped
   -queueAdvanceStopped
@@ -452,6 +456,8 @@ N_src_logic_conversation_runtime_execution_manager_ts ..> N_src_logic_conversati
 
 ### main-agent.ts
 
+[查看源码](main-agent.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_conversation_runtime_main_agent_ts["main-agent.ts"] {
@@ -464,6 +470,8 @@ class N_src_logic_conversation_runtime_main_agent_ts["main-agent.ts"] {
 
 
 ### message-queue.ts
+
+[查看源码](message-queue.ts)。
 
 成员 1/2（同名节点为同一声明，跨图合并阅读）。
 
@@ -527,6 +535,8 @@ N_src_logic_conversation_runtime_message_queue_ts ..> N_src_logic_conversation_r
 直接依赖：[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../tasks/rules/queue.ts](../../tasks/rules/queue.ts)。
 
 ### questions.ts
+
+[查看源码](questions.ts)。
 
 ```mermaid
 classDiagram

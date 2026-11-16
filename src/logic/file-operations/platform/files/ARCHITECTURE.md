@@ -54,9 +54,11 @@
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### artifact-files.ts
+
+[查看源码](artifact-files.ts)。
 
 ```mermaid
 classDiagram
@@ -80,8 +82,8 @@ class N_src_logic_file_operations_platform_files_artifact_files_ts_ArtifactFiles
   +ValidateImage()
   +CheckFiles()
   -root
-  -assert
-  -secureRead
+  -assert : function
+  -secureRead : function
   -Resolve()
   -ReadFiles()
   -ReadFile()
@@ -93,6 +95,8 @@ N_src_logic_file_operations_platform_files_artifact_files_ts ..> N_src_logic_fil
 
 ### code-check-runner.ts
 
+[查看源码](code-check-runner.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_file_operations_platform_files_code_check_runner_ts["code-check-runner.ts"] {
@@ -102,7 +106,7 @@ class N_src_logic_file_operations_platform_files_code_check_runner_ts_CodeCheckR
   +constructor()
   +Run()
   -root
-  -assertCurrent
+  -assertCurrent : function
   -manifests
   -Directory()
   -Command()
@@ -114,10 +118,12 @@ class N_src_logic_file_operations_platform_files_code_check_runner_ts_external_C
 N_src_logic_file_operations_platform_files_code_check_runner_ts_external_CodeCheckPort <|.. N_src_logic_file_operations_platform_files_code_check_runner_ts_CodeCheckRunner
 ```
 
-继承／实现来源：`CodeCheckPort` → [../../../evidence/rules/code-check.ts](../../../evidence/rules/code-check.ts)。
+继承／实现来源：`CodeCheckPort` → [../../../evidence/rules/code-check.ts](../../../evidence/rules/code-check.ts)（声明 `CodeCheckPort`）。
 直接依赖：[../../../../core/errors.ts](../../../../core/errors.ts)、[../../../../core/platform/node/serialization.ts](../../../../core/platform/node/serialization.ts)、[../../../evidence/rules/code-check.ts](../../../evidence/rules/code-check.ts)、[../../../evidence/rules/output-manifest-evidence.ts](../../../evidence/rules/output-manifest-evidence.ts)、[output-manifest-files.ts](output-manifest-files.ts)、[../../../workspace/rules/code-check.ts](../../../workspace/rules/code-check.ts)。
 
 ### controlled-file-blobs.ts
+
+[查看源码](controlled-file-blobs.ts)。
 
 ```mermaid
 classDiagram
@@ -139,6 +145,8 @@ N_src_logic_file_operations_platform_files_controlled_file_blobs_ts ..> N_src_lo
 直接依赖：[../../../../core/errors.ts](../../../../core/errors.ts)、[../../rules/controlled-file-event.ts](../../rules/controlled-file-event.ts)、[../../rules/controlled-file-operation.ts](../../rules/controlled-file-operation.ts)。
 
 ### controlled-file-protocol.ts
+
+[查看源码](controlled-file-protocol.ts)。
 
 ```mermaid
 classDiagram
@@ -206,6 +214,8 @@ N_src_logic_file_operations_platform_files_controlled_file_protocol_ts ..> N_src
 
 ### controlled-file-win32.ts
 
+[查看源码](controlled-file-win32.ts)。
+
 成员 1/2（同名节点为同一声明，跨图合并阅读）。
 
 ```mermaid
@@ -261,6 +271,8 @@ N_src_logic_file_operations_platform_files_controlled_file_win32_ts ..> N_src_lo
 
 ### output-manifest-files.ts
 
+[查看源码](output-manifest-files.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_file_operations_platform_files_output_manifest_files_ts["output-manifest-files.ts"] {
@@ -271,7 +283,7 @@ class N_src_logic_file_operations_platform_files_output_manifest_files_ts_Output
   +Capture()
   +Check()
   -root
-  -assert
+  -assert : function
   -guarded
   -files
   -Current()
@@ -284,6 +296,8 @@ N_src_logic_file_operations_platform_files_output_manifest_files_ts ..> N_src_lo
 直接依赖：[../../../../core/errors.ts](../../../../core/errors.ts)、[../../../evidence/rules/output-manifest-evidence.ts](../../../evidence/rules/output-manifest-evidence.ts)、[../../../evidence/rules/output-manifest.ts](../../../evidence/rules/output-manifest.ts)、[artifact-files.ts](artifact-files.ts)、[../../../workspace/rules/artifact-scope.ts](../../../workspace/rules/artifact-scope.ts)。
 
 ### png-validator.ts
+
+[查看源码](png-validator.ts)。
 
 ```mermaid
 classDiagram
@@ -315,6 +329,8 @@ N_src_logic_file_operations_platform_files_png_validator_ts ..> N_src_logic_file
 
 ### scoped-execution-files.ts
 
+[查看源码](scoped-execution-files.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_file_operations_platform_files_scoped_execution_files_ts["scoped-execution-files.ts"] {
@@ -329,9 +345,9 @@ class N_src_logic_file_operations_platform_files_scoped_execution_files_ts_Scope
   +Node()
   +Drain()
   -root
-  -assertCurrent
+  -assertCurrent : function
   -protectedRoots
-  -lifecycle
+  -lifecycle : function
   -unsettled
   -cleanupRetries
   -koffiPath
@@ -343,7 +359,7 @@ class N_src_logic_file_operations_platform_files_scoped_execution_files_ts_exter
 N_src_logic_file_operations_platform_files_scoped_execution_files_ts_external_ScopedExecutionPort <|.. N_src_logic_file_operations_platform_files_scoped_execution_files_ts_ScopedExecutionFiles
 ```
 
-继承／实现来源：`ScopedExecutionPort` → [../../../execution/rules/capabilities/run-scoped-execution.ts](../../../execution/rules/capabilities/run-scoped-execution.ts)。
+继承／实现来源：`ScopedExecutionPort` → [../../../execution/rules/capabilities/run-scoped-execution.ts](../../../execution/rules/capabilities/run-scoped-execution.ts)（声明 `ScopedExecutionPort`）。
 直接依赖：[../../../../core/errors.ts](../../../../core/errors.ts)、[../../../execution/rules/capabilities/run-scoped-execution.ts](../../../execution/rules/capabilities/run-scoped-execution.ts)、[controlled-file-win32.ts](controlled-file-win32.ts)、[../isolation/isolated-node.ts](../isolation/isolated-node.ts)、[../isolation/isolation-record.ts](../isolation/isolation-record.ts)、[../../rules/isolated-execution-recovery.ts](../../rules/isolated-execution-recovery.ts)、[../../rules/scoped-execution.ts](../../rules/scoped-execution.ts)、[../../../workspace/rules/execution-scope.ts](../../../workspace/rules/execution-scope.ts)。
 
 ### 本目录调用边界

@@ -218,7 +218,7 @@ Rules 以显式 assetsRoot 加载 business、capability、connector 的 Schema�
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ```mermaid
 classDiagram
@@ -334,6 +334,8 @@ class N_src_logic_knowledge_rules_types_ts["types.ts"] {
 
 ### builtins.ts
 
+[查看源码](builtins.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_knowledge_rules_builtins_ts["builtins.ts"] {
@@ -353,6 +355,8 @@ N_src_logic_knowledge_rules_builtins_ts ..> N_src_logic_knowledge_rules_builtins
 
 
 ### knowledge-queries.ts
+
+[查看源码](knowledge-queries.ts)。
 
 ```mermaid
 classDiagram
@@ -374,6 +378,8 @@ N_src_logic_knowledge_rules_knowledge_queries_ts ..> N_src_logic_knowledge_rules
 
 
 ### knowledge-refresh.ts
+
+[查看源码](knowledge-refresh.ts)。
 
 ```mermaid
 classDiagram
@@ -399,11 +405,13 @@ class N_src_logic_knowledge_rules_knowledge_refresh_ts_KnowledgeRefresh["Knowled
 N_src_logic_knowledge_rules_knowledge_refresh_ts ..> N_src_logic_knowledge_rules_knowledge_refresh_ts_KnowledgeRefresh : 声明
 ```
 
-继承／实现来源：`KnowledgeSnapshotReader` → [types.ts](types.ts)。
+继承／实现来源：`KnowledgeSnapshotReader` → [types.ts](types.ts)（声明 `KnowledgeSnapshotReader`）。
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[knowledge-write-input.ts](knowledge-write-input.ts)、[read-models/index.ts](read-models/index.ts)、[types.ts](types.ts)。
 
 
 ### knowledge-write-input.ts
+
+[查看源码](knowledge-write-input.ts)。
 
 ```mermaid
 classDiagram
@@ -437,6 +445,8 @@ N_src_logic_knowledge_rules_knowledge_write_input_ts ..> N_src_logic_knowledge_r
 
 ### knowledge-write-observation.ts
 
+[查看源码](knowledge-write-observation.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_knowledge_rules_knowledge_write_observation_ts["knowledge-write-observation.ts"] {
@@ -453,12 +463,15 @@ N_src_logic_knowledge_rules_knowledge_write_observation_ts ..> N_src_logic_knowl
 
 ### knowledge.ts
 
+[查看源码](knowledge.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_knowledge_rules_knowledge_ts["knowledge.ts"] {
   <<module>>
-  +revision()
   +isKnowledge()
+  +parseJson()
+  +revision : function
 }
 ```
 
@@ -483,6 +496,8 @@ N_src_logic_knowledge_rules_knowledge_ts ..> N_src_logic_knowledge_rules_knowled
 
 
 ### memory-index.ts
+
+[查看源码](memory-index.ts)。
 
 ```mermaid
 classDiagram
@@ -532,6 +547,8 @@ N_src_logic_knowledge_rules_memory_index_ts_MemoryIndexPlan <|-- N_src_logic_kno
 
 ### object-contract.ts
 
+[查看源码](object-contract.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_knowledge_rules_object_contract_ts["object-contract.ts"] {
@@ -564,12 +581,14 @@ class N_src_logic_knowledge_rules_object_contract_ts_external_KnowledgeCommit["K
 N_src_logic_knowledge_rules_object_contract_ts_external_KnowledgeCommit <|-- N_src_logic_knowledge_rules_object_contract_ts_ObjectCommit
 ```
 
-继承／实现来源：`Preview` → [types.ts](types.ts)。
-继承／实现来源：`KnowledgeCommit` → [types.ts](types.ts)。
+继承／实现来源：`Preview` → [types.ts](types.ts)（声明 `Preview`）。
+继承／实现来源：`KnowledgeCommit` → [types.ts](types.ts)（声明 `KnowledgeCommit`）。
 直接依赖：[types.ts](types.ts)、[../../team/rules/agent-runtime.ts](../../team/rules/agent-runtime.ts)、[../../workspace/rules/module-outline.ts](../../workspace/rules/module-outline.ts)。
 
 
 ### object-crud.ts
+
+[查看源码](object-crud.ts)。
 
 ```mermaid
 classDiagram
@@ -589,6 +608,8 @@ N_src_logic_knowledge_rules_object_crud_ts ..> N_src_logic_knowledge_rules_objec
 
 
 ### object-storage.ts
+
+[查看源码](object-storage.ts)。
 
 ```mermaid
 classDiagram
@@ -615,6 +636,8 @@ N_src_logic_knowledge_rules_object_storage_ts ..> N_src_logic_knowledge_rules_ob
 
 
 ### planned-commit.ts
+
+[查看源码](planned-commit.ts)。
 
 ```mermaid
 classDiagram
@@ -669,6 +692,8 @@ N_src_logic_knowledge_rules_planned_commit_ts ..> N_src_logic_knowledge_rules_pl
 
 
 ### portable-package.ts
+
+[查看源码](portable-package.ts)。
 
 ```mermaid
 classDiagram
@@ -747,6 +772,8 @@ N_src_logic_knowledge_rules_portable_package_ts ..> N_src_logic_knowledge_rules_
 
 ### ports.ts
 
+[查看源码](ports.ts)。
+
 成员 1/2（同名节点为同一声明，跨图合并阅读）。
 
 ```mermaid
@@ -800,6 +827,8 @@ N_src_logic_knowledge_rules_ports_ts ..> N_src_logic_knowledge_rules_ports_ts_Kn
 
 ### tool-output-base.ts
 
+[查看源码](tool-output-base.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_knowledge_rules_tool_output_base_ts["tool-output-base.ts"] {
@@ -826,6 +855,8 @@ N_src_logic_knowledge_rules_tool_output_base_ts ..> N_src_logic_knowledge_rules_
 
 ### tool-output-builtins.ts
 
+[查看源码](tool-output-builtins.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_knowledge_rules_tool_output_builtins_ts["tool-output-builtins.ts"] {
@@ -848,6 +879,8 @@ N_src_logic_knowledge_rules_tool_output_builtins_ts ..> N_src_logic_knowledge_ru
 
 ### tool-output-queries.ts
 
+[查看源码](tool-output-queries.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_knowledge_rules_tool_output_queries_ts["tool-output-queries.ts"] {
@@ -869,6 +902,8 @@ N_src_logic_knowledge_rules_tool_output_queries_ts ..> N_src_logic_knowledge_rul
 
 
 ### tool-output-transactions.ts
+
+[查看源码](tool-output-transactions.ts)。
 
 ```mermaid
 classDiagram
@@ -896,6 +931,8 @@ N_src_logic_knowledge_rules_tool_output_transactions_ts ..> N_src_logic_knowledg
 
 
 ### types.ts
+
+[查看源码](types.ts)。
 
 ```mermaid
 classDiagram

@@ -79,9 +79,11 @@
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### software-updates.css
+
+[查看源码](software-updates.css)。
 
 ```mermaid
 classDiagram
@@ -91,6 +93,8 @@ class N_src_view_updates_software_updates_css["software-updates.css"] {
 ```
 
 ### SoftwareUpdateButton.tsx
+
+[查看源码](SoftwareUpdateButton.tsx)。
 
 ```mermaid
 classDiagram
@@ -103,6 +107,8 @@ class N_src_view_updates_SoftwareUpdateButton_tsx["SoftwareUpdateButton.tsx"] {
 直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[software-updates.css](software-updates.css)、[update-button-state.ts](update-button-state.ts)、[useSoftwareUpdates.ts](useSoftwareUpdates.ts)。
 
 ### SoftwareUpdates.tsx
+
+[查看源码](SoftwareUpdates.tsx)。
 
 ```mermaid
 classDiagram
@@ -117,6 +123,8 @@ class N_src_view_updates_SoftwareUpdates_tsx["SoftwareUpdates.tsx"] {
 
 ### update-button-state.ts
 
+[查看源码](update-button-state.ts)。
+
 ```mermaid
 classDiagram
 class N_src_view_updates_update_button_state_ts["update-button-state.ts"] {
@@ -128,6 +136,8 @@ class N_src_view_updates_update_button_state_ts["update-button-state.ts"] {
 直接依赖：[../../bridge/contracts/desktop-updates.ts](../../bridge/contracts/desktop-updates.ts)。
 
 ### useSoftwareUpdates.ts
+
+[查看源码](useSoftwareUpdates.ts)。
 
 ```mermaid
 classDiagram
@@ -152,8 +162,8 @@ class N_src_view_updates_useSoftwareUpdates_ts_SoftwareUpdateController["Softwar
   +status
   +error
   +pending
-  +refresh
-  +act
+  +refresh : function
+  +act : function
 }
 N_src_view_updates_useSoftwareUpdates_ts ..> N_src_view_updates_useSoftwareUpdates_ts_SoftwareUpdateController : 声明
 ```

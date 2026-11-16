@@ -180,9 +180,11 @@ team-workflow 与 execution-context 使用 workspace.rules.assetsRoot 读取 Bui
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### automatic-context.ts
+
+[查看源码](automatic-context.ts)。
 
 ```mermaid
 classDiagram
@@ -195,6 +197,8 @@ class N_src_logic_execution_context_automatic_context_ts["automatic-context.ts"]
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[dispatch-context.ts](dispatch-context.ts)、[../../knowledge/rules/types.ts](../../knowledge/rules/types.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../tasks/rules/workflow-selection.ts](../../tasks/rules/workflow-selection.ts)、[../../team/rules/automatic-execution.ts](../../team/rules/automatic-execution.ts)。
 
 ### dispatch-context.ts
+
+[查看源码](dispatch-context.ts)。
 
 ```mermaid
 classDiagram
@@ -209,6 +213,8 @@ class N_src_logic_execution_context_dispatch_context_ts["dispatch-context.ts"] {
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../conversation/runtime/main-agent.ts](../../conversation/runtime/main-agent.ts)、[../../knowledge/rules/read-models/index.ts](../../knowledge/rules/read-models/index.ts)、[../../knowledge/rules/types.ts](../../knowledge/rules/types.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../tasks/rules/workflow-selection.ts](../../tasks/rules/workflow-selection.ts)、[../../team/rules/agent-types.ts](../../team/rules/agent-types.ts)。
 
 ### execution-context.ts
+
+[查看源码](execution-context.ts)。
 
 ```mermaid
 classDiagram
@@ -235,6 +241,8 @@ N_src_logic_execution_context_execution_context_ts ..> N_src_logic_execution_con
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../../conversation/runtime/main-agent.ts](../../conversation/runtime/main-agent.ts)、[automatic-context.ts](automatic-context.ts)、[dispatch-context.ts](dispatch-context.ts)、[../../knowledge/rules/builtins.ts](../../knowledge/rules/builtins.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../knowledge/rules/read-models/index.ts](../../knowledge/rules/read-models/index.ts)、[../../knowledge/rules/types.ts](../../knowledge/rules/types.ts)、[../../tasks/rules/execution-context.ts](../../tasks/rules/execution-context.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../tasks/rules/workflow-selection.ts](../../tasks/rules/workflow-selection.ts)、[../../team/rules/workspace-member.ts](../../team/rules/workspace-member.ts)、[../../workspace/rules/workflow-contract.ts](../../workspace/rules/workflow-contract.ts)。
 
 ### team-workflow.ts
+
+[查看源码](team-workflow.ts)。
 
 ```mermaid
 classDiagram

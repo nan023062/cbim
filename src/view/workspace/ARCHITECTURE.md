@@ -178,9 +178,11 @@ BusinessArchitecture 保留唯一模块树，模块责任、知识正文、目�
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### inline-module-ownership.ts
+
+[查看源码](inline-module-ownership.ts)。
 
 ```mermaid
 classDiagram
@@ -200,7 +202,7 @@ class N_src_view_workspace_inline_module_ownership_ts["inline-module-ownership.t
 }
 class N_src_view_workspace_inline_module_ownership_ts_InlineOwnerCall["InlineOwnerCall"] {
   <<type>>
-
+  +调用签名()
 }
 N_src_view_workspace_inline_module_ownership_ts ..> N_src_view_workspace_inline_module_ownership_ts_InlineOwnerCall : 声明
 class N_src_view_workspace_inline_module_ownership_ts_InlineOwnerAgent["InlineOwnerAgent"] {
@@ -232,17 +234,20 @@ class N_src_view_workspace_inline_module_ownership_ts["inline-module-ownership.t
 }
 class N_src_view_workspace_inline_module_ownership_ts_InlineOwnerPorts["InlineOwnerPorts"] {
   <<interface>>
-  +call
+  +call : function
   +members
   +ownerships
-  +isCurrent
+  +isCurrent : function
 }
 N_src_view_workspace_inline_module_ownership_ts ..> N_src_view_workspace_inline_module_ownership_ts_InlineOwnerPorts : 声明
 ```
 
+匿名签名（InlineOwnerCall，不是具名方法）：`(action: 'models.list' | 'workspace.members.list' | 'workspace.members.preview' | 'workspace.members.commit' | 'workspace.members.receipt' | 'workspace.ownerships.list' | 'workspace.ownerships.get' | 'workspace.ownerships.preview' | 'workspace.ownerships.commit' | 'workspace.ownerships.receipt', args?: unknown) => Promise<any>`。
 直接依赖：[../../bridge/contracts/agent-settings.ts](../../bridge/contracts/agent-settings.ts)、[../../bridge/contracts/engines.ts](../../bridge/contracts/engines.ts)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../../bridge/contracts/module-ownership.ts](../../bridge/contracts/module-ownership.ts)、[../../bridge/contracts/workspace-members.ts](../../bridge/contracts/workspace-members.ts)、[../team/workspace-member-state.ts](../team/workspace-member-state.ts)、[module-ownership-state.ts](module-ownership-state.ts)。
 
 ### InlineModuleOwner.tsx
+
+[查看源码](InlineModuleOwner.tsx)。
 
 ```mermaid
 classDiagram
@@ -268,6 +273,8 @@ N_src_view_workspace_InlineModuleOwner_tsx ..> N_src_view_workspace_InlineModule
 直接依赖：[../../bridge/contracts/ipc-call.ts](../../bridge/contracts/ipc-call.ts)、[../../bridge/contracts/module-ownership.ts](../../bridge/contracts/module-ownership.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../team/workspace-member-state.ts](../team/workspace-member-state.ts)、[inline-module-ownership.ts](inline-module-ownership.ts)、[module-ownership-state.ts](module-ownership-state.ts)。
 
 ### module-ownership-state.ts
+
+[查看源码](module-ownership-state.ts)。
 
 ```mermaid
 classDiagram
@@ -306,18 +313,18 @@ N_src_view_workspace_module_ownership_state_ts ..> N_src_view_workspace_module_o
 class N_src_view_workspace_module_ownership_state_ts_ModuleOwnershipCommandPorts["ModuleOwnershipCommandPorts"] {
   <<interface>>
   +storage
-  +commit
-  +lookup
-  +uuid
+  +commit : function
+  +lookup : function
+  +uuid : function
 }
 N_src_view_workspace_module_ownership_state_ts ..> N_src_view_workspace_module_ownership_state_ts_ModuleOwnershipCommandPorts : 声明
 class N_src_view_workspace_module_ownership_state_ts_ModuleOwnershipCommands["ModuleOwnershipCommands"] {
   +workspaceId
   +storageKey
   +constructor()
-  +snapshot
-  +blocked
-  +canRelease
+  +snapshot : get
+  +blocked : get
+  +canRelease : get
   +Subscribe()
   +IsPending()
   +Submit()
@@ -366,6 +373,8 @@ N_src_view_workspace_module_ownership_state_ts ..> N_src_view_workspace_module_o
 
 ### module-ownership.css
 
+[查看源码](module-ownership.css)。
+
 ```mermaid
 classDiagram
 class N_src_view_workspace_module_ownership_css["module-ownership.css"] {
@@ -374,6 +383,8 @@ class N_src_view_workspace_module_ownership_css["module-ownership.css"] {
 ```
 
 ### ModuleOwnershipDetail.tsx
+
+[查看源码](ModuleOwnershipDetail.tsx)。
 
 ```mermaid
 classDiagram
@@ -387,6 +398,8 @@ class N_src_view_workspace_ModuleOwnershipDetail_tsx["ModuleOwnershipDetail.tsx"
 直接依赖：[../../bridge/contracts/module-ownership.ts](../../bridge/contracts/module-ownership.ts)、[../knowledge/KnowledgeSourceDetails.tsx](../knowledge/KnowledgeSourceDetails.tsx)。
 
 ### ModuleOwnershipPanel.tsx
+
+[查看源码](ModuleOwnershipPanel.tsx)。
 
 ```mermaid
 classDiagram
@@ -407,8 +420,8 @@ class N_src_view_workspace_ModuleOwnershipPanel_tsx_ModuleOwnershipPanelProps["M
   +initialModuleId
   +initialMemberId
   +memberId
-  +onClose
-  +onDirtyChange
+  +onClose : function
+  +onDirtyChange : function
   +registration
 }
 N_src_view_workspace_ModuleOwnershipPanel_tsx ..> N_src_view_workspace_ModuleOwnershipPanel_tsx_ModuleOwnershipPanelProps : 声明
@@ -417,6 +430,8 @@ N_src_view_workspace_ModuleOwnershipPanel_tsx ..> N_src_view_workspace_ModuleOwn
 直接依赖：[../../bridge/contracts/module-ownership.ts](../../bridge/contracts/module-ownership.ts)、[../../bridge/contracts/workspace-members.ts](../../bridge/contracts/workspace-members.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../knowledge/KnowledgeSourceDetails.tsx](../knowledge/KnowledgeSourceDetails.tsx)、[../team/workspace-member-state.ts](../team/workspace-member-state.ts)、[ModuleOwnershipDetail.tsx](ModuleOwnershipDetail.tsx)、[module-ownership-state.ts](module-ownership-state.ts)、[module-ownership.css](module-ownership.css)。
 
 ### ModuleSourceTree.tsx
+
+[查看源码](ModuleSourceTree.tsx)。
 
 ```mermaid
 classDiagram
@@ -430,6 +445,8 @@ class N_src_view_workspace_ModuleSourceTree_tsx["ModuleSourceTree.tsx"] {
 
 ### SourceFilePreview.tsx
 
+[查看源码](SourceFilePreview.tsx)。
+
 ```mermaid
 classDiagram
 class N_src_view_workspace_SourceFilePreview_tsx["SourceFilePreview.tsx"] {
@@ -442,6 +459,8 @@ class N_src_view_workspace_SourceFilePreview_tsx["SourceFilePreview.tsx"] {
 
 ### workspace-view.css
 
+[查看源码](workspace-view.css)。
+
 ```mermaid
 classDiagram
 class N_src_view_workspace_workspace_view_css["workspace-view.css"] {
@@ -450,6 +469,8 @@ class N_src_view_workspace_workspace_view_css["workspace-view.css"] {
 ```
 
 ### WorkspaceView.tsx
+
+[查看源码](WorkspaceView.tsx)。
 
 ```mermaid
 classDiagram

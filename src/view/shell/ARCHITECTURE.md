@@ -121,9 +121,11 @@ App 持有 SettingsSectionId 与 useAppearance；进入设置时隐藏原工作�
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### App.tsx
+
+[查看源码](App.tsx)。
 
 ```mermaid
 classDiagram
@@ -136,6 +138,8 @@ class N_src_view_shell_App_tsx["App.tsx"] {
 直接依赖：[../../bridge/contracts/ipc-call.ts](../../bridge/contracts/ipc-call.ts)、[../../bridge/contracts/resources.ts](../../bridge/contracts/resources.ts)、[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../components/BrandMark.tsx](../components/BrandMark.tsx)、[../components/DeferredView.tsx](../components/DeferredView.tsx)、[../components/Empty.tsx](../components/Empty.tsx)、[../components/Icon.tsx](../components/Icon.tsx)、[../components/InterfaceHelp.tsx](../components/InterfaceHelp.tsx)、[../components/sidebar.css](../components/sidebar.css)、[../conversation/Conversation.tsx](../conversation/Conversation.tsx)、[../conversation/conversation-activity.ts](../conversation/conversation-activity.ts)、[../execution-view/team-conversations.ts](../execution-view/team-conversations.ts)、[../resources/ResourceRepositoryView.tsx](../resources/ResourceRepositoryView.tsx)、[../runtime/RuntimeOverview.tsx](../runtime/RuntimeOverview.tsx)、[../runtime/runtime-view-state.ts](../runtime/runtime-view-state.ts)、[../settings/SettingsView.tsx](../settings/SettingsView.tsx)、[../settings/settings-sections.ts](../settings/settings-sections.ts)、[../settings/useAppearance.ts](../settings/useAppearance.ts)、[ExtensionArea.tsx](ExtensionArea.tsx)、[UserMenu.tsx](UserMenu.tsx)、[WorkspaceList.tsx](WorkspaceList.tsx)、[runtime-navigation.ts](runtime-navigation.ts)、[tabs.ts](tabs.ts)、[useSidebarWidth.ts](useSidebarWidth.ts)、[../updates/SoftwareUpdates.tsx](../updates/SoftwareUpdates.tsx)、[../updates/useSoftwareUpdates.ts](../updates/useSoftwareUpdates.ts)。
 
 ### ExtensionArea.tsx
+
+[查看源码](ExtensionArea.tsx)。
 
 ```mermaid
 classDiagram
@@ -167,6 +171,8 @@ N_src_view_shell_ExtensionArea_tsx ..> N_src_view_shell_ExtensionArea_tsx_Panel 
 
 ### extensions.css
 
+[查看源码](extensions.css)。
+
 ```mermaid
 classDiagram
 class N_src_view_shell_extensions_css["extensions.css"] {
@@ -175,6 +181,8 @@ class N_src_view_shell_extensions_css["extensions.css"] {
 ```
 
 ### runtime-navigation.ts
+
+[查看源码](runtime-navigation.ts)。
 
 ```mermaid
 classDiagram
@@ -209,7 +217,7 @@ class N_src_view_shell_runtime_navigation_ts_VerifiedRuntimeNavigation["Verified
 N_src_view_shell_runtime_navigation_ts ..> N_src_view_shell_runtime_navigation_ts_VerifiedRuntimeNavigation : 声明
 class N_src_view_shell_runtime_navigation_ts_NavigationReader["NavigationReader"] {
   <<type>>
-
+  +调用签名()
 }
 N_src_view_shell_runtime_navigation_ts ..> N_src_view_shell_runtime_navigation_ts_NavigationReader : 声明
 class N_src_view_shell_runtime_navigation_ts_NavigationGraph["NavigationGraph"] {
@@ -230,16 +238,19 @@ class N_src_view_shell_runtime_navigation_ts_RuntimeNavigationResolver["RuntimeN
   +constructor()
   +Cancel()
   +Resolve()
-  -read
+  -read : function
   -generation
 }
 N_src_view_shell_runtime_navigation_ts ..> N_src_view_shell_runtime_navigation_ts_RuntimeNavigationResolver : 声明
 ```
 
-继承／实现来源：`RuntimeNavigationTarget` → [../runtime/runtime-view-state.ts](../runtime/runtime-view-state.ts)。
+匿名签名（NavigationReader，不是具名方法）：`(action: 'list' | 'loop.list', args?: { id: string }) => Promise<unknown>`。
+继承／实现来源：`RuntimeNavigationTarget` → [../runtime/runtime-view-state.ts](../runtime/runtime-view-state.ts)（声明 `RuntimeNavigationTarget`）。
 直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../foundations/utility/index.ts](../foundations/utility/index.ts)、[../runtime/runtime-view-state.ts](../runtime/runtime-view-state.ts)、[tabs.ts](tabs.ts)。
 
 ### shell.css
+
+[查看源码](shell.css)。
 
 ```mermaid
 classDiagram
@@ -249,6 +260,8 @@ class N_src_view_shell_shell_css["shell.css"] {
 ```
 
 ### tabs.ts
+
+[查看源码](tabs.ts)。
 
 ```mermaid
 classDiagram
@@ -303,6 +316,8 @@ N_src_view_shell_tabs_ts ..> N_src_view_shell_tabs_ts_Layouts : 声明
 
 ### UserMenu.tsx
 
+[查看源码](UserMenu.tsx)。
+
 ```mermaid
 classDiagram
 class N_src_view_shell_UserMenu_tsx["UserMenu.tsx"] {
@@ -315,6 +330,8 @@ class N_src_view_shell_UserMenu_tsx["UserMenu.tsx"] {
 
 ### useSidebarWidth.ts
 
+[查看源码](useSidebarWidth.ts)。
+
 ```mermaid
 classDiagram
 class N_src_view_shell_useSidebarWidth_ts["useSidebarWidth.ts"] {
@@ -326,6 +343,8 @@ class N_src_view_shell_useSidebarWidth_ts["useSidebarWidth.ts"] {
 
 ### workspace-list.css
 
+[查看源码](workspace-list.css)。
+
 ```mermaid
 classDiagram
 class N_src_view_shell_workspace_list_css["workspace-list.css"] {
@@ -334,6 +353,8 @@ class N_src_view_shell_workspace_list_css["workspace-list.css"] {
 ```
 
 ### WorkspaceList.tsx
+
+[查看源码](WorkspaceList.tsx)。
 
 ```mermaid
 classDiagram

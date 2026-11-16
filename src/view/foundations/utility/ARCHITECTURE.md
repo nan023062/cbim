@@ -118,9 +118,11 @@ storage.ts 的 JsonRecordStorage 注入 TextStorage、键及字节上限，每�
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### async.ts
+
+[查看源码](async.ts)。
 
 ```mermaid
 classDiagram
@@ -139,13 +141,15 @@ N_src_view_foundations_utility_async_ts ..> N_src_view_foundations_utility_async
 
 ### events.ts
 
+[查看源码](events.ts)。
+
 ```mermaid
 classDiagram
 class N_src_view_foundations_utility_events_ts["events.ts"] {
   <<module>>
 }
 class N_src_view_foundations_utility_events_ts_SubscriptionSet["SubscriptionSet"] {
-  +size
+  +size : get
   +Subscribe()
   +Notify()
   +Clear()
@@ -156,6 +160,8 @@ N_src_view_foundations_utility_events_ts ..> N_src_view_foundations_utility_even
 
 
 ### graphs.ts
+
+[查看源码](graphs.ts)。
 
 ```mermaid
 classDiagram
@@ -185,15 +191,22 @@ N_src_view_foundations_utility_graphs_ts_external_Error <|-- N_src_view_foundati
 
 ### index.ts
 
+[查看源码](index.ts)。
+
 ```mermaid
 classDiagram
 class N_src_view_foundations_utility_index_ts["index.ts"] {
   <<module>>
+  +equalJson()
+  +rankDirectedGraph()
 }
 ```
+
 直接依赖：[async.ts](async.ts)、[events.ts](events.ts)、[graphs.ts](graphs.ts)、[json.ts](json.ts)、[storage.ts](storage.ts)。
 
 ### json.ts
+
+[查看源码](json.ts)。
 
 ```mermaid
 classDiagram
@@ -206,6 +219,8 @@ class N_src_view_foundations_utility_json_ts["json.ts"] {
 直接依赖：[../../../core/utility/index.ts](../../../core/utility/index.ts)。
 
 ### storage.ts
+
+[查看源码](storage.ts)。
 
 ```mermaid
 classDiagram

@@ -1262,9 +1262,11 @@ graph-rules 的 acyclic 委托后端 GraphUtils.IsDirectedAcyclic。validateGrap
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### automatic-execution-rules.ts
+
+[查看源码](automatic-execution-rules.ts)。
 
 ```mermaid
 classDiagram
@@ -1277,6 +1279,8 @@ class N_src_logic_tasks_rules_automatic_execution_rules_ts["automatic-execution-
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../../team/rules/automatic-execution.ts](../../team/rules/automatic-execution.ts)。
 
 ### automatic-return.ts
+
+[查看源码](automatic-return.ts)。
 
 ```mermaid
 classDiagram
@@ -1310,6 +1314,8 @@ N_src_logic_tasks_rules_automatic_return_ts ..> N_src_logic_tasks_rules_automati
 
 ### candidate-review.ts
 
+[查看源码](candidate-review.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tasks_rules_candidate_review_ts["candidate-review.ts"] {
@@ -1338,6 +1344,8 @@ N_src_logic_tasks_rules_candidate_review_ts ..> N_src_logic_tasks_rules_candidat
 
 ### checkpoint-handoff-invariants.ts
 
+[查看源码](checkpoint-handoff-invariants.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tasks_rules_checkpoint_handoff_invariants_ts["checkpoint-handoff-invariants.ts"] {
@@ -1349,6 +1357,8 @@ class N_src_logic_tasks_rules_checkpoint_handoff_invariants_ts["checkpoint-hando
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[checkpoint-handoff-rules.ts](checkpoint-handoff-rules.ts)、[checkpoint-handoff.ts](checkpoint-handoff.ts)、[graph-types.ts](graph-types.ts)、[member-checkpoint-chain.ts](member-checkpoint-chain.ts)、[scope-goal.ts](scope-goal.ts)。
 
 ### checkpoint-handoff-rules.ts
+
+[查看源码](checkpoint-handoff-rules.ts)。
 
 ```mermaid
 classDiagram
@@ -1362,6 +1372,8 @@ class N_src_logic_tasks_rules_checkpoint_handoff_rules_ts["checkpoint-handoff-ru
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[checkpoint-handoff.ts](checkpoint-handoff.ts)、[graph-types.ts](graph-types.ts)、[member-checkpoint-chain.ts](member-checkpoint-chain.ts)、[member-checkpoint-ledger.ts](member-checkpoint-ledger.ts)、[scope-active-input.ts](scope-active-input.ts)、[scope-goal.ts](scope-goal.ts)。
 
 ### checkpoint-handoff.ts
+
+[查看源码](checkpoint-handoff.ts)。
 
 ```mermaid
 classDiagram
@@ -1388,6 +1400,8 @@ N_src_logic_tasks_rules_checkpoint_handoff_ts ..> N_src_logic_tasks_rules_checkp
 
 ### command-verification-output.ts
 
+[查看源码](command-verification-output.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tasks_rules_command_verification_output_ts["command-verification-output.ts"] {
@@ -1399,6 +1413,8 @@ class N_src_logic_tasks_rules_command_verification_output_ts["command-verificati
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[command-verification.ts](command-verification.ts)、[dispatch-scope.ts](dispatch-scope.ts)、[main-tool-output.ts](main-tool-output.ts)、[scope-goal.ts](scope-goal.ts)。
 
 ### command-verification.ts
+
+[查看源码](command-verification.ts)。
 
 ```mermaid
 classDiagram
@@ -1456,6 +1472,8 @@ N_src_logic_tasks_rules_command_verification_ts ..> N_src_logic_tasks_rules_comm
 
 ### continuation-source-snapshot.ts
 
+[查看源码](continuation-source-snapshot.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tasks_rules_continuation_source_snapshot_ts["continuation-source-snapshot.ts"] {
@@ -1475,6 +1493,8 @@ N_src_logic_tasks_rules_continuation_source_snapshot_ts ..> N_src_logic_tasks_ru
 
 
 ### coordination-preview.ts
+
+[查看源码](coordination-preview.ts)。
 
 ```mermaid
 classDiagram
@@ -1500,6 +1520,8 @@ N_src_logic_tasks_rules_coordination_preview_ts ..> N_src_logic_tasks_rules_coor
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[dispatch-scope.ts](dispatch-scope.ts)、[graph-types.ts](graph-types.ts)、[main-tool-scope.ts](main-tool-scope.ts)、[member-pause-rules.ts](member-pause-rules.ts)、[member-pause.ts](member-pause.ts)、[queued-task-cancel-rules.ts](queued-task-cancel-rules.ts)、[queued-task-cancel.ts](queued-task-cancel.ts)。
 
 ### dispatch-commands.ts
+
+[查看源码](dispatch-commands.ts)。
 
 ```mermaid
 classDiagram
@@ -1560,6 +1582,8 @@ N_src_logic_tasks_rules_dispatch_commands_ts ..> N_src_logic_tasks_rules_dispatc
 
 ### dispatch-execution.ts
 
+[查看源码](dispatch-execution.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tasks_rules_dispatch_execution_ts["dispatch-execution.ts"] {
@@ -1596,6 +1620,8 @@ N_src_logic_tasks_rules_dispatch_execution_ts ..> N_src_logic_tasks_rules_dispat
 
 ### dispatch-invariants.ts
 
+[查看源码](dispatch-invariants.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tasks_rules_dispatch_invariants_ts["dispatch-invariants.ts"] {
@@ -1608,6 +1634,8 @@ class N_src_logic_tasks_rules_dispatch_invariants_ts["dispatch-invariants.ts"] {
 
 ### dispatch-receipt.ts
 
+[查看源码](dispatch-receipt.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tasks_rules_dispatch_receipt_ts["dispatch-receipt.ts"] {
@@ -1617,6 +1645,8 @@ class N_src_logic_tasks_rules_dispatch_receipt_ts["dispatch-receipt.ts"] {
 直接依赖：[graph-rules.ts](graph-rules.ts)、[../../team/rules/automatic-execution.ts](../../team/rules/automatic-execution.ts)。
 
 ### dispatch-scope-invariants.ts
+
+[查看源码](dispatch-scope-invariants.ts)。
 
 ```mermaid
 classDiagram
@@ -1629,6 +1659,8 @@ class N_src_logic_tasks_rules_dispatch_scope_invariants_ts["dispatch-scope-invar
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../../budget/rules/scope-budget-invariants.ts](../../budget/rules/scope-budget-invariants.ts)、[../../budget/rules/scope-budget.ts](../../budget/rules/scope-budget.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[automatic-return.ts](automatic-return.ts)、[dispatch-scope.ts](dispatch-scope.ts)、[effect-observation-invariants.ts](effect-observation-invariants.ts)、[fresh-context.ts](fresh-context.ts)、[human-continuation-invariants.ts](human-continuation-invariants.ts)、[human-decision-invariants.ts](human-decision-invariants.ts)、[human-decisions.ts](human-decisions.ts)、[member-checkpoint.ts](member-checkpoint.ts)、[member-pause-rules.ts](member-pause-rules.ts)、[scope-active-input-rules.ts](scope-active-input-rules.ts)、[scope-active-input.ts](scope-active-input.ts)、[scope-continuation-attachments.ts](scope-continuation-attachments.ts)、[scope-continuation-record.ts](scope-continuation-record.ts)、[scope-continuation.ts](scope-continuation.ts)、[scope-goal.ts](scope-goal.ts)、[scope-recovery.ts](scope-recovery.ts)、[scope-replan.ts](scope-replan.ts)、[scope-run-invariants.ts](scope-run-invariants.ts)、[scope-run-tracking.ts](scope-run-tracking.ts)、[topic-interruption.ts](topic-interruption.ts)、[../../team/rules/automatic-execution.ts](../../team/rules/automatic-execution.ts)。
 
 ### dispatch-scope.ts
+
+[查看源码](dispatch-scope.ts)。
 
 成员 1/2（同名节点为同一声明，跨图合并阅读）。
 
@@ -1685,6 +1717,8 @@ N_src_logic_tasks_rules_dispatch_scope_ts ..> N_src_logic_tasks_rules_dispatch_s
 
 ### effect-observation-invariants.ts
 
+[查看源码](effect-observation-invariants.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tasks_rules_effect_observation_invariants_ts["effect-observation-invariants.ts"] {
@@ -1697,6 +1731,8 @@ class N_src_logic_tasks_rules_effect_observation_invariants_ts["effect-observati
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[dispatch-scope.ts](dispatch-scope.ts)、[effect-observation-rules.ts](effect-observation-rules.ts)、[effect-observation.ts](effect-observation.ts)、[scope-recovery.ts](scope-recovery.ts)。
 
 ### effect-observation-rules.ts
+
+[查看源码](effect-observation-rules.ts)。
 
 ```mermaid
 classDiagram
@@ -1714,11 +1750,13 @@ class N_src_logic_tasks_rules_effect_observation_rules_ts["effect-observation-ru
 
 ### effect-observation.ts
 
+[查看源码](effect-observation.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tasks_rules_effect_observation_ts["effect-observation.ts"] {
   <<module>>
-  +sameEffectSubject()
+  +sameEffectSubject : function
 }
 ```
 
@@ -1829,6 +1867,8 @@ N_src_logic_tasks_rules_effect_observation_ts ..> N_src_logic_tasks_rules_effect
 
 ### execution-context.ts
 
+[查看源码](execution-context.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tasks_rules_execution_context_ts["execution-context.ts"] {
@@ -1881,6 +1921,8 @@ N_src_logic_tasks_rules_execution_context_ts ..> N_src_logic_tasks_rules_executi
 
 ### execution-report.ts
 
+[查看源码](execution-report.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tasks_rules_execution_report_ts["execution-report.ts"] {
@@ -1901,6 +1943,8 @@ N_src_logic_tasks_rules_execution_report_ts ..> N_src_logic_tasks_rules_executio
 直接依赖：[dispatch-commands.ts](dispatch-commands.ts)、[member-commands.ts](member-commands.ts)、[../../tools/rules/receipt-schema.ts](../../tools/rules/receipt-schema.ts)、[../../tools/rules/scope-schema.ts](../../tools/rules/scope-schema.ts)。
 
 ### fresh-context.ts
+
+[查看源码](fresh-context.ts)。
 
 ```mermaid
 classDiagram
@@ -1924,6 +1968,8 @@ N_src_logic_tasks_rules_fresh_context_ts ..> N_src_logic_tasks_rules_fresh_conte
 
 
 ### graph-reducer.ts
+
+[查看源码](graph-reducer.ts)。
 
 ```mermaid
 classDiagram
@@ -1952,6 +1998,8 @@ N_src_logic_tasks_rules_graph_reducer_ts ..> N_src_logic_tasks_rules_graph_reduc
 
 ### graph-rules.ts
 
+[查看源码](graph-rules.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tasks_rules_graph_rules_ts["graph-rules.ts"] {
@@ -1969,6 +2017,8 @@ class N_src_logic_tasks_rules_graph_rules_ts["graph-rules.ts"] {
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/utility/index.ts](../../../core/utility/index.ts)、[candidate-review.ts](candidate-review.ts)、[checkpoint-handoff.ts](checkpoint-handoff.ts)、[graph-types.ts](graph-types.ts)、[member-checkpoint-chain.ts](member-checkpoint-chain.ts)、[member-checkpoint.ts](member-checkpoint.ts)、[member-help.ts](member-help.ts)、[queued-dependency-addition.ts](queued-dependency-addition.ts)、[queued-dependency-replacement.ts](queued-dependency-replacement.ts)、[queued-dependency-revision.ts](queued-dependency-revision.ts)、[queued-member-resume.ts](queued-member-resume.ts)、[queued-task-cancel.ts](queued-task-cancel.ts)、[workflow-selection.ts](workflow-selection.ts)、[../../team/rules/automatic-execution.ts](../../team/rules/automatic-execution.ts)、[../../team/rules/member-execution-binding.ts](../../team/rules/member-execution-binding.ts)。
 
 ### graph-types.ts
+
+[查看源码](graph-types.ts)。
 
 ```mermaid
 classDiagram
@@ -2173,6 +2223,8 @@ N_src_logic_tasks_rules_graph_types_ts ..> N_src_logic_tasks_rules_graph_types_t
 
 ### human-continuation-invariants.ts
 
+[查看源码](human-continuation-invariants.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tasks_rules_human_continuation_invariants_ts["human-continuation-invariants.ts"] {
@@ -2185,6 +2237,8 @@ class N_src_logic_tasks_rules_human_continuation_invariants_ts["human-continuati
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[human-continuation-rules.ts](human-continuation-rules.ts)、[human-continue.ts](human-continue.ts)、[scope-continuation-record.ts](scope-continuation-record.ts)、[scope-goal.ts](scope-goal.ts)。
 
 ### human-continuation-rules.ts
+
+[查看源码](human-continuation-rules.ts)。
 
 ```mermaid
 classDiagram
@@ -2200,6 +2254,8 @@ class N_src_logic_tasks_rules_human_continuation_rules_ts["human-continuation-ru
 直接依赖：[dispatch-scope.ts](dispatch-scope.ts)、[human-continue.ts](human-continue.ts)、[human-decisions.ts](human-decisions.ts)、[scope-continuation-record.ts](scope-continuation-record.ts)、[scope-goal.ts](scope-goal.ts)。
 
 ### human-continue.ts
+
+[查看源码](human-continue.ts)。
 
 ```mermaid
 classDiagram
@@ -2252,6 +2308,8 @@ N_src_logic_tasks_rules_human_continue_ts ..> N_src_logic_tasks_rules_human_cont
 
 ### human-decision-invariants.ts
 
+[查看源码](human-decision-invariants.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tasks_rules_human_decision_invariants_ts["human-decision-invariants.ts"] {
@@ -2265,6 +2323,8 @@ class N_src_logic_tasks_rules_human_decision_invariants_ts["human-decision-invar
 
 ### human-decision-proof.ts
 
+[查看源码](human-decision-proof.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tasks_rules_human_decision_proof_ts["human-decision-proof.ts"] {
@@ -2277,6 +2337,8 @@ class N_src_logic_tasks_rules_human_decision_proof_ts["human-decision-proof.ts"]
 直接依赖：[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../core/utility/index.ts](../../../core/utility/index.ts)、[human-decisions.ts](human-decisions.ts)。
 
 ### human-decisions.ts
+
+[查看源码](human-decisions.ts)。
 
 ```mermaid
 classDiagram
@@ -2412,6 +2474,8 @@ N_src_logic_tasks_rules_human_decisions_ts ..> N_src_logic_tasks_rules_human_dec
 
 ### human-reconsideration.ts
 
+[查看源码](human-reconsideration.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tasks_rules_human_reconsideration_ts["human-reconsideration.ts"] {
@@ -2423,6 +2487,8 @@ class N_src_logic_tasks_rules_human_reconsideration_ts["human-reconsideration.ts
 直接依赖：[human-decisions.ts](human-decisions.ts)。
 
 ### knowledge-source-invariants.ts
+
+[查看源码](knowledge-source-invariants.ts)。
 
 ```mermaid
 classDiagram
@@ -2450,11 +2516,14 @@ N_src_logic_tasks_rules_knowledge_source_invariants_ts ..> N_src_logic_tasks_rul
 
 ### main-tool-output.ts
 
+[查看源码](main-tool-output.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tasks_rules_main_tool_output_ts["main-tool-output.ts"] {
   <<module>>
   +mainToolOutputSchema()
+  +projectMainScope()
 }
 ```
 
@@ -2494,6 +2563,16 @@ N_src_logic_tasks_rules_main_tool_output_ts ..> N_src_logic_tasks_rules_main_too
 
 ### main-tool-scope.ts
 
+[查看源码](main-tool-scope.ts)。
+
+```mermaid
+classDiagram
+class N_src_logic_tasks_rules_main_tool_scope_ts["main-tool-scope.ts"] {
+  <<module>>
+  +projectMainScope()
+}
+```
+
 ```mermaid
 classDiagram
 class N_src_logic_tasks_rules_main_tool_scope_ts["main-tool-scope.ts"] {
@@ -2509,6 +2588,8 @@ N_src_logic_tasks_rules_main_tool_scope_ts ..> N_src_logic_tasks_rules_main_tool
 直接依赖：[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[scope-active-input.ts](scope-active-input.ts)、[scope-goal.ts](scope-goal.ts)、[scope-public.ts](scope-public.ts)、[topic-interruption.ts](topic-interruption.ts)、[../../team/rules/automatic-execution.ts](../../team/rules/automatic-execution.ts)、[../../team/rules/member-execution-binding.ts](../../team/rules/member-execution-binding.ts)。
 
 ### member-checkpoint-chain.ts
+
+[查看源码](member-checkpoint-chain.ts)。
 
 ```mermaid
 classDiagram
@@ -2539,6 +2620,8 @@ N_src_logic_tasks_rules_member_checkpoint_chain_ts ..> N_src_logic_tasks_rules_m
 
 ### member-checkpoint-evidence.ts
 
+[查看源码](member-checkpoint-evidence.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tasks_rules_member_checkpoint_evidence_ts["member-checkpoint-evidence.ts"] {
@@ -2564,6 +2647,8 @@ N_src_logic_tasks_rules_member_checkpoint_evidence_ts ..> N_src_logic_tasks_rule
 
 ### member-checkpoint-invariants.ts
 
+[查看源码](member-checkpoint-invariants.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tasks_rules_member_checkpoint_invariants_ts["member-checkpoint-invariants.ts"] {
@@ -2576,6 +2661,8 @@ class N_src_logic_tasks_rules_member_checkpoint_invariants_ts["member-checkpoint
 
 ### member-checkpoint-ledger.ts
 
+[查看源码](member-checkpoint-ledger.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tasks_rules_member_checkpoint_ledger_ts["member-checkpoint-ledger.ts"] {
@@ -2587,6 +2674,8 @@ class N_src_logic_tasks_rules_member_checkpoint_ledger_ts["member-checkpoint-led
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[graph-types.ts](graph-types.ts)、[member-checkpoint-chain.ts](member-checkpoint-chain.ts)、[member-checkpoint.ts](member-checkpoint.ts)、[scope-goal.ts](scope-goal.ts)。
 
 ### member-checkpoint-tools.ts
+
+[查看源码](member-checkpoint-tools.ts)。
 
 ```mermaid
 classDiagram
@@ -2615,6 +2704,8 @@ N_src_logic_tasks_rules_member_checkpoint_tools_ts ..> N_src_logic_tasks_rules_m
 直接依赖：[member-checkpoint.ts](member-checkpoint.ts)、[member-tool-output.ts](member-tool-output.ts)、[../../tools/rules/results.ts](../../tools/rules/results.ts)。
 
 ### member-checkpoint.ts
+
+[查看源码](member-checkpoint.ts)。
 
 ```mermaid
 classDiagram
@@ -2666,6 +2757,8 @@ N_src_logic_tasks_rules_member_checkpoint_ts ..> N_src_logic_tasks_rules_member_
 
 ### member-commands.ts
 
+[查看源码](member-commands.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tasks_rules_member_commands_ts["member-commands.ts"] {
@@ -2694,6 +2787,8 @@ N_src_logic_tasks_rules_member_commands_ts ..> N_src_logic_tasks_rules_member_co
 直接依赖：[../../execution/rules/member-run.ts](../../execution/rules/member-run.ts)、[dispatch-commands.ts](dispatch-commands.ts)、[dispatch-execution.ts](dispatch-execution.ts)、[graph-types.ts](graph-types.ts)。
 
 ### member-events.ts
+
+[查看源码](member-events.ts)。
 
 ```mermaid
 classDiagram
@@ -2732,6 +2827,8 @@ N_src_logic_tasks_rules_member_events_ts ..> N_src_logic_tasks_rules_member_even
 
 ### member-help-tools.ts
 
+[查看源码](member-help-tools.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tasks_rules_member_help_tools_ts["member-help-tools.ts"] {
@@ -2763,6 +2860,8 @@ N_src_logic_tasks_rules_member_help_tools_ts ..> N_src_logic_tasks_rules_member_
 
 ### member-help.ts
 
+[查看源码](member-help.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tasks_rules_member_help_ts["member-help.ts"] {
@@ -2788,6 +2887,8 @@ N_src_logic_tasks_rules_member_help_ts ..> N_src_logic_tasks_rules_member_help_t
 
 ### member-pause-rules.ts
 
+[查看源码](member-pause-rules.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tasks_rules_member_pause_rules_ts["member-pause-rules.ts"] {
@@ -2800,6 +2901,8 @@ class N_src_logic_tasks_rules_member_pause_rules_ts["member-pause-rules.ts"] {
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[dispatch-execution.ts](dispatch-execution.ts)、[dispatch-scope.ts](dispatch-scope.ts)、[member-checkpoint-chain.ts](member-checkpoint-chain.ts)、[member-checkpoint-ledger.ts](member-checkpoint-ledger.ts)、[member-pause.ts](member-pause.ts)、[scope-active-input.ts](scope-active-input.ts)、[scope-goal.ts](scope-goal.ts)。
 
 ### member-pause.ts
+
+[查看源码](member-pause.ts)。
 
 ```mermaid
 classDiagram
@@ -2815,6 +2918,8 @@ N_src_logic_tasks_rules_member_pause_ts ..> N_src_logic_tasks_rules_member_pause
 
 
 ### member-tool-output.ts
+
+[查看源码](member-tool-output.ts)。
 
 ```mermaid
 classDiagram
@@ -2888,6 +2993,8 @@ N_src_logic_tasks_rules_member_tool_output_ts ..> N_src_logic_tasks_rules_member
 
 ### member-topic-context-rules.ts
 
+[查看源码](member-topic-context-rules.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tasks_rules_member_topic_context_rules_ts["member-topic-context-rules.ts"] {
@@ -2900,6 +3007,8 @@ class N_src_logic_tasks_rules_member_topic_context_rules_ts["member-topic-contex
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[dispatch-scope.ts](dispatch-scope.ts)、[graph-types.ts](graph-types.ts)、[member-topic-context.ts](member-topic-context.ts)、[../../team/rules/team-session.ts](../../team/rules/team-session.ts)。
 
 ### member-topic-context.ts
+
+[查看源码](member-topic-context.ts)。
 
 ```mermaid
 classDiagram
@@ -2916,6 +3025,8 @@ N_src_logic_tasks_rules_member_topic_context_ts ..> N_src_logic_tasks_rules_memb
 
 ### module-ownership-invariants.ts
 
+[查看源码](module-ownership-invariants.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tasks_rules_module_ownership_invariants_ts["module-ownership-invariants.ts"] {
@@ -2929,6 +3040,8 @@ class N_src_logic_tasks_rules_module_ownership_invariants_ts["module-ownership-i
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[knowledge-source-invariants.ts](knowledge-source-invariants.ts)、[member-checkpoint.ts](member-checkpoint.ts)、[../../workspace/rules/module-ownership-rules.ts](../../workspace/rules/module-ownership-rules.ts)、[../../workspace/rules/module-ownership.ts](../../workspace/rules/module-ownership.ts)。
 
 ### office-history.ts
+
+[查看源码](office-history.ts)。
 
 ```mermaid
 classDiagram
@@ -2955,6 +3068,8 @@ N_src_logic_tasks_rules_office_history_ts ..> N_src_logic_tasks_rules_office_his
 
 ### owner-execution-invariants.ts
 
+[查看源码](owner-execution-invariants.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tasks_rules_owner_execution_invariants_ts["owner-execution-invariants.ts"] {
@@ -2978,6 +3093,8 @@ N_src_logic_tasks_rules_owner_execution_invariants_ts ..> N_src_logic_tasks_rule
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[automatic-execution-rules.ts](automatic-execution-rules.ts)、[graph-types.ts](graph-types.ts)、[scope-active-input.ts](scope-active-input.ts)、[scope-goal.ts](scope-goal.ts)、[workflow-selection.ts](workflow-selection.ts)、[../../team/rules/automatic-execution.ts](../../team/rules/automatic-execution.ts)、[../../team/rules/member-execution-binding.ts](../../team/rules/member-execution-binding.ts)、[../../team/rules/member-execution-rules.ts](../../team/rules/member-execution-rules.ts)、[../../team/rules/workspace-member-rules.ts](../../team/rules/workspace-member-rules.ts)、[../../workspace/rules/knowledge-source-rules.ts](../../workspace/rules/knowledge-source-rules.ts)。
 
 ### persistent-write-input.ts
+
+[查看源码](persistent-write-input.ts)。
 
 ```mermaid
 classDiagram
@@ -3016,6 +3133,8 @@ N_src_logic_tasks_rules_persistent_write_input_ts ..> N_src_logic_tasks_rules_pe
 
 ### persistent-write-observation.ts
 
+[查看源码](persistent-write-observation.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tasks_rules_persistent_write_observation_ts["persistent-write-observation.ts"] {
@@ -3035,6 +3154,8 @@ N_src_logic_tasks_rules_persistent_write_observation_ts ..> N_src_logic_tasks_ru
 
 
 ### queue.ts
+
+[查看源码](queue.ts)。
 
 ```mermaid
 classDiagram
@@ -3068,6 +3189,8 @@ N_src_logic_tasks_rules_queue_ts ..> N_src_logic_tasks_rules_queue_ts_QueueDelta
 
 ### queued-dependency-addition-invariants.ts
 
+[查看源码](queued-dependency-addition-invariants.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tasks_rules_queued_dependency_addition_invariants_ts["queued-dependency-addition-invariants.ts"] {
@@ -3080,6 +3203,8 @@ class N_src_logic_tasks_rules_queued_dependency_addition_invariants_ts["queued-d
 
 ### queued-dependency-addition-rules.ts
 
+[查看源码](queued-dependency-addition-rules.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tasks_rules_queued_dependency_addition_rules_ts["queued-dependency-addition-rules.ts"] {
@@ -3091,6 +3216,8 @@ class N_src_logic_tasks_rules_queued_dependency_addition_rules_ts["queued-depend
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[graph-types.ts](graph-types.ts)、[queued-dependency-addition.ts](queued-dependency-addition.ts)、[scope-active-input.ts](scope-active-input.ts)、[scope-goal.ts](scope-goal.ts)、[workflow-selection.ts](workflow-selection.ts)。
 
 ### queued-dependency-addition.ts
+
+[查看源码](queued-dependency-addition.ts)。
 
 ```mermaid
 classDiagram
@@ -3126,6 +3253,8 @@ N_src_logic_tasks_rules_queued_dependency_addition_ts ..> N_src_logic_tasks_rule
 
 ### queued-dependency-replacement-invariants.ts
 
+[查看源码](queued-dependency-replacement-invariants.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tasks_rules_queued_dependency_replacement_invariants_ts["queued-dependency-replacement-invariants.ts"] {
@@ -3138,6 +3267,8 @@ class N_src_logic_tasks_rules_queued_dependency_replacement_invariants_ts["queue
 
 ### queued-dependency-replacement-rules.ts
 
+[查看源码](queued-dependency-replacement-rules.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tasks_rules_queued_dependency_replacement_rules_ts["queued-dependency-replacement-rules.ts"] {
@@ -3149,6 +3280,8 @@ class N_src_logic_tasks_rules_queued_dependency_replacement_rules_ts["queued-dep
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[checkpoint-handoff-rules.ts](checkpoint-handoff-rules.ts)、[graph-types.ts](graph-types.ts)、[queued-dependency-replacement.ts](queued-dependency-replacement.ts)、[scope-goal.ts](scope-goal.ts)、[workflow-selection.ts](workflow-selection.ts)。
 
 ### queued-dependency-replacement.ts
+
+[查看源码](queued-dependency-replacement.ts)。
 
 ```mermaid
 classDiagram
@@ -3184,6 +3317,8 @@ N_src_logic_tasks_rules_queued_dependency_replacement_ts ..> N_src_logic_tasks_r
 
 ### queued-dependency-revision-invariants.ts
 
+[查看源码](queued-dependency-revision-invariants.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tasks_rules_queued_dependency_revision_invariants_ts["queued-dependency-revision-invariants.ts"] {
@@ -3196,6 +3331,8 @@ class N_src_logic_tasks_rules_queued_dependency_revision_invariants_ts["queued-d
 
 ### queued-dependency-revision-rules.ts
 
+[查看源码](queued-dependency-revision-rules.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tasks_rules_queued_dependency_revision_rules_ts["queued-dependency-revision-rules.ts"] {
@@ -3207,6 +3344,8 @@ class N_src_logic_tasks_rules_queued_dependency_revision_rules_ts["queued-depend
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[graph-rules.ts](graph-rules.ts)、[graph-types.ts](graph-types.ts)、[queued-dependency-revision.ts](queued-dependency-revision.ts)、[scope-active-input.ts](scope-active-input.ts)、[scope-goal.ts](scope-goal.ts)、[workflow-selection.ts](workflow-selection.ts)。
 
 ### queued-dependency-revision.ts
+
+[查看源码](queued-dependency-revision.ts)。
 
 ```mermaid
 classDiagram
@@ -3233,6 +3372,8 @@ N_src_logic_tasks_rules_queued_dependency_revision_ts ..> N_src_logic_tasks_rule
 
 ### queued-member-resume-rules.ts
 
+[查看源码](queued-member-resume-rules.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tasks_rules_queued_member_resume_rules_ts["queued-member-resume-rules.ts"] {
@@ -3244,6 +3385,8 @@ class N_src_logic_tasks_rules_queued_member_resume_rules_ts["queued-member-resum
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[graph-types.ts](graph-types.ts)、[member-checkpoint-chain.ts](member-checkpoint-chain.ts)、[member-checkpoint-ledger.ts](member-checkpoint-ledger.ts)、[queued-member-resume.ts](queued-member-resume.ts)、[scope-goal.ts](scope-goal.ts)、[workflow-selection.ts](workflow-selection.ts)、[../../team/rules/automatic-execution.ts](../../team/rules/automatic-execution.ts)、[../../team/rules/member-execution-binding.ts](../../team/rules/member-execution-binding.ts)。
 
 ### queued-member-resume.ts
+
+[查看源码](queued-member-resume.ts)。
 
 ```mermaid
 classDiagram
@@ -3274,6 +3417,8 @@ N_src_logic_tasks_rules_queued_member_resume_ts ..> N_src_logic_tasks_rules_queu
 
 ### queued-task-cancel-rules.ts
 
+[查看源码](queued-task-cancel-rules.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tasks_rules_queued_task_cancel_rules_ts["queued-task-cancel-rules.ts"] {
@@ -3286,6 +3431,8 @@ class N_src_logic_tasks_rules_queued_task_cancel_rules_ts["queued-task-cancel-ru
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[graph-types.ts](graph-types.ts)、[queued-task-cancel.ts](queued-task-cancel.ts)。
 
 ### queued-task-cancel.ts
+
+[查看源码](queued-task-cancel.ts)。
 
 ```mermaid
 classDiagram
@@ -3318,6 +3465,8 @@ N_src_logic_tasks_rules_queued_task_cancel_ts ..> N_src_logic_tasks_rules_queued
 
 ### scope-active-input-rules.ts
 
+[查看源码](scope-active-input-rules.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tasks_rules_scope_active_input_rules_ts["scope-active-input-rules.ts"] {
@@ -3330,6 +3479,8 @@ class N_src_logic_tasks_rules_scope_active_input_rules_ts["scope-active-input-ru
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[scope-active-input.ts](scope-active-input.ts)、[scope-continuation-record.ts](scope-continuation-record.ts)、[scope-continuation.ts](scope-continuation.ts)、[scope-goal.ts](scope-goal.ts)。
 
 ### scope-active-input.ts
+
+[查看源码](scope-active-input.ts)。
 
 ```mermaid
 classDiagram
@@ -3383,6 +3534,8 @@ N_src_logic_tasks_rules_scope_active_input_ts ..> N_src_logic_tasks_rules_scope_
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[scope-continuation-attachments.ts](scope-continuation-attachments.ts)。
 
 ### scope-continuation-attachments.ts
+
+[查看源码](scope-continuation-attachments.ts)。
 
 ```mermaid
 classDiagram
@@ -3442,6 +3595,8 @@ N_src_logic_tasks_rules_scope_continuation_attachments_ts ..> N_src_logic_tasks_
 
 ### scope-continuation-record.ts
 
+[查看源码](scope-continuation-record.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tasks_rules_scope_continuation_record_ts["scope-continuation-record.ts"] {
@@ -3465,6 +3620,8 @@ N_src_logic_tasks_rules_scope_continuation_record_ts ..> N_src_logic_tasks_rules
 直接依赖：[human-continue.ts](human-continue.ts)、[scope-continuation.ts](scope-continuation.ts)。
 
 ### scope-continuation.ts
+
+[查看源码](scope-continuation.ts)。
 
 ```mermaid
 classDiagram
@@ -3514,14 +3671,16 @@ N_src_logic_tasks_rules_scope_continuation_ts ..> N_src_logic_tasks_rules_scope_
 
 ### scope-goal.ts
 
+[查看源码](scope-goal.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tasks_rules_scope_goal_ts["scope-goal.ts"] {
   <<module>>
   +goalInputRevision()
   +goalNeedsReplan()
-  +sameGoalValue()
   +validateScopeGoalTransition()
+  +sameGoalValue : function
 }
 ```
 
@@ -3579,6 +3738,8 @@ N_src_logic_tasks_rules_scope_goal_ts ..> N_src_logic_tasks_rules_scope_goal_ts_
 
 ### scope-public.ts
 
+[查看源码](scope-public.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tasks_rules_scope_public_ts["scope-public.ts"] {
@@ -3602,6 +3763,8 @@ N_src_logic_tasks_rules_scope_public_ts ..> N_src_logic_tasks_rules_scope_public
 直接依赖：[../../budget/rules/scope-budget.ts](../../budget/rules/scope-budget.ts)、[dispatch-scope.ts](dispatch-scope.ts)、[human-decisions.ts](human-decisions.ts)、[scope-active-input.ts](scope-active-input.ts)、[scope-continuation-record.ts](scope-continuation-record.ts)、[scope-continuation.ts](scope-continuation.ts)、[scope-goal.ts](scope-goal.ts)、[scope-recovery.ts](scope-recovery.ts)、[scope-replan.ts](scope-replan.ts)、[scope-run-tracking.ts](scope-run-tracking.ts)、[topic-interruption.ts](topic-interruption.ts)、[../../team/rules/automatic-execution.ts](../../team/rules/automatic-execution.ts)。
 
 ### scope-recovery.ts
+
+[查看源码](scope-recovery.ts)。
 
 ```mermaid
 classDiagram
@@ -3667,6 +3830,8 @@ N_src_logic_tasks_rules_scope_recovery_ts ..> N_src_logic_tasks_rules_scope_reco
 
 ### scope-replan.ts
 
+[查看源码](scope-replan.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tasks_rules_scope_replan_ts["scope-replan.ts"] {
@@ -3728,6 +3893,8 @@ N_src_logic_tasks_rules_scope_replan_ts ..> N_src_logic_tasks_rules_scope_replan
 
 ### scope-run-invariants.ts
 
+[查看源码](scope-run-invariants.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tasks_rules_scope_run_invariants_ts["scope-run-invariants.ts"] {
@@ -3739,6 +3906,8 @@ class N_src_logic_tasks_rules_scope_run_invariants_ts["scope-run-invariants.ts"]
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[dispatch-scope.ts](dispatch-scope.ts)、[fresh-context.ts](fresh-context.ts)、[scope-run-tracking.ts](scope-run-tracking.ts)。
 
 ### scope-run-tracking.ts
+
+[查看源码](scope-run-tracking.ts)。
 
 ```mermaid
 classDiagram
@@ -3770,6 +3939,8 @@ N_src_logic_tasks_rules_scope_run_tracking_ts ..> N_src_logic_tasks_rules_scope_
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)。
 
 ### scope-view.ts
+
+[查看源码](scope-view.ts)。
 
 ```mermaid
 classDiagram
@@ -3867,6 +4038,8 @@ N_src_logic_tasks_rules_scope_view_ts ..> N_src_logic_tasks_rules_scope_view_ts_
 
 ### topic-interruption.ts
 
+[查看源码](topic-interruption.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tasks_rules_topic_interruption_ts["topic-interruption.ts"] {
@@ -3896,6 +4069,8 @@ N_src_logic_tasks_rules_topic_interruption_ts ..> N_src_logic_tasks_rules_topic_
 
 ### types.ts
 
+[查看源码](types.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tasks_rules_types_ts["types.ts"] {
@@ -3923,6 +4098,8 @@ N_src_logic_tasks_rules_types_ts ..> N_src_logic_tasks_rules_types_ts_TaskSpec :
 
 ### workflow-selection.ts
 
+[查看源码](workflow-selection.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_tasks_rules_workflow_selection_ts["workflow-selection.ts"] {
@@ -3948,6 +4125,8 @@ N_src_logic_tasks_rules_workflow_selection_ts ..> N_src_logic_tasks_rules_workfl
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)。
 
 ### workspace-member-invariants.ts
+
+[查看源码](workspace-member-invariants.ts)。
 
 ```mermaid
 classDiagram

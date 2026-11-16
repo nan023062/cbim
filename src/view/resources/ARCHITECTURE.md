@@ -99,9 +99,11 @@ WorkspaceResourceTransfer 同样使用 ModalFrame；选择、审阅、回执三�
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### repository-connection-state.ts
+
+[查看源码](repository-connection-state.ts)。
 
 ```mermaid
 classDiagram
@@ -160,6 +162,8 @@ N_src_view_resources_repository_connection_state_ts ..> N_src_view_resources_rep
 
 ### repository-connections.css
 
+[查看源码](repository-connections.css)。
+
 ```mermaid
 classDiagram
 class N_src_view_resources_repository_connections_css["repository-connections.css"] {
@@ -168,6 +172,8 @@ class N_src_view_resources_repository_connections_css["repository-connections.cs
 ```
 
 ### RepositoryConnections.tsx
+
+[查看源码](RepositoryConnections.tsx)。
 
 ```mermaid
 classDiagram
@@ -193,6 +199,8 @@ N_src_view_resources_RepositoryConnections_tsx ..> N_src_view_resources_Reposito
 
 ### resource-application.ts
 
+[查看源码](resource-application.ts)。
+
 ```mermaid
 classDiagram
 class N_src_view_resources_resource_application_ts["resource-application.ts"] {
@@ -217,6 +225,8 @@ N_src_view_resources_resource_application_ts ..> N_src_view_resources_resource_a
 直接依赖：[../../bridge/contracts/resources.ts](../../bridge/contracts/resources.ts)。
 
 ### ResourceRepositoryView.tsx
+
+[查看源码](ResourceRepositoryView.tsx)。
 
 ```mermaid
 classDiagram
@@ -248,6 +258,8 @@ N_src_view_resources_ResourceRepositoryView_tsx ..> N_src_view_resources_Resourc
 
 ### workspace-transfer.css
 
+[查看源码](workspace-transfer.css)。
+
 ```mermaid
 classDiagram
 class N_src_view_resources_workspace_transfer_css["workspace-transfer.css"] {
@@ -256,6 +268,8 @@ class N_src_view_resources_workspace_transfer_css["workspace-transfer.css"] {
 ```
 
 ### WorkspaceResourceTransfer.tsx
+
+[查看源码](WorkspaceResourceTransfer.tsx)。
 
 ```mermaid
 classDiagram
@@ -296,8 +310,8 @@ class N_src_view_resources_WorkspaceResourceTransfer_tsx_WorkspaceResourceTransf
   +targetParentId
   +category
   +resourceId
-  +onClose
-  +onApplied
+  +onClose : function
+  +onApplied : function
 }
 N_src_view_resources_WorkspaceResourceTransfer_tsx ..> N_src_view_resources_WorkspaceResourceTransfer_tsx_WorkspaceResourceTransferProps : 声明
 ```

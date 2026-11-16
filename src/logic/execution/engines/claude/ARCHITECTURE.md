@@ -95,9 +95,11 @@ package.ts 导出协议 1、适配器版本 1.0.0 的统一工厂；SDK 仍由 s
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### engine.ts
+
+[查看源码](engine.ts)。
 
 ```mermaid
 classDiagram
@@ -126,7 +128,7 @@ class N_src_logic_execution_engines_claude_engine_ts_ClaudeOptions["ClaudeOption
   +images
   +turnTimeoutMs
   +requestBudget()
-  +loadSdk
+  +loadSdk : function
 }
 N_src_logic_execution_engines_claude_engine_ts ..> N_src_logic_execution_engines_claude_engine_ts_ClaudeOptions : 声明
 class N_src_logic_execution_engines_claude_engine_ts_ClaudeCodeEngine["ClaudeCodeEngine"] {
@@ -141,8 +143,8 @@ class N_src_logic_execution_engines_claude_engine_ts_ClaudeCodeEngine["ClaudeCod
   -query
   -tools
   -transport
-  -push
-  -endInput
+  -push : function
+  -endInput : function
   -stopped
   -bound
   -nativeId
@@ -179,10 +181,12 @@ class N_src_logic_execution_engines_claude_engine_ts_external_AgentEngine["Agent
 N_src_logic_execution_engines_claude_engine_ts_external_AgentEngine <|.. N_src_logic_execution_engines_claude_engine_ts_ClaudeCodeEngine
 ```
 
-继承／实现来源：`AgentEngine` → [../../rules/types.ts](../../rules/types.ts)。
+继承／实现来源：`AgentEngine` → [../../rules/types.ts](../../rules/types.ts)（声明 `AgentEngine`）。
 直接依赖：[../../../../core/utility/index.ts](../../../../core/utility/index.ts)、[../../../budget/rules/request-budget.ts](../../../budget/rules/request-budget.ts)、[../../../engines/index.ts](../../../engines/index.ts)、[sdk.ts](sdk.ts)、[tools.ts](tools.ts)、[../run-inactivity.ts](../run-inactivity.ts)、[../transport/request-budget-transport.ts](../transport/request-budget-transport.ts)、[../../rules/engine-instructions.ts](../../rules/engine-instructions.ts)、[../../rules/engine-runtime.ts](../../rules/engine-runtime.ts)、[../../rules/engine-tools.ts](../../rules/engine-tools.ts)、[../../rules/types.ts](../../rules/types.ts)。
 
 ### package.ts
+
+[查看源码](package.ts)。
 
 ```mermaid
 classDiagram
@@ -193,6 +197,8 @@ class N_src_logic_execution_engines_claude_package_ts["package.ts"] {
 直接依赖：[../../../engines/index.ts](../../../engines/index.ts)、[engine.ts](engine.ts)、[../../rules/engine-adapter.ts](../../rules/engine-adapter.ts)。
 
 ### sdk.ts
+
+[查看源码](sdk.ts)。
 
 ```mermaid
 classDiagram
@@ -205,6 +211,8 @@ class N_src_logic_execution_engines_claude_sdk_ts["sdk.ts"] {
 直接依赖：[../../rules/engine-runtime.ts](../../rules/engine-runtime.ts)。
 
 ### tools.ts
+
+[查看源码](tools.ts)。
 
 ```mermaid
 classDiagram

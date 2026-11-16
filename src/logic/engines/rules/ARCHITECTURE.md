@@ -39,9 +39,11 @@ model-choices 根据模型角色的操作、协议、白名单和启用状态生
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### model-choices.ts
+
+[查看源码](model-choices.ts)。
 
 ```mermaid
 classDiagram
@@ -69,6 +71,8 @@ N_src_logic_engines_rules_model_choices_ts ..> N_src_logic_engines_rules_model_c
 直接依赖：[../catalog/supported-engines.ts](../catalog/supported-engines.ts)、[../model-roles.ts](../model-roles.ts)、[model-roles.ts](model-roles.ts)、[model-selection.ts](model-selection.ts)、[../../models/index.ts](../../models/index.ts)。
 
 ### model-roles.ts
+
+[查看源码](model-roles.ts)。
 
 ```mermaid
 classDiagram
@@ -98,17 +102,19 @@ N_src_logic_engines_rules_model_roles_ts ..> N_src_logic_engines_rules_model_rol
 
 ### model-selection.ts
 
+[查看源码](model-selection.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_engines_rules_model_selection_ts["model-selection.ts"] {
   <<module>>
   +engineDescriptor()
-  +engineLabel()
-  +engineApi()
-  +engineSupportsApi()
   +engineModelRequirement()
   +connectionForEngine()
   +providerSupportsEngine()
+  +engineLabel : function
+  +engineApi : function
+  +engineSupportsApi : function
 }
 ```
 

@@ -319,9 +319,11 @@ AgentHistoryRecord 可保存严格 agentCall 原父引用。新业务子运行�
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### agent-runtime.ts
+
+[查看源码](agent-runtime.ts)。
 
 ```mermaid
 classDiagram
@@ -343,6 +345,8 @@ N_src_logic_team_rules_agent_runtime_ts ..> N_src_logic_team_rules_agent_runtime
 直接依赖：[../../engines/index.ts](../../engines/index.ts)。
 
 ### agent-types.ts
+
+[查看源码](agent-types.ts)。
 
 ```mermaid
 classDiagram
@@ -417,6 +421,8 @@ N_src_logic_team_rules_agent_types_ts_AgentIdentity <|-- N_src_logic_team_rules_
 
 ### automatic-execution.ts
 
+[查看源码](automatic-execution.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_team_rules_automatic_execution_ts["automatic-execution.ts"] {
@@ -452,6 +458,8 @@ N_src_logic_team_rules_automatic_execution_ts ..> N_src_logic_team_rules_automat
 
 ### implicit-module-owner.ts
 
+[查看源码](implicit-module-owner.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_team_rules_implicit_module_owner_ts["implicit-module-owner.ts"] {
@@ -463,6 +471,8 @@ class N_src_logic_team_rules_implicit_module_owner_ts["implicit-module-owner.ts"
 直接依赖：[../../workspace/rules/module-ownership.ts](../../workspace/rules/module-ownership.ts)。
 
 ### member-execution-binding.ts
+
+[查看源码](member-execution-binding.ts)。
 
 ```mermaid
 classDiagram
@@ -501,6 +511,8 @@ N_src_logic_team_rules_member_execution_binding_ts ..> N_src_logic_team_rules_me
 
 ### member-execution-rules.ts
 
+[查看源码](member-execution-rules.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_team_rules_member_execution_rules_ts["member-execution-rules.ts"] {
@@ -527,10 +539,12 @@ class N_src_logic_team_rules_member_execution_rules_ts_external_KnowledgeSourceR
 N_src_logic_team_rules_member_execution_rules_ts_external_KnowledgeSourceRegistry <|-- N_src_logic_team_rules_member_execution_rules_ts_OwnerExecutionRegistry
 ```
 
-继承／实现来源：`KnowledgeSourceRegistry` → [../../workspace/rules/knowledge-source-rules.ts](../../workspace/rules/knowledge-source-rules.ts)。
+继承／实现来源：`KnowledgeSourceRegistry` → [../../workspace/rules/knowledge-source-rules.ts](../../workspace/rules/knowledge-source-rules.ts)（声明 `KnowledgeSourceRegistry`）。
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[implicit-module-owner.ts](implicit-module-owner.ts)、[member-execution-binding.ts](member-execution-binding.ts)、[workspace-member-rules.ts](workspace-member-rules.ts)、[workspace-member.ts](workspace-member.ts)、[../../workspace/rules/knowledge-source-rules.ts](../../workspace/rules/knowledge-source-rules.ts)、[../../workspace/rules/module-ownership.ts](../../workspace/rules/module-ownership.ts)。
 
 ### owner-execution-discovery.ts
+
+[查看源码](owner-execution-discovery.ts)。
 
 ```mermaid
 classDiagram
@@ -562,6 +576,8 @@ N_src_logic_team_rules_owner_execution_discovery_ts ..> N_src_logic_team_rules_o
 直接依赖：[member-execution-binding.ts](member-execution-binding.ts)、[workspace-member.ts](workspace-member.ts)、[../../workspace/rules/knowledge-source.ts](../../workspace/rules/knowledge-source.ts)、[../../workspace/rules/module-ownership.ts](../../workspace/rules/module-ownership.ts)。
 
 ### session-history-storage.ts
+
+[查看源码](session-history-storage.ts)。
 
 ```mermaid
 classDiagram
@@ -600,6 +616,8 @@ N_src_logic_team_rules_session_history_storage_ts ..> N_src_logic_team_rules_ses
 直接依赖：[../../agents/contracts.ts](../../agents/contracts.ts)、[../../tasks/rules/types.ts](../../tasks/rules/types.ts)、[session-history.ts](session-history.ts)。
 
 ### session-history.ts
+
+[查看源码](session-history.ts)。
 
 ```mermaid
 classDiagram
@@ -740,6 +758,8 @@ N_src_logic_team_rules_session_history_ts ..> N_src_logic_team_rules_session_his
 
 ### team-session.ts
 
+[查看源码](team-session.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_team_rules_team_session_ts["team-session.ts"] {
@@ -771,14 +791,14 @@ N_src_logic_team_rules_team_session_ts ..> N_src_logic_team_rules_team_session_t
 
 ### workspace-member-rules.ts
 
+[查看源码](workspace-member-rules.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_team_rules_workspace_member_rules_ts["workspace-member-rules.ts"] {
   <<module>>
   +workspaceMemberCanonical()
-  +workspaceMemberModelHash()
   +workspaceMemberCapabilityHash()
-  +workspaceMemberHash()
   +workspaceMemberCommand()
   +workspaceMemberMainCommandId()
   +workspaceMemberProposed()
@@ -787,6 +807,8 @@ class N_src_logic_team_rules_workspace_member_rules_ts["workspace-member-rules.t
   +workspaceMemberReceipt()
   +applyWorkspaceMemberChange()
   +validateWorkspaceMember()
+  +workspaceMemberModelHash : function
+  +workspaceMemberHash : function
 }
 ```
 
@@ -808,6 +830,8 @@ N_src_logic_team_rules_workspace_member_rules_ts ..> N_src_logic_team_rules_work
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../core/utility/index.ts](../../../core/utility/index.ts)、[workspace-member.ts](workspace-member.ts)、[../../workspace/rules/knowledge-source.ts](../../workspace/rules/knowledge-source.ts)。
 
 ### workspace-member-tools.ts
+
+[查看源码](workspace-member-tools.ts)。
 
 ```mermaid
 classDiagram
@@ -845,6 +869,8 @@ N_src_logic_team_rules_workspace_member_tools_ts ..> N_src_logic_team_rules_work
 直接依赖：[workspace-member.ts](workspace-member.ts)。
 
 ### workspace-member.ts
+
+[查看源码](workspace-member.ts)。
 
 ```mermaid
 classDiagram

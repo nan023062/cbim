@@ -62,7 +62,7 @@ locking.ts 提供 KernelLock，使用 Windows mutex 或 POSIX flock。保留 Glo
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ```mermaid
 classDiagram
@@ -90,6 +90,8 @@ N_src_core_platform_node_serialization_ts ..> N_src_core_platform_node_digest_ts
 
 ### digest.ts
 
+[查看源码](digest.ts)。
+
 ```mermaid
 classDiagram
 class N_src_core_platform_node_digest_ts["digest.ts"] {
@@ -101,6 +103,8 @@ class N_src_core_platform_node_digest_ts["digest.ts"] {
 
 
 ### locking.ts
+
+[查看源码](locking.ts)。
 
 ```mermaid
 classDiagram
@@ -122,12 +126,17 @@ N_src_core_platform_node_locking_ts ..> N_src_core_platform_node_locking_ts_Kern
 
 ### serialization.ts
 
+[查看源码](serialization.ts)。
+
 ```mermaid
 classDiagram
 class N_src_core_platform_node_serialization_ts["serialization.ts"] {
   <<module>>
+  +hash()
+  +json : function
 }
 ```
+
 直接依赖：[digest.ts](digest.ts)、[../../utility/index.ts](../../utility/index.ts)。
 
 

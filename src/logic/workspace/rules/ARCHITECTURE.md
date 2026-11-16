@@ -220,9 +220,11 @@ assertWorkflowCapabilities 是旧成员启动和递归 Loop 装配共用的纯�
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### artifact-scope.ts
+
+[查看源码](artifact-scope.ts)。
 
 ```mermaid
 classDiagram
@@ -265,6 +267,8 @@ N_src_logic_workspace_rules_artifact_scope_ts ..> N_src_logic_workspace_rules_ar
 
 ### code-check.ts
 
+[查看源码](code-check.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_workspace_rules_code_check_ts["code-check.ts"] {
@@ -280,6 +284,8 @@ N_src_logic_workspace_rules_code_check_ts ..> N_src_logic_workspace_rules_code_c
 直接依赖：[artifact-scope.ts](artifact-scope.ts)。
 
 ### csv-validation-schema.ts
+
+[查看源码](csv-validation-schema.ts)。
 
 ```mermaid
 classDiagram
@@ -316,6 +322,8 @@ N_src_logic_workspace_rules_csv_validation_schema_ts ..> N_src_logic_workspace_r
 
 ### execution-scope.ts
 
+[查看源码](execution-scope.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_workspace_rules_execution_scope_ts["execution-scope.ts"] {
@@ -347,6 +355,8 @@ N_src_logic_workspace_rules_execution_scope_ts ..> N_src_logic_workspace_rules_e
 直接依赖：[artifact-scope.ts](artifact-scope.ts)。
 
 ### json-validation-schema.ts
+
+[查看源码](json-validation-schema.ts)。
 
 ```mermaid
 classDiagram
@@ -404,6 +414,8 @@ N_src_logic_workspace_rules_json_validation_schema_ts ..> N_src_logic_workspace_
 
 ### knowledge-source-rules.ts
 
+[查看源码](knowledge-source-rules.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_workspace_rules_knowledge_source_rules_ts["knowledge-source-rules.ts"] {
@@ -442,6 +454,8 @@ N_src_logic_workspace_rules_knowledge_source_rules_ts ..> N_src_logic_workspace_
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../core/utility/index.ts](../../../core/utility/index.ts)、[knowledge-source.ts](knowledge-source.ts)。
 
 ### knowledge-source.ts
+
+[查看源码](knowledge-source.ts)。
 
 ```mermaid
 classDiagram
@@ -566,6 +580,8 @@ N_src_logic_workspace_rules_knowledge_source_ts ..> N_src_logic_workspace_rules_
 
 ### module-outline.ts
 
+[查看源码](module-outline.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_workspace_rules_module_outline_ts["module-outline.ts"] {
@@ -577,17 +593,20 @@ class N_src_logic_workspace_rules_module_outline_ts["module-outline.ts"] {
 
 ### module-ownership-rules.ts
 
+[查看源码](module-ownership-rules.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_workspace_rules_module_ownership_rules_ts["module-ownership-rules.ts"] {
   <<module>>
-  +moduleOwnershipHash()
   +assertModuleOwnershipExpectedBinding()
   +moduleOwnershipMainCommandId()
   +moduleOwnershipCommand()
   +moduleOwnershipBasis()
   +moduleOwnershipReceipt()
   +applyModuleOwnershipChange()
+  +moduleOwnershipCanonical : function
+  +moduleOwnershipHash : function
 }
 ```
 
@@ -624,6 +643,8 @@ N_src_logic_workspace_rules_module_ownership_rules_ts ..> N_src_logic_workspace_
 
 ### module-ownership-tool-policy.ts
 
+[查看源码](module-ownership-tool-policy.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_workspace_rules_module_ownership_tool_policy_ts["module-ownership-tool-policy.ts"] {
@@ -648,6 +669,8 @@ N_src_logic_workspace_rules_module_ownership_tool_policy_ts ..> N_src_logic_work
 直接依赖：[../../tools/rules/types.ts](../../tools/rules/types.ts)。
 
 ### module-ownership-tools.ts
+
+[查看源码](module-ownership-tools.ts)。
 
 ```mermaid
 classDiagram
@@ -705,6 +728,8 @@ N_src_logic_workspace_rules_module_ownership_tools_ts ..> N_src_logic_workspace_
 直接依赖：[../../team/rules/owner-execution-discovery.ts](../../team/rules/owner-execution-discovery.ts)、[../../team/rules/workspace-member.ts](../../team/rules/workspace-member.ts)、[module-ownership.ts](module-ownership.ts)。
 
 ### module-ownership.ts
+
+[查看源码](module-ownership.ts)。
 
 ```mermaid
 classDiagram
@@ -881,6 +906,8 @@ N_src_logic_workspace_rules_module_ownership_ts ..> N_src_logic_workspace_rules_
 
 ### png-validation-schema.ts
 
+[查看源码](png-validation-schema.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_workspace_rules_png_validation_schema_ts["png-validation-schema.ts"] {
@@ -907,6 +934,8 @@ N_src_logic_workspace_rules_png_validation_schema_ts ..> N_src_logic_workspace_r
 
 ### project-root.ts
 
+[查看源码](project-root.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_workspace_rules_project_root_ts["project-root.ts"] {
@@ -915,6 +944,8 @@ class N_src_logic_workspace_rules_project_root_ts["project-root.ts"] {
 ```
 
 ### source-browser.ts
+
+[查看源码](source-browser.ts)。
 
 ```mermaid
 classDiagram
@@ -948,6 +979,8 @@ N_src_logic_workspace_rules_source_browser_ts ..> N_src_logic_workspace_rules_so
 
 
 ### workflow-contract.ts
+
+[查看源码](workflow-contract.ts)。
 
 ```mermaid
 classDiagram

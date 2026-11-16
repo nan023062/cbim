@@ -635,9 +635,11 @@ models.testConnection 按 generation/api 或 embedding 操作测试已经保存�
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### admission.ts
+
+[查看源码](admission.ts)。
 
 ```mermaid
 classDiagram
@@ -648,6 +650,8 @@ class N_src_bridge_contracts_admission_ts["admission.ts"] {
 直接依赖：[../../logic/runtime/rules/admission.ts](../../logic/runtime/rules/admission.ts)。
 
 ### agent-history-ipc.ts
+
+[查看源码](agent-history-ipc.ts)。
 
 ```mermaid
 classDiagram
@@ -691,6 +695,8 @@ N_src_bridge_contracts_agent_history_ipc_ts ..> N_src_bridge_contracts_agent_his
 
 ### agent-history.ts
 
+[查看源码](agent-history.ts)。
+
 ```mermaid
 classDiagram
 class N_src_bridge_contracts_agent_history_ts["agent-history.ts"] {
@@ -701,6 +707,8 @@ class N_src_bridge_contracts_agent_history_ts["agent-history.ts"] {
 
 ### agent-settings.ts
 
+[查看源码](agent-settings.ts)。
+
 ```mermaid
 classDiagram
 class N_src_bridge_contracts_agent_settings_ts["agent-settings.ts"] {
@@ -710,6 +718,16 @@ class N_src_bridge_contracts_agent_settings_ts["agent-settings.ts"] {
 直接依赖：[../../logic/team/rules/agent-runtime.ts](../../logic/team/rules/agent-runtime.ts)。
 
 ### architecture.ts
+
+[查看源码](architecture.ts)。
+
+```mermaid
+classDiagram
+class N_src_bridge_contracts_architecture_ts["architecture.ts"] {
+  <<module>>
+  +moduleBodyTemplate()
+}
+```
 
 ```mermaid
 classDiagram
@@ -747,11 +765,13 @@ N_src_bridge_contracts_architecture_ts ..> N_src_bridge_contracts_architecture_t
 
 ### automation.ts
 
+[查看源码](automation.ts)。
+
 ```mermaid
 classDiagram
 class N_src_bridge_contracts_automation_ts["automation.ts"] {
   <<module>>
-  +isAutomationAction()
+  +isAutomationAction : function
 }
 ```
 
@@ -786,6 +806,8 @@ N_src_bridge_contracts_automation_ts ..> N_src_bridge_contracts_automation_ts_Au
 
 ### chat.ts
 
+[查看源码](chat.ts)。
+
 ```mermaid
 classDiagram
 class N_src_bridge_contracts_chat_ts["chat.ts"] {
@@ -810,25 +832,35 @@ N_src_bridge_contracts_chat_ts ..> N_src_bridge_contracts_chat_ts_ChatMaterialIm
 
 ### command-verification.ts
 
+[查看源码](command-verification.ts)。
+
 ```mermaid
 classDiagram
 class N_src_bridge_contracts_command_verification_ts["command-verification.ts"] {
   <<module>>
+  +isVerifiableMainToolName()
 }
 ```
+
 直接依赖：[../../logic/tasks/rules/command-verification.ts](../../logic/tasks/rules/command-verification.ts)。
 
 ### controlled-files.ts
+
+[查看源码](controlled-files.ts)。
 
 ```mermaid
 classDiagram
 class N_src_bridge_contracts_controlled_files_ts["controlled-files.ts"] {
   <<module>>
+  +controlledFileUtf8Bytes()
 }
 ```
+
 直接依赖：[../../logic/file-operations/rules/controlled-file-operation.ts](../../logic/file-operations/rules/controlled-file-operation.ts)。
 
 ### desktop-updates.ts
+
+[查看源码](desktop-updates.ts)。
 
 ```mermaid
 classDiagram
@@ -842,35 +874,88 @@ class N_src_bridge_contracts_desktop_updates_ts["desktop-updates.ts"] {
 
 ### dispatch.ts
 
+[查看源码](dispatch.ts)。
+
+公开入口 1/2（同一模块）。
+
 ```mermaid
 classDiagram
 class N_src_bridge_contracts_dispatch_ts["dispatch.ts"] {
   <<module>>
+  +memberResumeRequests()
+  +currentMemberResumeRequest()
+  +validMemberCheckpointChain()
+  +applyGraphBatch()
+  +validateGraph()
+  +applyScopeBatch()
+  +validateScopeSnapshot()
+  +pendingTopicInterruption()
+  +recoverySourceSelection()
+  +recoverySourceKey()
+  +recoveryRequestSource()
+  +isMainRecoverySource()
 }
 ```
+
+公开入口 2/2（同一模块）。
+
+```mermaid
+classDiagram
+class N_src_bridge_contracts_dispatch_ts["dispatch.ts"] {
+  <<module>>
+  +scopeActiveInputStatus()
+  +scopeHasUnresolvedActiveInput()
+}
+```
+
 直接依赖：[../../logic/evidence/rules/artifact-baseline.ts](../../logic/evidence/rules/artifact-baseline.ts)、[../../logic/tasks/rules/checkpoint-handoff.ts](../../logic/tasks/rules/checkpoint-handoff.ts)、[../../logic/tasks/rules/dispatch-commands.ts](../../logic/tasks/rules/dispatch-commands.ts)、[../../logic/tasks/rules/dispatch-receipt.ts](../../logic/tasks/rules/dispatch-receipt.ts)、[../../logic/tasks/rules/dispatch-scope.ts](../../logic/tasks/rules/dispatch-scope.ts)、[../../logic/tasks/rules/execution-report.ts](../../logic/tasks/rules/execution-report.ts)、[../../logic/tasks/rules/graph-reducer.ts](../../logic/tasks/rules/graph-reducer.ts)、[../../logic/tasks/rules/graph-rules.ts](../../logic/tasks/rules/graph-rules.ts)、[../../logic/tasks/rules/graph-types.ts](../../logic/tasks/rules/graph-types.ts)、[../../logic/tasks/rules/member-checkpoint-chain.ts](../../logic/tasks/rules/member-checkpoint-chain.ts)、[../../logic/tasks/rules/member-checkpoint.ts](../../logic/tasks/rules/member-checkpoint.ts)、[../../logic/tasks/rules/member-commands.ts](../../logic/tasks/rules/member-commands.ts)、[../../logic/tasks/rules/member-events.ts](../../logic/tasks/rules/member-events.ts)、[../../logic/tasks/rules/queued-dependency-addition.ts](../../logic/tasks/rules/queued-dependency-addition.ts)、[../../logic/tasks/rules/queued-dependency-replacement.ts](../../logic/tasks/rules/queued-dependency-replacement.ts)、[../../logic/tasks/rules/queued-dependency-revision.ts](../../logic/tasks/rules/queued-dependency-revision.ts)、[../../logic/tasks/rules/queued-member-resume.ts](../../logic/tasks/rules/queued-member-resume.ts)、[../../logic/tasks/rules/scope-active-input.ts](../../logic/tasks/rules/scope-active-input.ts)、[../../logic/tasks/rules/scope-continuation-attachments.ts](../../logic/tasks/rules/scope-continuation-attachments.ts)、[../../logic/tasks/rules/scope-continuation.ts](../../logic/tasks/rules/scope-continuation.ts)、[../../logic/tasks/rules/scope-public.ts](../../logic/tasks/rules/scope-public.ts)、[../../logic/tasks/rules/scope-recovery.ts](../../logic/tasks/rules/scope-recovery.ts)、[../../logic/tasks/rules/scope-replan.ts](../../logic/tasks/rules/scope-replan.ts)、[../../logic/tasks/rules/scope-view.ts](../../logic/tasks/rules/scope-view.ts)、[../../logic/tasks/rules/topic-interruption.ts](../../logic/tasks/rules/topic-interruption.ts)、[../../logic/team/rules/team-session.ts](../../logic/team/rules/team-session.ts)、[../../logic/tools/rules/receipt-schema.ts](../../logic/tools/rules/receipt-schema.ts)。
 
 ### effect-observation.ts
+
+[查看源码](effect-observation.ts)。
 
 ```mermaid
 classDiagram
 class N_src_bridge_contracts_effect_observation_ts["effect-observation.ts"] {
   <<module>>
+  +sameEffectSubject : function
 }
 ```
+
 直接依赖：[../../logic/tasks/rules/effect-observation.ts](../../logic/tasks/rules/effect-observation.ts)。
 
 ### engines.ts
+
+[查看源码](engines.ts)。
 
 ```mermaid
 classDiagram
 class N_src_bridge_contracts_engines_ts["engines.ts"] {
   <<module>>
+  +modelRoleChoices()
+  +engineSelectionAvailable()
+  +engineDescriptor()
+  +engineLabel : function
+  +engineApi : function
+  +engineSupportsApi : function
+  +connectionForEngine()
+  +providerSupportsEngine()
 }
 ```
+
 直接依赖：[../../logic/engines/index.ts](../../logic/engines/index.ts)。
 
 ### execution.ts
+
+[查看源码](execution.ts)。
+
+```mermaid
+classDiagram
+class N_src_bridge_contracts_execution_ts["execution.ts"] {
+  <<module>>
+  +inputIssueMessage()
+}
+```
 
 ```mermaid
 classDiagram
@@ -896,6 +981,8 @@ N_src_bridge_contracts_execution_ts ..> N_src_bridge_contracts_execution_ts_Publ
 
 ### github-feedback.ts
 
+[查看源码](github-feedback.ts)。
+
 ```mermaid
 classDiagram
 class N_src_bridge_contracts_github_feedback_ts["github-feedback.ts"] {
@@ -905,6 +992,8 @@ class N_src_bridge_contracts_github_feedback_ts["github-feedback.ts"] {
 直接依赖：[../../logic/feedback/index.ts](../../logic/feedback/index.ts)。
 
 ### governance.ts
+
+[查看源码](governance.ts)。
 
 ```mermaid
 classDiagram
@@ -916,15 +1005,21 @@ class N_src_bridge_contracts_governance_ts["governance.ts"] {
 
 ### human-continue.ts
 
+[查看源码](human-continue.ts)。
+
 ```mermaid
 classDiagram
 class N_src_bridge_contracts_human_continue_ts["human-continue.ts"] {
   <<module>>
+  +isHumanContinuation()
 }
 ```
+
 直接依赖：[../../logic/tasks/rules/human-continue.ts](../../logic/tasks/rules/human-continue.ts)、[../../logic/tasks/rules/scope-continuation-record.ts](../../logic/tasks/rules/scope-continuation-record.ts)。
 
 ### human-decisions.ts
+
+[查看源码](human-decisions.ts)。
 
 ```mermaid
 classDiagram
@@ -935,6 +1030,8 @@ class N_src_bridge_contracts_human_decisions_ts["human-decisions.ts"] {
 直接依赖：[../../logic/tasks/rules/human-decisions.ts](../../logic/tasks/rules/human-decisions.ts)。
 
 ### ipc-call.ts
+
+[查看源码](ipc-call.ts)。
 
 ```mermaid
 classDiagram
@@ -1035,7 +1132,7 @@ class N_src_bridge_contracts_ipc_call_ts_ExactIpcCall["ExactIpcCall"] {
 N_src_bridge_contracts_ipc_call_ts ..> N_src_bridge_contracts_ipc_call_ts_ExactIpcCall : 声明
 class N_src_bridge_contracts_ipc_call_ts_IpcCaller["IpcCaller"] {
   <<interface>>
-
+  +调用签名()
 }
 N_src_bridge_contracts_ipc_call_ts ..> N_src_bridge_contracts_ipc_call_ts_IpcCaller : 声明
 class N_src_bridge_contracts_ipc_call_ts_IpcHandlers["IpcHandlers"] {
@@ -1067,25 +1164,29 @@ class N_src_bridge_contracts_ipc_call_ts_IpcResult["IpcResult"] {
 N_src_bridge_contracts_ipc_call_ts ..> N_src_bridge_contracts_ipc_call_ts_IpcResult : 声明
 class N_src_bridge_contracts_ipc_call_ts_IpcCallerFor["IpcCallerFor"] {
   <<type>>
-
+  +调用签名()
 }
 N_src_bridge_contracts_ipc_call_ts ..> N_src_bridge_contracts_ipc_call_ts_IpcCallerFor : 声明
 ```
 
-继承／实现来源：`AgentHistoryResponses` → [agent-history-ipc.ts](agent-history-ipc.ts)。
-继承／实现来源：`PeopleIpcResponses` → [ipc-people.ts](ipc-people.ts)。
-继承／实现来源：`GovernanceIpcResponses` → [ipc-governance.ts](ipc-governance.ts)。
-继承／实现来源：`DispatchIpcResponses` → [ipc-dispatch.ts](ipc-dispatch.ts)。
-继承／实现来源：`SettingsIpcResponses` → [ipc-settings.ts](ipc-settings.ts)。
-继承／实现来源：`LoopIpcResponses` → [ipc-loop.ts](ipc-loop.ts)。
-继承／实现来源：`ChatIpcResponses` → [ipc-chat.ts](ipc-chat.ts)。
-继承／实现来源：`ResourcesIpcResponses` → [ipc-resources.ts](ipc-resources.ts)。
-继承／实现来源：`WorkspaceIpcResponses` → [ipc-workspace.ts](ipc-workspace.ts)。
-继承／实现来源：`DesktopIpcResponses` → [ipc-desktop.ts](ipc-desktop.ts)。
-继承／实现来源：`AutomationActionResults` → [automation.ts](automation.ts)。
+匿名签名（IpcCaller，不是具名方法）：`<C extends IpcCall>(...request: C & ExactIpcCall<C>): Promise<IpcResponse<C[0]>>`。
+匿名签名（IpcCallerFor，不是具名方法）：`<C extends IpcCall<A>>(...request: C & ExactIpcCall<C>) => Promise<IpcResponse<C[0]>>`。
+继承／实现来源：`AgentHistoryResponses` → [agent-history-ipc.ts](agent-history-ipc.ts)（声明 `AgentHistoryResponses`）。
+继承／实现来源：`PeopleIpcResponses` → [ipc-people.ts](ipc-people.ts)（声明 `PeopleIpcResponses`）。
+继承／实现来源：`GovernanceIpcResponses` → [ipc-governance.ts](ipc-governance.ts)（声明 `GovernanceIpcResponses`）。
+继承／实现来源：`DispatchIpcResponses` → [ipc-dispatch.ts](ipc-dispatch.ts)（声明 `DispatchIpcResponses`）。
+继承／实现来源：`SettingsIpcResponses` → [ipc-settings.ts](ipc-settings.ts)（声明 `SettingsIpcResponses`）。
+继承／实现来源：`LoopIpcResponses` → [ipc-loop.ts](ipc-loop.ts)（声明 `LoopIpcResponses`）。
+继承／实现来源：`ChatIpcResponses` → [ipc-chat.ts](ipc-chat.ts)（声明 `ChatIpcResponses`）。
+继承／实现来源：`ResourcesIpcResponses` → [ipc-resources.ts](ipc-resources.ts)（声明 `ResourcesIpcResponses`）。
+继承／实现来源：`WorkspaceIpcResponses` → [ipc-workspace.ts](ipc-workspace.ts)（声明 `WorkspaceIpcResponses`）。
+继承／实现来源：`DesktopIpcResponses` → [ipc-desktop.ts](ipc-desktop.ts)（声明 `DesktopIpcResponses`）。
+继承／实现来源：`AutomationActionResults` → [automation.ts](automation.ts)（声明 `AutomationActionResults`）。
 直接依赖：[agent-history-ipc.ts](agent-history-ipc.ts)、[automation.ts](automation.ts)、[ipc-chat.ts](ipc-chat.ts)、[ipc-desktop.ts](ipc-desktop.ts)、[ipc-dispatch.ts](ipc-dispatch.ts)、[ipc-governance.ts](ipc-governance.ts)、[ipc-loop.ts](ipc-loop.ts)、[ipc-people.ts](ipc-people.ts)、[ipc-resources.ts](ipc-resources.ts)、[ipc-settings.ts](ipc-settings.ts)、[ipc-workspace.ts](ipc-workspace.ts)。
 
 ### ipc-chat.ts
+
+[查看源码](ipc-chat.ts)。
 
 ```mermaid
 classDiagram
@@ -1110,6 +1211,8 @@ N_src_bridge_contracts_ipc_chat_ts ..> N_src_bridge_contracts_ipc_chat_ts_ChatIp
 直接依赖：[chat.ts](chat.ts)、[ipc-shapes.ts](ipc-shapes.ts)、[../../logic/connectors/rules/repository-tools.ts](../../logic/connectors/rules/repository-tools.ts)。
 
 ### ipc-desktop.ts
+
+[查看源码](ipc-desktop.ts)。
 
 ```mermaid
 classDiagram
@@ -1138,6 +1241,8 @@ N_src_bridge_contracts_ipc_desktop_ts ..> N_src_bridge_contracts_ipc_desktop_ts_
 直接依赖：[chat.ts](chat.ts)、[desktop-updates.ts](desktop-updates.ts)、[ipc-shapes.ts](ipc-shapes.ts)。
 
 ### ipc-dispatch.ts
+
+[查看源码](ipc-dispatch.ts)。
 
 成员 1/3（同名节点为同一声明，跨图合并阅读）。
 
@@ -1221,6 +1326,8 @@ N_src_bridge_contracts_ipc_dispatch_ts ..> N_src_bridge_contracts_ipc_dispatch_t
 
 ### ipc-governance.ts
 
+[查看源码](ipc-governance.ts)。
+
 ```mermaid
 classDiagram
 class N_src_bridge_contracts_ipc_governance_ts["ipc-governance.ts"] {
@@ -1243,6 +1350,8 @@ N_src_bridge_contracts_ipc_governance_ts ..> N_src_bridge_contracts_ipc_governan
 直接依赖：[../../logic/governance/rules/module-governance.ts](../../logic/governance/rules/module-governance.ts)。
 
 ### ipc-loop.ts
+
+[查看源码](ipc-loop.ts)。
 
 成员 1/2（同名节点为同一声明，跨图合并阅读）。
 
@@ -1305,6 +1414,8 @@ N_src_bridge_contracts_ipc_loop_ts ..> N_src_bridge_contracts_ipc_loop_ts_LoopIp
 
 ### ipc-people.ts
 
+[查看源码](ipc-people.ts)。
+
 ```mermaid
 classDiagram
 class N_src_bridge_contracts_ipc_people_ts["ipc-people.ts"] {
@@ -1330,6 +1441,8 @@ N_src_bridge_contracts_ipc_people_ts ..> N_src_bridge_contracts_ipc_people_ts_Pe
 直接依赖：[../../logic/team/rules/workspace-member.ts](../../logic/team/rules/workspace-member.ts)、[../../logic/workspace/rules/module-ownership.ts](../../logic/workspace/rules/module-ownership.ts)。
 
 ### ipc-resources.ts
+
+[查看源码](ipc-resources.ts)。
 
 成员 1/2（同名节点为同一声明，跨图合并阅读）。
 
@@ -1380,6 +1493,8 @@ N_src_bridge_contracts_ipc_resources_ts ..> N_src_bridge_contracts_ipc_resources
 直接依赖：[ipc-shapes.ts](ipc-shapes.ts)、[resources.ts](resources.ts)、[../../logic/connectors/rules/repository-connection.ts](../../logic/connectors/rules/repository-connection.ts)、[../../logic/knowledge/rules/types.ts](../../logic/knowledge/rules/types.ts)。
 
 ### ipc-settings.ts
+
+[查看源码](ipc-settings.ts)。
 
 成员 1/2（同名节点为同一声明，跨图合并阅读）。
 
@@ -1433,10 +1548,12 @@ class N_src_bridge_contracts_ipc_settings_ts_external_ModelActionResults["ModelA
 N_src_bridge_contracts_ipc_settings_ts_external_ModelActionResults <|-- N_src_bridge_contracts_ipc_settings_ts_SettingsIpcResponses
 ```
 
-继承／实现来源：`ModelActionResults` → [model-actions.ts](model-actions.ts)。
+继承／实现来源：`ModelActionResults` → [model-actions.ts](model-actions.ts)（声明 `ModelActionResults`）。
 直接依赖：[engines.ts](engines.ts)、[github-feedback.ts](github-feedback.ts)、[ipc-shapes.ts](ipc-shapes.ts)、[model-actions.ts](model-actions.ts)、[models.ts](models.ts)、[web.ts](web.ts)、[../../logic/budget/rules/scope-budget.ts](../../logic/budget/rules/scope-budget.ts)、[../../logic/runtime/rules/admission.ts](../../logic/runtime/rules/admission.ts)、[../../logic/runtime/rules/types.ts](../../logic/runtime/rules/types.ts)。
 
 ### ipc-shapes.ts
+
+[查看源码](ipc-shapes.ts)。
 
 ```mermaid
 classDiagram
@@ -1447,6 +1564,8 @@ class N_src_bridge_contracts_ipc_shapes_ts["ipc-shapes.ts"] {
 直接依赖：[../../logic/tools/rules/questions.ts](../../logic/tools/rules/questions.ts)。
 
 ### ipc-workspace.ts
+
+[查看源码](ipc-workspace.ts)。
 
 成员 1/2（同名节点为同一声明，跨图合并阅读）。
 
@@ -1495,6 +1614,8 @@ N_src_bridge_contracts_ipc_workspace_ts ..> N_src_bridge_contracts_ipc_workspace
 
 ### isolated-executions.ts
 
+[查看源码](isolated-executions.ts)。
+
 ```mermaid
 classDiagram
 class N_src_bridge_contracts_isolated_executions_ts["isolated-executions.ts"] {
@@ -1505,15 +1626,21 @@ class N_src_bridge_contracts_isolated_executions_ts["isolated-executions.ts"] {
 
 ### knowledge-source.ts
 
+[查看源码](knowledge-source.ts)。
+
 ```mermaid
 classDiagram
 class N_src_bridge_contracts_knowledge_source_ts["knowledge-source.ts"] {
   <<module>>
+  +sourceReadStateMatches()
 }
 ```
+
 直接依赖：[../../logic/workspace/rules/knowledge-source.ts](../../logic/workspace/rules/knowledge-source.ts)。
 
 ### knowledge-transactions.ts
+
+[查看源码](knowledge-transactions.ts)。
 
 ```mermaid
 classDiagram
@@ -1525,11 +1652,13 @@ class N_src_bridge_contracts_knowledge_transactions_ts["knowledge-transactions.t
 
 ### model-actions.ts
 
+[查看源码](model-actions.ts)。
+
 ```mermaid
 classDiagram
 class N_src_bridge_contracts_model_actions_ts["model-actions.ts"] {
   <<module>>
-  +isModelAction()
+  +isModelAction : function
 }
 ```
 
@@ -1568,25 +1697,37 @@ N_src_bridge_contracts_model_actions_ts ..> N_src_bridge_contracts_model_actions
 
 ### models.ts
 
+[查看源码](models.ts)。
+
 ```mermaid
 classDiagram
 class N_src_bridge_contracts_models_ts["models.ts"] {
   <<module>>
+  +selectProviderConnection()
+  +identifyProvider()
+  +modelStopError()
 }
 ```
+
 直接依赖：[../../logic/execution/rules/model-errors.ts](../../logic/execution/rules/model-errors.ts)、[../../logic/models/index.ts](../../logic/models/index.ts)。
 
 ### module-ownership.ts
+
+[查看源码](module-ownership.ts)。
 
 ```mermaid
 classDiagram
 class N_src_bridge_contracts_module_ownership_ts["module-ownership.ts"] {
   <<module>>
+  +isModuleOwnershipSourceAdoption()
 }
 ```
+
 直接依赖：[../../logic/workspace/rules/module-ownership.ts](../../logic/workspace/rules/module-ownership.ts)。
 
 ### output-manifest.ts
+
+[查看源码](output-manifest.ts)。
 
 ```mermaid
 classDiagram
@@ -1598,15 +1739,22 @@ class N_src_bridge_contracts_output_manifest_ts["output-manifest.ts"] {
 
 ### owner-execution.ts
 
+[查看源码](owner-execution.ts)。
+
 ```mermaid
 classDiagram
 class N_src_bridge_contracts_owner_execution_ts["owner-execution.ts"] {
   <<module>>
+  +ownerExecutionBindingMatches()
+  +automaticExecutionBindingMatches()
 }
 ```
+
 直接依赖：[../../logic/team/rules/automatic-execution.ts](../../logic/team/rules/automatic-execution.ts)、[../../logic/team/rules/member-execution-binding.ts](../../logic/team/rules/member-execution-binding.ts)、[../../logic/team/rules/owner-execution-discovery.ts](../../logic/team/rules/owner-execution-discovery.ts)。
 
 ### repository-connections.ts
+
+[查看源码](repository-connections.ts)。
 
 ```mermaid
 classDiagram
@@ -1617,6 +1765,8 @@ class N_src_bridge_contracts_repository_connections_ts["repository-connections.t
 直接依赖：[../../logic/connectors/rules/repository-connection.ts](../../logic/connectors/rules/repository-connection.ts)、[../../logic/connectors/rules/repository-tools.ts](../../logic/connectors/rules/repository-tools.ts)。
 
 ### resources.ts
+
+[查看源码](resources.ts)。
 
 ```mermaid
 classDiagram
@@ -1662,6 +1812,8 @@ N_src_bridge_contracts_resources_ts ..> N_src_bridge_contracts_resources_ts_Impo
 
 ### runtime.ts
 
+[查看源码](runtime.ts)。
+
 ```mermaid
 classDiagram
 class N_src_bridge_contracts_runtime_ts["runtime.ts"] {
@@ -1671,6 +1823,8 @@ class N_src_bridge_contracts_runtime_ts["runtime.ts"] {
 直接依赖：[../../logic/runtime/rules/runtime-validation.ts](../../logic/runtime/rules/runtime-validation.ts)、[../../logic/runtime/rules/types.ts](../../logic/runtime/rules/types.ts)。
 
 ### scope-budget.ts
+
+[查看源码](scope-budget.ts)。
 
 ```mermaid
 classDiagram
@@ -1682,6 +1836,8 @@ class N_src_bridge_contracts_scope_budget_ts["scope-budget.ts"] {
 
 ### scope-usage.ts
 
+[查看源码](scope-usage.ts)。
+
 ```mermaid
 classDiagram
 class N_src_bridge_contracts_scope_usage_ts["scope-usage.ts"] {
@@ -1692,15 +1848,25 @@ class N_src_bridge_contracts_scope_usage_ts["scope-usage.ts"] {
 
 ### usage.ts
 
+[查看源码](usage.ts)。
+
 ```mermaid
 classDiagram
 class N_src_bridge_contracts_usage_ts["usage.ts"] {
   <<module>>
+  +runUsage()
+  +taskUsage()
+  +runDuration()
+  +tokenCount()
+  +durationText()
 }
 ```
+
 直接依赖：[../../logic/execution/rules/usage.ts](../../logic/execution/rules/usage.ts)。
 
 ### web.ts
+
+[查看源码](web.ts)。
 
 ```mermaid
 classDiagram
@@ -1712,6 +1878,8 @@ class N_src_bridge_contracts_web_ts["web.ts"] {
 
 ### workspace-members.ts
 
+[查看源码](workspace-members.ts)。
+
 ```mermaid
 classDiagram
 class N_src_bridge_contracts_workspace_members_ts["workspace-members.ts"] {
@@ -1721,6 +1889,8 @@ class N_src_bridge_contracts_workspace_members_ts["workspace-members.ts"] {
 直接依赖：[../../logic/team/rules/workspace-member.ts](../../logic/team/rules/workspace-member.ts)。
 
 ### workspace-view.ts
+
+[查看源码](workspace-view.ts)。
 
 ```mermaid
 classDiagram
@@ -1732,6 +1902,8 @@ class N_src_bridge_contracts_workspace_view_ts["workspace-view.ts"] {
 
 ### workspace.ts
 
+[查看源码](workspace.ts)。
+
 ```mermaid
 classDiagram
 class N_src_bridge_contracts_workspace_ts["workspace.ts"] {
@@ -1739,10 +1911,15 @@ class N_src_bridge_contracts_workspace_ts["workspace.ts"] {
 }
 class N_src_bridge_contracts_workspace_ts_Bridge["Bridge"] {
   <<interface>>
-  +call
+  +call : function
   +ImportFiles()
 }
 N_src_bridge_contracts_workspace_ts ..> N_src_bridge_contracts_workspace_ts_Bridge : 声明
+class N_src_bridge_contracts_workspace_ts_global_Window["global.Window"] {
+  <<interface>>
+  +cbim
+}
+N_src_bridge_contracts_workspace_ts ..> N_src_bridge_contracts_workspace_ts_global_Window : 声明
 ```
 
 直接依赖：[chat.ts](chat.ts)、[ipc-call.ts](ipc-call.ts)、[workspace-view.ts](workspace-view.ts)、[../../logic/knowledge/rules/types.ts](../../logic/knowledge/rules/types.ts)、[../../logic/workspace/rules/project-root.ts](../../logic/workspace/rules/project-root.ts)。

@@ -121,9 +121,11 @@ interface.css 统一普通文字 15px/400、短标题 500、页面标题 20px、
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### agent-model-form.css
+
+[查看源码](agent-model-form.css)。
 
 ```mermaid
 classDiagram
@@ -133,6 +135,8 @@ class N_src_view_components_agent_model_form_css["agent-model-form.css"] {
 ```
 
 ### AgentModelForm.tsx
+
+[查看源码](AgentModelForm.tsx)。
 
 ```mermaid
 classDiagram
@@ -146,6 +150,8 @@ class N_src_view_components_AgentModelForm_tsx["AgentModelForm.tsx"] {
 
 ### BrandMark.tsx
 
+[查看源码](BrandMark.tsx)。
+
 ```mermaid
 classDiagram
 class N_src_view_components_BrandMark_tsx["BrandMark.tsx"] {
@@ -156,6 +162,8 @@ class N_src_view_components_BrandMark_tsx["BrandMark.tsx"] {
 
 
 ### DeferredView.tsx
+
+[查看源码](DeferredView.tsx)。
 
 ```mermaid
 classDiagram
@@ -186,6 +194,8 @@ N_src_view_components_DeferredView_tsx_external_Component <|-- N_src_view_compon
 
 ### Empty.tsx
 
+[查看源码](Empty.tsx)。
+
 ```mermaid
 classDiagram
 class N_src_view_components_Empty_tsx["Empty.tsx"] {
@@ -197,6 +207,8 @@ class N_src_view_components_Empty_tsx["Empty.tsx"] {
 直接依赖：[Icon.tsx](Icon.tsx)。
 
 ### EngineModelPicker.tsx
+
+[查看源码](EngineModelPicker.tsx)。
 
 ```mermaid
 classDiagram
@@ -210,6 +222,8 @@ class N_src_view_components_EngineModelPicker_tsx["EngineModelPicker.tsx"] {
 
 ### Icon.tsx
 
+[查看源码](Icon.tsx)。
+
 ```mermaid
 classDiagram
 class N_src_view_components_Icon_tsx["Icon.tsx"] {
@@ -221,6 +235,8 @@ class N_src_view_components_Icon_tsx["Icon.tsx"] {
 
 ### interface.css
 
+[查看源码](interface.css)。
+
 ```mermaid
 classDiagram
 class N_src_view_components_interface_css["interface.css"] {
@@ -229,6 +245,8 @@ class N_src_view_components_interface_css["interface.css"] {
 ```
 
 ### InterfaceHelp.tsx
+
+[查看源码](InterfaceHelp.tsx)。
 
 ```mermaid
 classDiagram
@@ -242,6 +260,8 @@ class N_src_view_components_InterfaceHelp_tsx["InterfaceHelp.tsx"] {
 
 ### ModalFrame.tsx
 
+[查看源码](ModalFrame.tsx)。
+
 ```mermaid
 classDiagram
 class N_src_view_components_ModalFrame_tsx["ModalFrame.tsx"] {
@@ -253,6 +273,8 @@ class N_src_view_components_ModalFrame_tsx["ModalFrame.tsx"] {
 
 ### repository-scope.css
 
+[查看源码](repository-scope.css)。
+
 ```mermaid
 classDiagram
 class N_src_view_components_repository_scope_css["repository-scope.css"] {
@@ -261,6 +283,8 @@ class N_src_view_components_repository_scope_css["repository-scope.css"] {
 ```
 
 ### RepositoryScopeDetails.tsx
+
+[查看源码](RepositoryScopeDetails.tsx)。
 
 ```mermaid
 classDiagram
@@ -274,6 +298,8 @@ class N_src_view_components_RepositoryScopeDetails_tsx["RepositoryScopeDetails.t
 
 ### sidebar.css
 
+[查看源码](sidebar.css)。
+
 ```mermaid
 classDiagram
 class N_src_view_components_sidebar_css["sidebar.css"] {
@@ -283,6 +309,8 @@ class N_src_view_components_sidebar_css["sidebar.css"] {
 
 ### state-labels.ts
 
+[查看源码](state-labels.ts)。
+
 ```mermaid
 classDiagram
 class N_src_view_components_state_labels_ts["state-labels.ts"] {
@@ -291,6 +319,8 @@ class N_src_view_components_state_labels_ts["state-labels.ts"] {
 ```
 
 ### TreeActions.tsx
+
+[查看源码](TreeActions.tsx)。
 
 ```mermaid
 classDiagram
@@ -319,6 +349,8 @@ N_src_view_components_TreeActions_tsx ..> N_src_view_components_TreeActions_tsx_
 直接依赖：[Icon.tsx](Icon.tsx)。
 
 ### ViewTabs.tsx
+
+[查看源码](ViewTabs.tsx)。
 
 ```mermaid
 classDiagram

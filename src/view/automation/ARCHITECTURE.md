@@ -48,9 +48,11 @@
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### automation.css
+
+[查看源码](automation.css)。
 
 ```mermaid
 classDiagram
@@ -60,6 +62,8 @@ class N_src_view_automation_automation_css["automation.css"] {
 ```
 
 ### AutomationEditor.tsx
+
+[查看源码](AutomationEditor.tsx)。
 
 ```mermaid
 classDiagram
@@ -72,6 +76,8 @@ class N_src_view_automation_AutomationEditor_tsx["AutomationEditor.tsx"] {
 直接依赖：[../../bridge/contracts/automation.ts](../../bridge/contracts/automation.ts)、[../components/Icon.tsx](../components/Icon.tsx)。
 
 ### AutomationView.tsx
+
+[查看源码](AutomationView.tsx)。
 
 ```mermaid
 classDiagram

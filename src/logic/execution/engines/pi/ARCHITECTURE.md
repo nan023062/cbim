@@ -259,9 +259,11 @@ package.ts 导出协议 1 的 Pi 工厂和适配器版本；它保留 SDK 1.5.0 
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### bridge.ts
+
+[查看源码](bridge.ts)。
 
 ```mermaid
 classDiagram
@@ -275,6 +277,8 @@ class N_src_logic_execution_engines_pi_bridge_ts["bridge.ts"] {
 直接依赖：[../../../../core/errors.ts](../../../../core/errors.ts)、[../../rules/engine-tools.ts](../../rules/engine-tools.ts)、[../../rules/input-source.ts](../../rules/input-source.ts)、[../../rules/types.ts](../../rules/types.ts)、[../../../tools/rules/outcome.ts](../../../tools/rules/outcome.ts)、[../../../tools/rules/results.ts](../../../tools/rules/results.ts)。
 
 ### engine.ts
+
+[查看源码](engine.ts)。
 
 成员 1/2（同名节点为同一声明，跨图合并阅读）。
 
@@ -350,10 +354,12 @@ class N_src_logic_execution_engines_pi_engine_ts_external_AgentEngine["AgentEngi
 N_src_logic_execution_engines_pi_engine_ts_external_AgentEngine <|.. N_src_logic_execution_engines_pi_engine_ts_PiEngine
 ```
 
-继承／实现来源：`AgentEngine` → [../../rules/types.ts](../../rules/types.ts)。
+继承／实现来源：`AgentEngine` → [../../rules/types.ts](../../rules/types.ts)（声明 `AgentEngine`）。
 直接依赖：[../../../../core/errors.ts](../../../../core/errors.ts)、[../../../../core/utility/index.ts](../../../../core/utility/index.ts)、[../../../budget/rules/request-budget.ts](../../../budget/rules/request-budget.ts)、[bridge.ts](bridge.ts)、[request-budget-bootstrap.ts](request-budget-bootstrap.ts)、[rpc.ts](rpc.ts)、[runtime-config.ts](runtime-config.ts)、[../run-inactivity.ts](../run-inactivity.ts)、[../transport/request-budget-transport.ts](../transport/request-budget-transport.ts)、[../../rules/engine-instructions.ts](../../rules/engine-instructions.ts)、[../../rules/engine-runtime.ts](../../rules/engine-runtime.ts)、[../../rules/engine-tools.ts](../../rules/engine-tools.ts)、[../../rules/model-errors.ts](../../rules/model-errors.ts)、[../../rules/types.ts](../../rules/types.ts)、[../../../models/index.ts](../../../models/index.ts)、[../../../tools/rules/native-tools.ts](../../../tools/rules/native-tools.ts)。
 
 ### package.ts
+
+[查看源码](package.ts)。
 
 ```mermaid
 classDiagram
@@ -364,6 +370,8 @@ class N_src_logic_execution_engines_pi_package_ts["package.ts"] {
 直接依赖：[../../../engines/index.ts](../../../engines/index.ts)、[engine.ts](engine.ts)、[../../rules/engine-adapter.ts](../../rules/engine-adapter.ts)。
 
 ### request-budget-bootstrap.ts
+
+[查看源码](request-budget-bootstrap.ts)。
 
 ```mermaid
 classDiagram
@@ -376,6 +384,8 @@ class N_src_logic_execution_engines_pi_request_budget_bootstrap_ts["request-budg
 
 ### rpc.ts
 
+[查看源码](rpc.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_execution_engines_pi_rpc_ts["rpc.ts"] {
@@ -387,9 +397,9 @@ class N_src_logic_execution_engines_pi_rpc_ts_PiRpc["PiRpc"] {
   +Request()
   +Send()
   +Close()
-  -onEvent
-  -onExit
-  -redact
+  -onEvent : function
+  -onExit : function
+  -redact : function
   -child
   -dead
   -frames
@@ -403,6 +413,8 @@ N_src_logic_execution_engines_pi_rpc_ts ..> N_src_logic_execution_engines_pi_rpc
 直接依赖：[../../../../core/utility/index.ts](../../../../core/utility/index.ts)、[../../rules/engine-adapter.ts](../../rules/engine-adapter.ts)。
 
 ### runtime-config.ts
+
+[查看源码](runtime-config.ts)。
 
 ```mermaid
 classDiagram

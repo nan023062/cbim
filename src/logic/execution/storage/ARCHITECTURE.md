@@ -57,9 +57,11 @@ business-runs 从原 canonical 验证父工具授权、首次带 limits 的引�
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### business-runs.ts
+
+[查看源码](business-runs.ts)。
 
 ```mermaid
 classDiagram
@@ -71,8 +73,8 @@ class N_src_logic_execution_storage_business_runs_ts_AgentBusinessRuns["AgentBus
   +Start()
   +Close()
   -store
-  -assertCurrent
-  -inspect
+  -assertCurrent : function
+  -inspect : function
 }
 N_src_logic_execution_storage_business_runs_ts ..> N_src_logic_execution_storage_business_runs_ts_AgentBusinessRuns : 声明
 ```
@@ -80,6 +82,8 @@ N_src_logic_execution_storage_business_runs_ts ..> N_src_logic_execution_storage
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../agents/contracts.ts](../../agents/contracts.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../rules/business-run-invariants.ts](../rules/business-run-invariants.ts)、[../rules/business-run.ts](../rules/business-run.ts)、[../rules/types.ts](../rules/types.ts)。
 
 ### run-journal.ts
+
+[查看源码](run-journal.ts)。
 
 ```mermaid
 classDiagram
@@ -105,6 +109,8 @@ N_src_logic_execution_storage_run_journal_ts ..> N_src_logic_execution_storage_r
 
 ### run-storage.ts
 
+[查看源码](run-storage.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_execution_storage_run_storage_ts["run-storage.ts"] {
@@ -123,7 +129,7 @@ class N_src_logic_execution_storage_run_storage_ts_external_RunStorage["RunStora
 N_src_logic_execution_storage_run_storage_ts_external_RunStorage <|.. N_src_logic_execution_storage_run_storage_ts_FileRunStorage
 ```
 
-继承／实现来源：`RunStorage` → [../rules/storage.ts](../rules/storage.ts)。
+继承／实现来源：`RunStorage` → [../rules/storage.ts](../rules/storage.ts)（声明 `RunStorage`）。
 直接依赖：[../ports/identity.ts](../ports/identity.ts)、[../rules/storage.ts](../rules/storage.ts)、[run-journal.ts](run-journal.ts)、[../../tasks/rules/types.ts](../../tasks/rules/types.ts)。
 
 ### 本目录调用边界

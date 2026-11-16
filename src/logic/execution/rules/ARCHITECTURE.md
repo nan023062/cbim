@@ -464,7 +464,7 @@ AgentBusinessRun.request 可选保存新业务原目标与验收要求；旧记�
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ```mermaid
 classDiagram
@@ -586,12 +586,14 @@ N_src_logic_execution_rules_usage_ts ..> N_src_logic_execution_rules_types_ts : 
 
 ### business-run-invariants.ts
 
+[查看源码](business-run-invariants.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_execution_rules_business_run_invariants_ts["business-run-invariants.ts"] {
   <<module>>
-  +agentBusinessRunCommand()
   +projectAgentBusinessRuns()
+  +agentBusinessRunCommand : function
 }
 ```
 
@@ -599,6 +601,8 @@ class N_src_logic_execution_rules_business_run_invariants_ts["business-run-invar
 
 
 ### business-run.ts
+
+[查看源码](business-run.ts)。
 
 ```mermaid
 classDiagram
@@ -634,6 +638,8 @@ N_src_logic_execution_rules_business_run_ts ..> N_src_logic_execution_rules_busi
 
 
 ### conversation-binding.ts
+
+[查看源码](conversation-binding.ts)。
 
 ```mermaid
 classDiagram
@@ -671,6 +677,8 @@ N_src_logic_execution_rules_conversation_binding_ts ..> N_src_logic_execution_ru
 
 
 ### engine-adapter.ts
+
+[查看源码](engine-adapter.ts)。
 
 ```mermaid
 classDiagram
@@ -725,6 +733,8 @@ N_src_logic_execution_rules_engine_adapter_ts ..> N_src_logic_execution_rules_en
 
 ### engine-instructions.ts
 
+[查看源码](engine-instructions.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_execution_rules_engine_instructions_ts["engine-instructions.ts"] {
@@ -737,6 +747,8 @@ class N_src_logic_execution_rules_engine_instructions_ts["engine-instructions.ts
 
 
 ### engine-runtime.ts
+
+[查看源码](engine-runtime.ts)。
 
 ```mermaid
 classDiagram
@@ -765,6 +777,8 @@ N_src_logic_execution_rules_engine_runtime_ts ..> N_src_logic_execution_rules_en
 
 ### engine-session.ts
 
+[查看源码](engine-session.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_execution_rules_engine_session_ts["engine-session.ts"] {
@@ -791,6 +805,8 @@ N_src_logic_execution_rules_engine_session_ts ..> N_src_logic_execution_rules_en
 
 
 ### engine-tools.ts
+
+[查看源码](engine-tools.ts)。
 
 ```mermaid
 classDiagram
@@ -838,16 +854,25 @@ N_src_logic_execution_rules_engine_tools_ts ..> N_src_logic_execution_rules_engi
 
 ### index.ts
 
+[查看源码](index.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_execution_rules_index_ts["index.ts"] {
   <<module>>
+  +checkedMemberRunBinding()
+  +checkedMemberRunLaunch()
+  +checkedRunInputSource()
+  +checkedConversationAgentBinding()
 }
 ```
+
 直接依赖：[conversation-binding.ts](conversation-binding.ts)、[input-source.ts](input-source.ts)、[member-run.ts](member-run.ts)、[runtime/runtime.ts](runtime/runtime.ts)、[storage.ts](storage.ts)、[types.ts](types.ts)。
 
 
 ### input-source.ts
+
+[查看源码](input-source.ts)。
 
 ```mermaid
 classDiagram
@@ -922,6 +947,8 @@ N_src_logic_execution_rules_input_source_ts ..> N_src_logic_execution_rules_inpu
 
 ### member-run.ts
 
+[查看源码](member-run.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_execution_rules_member_run_ts["member-run.ts"] {
@@ -963,6 +990,8 @@ N_src_logic_execution_rules_member_run_ts ..> N_src_logic_execution_rules_member
 
 ### model-errors.ts
 
+[查看源码](model-errors.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_execution_rules_model_errors_ts["model-errors.ts"] {
@@ -974,6 +1003,8 @@ class N_src_logic_execution_rules_model_errors_ts["model-errors.ts"] {
 
 
 ### repeated-tool-failures.ts
+
+[查看源码](repeated-tool-failures.ts)。
 
 ```mermaid
 classDiagram
@@ -996,6 +1027,8 @@ N_src_logic_execution_rules_repeated_tool_failures_ts ..> N_src_logic_execution_
 
 ### run-failure.ts
 
+[查看源码](run-failure.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_execution_rules_run_failure_ts["run-failure.ts"] {
@@ -1007,6 +1040,8 @@ class N_src_logic_execution_rules_run_failure_ts["run-failure.ts"] {
 
 
 ### scope-usage.ts
+
+[查看源码](scope-usage.ts)。
 
 ```mermaid
 classDiagram
@@ -1022,6 +1057,8 @@ class N_src_logic_execution_rules_scope_usage_ts["scope-usage.ts"] {
 
 
 ### storage.ts
+
+[查看源码](storage.ts)。
 
 ```mermaid
 classDiagram
@@ -1049,6 +1086,8 @@ N_src_logic_execution_rules_storage_ts ..> N_src_logic_execution_rules_storage_t
 
 
 ### types.ts
+
+[查看源码](types.ts)。
 
 ```mermaid
 classDiagram
@@ -1148,6 +1187,8 @@ N_src_logic_execution_rules_types_ts ..> N_src_logic_execution_rules_types_ts_Co
 
 
 ### usage.ts
+
+[查看源码](usage.ts)。
 
 ```mermaid
 classDiagram

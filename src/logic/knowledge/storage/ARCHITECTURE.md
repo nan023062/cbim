@@ -75,9 +75,11 @@ prepared 保存或 Store prepare 异常时，只有严格核实原 Store 屏障�
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### files.ts
+
+[查看源码](files.ts)。
 
 ```mermaid
 classDiagram
@@ -90,6 +92,8 @@ class N_src_logic_knowledge_storage_files_ts["files.ts"] {
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../rules/knowledge.ts](../rules/knowledge.ts)、[../rules/types.ts](../rules/types.ts)、[../../workspace/ports/paths.ts](../../workspace/ports/paths.ts)。
 
 ### governance-port.ts
+
+[查看源码](governance-port.ts)。
 
 ```mermaid
 classDiagram
@@ -135,6 +139,8 @@ N_src_logic_knowledge_storage_governance_port_ts ..> N_src_logic_knowledge_stora
 
 ### knowledge-store.ts
 
+[查看源码](knowledge-store.ts)。
+
 成员 1/2（同名节点为同一声明，跨图合并阅读）。
 
 ```mermaid
@@ -153,7 +159,7 @@ class N_src_logic_knowledge_storage_knowledge_store_ts_KnowledgeStoreOwner["Know
   +knowledgeErrors
   +lastRevision
   +changed
-  +fault
+  +fault : function
   +Assert()
 }
 N_src_logic_knowledge_storage_knowledge_store_ts ..> N_src_logic_knowledge_storage_knowledge_store_ts_KnowledgeStoreOwner : 声明
@@ -211,7 +217,7 @@ class N_src_logic_knowledge_storage_knowledge_store_ts["knowledge-store.ts"] {
 }
 class N_src_logic_knowledge_storage_knowledge_store_ts_KnowledgeStore["KnowledgeStore"] {
   -owner
-  -log
+  -log : function
   -governance
   -sources
   -queue
@@ -228,6 +234,8 @@ N_src_logic_knowledge_storage_knowledge_store_ts ..> N_src_logic_knowledge_stora
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../rules/knowledge.ts](../rules/knowledge.ts)、[../rules/planned-commit.ts](../rules/planned-commit.ts)、[../rules/types.ts](../rules/types.ts)、[files.ts](files.ts)、[governance-port.ts](governance-port.ts)、[planned-commit.ts](planned-commit.ts)、[source-journal.ts](source-journal.ts)、[../../workspace/ports/paths.ts](../../workspace/ports/paths.ts)。
 
 ### object-storage.ts
+
+[查看源码](object-storage.ts)。
 
 ```mermaid
 classDiagram
@@ -251,10 +259,12 @@ class N_src_logic_knowledge_storage_object_storage_ts_external_ObjectStorage["Ob
 N_src_logic_knowledge_storage_object_storage_ts_external_ObjectStorage <|.. N_src_logic_knowledge_storage_object_storage_ts_FileObjectStorage
 ```
 
-继承／实现来源：`ObjectStorage` → [../rules/object-storage.ts](../rules/object-storage.ts)。
+继承／实现来源：`ObjectStorage` → [../rules/object-storage.ts](../rules/object-storage.ts)（声明 `ObjectStorage`）。
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../rules/object-storage.ts](../rules/object-storage.ts)、[../rules/types.ts](../rules/types.ts)、[../../workspace/ports/paths.ts](../../workspace/ports/paths.ts)。
 
 ### planned-commit.ts
+
+[查看源码](planned-commit.ts)。
 
 ```mermaid
 classDiagram
@@ -267,6 +277,8 @@ class N_src_logic_knowledge_storage_planned_commit_ts["planned-commit.ts"] {
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../rules/planned-commit.ts](../rules/planned-commit.ts)、[../rules/types.ts](../rules/types.ts)、[../../workspace/ports/paths.ts](../../workspace/ports/paths.ts)。
 
 ### source-journal.ts
+
+[查看源码](source-journal.ts)。
 
 ```mermaid
 classDiagram

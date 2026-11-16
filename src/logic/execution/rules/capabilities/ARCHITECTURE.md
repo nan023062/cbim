@@ -63,9 +63,11 @@ RunControlledFile.Guard 在原写结果未知后允许 cbim_ask_user_question，
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### artifact-capture.ts
+
+[查看源码](artifact-capture.ts)。
 
 ```mermaid
 classDiagram
@@ -102,6 +104,8 @@ N_src_logic_execution_rules_capabilities_artifact_capture_ts ..> N_src_logic_exe
 
 ### member-checkpoint.ts
 
+[查看源码](member-checkpoint.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_execution_rules_capabilities_member_checkpoint_ts["member-checkpoint.ts"] {
@@ -128,6 +132,8 @@ N_src_logic_execution_rules_capabilities_member_checkpoint_ts ..> N_src_logic_ex
 直接依赖：[../../../../core/errors.ts](../../../../core/errors.ts)、[../../../evidence/rules/progress.ts](../../../evidence/rules/progress.ts)、[artifact-capture.ts](artifact-capture.ts)、[../member-run.ts](../member-run.ts)、[../types.ts](../types.ts)、[../../../tasks/rules/member-checkpoint-evidence.ts](../../../tasks/rules/member-checkpoint-evidence.ts)、[../../../tasks/rules/member-checkpoint-tools.ts](../../../tasks/rules/member-checkpoint-tools.ts)、[../../../tasks/rules/member-checkpoint.ts](../../../tasks/rules/member-checkpoint.ts)。
 
 ### member-tool-capabilities.ts
+
+[查看源码](member-tool-capabilities.ts)。
 
 ```mermaid
 classDiagram
@@ -161,6 +167,8 @@ N_src_logic_execution_rules_capabilities_member_tool_capabilities_ts ..> N_src_l
 直接依赖：[../../../evidence/rules/artifact-tools.ts](../../../evidence/rules/artifact-tools.ts)、[../../../evidence/rules/output-manifest-tools.ts](../../../evidence/rules/output-manifest-tools.ts)、[../../../evidence/rules/progress-tools.ts](../../../evidence/rules/progress-tools.ts)、[../../../evidence/rules/validation-tools.ts](../../../evidence/rules/validation-tools.ts)、[run-code-check.ts](run-code-check.ts)、[run-controlled-file.ts](run-controlled-file.ts)、[run-scoped-execution.ts](run-scoped-execution.ts)、[../engine-tools.ts](../engine-tools.ts)、[../../../file-operations/rules/artifact-transition.ts](../../../file-operations/rules/artifact-transition.ts)、[../../../tasks/rules/member-checkpoint-tools.ts](../../../tasks/rules/member-checkpoint-tools.ts)、[../../../tasks/rules/member-help-tools.ts](../../../tasks/rules/member-help-tools.ts)。
 
 ### output-manifest-capture.ts
+
+[查看源码](output-manifest-capture.ts)。
 
 成员 1/2（同名节点为同一声明，跨图合并阅读）。
 
@@ -216,6 +224,8 @@ N_src_logic_execution_rules_capabilities_output_manifest_capture_ts ..> N_src_lo
 
 ### run-artifact-transition.ts
 
+[查看源码](run-artifact-transition.ts)。
+
 成员 1/2（同名节点为同一声明，跨图合并阅读）。
 
 ```mermaid
@@ -240,7 +250,7 @@ class N_src_logic_execution_rules_capabilities_run_artifact_transition_ts_RunArt
   +Guard()
   +Authorize()
   +Observed()
-  +unverifiedCallIds
+  +unverifiedCallIds : get
   +AssertVerified()
   +Stop()
   +Drain()
@@ -281,10 +291,12 @@ class N_src_logic_execution_rules_capabilities_run_artifact_transition_ts_extern
 N_src_logic_execution_rules_capabilities_run_artifact_transition_ts_external_ArtifactTransitionToolPort <|.. N_src_logic_execution_rules_capabilities_run_artifact_transition_ts_RunArtifactTransition
 ```
 
-继承／实现来源：`ArtifactTransitionToolPort` → [../../../file-operations/rules/artifact-transition.ts](../../../file-operations/rules/artifact-transition.ts)。
+继承／实现来源：`ArtifactTransitionToolPort` → [../../../file-operations/rules/artifact-transition.ts](../../../file-operations/rules/artifact-transition.ts)（声明 `ArtifactTransitionToolPort`）。
 直接依赖：[../../../../core/errors.ts](../../../../core/errors.ts)、[../../../../core/platform/node/serialization.ts](../../../../core/platform/node/serialization.ts)、[../../../../core/utility/index.ts](../../../../core/utility/index.ts)、[../../../evidence/rules/output-manifest-evidence.ts](../../../evidence/rules/output-manifest-evidence.ts)、[../../../evidence/rules/output-manifest.ts](../../../evidence/rules/output-manifest.ts)、[output-manifest-capture.ts](output-manifest-capture.ts)、[../member-run.ts](../member-run.ts)、[../types.ts](../types.ts)、[../../../file-operations/rules/artifact-transition-evidence.ts](../../../file-operations/rules/artifact-transition-evidence.ts)、[../../../file-operations/rules/artifact-transition.ts](../../../file-operations/rules/artifact-transition.ts)、[../../../tools/rules/results.ts](../../../tools/rules/results.ts)、[../../../workspace/rules/artifact-scope.ts](../../../workspace/rules/artifact-scope.ts)。
 
 ### run-code-check.ts
+
+[查看源码](run-code-check.ts)。
 
 ```mermaid
 classDiagram
@@ -333,6 +345,8 @@ N_src_logic_execution_rules_capabilities_run_code_check_ts ..> N_src_logic_execu
 
 ### run-controlled-file.ts
 
+[查看源码](run-controlled-file.ts)。
+
 成员 1/2（同名节点为同一声明，跨图合并阅读）。
 
 ```mermaid
@@ -353,7 +367,7 @@ class N_src_logic_execution_rules_capabilities_run_controlled_file_ts_RunControl
   +Guard()
   +Authorize()
   +Observed()
-  +unverifiedCallIds
+  +unverifiedCallIds : get
   +AssertVerified()
   +Stop()
   +Drain()
@@ -361,7 +375,7 @@ class N_src_logic_execution_rules_capabilities_run_controlled_file_ts_RunControl
   +Call()
   -binding
   -port
-  -assertReady
+  -assertReady : function
   -reserved
   -unverified
   -controller
@@ -388,6 +402,8 @@ N_src_logic_execution_rules_capabilities_run_controlled_file_ts ..> N_src_logic_
 
 ### run-scoped-execution.ts
 
+[查看源码](run-scoped-execution.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_execution_rules_capabilities_run_scoped_execution_ts["run-scoped-execution.ts"] {
@@ -412,7 +428,7 @@ class N_src_logic_execution_rules_capabilities_run_scoped_execution_ts_RunScoped
   +Call()
   -scope
   -port
-  -assertReady
+  -assertReady : function
   -controller
   -pending
   -physicalUnknown
@@ -425,6 +441,8 @@ N_src_logic_execution_rules_capabilities_run_scoped_execution_ts ..> N_src_logic
 直接依赖：[../../../../core/errors.ts](../../../../core/errors.ts)、[../../../../core/platform/node/serialization.ts](../../../../core/platform/node/serialization.ts)、[../../../../core/utility/index.ts](../../../../core/utility/index.ts)、[../../../file-operations/rules/controlled-file-operation.ts](../../../file-operations/rules/controlled-file-operation.ts)、[../../../file-operations/rules/isolated-execution-recovery.ts](../../../file-operations/rules/isolated-execution-recovery.ts)、[../../../file-operations/rules/scoped-execution.ts](../../../file-operations/rules/scoped-execution.ts)、[../../../tools/rules/results.ts](../../../tools/rules/results.ts)、[../../../workspace/rules/execution-scope.ts](../../../workspace/rules/execution-scope.ts)。
 
 ### run-validation.ts
+
+[查看源码](run-validation.ts)。
 
 ```mermaid
 classDiagram

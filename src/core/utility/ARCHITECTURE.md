@@ -183,9 +183,11 @@ graphs.ts 的 GraphUtils.IsDirectedAcyclic 对唯一节点、完整端点执行�
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### async.ts
+
+[查看源码](async.ts)。
 
 ```mermaid
 classDiagram
@@ -200,8 +202,8 @@ class N_src_core_utility_async_ts_SerialQueue["SerialQueue"] {
 N_src_core_utility_async_ts ..> N_src_core_utility_async_ts_SerialQueue : 声明
 class N_src_core_utility_async_ts_PendingReply["PendingReply"] {
   <<interface>>
-  +resolve
-  +reject
+  +resolve : function
+  +reject : function
 }
 N_src_core_utility_async_ts ..> N_src_core_utility_async_ts_PendingReply : 声明
 class N_src_core_utility_async_ts_PendingRequests["PendingRequests"] {
@@ -212,7 +214,7 @@ class N_src_core_utility_async_ts_PendingRequests["PendingRequests"] {
 }
 N_src_core_utility_async_ts ..> N_src_core_utility_async_ts_PendingRequests : 声明
 class N_src_core_utility_async_ts_InFlightOperations["InFlightOperations"] {
-  +size
+  +size : get
   +Track()
   +Drain()
   -pending
@@ -222,6 +224,8 @@ N_src_core_utility_async_ts ..> N_src_core_utility_async_ts_InFlightOperations :
 
 
 ### bytes.ts
+
+[查看源码](bytes.ts)。
 
 ```mermaid
 classDiagram
@@ -248,6 +252,8 @@ N_src_core_utility_bytes_ts ..> N_src_core_utility_bytes_ts_ByteUtils : 声明
 
 ### graphs.ts
 
+[查看源码](graphs.ts)。
+
 ```mermaid
 classDiagram
 class N_src_core_utility_graphs_ts["graphs.ts"] {
@@ -263,6 +269,8 @@ N_src_core_utility_graphs_ts ..> N_src_core_utility_graphs_ts_GraphUtils : 声�
 
 ### index.ts
 
+[查看源码](index.ts)。
+
 ```mermaid
 classDiagram
 class N_src_core_utility_index_ts["index.ts"] {
@@ -272,6 +280,8 @@ class N_src_core_utility_index_ts["index.ts"] {
 直接依赖：[async.ts](async.ts)、[bytes.ts](bytes.ts)、[graphs.ts](graphs.ts)、[json.ts](json.ts)、[strings.ts](strings.ts)。
 
 ### json.ts
+
+[查看源码](json.ts)。
 
 ```mermaid
 classDiagram
@@ -290,7 +300,7 @@ class N_src_core_utility_json_ts_external_SyntaxError["SyntaxError (全局或跨
 N_src_core_utility_json_ts_external_SyntaxError <|-- N_src_core_utility_json_ts_StrictJsonError
 class N_src_core_utility_json_ts_JsonKeyOrder["JsonKeyOrder"] {
   <<interface>>
-  +compareKeys
+  +compareKeys : function
   +omitUndefinedProperties
 }
 N_src_core_utility_json_ts ..> N_src_core_utility_json_ts_JsonKeyOrder : 声明
@@ -307,6 +317,8 @@ N_src_core_utility_json_ts ..> N_src_core_utility_json_ts_JsonUtils : 声明
 
 ### strings.ts
 
+[查看源码](strings.ts)。
+
 ```mermaid
 classDiagram
 class N_src_core_utility_strings_ts["strings.ts"] {
@@ -314,8 +326,8 @@ class N_src_core_utility_strings_ts["strings.ts"] {
 }
 class N_src_core_utility_strings_ts_LineFramePolicy["LineFramePolicy"] {
   <<interface>>
-  +checkLine
-  +checkRemainder
+  +checkLine : function
+  +checkRemainder : function
 }
 N_src_core_utility_strings_ts ..> N_src_core_utility_strings_ts_LineFramePolicy : 声明
 class N_src_core_utility_strings_ts_LineFramer["LineFramer"] {

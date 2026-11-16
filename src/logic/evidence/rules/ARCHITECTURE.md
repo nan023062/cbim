@@ -91,9 +91,11 @@ validateWorkflowEvidence 的可信 requireDelivery 选项用于没有附加 Work
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### artifact-baseline.ts
+
+[查看源码](artifact-baseline.ts)。
 
 ```mermaid
 classDiagram
@@ -169,14 +171,16 @@ N_src_logic_evidence_rules_artifact_baseline_ts ..> N_src_logic_evidence_rules_a
 
 ### artifact-evidence.ts
 
+[查看源码](artifact-evidence.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_evidence_rules_artifact_evidence_ts["artifact-evidence.ts"] {
   <<module>>
-  +artifactEventChangesFiles()
   +artifactSucceededCall()
   +artifactSources()
   +verifyArtifactBaselines()
+  +artifactEventChangesFiles : function
 }
 ```
 
@@ -212,6 +216,8 @@ N_src_logic_evidence_rules_artifact_evidence_ts ..> N_src_logic_evidence_rules_a
 
 ### artifact-tools.ts
 
+[查看源码](artifact-tools.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_evidence_rules_artifact_tools_ts["artifact-tools.ts"] {
@@ -239,6 +245,8 @@ N_src_logic_evidence_rules_artifact_tools_ts ..> N_src_logic_evidence_rules_arti
 直接依赖：[artifact-baseline.ts](artifact-baseline.ts)、[../../tasks/rules/member-tool-output.ts](../../tasks/rules/member-tool-output.ts)、[../../tools/rules/results.ts](../../tools/rules/results.ts)。
 
 ### code-check.ts
+
+[查看源码](code-check.ts)。
 
 ```mermaid
 classDiagram
@@ -317,6 +325,8 @@ N_src_logic_evidence_rules_code_check_ts ..> N_src_logic_evidence_rules_code_che
 
 ### complete-output-evidence.ts
 
+[查看源码](complete-output-evidence.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_evidence_rules_complete_output_evidence_ts["complete-output-evidence.ts"] {
@@ -350,11 +360,16 @@ N_src_logic_evidence_rules_complete_output_evidence_ts ..> N_src_logic_evidence_
 
 ### output-manifest-evidence.ts
 
+[查看源码](output-manifest-evidence.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_evidence_rules_output_manifest_evidence_ts["output-manifest-evidence.ts"] {
   <<module>>
   +verifyOutputManifests()
+  +outputManifestHash : function
+  +outputManifestScopeHash : function
+  +outputManifestReference()
 }
 ```
 
@@ -374,19 +389,23 @@ N_src_logic_evidence_rules_output_manifest_evidence_ts ..> N_src_logic_evidence_
 
 ### output-manifest-identity.ts
 
+[查看源码](output-manifest-identity.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_evidence_rules_output_manifest_identity_ts["output-manifest-identity.ts"] {
   <<module>>
-  +outputManifestScopeHash()
-  +outputManifestHash()
   +outputManifestReference()
+  +outputManifestScopeHash : function
+  +outputManifestHash : function
 }
 ```
 
 直接依赖：[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../core/utility/index.ts](../../../core/utility/index.ts)、[output-manifest.ts](output-manifest.ts)、[../../workspace/rules/artifact-scope.ts](../../workspace/rules/artifact-scope.ts)。
 
 ### output-manifest-tools.ts
+
+[查看源码](output-manifest-tools.ts)。
 
 ```mermaid
 classDiagram
@@ -421,6 +440,8 @@ N_src_logic_evidence_rules_output_manifest_tools_ts ..> N_src_logic_evidence_rul
 直接依赖：[output-manifest-evidence.ts](output-manifest-evidence.ts)、[output-manifest.ts](output-manifest.ts)、[../../tools/rules/results.ts](../../tools/rules/results.ts)、[../../workspace/rules/artifact-scope.ts](../../workspace/rules/artifact-scope.ts)。
 
 ### output-manifest.ts
+
+[查看源码](output-manifest.ts)。
 
 ```mermaid
 classDiagram
@@ -508,6 +529,8 @@ N_src_logic_evidence_rules_output_manifest_ts ..> N_src_logic_evidence_rules_out
 
 ### progress-schema.ts
 
+[查看源码](progress-schema.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_evidence_rules_progress_schema_ts["progress-schema.ts"] {
@@ -539,6 +562,8 @@ N_src_logic_evidence_rules_progress_schema_ts ..> N_src_logic_evidence_rules_pro
 
 ### progress-tools.ts
 
+[查看源码](progress-tools.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_evidence_rules_progress_tools_ts["progress-tools.ts"] {
@@ -563,7 +588,7 @@ class N_src_logic_evidence_rules_progress_tools_ts_TaskProgressTools["TaskProgre
   +Invalidate()
   +Record()
   +Call()
-  -save
+  -save : function
   -ports
   -state
   -evidence
@@ -592,6 +617,8 @@ N_src_logic_evidence_rules_progress_tools_ts ..> N_src_logic_evidence_rules_prog
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[artifact-baseline.ts](artifact-baseline.ts)、[code-check.ts](code-check.ts)、[complete-output-evidence.ts](complete-output-evidence.ts)、[output-manifest.ts](output-manifest.ts)、[progress-schema.ts](progress-schema.ts)、[progress.ts](progress.ts)、[validation.ts](validation.ts)、[workflow-evidence.ts](workflow-evidence.ts)、[../../tasks/rules/member-tool-output.ts](../../tasks/rules/member-tool-output.ts)、[../../tools/rules/results.ts](../../tools/rules/results.ts)、[../../tools/rules/types.ts](../../tools/rules/types.ts)。
 
 ### progress.ts
+
+[查看源码](progress.ts)。
 
 ```mermaid
 classDiagram
@@ -634,6 +661,8 @@ N_src_logic_evidence_rules_progress_ts ..> N_src_logic_evidence_rules_progress_t
 
 ### validation-evidence.ts
 
+[查看源码](validation-evidence.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_evidence_rules_validation_evidence_ts["validation-evidence.ts"] {
@@ -661,6 +690,8 @@ N_src_logic_evidence_rules_validation_evidence_ts ..> N_src_logic_evidence_rules
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../core/utility/index.ts](../../../core/utility/index.ts)、[artifact-baseline.ts](artifact-baseline.ts)、[artifact-evidence.ts](artifact-evidence.ts)、[complete-output-evidence.ts](complete-output-evidence.ts)、[output-manifest-evidence.ts](output-manifest-evidence.ts)、[validation.ts](validation.ts)、[../../workspace/rules/artifact-scope.ts](../../workspace/rules/artifact-scope.ts)、[../../workspace/rules/json-validation-schema.ts](../../workspace/rules/json-validation-schema.ts)、[../../workspace/rules/workflow-contract.ts](../../workspace/rules/workflow-contract.ts)。
 
 ### validation-tools.ts
+
+[查看源码](validation-tools.ts)。
 
 ```mermaid
 classDiagram
@@ -690,6 +721,8 @@ N_src_logic_evidence_rules_validation_tools_ts ..> N_src_logic_evidence_rules_va
 直接依赖：[complete-output-evidence.ts](complete-output-evidence.ts)、[output-manifest.ts](output-manifest.ts)、[validation-evidence.ts](validation-evidence.ts)、[validation.ts](validation.ts)、[../../tools/rules/results.ts](../../tools/rules/results.ts)。
 
 ### validation.ts
+
+[查看源码](validation.ts)。
 
 ```mermaid
 classDiagram
@@ -739,6 +772,8 @@ N_src_logic_evidence_rules_validation_ts ..> N_src_logic_evidence_rules_validati
 直接依赖：[artifact-baseline.ts](artifact-baseline.ts)、[output-manifest.ts](output-manifest.ts)、[../../tools/rules/receipt-schema.ts](../../tools/rules/receipt-schema.ts)、[../../workspace/rules/json-validation-schema.ts](../../workspace/rules/json-validation-schema.ts)。
 
 ### workflow-evidence.ts
+
+[查看源码](workflow-evidence.ts)。
 
 ```mermaid
 classDiagram

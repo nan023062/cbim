@@ -42,19 +42,27 @@
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### index.ts
+
+[查看源码](index.ts)。
 
 ```mermaid
 classDiagram
 class N_src_logic_knowledge_rules_read_models_index_ts["index.ts"] {
   <<module>>
+  +context()
+  +data()
+  +content()
 }
 ```
+
 直接依赖：[snapshot.ts](snapshot.ts)、[team.ts](team.ts)、[workspace.ts](workspace.ts)。
 
 ### snapshot.ts
+
+[查看源码](snapshot.ts)。
 
 ```mermaid
 classDiagram
@@ -69,6 +77,8 @@ class N_src_logic_knowledge_rules_read_models_snapshot_ts["snapshot.ts"] {
 直接依赖：[../../../../core/errors.ts](../../../../core/errors.ts)、[../../../../core/json.ts](../../../../core/json.ts)、[../types.ts](../types.ts)。
 
 ### team.ts
+
+[查看源码](team.ts)。
 
 ```mermaid
 classDiagram
@@ -87,6 +97,8 @@ N_src_logic_knowledge_rules_read_models_team_ts ..> N_src_logic_knowledge_rules_
 直接依赖：[../../../../core/errors.ts](../../../../core/errors.ts)、[../../../../core/json.ts](../../../../core/json.ts)、[snapshot.ts](snapshot.ts)、[../types.ts](../types.ts)。
 
 ### workspace.ts
+
+[查看源码](workspace.ts)。
 
 ```mermaid
 classDiagram

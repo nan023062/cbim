@@ -82,9 +82,11 @@ WebPageReader → 静态 PublicHttp + HTML 提取 → 必要时调用注入的 B
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### browser-proxy.ts
+
+[查看源码](browser-proxy.ts)。
 
 ```mermaid
 classDiagram
@@ -111,15 +113,25 @@ N_src_core_platform_node_web_browser_proxy_ts ..> N_src_core_platform_node_web_b
 
 ### index.ts
 
+[查看源码](index.ts)。
+
 ```mermaid
 classDiagram
 class N_src_core_platform_node_web_index_ts["index.ts"] {
   <<module>>
+  +publicUrl()
+  +publicAddress()
+  +openBrowserProxy()
+  +htmlMarkdown()
+  +truncateParagraphs()
 }
 ```
+
 直接依赖：[browser-proxy.ts](browser-proxy.ts)、[page-reader.ts](page-reader.ts)、[public-http.ts](public-http.ts)、[../../../web/index.ts](../../../web/index.ts)。
 
 ### page-reader.ts
+
+[查看源码](page-reader.ts)。
 
 ```mermaid
 classDiagram
@@ -147,6 +159,8 @@ N_src_core_platform_node_web_page_reader_ts ..> N_src_core_platform_node_web_pag
 直接依赖：[public-http.ts](public-http.ts)、[../../../web/index.ts](../../../web/index.ts)。
 
 ### public-http.ts
+
+[查看源码](public-http.ts)。
 
 ```mermaid
 classDiagram

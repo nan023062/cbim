@@ -124,9 +124,11 @@ AutoCollaboration.RecoveryPreflight 返回已核实来源的协议。acceptRecov
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### auto-collaboration.ts
+
+[查看源码](auto-collaboration.ts)。
 
 成员 1/4（同名节点为同一声明，跨图合并阅读）。
 
@@ -199,7 +201,7 @@ class N_src_logic_dispatch_runtime_auto_collaboration_ts_AutoCollaboration["Auto
   -dispatch
   -members
   -execution
-  -reportIssue
+  -reportIssue : function
   -batches
   -preparedTasks
   -cycles
@@ -220,7 +222,7 @@ class N_src_logic_dispatch_runtime_auto_collaboration_ts_AutoCollaboration["Auto
   -closed
   -pending
   -scheduled
-  -releaseListener
+  -releaseListener : function
   -InsertActiveInput()
   -HumanContinuationPreflight()
   -AcceptHumanContinuation()
@@ -280,6 +282,8 @@ N_src_logic_dispatch_runtime_auto_collaboration_ts ..> N_src_logic_dispatch_runt
 
 ### automatic-return-service.ts
 
+[查看源码](automatic-return-service.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_dispatch_runtime_automatic_return_service_ts["automatic-return-service.ts"] {
@@ -303,6 +307,8 @@ N_src_logic_dispatch_runtime_automatic_return_service_ts ..> N_src_logic_dispatc
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../rules/dispatch-storage.ts](../rules/dispatch-storage.ts)、[member-failure-limit.ts](member-failure-limit.ts)、[owner-execution-service.ts](owner-execution-service.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../tasks/rules/automatic-return.ts](../../tasks/rules/automatic-return.ts)、[../../tasks/rules/dispatch-scope.ts](../../tasks/rules/dispatch-scope.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../tasks/rules/scope-goal.ts](../../tasks/rules/scope-goal.ts)、[../../tasks/runtime/scope-goal-service.ts](../../tasks/runtime/scope-goal-service.ts)、[../../team/rules/workspace-member-rules.ts](../../team/rules/workspace-member-rules.ts)。
 
 ### dispatch-service.ts
+
+[查看源码](dispatch-service.ts)。
 
 成员 1/4（同名节点为同一声明，跨图合并阅读）。
 
@@ -416,6 +422,8 @@ N_src_logic_dispatch_runtime_dispatch_service_ts ..> N_src_logic_dispatch_runtim
 
 ### goal-repair.ts
 
+[查看源码](goal-repair.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_dispatch_runtime_goal_repair_ts["goal-repair.ts"] {
@@ -428,6 +436,8 @@ class N_src_logic_dispatch_runtime_goal_repair_ts["goal-repair.ts"] {
 
 ### member-failure-limit.ts
 
+[查看源码](member-failure-limit.ts)。
+
 ```mermaid
 classDiagram
 class N_src_logic_dispatch_runtime_member_failure_limit_ts["member-failure-limit.ts"] {
@@ -439,6 +449,8 @@ class N_src_logic_dispatch_runtime_member_failure_limit_ts["member-failure-limit
 直接依赖：[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)。
 
 ### owner-execution-service.ts
+
+[查看源码](owner-execution-service.ts)。
 
 ```mermaid
 classDiagram

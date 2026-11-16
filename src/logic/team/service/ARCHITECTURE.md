@@ -43,9 +43,11 @@ main-workspace-member-tools 依赖 execution 的 MainToolContext，不再依赖 
 
 ## 架构类图
 
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### main-workspace-member-tools.ts
+
+[查看源码](main-workspace-member-tools.ts)。
 
 ```mermaid
 classDiagram
@@ -58,6 +60,8 @@ class N_src_logic_team_service_main_workspace_member_tools_ts["main-workspace-me
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../execution/rules/conversation-binding.ts](../../execution/rules/conversation-binding.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../knowledge/rules/read-models/index.ts](../../knowledge/rules/read-models/index.ts)、[../../tasks/rules/types.ts](../../tasks/rules/types.ts)、[../rules/agent-runtime.ts](../rules/agent-runtime.ts)、[../rules/workspace-member-rules.ts](../rules/workspace-member-rules.ts)、[../rules/workspace-member-tools.ts](../rules/workspace-member-tools.ts)、[../rules/workspace-member.ts](../rules/workspace-member.ts)、[workspace-members.ts](workspace-members.ts)。
 
 ### workspace-members.ts
+
+[查看源码](workspace-members.ts)。
 
 成员 1/2（同名节点为同一声明，跨图合并阅读）。
 
@@ -89,7 +93,7 @@ class N_src_logic_team_service_workspace_members_ts_WorkspaceMembers["WorkspaceM
   -owner
   -store
   -models
-  -isCurrent
+  -isCurrent : function
   -Assert()
   -Identity()
   -SameWorkspace()

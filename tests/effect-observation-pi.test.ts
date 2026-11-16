@@ -1,3 +1,5 @@
+import {mainToolContractProvider} from './main-tool-contract-provider';
+import {prepareRecursiveOriginal} from './recursive-original-fixture';
 import {prepareRecursiveUnknownEffect} from './recursive-effect-fixture';
 import {expect,it} from 'vitest';
 import fs from 'node:fs/promises';
@@ -12,8 +14,6 @@ import {replanPreviewSchema,replanReceiptSchema,type ReplanRequest} from '../src
 import {fixture} from './helpers';
 import {effectFixture as data,effectObservationProvider} from './effect-observation-provider';
 import {prepareUnknownEffect,assertOriginalEffectUnchanged,effectWait,effectRecords,effectLogBytes,effectRunBytes,effectRunEvidence,archiveEffectRuns} from './effect-observation-fixture';
-import {originalCommandProvider} from './original-command-provider';
-import {executeOriginalCommandSeed} from './original-command-fixture';
 
 const sha=(text:string)=>createHash('sha256').update(text).digest('hex');
 const journal=(user:string,id:string)=>fs.readFile(path.join(user,id,'dispatch','dispatch.jsonl'));
@@ -90,17 +90,23 @@ it.each(['changed','unsupported','edit']as const)('does not turn current files o
   finally{await app.shutdown();await provider.close();if(!keep)await f.cleanup()}
 },150000);
 
-it('observes actual main control commit without claiming downstream effects or replaying the failed wire',async()=>{
-  const f=await fixture(),provider=await originalCommandProvider('bad-dispatch');let app=f.app,keep=false;
-  try{
-    const source=await executeOriginalCommandSeed(app,f.user,f.a,provider,'bad-dispatch'),identity={workspaceId:source.query.workspaceId,rootSessionId:source.query.rootSessionId},selection={...identity,subject:{kind:'main_run' as const,runId:source.query.runId,toolCallIds:[source.query.toolCallId]}},before=await journal(f.user,identity.workspaceId),report=effectObservationReportSchema.parse(await app.dispatch('dispatch.effectObserve',selection));
-    expect(report.source).toMatchObject({state:'verified',scopeStatus:'closed'});expect(report.source).not.toHaveProperty('taskRevision');expect(report.calls[0]).toMatchObject({outcome:'failed',coverage:'control_commit_only',command:{state:'committed'}});expect(report.calls[0].file).toBeUndefined();expect(report.acceptance).toBe('not_evaluated');expect(await journal(f.user,identity.workspaceId)).toEqual(before);
-    const request:EffectDispositionInput={...selection,commandId:randomUUID(),expectedBasis:report.basis,expectedRevision:report.dispositionRevision,decision:'leave_unresolved',reason:'原控制面提交已核实，不能由此推断所有执行影响。'};
-    const receipt=effectDispositionReceiptSchema.parse(await app.dispatch('dispatch.effectDisposition',request));
-    const logs=await effectLogBytes(f.user,identity.workspaceId),bytes=await journal(f.user,identity.workspaceId),runs=await effectRunBytes(app,f.user,identity.workspaceId,identity.rootSessionId);await archiveEffectRuns('test-results/effect-observation-main-pi-bytes',f.user,identity.workspaceId,runs);
-    await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.init();
-    const restored=effectObservationReportSchema.parse(await app.dispatch('dispatch.effectObserve',selection));expect(restored.calls).toEqual(report.calls);expect(restored.basis).toEqual(report.basis);expect(await app.dispatch('dispatch.effectDisposition',request)).toEqual(receipt);expect(await effectLogBytes(f.user,identity.workspaceId)).toEqual(logs);expect(await effectRunBytes(app,f.user,identity.workspaceId,identity.rootSessionId)).toEqual(runs);expect(await journal(f.user,identity.workspaceId)).toEqual(bytes);expect([provider.main.length,provider.member.length]).toEqual([10,5]);expect(provider.errors).toEqual([]);
-    await fs.writeFile('test-results/effect-observation-main-pi-evidence.json',JSON.stringify({report,receipt,restored,requests:{main:10,member:5},faultCounts:source.faultCounts,sourceFailedPreserved:true,reopenNoReplay:true,runs:effectRunEvidence(runs)},null,2));
-  }catch(error){keep=true;await fs.writeFile('test-results/effect-observation-main-pi-failure.json',JSON.stringify({temp:f.temp,error:String(error),stack:error instanceof Error?error.stack:undefined,errors:provider.errors},null,2));throw error}
-  finally{provider.release();await app.shutdown();await provider.close();if(!keep)await f.cleanup()}
-},150000);
+it('observes a failed recursive parent response separately from actual child facts',async()=>{
+ const f=await fixture(),provider=await mainToolContractProvider('lost-result',true);let app=f.app;
+ try{
+  const source=await prepareRecursiveOriginal(app,f.a,provider,'lost-result'),identity=source.identity,id=identity.workspaceId;
+  const selection={...identity,subject:{kind:'main_run' as const,runId:source.started.runId,toolCallIds:['contract-call']}};
+  const before=await journal(f.user,id),report=effectObservationReportSchema.parse(await app.dispatch('dispatch.effectObserve',selection));
+  expect(report.source).toMatchObject({state:'verified',scopeStatus:'closed'});
+  expect(report.calls[0]).toMatchObject({outcome:'failed',coverage:'unsupported'});expect(report.calls[0].file).toBeUndefined();expect(report.acceptance).toBe('not_evaluated');
+  expect(await journal(f.user,id)).toEqual(before);
+  const run=source.state.agentBusinessRuns![0],child=await app.dispatch('dispatch.executionReport',{...identity,taskId:run.binding.taskId,runId:run.binding.runId});
+  expect(child.execution).toBe('settled');expect(child.log.state).toBe('verified');expect(provider.state.check).toMatchObject({state:'verified',acceptance:'not_evaluated'});
+  const request:EffectDispositionInput={...selection,commandId:randomUUID(),expectedBasis:report.basis,expectedRevision:report.dispositionRevision,decision:'leave_unresolved',reason:'The failed parent acknowledgement does not rewrite the actual child facts.'};
+  const receipt=effectDispositionReceiptSchema.parse(await app.dispatch('dispatch.effectDisposition',request));
+  const bytes=await journal(f.user,id),runs=await effectRunBytes(app,f.user,id,identity.rootSessionId),counts=[provider.main.length,provider.member.length];
+  await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.init();
+  const restored=effectObservationReportSchema.parse(await app.dispatch('dispatch.effectObserve',selection));
+  expect(restored.calls).toEqual(report.calls);expect(restored.basis).toEqual(report.basis);expect(await app.dispatch('dispatch.effectDisposition',request)).toEqual(receipt);
+  expect(await effectRunBytes(app,f.user,id,identity.rootSessionId)).toEqual(runs);expect(await journal(f.user,id)).toEqual(bytes);expect([provider.main.length,provider.member.length]).toEqual(counts);expect(provider.errors).toEqual([]);
+ }finally{await app.shutdown();await provider.close();await f.cleanup()}
+},90000);

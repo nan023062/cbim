@@ -3324,3 +3324,10 @@ member-pause-pi 四项改用真实递归 Agent 工具：A 实际写入、读取�
 相关验证：`pnpm exec vitest run tests/business-run-registry.test.ts tests/scope-recovery.test.ts tests/recovery-start-race.test.ts tests/scope-detail-recovery.test.ts --reporter=json --outputFile=build/recursive-recovery-boundaries.json` 29/29 通过，包含新增 4 项持久权限边界。`pnpm check:architecture`、`pnpm check:test-modules` 通过；源码涉及 conversation/runtime、dispatch/runtime、execution/rules、tasks/rules、tasks/runtime 的注释与 CONTRACT/ARCHITECTURE 已同步。正式业务重规划、补充材料、原控制调用核查及剩余桌面迁移尚未在本步完成；不声明全量 CI 或发布通过。
 
 类型复验：修正新增单元夹具缺少 profileId 及可选字段断言后，`pnpm typecheck` 通过。CI 43801296964（旧头 47ef1e8b）四片全部返回：3663 通过、41 失败、2 pending；这是新交接/依赖/核实提交之前的历史基线，不代表当前头剩余失败数。
+
+
+## Issue #94：递归原调用核查迁移
+
+以 b06f3f9e 为基线，将原命令核查的三种场景迁移至实际 Agent 调用：登记后回包丢失、执行结果回包丢失、进入调用前失败。另迁移父调用副作用观察，分别核实失败的父工具回包与已完成的子调用，未将父回包失败等同于未发生执行。保留精确 callId、跨 root 隔离、重复只读查询、重启字节不变和无自动重放断言；不生成旧 TaskNode。
+
+验证：`pnpm exec vitest run tests/original-command-pi.test.ts tests/main-tool-contract-pi.test.ts --reporter=json --outputFile=build/recursive-original-commands.json`：7/7 通过（新迁移 3 项、受影响供应器消费者 4 项）。`pnpm exec vitest run tests/effect-observation-pi.test.ts -t 'observes a failed recursive parent' --reporter=json --outputFile=build/recursive-parent-effect.json`：1/1 选中通过，其余 4 项未选中。`pnpm typecheck`、`pnpm check:test-modules` 通过，541 套件登记（174 unit、166 contract、201 integration）。仅测试与记录修改，无 src 注释/类图变更。全量 CI、桌面、安装升级未在本切片执行；仍待迁移补充材料 8 项、业务重新规划 3 项及完整观察后修复 1 项。

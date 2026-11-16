@@ -1,36 +1,37 @@
-import {expect,it} from 'vitest';
+import {expect,it,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fixture} from './helpers';
 import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
-import {commandVerificationReportSchema} from '../src/logic/tasks/rules/command-verification';
-import {originalCommandProvider,originalCommandData as data,type OriginalCommandMode} from './original-command-provider';
-import {executeOriginalCommandSeed,waitOriginalCommand,originalCommandRecords,originalCommandLogBytes,originalCommandRunBytes,originalCommandByteEvidence,archiveOriginalCommandEvidence} from './original-command-fixture';
+import {mainToolContractProvider} from './main-tool-contract-provider';
+import {prepareRecursiveOriginal,type OriginalRecursiveMode} from './recursive-original-fixture';
 
-it.each(['bad-plan','bad-dispatch','absent-plan']as OriginalCommandMode[])('verifies original actual main command without replaying failed output (%s)',async mode=>{
-  const f=await fixture(),provider=await originalCommandProvider(mode);let app=f.app,keepTemp=false;
-  const directory='test-results/original-command-'+mode+'-pi-bytes';
-  try{
-    const seeded=await executeOriginalCommandSeed(app,f.user,f.a,provider,mode),id=seeded.seeded.entry.id,query=seeded.query;
-    const read=async(input=query)=>commandVerificationReportSchema.parse(await app.dispatch('dispatch.commandReport',input));
-    const first=await read();expect(first.command).toEqual(provider.state.report!.command);expect(first.source.outcome).toBe('failed');expect(first.scope?.status).toBe('closed');expect(first.acceptance).toBe('not_evaluated');expect(first.readOnly).toBe(true);expect(first.command.state).toBe(mode==='absent-plan'?'absent':'committed');
-    expect(JSON.stringify(first)).not.toMatch(/sessionFile|nativeSessionId|apiKey|baseUrl|"prepared"/);
-    const source=seeded.thread[0],failed=source.events.filter(event=>event.type==='tool.finished'&&event.data.id===query.toolCallId);expect(failed).toHaveLength(1);expect(failed[0].data.isError).toBe(true);expect(JSON.stringify(failed)).toContain(mode==='absent-plan'?'TEST_BEFORE_COMMIT':'TOOL_OUTPUT_INVALID');
-    expect(source.toolReceipts?.filter(receipt=>receipt.toolName==='cbim_dispatch_command_report')).toEqual(expect.arrayContaining([expect.objectContaining({outcome:'succeeded',effects:['read']})]));
-    const readonly=await read({...query,toolCallId:'original-initial-inspect'});expect(readonly.command).toEqual({state:'not_applicable',reason:'readonly_tool'});
-    const unknown=await read({...query,toolCallId:'never-issued-call'});expect(unknown.command).toMatchObject({state:'unverifiable'});expect(unknown.command).not.toHaveProperty('commandId');expect(unknown.command).not.toHaveProperty('result');
-    const before=await fs.readFile(path.join(f.user,id,'dispatch','dispatch.jsonl')),logBytes=await originalCommandLogBytes(f.user,id),counts={main:provider.main.length,member:provider.member.length,other:provider.other.length};
-    for(let index=0;index<3;index++){const again=await read();expect(again.command).toEqual(first.command);expect(again.source).toEqual(first.source);expect(again.basis).toEqual(first.basis)}
-    expect(await fs.readFile(path.join(f.user,id,'dispatch','dispatch.jsonl'))).toEqual(before);expect(await originalCommandLogBytes(f.user,id)).toEqual(logBytes);expect({main:provider.main.length,member:provider.member.length,other:provider.other.length}).toEqual(counts);
-    // A second genuinely created root must not borrow the first root's native/canonical or transaction result.
-    const other=await app.dispatch('loop.chat',{id,message:data.otherGoal,options:seeded.seeded.options});await waitOriginalCommand(async()=>(await originalCommandRecords(f.user,id)).scopes.every(scope=>scope.status==='closed')&&app.runtime.snapshot().pressure.activeRuns===0,provider,'independent root settled');
-    expect(provider.other).toHaveLength(1);const wrongRoot=await read({...query,rootSessionId:other.taskId});expect(wrongRoot.command).toEqual({state:'unverifiable',reason:'source_unverified'});expect(wrongRoot.source.toolName).toBeUndefined();expect(wrongRoot.scope).toBeUndefined();if(first.command.state==='committed'||first.command.state==='absent')expect(JSON.stringify(wrongRoot)).not.toContain(first.command.commandId);
-    const saved=await originalCommandRecords(f.user,id),allLogs=await originalCommandLogBytes(f.user,id),journal=await fs.readFile(path.join(f.user,id,'dispatch','dispatch.jsonl')),runBytes=await originalCommandRunBytes(f.user,id,query.rootSessionId,await app.execution(id).thread(query.rootSessionId),saved.runs),secondaryBytes=await originalCommandRunBytes(f.user,id,other.taskId,await app.execution(id).thread(other.taskId),[]);
-    await archiveOriginalCommandEvidence(directory,f.user,id,[...runBytes,...secondaryBytes]);
-    await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.init();
-    const restored=await read();expect(restored.command).toEqual(first.command);expect(restored.source).toEqual(first.source);expect(await originalCommandRecords(f.user,id)).toEqual(saved);expect(await originalCommandLogBytes(f.user,id)).toEqual(allLogs);expect(await fs.readFile(path.join(f.user,id,'dispatch','dispatch.jsonl'))).toEqual(journal);expect(await originalCommandRunBytes(f.user,id,query.rootSessionId,await app.execution(id).thread(query.rootSessionId),saved.runs)).toEqual(runBytes);expect(await originalCommandRunBytes(f.user,id,other.taskId,await app.execution(id).thread(other.taskId),[])).toEqual(secondaryBytes);expect({main:provider.main.length,member:provider.member.length,other:provider.other.length}).toEqual({...counts,other:1});expect(provider.errors).toEqual([]);
-    await fs.writeFile(`test-results/original-command-${mode}-pi-evidence.json`,JSON.stringify({mode,realPi:true,provider:'local deterministic HTTP',query,first,readonly,unknown,wrongRoot,restored,requests:{main:provider.main.length,member:provider.member.length,other:provider.other.length},faultCounts:seeded.faultCounts,originalFailurePreserved:true,queryWroteNoJournal:true,restartWithoutReplay:true,runBytes:originalCommandByteEvidence([...runBytes,...secondaryBytes]),bytesDirectory:directory,sourceFaultInjection:mode==='absent-plan'?'test throw before real plan transaction':'await actual commit then corrupt returned wire only'},null,2));
-  }catch(error){keepTemp=true;await fs.mkdir('test-results',{recursive:true});await fs.writeFile(`test-results/original-command-${mode}-pi-failure.json`,JSON.stringify({mode,temp:f.temp,error:String(error),state:provider.state,mainRequests:provider.main.length,memberRequests:provider.member.length,otherRequests:provider.other.length,providerErrors:provider.errors},null,2));throw error}
-  finally{provider.release();await app.shutdown();await provider.close();if(!keepTemp)await f.cleanup()}
-},150000);
+it.each(['lost-registration','lost-result','before-call'] as OriginalRecursiveMode[])('checks original recursive facts without replaying an ambiguous response (%s)',async mode=>{
+ const f=await fixture(),provider=await mainToolContractProvider(mode,true);let app=f.app;
+ try{
+  const source=await prepareRecursiveOriginal(app,f.a,provider,mode),id=source.identity.workspaceId,root=source.thread[0];
+  const failures=root.events.filter(e=>e.type==='tool.finished'&&e.data.id==='contract-call');
+  expect(failures).toHaveLength(1);expect(failures[0].data.isError).toBe(true);
+  const updates=root.events.filter(e=>e.type==='tool.updated'&&e.data.id==='contract-call'&&e.data.limits);
+  expect(updates).toHaveLength(mode==='before-call'?0:1);
+  if(mode==='lost-result')expect(provider.state.check).toMatchObject({state:'verified',acceptance:'not_evaluated',runId:source.state.agentBusinessRuns![0].binding.runId});
+  else expect(provider.state.check.error.code).toBe('AGENT_RESULT_UNAVAILABLE');
+  const run=source.state.agentBusinessRuns?.[0],selection=run?{...source.identity,taskId:run.binding.taskId,runId:run.binding.runId}:undefined;
+  const report=selection?await app.dispatch('dispatch.executionReport',selection):undefined;
+  if(report){expect(report.basis.executionModel).toBe('agent-tools-v1');expect(report.log.state).toBe(mode==='lost-result'?'verified':'missing');expect(report.execution).toBe(mode==='lost-result'?'settled':'unknown');expect(report.candidate).toBeUndefined()}
+  const originalFiles=[root.sessionFile!,path.join(f.user,id,'loop-engine/tasks',root.task.taskId,root.runId,'events.jsonl')],bytes=await Promise.all(originalFiles.map(p=>fs.readFile(p)));
+  const other=await app.dispatch('loop.chat',{id,message:'ORIGINAL_OTHER_ROOT: inspect only its own calls',options:{permission:'read'}});
+  await vi.waitFor(async()=>{expect(provider.errors).toEqual([]);expect(app.runtime.snapshot().pressure.activeRuns).toBe(0);expect((await app.workspace(id).dispatchStore.read()).scopes?.every(s=>s.status==='closed')).toBe(true)},{timeout:30000,interval:30});
+  expect(provider.other).toHaveLength(2);
+  if(selection)await expect(app.dispatch('dispatch.executionReport',{...selection,rootSessionId:other.taskId})).rejects.toMatchObject({code:'TASK_NOT_FOUND'});
+  const state=await app.workspace(id).dispatchStore.read(),journal=await fs.readFile(path.join(f.user,id,'dispatch/dispatch.jsonl')),counts=[provider.main.length,provider.member.length,provider.other.length];
+  if(selection)for(let i=0;i<3;i++)expect((await app.dispatch('dispatch.executionReport',selection)).basis).toEqual(report!.basis);
+  expect(await fs.readFile(path.join(f.user,id,'dispatch/dispatch.jsonl'))).toEqual(journal);
+  expect(await Promise.all(originalFiles.map(p=>fs.readFile(p)))).toEqual(bytes);
+  await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.init();
+  expect(await app.workspace(id).dispatchStore.read()).toEqual(state);
+  if(selection)expect((await app.dispatch('dispatch.executionReport',selection)).basis).toEqual(report!.basis);
+  expect(await fs.readFile(path.join(f.user,id,'dispatch/dispatch.jsonl'))).toEqual(journal);expect(await Promise.all(originalFiles.map(p=>fs.readFile(p)))).toEqual(bytes);expect([provider.main.length,provider.member.length,provider.other.length]).toEqual(counts);
+ }finally{vi.restoreAllMocks();provider.release();await app.shutdown();await provider.close();await f.cleanup()}
+},90000);

@@ -521,13 +521,14 @@ class N_src_logic_team_rules_member_execution_rules_ts_OwnerExecutionRegistry["O
   +moduleOwnerships
 }
 N_src_logic_team_rules_member_execution_rules_ts ..> N_src_logic_team_rules_member_execution_rules_ts_OwnerExecutionRegistry : 声明
-class N_src_logic_team_rules_member_execution_rules_ts_external_KnowledgeSourceRegistry["KnowledgeSourceRegistry (外部契约)"] {
-  <<external>>
+class N_src_logic_team_rules_member_execution_rules_ts_external_KnowledgeSourceRegistry["KnowledgeSourceRegistry (../../workspace/rules/knowledge-source-rules)"] {
+  <<boundary>>
 }
 N_src_logic_team_rules_member_execution_rules_ts_external_KnowledgeSourceRegistry <|-- N_src_logic_team_rules_member_execution_rules_ts_OwnerExecutionRegistry
 ```
 
-直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[workspace-member.ts](workspace-member.ts)、[workspace-member-rules.ts](workspace-member-rules.ts)、[../../workspace/rules/module-ownership.ts](../../workspace/rules/module-ownership.ts)、[../../workspace/rules/knowledge-source-rules.ts](../../workspace/rules/knowledge-source-rules.ts)、[member-execution-binding.ts](member-execution-binding.ts)、[implicit-module-owner.ts](implicit-module-owner.ts)。
+继承／实现来源：`KnowledgeSourceRegistry` → [../../workspace/rules/knowledge-source-rules.ts](../../workspace/rules/knowledge-source-rules.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[implicit-module-owner.ts](implicit-module-owner.ts)、[member-execution-binding.ts](member-execution-binding.ts)、[workspace-member-rules.ts](workspace-member-rules.ts)、[workspace-member.ts](workspace-member.ts)、[../../workspace/rules/knowledge-source-rules.ts](../../workspace/rules/knowledge-source-rules.ts)、[../../workspace/rules/module-ownership.ts](../../workspace/rules/module-ownership.ts)。
 
 ### owner-execution-discovery.ts
 
@@ -558,7 +559,7 @@ class N_src_logic_team_rules_owner_execution_discovery_ts_TaskOwnerInspectOutput
 N_src_logic_team_rules_owner_execution_discovery_ts ..> N_src_logic_team_rules_owner_execution_discovery_ts_TaskOwnerInspectOutput : 声明
 ```
 
-直接依赖：[member-execution-binding.ts](member-execution-binding.ts)、[workspace-member.ts](workspace-member.ts)、[../../workspace/rules/module-ownership.ts](../../workspace/rules/module-ownership.ts)、[../../workspace/rules/knowledge-source.ts](../../workspace/rules/knowledge-source.ts)。
+直接依赖：[member-execution-binding.ts](member-execution-binding.ts)、[workspace-member.ts](workspace-member.ts)、[../../workspace/rules/knowledge-source.ts](../../workspace/rules/knowledge-source.ts)、[../../workspace/rules/module-ownership.ts](../../workspace/rules/module-ownership.ts)。
 
 ### session-history-storage.ts
 
@@ -804,7 +805,7 @@ class N_src_logic_team_rules_workspace_member_rules_ts_WorkspaceMemberRegistry["
 N_src_logic_team_rules_workspace_member_rules_ts ..> N_src_logic_team_rules_workspace_member_rules_ts_WorkspaceMemberRegistry : 声明
 ```
 
-直接依赖：[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../workspace/rules/knowledge-source.ts](../../workspace/rules/knowledge-source.ts)、[workspace-member.ts](workspace-member.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../core/utility/index.ts](../../../core/utility/index.ts)、[workspace-member.ts](workspace-member.ts)、[../../workspace/rules/knowledge-source.ts](../../workspace/rules/knowledge-source.ts)。
 
 ### workspace-member-tools.ts
 
@@ -1033,7 +1034,7 @@ class N_src_logic_team_rules_workspace_member_ts_WorkspaceMemberDetail["Workspac
 N_src_logic_team_rules_workspace_member_ts ..> N_src_logic_team_rules_workspace_member_ts_WorkspaceMemberDetail : 声明
 ```
 
-直接依赖：[../../models/index.ts](../../models/index.ts)、[../../engines/index.ts](../../engines/index.ts)、[../../workspace/rules/knowledge-source.ts](../../workspace/rules/knowledge-source.ts)。
+直接依赖：[../../engines/index.ts](../../engines/index.ts)、[../../models/index.ts](../../models/index.ts)、[../../workspace/rules/knowledge-source.ts](../../workspace/rules/knowledge-source.ts)。
 
 ### 本目录调用边界
 
@@ -1042,22 +1043,22 @@ classDiagram
 class N_src_logic_team_rules_member_execution_rules_ts["member-execution-rules.ts"] {
   <<module>>
 }
-class N_src_logic_team_rules_workspace_member_ts["workspace-member.ts"] {
-  <<module>>
-}
-class N_src_logic_team_rules_workspace_member_rules_ts["workspace-member-rules.ts"] {
+class N_src_logic_team_rules_implicit_module_owner_ts["implicit-module-owner.ts"] {
   <<module>>
 }
 class N_src_logic_team_rules_member_execution_binding_ts["member-execution-binding.ts"] {
   <<module>>
 }
-class N_src_logic_team_rules_implicit_module_owner_ts["implicit-module-owner.ts"] {
+class N_src_logic_team_rules_workspace_member_rules_ts["workspace-member-rules.ts"] {
   <<module>>
 }
-N_src_logic_team_rules_member_execution_rules_ts ..> N_src_logic_team_rules_workspace_member_ts : 导入依赖
-N_src_logic_team_rules_member_execution_rules_ts ..> N_src_logic_team_rules_workspace_member_rules_ts : 导入依赖
-N_src_logic_team_rules_member_execution_rules_ts ..> N_src_logic_team_rules_member_execution_binding_ts : 导入依赖
+class N_src_logic_team_rules_workspace_member_ts["workspace-member.ts"] {
+  <<module>>
+}
 N_src_logic_team_rules_member_execution_rules_ts ..> N_src_logic_team_rules_implicit_module_owner_ts : 导入依赖
+N_src_logic_team_rules_member_execution_rules_ts ..> N_src_logic_team_rules_member_execution_binding_ts : 导入依赖
+N_src_logic_team_rules_member_execution_rules_ts ..> N_src_logic_team_rules_workspace_member_rules_ts : 导入依赖
+N_src_logic_team_rules_member_execution_rules_ts ..> N_src_logic_team_rules_workspace_member_ts : 导入依赖
 ```
 
 ```mermaid

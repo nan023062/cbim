@@ -50,7 +50,7 @@ ModuleSourceTree 按 validation.tree 只显示模块，目录来自 sources 绑�
 
 ##### 模块卡片一级负责人选择
 
-`InlineModuleOwner` 在原模块卡片上选择即保存；列表由静态自定义 Agent、内置执行者与真实岗位组成，不含主 Agent。同一 Agent 多岗位在同一级区分，不猜选模型。已有岗位保留原配置；无岗位时使用模型设置中已选默认供应商/模型，自动生成登记说明，经原预览与提交登记后以真实 memberId 绑定。不填写额外描述，不进入二级页面；默认模型缺失明确报错，不伪造配置。
+`InlineModuleOwner` 在原模块卡片上选择即保存；列表由静态自定义 Agent 与真实岗位组成，过滤主 Agent 和已退役的 `cbim:executor`。同一 Agent 多岗位在同一级区分，不猜选模型。已有岗位保留原配置；无岗位时使用模型设置中已选默认供应商/模型，自动生成登记说明，经原预览与提交登记后以真实 memberId 绑定。不填写额外描述，不进入二级页面；默认模型缺失明确报错，不伪造配置。
 
 `inline-module-ownership.ts` 只编排既有命令，不提供新后端写通道。岗位与责任分别保存原请求和回执；任一步未知则停止后续，原地核实或重开只查询，不重放或自动继续绑定。读取失败不假报空列表；停用/退休岗位不隐式重建；源/实例变化仍由原门禁拒绝。可能部分成功的岗位保留，用户再次明确选择后可复用。模块行尾菜单打开原知识编辑器，删除仍经过影响预览与确认，不直接删文件。
 
@@ -82,7 +82,7 @@ ModuleSourceTree 按 validation.tree 只显示模块，目录来自 sources 绑�
 
 #### 单模块负责人控制面
 
-旧完整责任面板的岗位列表为空时，下拉框展示“从 Agent 登记新岗位”：选项取同工作区的静态团队快照，包含自定义 Agent 与内置执行者，不包含主 Agent。`BusinessArchitecture` 组合现有 `WorkspaceMembers`，传递真实工作区运行状态与所选 Agent；岗位与模型仍由用户明确填写、预览并保存。登记受理后返回原模块，重新读取岗位列表，只有新 memberId 仍存在且 active 才预选；不使用 Agent ID 代替岗位，不自动保存责任。取消返回原模块且不登记；登记结果未知时保留原命令核实界面，不自动返回或创建另一岗位。
+旧完整责任面板的岗位列表为空时，下拉框展示“从 Agent 登记新岗位”：选项取同工作区的静态团队快照，只提供可登记的自定义 Agent，不提供主 Agent 或已退役的默认执行者。`BusinessArchitecture` 组合现有 `WorkspaceMembers`，传递真实工作区运行状态与所选 Agent；岗位与模型仍由用户明确填写、预览并保存。登记受理后返回原模块，重新读取岗位列表，只有新 memberId 仍存在且 active 才预选；不使用 Agent ID 代替岗位，不自动保存责任。取消返回原模块且不登记；登记结果未知时保留原命令核实界面，不自动返回或创建另一岗位。
 
 空列表与读取失败分开呈现：只有完整列表成功读完才提示尚无／没有启用岗位，并开放 Agent 登记选项；读取失败保留核实错误与重试入口。再次选择模块或刷新不重复套用初始新岗位选择。负责人面板只调用上层注入的登记回调，不反向导入岗位管理视图；责任与岗位写入继续使用各自原控制器及后端版本门禁。
 
@@ -240,7 +240,7 @@ class N_src_view_workspace_inline_module_ownership_ts_InlineOwnerPorts["InlineOw
 N_src_view_workspace_inline_module_ownership_ts ..> N_src_view_workspace_inline_module_ownership_ts_InlineOwnerPorts : 声明
 ```
 
-直接依赖：[../../bridge/contracts/module-ownership.ts](../../bridge/contracts/module-ownership.ts)、[../../bridge/contracts/workspace-members.ts](../../bridge/contracts/workspace-members.ts)、[../../bridge/contracts/engines.ts](../../bridge/contracts/engines.ts)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../../bridge/contracts/agent-settings.ts](../../bridge/contracts/agent-settings.ts)、[../team/workspace-member-state.ts](../team/workspace-member-state.ts)、[module-ownership-state.ts](module-ownership-state.ts)。
+直接依赖：[../../bridge/contracts/agent-settings.ts](../../bridge/contracts/agent-settings.ts)、[../../bridge/contracts/engines.ts](../../bridge/contracts/engines.ts)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../../bridge/contracts/module-ownership.ts](../../bridge/contracts/module-ownership.ts)、[../../bridge/contracts/workspace-members.ts](../../bridge/contracts/workspace-members.ts)、[../team/workspace-member-state.ts](../team/workspace-member-state.ts)、[module-ownership-state.ts](module-ownership-state.ts)。
 
 ### InlineModuleOwner.tsx
 
@@ -265,7 +265,7 @@ class N_src_view_workspace_InlineModuleOwner_tsx_InlineModuleOwners["InlineModul
 N_src_view_workspace_InlineModuleOwner_tsx ..> N_src_view_workspace_InlineModuleOwner_tsx_InlineModuleOwners : 声明
 ```
 
-直接依赖：[../../bridge/contracts/ipc-call.ts](../../bridge/contracts/ipc-call.ts)、[../../bridge/contracts/module-ownership.ts](../../bridge/contracts/module-ownership.ts)、[../team/workspace-member-state.ts](../team/workspace-member-state.ts)、[module-ownership-state.ts](module-ownership-state.ts)、[inline-module-ownership.ts](inline-module-ownership.ts)、[../components/Icon.tsx](../components/Icon.tsx)。
+直接依赖：[../../bridge/contracts/ipc-call.ts](../../bridge/contracts/ipc-call.ts)、[../../bridge/contracts/module-ownership.ts](../../bridge/contracts/module-ownership.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../team/workspace-member-state.ts](../team/workspace-member-state.ts)、[inline-module-ownership.ts](inline-module-ownership.ts)、[module-ownership-state.ts](module-ownership-state.ts)。
 
 ### module-ownership-state.ts
 
@@ -362,7 +362,7 @@ class N_src_view_workspace_module_ownership_state_ts_ModuleOwnershipCommandPool[
 N_src_view_workspace_module_ownership_state_ts ..> N_src_view_workspace_module_ownership_state_ts_ModuleOwnershipCommandPool : 声明
 ```
 
-直接依赖：[../foundations/utility/index.ts](../foundations/utility/index.ts)、[../../bridge/contracts/module-ownership.ts](../../bridge/contracts/module-ownership.ts)、[../../bridge/contracts/knowledge-source.ts](../../bridge/contracts/knowledge-source.ts)。
+直接依赖：[../../bridge/contracts/knowledge-source.ts](../../bridge/contracts/knowledge-source.ts)、[../../bridge/contracts/module-ownership.ts](../../bridge/contracts/module-ownership.ts)、[../foundations/utility/index.ts](../foundations/utility/index.ts)。
 
 ### module-ownership.css
 
@@ -414,7 +414,7 @@ class N_src_view_workspace_ModuleOwnershipPanel_tsx_ModuleOwnershipPanelProps["M
 N_src_view_workspace_ModuleOwnershipPanel_tsx ..> N_src_view_workspace_ModuleOwnershipPanel_tsx_ModuleOwnershipPanelProps : 声明
 ```
 
-直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../../bridge/contracts/module-ownership.ts](../../bridge/contracts/module-ownership.ts)、[../../bridge/contracts/workspace-members.ts](../../bridge/contracts/workspace-members.ts)、[../team/workspace-member-state.ts](../team/workspace-member-state.ts)、[module-ownership-state.ts](module-ownership-state.ts)、[ModuleOwnershipDetail.tsx](ModuleOwnershipDetail.tsx)、[../knowledge/KnowledgeSourceDetails.tsx](../knowledge/KnowledgeSourceDetails.tsx)、[module-ownership.css](module-ownership.css)。
+直接依赖：[../../bridge/contracts/module-ownership.ts](../../bridge/contracts/module-ownership.ts)、[../../bridge/contracts/workspace-members.ts](../../bridge/contracts/workspace-members.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../knowledge/KnowledgeSourceDetails.tsx](../knowledge/KnowledgeSourceDetails.tsx)、[../team/workspace-member-state.ts](../team/workspace-member-state.ts)、[ModuleOwnershipDetail.tsx](ModuleOwnershipDetail.tsx)、[module-ownership-state.ts](module-ownership-state.ts)、[module-ownership.css](module-ownership.css)。
 
 ### ModuleSourceTree.tsx
 
@@ -426,7 +426,7 @@ class N_src_view_workspace_ModuleSourceTree_tsx["ModuleSourceTree.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../../bridge/contracts/ipc-workspace.ts](../../bridge/contracts/ipc-workspace.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../components/TreeActions.tsx](../components/TreeActions.tsx)、[../knowledge/knowledge-files.css](../knowledge/knowledge-files.css)。
+直接依赖：[../../bridge/contracts/ipc-workspace.ts](../../bridge/contracts/ipc-workspace.ts)、[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../components/TreeActions.tsx](../components/TreeActions.tsx)、[../knowledge/knowledge-files.css](../knowledge/knowledge-files.css)。
 
 ### SourceFilePreview.tsx
 
@@ -459,7 +459,7 @@ class N_src_view_workspace_WorkspaceView_tsx["WorkspaceView.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../components/Empty.tsx](../components/Empty.tsx)、[../components/TreeActions.tsx](../components/TreeActions.tsx)、[ModuleSourceTree.tsx](ModuleSourceTree.tsx)、[SourceFilePreview.tsx](SourceFilePreview.tsx)、[../../bridge/contracts/ipc-workspace.ts](../../bridge/contracts/ipc-workspace.ts)、[../knowledge/KnowledgeFilePreview.tsx](../knowledge/KnowledgeFilePreview.tsx)、[../knowledge/GovernanceLaunch.tsx](../knowledge/GovernanceLaunch.tsx)、[../knowledge/ArchitectureEditor.tsx](../knowledge/ArchitectureEditor.tsx)、[../resources/WorkspaceResourceTransfer.tsx](../resources/WorkspaceResourceTransfer.tsx)、[../governance/ModuleGovernancePanel.tsx](../governance/ModuleGovernancePanel.tsx)、[ModuleOwnershipPanel.tsx](ModuleOwnershipPanel.tsx)、[../team/WorkspaceMembers.tsx](../team/WorkspaceMembers.tsx)、[../team/team-model.ts](../team/team-model.ts)、[InlineModuleOwner.tsx](InlineModuleOwner.tsx)、[workspace-view.css](workspace-view.css)。
+直接依赖：[../../bridge/contracts/ipc-workspace.ts](../../bridge/contracts/ipc-workspace.ts)、[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../components/Empty.tsx](../components/Empty.tsx)、[../components/Icon.tsx](../components/Icon.tsx)、[../components/TreeActions.tsx](../components/TreeActions.tsx)、[../governance/ModuleGovernancePanel.tsx](../governance/ModuleGovernancePanel.tsx)、[../knowledge/ArchitectureEditor.tsx](../knowledge/ArchitectureEditor.tsx)、[../knowledge/GovernanceLaunch.tsx](../knowledge/GovernanceLaunch.tsx)、[../knowledge/KnowledgeFilePreview.tsx](../knowledge/KnowledgeFilePreview.tsx)、[../resources/WorkspaceResourceTransfer.tsx](../resources/WorkspaceResourceTransfer.tsx)、[../team/WorkspaceMembers.tsx](../team/WorkspaceMembers.tsx)、[../team/team-model.ts](../team/team-model.ts)、[InlineModuleOwner.tsx](InlineModuleOwner.tsx)、[ModuleOwnershipPanel.tsx](ModuleOwnershipPanel.tsx)、[ModuleSourceTree.tsx](ModuleSourceTree.tsx)、[SourceFilePreview.tsx](SourceFilePreview.tsx)、[workspace-view.css](workspace-view.css)。
 
 ### 本目录调用边界
 
@@ -477,10 +477,13 @@ class N_src_view_workspace_InlineModuleOwner_tsx["InlineModuleOwner.tsx"] {
 class N_src_view_workspace_ModuleOwnershipPanel_tsx["ModuleOwnershipPanel.tsx"] {
   <<component>>
 }
+class N_src_view_workspace_ModuleOwnershipDetail_tsx["ModuleOwnershipDetail.tsx"] {
+  <<component>>
+}
 N_src_view_workspace_inline_module_ownership_ts ..> N_src_view_workspace_module_ownership_state_ts : 导入依赖
-N_src_view_workspace_InlineModuleOwner_tsx ..> N_src_view_workspace_module_ownership_state_ts : 导入依赖
 N_src_view_workspace_InlineModuleOwner_tsx ..> N_src_view_workspace_inline_module_ownership_ts : 导入依赖
-N_src_view_workspace_ModuleOwnershipPanel_tsx ..> N_src_view_workspace_module_ownership_state_ts : 导入依赖
+N_src_view_workspace_InlineModuleOwner_tsx ..> N_src_view_workspace_module_ownership_state_ts : 导入依赖
+N_src_view_workspace_ModuleOwnershipPanel_tsx ..> N_src_view_workspace_ModuleOwnershipDetail_tsx : 导入依赖
 ```
 
 ```mermaid
@@ -488,12 +491,26 @@ classDiagram
 class N_src_view_workspace_ModuleOwnershipPanel_tsx["ModuleOwnershipPanel.tsx"] {
   <<component>>
 }
-class N_src_view_workspace_ModuleOwnershipDetail_tsx["ModuleOwnershipDetail.tsx"] {
-  <<component>>
+class N_src_view_workspace_module_ownership_state_ts["module-ownership-state.ts"] {
+  <<module>>
 }
 class N_src_view_workspace_module_ownership_css["module-ownership.css"] {
   <<stylesheet>>
 }
+class N_src_view_workspace_WorkspaceView_tsx["WorkspaceView.tsx"] {
+  <<component>>
+}
+class N_src_view_workspace_InlineModuleOwner_tsx["InlineModuleOwner.tsx"] {
+  <<component>>
+}
+N_src_view_workspace_ModuleOwnershipPanel_tsx ..> N_src_view_workspace_module_ownership_state_ts : 导入依赖
+N_src_view_workspace_ModuleOwnershipPanel_tsx ..> N_src_view_workspace_module_ownership_css : 导入依赖
+N_src_view_workspace_WorkspaceView_tsx ..> N_src_view_workspace_InlineModuleOwner_tsx : 导入依赖
+N_src_view_workspace_WorkspaceView_tsx ..> N_src_view_workspace_ModuleOwnershipPanel_tsx : 导入依赖
+```
+
+```mermaid
+classDiagram
 class N_src_view_workspace_WorkspaceView_tsx["WorkspaceView.tsx"] {
   <<component>>
 }
@@ -503,28 +520,11 @@ class N_src_view_workspace_ModuleSourceTree_tsx["ModuleSourceTree.tsx"] {
 class N_src_view_workspace_SourceFilePreview_tsx["SourceFilePreview.tsx"] {
   <<component>>
 }
-N_src_view_workspace_ModuleOwnershipPanel_tsx ..> N_src_view_workspace_ModuleOwnershipDetail_tsx : 导入依赖
-N_src_view_workspace_ModuleOwnershipPanel_tsx ..> N_src_view_workspace_module_ownership_css : 导入依赖
-N_src_view_workspace_WorkspaceView_tsx ..> N_src_view_workspace_ModuleSourceTree_tsx : 导入依赖
-N_src_view_workspace_WorkspaceView_tsx ..> N_src_view_workspace_SourceFilePreview_tsx : 导入依赖
-```
-
-```mermaid
-classDiagram
-class N_src_view_workspace_WorkspaceView_tsx["WorkspaceView.tsx"] {
-  <<component>>
-}
-class N_src_view_workspace_ModuleOwnershipPanel_tsx["ModuleOwnershipPanel.tsx"] {
-  <<component>>
-}
-class N_src_view_workspace_InlineModuleOwner_tsx["InlineModuleOwner.tsx"] {
-  <<component>>
-}
 class N_src_view_workspace_workspace_view_css["workspace-view.css"] {
   <<stylesheet>>
 }
-N_src_view_workspace_WorkspaceView_tsx ..> N_src_view_workspace_ModuleOwnershipPanel_tsx : 导入依赖
-N_src_view_workspace_WorkspaceView_tsx ..> N_src_view_workspace_InlineModuleOwner_tsx : 导入依赖
+N_src_view_workspace_WorkspaceView_tsx ..> N_src_view_workspace_ModuleSourceTree_tsx : 导入依赖
+N_src_view_workspace_WorkspaceView_tsx ..> N_src_view_workspace_SourceFilePreview_tsx : 导入依赖
 N_src_view_workspace_WorkspaceView_tsx ..> N_src_view_workspace_workspace_view_css : 导入依赖
 ```
 

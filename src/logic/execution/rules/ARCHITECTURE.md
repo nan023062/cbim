@@ -45,7 +45,7 @@
 
 `publicRunFailure` 为成员任务卡和执行详情提供同一套无副作用诊断转换。已知无进展超时、旧整轮超时、事件过大、进程退出、输出长度限制、认证/限流/网络错误重建具体说明；任意供应商错误、原生路径、凭据和工具正文不直接公开，无法识别的原始原因保留在 canonical 日志。数值仅从有限的错误形态提取，转换不修改历史、不认定副作用已撤销、不触发重试。
 
-当前实现位于本目录的公开契约、`runtime/` 与 `capabilities/`；具体引擎位于 [execution/engines](../engines/ARCHITECTURE.md)，由 [调度装配](../assembly/ARCHITECTURE.md) 选择。下文标明“设计”“待实现”的历史端口草案仍非已实现保证；当前结构以本目录类图和源码为准。
+当前实现位于本目录的公开契约、`runtime/` 与 `capabilities/`；具体引擎位于 [execution/engines](../engines/ARCHITECTURE.md)，由 [调度装配](../assembly/ARCHITECTURE.md) 选择。下文契约与类图均按当前声明维护。
 
 <a id="contract-原主轮插入与停止边界"></a>
 
@@ -99,7 +99,7 @@
 
 ##### 执行成员的一次性求助门闩
 
-`EngineContext.capabilities` 中的 `member-help` 能力 只在 `startMember` 的可信绑定下存在。Pi 透传一次性 gate 的真实 `toolCallId`；主 Agent 伪造工具名仍会被拒绝。运行时在任何异步策略前为求助预占门闩；正在审批或已放行未结束的其它调用都阻止求助。预占之后的新工具仅写入拒绝事实，不进入可能执行集合，也不能反过来干扰已批准的求助。
+`EngineContext.capabilities` 中的 `member-help` 能力 只在 `StartMember` 的可信绑定下存在。Pi 透传一次性 gate 的真实 `toolCallId`；主 Agent 伪造工具名仍会被拒绝。运行时在任何异步策略前为求助预占门闩；正在审批或已放行未结束的其它调用都阻止求助。预占之后的新工具仅写入拒绝事实，不进入可能执行集合，也不能反过来干扰已批准的求助。
 
 `cbim_task_help` 执行前再次检查停止、授权、所有在途操作和被引用工具确实属于本轮；先记录 `task.help_requested {help}`，再返回标准 `{state:'staged',help}` 正文，最后由统一 `tool.finished` 签发回执。请求使用固定 MemberRunBinding，没有模型提供的收件人或提权参数。落盘失败不在同轮重放；成功后任何工具仍被拒绝，成员应结束本轮。
 
@@ -107,10 +107,10 @@ staged 不是派发图交接。外层在引擎关闭和 canonical 日志核实�
 
 ```mermaid
 classDiagram
-class LoopRuntime { +startMember() }
-class MemberHelpTools { +guard() +denied() +call() }
+class LoopRuntime { +StartMember() }
+class MemberHelpTools { +Guard() +Denied() +Call() }
 class EngineContext { +capabilities }
-class RunJournal { <<port>> +append() }
+class RunJournal { <<port>> +Append() }
 LoopRuntime --> MemberHelpTools : 每轮可信绑定与门闩
 LoopRuntime --> RunJournal : 先持久化请求与回执
 LoopRuntime --> EngineContext : 注入可用端口
@@ -125,7 +125,7 @@ MemberToolCapabilities --> EngineCapability : 适配
 
 ##### 显式新主上下文
 
-`LoopRuntime.StartFreshMain(task, message, control)` 只供可信调度入口使用，要求已经登记的 `chat / cbim:main` 绑定。保留逻辑任务与主实例，在取得租约后枚举既有运行目录，并合并 `knownRunIds()` 返回的可靠旧意图（包括尚无日志的意图）；上限 4096 个去重身份。新 runId 与 nativeSessionId 由运行时生成，`beforeRun` 在任何日志或引擎创建前原子保存新周期及上下文边界。
+`LoopRuntime.StartFreshMain(task, message, control)` 只供可信调度入口使用，要求已经登记的 `chat / cbim:main` 绑定。保留逻辑任务与主实例，在取得租约后枚举既有运行目录，并合并 `KnownRunIds()` 返回的可靠旧意图（包括尚无日志的意图）；上限 4096 个去重身份。新 runId 与 nativeSessionId 由运行时生成，`beforeRun` 在任何日志或引擎创建前原子保存新周期及上下文边界。
 
 这个入口不读旧运行日志，不传旧 sessionFile、source 或任务进度，不调用 reserveTask 覆盖原目录。旧文件、未知回执与原周期保持原状。`run.started.freshMain` 保存新原生身份与排除集合，便于核对可靠意图；模型和公开 IPC 不能提交这些字段。停止覆盖意图、日志和引擎准备；成功接收意图也不意味着执行成功，重启不自动重放。
 
@@ -169,7 +169,7 @@ MemberToolCapabilities --> EngineCapability : 适配
 
 `member-run.ts` 已实现 `MemberRunBinding` 和 `MemberRunLaunch`：调度先保存任务、成员和运行绑定，再调用 `LoopRuntime.StartMember(task, message, launch)`。绑定包括 `workspaceId / teamId / agentId / agentInstanceId / agentSessionId / rootSessionId / taskId / runId / leaseEpoch / planRevision`；原生 `nativeSessionId / sessionFile?` 作为单独的后端启动参数传入，不进入公开任务图。业务任务必须指定成员及非空模块列表，运行日志写入完整绑定，读取时核对任务和轮次身份。
 
-`startMember` 与普通 `start / resume` 共用租约、工具决策持久化、回执、计划工具和终态处理，使用调度预分配的 `runId`。成员新任务不能伪装为旧 `TaskSpec` 的恢复；现阶段拒绝重复业务任务及普通 `resume` 恢复成员日志，不自动重试。是否能复用同成员通道由调度核实：上轮必须安全完成且没有未决工具，并持有成员及通道执行槽；大脑不会根据角色名寻找最近的 Session。
+`StartMember` 与普通 `start / resume` 共用租约、工具决策持久化、回执、计划工具和终态处理，使用调度预分配的 `runId`。成员新任务不能伪装为旧 `TaskSpec` 的恢复；现阶段拒绝重复业务任务及普通 `resume` 恢复成员日志，不自动重试。是否能复用同成员通道由调度核实：上轮必须安全完成且没有未决工具，并持有成员及通道执行槽；大脑不会根据角色名寻找最近的 Session。
 
 `EngineContext.nativeSessionId` 使首次启动可以使用成员通道的原生身份，后续任务通过该身份和已核实的 `sessionFile` 继续同一通道。Pi 同时验证文件属于该工作区受管理会话目录，并从真实子进程 `get_state` 核对 `sessionId`，不一致时在模型生成前中断。未提供该字段的普通对话保留原有以 `taskId` 新建会话的行为。
 
@@ -183,201 +183,56 @@ MemberToolCapabilities --> EngineCapability : 适配
 
 <a id="contract-独立成员的大脑执行端口设计"></a>
 
-##### 独立成员的大脑执行端口设计
+##### 独立成员的执行端口
 
-以下保留后续通用执行端口的设计；`AgentRunPort / PreparedAgentTurn / AgentRunOutcome` 及安全等待让出等类型**尚未按下列形式完整实现**。当前实现使用上一节的 `MemberRunLaunch` 与 `startMember`，不把设计中的所有能力描述为已交付。
+当前执行边界是 [LoopRuntime](runtime/runtime.ts)、[MemberRunLaunch](member-run.ts) 与 [AgentEngine / EngineContext](types.ts)。本说明只列现有类型和端口，不保留未实现的 AgentRunPort 等示意接口。
 
 <a id="contract-当前可复用能力与需要拆开的身份"></a>
 
-###### 当前可复用能力与需要拆开的身份
+###### 当前可复用能力与身份
 
-当前 `LoopRuntime` 已提供任务租约、先持久化再执行的工具决策、工具回执、运行终态和显式恢复。`EngineContext.emit` 与 `beforeTool` 是事实记录和权限入口，成员执行继续使用这些入口，不能另开一条绕过门禁的执行链。
-
-普通对话兼容路径仍以 `taskId` 关联聊天线程、运行目录和 Pi 的新建会话标识；恢复要求 `TaskSpec` 与历史完全一致。成员业务任务现通过 `MemberRunBinding.agentSessionId` 和独立原生身份支持同一通道先后处理不同任务；下列设计继续描述未来会话分支、任务分支和等待提交的统一端口，不能把新任务伪装为旧任务的 `resume`。
-
-```ts
-/** 每次执行都有成员、通道与运行身份；尚未定位模块的会话也能启动。 */
-interface AgentRunIdentity {
-  workspaceId: string;
-  teamId: string;
-  agentId: string;
-  agentInstanceId: string;
-  /** 当前成员运行租约的代际；正常重启保持成员 ID，接管时递增该值。 */
-  leaseEpoch: number;
-  agentSessionId: string;
-  rootSessionId: string;
-  runId: string;
-}
-type ConversationRunBinding = AgentRunIdentity & { kind: 'conversation' };
-type TaskRunBinding = AgentRunIdentity & { kind: 'task'; taskId: string };
-type AgentRunBinding = ConversationRunBinding | TaskRunBinding;
-
-/** 后端内部的原生会话绑定；不得进入公开图节点或前端事件。 */
-interface NativeSessionBinding {
-  agentSessionId: string;
-  nativeSessionId?: string;
-  sessionFile?: string;
-}
-
-/** 以下引用是待实现的不透明内部标识；解析结果固定到本次 run。 */
-type ModelSnapshotRef = Readonly<{ kind: 'model'; id: string }>;
-type PolicySnapshotRef = Readonly<{ kind: 'policy'; id: string }>;
-type ToolSetSnapshotRef = Readonly<{ kind: 'toolset'; id: string }>;
-interface ExecutionSnapshotBindings {
-  model: ModelSnapshotRef;
-  policy: PolicySnapshotRef;
-  tools: ToolSetSnapshotRef;
-}
-
-/** 共有不可变输入；角色/模型/权限/工具仍逐次固定，不从旧任务隐式继承。 */
-interface PreparedTurnInput {
-  goal: string;
-  knowledgeRevision: string;
-  roleInstructions: string;
-  snapshots: ExecutionSnapshotBindings;
-  input: {
-    messageId: string;
-    kind: 'user' | 'assignment' | 'result' | 'followup';
-    text: string;
-    sourceTaskId?: string;
-  };
-  images?: InputImage[];
-  session: NativeSessionBinding;
-}
-
-// ModuleBinding 使用 logic/tasks/rules 契约的类型；此处只补充固定知识正文。
-type PreparedModuleBinding = ModuleBinding & { context: string };
-type PreparedAgentTurn = PreparedTurnInput & (
-  | { binding: ConversationRunBinding; moduleBindings?: [] }
-  | { binding: TaskRunBinding;
-      moduleBindings: [PreparedModuleBinding, ...PreparedModuleBinding[]] }
-);
-
-/** 只报告 staged 提交，不代表图中的 result_ready / waiting 已经生效。 */
-type BusinessTurnOutcome =
-  | { kind: 'result_submission'; planRevision: number;
-      submissionRef: string }
-  | { kind: 'wait_submission';
-      awaitedChildren: { taskId: string; planRevision: number }[]; reason: string;
-      planRevision: number; submissionRef: string }
-  | { kind: 'none'; reason: 'no_submission' };
-
-/** 引擎片段终态；普通会话完成与业务任务提交不能互相替代。 */
-type AgentRunOutcome = {
-  unresolvedToolCallIds: string[];
-  session: NativeSessionBinding;
-} & (
-  | { binding: ConversationRunBinding; status: 'completed';
-      outcome: { kind: 'conversation_complete' } }
-  | { binding: TaskRunBinding; status: 'completed';
-      outcome: BusinessTurnOutcome }
-  | { binding: AgentRunBinding;
-      status: 'cancelled' | 'failed' | 'interrupted';
-      outcome: { kind: 'execution_not_completed' } }
-);
-
-/** 与本次完整 binding 绑定的能力端口；函数和凭据不序列化进任务图。 */
-interface AgentRunPorts {
-  createEngine(snapshots: ExecutionSnapshotBindings): Promise<AgentEngine>;
-  emit(event: EngineEvent): Promise<void>;
-  beforeTool(call: ToolCall): Promise<ToolDecision>;
-}
-
-/** 由调度层调用、装配层提供实现；Logic 领域规则 不反向引用调度或 Electron。 */
-interface AgentRunPort {
-  execute(turn: PreparedAgentTurn, ports: AgentRunPorts): Promise<AgentRunOutcome>;
-  stop(binding: AgentRunBinding): Promise<void>;
-}
-```
-
-会话输入与业务任务输入是独立的联合分支。主 Agent 分析请求、查询知识和定位模块时使用 `kind:'conversation'`，无需 `taskId`，模块绑定为空或缺省；普通交流可以正常完成，不创建虚假的业务节点。正式执行才使用 `kind:'task'`，必须具有真实 `taskId` 和至少一个已核实的 `ModuleBinding`。会话中查到的候选模块仍是分析材料，只有调度成功后的任务输入才持有正式模块绑定。
-
-从会话根派发时，可信 Caller 携带成员、`rootSessionId`、`runId` 和 `leaseEpoch`，不携带 `taskId`；父节点由根身份确定。从任务继续派发时才注入当前任务 ID。不能为了复用旧运行目录或工具参数，在会话分支合成一个业务任务 ID。
-
-`ModuleBinding` 复用 [任务图契约](../../tasks/rules/ARCHITECTURE.md#contract) 的设计类型，保留维护关系、版本和 `workflow` 的 `module / general` 联合类型，不再定义另一套 Workflow 数组。模块流程只能来自自身定义；通用流程仅按该联合类型记录明确来源、版本与采用原因。`context` 是该绑定对应的固定知识正文，不能把几个模块拼成无来源的共享流程。
-
-`InputImage`、`AgentEngine`、`EngineEvent`、`ToolCall` 和 `ToolDecision` 引用现有 Logic 领域规则 契约；`ModuleBinding`、快照引用与 `AgentRunPorts` 是待实现类型。三个快照引用不能由模型构造，失效或跨工作区引用必须拒绝，不回退成“当前默认设置”。装配层在执行开始前解析并固定模型能力/参数与凭据、权限策略及本轮可用工具清单：模型凭据只进入现有后端 `ResolvedLlm` 快照与受控引擎，绝不进入图事件、角色配置或公开 DTO。权限引用包含本次任务范围及审批有效期，工具引用固定发现清单，但发现某工具不等于授权执行。
-
-`createEngine` 只装配该快照允许的工具集合；`beforeTool` 绑定相同策略与完整运行身份，调用成功也必须持久化决策后才能放行副作用。`emit` 绑定本次持久化日志，失败时不得继续无记录执行。引擎实现不得保留一个绕过这些端口的工具执行入口。运行中设置修改留给下一次执行，当前快照不随全局设置漂移。
-
-`status:'completed'` 仅表示执行片段安全结束。会话分支返回 `conversation_complete`，表示本次交流或分析完成，不等于已派出的所有任务完成；它不适用“业务任务缺少交付或等待提交则阻塞”的判定。任务分支没有结构化提交时返回 `outcome:{kind:'none',reason:'no_submission'}`，不能根据结尾文本或模型宣称补造交付。
-
-`submitResult / waitForChildren` 先持久化 `status:'staged'` 的提交；`submissionRef` 指向该回执的 `submissionId`，同时携带提交时的 `planRevision`。Brain 只返回 `result_submission / wait_submission`，不宣布图状态。片段结束后，调度层核对完整运行绑定、租约代际、任务及计划版本、证据、依赖和未决副作用，再在最终事务中发布 `result_ready / waiting` 及关联 outbox。提交后新增写入、运行失败或基线改变会令 staged 候选失效；失效提交保留审计，不能先让下游消费再回头撤销。候选结果也不代表验收通过。
-
-等待工具提交 staged 请求后，由引擎适配器在安全片段边界停止继续生成与新工具调用，等待在途工具收尾，再回传 `wait_submission`。这一受控让出不伪装成用户取消；它也不能用一个永久未完成的工具 Promise 占住成员执行槽。若存在未决副作用则返回 `interrupted`，不释放成可继续执行的业务等待；未接通安全让出能力前，不向模型提供等待工具。
-
-上面的 `AgentRunPort` 不直接暴露 `resume(taskId, runId)`：恢复是调度层审核旧执行事实后的显式操作。普通新任务、结果唤醒与故障恢复必须分别准备输入，不能用一个“继续”标志代替它们的校验。
+普通 Start／Resume 与可信 StartMember／ResumeMember 共用日志、任务租约及工具门禁。taskId 标识任务，runId 标识一次运行，成员通道与原生会话身份由 MemberRunBinding／MemberRunLaunch 绑定；新业务任务不能冒充旧 TaskSpec 的恢复。具体准备、输入来源及前置条件见本页的成员执行和检查点契约。
 
 <a id="contract-会话租约和权限边界"></a>
 
-###### 会话、租约和权限边界
+###### 租约和权限边界
 
-1. `agentSessionId` 与 `NativeSessionBinding.agentSessionId` 必须相等，且绑定到同一工作区和角色。原生会话文件只能由后端在受管理目录内解析；模型或前端提交的任意路径不得成为会话恢复来源。
-2. 同一成员实例首版只有一个活动执行；同一 `agentSessionId` 还必须有独立的运行租约，避免进程重启或错误路由造成两个执行同时写入同一个原生会话。只按 `taskId` 加锁不够。正常重启保留 `agentInstanceId`；新持有者以递增的 `leaseEpoch` 接管，所有执行回调均须匹配当前代际。
-3. 每次执行固定角色、任务、模块、模型和权限快照。换任务先准备当前任务上下文，再决定复用其正确通道；不得因为成员相同就恢复任意最近的 session 文件。
-4. 同一通道的历史可作为有来源的协作背景，但当前目标与权限以本次固定输入为准。不同 `rootSessionId` 的上下文默认隔离；跨根会话协作须显式传递必要摘要，不能拼接完整历史。
-5. 本次任务授权不向同成员的下一任务或被派发成员传播。派发工具在发起者处通过策略检查，接收者的实际副作用仍经过自身 `beforeTool`。收到消息不等于获得写权限。
-6. `stop` 只有在完整绑定匹配当前活动执行时才生效。不能以角色名停止其它通道，也不能把“请求停止”当作已停止。工具已放行但回执未知时，保持 `interrupted` 和未决工具清单。
+RuntimeOptions.AcquireLease 在创建运行前取得占用，可信 BeforeRun 保存受理事实后才进入引擎准备。RuntimeOptions.CreateEngine 创建本轮独立适配器；EngineContext.beforeTool 与 emit 分别承接本轮门禁和事实记录。当前选型、凭据和工具集合由可信装配冻结，运行不能因设置变化自动换身份或提升权限；凭据不进入公开图事件。
 
 <a id="contract-执行事实到派发图事件"></a>
 
-###### 执行事实到派发图事件
+###### 执行事实与图状态
 
-`StoredEvent.seq` 仍是单个 `runId` 内的执行日志序号；不能用它给整个派发图排序。图的增量事件由调度层在接收已持久化执行事实后独立提交，拥有图自己的顺序与命令幂等语义。
-
-| 大脑事实 | 调度层可以投影的变化 | 不允许的推断 |
-| --- | --- | --- |
-| 执行开始、Session 绑定 | 会话或真实任务关联本次 `runId`，成员进入工作态 | 为分析会话制造业务节点 |
-| 思考、文本、工具状态 | 当前会话或任务的实时进度 | 依赖任务已成功 |
-| 工具放行与回执 | 更新本次执行证据、未决副作用 | 模型自述可以替代真实回执 |
-| 会话正常结束 | `conversation_complete`，保留其已派发任务 | 没有业务提交就应把正常对话阻塞 |
-| 任务片段正常结束 | 调度层复核 staged 提交或处理缺少提交的情况 | 当前节点与所有子任务自动完成 |
-| 停止、失败或进程丢失 | 取消请求或中断事实，保留可恢复状态 | 可以无条件重放历史工具 |
-
-事实应携带完整 `AgentRunBinding`，调度层先核对持久化成员身份、`leaseEpoch`、活动 `runId` 和通道，再接受状态变化。迟到的旧运行事件可保留到旧运行审计中，但不得覆盖新运行的节点状态。
-
-新事件外壳按 `conversation / task` 绑定区分日志归属，不能把 conversation 硬塞进现有必填 `taskId` 的 `StoredEvent`。实施时增加版本化外壳或明确兼容映射；工具 proposed/allowed/denied、执行回执、状态、图片输入和原生会话绑定等既有事实全部保留，两种输入都经过相同权限与日志端口。
-
-大脑只持有注入的执行/存储/策略端口，负责报告执行事实，不寻找团队成员、分配收件箱、选择业务模块或直接操作图存储。成员消息通过调度层可靠投递，不能把已有 `AgentEngine.steer` 当作有持久化、去重和确认语义的邮箱。
+StoredEvent.seq 是单 run 内的日志顺序，图批次由派发存储另行编号。运行 completed 只表示该轮引擎正常结束；成员候选、求助和检查点由真实工具事实及结算规则确认，任务状态和结果信封由外层事务提交。普通聊天无须制造成员任务或交付候选。
 
 <a id="contract-恢复与旧数据兼容"></a>
 
-###### 恢复与旧数据兼容
+###### 恢复与兼容
 
-- 旧日志、队列、Pi Session 不自动修改 ID。实施时增加显式版本及映射记录，区分旧聊天 `taskId` 与新业务节点 `taskId`；旧事件继续用原标识读取。
-- 现有恢复的知识版本校验、任务一致性校验和未知工具人工核实不能因为拆分 Session 而移除。新增通道迁移也必须保留这些保护。
-- 业务节点重试保留 `taskId`，生成新 `runId`；运行日志只追加，不抹去失败尝试。是否复用原生通道由核实后的恢复策略决定。
-- 引擎或软件退出不意味着副作用尚未发生。未决工具回执未核实时，不自动消费重复任务消息重新执行；可恢复的消息等待与不可安全重放的执行分别标记。
-- 第一阶段应以假执行端口验证身份、串行化和事件语义，再接真实 Pi 并验证独立通道、停止、恢复与工具审批。通过假端口测试不能宣称已交付真实多成员执行。
+Resume 校验原任务及完整历史；成员检查点使用独立 ResumeMember 及可信校验回调，不放宽普通恢复。未知工具结果、损坏绑定或不符合恢复协议的历史必须报告原问题，不按模型文本补造成功，也不自动重放副作用。旧日志缺省字段仅沿现有兼容分支读取。
 
 <a id="contract-待实现的端口关系"></a>
 
-###### 待实现的端口关系
+###### 当前端口关系
 
 ```mermaid
 classDiagram
-class MemberExecution["调度层成员执行（待实现）"] {
-  <<boundary>>
-}
-class AgentRunPort["AgentRunPort（待实现）"] {
-  <<interface>>
-  +execute(turn, ports)
-  +stop(binding)
-}
-class LoopRuntime["LoopRuntime（现有）"]
-class AgentRunAdapter["大脑执行适配器（待实现）"] {
-  <<adapter>>
-}
-class AgentEngine["AgentEngine（现有）"] {
-  <<interface>>
-}
-MemberExecution ..> AgentRunPort : 注入并调用
-AgentRunAdapter ..|> AgentRunPort : 实现端口
-AgentRunAdapter ..> LoopRuntime : 复用现有执行能力
-LoopRuntime ..> AgentEngine : 通过既有契约驱动
+class MemberExecutionManager { <<team/runtime boundary>> }
+class MemberExecutionPorts { <<team/runtime interface>> }
+class LoopRuntime
+class RuntimeOptions { <<interface>> }
+class AgentEngine { <<interface>> }
+class EngineContext { <<interface>> }
+MemberExecutionManager ..> MemberExecutionPorts : 准备真实执行
+MemberExecutionPorts ..> LoopRuntime : 返回本轮 runtime
+LoopRuntime ..> RuntimeOptions : 租约与工厂注入
+RuntimeOptions ..> AgentEngine : CreateEngine
+LoopRuntime ..> AgentEngine : 驱动与排空
+AgentEngine ..> EngineContext : 门禁与事件
 ```
 
-图中的适配关系是实施方向，不表示当前 `LoopRuntime` 已实现 `AgentRunPort`。与 [成员契约](../../team/rules/ARCHITECTURE.md#contract) 和 [任务图契约](../../tasks/rules/ARCHITECTURE.md#contract) 一起评审后再增加代码文件；当前代码类图仍以实际声明为准。
+跨目录入口见 [成员执行](../../team/runtime/member-execution.ts)；具体方法与可见性由本页生成类图和 runtime 子目录类图展示。
+
 <a id="contract-磁盘执行证据完整性"></a>
 
 ##### 磁盘执行证据完整性
@@ -388,9 +243,9 @@ LoopRuntime ..> AgentEngine : 通过既有契约驱动
 
 `RunMemberCheckpoint` 仅为具备可信文件端口及正数 memberCheckpointAllowance 的成员运行装配 `cbim_task_checkpoint`。策略 await 之前同步预占门闩，拒绝未结束工具或审批；完整白名单文件来源、当前进度和知识、全部文件字节核实后保存 `task.checkpoint_requested`。成功只表示暂存，随后所有工具被封住，模型须正常结束。停止、超时、关闭失败或未决工具不能成为安全检查点；Logic 领域规则 verifier 与外层调度才负责结算。
 
-`resumeMember` 是可信调度专用入口，要求原 canonical 完整正常终态、冻结 logHash、原 TaskSpec/成员/通道相同及 `leaseEpoch = old + 1`，仅 runId 改变。它不放宽普通 start/resume，不能沿 help/失败/取消日志继续。原进度复制后立即失效旧证据和 delivery；续轮不再提供检查点工具，必须用新运行的实际证据交付。
+`ResumeMember` 是可信调度专用入口，要求原 canonical 完整正常终态、冻结 logHash、原 TaskSpec/成员/通道相同及 `leaseEpoch = old + 1`，仅 runId 改变。它不放宽普通 start/resume，不能沿 help/失败/取消日志继续。原进度复制后立即失效旧证据和 delivery；续轮不再提供检查点工具，必须用新运行的实际证据交付。
 
-`assertMemberResume` 由后端注入，核实原日志、知识、全覆盖文件基线及私有原生指纹，覆盖 Runtime 与 Pi 准备窗口。原生配置完成、onEngineReady 返回后，`assertMemberResumeInputs` 在真正发 prompt 前再核原日志、知识和业务文件；原 native 指纹已在载入前后核实，此时允许本轮受控配置合法追加。端口没有公开路径参数，不签发任意恢复能力；每任务最多16个检查点，每段只消费一次；持久等待经明确清单和用户继续后可跨应用重启，运行时本身不自动唤醒。
+`assertMemberResume` 由后端注入，核实原日志、知识、全覆盖文件基线及私有原生指纹，覆盖 Runtime 与 Pi 准备窗口。原生配置完成、onEngineReady 返回后，`AssertMemberResumeInputs` 在真正发 prompt 前再核原日志、知识和业务文件；原 native 指纹已在载入前后核实，此时允许本轮受控配置合法追加。端口没有公开路径参数，不签发任意恢复能力；每任务最多16个检查点，每段只消费一次；持久等待经明确清单和用户继续后可跨应用重启，运行时本身不自动唤醒。
 
 `RunSummary.logIntegrity` 为可选的磁盘读取诊断，当前 `RunJournal.Read` 总会提供 `partialTail`。完整前缀仍可供展示；尾行未写完不解析、不截断，也不能据前缀的 settled 证明完整日志。`LoopRuntime` 在创建新引擎或调用启动意图前拒绝续接已知不完整的原日志，并释放预检租约；即使传入工具核实 ID 也不能跳过。内存摘要或旧端口未提供该字段时不补造磁盘诊断。读取本身不授权重放。
 
@@ -407,7 +262,7 @@ LoopRuntime ..> AgentEngine : 通过既有契约驱动
 
 ##### 成员 Workflow 程序门禁
 
-`RuntimeOptions.workflowContracts` 只由正式成员冻结知识装配。存在约定而缺少成员绑定或 `describeTool` 时，启动前拒绝；无约定的旧运行保留原策略。`describeTool` 纯分类和参数解析只执行一次，不请求批准；同一描述传给原 `toolPolicy` 授权端，不为 Workflow 创建第二套权限分类。
+`RuntimeOptions.workflowContracts` 只由正式成员冻结知识装配。存在约定而缺少成员绑定或 `describeTool` 时，启动前拒绝；无约定的旧运行保留原策略。`describeTool` 纯分类和参数解析只执行一次，不请求批准；同一描述传给原 `ToolPolicy` 授权端，不为 Workflow 创建第二套权限分类。
 
 业务写入或命令先同步核对本轮原任务计划，再执行既有权限/审批；批准返回后，`TaskProgressTools.Invalidate(reason, expectedPlanVersion)` 在同一串行状态操作中核对版本并清旧证据，变化则拒绝，不发放工具执行许可。知识写入不属于本片业务计划前置，但继续使旧证据失效；不能因拆分分类步骤保留过期证据。停止仍覆盖审批、持久化与实际返回放行之间的窗口。
 
@@ -695,41 +550,41 @@ N_src_logic_execution_rules_usage_ts ..> N_src_logic_execution_rules_types_ts : 
 
 各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
 
-- `business-run-invariants.ts` → `member-run.ts`：导入。
 - `business-run-invariants.ts` → `business-run.ts`：导入。
+- `business-run-invariants.ts` → `member-run.ts`：导入。
 - `business-run.ts` → `member-run.ts`：导入。
 - `capabilities` → `member-run.ts`：导入。
 - `capabilities` → `types.ts`：导入。
 - `capabilities` → `engine-tools.ts`：导入。
-- `engine-adapter.ts` → `types.ts`：导入。
-- `engine-adapter.ts` → `engine-tools.ts`：导入。
 - `engine-adapter.ts` → `engine-runtime.ts`：导入。
-- `engine-instructions.ts` → `types.ts`：导入。
+- `engine-adapter.ts` → `engine-tools.ts`：导入。
+- `engine-adapter.ts` → `types.ts`：导入。
 - `engine-instructions.ts` → `engine-tools.ts`：导入。
+- `engine-instructions.ts` → `types.ts`：导入。
 - `engine-session.ts` → `types.ts`：导入。
-- `index.ts` → `types.ts`：导入。
-- `index.ts` → `storage.ts`：导入。
-- `index.ts` → `runtime`：导入。
-- `index.ts` → `member-run.ts`：导入。
-- `index.ts` → `input-source.ts`：导入。
 - `index.ts` → `conversation-binding.ts`：导入。
-- `runtime` → `engine-session.ts`：导入。
-- `runtime` → `storage.ts`：导入。
+- `index.ts` → `input-source.ts`：导入。
+- `index.ts` → `member-run.ts`：导入。
+- `index.ts` → `runtime`：导入。
+- `index.ts` → `storage.ts`：导入。
+- `index.ts` → `types.ts`：导入。
 - `runtime` → `capabilities`：导入。
-- `runtime` → `repeated-tool-failures.ts`：导入。
-- `runtime` → `member-run.ts`：导入。
-- `runtime` → `input-source.ts`：导入。
 - `runtime` → `conversation-binding.ts`：导入。
+- `runtime` → `engine-session.ts`：导入。
+- `runtime` → `input-source.ts`：导入。
+- `runtime` → `member-run.ts`：导入。
+- `runtime` → `repeated-tool-failures.ts`：导入。
+- `runtime` → `storage.ts`：导入。
 - `runtime` → `types.ts`：导入。
 - `scope-usage.ts` → `types.ts`：导入。
 - `storage.ts` → `types.ts`：导入。
-- `types.ts` → `member-run.ts`：导入。
-- `types.ts` → `input-source.ts`：导入。
 - `types.ts` → `conversation-binding.ts`：导入。
 - `types.ts` → `engine-tools.ts`：导入。
+- `types.ts` → `input-source.ts`：导入。
+- `types.ts` → `member-run.ts`：导入。
 - `usage.ts` → `types.ts`：导入。
 
-### business-run-invariants.ts 公开入口
+### business-run-invariants.ts
 
 ```mermaid
 classDiagram
@@ -740,8 +595,45 @@ class N_src_logic_execution_rules_business_run_invariants_ts["business-run-invar
 }
 ```
 
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../ports/identity.ts](../ports/identity.ts)、[business-run.ts](business-run.ts)、[member-run.ts](member-run.ts)、[../../tasks/rules/execution-context.ts](../../tasks/rules/execution-context.ts)。
 
-### conversation-binding.ts 公开入口
+
+### business-run.ts
+
+```mermaid
+classDiagram
+class N_src_logic_execution_rules_business_run_ts["business-run.ts"] {
+  <<module>>
+}
+class N_src_logic_execution_rules_business_run_ts_BusinessRunSource["BusinessRunSource"] {
+  <<interface>>
+  +binding
+  +prepared
+  +permission
+  +protocol
+}
+N_src_logic_execution_rules_business_run_ts ..> N_src_logic_execution_rules_business_run_ts_BusinessRunSource : 声明
+class N_src_logic_execution_rules_business_run_ts_AgentBusinessRun["AgentBusinessRun"] {
+  <<interface>>
+  +protocol
+  +binding
+  +scopeId
+  +parent
+  +lineage
+  +prepared
+  +permission
+  +request
+  +status
+  +createdAt
+  +closedAt
+}
+N_src_logic_execution_rules_business_run_ts ..> N_src_logic_execution_rules_business_run_ts_AgentBusinessRun : 声明
+```
+
+直接依赖：[../../agents/contracts.ts](../../agents/contracts.ts)、[member-run.ts](member-run.ts)、[../../tasks/rules/execution-context.ts](../../tasks/rules/execution-context.ts)。
+
+
+### conversation-binding.ts
 
 ```mermaid
 classDiagram
@@ -751,8 +643,34 @@ class N_src_logic_execution_rules_conversation_binding_ts["conversation-binding.
 }
 ```
 
+```mermaid
+classDiagram
+class N_src_logic_execution_rules_conversation_binding_ts["conversation-binding.ts"] {
+  <<module>>
+}
+class N_src_logic_execution_rules_conversation_binding_ts_ConversationAgentBinding["ConversationAgentBinding"] {
+  <<interface>>
+  +workspaceId
+  +teamId
+  +agentId
+  +agentInstanceId
+  +agentSessionId
+  +rootSessionId
+}
+N_src_logic_execution_rules_conversation_binding_ts ..> N_src_logic_execution_rules_conversation_binding_ts_ConversationAgentBinding : 声明
+class N_src_logic_execution_rules_conversation_binding_ts_MainToolContext["MainToolContext"] {
+  <<interface>>
+  +binding
+  +AssertCurrent()
+  +Track()
+}
+N_src_logic_execution_rules_conversation_binding_ts ..> N_src_logic_execution_rules_conversation_binding_ts_MainToolContext : 声明
+```
 
-### engine-adapter.ts 公开入口
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../ports/identity.ts](../ports/identity.ts)、[../../tasks/rules/types.ts](../../tasks/rules/types.ts)。
+
+
+### engine-adapter.ts
 
 ```mermaid
 classDiagram
@@ -762,8 +680,50 @@ class N_src_logic_execution_rules_engine_adapter_ts["engine-adapter.ts"] {
 }
 ```
 
+```mermaid
+classDiagram
+class N_src_logic_execution_rules_engine_adapter_ts["engine-adapter.ts"] {
+  <<module>>
+}
+class N_src_logic_execution_rules_engine_adapter_ts_EngineProcess["EngineProcess"] {
+  <<interface>>
+  +command
+  +args
+  +env
+}
+N_src_logic_execution_rules_engine_adapter_ts ..> N_src_logic_execution_rules_engine_adapter_ts_EngineProcess : 声明
+class N_src_logic_execution_rules_engine_adapter_ts_EngineAdapterOptions["EngineAdapterOptions"] {
+  <<interface>>
+  +runtime
+  +nativeToolsRuntime
+  +process
+  +provider
+  +model
+  +agentHome
+  +prompt
+  +knowledge
+  +llm
+  +images
+  +allowNativeExecution
+  +turnTimeoutMs
+  +requestBudget()
+}
+N_src_logic_execution_rules_engine_adapter_ts ..> N_src_logic_execution_rules_engine_adapter_ts_EngineAdapterOptions : 声明
+class N_src_logic_execution_rules_engine_adapter_ts_EngineAdapter["EngineAdapter"] {
+  <<interface>>
+  +protocol
+  +id
+  +version
+  +descriptor
+  +create()
+}
+N_src_logic_execution_rules_engine_adapter_ts ..> N_src_logic_execution_rules_engine_adapter_ts_EngineAdapter : 声明
+```
 
-### engine-instructions.ts 公开入口
+直接依赖：[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../../budget/rules/request-budget.ts](../../budget/rules/request-budget.ts)、[../../engines/index.ts](../../engines/index.ts)、[engine-runtime.ts](engine-runtime.ts)、[engine-tools.ts](engine-tools.ts)、[types.ts](types.ts)。
+
+
+### engine-instructions.ts
 
 ```mermaid
 classDiagram
@@ -773,8 +733,37 @@ class N_src_logic_execution_rules_engine_instructions_ts["engine-instructions.ts
 }
 ```
 
+直接依赖：[engine-tools.ts](engine-tools.ts)、[types.ts](types.ts)。
 
-### engine-session.ts 公开入口
+
+### engine-runtime.ts
+
+```mermaid
+classDiagram
+class N_src_logic_execution_rules_engine_runtime_ts["engine-runtime.ts"] {
+  <<module>>
+}
+class N_src_logic_execution_rules_engine_runtime_ts_EngineRuntimePackage["EngineRuntimePackage"] {
+  <<interface>>
+  +dependencies
+  +retain()
+  +root
+  +version
+  +entry
+  +identity
+  +adapter
+}
+N_src_logic_execution_rules_engine_runtime_ts ..> N_src_logic_execution_rules_engine_runtime_ts_EngineRuntimePackage : 声明
+class N_src_logic_execution_rules_engine_runtime_ts_EngineRuntimeResolver["EngineRuntimeResolver"] {
+  <<interface>>
+  +ResolveEngine()
+}
+N_src_logic_execution_rules_engine_runtime_ts ..> N_src_logic_execution_rules_engine_runtime_ts_EngineRuntimeResolver : 声明
+```
+
+
+
+### engine-session.ts
 
 ```mermaid
 classDiagram
@@ -784,8 +773,24 @@ class N_src_logic_execution_rules_engine_session_ts["engine-session.ts"] {
 }
 ```
 
+```mermaid
+classDiagram
+class N_src_logic_execution_rules_engine_session_ts["engine-session.ts"] {
+  <<module>>
+}
+class N_src_logic_execution_rules_engine_session_ts_EngineSessionSelection["EngineSessionSelection"] {
+  <<interface>>
+  +sessionFile
+  +nativeSessionId
+  +handoff
+}
+N_src_logic_execution_rules_engine_session_ts ..> N_src_logic_execution_rules_engine_session_ts_EngineSessionSelection : 声明
+```
 
-### engine-tools.ts 公开入口
+直接依赖：[../ports/identity.ts](../ports/identity.ts)、[types.ts](types.ts)。
+
+
+### engine-tools.ts
 
 ```mermaid
 classDiagram
@@ -796,8 +801,53 @@ class N_src_logic_execution_rules_engine_tools_ts["engine-tools.ts"] {
 }
 ```
 
+```mermaid
+classDiagram
+class N_src_logic_execution_rules_engine_tools_ts["engine-tools.ts"] {
+  <<module>>
+}
+class N_src_logic_execution_rules_engine_tools_ts_EngineToolSchema["EngineToolSchema"] {
+  <<interface>>
+  +name
+  +description
+  +inputSchema
+}
+N_src_logic_execution_rules_engine_tools_ts ..> N_src_logic_execution_rules_engine_tools_ts_EngineToolSchema : 声明
+class N_src_logic_execution_rules_engine_tools_ts_EngineToolsPort["EngineToolsPort"] {
+  <<interface>>
+  +list()
+  +call()
+}
+N_src_logic_execution_rules_engine_tools_ts ..> N_src_logic_execution_rules_engine_tools_ts_EngineToolsPort : 声明
+class N_src_logic_execution_rules_engine_tools_ts_EngineCapability["EngineCapability"] {
+  <<interface>>
+  +id
+  +tools
+  +instructions
+  +disableNativeTools
+}
+N_src_logic_execution_rules_engine_tools_ts ..> N_src_logic_execution_rules_engine_tools_ts_EngineCapability : 声明
+class N_src_logic_execution_rules_engine_tools_ts_EngineCapabilities["EngineCapabilities"] {
+  <<interface>>
+  +capabilities
+}
+N_src_logic_execution_rules_engine_tools_ts ..> N_src_logic_execution_rules_engine_tools_ts_EngineCapabilities : 声明
+```
 
-### input-source.ts 公开入口
+
+
+### index.ts
+
+```mermaid
+classDiagram
+class N_src_logic_execution_rules_index_ts["index.ts"] {
+  <<module>>
+}
+```
+直接依赖：[conversation-binding.ts](conversation-binding.ts)、[input-source.ts](input-source.ts)、[member-run.ts](member-run.ts)、[runtime/runtime.ts](runtime/runtime.ts)、[storage.ts](storage.ts)、[types.ts](types.ts)。
+
+
+### input-source.ts
 
 ```mermaid
 classDiagram
@@ -807,8 +857,70 @@ class N_src_logic_execution_rules_input_source_ts["input-source.ts"] {
 }
 ```
 
+```mermaid
+classDiagram
+class N_src_logic_execution_rules_input_source_ts["input-source.ts"] {
+  <<module>>
+}
+class N_src_logic_execution_rules_input_source_ts_MemberResultSource["MemberResultSource"] {
+  <<interface>>
+  +kind
+  +continuationId
+  +messageIds
+  +taskIds
+}
+N_src_logic_execution_rules_input_source_ts ..> N_src_logic_execution_rules_input_source_ts_MemberResultSource : 声明
+class N_src_logic_execution_rules_input_source_ts_UserContinuationSource["UserContinuationSource"] {
+  <<interface>>
+  +kind
+  +continuationId
+  +scopeId
+  +waitId
+  +inputRevision
+  +attachmentManifestHash
+  +interruptionId
+}
+N_src_logic_execution_rules_input_source_ts ..> N_src_logic_execution_rules_input_source_ts_UserContinuationSource : 声明
+class N_src_logic_execution_rules_input_source_ts_HumanDecisionsSource["HumanDecisionsSource"] {
+  <<interface>>
+  +kind
+  +continuationId
+  +scopeId
+  +waitId
+  +inputRevision
+  +decisionRevision
+  +decisionIds
+}
+N_src_logic_execution_rules_input_source_ts ..> N_src_logic_execution_rules_input_source_ts_HumanDecisionsSource : 声明
+class N_src_logic_execution_rules_input_source_ts_GoalRepairSource["GoalRepairSource"] {
+  <<interface>>
+  +kind
+  +continuationId
+  +scopeId
+  +sourceRunId
+  +attempt
+  +failureCode
+  +fingerprint
+}
+N_src_logic_execution_rules_input_source_ts ..> N_src_logic_execution_rules_input_source_ts_GoalRepairSource : 声明
+```
 
-### member-run.ts 公开入口
+```mermaid
+classDiagram
+class N_src_logic_execution_rules_input_source_ts["input-source.ts"] {
+  <<module>>
+}
+class N_src_logic_execution_rules_input_source_ts_RunInputSource["RunInputSource"] {
+  <<type>>
+
+}
+N_src_logic_execution_rules_input_source_ts ..> N_src_logic_execution_rules_input_source_ts_RunInputSource : 声明
+```
+
+直接依赖：[../ports/identity.ts](../ports/identity.ts)。
+
+
+### member-run.ts
 
 ```mermaid
 classDiagram
@@ -819,8 +931,37 @@ class N_src_logic_execution_rules_member_run_ts["member-run.ts"] {
 }
 ```
 
+```mermaid
+classDiagram
+class N_src_logic_execution_rules_member_run_ts["member-run.ts"] {
+  <<module>>
+}
+class N_src_logic_execution_rules_member_run_ts_MemberRunBinding["MemberRunBinding"] {
+  <<interface>>
+  +workspaceId
+  +teamId
+  +agentId
+  +agentInstanceId
+  +agentSessionId
+  +rootSessionId
+  +taskId
+  +runId
+  +leaseEpoch
+  +planRevision
+}
+N_src_logic_execution_rules_member_run_ts ..> N_src_logic_execution_rules_member_run_ts_MemberRunBinding : 声明
+class N_src_logic_execution_rules_member_run_ts_MemberRunLaunch["MemberRunLaunch"] {
+  <<interface>>
+  +binding
+  +session
+}
+N_src_logic_execution_rules_member_run_ts ..> N_src_logic_execution_rules_member_run_ts_MemberRunLaunch : 声明
+```
 
-### model-errors.ts 公开入口
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../ports/identity.ts](../ports/identity.ts)、[../../tasks/rules/types.ts](../../tasks/rules/types.ts)、[../../team/rules/automatic-execution.ts](../../team/rules/automatic-execution.ts)、[../../team/rules/member-execution-binding.ts](../../team/rules/member-execution-binding.ts)。
+
+
+### model-errors.ts
 
 ```mermaid
 classDiagram
@@ -831,7 +972,29 @@ class N_src_logic_execution_rules_model_errors_ts["model-errors.ts"] {
 ```
 
 
-### run-failure.ts 公开入口
+
+### repeated-tool-failures.ts
+
+```mermaid
+classDiagram
+class N_src_logic_execution_rules_repeated_tool_failures_ts["repeated-tool-failures.ts"] {
+  <<module>>
+}
+class N_src_logic_execution_rules_repeated_tool_failures_ts_RepeatedToolFailures["RepeatedToolFailures"] {
+  +blocked
+  +Proposed()
+  +Settled()
+  -pending
+  -previous
+  -count
+}
+N_src_logic_execution_rules_repeated_tool_failures_ts ..> N_src_logic_execution_rules_repeated_tool_failures_ts_RepeatedToolFailures : 声明
+```
+
+直接依赖：[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../tools/rules/types.ts](../../tools/rules/types.ts)。
+
+
+### run-failure.ts
 
 ```mermaid
 classDiagram
@@ -842,7 +1005,8 @@ class N_src_logic_execution_rules_run_failure_ts["run-failure.ts"] {
 ```
 
 
-### scope-usage.ts 公开入口
+
+### scope-usage.ts
 
 ```mermaid
 classDiagram
@@ -854,8 +1018,136 @@ class N_src_logic_execution_rules_scope_usage_ts["scope-usage.ts"] {
 }
 ```
 
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../budget/rules/scope-usage.ts](../../budget/rules/scope-usage.ts)、[types.ts](types.ts)。
 
-### usage.ts 公开入口
+
+### storage.ts
+
+```mermaid
+classDiagram
+class N_src_logic_execution_rules_storage_ts["storage.ts"] {
+  <<module>>
+}
+class N_src_logic_execution_rules_storage_ts_ExecutionJournal["ExecutionJournal"] {
+  <<interface>>
+  +Init()
+  +Append()
+  +Flush()
+}
+N_src_logic_execution_rules_storage_ts ..> N_src_logic_execution_rules_storage_ts_ExecutionJournal : 声明
+class N_src_logic_execution_rules_storage_ts_RunStorage["RunStorage"] {
+  <<interface>>
+  +ReserveTask()
+  +CreateJournal()
+  +Read()
+  +List()
+}
+N_src_logic_execution_rules_storage_ts ..> N_src_logic_execution_rules_storage_ts_RunStorage : 声明
+```
+
+直接依赖：[types.ts](types.ts)、[../../tasks/rules/types.ts](../../tasks/rules/types.ts)。
+
+
+### types.ts
+
+```mermaid
+classDiagram
+class N_src_logic_execution_rules_types_ts["types.ts"] {
+  <<module>>
+}
+class N_src_logic_execution_rules_types_ts_RunStatus["RunStatus"] {
+  <<type>>
+
+}
+N_src_logic_execution_rules_types_ts ..> N_src_logic_execution_rules_types_ts_RunStatus : 声明
+class N_src_logic_execution_rules_types_ts_EngineEvent["EngineEvent"] {
+  <<interface>>
+  +type
+  +data
+}
+N_src_logic_execution_rules_types_ts ..> N_src_logic_execution_rules_types_ts_EngineEvent : 声明
+class N_src_logic_execution_rules_types_ts_StoredEvent["StoredEvent"] {
+  <<interface>>
+  +version
+  +seq
+  +taskId
+  +runId
+  +workspaceId
+  +time
+}
+N_src_logic_execution_rules_types_ts ..> N_src_logic_execution_rules_types_ts_StoredEvent : 声明
+N_src_logic_execution_rules_types_ts_EngineEvent <|-- N_src_logic_execution_rules_types_ts_StoredEvent
+class N_src_logic_execution_rules_types_ts_InputImage["InputImage"] {
+  <<interface>>
+  +type
+  +data
+  +mimeType
+}
+N_src_logic_execution_rules_types_ts ..> N_src_logic_execution_rules_types_ts_InputImage : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_logic_execution_rules_types_ts["types.ts"] {
+  <<module>>
+}
+class N_src_logic_execution_rules_types_ts_EngineContext["EngineContext"] {
+  <<interface>>
+  +task
+  +runId
+  +directory
+  +sessionFile
+  +nativeSessionId
+  +engineHandoff
+  +memberBinding
+  +conversationBinding
+  +source
+  +capabilities
+  +assertMemberResume()
+  +emit()
+  +beforeTool()
+}
+N_src_logic_execution_rules_types_ts ..> N_src_logic_execution_rules_types_ts_EngineContext : 声明
+class N_src_logic_execution_rules_types_ts_AgentEngine["AgentEngine"] {
+  <<interface>>
+  +kind
+  +start()
+  +run()
+  +steer()
+  +stop()
+  +close()
+}
+N_src_logic_execution_rules_types_ts ..> N_src_logic_execution_rules_types_ts_AgentEngine : 声明
+class N_src_logic_execution_rules_types_ts_RunSummary["RunSummary"] {
+  <<interface>>
+  +task
+  +runId
+  +status
+  +acceptance
+  +sessionFile
+  +memberBinding
+  +conversationBinding
+  +source
+  +unresolvedTools
+  +toolReceipts
+  +taskProgress
+  +events
+  +logIntegrity
+}
+N_src_logic_execution_rules_types_ts ..> N_src_logic_execution_rules_types_ts_RunSummary : 声明
+class N_src_logic_execution_rules_types_ts_ConversationThreadView["ConversationThreadView"] {
+  <<interface>>
+  +runs
+  +issues
+  +resumeRunId
+}
+N_src_logic_execution_rules_types_ts ..> N_src_logic_execution_rules_types_ts_ConversationThreadView : 声明
+```
+
+直接依赖：[../../evidence/rules/progress.ts](../../evidence/rules/progress.ts)、[conversation-binding.ts](conversation-binding.ts)、[engine-tools.ts](engine-tools.ts)、[input-source.ts](input-source.ts)、[member-run.ts](member-run.ts)、[../../tasks/rules/types.ts](../../tasks/rules/types.ts)、[../../tools/rules/policy/types.ts](../../tools/rules/policy/types.ts)、[../../tools/rules/types.ts](../../tools/rules/types.ts)。
+
+
+### usage.ts
 
 ```mermaid
 classDiagram
@@ -868,6 +1160,37 @@ class N_src_logic_execution_rules_usage_ts["usage.ts"] {
   +durationText()
 }
 ```
+
+```mermaid
+classDiagram
+class N_src_logic_execution_rules_usage_ts["usage.ts"] {
+  <<module>>
+}
+class N_src_logic_execution_rules_usage_ts_RunUsage["RunUsage"] {
+  <<interface>>
+  +input
+  +output
+  +cacheRead
+  +cacheWrite
+  +reasoning
+  +total
+  +cost
+  +costPartial
+  +usageReported
+}
+N_src_logic_execution_rules_usage_ts ..> N_src_logic_execution_rules_usage_ts_RunUsage : 声明
+class N_src_logic_execution_rules_usage_ts_RunMeasurement["RunMeasurement"] {
+  <<interface>>
+  +usage
+  +reports
+  +generationMs
+  +outputForRate
+  +timingComplete
+}
+N_src_logic_execution_rules_usage_ts ..> N_src_logic_execution_rules_usage_ts_RunMeasurement : 声明
+```
+
+直接依赖：[types.ts](types.ts)。
 
 
 ## 子目录导航

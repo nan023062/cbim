@@ -55,7 +55,7 @@ reader 取消不依赖 fetch 转发信号；中断、超限或坏 JSON 均沿原
 
 `GitHubFeedbackAuth` 使用公开 OAuth Client ID 和 Device Flow，固定连接 github.com / api.github.com；桌面按钮明确授予选定仓库的自动反馈提交。公开仓库请求 public_repo，私有仓库只有明确选择后才请求 repo；不内置公用 token。用户与不可变 repositoryId 经真实 GET 核验，令牌只经 `SecretCipher` 加密保存。设备码与 token 不进入模型／IPC，授权状态只返回短期 userCode。interval、slow_down、过期及 flowId 代际由后端检查；内核锁和队列防止其它窗口将旧登录换投新目标。取消、断开和关闭不自动创建 Issue。
 
-`checkConnection` 沿同一设置队列与锁只读公开连接事实，不解密、不请求 GitHub、不查询提交历史。有效本机 flow 但未保存 connection 返回 `GITHUB_AUTH_PENDING`；这不证明网页上是否已经授权。网页授权、设置页轮询核验并保存连接、下一轮捕获反馈端口是不同步骤。设置读取错误保留 `GITHUB_SETTINGS`，不伪装成未登录；旧 scope 与当前连接不符时只报告变化，不改投新目标。实际提交仍在原端口中独立复验账号和仓库。
+`CheckConnection` 沿同一设置队列与锁只读公开连接事实，不解密、不请求 GitHub、不查询提交历史。有效本机 flow 但未保存 connection 返回 `GITHUB_AUTH_PENDING`；这不证明网页上是否已经授权。网页授权、设置页轮询核验并保存连接、下一轮捕获反馈端口是不同步骤。设置读取错误保留 `GITHUB_SETTINGS`，不伪装成未登录；旧 scope 与当前连接不符时只报告变化，不改投新目标。实际提交仍在原端口中独立复验账号和仓库。
 
 `GitHubFeedback` 向桌面主会话捕获固定目标端口，每次提交复验账号、仓库、工作区存活和当前连接。模型只填严格 BUG／需求字段；正文由纯函数排版，不遍历会话、工程或附件。先可靠保存 sending 意图再 POST；同工作区相同账号／仓库／规范化正文跨会话复用原 submitted，不因新调用 ID 重发。账本保留原 rootSessionId、内容指纹和 Issue 编号，不存正文或凭据；最多 1000 条，不静默丢弃旧记录。
 
@@ -208,7 +208,7 @@ class N_src_logic_feedback_service_github_feedback_auth_ts_GitHubFeedbackAuth["G
 N_src_logic_feedback_service_github_feedback_auth_ts ..> N_src_logic_feedback_service_github_feedback_auth_ts_GitHubFeedbackAuth : 声明
 ```
 
-直接依赖：[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/digest.ts](../../../core/platform/node/digest.ts)、[../../../core/platform/node/locking.ts](../../../core/platform/node/locking.ts)、[../../../core/contracts/secrets.ts](../../../core/contracts/secrets.ts)、[../index.ts](../index.ts)、[github-api.ts](github-api.ts)。
+直接依赖：[../../../core/contracts/secrets.ts](../../../core/contracts/secrets.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/digest.ts](../../../core/platform/node/digest.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/platform/node/locking.ts](../../../core/platform/node/locking.ts)、[../index.ts](../index.ts)、[github-api.ts](github-api.ts)。
 
 ### github-feedback.ts
 
@@ -254,7 +254,7 @@ class N_src_logic_feedback_service_github_feedback_ts_GitHubFeedback["GitHubFeed
 N_src_logic_feedback_service_github_feedback_ts ..> N_src_logic_feedback_service_github_feedback_ts_GitHubFeedback : 声明
 ```
 
-直接依赖：[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/platform/node/digest.ts](../../../core/platform/node/digest.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/contracts/secrets.ts](../../../core/contracts/secrets.ts)、[../index.ts](../index.ts)、[../../../core/platform/node/locking.ts](../../../core/platform/node/locking.ts)、[github-feedback-auth.ts](github-feedback-auth.ts)、[github-api.ts](github-api.ts)。
+直接依赖：[../../../core/contracts/secrets.ts](../../../core/contracts/secrets.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/digest.ts](../../../core/platform/node/digest.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/platform/node/locking.ts](../../../core/platform/node/locking.ts)、[../index.ts](../index.ts)、[github-api.ts](github-api.ts)、[github-feedback-auth.ts](github-feedback-auth.ts)。
 
 ### index.ts
 
@@ -264,7 +264,7 @@ class N_src_logic_feedback_service_index_ts["index.ts"] {
   <<module>>
 }
 ```
-直接依赖：[github-feedback.ts](github-feedback.ts)、[github-feedback-auth.ts](github-feedback-auth.ts)、[github-api.ts](github-api.ts)。
+直接依赖：[github-api.ts](github-api.ts)、[github-feedback-auth.ts](github-feedback-auth.ts)、[github-feedback.ts](github-feedback.ts)。
 
 ### 本目录调用边界
 
@@ -283,9 +283,9 @@ class N_src_logic_feedback_service_index_ts["index.ts"] {
   <<module>>
 }
 N_src_logic_feedback_service_github_feedback_auth_ts ..> N_src_logic_feedback_service_github_api_ts : 导入依赖
-N_src_logic_feedback_service_github_feedback_ts ..> N_src_logic_feedback_service_github_feedback_auth_ts : 导入依赖
 N_src_logic_feedback_service_github_feedback_ts ..> N_src_logic_feedback_service_github_api_ts : 导入依赖
-N_src_logic_feedback_service_index_ts ..> N_src_logic_feedback_service_github_feedback_ts : 导入依赖
+N_src_logic_feedback_service_github_feedback_ts ..> N_src_logic_feedback_service_github_feedback_auth_ts : 导入依赖
+N_src_logic_feedback_service_index_ts ..> N_src_logic_feedback_service_github_api_ts : 导入依赖
 ```
 
 ```mermaid
@@ -296,11 +296,11 @@ class N_src_logic_feedback_service_index_ts["index.ts"] {
 class N_src_logic_feedback_service_github_feedback_auth_ts["github-feedback-auth.ts"] {
   <<module>>
 }
-class N_src_logic_feedback_service_github_api_ts["github-api.ts"] {
+class N_src_logic_feedback_service_github_feedback_ts["github-feedback.ts"] {
   <<module>>
 }
 N_src_logic_feedback_service_index_ts ..> N_src_logic_feedback_service_github_feedback_auth_ts : 导入依赖
-N_src_logic_feedback_service_index_ts ..> N_src_logic_feedback_service_github_api_ts : 导入依赖
+N_src_logic_feedback_service_index_ts ..> N_src_logic_feedback_service_github_feedback_ts : 导入依赖
 ```
 
 

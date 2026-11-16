@@ -66,7 +66,7 @@ class N_src_logic_engines_rules_model_choices_ts_ModelChoice["ModelChoice"] {
 N_src_logic_engines_rules_model_choices_ts ..> N_src_logic_engines_rules_model_choices_ts_ModelChoice : 声明
 ```
 
-直接依赖：[../../models/index.ts](../../models/index.ts)、[model-selection.ts](model-selection.ts)、[../catalog/supported-engines.ts](../catalog/supported-engines.ts)、[model-roles.ts](model-roles.ts)、[../model-roles.ts](../model-roles.ts)。
+直接依赖：[../catalog/supported-engines.ts](../catalog/supported-engines.ts)、[../model-roles.ts](../model-roles.ts)、[model-roles.ts](model-roles.ts)、[model-selection.ts](model-selection.ts)、[../../models/index.ts](../../models/index.ts)。
 
 ### model-roles.ts
 
@@ -112,7 +112,7 @@ class N_src_logic_engines_rules_model_selection_ts["model-selection.ts"] {
 }
 ```
 
-直接依赖：[../../models/index.ts](../../models/index.ts)、[../catalog/supported-engines.ts](../catalog/supported-engines.ts)。
+直接依赖：[../catalog/supported-engines.ts](../catalog/supported-engines.ts)、[../../models/index.ts](../../models/index.ts)。
 
 ### 本目录调用边界
 
@@ -121,14 +121,14 @@ classDiagram
 class N_src_logic_engines_rules_model_choices_ts["model-choices.ts"] {
   <<module>>
 }
-class N_src_logic_engines_rules_model_selection_ts["model-selection.ts"] {
-  <<module>>
-}
 class N_src_logic_engines_rules_model_roles_ts["model-roles.ts"] {
   <<module>>
 }
-N_src_logic_engines_rules_model_choices_ts ..> N_src_logic_engines_rules_model_selection_ts : 导入依赖
+class N_src_logic_engines_rules_model_selection_ts["model-selection.ts"] {
+  <<module>>
+}
 N_src_logic_engines_rules_model_choices_ts ..> N_src_logic_engines_rules_model_roles_ts : 导入依赖
+N_src_logic_engines_rules_model_choices_ts ..> N_src_logic_engines_rules_model_selection_ts : 导入依赖
 ```
 
 

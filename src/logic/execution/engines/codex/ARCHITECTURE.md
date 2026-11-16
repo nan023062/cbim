@@ -206,8 +206,8 @@ class N_src_logic_execution_engines_codex_engine_ts_CodexEngine["CodexEngine"] {
   -stopped
 }
 N_src_logic_execution_engines_codex_engine_ts ..> N_src_logic_execution_engines_codex_engine_ts_CodexEngine : 声明
-class N_src_logic_execution_engines_codex_engine_ts_external_AgentEngine["AgentEngine (外部契约)"] {
-  <<external>>
+class N_src_logic_execution_engines_codex_engine_ts_external_AgentEngine["AgentEngine (../../rules/types)"] {
+  <<boundary>>
 }
 N_src_logic_execution_engines_codex_engine_ts_external_AgentEngine <|.. N_src_logic_execution_engines_codex_engine_ts_CodexEngine
 ```
@@ -232,13 +232,14 @@ class N_src_logic_execution_engines_codex_engine_ts_CodexEngine["CodexEngine"] {
   -Notification()
 }
 N_src_logic_execution_engines_codex_engine_ts ..> N_src_logic_execution_engines_codex_engine_ts_CodexEngine : 声明
-class N_src_logic_execution_engines_codex_engine_ts_external_AgentEngine["AgentEngine (外部契约)"] {
-  <<external>>
+class N_src_logic_execution_engines_codex_engine_ts_external_AgentEngine["AgentEngine (../../rules/types)"] {
+  <<boundary>>
 }
 N_src_logic_execution_engines_codex_engine_ts_external_AgentEngine <|.. N_src_logic_execution_engines_codex_engine_ts_CodexEngine
 ```
 
-直接依赖：[../../../../core/utility/index.ts](../../../../core/utility/index.ts)、[../../rules/types.ts](../../rules/types.ts)、[../../../engines/index.ts](../../../engines/index.ts)、[../../../budget/rules/request-budget.ts](../../../budget/rules/request-budget.ts)、[../../rules/engine-tools.ts](../../rules/engine-tools.ts)、[../../rules/engine-instructions.ts](../../rules/engine-instructions.ts)、[../native-tools.ts](../native-tools.ts)、[binary.ts](binary.ts)、[../../rules/engine-runtime.ts](../../rules/engine-runtime.ts)、[rpc.ts](rpc.ts)、[tools.ts](tools.ts)、[model-proxy.ts](model-proxy.ts)、[session.ts](session.ts)、[../run-inactivity.ts](../run-inactivity.ts)。
+继承／实现来源：`AgentEngine` → [../../rules/types.ts](../../rules/types.ts)。
+直接依赖：[../../../../core/utility/index.ts](../../../../core/utility/index.ts)、[../../../budget/rules/request-budget.ts](../../../budget/rules/request-budget.ts)、[../../../engines/index.ts](../../../engines/index.ts)、[binary.ts](binary.ts)、[model-proxy.ts](model-proxy.ts)、[rpc.ts](rpc.ts)、[session.ts](session.ts)、[tools.ts](tools.ts)、[../native-tools.ts](../native-tools.ts)、[../run-inactivity.ts](../run-inactivity.ts)、[../../rules/engine-instructions.ts](../../rules/engine-instructions.ts)、[../../rules/engine-runtime.ts](../../rules/engine-runtime.ts)、[../../rules/engine-tools.ts](../../rules/engine-tools.ts)、[../../rules/types.ts](../../rules/types.ts)。
 
 ### model-proxy.ts
 
@@ -250,7 +251,7 @@ class N_src_logic_execution_engines_codex_model_proxy_ts["model-proxy.ts"] {
 }
 ```
 
-直接依赖：[../../../models/index.ts](../../../models/index.ts)、[../../../budget/rules/request-budget.ts](../../../budget/rules/request-budget.ts)、[../transport/request-budget-transport.ts](../transport/request-budget-transport.ts)、[../transport/request-budget-usage.ts](../transport/request-budget-usage.ts)、[tools.ts](tools.ts)。
+直接依赖：[../../../budget/rules/request-budget.ts](../../../budget/rules/request-budget.ts)、[tools.ts](tools.ts)、[../transport/request-budget-transport.ts](../transport/request-budget-transport.ts)、[../transport/request-budget-usage.ts](../transport/request-budget-usage.ts)、[../../../models/index.ts](../../../models/index.ts)。
 
 ### package.ts
 
@@ -260,7 +261,7 @@ class N_src_logic_execution_engines_codex_package_ts["package.ts"] {
   <<module>>
 }
 ```
-直接依赖：[engine.ts](engine.ts)、[../../../engines/index.ts](../../../engines/index.ts)、[../../rules/engine-adapter.ts](../../rules/engine-adapter.ts)。
+直接依赖：[../../../engines/index.ts](../../../engines/index.ts)、[engine.ts](engine.ts)、[../../rules/engine-adapter.ts](../../rules/engine-adapter.ts)。
 
 ### rpc.ts
 
@@ -346,7 +347,7 @@ class N_src_logic_execution_engines_codex_tools_ts_CodexToolSpec["CodexToolSpec"
 N_src_logic_execution_engines_codex_tools_ts ..> N_src_logic_execution_engines_codex_tools_ts_CodexToolSpec : 声明
 ```
 
-直接依赖：[../../../../core/utility/index.ts](../../../../core/utility/index.ts)、[../../../tools/rules/outcome.ts](../../../tools/rules/outcome.ts)、[../../rules/types.ts](../../rules/types.ts)、[../../rules/engine-tools.ts](../../rules/engine-tools.ts)、[../../../tools/rules/native-tools.ts](../../../tools/rules/native-tools.ts)、[../../../tools/rules/results.ts](../../../tools/rules/results.ts)。
+直接依赖：[../../../../core/utility/index.ts](../../../../core/utility/index.ts)、[../../rules/engine-tools.ts](../../rules/engine-tools.ts)、[../../rules/types.ts](../../rules/types.ts)、[../../../tools/rules/native-tools.ts](../../../tools/rules/native-tools.ts)、[../../../tools/rules/outcome.ts](../../../tools/rules/outcome.ts)、[../../../tools/rules/results.ts](../../../tools/rules/results.ts)。
 
 ### 本目录调用边界
 
@@ -358,19 +359,19 @@ class N_src_logic_execution_engines_codex_engine_ts["engine.ts"] {
 class N_src_logic_execution_engines_codex_binary_ts["binary.ts"] {
   <<module>>
 }
-class N_src_logic_execution_engines_codex_rpc_ts["rpc.ts"] {
-  <<module>>
-}
-class N_src_logic_execution_engines_codex_tools_ts["tools.ts"] {
-  <<module>>
-}
 class N_src_logic_execution_engines_codex_model_proxy_ts["model-proxy.ts"] {
   <<module>>
 }
+class N_src_logic_execution_engines_codex_rpc_ts["rpc.ts"] {
+  <<module>>
+}
+class N_src_logic_execution_engines_codex_session_ts["session.ts"] {
+  <<module>>
+}
 N_src_logic_execution_engines_codex_engine_ts ..> N_src_logic_execution_engines_codex_binary_ts : 导入依赖
-N_src_logic_execution_engines_codex_engine_ts ..> N_src_logic_execution_engines_codex_rpc_ts : 导入依赖
-N_src_logic_execution_engines_codex_engine_ts ..> N_src_logic_execution_engines_codex_tools_ts : 导入依赖
 N_src_logic_execution_engines_codex_engine_ts ..> N_src_logic_execution_engines_codex_model_proxy_ts : 导入依赖
+N_src_logic_execution_engines_codex_engine_ts ..> N_src_logic_execution_engines_codex_rpc_ts : 导入依赖
+N_src_logic_execution_engines_codex_engine_ts ..> N_src_logic_execution_engines_codex_session_ts : 导入依赖
 ```
 
 ```mermaid
@@ -378,19 +379,16 @@ classDiagram
 class N_src_logic_execution_engines_codex_engine_ts["engine.ts"] {
   <<module>>
 }
-class N_src_logic_execution_engines_codex_session_ts["session.ts"] {
+class N_src_logic_execution_engines_codex_tools_ts["tools.ts"] {
   <<module>>
 }
 class N_src_logic_execution_engines_codex_model_proxy_ts["model-proxy.ts"] {
   <<module>>
 }
-class N_src_logic_execution_engines_codex_tools_ts["tools.ts"] {
-  <<module>>
-}
 class N_src_logic_execution_engines_codex_package_ts["package.ts"] {
   <<module>>
 }
-N_src_logic_execution_engines_codex_engine_ts ..> N_src_logic_execution_engines_codex_session_ts : 导入依赖
+N_src_logic_execution_engines_codex_engine_ts ..> N_src_logic_execution_engines_codex_tools_ts : 导入依赖
 N_src_logic_execution_engines_codex_model_proxy_ts ..> N_src_logic_execution_engines_codex_tools_ts : 导入依赖
 N_src_logic_execution_engines_codex_package_ts ..> N_src_logic_execution_engines_codex_engine_ts : 导入依赖
 ```

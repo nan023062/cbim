@@ -70,6 +70,81 @@ N_src_logic_resources_service ..> N_src_logic_resources_index_ts : 导入依赖
 - `packages` → `service`：导入。
 - `service` → `index.ts`：导入。
 
+### contracts.ts
+
+```mermaid
+classDiagram
+class N_src_logic_resources_contracts_ts["contracts.ts"] {
+  <<module>>
+}
+class N_src_logic_resources_contracts_ts_ResourceKind["ResourceKind"] {
+  <<type>>
+
+}
+N_src_logic_resources_contracts_ts ..> N_src_logic_resources_contracts_ts_ResourceKind : 声明
+class N_src_logic_resources_contracts_ts_ResourceCategory["ResourceCategory"] {
+  <<type>>
+
+}
+N_src_logic_resources_contracts_ts ..> N_src_logic_resources_contracts_ts_ResourceCategory : 声明
+class N_src_logic_resources_contracts_ts_ResourceDefinition["ResourceDefinition"] {
+  <<interface>>
+  +id
+  +kind
+  +name
+  +summary
+  +content
+  +updatedAt
+}
+N_src_logic_resources_contracts_ts ..> N_src_logic_resources_contracts_ts_ResourceDefinition : 声明
+class N_src_logic_resources_contracts_ts_ResourceLibrarySnapshot["ResourceLibrarySnapshot"] {
+  <<interface>>
+  +repositoryId
+  +revision
+  +items
+}
+N_src_logic_resources_contracts_ts ..> N_src_logic_resources_contracts_ts_ResourceLibrarySnapshot : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_logic_resources_contracts_ts["contracts.ts"] {
+  <<module>>
+}
+class N_src_logic_resources_contracts_ts_RepositoryConfig["RepositoryConfig"] {
+  <<type>>
+
+}
+N_src_logic_resources_contracts_ts ..> N_src_logic_resources_contracts_ts_RepositoryConfig : 声明
+class N_src_logic_resources_contracts_ts_RepositorySession["RepositorySession"] {
+  <<type>>
+
+}
+N_src_logic_resources_contracts_ts ..> N_src_logic_resources_contracts_ts_RepositorySession : 声明
+class N_src_logic_resources_contracts_ts_RepositoryStatus["RepositoryStatus"] {
+  <<interface>>
+  +session
+  +source
+  +config
+  +error
+  +sharing
+}
+N_src_logic_resources_contracts_ts ..> N_src_logic_resources_contracts_ts_RepositoryStatus : 声明
+```
+
+
+
+### index.ts
+
+```mermaid
+classDiagram
+class N_src_logic_resources_index_ts["index.ts"] {
+  <<module>>
+}
+```
+直接依赖：[contracts.ts](contracts.ts)。
+
+
 ## 子目录导航
 
 - [packages/](packages/ARCHITECTURE.md)：静态知识包的发布与预览导入；同时核仓库和知识版本，正式导入复用原知识事务。

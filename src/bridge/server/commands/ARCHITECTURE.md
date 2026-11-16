@@ -49,7 +49,7 @@ class N_src_bridge_server_commands_loop_cli_ts["loop-cli.ts"] {
   <<module>>
 }
 ```
-直接依赖：[../../../logic/workspace/service/paths.ts](../../../logic/workspace/service/paths.ts)、[../application.ts](../application.ts)。
+直接依赖：[../application.ts](../application.ts)、[../../../logic/workspace/service/paths.ts](../../../logic/workspace/service/paths.ts)。
 
 
 ## 子目录导航

@@ -4,7 +4,7 @@
 
 ## 封装意图
 
-通用展示组件，不持有领域服务与运行状态。 EngineModelPicker 固定三引擎目录，按协议筛选统一模型，空目录仍可选择引擎。
+通用展示组件，不持有领域服务与运行状态。 EngineModelPicker 使用官方静态引擎目录，按协议筛选统一模型，空目录仍可选择引擎。
 
 ## 类与模块的设计意图
 
@@ -78,7 +78,7 @@ state-labels.ts 只提供工作区与工具任务的展示词汇，由外壳和�
 
 ##### 模型选型保留附加角色
 
-EngineModelPicker 同引擎切换 primary 时保留 value.modelRoles；引擎变化清空整个旧选型。此组件当前仍只显示主模型下拉，额外角色的完整编辑在后续界面切片接通。
+EngineModelPicker 同引擎切换 primary 时保留 value.modelRoles；引擎变化清空整个旧选型。此组件依据 `additionalModelRoles` 展示额外角色下拉，按角色 kind、required 和模型能力过滤选项；缺少可用模型时显示配置提示。
 
 EngineModelPicker 按官方角色展示额外必填模型，切换引擎清旧角色，同引擎换主模型保留角色。AgentModelForm 将完整草稿一次保存；保存前用共享纯规则验证，取消不提交。
 
@@ -142,7 +142,7 @@ class N_src_view_components_AgentModelForm_tsx["AgentModelForm.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/agent-settings.ts](../../bridge/contracts/agent-settings.ts)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../../bridge/contracts/engines.ts](../../bridge/contracts/engines.ts)、[EngineModelPicker.tsx](EngineModelPicker.tsx)、[agent-model-form.css](agent-model-form.css)。
+直接依赖：[../../bridge/contracts/agent-settings.ts](../../bridge/contracts/agent-settings.ts)、[../../bridge/contracts/engines.ts](../../bridge/contracts/engines.ts)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[EngineModelPicker.tsx](EngineModelPicker.tsx)、[agent-model-form.css](agent-model-form.css)。
 
 ### BrandMark.tsx
 
@@ -176,12 +176,13 @@ class N_src_view_components_DeferredView_tsx_ViewLoadBoundary["ViewLoadBoundary"
   +render()
 }
 N_src_view_components_DeferredView_tsx ..> N_src_view_components_DeferredView_tsx_ViewLoadBoundary : 声明
-class N_src_view_components_DeferredView_tsx_external_Component["Component (外部契约)"] {
+class N_src_view_components_DeferredView_tsx_external_Component["Component (react)"] {
   <<external>>
 }
 N_src_view_components_DeferredView_tsx_external_Component <|-- N_src_view_components_DeferredView_tsx_ViewLoadBoundary
 ```
 
+继承／实现来源：`Component` → `react`。
 
 ### Empty.tsx
 
@@ -205,7 +206,7 @@ class N_src_view_components_EngineModelPicker_tsx["EngineModelPicker.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/engines.ts](../../bridge/contracts/engines.ts)、[../../bridge/contracts/agent-settings.ts](../../bridge/contracts/agent-settings.ts)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)。
+直接依赖：[../../bridge/contracts/agent-settings.ts](../../bridge/contracts/agent-settings.ts)、[../../bridge/contracts/engines.ts](../../bridge/contracts/engines.ts)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)。
 
 ### Icon.tsx
 

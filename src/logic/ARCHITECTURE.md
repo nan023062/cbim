@@ -163,7 +163,7 @@ pending/unknown 阻止规划、派发、续执行预约、新成员领取、成�
 
 带 JSON/CSV/PNG 专业条件验证的候选先核完整历史证明，不因当前文件变化抹去过去事实。可能接受时，所有冻结验证文件与明确选定基线合并到同一次读取，即使用户选择的基线没有包含该必验文件，也须重新匹配。合并超过 16 文件或 32 MiB 时仅关闭接受，保留所选范围观察与明确限制，仍可拒绝/补证；无选择始终零文件读取。负面决定和负面显式继续只核真实历史、身份及当前知识，不要求被拒文件还保持原字节。
 
-`decide` 只接可信桌面注入的 `local_desktop / explicit_submit` 标记，不冒称认证账号。在事务外重建依据，再于知识快照下的短事务核对内容 basis 与独立决定 revision，只追加本周期 `humanDecisions`；同命令同内容返回原回执、不重读文件，相同人工项和依据的新决定只关联上条记录，历史不删。日志/知识前后复核不构成与外部文件系统的原子快照。关闭或工作区退役期间的迟到读取不能继续提交；只读占用始终释放，不领取模型名额。
+`Decide` 只接可信桌面注入的 `local_desktop / explicit_submit` 标记，不冒称认证账号。在事务外重建依据，再于知识快照下的短事务核对内容 basis 与独立决定 revision，只追加本周期 `humanDecisions`；同命令同内容返回原回执、不重读文件，相同人工项和依据的新决定只关联上条记录，历史不删。日志/知识前后复核不构成与外部文件系统的原子快照。关闭或工作区退役期间的迟到读取不能继续提交；只读占用始终释放，不领取模型名额。
 
 保存和查询均不改 goal、wait、图、成员、信封、权限或运行清单，不继续用户队列，不调用模型。“决定已记录”不等于目标完成；只有下述独立显式继续实际消费后，接受才可能用于新审阅。
 
@@ -209,7 +209,7 @@ human satisfied 只接受当前 input 已消费的 `human-decision` 引用，且
 
 `WorkspaceExecutionManager.ReplanExecution` 与只读核实入口分开，先按稳定命令查询原回执，未受理才预检指定核实周期的证据和显式权限。新业务目标不读取旧 TaskSpec 或复制旧工具参数。`startFreshMain.beforeRun` 经 `AutoCollaboration.AcceptReplan` 在真实租约内重新核验并持久化意图，再建立新的 Cycle；同主实例和任务图根不变，新业务使用新原生上下文、执行实例和自己的目标审阅。
 
-队列保持暂停；停止版本在串行排队前捕获，预检、工厂等待及意图提交都受停止屏障保护。已提交后的启动或返回失败保留原回执；仅本次真实 runId 的意图可被故障收束，不能因此关闭旧命令或重复启动。Team 主角色只调度和受控知识治理，Auto 可直接工作；旧核实周期的只读约束不因新业务获得 ask/execute 而变化。
+队列保持暂停；停止版本在串行排队前捕获，预检、工厂等待及意图提交都受停止屏障保护。已提交后的启动或返回失败保留原回执；仅本次真实 runId 的意图可被故障收束，不能因此关闭旧命令或重复启动。Team 与 Auto 的主角色都可按权限直接工作；Team 优先使用有效自定义岗位，未配置时由主会话执行。旧核实周期的只读约束不因新业务获得 ask/execute 而变化。
 
 <a id="scheduling-新只读核实周期的主执行接线"></a>
 
@@ -219,7 +219,7 @@ human satisfied 只接受当前 input 已消费的 `human-decision` 引用，且
 
 停止/关闭先取消尚未 active 的启动信号，等待恢复意图事务结束后收束新周期；提交后的异常只核对并关闭本次真实 runId，不误处理旧重复回执。新周期的主运行与成员启动均受 read 限制，成员回注和 waiting 补充不得提升权限。主 Agent 继续负责模块/团队匹配和目标审阅，实际只读核实由新执行实例承担。
 
-执行前的 `thread` 使用最近可靠新上下文边界，只排除冻结旧运行，要求初始运行存在、初始声明与意图一致，后续按 `resumeFrom` 单链连接，原生身份和任务/主实例绑定一致；不按时钟或最新可读文件回退。`threadView` 一次读取全部可读历史并返回问题占位，仅完整当前链提供续聊头。历史损坏不阻塞独立新周期，当前链损坏仍明确阻断执行。
+执行前的 `thread` 使用最近可靠新上下文边界，只排除冻结旧运行，要求初始运行存在、初始声明与意图一致，后续按 `resumeFrom` 单链连接，原生身份和任务/主实例绑定一致；不按时钟或最新可读文件回退。`ThreadView` 一次读取全部可读历史并返回问题占位，仅完整当前链提供续聊头。历史损坏不阻塞独立新周期，当前链损坏仍明确阻断执行。
 
 <a id="scheduling-成员派发与执行调度契约"></a>
 
@@ -237,7 +237,7 @@ human satisfied 只接受当前 input 已消费的 `human-decision` 引用，且
 
 - `start` 接收 `workspaceId/rootSessionId/taskId/commandId/expectedRevision/options`。options 只含公开模型标识、read/ask/execute 权限和毫秒超时，默认 read；不能指定成员身份、会话路径、提示词或状态。返回的是已持久化领取回执，不承诺此时已开始生成；相同命令返回原回执，不重复解析模型或执行。
 - 领取前拒绝主 Agent、released 执行实例和已关闭调度周期；同主会话有 waiting 周期时返回 GOAL_WAITING，包括旧无 scope 的任务入口，不能通过历史成员运行绕过等待。然后核实依赖、成员占用及工作区写占用，冻结角色/Skill、模块/Workflow、规范全文、前置候选和公开模型参数。密钥仅在主进程闭包中。领取事务同时写 starting、成员 communicating、task queued+activeRunId、assignment claimed。
-- `startMember` 使用预分配 runId、固定执行实例通道，日志位于 `dispatch/runs/tasks/`，不混入聊天列表。当前调度周期内每个 task 创建新执行实例和通道，不复用前一 task 的历史；旧无 scope 的显式接口保留原通道兼容行为。前次非 completed、工具结果未知或日志绑定不符的旧通道拒绝盲目续接；尚无异常通道人工对账/重试入口。
+- `StartMember` 使用预分配 runId、固定执行实例通道，日志位于 `dispatch/runs/tasks/`，不混入聊天列表。当前调度周期内每个 task 创建新执行实例和通道，不复用前一 task 的历史；旧无 scope 的显式接口保留原通道兼容行为。前次非 completed、工具结果未知或日志绑定不符的旧通道拒绝盲目续接；尚无异常通道人工对账/重试入口。
 - 模型生成前，onEngineReady 提交 running、原生文件绑定、成员 working；回调失败关闭引擎并中断。任务拥有独立审批/问题队列，不继承其他运行的“本次全部通过”。
 - `WorkspaceExecutionLease` 为主会话与成员共享。主轮按本轮 permission 领取占用：read 可共享，ask/execute 保守独占。租约先于周期恢复取得，不能先拿只读租约再因恢复出的 Auto 模式开放写入。知识写入另由知识服务串行事务和版本保护；Team 保守占用不意味着获得业务写工具。正式执行成员同一实例串行，不同成员只读可并行，ask/execute 保守独占工作区业务执行。没有文件范围写锁；角色知识字段不是可执行权限策略。冲突立即返回 busy，不在事务内等待。
 - completed 只结束大脑回合。仅同轮结构化计划保持原目标/验收、全部步骤有有效工具证据且调用 cbim_delivery_prepare，才进入 result_ready 并返回候选信封。普通文本、改写目标或知识基线变化得到 blocked；候选 acceptance 始终为 not_evaluated。
@@ -256,13 +256,13 @@ human satisfied 只接受当前 input 已消费的 `human-decision` 引用，且
 
 ##### 周期目标规划、审阅与结束门禁
 
-`ScopeGoalService(owner, store, ports?)` 与派发复用串行事务；`ScopeGoalPorts.InspectMember(run)` 和 `inspectMain(rootSessionId, runId)` 仅按可信绑定读取 canonical 日志。`inspect` 不读日志；`plan` 解析真实静态角色、有效维护模块、当前知识基线并保存责任映射；无日志端口时仍可规划，但 review / validateCompletion / validateWaiting 明确拒绝。主角色仅治理且 moduleIds=[] 时不要求业务知识通过结构校验，保留修复损坏知识的入口。
+`ScopeGoalService(owner, store, ports?)` 与派发复用串行事务；`ScopeGoalPorts.InspectMember(run)` 和 `InspectMain(rootSessionId, runId)` 仅按可信绑定读取 canonical 日志。`inspect` 不读日志；`plan` 解析真实静态角色、有效维护模块、当前知识基线并保存责任映射；无日志端口时仍可规划，但 review / validateCompletion / validateWaiting 明确拒绝。主角色仅治理且 moduleIds=[] 时不要求业务知识通过结构校验，保留修复损坏知识的入口。
 
 - `plan(identity, scopeId, runId, commandId, draft)` 和 `review(...)` 都接受 expectedRevision，幂等命令包含完整草案指纹。身份由主轮闭包注入，模型不能指定 scope、run 或存储路径。最多 64 次决策；不通过重规划删改既有人工作业验收项。
-- `validateDispatch(state, scope, task, knowledgeRevision)` 在派发事务中核实存在当前计划、没有阻塞/未清除的审阅、当前知识版本一致，角色与模块集合匹配责任分配。审阅后再派工必须显式 replan。旧无 goal 记录不补造计划。
+- `ValidateDispatch(state, scope, task, knowledgeRevision)` 在派发事务中核实存在当前计划、没有阻塞/未清除的审阅、当前知识版本一致，角色与模块集合匹配责任分配。审阅后再派工必须显式 replan。旧无 goal 记录不补造计划。
 - 成员证据必须来自本 scope 真实 result_ready 候选，完整绑定 task/run/实例/通道/planRevision；canonical 日志须 completed、无未决工具、结构化交付与候选一致。引用的成功工具回执须有匹配授权、结果正文哈希和最后副作用之后的有效代次。执行知识基线必须等于审阅基线，不能对旧候选仅重盖当前版本。
 - 主治理证据只接受当前审阅 run 中 `cbim_knowledge_commit / cbim_object_commit` 的真实成功知识写回执，且结果正文证明同实例、当前知识版本和非空 `.cbim/` 变更。主对话通道从已登记 conversation Session 验证，与图根必须同实例，但不混用图根的任务/邮箱通道。模型正文、任务记录、派发和目标审阅回执均不能自证成功。
-- `review complete` 只保存申请，工具执行期间不要求主运行已经 settled。`validateCompletion` 在父级关闭事务内调用且不重入 store：同一主 run 必须实际 completed、无未决工具，计划/审阅当前，图和知识版本未变，审阅后没有新副作用；全部 scope 工作均已终态。缺证据、未满足项或 human 项阻止完成。
+- `review complete` 只保存申请，工具执行期间不要求主运行已经 settled。`ValidateCompletion` 在父级关闭事务内调用且不重入 store：同一主 run 必须实际 completed、无未决工具，计划/审阅当前，图和知识版本未变，审阅后没有新副作用；全部 scope 工作均已终态。缺证据、未满足项或 human 项阻止完成。
 - 失败/阻塞/取消/中断任务必须以显式 superseded 关系被本 scope 后续实际成功任务替代，替代模块并集覆盖原范围；知识基线已过期的旧候选同样必须明确替代。关系用线性有色 DFS 拒绝环，不能由模型构造稠密图阻塞主线程。替代本身不删除历史任务或回滚副作用。
 - `block` 仅可信协调器调用，保存失败原因并冻结后续决策，不发布虚假任务图事件，也不直接释放实例。普通无 plan、无派工且无业务治理动作的问答保持轻量；一旦有业务计划/派工/知识写入，不能把缺失审阅当作普通结束。
 
@@ -274,7 +274,7 @@ human satisfied 只接受当前 input 已消费的 `human-decision` 引用，且
 
 `WorkspaceDispatchService.ParkScope(identity, scopeId, summary, mainRunIds)` 仅供可信协调器在主运行实际收尾并释放资源后调用。它在派发串行事务内调用 `ScopeGoalService.ValidateWaiting`：当前 awaiting_user 审阅属于同一主运行，主运行的传入摘要与 canonical 日志均为 completed 且无未决/未知工具；图游标、知识版本、副作用界限未变；本周期成员运行均已结算，待办仅可按显式 memberPause 完整保留可靠检查点及未领取后继；同主会话不存在 starting/running，包括旧无 scope 的运行。所有本周期成员运行再读 canonical 日志核验身份和工具终态；明确 failed/cancelled 可等待，interrupted 或未知副作用拒绝。已有证据仍按原审阅规则复核，不将等待或用户排队文字当成人工验收。
 
-成功后只在现有事务日志写 status=waiting 与 `DispatchScopeWait`，原目标和审阅不改写、graph cursor 不推进，也不新增存储。可信主轮清单立即复制，1–32 个唯一 runId 且包含当前主运行；用于保留已消耗预算，不自动恢复任何运行。等待幂等键包含周期和真实主 runId，同周期后续再等待创建独立检查点；事务后再次核实当前状态，旧成功回执不能掩盖已取消。waiting 占据该根唯一未关闭槽，拒绝新周期、计划、审阅、派工或成员启动；close(cancelled/failed/interrupted) 保留检查点并释放执行实例，close(completed) 拒绝。`recoverScopes` 只收束遗留 active；`waitingScopes` 内部只读枚举 waiting，无 IPC 自动恢复能力。
+成功后只在现有事务日志写 status=waiting 与 `DispatchScopeWait`，原目标和审阅不改写、graph cursor 不推进，也不新增存储。可信主轮清单立即复制，1–32 个唯一 runId 且包含当前主运行；用于保留已消耗预算，不自动恢复任何运行。等待幂等键包含周期和真实主 runId，同周期后续再等待创建独立检查点；事务后再次核实当前状态，旧成功回执不能掩盖已取消。waiting 占据该根唯一未关闭槽，拒绝新周期、计划、审阅、派工或成员启动；close(cancelled/failed/interrupted) 保留检查点并释放执行实例，close(completed) 拒绝。`RecoverScopes` 只收束遗留 active；`WaitingScopes` 内部只读枚举 waiting，无 IPC 自动恢复能力。
 
 `AutoCollaboration.Initialize` 只重建 waiting 根占位并暂停相应用户队列，不读取/启动模型、不恢复成员租约。busy 同时覆盖正在调度和已安全等待的周期。停泊后移出活动循环；应用 shutdown 保留 waiting；用户 stop 与停泊提交竞争时，仍会在提交完成后查找并取消等待周期。queue enqueue 和普通 resume 在 waiting 时只保存为 paused；继续队列返回 GOAL_WAITING，不能把“同意”等排队文字解释为继续原目标或人工批准。显式补充走独立入口，不解冻 closed 或 goal.blocked。
 
@@ -294,62 +294,67 @@ human satisfied 只接受当前 input 已消费的 `human-decision` 引用，且
 
 `AutoCollaboration` 按工作区装配，只向使用已保存模型配置的主聊天轮次提供实际主调度工具；正式任务不获得递归工具。Auto 主会话可直接实现；正式业务派发按冻结模式核验：Team 必须提供当前发现的 `ownerSelection`，内置角色同样要求真实岗位、模块责任及已采纳模型；Auto 明确委派保留原真实缺口兜底。普通问答不用登记业务节点。模型提交岗位选择、角色、模块、目标、验收、前置及可选 Workflow；工作区/会话/runId、scopeId 与实际 toolCallId 由运行绑定提供，业务请求必须符合当前目标计划。稳定调用键映射到持久化命令，同次重发返回原回执。单轮最多登记 100 个不同派发调用，不能在工具 Promise 中等待执行。
 
-一次用户任务对应一个持久化 `DispatchScope`，可以跨多个主模型轮次、多个成员执行和结果回传。`starting` 在模型工厂准备后、模型启动前调用 `openScope`；可信结果回注沿用原周期，不能新建周期。每个模型轮仍保留独立 batch，以准确记录本轮派发和回注来源。普通聊天在最新主轮正常结束且没有规划、派工或知识写入后关闭生命周期；正式工作必须由主 Agent 提交 complete 审阅申请，并在主运行结算后通过真实证据、版本和全周期状态复核，才允许以 completed 关闭。awaiting_user 则须通过独立安全检查后持久等待；其他不满足要求的情况继续分析、重规划或明确记录阻塞，不能把空回复或底层 run.completed 当作成功；首个主轮派发完成不关闭。失败、停止、启动失败和应用退出都会尝试收束活动周期：等待在途派发/启动完成，停止成员并等待真实结算，再调用 `closeScope` 释放执行实例；已安全 waiting 在应用退出时保留。历史任务和运行日志保留，关闭失败继续报告诊断并保留真实状态，不伪装为已释放。
+一次用户任务对应一个持久化 `DispatchScope`，可以跨多个主模型轮次、多个成员执行和结果回传。`starting` 在模型工厂准备后、模型启动前调用 `openScope`；可信结果回注沿用原周期，不能新建周期。每个模型轮仍保留独立 batch，以准确记录本轮派发和回注来源。普通聊天在最新主轮正常结束且没有规划、派工或知识写入后关闭生命周期；正式工作必须由主 Agent 提交 complete 审阅申请，并在主运行结算后通过真实证据、版本和全周期状态复核，才允许以 completed 关闭。awaiting_user 则须通过独立安全检查后持久等待；其他不满足要求的情况继续分析、重规划或明确记录阻塞，不能把空回复或底层 run.completed 当作成功；首个主轮派发完成不关闭。失败、停止、启动失败和应用退出都会尝试收束活动周期：等待在途派发/启动完成，停止成员并等待真实结算，再调用 `CloseScope` 释放执行实例；已安全 waiting 在应用退出时保留。历史任务和运行日志保留，关闭失败继续报告诊断并保留真实状态，不伪装为已释放。
 
-用户队列在周期关闭事务完成前保持 busy，成功关闭后才由 `collaborationReady` 开始下一条 pending 用户消息的新周期；已暂停项不自动恢复。用户停止和启动工厂等待之间用停止版本核验，防止异步返回覆盖较新的停止请求。重开时先 `MemberExecutionManager.Initialize` 将遗留运行结算为 interrupted，再 `recoverScopes` 关闭遗留 active 周期、`AutoCollaboration.Initialize` 保留安全 waiting 占位；不自动启动任何成员或投递历史结果。
+用户队列在周期关闭事务完成前保持 busy，成功关闭后才由 `CollaborationReady` 开始下一条 pending 用户消息的新周期；已暂停项不自动恢复。用户停止和启动工厂等待之间用停止版本核验，防止异步返回覆盖较新的停止请求。重开时先 `MemberExecutionManager.Initialize` 将遗留运行结算为 interrupted，再 `RecoverScopes` 关闭遗留 active 周期、`AutoCollaboration.Initialize` 保留安全 waiting 占位；不自动启动任何成员或投递历史结果。
 
 协调器保存主轮选择的公开 profileId/model/permission，不保存密钥或复制 allowAll。主轮安全完成、释放租约后才启动就绪成员；真实租约释放与可靠成员结算触发后续推进，不轮询磁盘。成员启动时重新解析该模型配置并冻结执行知识，同一成员串行，写冲突交给共享租约。未满足外部前置、启动失败或 blocked 如实回传，不伪造候选。
 
 结果先作为 `member-results` 可信来源登记到主会话运行日志，并经 Pi custom 消息送入原生上下文，然后才确认结果信封。来源登记或启动失败保留未处理信封；登记成功但确认失败不重复运行。待处理批次仅存在于当前进程，重启只恢复任务、信封和来源事实，不自动恢复协调执行。
 
-`WorkspaceExecutionManager.AttachCollaboration` 由可信装配层调用一次，接收 `starting / startFailed / busy / settled / stop`，不通过公开 IPC 设置回调。`startFailed` 清理已打开的周期，结果回注遇到暂时租约冲突时保留原周期等待。`settled` 仅在运行收尾、工作区占用释放和 active 删除后同步通知协调器；回调登记下一步而不等待成员整轮执行。无法核实收尾时传入 undefined，不把失败当作主会话正常完成。
+`WorkspaceExecutionManager.AttachCollaboration` 由可信装配层调用一次，接收 `starting / startFailed / busy / settled / stop`，不通过公开 IPC 设置回调。`StartFailed` 清理已打开的周期，结果回注遇到暂时租约冲突时保留原周期等待。`settled` 仅在运行收尾、工作区占用释放和 active 删除后同步通知协调器；回调登记下一步而不等待成员整轮执行。无法核实收尾时传入 undefined，不把失败当作主会话正常完成。
 
-`continueFromResults` 在会话串行边界中核验最新 chat 运行已 completed、无未决工具且原生会话存在，携带 `RunInputSource` 调用大脑续跑。来源包含稳定的 continuationId、结果 messageIds 和涉及的 taskIds，不允许通过用户 resume 参数注入。失败或 blocked 成员可以没有结果信封，但仍必须有任务集合和接续身份。相同 continuationId、同批来源及相同正文返回已经保存的运行回执；改变集合、正文或改用新标识重复消费 messageId 会拒绝。该去重从运行日志恢复，不靠内存标记；回执只代表可靠启动，候选和收件仍不等于验收。
+`ContinueFromResults` 在会话串行边界中核验最新 chat 运行已 completed、无未决工具且原生会话存在，携带 `RunInputSource` 调用大脑续跑。来源包含稳定的 continuationId、结果 messageIds 和涉及的 taskIds，不允许通过用户 resume 参数注入。失败或 blocked 成员可以没有结果信封，但仍必须有任务集合和接续身份。相同 continuationId、同批来源及相同正文返回已经保存的运行回执；改变集合、正文或改用新标识重复消费 messageId 会拒绝。该去重从运行日志恢复，不靠内存标记；回执只代表可靠启动，候选和收件仍不等于验收。
 
-协作 busy 期间，用户 resume 保存为原用户队列项并返回 queued:true；原文字与发送配置不改变，也不会抢占成员租约。带未决工具核实参数的 resume 拒绝排队，避免静默丢弃核实语义。`collaborationReady` 只尝试队列中已经 pending 的消息，不解除暂停。自动结果单独进入来源明确的续跑，不加入可编辑、删除的用户队列。
+协作 busy 期间，用户 resume 保存为原用户队列项并返回 queued:true；原文字与发送配置不改变，也不会抢占成员租约。带未决工具核实参数的 resume 拒绝排队，避免静默丢弃核实语义。`CollaborationReady` 只尝试队列中已经 pending 的消息，不解除暂停。自动结果单独进入来源明确的续跑，不加入可编辑、删除的用户队列。
 
-无法确认成员结算或续跑的异常会记录到应用运行监管，`pauseCollaboration` 立即建立停止屏障后串行保存队列暂停；不能因清除 busy 而抢跑用户消息。成员结算失败保留真实租约与活动记录，留待核实；不能声称已释放。停止成员失败可观察并向调用方报告，不静默忽略。
+无法确认成员结算或续跑的异常会记录到应用运行监管，`PauseCollaboration` 立即建立停止屏障后串行保存队列暂停；不能因清除 busy 而抢跑用户消息。成员结算失败保留真实租约与活动记录，留待核实；不能声称已释放。停止成员失败可观察并向调用方报告，不静默忽略。
 
 用户 stop 先建立本会话的自动续跑停止屏障，再调用协调器停止，最后暂停用户队列并停止主运行；协调器停止不在管理器串行边界内等待，避免反向查询管理器时死锁。停止期间即使协调器已解除 busy，自动队列和迟到结果也不能重启模型；工厂等待后仍复核屏障。显式新用户轮次或继续队列才清除停止屏障。应用重启不自动投递历史结果；已保存的来源用于核实与去重。
 
 ```mermaid
 classDiagram
 class WorkspaceExecutionManager {
-  +attachCollaboration(hooks)
-  +replanExecution(request)
-  +recoverExecution(request)
-  +continueFromResults(taskId, message, options, source)
-  +collaborationReady(taskId)
-  +pauseCollaboration(taskId, reason)
-  +resume(taskId, runId, message, options)
-  +stop(taskId)
+  +AttachCollaboration(hooks)
+  +ReplanExecution(request)
+  +RecoverExecution(request)
+  +ContinueFromResults(taskId, message, options, source)
+  +CollaborationReady(taskId)
+  +PauseCollaboration(taskId, reason)
+  +Resume(taskId, runId, message, options)
+  +Stop(taskId)
 }
 class ExecutionCollaboration {
   <<interface>>
-  +replanReceipt(query)
-  +replanPreflight(request)
-  +acceptReplan(request, task, context)
-  +starting(task, options, source)
-  +startFailed(task, source, error)
-  +busy(taskId)
-  +settled(task, options, summary)
-  +stop(taskId)
+  +ReplanReceipt(query)
+  +ReplanPreflight(request)
+  +AcceptReplan(request, task, context)
+  +Starting(task, options, source)
+  +StartFailed(task, source, error)
+  +Busy(taskId)
+  +Settled(task, options, summary)
+  +Stop(taskId)
 }
 class RunInputSource {
-  <<core contract>>
+  <<type>>
+  +kind
   +continuationId
+}
+class MemberResultSource {
+  <<interface>>
   +messageIds
   +taskIds
 }
+RunInputSource ..> MemberResultSource : member-results 联合分支
 WorkspaceExecutionManager ..> ExecutionCollaboration : 释放占用后通知
 WorkspaceExecutionManager ..> RunInputSource : 核验来源并按日志去重
 class AutoCollaboration {
-  -replanPreflight(request)
-  -acceptReplan(request, task, context)
-  +tools(task, runId, options)
-  +busy(taskId)
-  +stop(taskId)
-  +close()
+  -ReplanPreflight(request)
+  -AcceptReplan(request, task, context)
+  +Tools(task, runId, options)
+  +Busy(taskId)
+  +Stop(taskId)
+  +Close()
 }
 AutoCollaboration ..> WorkspaceExecutionManager : 来源续跑与队列协调
 ```
@@ -359,192 +364,104 @@ AutoCollaboration ..> WorkspaceExecutionManager : 来源续跑与队列协调
 ```mermaid
 classDiagram
 class MemberExecutionManager {
-  +initialize()
-  +start(raw)
-  +waitForSettlement(raw)
-  +stop(raw)
-  +inspect(raw)
-  +events(raw)
-  +messages(raw)
-  +acknowledge(raw)
-  +pendingApprovals(raw)
-  +answerApproval(raw, id, allow, allowAll)
-  +pendingQuestions(raw)
-  +answerQuestion(raw, id, answers)
-  +subscribe(listener)
-  +close()
+  +Initialize()
+  +Start(raw)
+  +WaitForSettlement(raw)
+  +Stop(raw)
+  +Inspect(raw)
+  +Events(raw)
+  +Messages(raw)
+  +Acknowledge(raw)
+  +PendingApprovals(raw)
+  +AnswerApproval(raw, id, allow, allowAll)
+  +PendingQuestions(raw)
+  +AnswerQuestion(raw, id, answers)
+  +Subscribe(listener)
+  +Close()
 }
 class MemberExecutionPorts {
   <<interface>>
-  +acquire(key, permission, agentInstanceId)
-  +prepare(options)
-  +inspect(run)
+  +Acquire(key, permission, agentInstanceId)
+  +Prepare(options)
+  +Inspect(run)
 }
 class DispatchStore {
   <<interface>>
-  +transact(command, prepare)
-  +read()
+  +Transact(command, prepare)
+  +Read()
 }
 class LoopRuntime {
-  <<core>>
-  +startMember(task, message, launch)
-  +stop(taskId)
-  +close()
+  <<execution/runtime boundary>>
+  +StartMember(task, message, launch)
+  +Stop(taskId)
+  +Close()
 }
 MemberExecutionManager ..> MemberExecutionPorts : 注入模型和工作区占用
 MemberExecutionManager ..> DispatchStore : 原子领取与结算
 MemberExecutionManager ..> LoopRuntime : 独立成员运行
 class MemberEventStreams {
-  +begin(run, task)
-  +append(run, task, event)
-  +read(run, task, cursor, limit)
-  +clear()
+  +Begin(run, task)
+  +Append(run, task, event)
+  +Read(run, task, cursor, limit)
+  +Clear()
 }
 MemberExecutionManager ..> MemberEventStreams : 公开执行增量
 ```
 
-以下保留进一步调度能力的目标契约；等待/唤醒、任务取消和自动恢复执行仍属后续设计。仅主 Agent 拥有调度职责，执行 Agent 自主理解环境并执行目标模块，协作缺口返回主 Agent 处理，不开放成员递归派发。
+当前有两条明确的协作路径：办公室任务使用持久化派发图和成员执行服务；统一 Agent 调用使用 [AgentCallScheduler](execution/assembly/agent-call-scheduler.ts) 管理父子调用、求助、取消和真实排空。不能把统一调用的递归能力写成旧派发工具已经支持成员递归派工。
 
 <a id="scheduling-职责和端口"></a>
 
 ###### 职责和端口
 
-调度器接收主 Agent 分析后的任务请求，核验岗位、来源、多模块岗位责任、依赖与权限，再持久化派发。主 Agent 模型提出分工，也可按本轮权限通过内部知识服务维护团队和业务定义，程序负责边界与事实；执行 Agent 自主探索真实团队与目标模块、选择实现和验证方法，再返回事实或缺口。组织的父子关系不授予派发权；未配置自定义负责岗位的模块由主实例在本轮权限内直接处理；已配置但失效的岗位明确报缺口，不能默认创建执行者绕过岗位模型与来源门禁。
+[WorkspaceDispatchService](dispatch/runtime/dispatch-service.ts) 负责建图、会话与周期登记、派发、依赖修订和读取；[prepareMember](team/runtime/agent-manager.ts) 是分配真实成员与通道身份的函数，并不存在 AgentManager 类。[MemberExecutionManager](team/runtime/member-execution.ts) 管理领取、执行和结算，[member-state](team/runtime/member-state.ts) 核实交付并组装图事实；[WorkspaceExecutionLease](execution/admission/workspace-lease.ts) 管理工作区占用。它们通过 [DispatchStore](dispatch/rules/dispatch-storage.ts) 契约提交，由 [FileDispatchStore](dispatch/storage/dispatch-store.ts) 持久化。
 
-`dispatch-service.ts` 负责建图、注册、派发及读取；`agent-manager.ts` 分配身份；`member-execution.ts` 管理领取、执行、结果和恢复，`member-state.ts` 核实交付并组装图事实，`workspace-lease.ts` 管理跨运行占用。存储端口在 Logic 领域契约 `dispatch-storage.ts`。下面 `AgentDispatchService` 是后续模型命令契约，不是当前同名实现。
-
-派发服务方法为 `initialize / openGraph / conversationBinding / openScope / closeScope / recoverScopes / createMember / dispatchTask / snapshot / delta / close`，拒绝任意 requester、parentTaskId 或运行状态，请求人固定来自主会话根。`openScope` 开启用户任务级周期；`closeScope` 在在途运行结算后原子释放执行实例并保留历史；`recoverScopes` 将重启前 active 周期结算为 interrupted，保留安全 waiting 且不重放执行。执行管理器另提供 `start / stop / inspect / messages / acknowledge` 与审批/问题接口；启动时冻结正文并复核基线，不符合则拒绝运行。
-
-应用级动态索引位于相邻的 `runtime/`：main 注入已提交派发观察和 Loop 事件订阅，WorkspaceExecutionManager 另提供 `observeQueue / initializeQueueMonitoring` 报告保存后的队列负载。业务服务不反向依赖全局管理器；全局索引不接管知识或执行权限。
-
-```ts
-// 以下为服务边界示意；GraphIdentity / ModuleBinding 等复用 Logic 领域契约 契约。
-type DispatchCaller = {
-  identity: GraphIdentity;
-  agent: AgentRef;
-  taskId?: string; runId?: string;
-  leaseEpoch: number; // 进程接管代际，不替代稳定的 agentInstanceId
-  permissionSnapshotId: string;
-};
-type TaskDraft = {
-  assigneeAgentId: string;
-  moduleIds: string[];
-  goal: string;
-  acceptance: { id: string; text: string }[];
-  prerequisites: { taskId: string; expectedPlanRevision: number }[];
-};
-type DispatchRequest = {
-  commandId: string;
-  parentTaskId?: string;
-  expectedParentRevision: number;
-  task: TaskDraft;
-};
-type DispatchReceipt = {
-  commandId: string; taskId: string; messageId: string;
-  cursor: GraphCursor;
-  disposition: 'queued' | 'waiting'; // 已可靠派发，不是执行完成
-};
-type TurnSubmissionReceipt = {
-  submissionId: string; taskId: string; runId: string; planRevision: number;
-  kind: 'result' | 'wait'; status: 'staged';
-};
-interface AgentDispatchService {
-  dispatch(caller: DispatchCaller, request: DispatchRequest): Promise<DispatchReceipt>;
-  waitForChildren(caller: DispatchCaller, request: {
-    commandId: string; taskId: string; expectedRevision: number;
-    children: { taskId: string; planRevision: number }[]; reason: string;
-  }): Promise<TurnSubmissionReceipt>;
-  submitResult(caller: DispatchCaller, request: {
-    commandId: string; taskId: string; expectedRevision: number;
-    planRevision: number; summary: string;
-    evidenceRefs: string[]; limitations: string[];
-  }): Promise<TurnSubmissionReceipt>;
-}
-```
-
-`caller` 完全由可信运行绑定注入，不作为模型参数。只有主 Agent 调度阶段可调用派发，当前派发使用根节点 revision；未来的 parentTaskId 仅表达主调度追加任务的前序关系，不授予执行成员派发权。派发时解析接收实例及正确 agentSessionId，冻结 `ModuleBinding[]`，不接收模型伪造的模块绑定或版本。一个请求创建一个节点；并行工作拆成多次请求。
-
-同 `commandId` 的同参重试返回原回执；异参返回冲突。重试去重先于乐观版本检查；新请求版本过期须重读，不能自动覆盖。工具调用层用可信调用 ID 关联 commandId，网络重发与模型再次主动派工不是同一回事。读取/投递确认不替代 `result_ready`。
-
-`submitResult` 仅接受当前 assignee 的活动 run，必须匹配 planRevision；证据引用在该任务运行的可信回执集合中核验。`submitResult / waitForChildren` 先可靠保存 staged 提交，不立即发布 result_ready / waiting；大脑在安全片段边界完成收尾并确认无在途副作用后，调度器再核验版本、提交节点状态和 outbox。提交后的新增写入或失败使 staged 候选失效，不能让下游先消费仍在变化的成果。如果子任务仍未解决，应等待或明确修订范围，不能默默把未完成工作计为完成。候选验收始终为 `not_evaluated`。
+公开方法以源码声明为准：WorkspaceDispatchService 的 Initialize、OpenGraph、ConversationBinding、OpenScope、CloseScope、RecoverScopes、CreateMember、DispatchTask、Snapshot、Delta、SessionRead 和 Close；MemberExecutionManager 的 Start、Stop、Inspect、Messages、Acknowledge 及审批／问题入口属于执行管理，不由前端直接写状态。
 
 <a id="scheduling-一次派发的顺序"></a>
 
 ###### 一次派发的顺序
 
-1. 核对工作区、根会话、主调度实例/租约、当前运行和授权；执行 Agent 不能调用派发入口。
-2. 通过 Context 查询成员及全部模块，冻结角色配置、模块、Workflow 和权限基线。定位不完整时返回可处理的缺口，不伪造正式任务节点。
-3. 在同一提交版本中校验父关系、前置版本及全部启用边的 DAG；持久化新任务、派发边/依赖边、outbox 消息、命令回执与图事件。
-4. 持久化成功后才发布图批次并投递邮箱；接收方持久化 inbox 后确认。派发方不持有接收方 Session 的写权限。
-5. 依赖未满足则节点为 waiting；可执行时 queued。取得成员执行槽、会话租约及写冲突资源后，先记录 runId 和执行意图，再启动大脑，实际启动事实推进 running。
-6. 工具回执和终态由大脑事实接入。交付候选可靠保存后，以结果消息唤醒等待方；等待方核实结果版本后继续自己的任务。
-
-图批次、邮箱与幂等索引必须在同一调度事务中提交。`DispatchGraphStore` 等示意端口不作为已实现类型；当前 DispatchStore 归 logic/dispatch/rules，FileDispatchStore 归 logic/dispatch/storage，由 Logic 应用装配注入；运行编排不得反向导入应用装配或 Electron。
+1. 可信主运行注入工作区、根会话、周期和调用身份；严格解析请求并核实计划、岗位、模块来源、权限和前置依赖。
+2. DispatchStore 在同一事务中保存任务、图批次、assignment 消息与命令回执；同命令同请求查原回执，异参拒绝。
+3. 成员管理器核实可领取条件，取得已有准入与工作区占用，可靠保存运行意图后才通过准备端口启动 LoopRuntime。
+4. 运行日志记录真实工具和终态。成员结算复核计划、候选、知识与当前文件证据，再在原事务中发布状态和 result 消息；completed 本身不是业务验收。
 
 <a id="scheduling-消息等待与防死锁"></a>
 
-###### 消息、等待与防死锁
+###### 消息、等待与依赖
 
-内部消息协议放在 Logic 领域契约的独立契约文件，由调度实现投递；形状如下，AgentRef 来自可信绑定，正文与结果证据单独保存，不进入公开图增量：
+持久消息使用 [DispatchMessage](dispatch/rules/dispatch-storage.ts) 的 assignment／result／help／checkpoint 信封及真实投递、领取、确认字段；原消息 ID 和任务／运行绑定用于去重与核对。主轮结束和成员结果触发 [AutoCollaboration](dispatch/runtime/auto-collaboration.ts) 的串行推进，结果回注使用 RunInputSource，不冒充用户新输入。
 
-```ts
-type AgentMessage = {
-  messageId: string; commandId: string; identity: GraphIdentity;
-  from: AgentRef; to: AgentRef; taskId: string; createdAt: string;
-} & (
-  | { kind: 'assignment'; planRevision: number }
-  | { kind: 'result'; replyTo: string; resultId: string;
-      runId: string; planRevision: number }
-  | { kind: 'question'; contentRef: string }
-  | { kind: 'answer'; replyTo: string; contentRef: string }
-);
-```
-
-replyTo 引用原始 assignment/question 的 messageId；接收方核对原发送方、taskId、图归属与当前基线。通道需要时将 question/answer 映射为带来源的 followup 执行输入，不冒充新 assignment。
-
-消息由可靠 outbox/inbox 投递，`messageId` 去重后只入队一次；领取、处理完成与业务结果分别记录。通信状态只在真实交付/消费期间出现，不能用动画或网络轮询推断。
-
-主调度等待已经派发的任务时，目标方案用 `awaitedChildren` 持久化 taskId + planRevision，不添加返回方向的执行边。等待必须在安全片段边界让出大脑槽和工作区占用，收到有效结果后再排队。执行 Agent 若遇到协作缺口则返回主调度，不自行派生子任务或持槽等待未提供的工具。已受理成员与结果回注已接应用级公平准入；任意工具现场的通用持久停泊仍是目标设计；已实现的安全检查点与显式续执行按专门协议核实，不因此开放未知现场恢复。
-
-前置依赖只连接任务节点；结果必须来自指定 planRevision 的有效候选。失败/取消的依赖不会因收到一条回复而满足。结果变旧时阻塞尚未执行的依赖任务；已经执行的下游进入基线复核，不自动重放。除了可视化 DAG，调度器还检查实际等待图：当前任务 → 未满足的前置任务，以及父任务 → awaitedChildren。任一新增派发、等待或修订使其成环均拒绝，防止“A 派 B，B 以 A 的结果为前置，A 又等 B”。问答消息本身不添加执行依赖，也不自动挂起整个任务；如需等待必须登记可检查的任务关系。
+依赖关系必须满足实际图规则及版本、候选审阅门禁。成员求助和检查点分别按已实现协议结算；不存在通用的 waitForChildren、submitResult 或任意 question/answer 派发消息端口。统一 Agent 的内存问答由其独立交换对象负责，不伪装为持久图信封。
 
 <a id="scheduling-并发权限与恢复"></a>
 
 ###### 并发、权限与恢复
 
-- 首版同成员实例串行，不同成员可并行；独立 agentSessionId 与租约保护原生上下文。正常重启保持 agentInstanceId，用 leaseEpoch 拒绝旧进程的迟到回调。
-- 模块写作用域重叠的任务串行；命令实际作用域未知按工作区写冲突处理。等待时释放资源，恢复时重新校验文件及知识基线。这不是操作系统沙箱，也不能阻止用户或外部工具编辑。
-- 派发授权与接收成员工具操作授权分别校验；不得复制“本次任务全部通过”给新任务。新任务权限不超过工作区策略、发起任务允许范围与接收成员策略的交集，批准由可信入口负责。
-- 停止区分请求与实际停止事实；取消自身/子树必须明确 scope。未启动任务可直接取消已排队工作；正在执行的任务等待工具和大脑终态，未知结果为 interrupted。停止不代表回滚。
-- 收到 completed 运行事实只结束执行片段；业务任务没有明确交付候选或等待动作时进入 blocked 并给出原因，不由模型回合结束推断业务成功。普通 conversation 运行可以正常结束，不要求创建 TaskNode 或交付候选。
-- 崩溃恢复先重建事务与邮箱，再核对在途 run。只重投幂等消息，不自动重放未知副作用。重试沿用 taskId、生成新 runId，并保留失败证据；晚到旧 run 不覆盖新状态。
+成员／通道占用、全局准入和工作区读写租约分别由已有服务管理；工具调用仍逐次授权。停止请求不等于释放完成，未知副作用不自动重放。应用重开先核实历史并结算遗留运行，安全 waiting 保留原检查点；显式恢复仍须满足原运行、任务、计划和证据的校验。统一调用关闭失败保留句柄，只重试排空。
 
 <a id="scheduling-目标结构类图待实现"></a>
 
-###### 目标结构类图（待实现）
+###### 当前协作结构
 
 ```mermaid
 classDiagram
-class DispatchService {
-  <<planned>>
-  +dispatch(caller, request)
-  +waitForChildren(caller, request)
-  +submitResult(caller, request)
-}
-class AgentManager { <<planned>> }
-class MemberMailbox { <<planned>> }
-class TaskContextResolver { <<port>> }
-class DispatchGraphStore { <<port>> }
-class AgentRunPort { <<port>> }
-DispatchService ..> TaskContextResolver : 核实并冻结
-DispatchService ..> DispatchGraphStore : 原子事务
-DispatchService ..> AgentManager : 申请成员执行
-AgentManager ..> MemberMailbox : 领取与恢复
-AgentManager ..> AgentRunPort : 执行独立通道
-MemberMailbox ..> DispatchGraphStore : 去重和投递事实
+class WorkspaceDispatchService
+class MemberExecutionManager
+class AutoCollaboration
+class DispatchStore { <<interface>> }
+class MemberExecutionPorts { <<interface>> }
+class AgentManagerModule["team/runtime/agent-manager.ts"] { <<module>> }
+WorkspaceDispatchService ..> AgentManagerModule : prepareMember 分配身份
+WorkspaceDispatchService ..> DispatchStore : 原子派发与周期事务
+MemberExecutionManager ..> DispatchStore : 领取与结算
+MemberExecutionManager ..> MemberExecutionPorts : 注入执行能力
+AutoCollaboration ..> WorkspaceDispatchService : 周期和结果推进
+AutoCollaboration ..> MemberExecutionManager : 启动与停止成员
 ```
 
-后续调度验收至少覆盖：主调度把未配置模块留在主会话执行、把多个自定义岗位派给对应执行者并按返回结果追加后续任务、两种模式的主实例都可按权限直接实现、执行者不得派工、不能新派已退役默认执行者、周期结束释放执行实例、跨图拒绝、依赖成环、重复派发和迟到回调、实例串行/上下文隔离、权限不扩张、写冲突和未知结果不重放。现有任务图渲染只展示实际已接通行为。
+节点对应上文链接的实际声明；目录组合不表示嵌套类或继承。
 
 <a id="scheduling-主会话目标的只读展示端口"></a>
 
@@ -571,7 +488,7 @@ MemberMailbox ..> DispatchGraphStore : 去重和投递事实
 
 同命令同参返回原始意图，无论新 scope 此后是否关闭；幂等检索先于当前基线与 busy 检查。变参冲突不能换 ID 盲重试。仅本次成功提交在内存返回 `fresh:true`，持久回执不含这个启动许可；受理后读取失败要按原命令核实，不能重新调用模型。关闭与重启保留意图和原历史，不自动恢复或重放旧工具。
 
-新 scope 使用新的原生主上下文，同时保留主会话及主实例身份。`latestContext` 按 scopes 持久插入顺序取最后一次核实或业务重规划意图，不能按时间或“最后可读日志”绕过损坏；`priorRunIds` 合并此前隔离集合与两类新周期/补充启动意图，包含尚未创建日志的运行。没有任务图的旧普通聊天返回空上下文，而真正核实的 preflight/accept 仍严格核对主图身份。
+新 scope 使用新的原生主上下文，同时保留主会话及主实例身份。`LatestContext` 按 scopes 持久插入顺序取最后一次核实或业务重规划意图，不能按时间或“最后可读日志”绕过损坏；`PriorRunIds` 合并此前隔离集合与两类新周期/补充启动意图，包含尚未创建日志的运行。没有任务图的旧普通聊天返回空上下文，而真正核实的 preflight/accept 仍严格核对主图身份。
 
 核实周期仅允许只读观察与重新取证。MemberExecutionManager 在准备引擎和获取执行租约前拒绝 ask/execute；补充等待输入也不可升权，持久 invariants 继续验证所有成员运行与补充权限。新成员实例不复用已关闭来源实例。观察文字、核实工具回执和模型 completed 都不等于业务验收；正式写入重规划与重派尚未在此入口开放。
 
@@ -627,7 +544,7 @@ AutoCollaboration 只在成功撤销回执后，从当前派发批次的待启�
 
 ##### 周期运行归属与按需计量
 
-普通主轮在 Runtime 的 beforeRun 取得真实 runId 后，使用 `openScope(identity,scopeId,input,runId)` 原子创建周期与 `runTracking`。结果回注通过 `registerMainRun` 追加原周期；显式补充在消费 waiting 的事务内追加，新核实与业务重规划各在其受理事务登记独立首轮。追加只保存周期、不顺带改变图或目标。legacy 缺少清单时原样保留，不能从时间、TaskSpec 或已有文件猜测完整归属。已登记却无日志的运行仍保留为未核实意图；fresh 上下文排除集合包含这些清单。
+普通主轮在 Runtime 的 beforeRun 取得真实 runId 后，使用 `openScope(identity,scopeId,input,runId)` 原子创建周期与 `runTracking`。结果回注通过 `RegisterMainRun` 追加原周期；显式补充在消费 waiting 的事务内追加，新核实与业务重规划各在其受理事务登记独立首轮。追加只保存周期、不顺带改变图或目标。legacy 缺少清单时原样保留，不能从时间、TaskSpec 或已有文件猜测完整归属。已登记却无日志的运行仍保留为未核实意图；fresh 上下文排除集合包含这些清单。
 
 `ScopeUsageService.Read` 只读取所选 scope 的最多 32 个主轮及有界成员来源。成员使用 task.scopeId/runIds 与 DispatchRun.binding，保留实例释放后的历史；主轮必须匹配登记实例及 conversation 通道。日志事件顺序、身份和 run.started 正文绑定必须与摘要一致。日志缺失、损坏、未知完整性、部分用量或未知价格分别报告，不能视为免费或零消耗。
 
@@ -653,7 +570,7 @@ AutoCollaboration 只在成功撤销回执后，从当前派发批次的待启�
 
 `ScopeBudgetService` 在新普通周期、只读核实周期、业务重规划周期创建时冻结应用策略。默认关闭，旧无 budget 的周期不补造。启用时，首轮证明与主清单同事务写入；结果回注、用户显式补充与成员领取都先在当前派发事务中重读精确 canonical 日志，再将 `budget.lastAdmission` 与本次新增主运行或 DispatchRun 一起提交。策略改变仅影响下个周期，不能抹去当前已报告用量、复活旧执行实例或提升权限。
 
-主执行入口在 beforeRun 前取得 `holdMain(runId)`，在启动失败或引擎关闭后释放。它只用于识别登记后尚未写日志的可信进程内窗口，重启不会恢复该占位。成员以已经持久登记的 starting/running 为在途依据。启用额度的同周期一次只启动一个真实运行；已有在途先返回 `SCOPE_BUDGET_WAITING`，调用方释放本次临时名额并保留批次，原运行结算事件再唤醒核实。没有在途时，缺失、损坏、未完整报告的所需计量拒绝启动；仅配置 Token 不要求价格可知，配置费用才要求可靠估算。
+主执行入口在 beforeRun 前取得 `HoldMain(runId)`，在启动失败或引擎关闭后释放。它只用于识别登记后尚未写日志的可信进程内窗口，重启不会恢复该占位。成员以已经持久登记的 starting/running 为在途依据。启用额度的同周期一次只启动一个真实运行；已有在途先返回 `SCOPE_BUDGET_WAITING`，调用方释放本次临时名额并保留批次，原运行结算事件再唤醒核实。没有在途时，缺失、损坏、未完整报告的所需计量拒绝启动；仅配置 Token 不要求价格可知，配置费用才要求可靠估算。
 
 达到阈值返回 `SCOPE_BUDGET_EXCEEDED`，所需用量无法核实返回 `SCOPE_BUDGET_UNVERIFIABLE`。拒绝必须先在独立 scope mutation 保存 `budget.blocked`，事务外再抛错；不新增运行、不领取信封、不签发启动回执。等待补充被拒绝时，原 wait、goal/input 版本、continuations 和运行清单保持原样；它不是 `goal.blocked`，不能破坏安全检查点。拒绝命令在内部日志中可幂等读取，但公开 continuation/recovery/replan receipt 仍只返回真实已受理意图。
 
@@ -693,7 +610,7 @@ JSON/CSV/PNG 要求另按实际工厂的 `availableValidators` 与文件端口�
 
 ##### 队列插入的原轮次与停止屏障
 
-`insertQueued(taskId,queueId,expectedRunId)` 强制绑定用户选定的活动主轮，缺失/过期身份在领取前拒绝。领取、附件读取和 Runtime 入口前后核查原运行、工作区及停止代次；原消息使用当前主运行权限，不能用队列设置提权或改投成员。停止、协作暂停、协调器关闭及管理器关闭同步撤销插入；实际引擎停止不排在阻塞的插入串行事务之后。
+`InsertQueued(taskId,queueId,expectedRunId)` 强制绑定用户选定的活动主轮，缺失/过期身份在领取前拒绝。领取、附件读取和 Runtime 入口前后核查原运行、工作区及停止代次；原消息使用当前主运行权限，不能用队列设置提权或改投成员。停止、协作暂停、协调器关闭及管理器关闭同步撤销插入；实际引擎停止不排在阻塞的插入串行事务之后。
 
 queued 与接受日志确认后才移除队列项，迟到停止不撤销接受。通信、接受日志或移除/暂停保存失败保持未知并设置独立 `queueAdvanceStopped`，即使暂停写盘失败也不自动推进旧队列；它只阻止普通自动队列，不误停合法成员结果回注。显式继续队列在原 waiting 门禁和持久恢复成功后清除此屏障。旧队列重开仍全部暂停，不迁移或重放。
 
@@ -773,7 +690,7 @@ EffectObservationService 仅从完整可信主 canonical 的原 proposed/allowed
 
 #### 原治理与责任保存核实（Step39）
 
-影响观察通过可选 `observePersistent` 端口核实 cbim_governance_observe/propose 与 cbim_module_owner_change_commit。只在可信唯一主来源与原严格授权均匹配时重建引用，两次核实原命令；来源摘要/身份不符保持不可核实，读取变化使处置依据失效。旧失败/unknown 不清除，记录保存不签发批准、迁移、派发或恢复资格。取证在任务事务外，不在 Store 锁内反向等待知识队列。
+影响观察通过可选 `ObservePersistent` 端口核实 cbim_governance_observe/propose 与 cbim_module_owner_change_commit。只在可信唯一主来源与原严格授权均匹配时重建引用，两次核实原命令；来源摘要/身份不符保持不可核实，读取变化使处置依据失效。旧失败/unknown 不清除，记录保存不签发批准、迁移、派发或恢复资格。取证在任务事务外，不在 Store 锁内反向等待知识队列。
 
 <a id="scheduling-受控文件统一影响观察step40"></a>
 
@@ -953,8 +870,8 @@ class N_src_logic_conversation["conversation/"] {
 }
 N_src_logic_application ..> N_src_logic_automation : 导入依赖
 N_src_logic_application ..> N_src_logic_budget : 导入依赖
-N_src_logic_application ..> N_src_logic_conversation : 导入依赖
 N_src_logic_application ..> N_src_logic_connectors : 导入依赖
+N_src_logic_application ..> N_src_logic_conversation : 导入依赖
 N_src_logic_application ..> N_src_logic_agents : 导入依赖
 N_src_logic_automation ..> N_src_logic_conversation : 导入依赖
 N_src_logic_budget ..> N_src_logic_agents : 导入依赖
@@ -986,12 +903,12 @@ N_src_logic_dispatch ..> N_src_logic_engines : 导入依赖
 N_src_logic_dispatch ..> N_src_logic_evidence : 导入依赖
 N_src_logic_engines ..> N_src_logic_execution : 导入依赖
 N_src_logic_evidence ..> N_src_logic_file_operations : 导入依赖
-N_src_logic_evidence ..> N_src_logic_execution : 导入依赖
 N_src_logic_evidence ..> N_src_logic_dispatch : 导入依赖
+N_src_logic_evidence ..> N_src_logic_execution : 导入依赖
 N_src_logic_execution ..> N_src_logic_engines : 导入依赖
 N_src_logic_execution ..> N_src_logic_evidence : 导入依赖
-N_src_logic_execution ..> N_src_logic_file_operations : 导入依赖
 N_src_logic_execution ..> N_src_logic_feedback : 导入依赖
+N_src_logic_execution ..> N_src_logic_file_operations : 导入依赖
 N_src_logic_execution ..> N_src_logic_dispatch : 导入依赖
 N_src_logic_file_operations ..> N_src_logic_evidence : 导入依赖
 N_src_logic_file_operations ..> N_src_logic_execution : 导入依赖
@@ -1068,39 +985,39 @@ class N_src_logic_workspace["workspace/"] {
 各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
 
 - `agents` → `tools`：导入。
-- `agents` → `tasks`：导入。
 - `agents` → `execution`：导入。
-- `application` → `web`：导入。
+- `agents` → `tasks`：导入。
 - `application` → `automation`：导入。
-- `application` → `file-operations`：导入。
 - `application` → `budget`：导入。
-- `application` → `models`：导入。
-- `application` → `engines`：导入。
-- `application` → `team`：导入。
-- `application` → `runtime`：导入。
-- `application` → `feedback`：导入。
-- `application` → `updates`：导入。
-- `application` → `execution`：导入。
-- `application` → `dispatch`：导入。
-- `application` → `materials`：导入。
-- `application` → `history`：导入。
-- `application` → `conversation`：导入。
-- `application` → `workspace`：导入。
-- `application` → `knowledge`：导入。
-- `application` → `resources`：导入。
 - `application` → `connectors`：导入。
-- `application` → `evidence`：导入。
+- `application` → `conversation`：导入。
+- `application` → `dispatch`：导入。
+- `application` → `engines`：导入。
+- `application` → `execution`：导入。
+- `application` → `feedback`：导入。
+- `application` → `file-operations`：导入。
+- `application` → `history`：导入。
+- `application` → `knowledge`：导入。
+- `application` → `materials`：导入。
+- `application` → `models`：导入。
+- `application` → `resources`：导入。
+- `application` → `runtime`：导入。
+- `application` → `team`：导入。
+- `application` → `updates`：导入。
+- `application` → `web`：导入。
+- `application` → `workspace`：导入。
 - `application` → `agents`：导入。
+- `application` → `evidence`：导入。
 - `application` → `tasks`：导入。
 - `application` → `tools`：导入。
 - `application` → `governance`：导入。
-- `automation` → `workspace`：导入。
 - `automation` → `conversation`：导入。
 - `automation` → `dispatch`：导入。
 - `automation` → `knowledge`：导入。
 - `automation` → `team`：导入。
-- `budget` → `team`：导入。
+- `automation` → `workspace`：导入。
 - `budget` → `dispatch`：导入。
+- `budget` → `team`：导入。
 - `budget` → `engines`：导入。
 - `budget` → `tasks`：导入。
 - `budget` → `execution`：导入。
@@ -1111,19 +1028,19 @@ class N_src_logic_workspace["workspace/"] {
 - `connectors` → `resources`：导入。
 - `conversation` → `tools`：导入。
 - `conversation` → `engines`：导入。
-- `conversation` → `knowledge`：导入。
 - `conversation` → `execution`：导入。
+- `conversation` → `knowledge`：导入。
 - `conversation` → `tasks`：导入。
-- `dispatch` → `execution`：导入。
-- `dispatch` → `team`：导入。
-- `dispatch` → `tasks`：导入。
-- `dispatch` → `workspace`：导入。
-- `dispatch` → `file-operations`：导入。
 - `dispatch` → `budget`：导入。
-- `dispatch` → `knowledge`：导入。
-- `dispatch` → `tools`：导入。
+- `dispatch` → `execution`：导入。
+- `dispatch` → `file-operations`：导入。
+- `dispatch` → `tasks`：导入。
+- `dispatch` → `team`：导入。
+- `dispatch` → `workspace`：导入。
 - `dispatch` → `conversation`：导入。
 - `dispatch` → `engines`：导入。
+- `dispatch` → `knowledge`：导入。
+- `dispatch` → `tools`：导入。
 - `dispatch` → `evidence`：导入。
 - `engines` → `models`：导入。
 - `engines` → `updates`：导入。
@@ -1132,8 +1049,8 @@ class N_src_logic_workspace["workspace/"] {
 - `evidence` → `tools`：导入。
 - `evidence` → `tasks`：导入。
 - `evidence` → `workspace`：导入。
-- `evidence` → `execution`：导入。
 - `evidence` → `dispatch`：导入。
+- `evidence` → `execution`：导入。
 - `evidence` → `knowledge`：导入。
 - `evidence` → `runtime`：导入。
 - `evidence` → `team`：导入。
@@ -1143,61 +1060,61 @@ class N_src_logic_workspace["workspace/"] {
 - `execution` → `tools`：导入。
 - `execution` → `agents`：导入。
 - `execution` → `engines`：导入。
-- `execution` → `web`：导入。
-- `execution` → `workspace`：导入。
-- `execution` → `knowledge`：导入。
+- `execution` → `budget`：导入。
+- `execution` → `connectors`：导入。
 - `execution` → `conversation`：导入。
 - `execution` → `evidence`：导入。
-- `execution` → `tasks`：导入。
-- `execution` → `file-operations`：导入。
-- `execution` → `connectors`：导入。
 - `execution` → `feedback`：导入。
+- `execution` → `file-operations`：导入。
 - `execution` → `governance`：导入。
+- `execution` → `knowledge`：导入。
+- `execution` → `tasks`：导入。
 - `execution` → `team`：导入。
-- `execution` → `budget`：导入。
+- `execution` → `web`：导入。
+- `execution` → `workspace`：导入。
 - `execution` → `models`：导入。
 - `execution` → `dispatch`：导入。
 - `file-operations` → `evidence`：导入。
-- `file-operations` → `workspace`：导入。
 - `file-operations` → `tasks`：导入。
+- `file-operations` → `workspace`：导入。
 - `file-operations` → `execution`：导入。
 - `file-operations` → `dispatch`：导入。
 - `file-operations` → `team`：导入。
-- `governance` → `tasks`：导入。
 - `governance` → `execution`：导入。
+- `governance` → `tasks`：导入。
 - `governance` → `workspace`：导入。
 - `governance` → `knowledge`：导入。
 - `history` → `agents`：导入。
-- `history` → `execution`：导入。
 - `history` → `dispatch`：导入。
+- `history` → `execution`：导入。
+- `history` → `runtime`：导入。
 - `history` → `tasks`：导入。
 - `history` → `team`：导入。
-- `history` → `runtime`：导入。
 - `knowledge` → `connectors`：导入。
 - `knowledge` → `workspace`：导入。
 - `knowledge` → `team`：导入。
 - `knowledge` → `dispatch`：导入。
-- `materials` → `tasks`：导入。
 - `materials` → `execution`：导入。
 - `materials` → `knowledge`：导入。
+- `materials` → `tasks`：导入。
 - `materials` → `connectors`：导入。
 - `resources` → `knowledge`：导入。
-- `runtime` → `execution`：导入。
 - `runtime` → `dispatch`：导入。
+- `runtime` → `execution`：导入。
 - `runtime` → `tasks`：导入。
 - `runtime` → `team`：导入。
 - `runtime` → `evidence`：导入。
 - `runtime` → `tools`：导入。
-- `tasks` → `team`：导入。
 - `tasks` → `dispatch`：导入。
+- `tasks` → `team`：导入。
 - `tasks` → `engines`：导入。
 - `tasks` → `execution`：导入。
 - `tasks` → `tools`：导入。
 - `tasks` → `models`：导入。
 - `tasks` → `budget`：导入。
 - `tasks` → `evidence`：导入。
-- `tasks` → `knowledge`：导入。
 - `tasks` → `file-operations`：导入。
+- `tasks` → `knowledge`：导入。
 - `tasks` → `workspace`：导入。
 - `tasks` → `governance`：导入。
 - `tasks` → `runtime`：导入。
@@ -1211,13 +1128,13 @@ class N_src_logic_workspace["workspace/"] {
 - `team` → `knowledge`：导入。
 - `team` → `evidence`：导入。
 - `team` → `runtime`：导入。
-- `team` → `conversation`：导入。
 - `team` → `budget`：导入。
+- `team` → `conversation`：导入。
 - `tools` → `engines`：导入。
-- `tools` → `governance`：导入。
-- `tools` → `workspace`：导入。
-- `tools` → `team`：导入。
 - `tools` → `feedback`：导入。
+- `tools` → `governance`：导入。
+- `tools` → `team`：导入。
+- `tools` → `workspace`：导入。
 - `tools` → `connectors`：导入。
 - `tools` → `tasks`：导入。
 - `tools` → `execution`：导入。
@@ -1226,9 +1143,9 @@ class N_src_logic_workspace["workspace/"] {
 - `workspace` → `knowledge`：导入。
 - `workspace` → `team`：导入。
 - `workspace` → `tools`：导入。
+- `workspace` → `dispatch`：导入。
 - `workspace` → `execution`：导入。
 - `workspace` → `tasks`：导入。
-- `workspace` → `dispatch`：导入。
 - `workspace` → `governance`：导入。
 
 ## 子目录导航

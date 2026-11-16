@@ -75,17 +75,53 @@ test('长类和多入口模块分段展示，保留全部公开生命周期接�
   expect(document).toContain('公开入口 2/2');
 });
 
-test('非叶子目录保持子目录边界，并列出本层模块公开入口',()=>{
+test('非叶子目录保持子目录边界，保留本层类、接口、类型、成员和公开入口',()=>{
   const project=fixture({
-    'src/logic/execution/rules/member-run.ts':'export interface Binding {runId:string}; export function checkedBinding(value:Binding){return value}',
+    'src/logic/execution/rules/member-run.ts':'export interface Binding {runId:string}; export type State={ready:boolean}; export class Runner {private active=false; Start(){this.active=true}}; export function checkedBinding(value:Binding){return value}',
     'src/logic/execution/rules/runtime/types.ts':'export interface Model {id:string}',
   });
   const result=project.run();expect(result.status,result.stderr).toBe(0);
   const document=project.read('src/logic/execution/rules/ARCHITECTURE.md');
   expect(document).toContain('["runtime/"] {\n  <<directory>>');
   expect(document).toContain('+checkedBinding()');
+  for(const name of ['Binding','State','Runner'])expect(document).toContain(`["${name}"]`);
+  for(const member of ['+runId','+ready','-active','+Start()'])expect(document).toContain(`  ${member}\n`);
   expect(document).not.toContain('["Model"]');
   expect(document).toContain('[runtime/](runtime/ARCHITECTURE.md)');
+});
+
+test('依赖图解析 js 到 ts、动态导入、require 和样式，并标明跨文件继承的真实来源',()=>{
+  const project=fixture({
+    'src/core/utility/base.ts':'export class Base {Start(){}}',
+    'src/core/utility/types.mts':'export interface Input {id:string}',
+    'src/core/platform/node/entry.ts':`import {Base as Parent} from '../../utility/base.js';
+      import type {Input} from '../../utility/types.mjs';
+      import './style.css';
+      export class Child extends Parent {input?:Input}
+      export const Load=()=>import('./lazy.js');
+      const helper=require('./helper.cjs');`,
+    'src/core/platform/node/lazy.ts':'export const ready=true;',
+    'src/core/platform/node/helper.cts':'export const value=1;',
+    'src/core/platform/node/style.css':'.sample {}',
+  });
+  const result=project.run();expect(result.status,result.stderr).toBe(0);
+  const document=project.read('src/core/platform/node/ARCHITECTURE.md');
+  for(const target of ['../../utility/base.ts','../../utility/types.mts','lazy.ts','helper.cts','style.css'])expect(document).toContain(`[${target}](${target})`);
+  expect(document).toContain('Parent (../../utility/base.js)');
+  expect(document).toContain('继承／实现来源：`Parent` → [../../utility/base.ts](../../utility/base.ts)');
+  expect(project.read('src/core/ARCHITECTURE.md')).toContain('`platform` → `utility`');
+  expect(project.run(true).status).toBe(0);
+});
+
+test('源码依赖无法解析时拒绝整批写入，不能用缺边的图报告一致',()=>{
+  for(const source of ["export {missing} from './missing.js';","const entry='./runtime.js'; void import(entry);","import './missing.css';"]){
+    const project=fixture({'src/core/sample.ts':source});
+    const before=project.read('src/ARCHITECTURE.md');
+    const result=project.run();
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('源码依赖无法解析');
+    expect(project.read('src/ARCHITECTURE.md')).toBe(before);
+  }
 });
 
 test('文件清单保留源码、样式和资源，契约只在唯一架构文档维护',()=>{

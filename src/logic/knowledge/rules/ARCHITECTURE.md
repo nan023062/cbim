@@ -70,8 +70,8 @@ portable-package 的递归对象排序组合 utility.orderJsonValue，继续使�
 ```mermaid
 classDiagram
 class Builtins {
-  +catalog()
-  +read(id, expectedVersion)
+  +Catalog()
+  +Read(id, expectedVersion)
 }
 note for Builtins "从 assets 白名单读取规范与流程、版本和引用；GitHub 写入属于独立主会话工具"
 ```
@@ -265,8 +265,8 @@ class N_src_logic_knowledge_rules_object_storage_ts["object-storage.ts"] {
 class N_src_logic_knowledge_rules_planned_commit_ts["planned-commit.ts"] {
   <<module>>
 }
-N_src_logic_knowledge_rules_object_crud_ts ..> N_src_logic_knowledge_rules_object_contract_ts : 导入依赖
 N_src_logic_knowledge_rules_object_crud_ts ..> N_src_logic_knowledge_rules_knowledge_ts : 导入依赖
+N_src_logic_knowledge_rules_object_crud_ts ..> N_src_logic_knowledge_rules_object_contract_ts : 导入依赖
 N_src_logic_knowledge_rules_object_crud_ts ..> N_src_logic_knowledge_rules_planned_commit_ts : 导入依赖
 N_src_logic_knowledge_rules_object_storage_ts ..> N_src_logic_knowledge_rules_planned_commit_ts : 导入依赖
 ```
@@ -305,34 +305,105 @@ class N_src_logic_knowledge_rules_types_ts["types.ts"] {
 
 各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
 
-- `knowledge-queries.ts` → `types.ts`：导入。
 - `knowledge-queries.ts` → `read-models`：导入。
+- `knowledge-queries.ts` → `types.ts`：导入。
 - `knowledge-refresh.ts` → `knowledge-write-input.ts`：导入。
-- `knowledge-refresh.ts` → `types.ts`：导入。
 - `knowledge-refresh.ts` → `read-models`：导入。
+- `knowledge-refresh.ts` → `types.ts`：导入。
 - `knowledge-write-input.ts` → `planned-commit.ts`：导入。
 - `knowledge-write-input.ts` → `types.ts`：导入。
 - `knowledge.ts` → `types.ts`：导入。
 - `memory-index.ts` → `tool-output-base.ts`：导入。
 - `object-contract.ts` → `types.ts`：导入。
-- `object-crud.ts` → `object-contract.ts`：导入。
-- `object-crud.ts` → `ports.ts`：导入。
 - `object-crud.ts` → `knowledge.ts`：导入。
-- `object-crud.ts` → `types.ts`：导入。
+- `object-crud.ts` → `object-contract.ts`：导入。
 - `object-crud.ts` → `planned-commit.ts`：导入。
-- `object-storage.ts` → `types.ts`：导入。
+- `object-crud.ts` → `ports.ts`：导入。
+- `object-crud.ts` → `types.ts`：导入。
 - `object-storage.ts` → `planned-commit.ts`：导入。
+- `object-storage.ts` → `types.ts`：导入。
 - `portable-package.ts` → `knowledge.ts`：导入。
 - `portable-package.ts` → `types.ts`：导入。
-- `ports.ts` → `types.ts`：导入。
 - `ports.ts` → `object-storage.ts`：导入。
 - `ports.ts` → `planned-commit.ts`：导入。
+- `ports.ts` → `types.ts`：导入。
 - `read-models` → `types.ts`：导入。
 - `tool-output-builtins.ts` → `tool-output-base.ts`：导入。
 - `tool-output-queries.ts` → `tool-output-base.ts`：导入。
 - `tool-output-transactions.ts` → `tool-output-base.ts`：导入。
 
-### knowledge-write-input.ts 公开入口
+### builtins.ts
+
+```mermaid
+classDiagram
+class N_src_logic_knowledge_rules_builtins_ts["builtins.ts"] {
+  <<module>>
+}
+class N_src_logic_knowledge_rules_builtins_ts_Builtins["Builtins"] {
+  +constructor()
+  +Catalog()
+  +Read()
+  -assetsRoot
+  -Document()
+}
+N_src_logic_knowledge_rules_builtins_ts ..> N_src_logic_knowledge_rules_builtins_ts_Builtins : 声明
+```
+
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)。
+
+
+### knowledge-queries.ts
+
+```mermaid
+classDiagram
+class N_src_logic_knowledge_rules_knowledge_queries_ts["knowledge-queries.ts"] {
+  <<module>>
+}
+class N_src_logic_knowledge_rules_knowledge_queries_ts_KnowledgeQueries["KnowledgeQueries"] {
+  +constructor()
+  +Modules()
+  +Module()
+  +Agents()
+  +Agent()
+  -workspace
+}
+N_src_logic_knowledge_rules_knowledge_queries_ts ..> N_src_logic_knowledge_rules_knowledge_queries_ts_KnowledgeQueries : 声明
+```
+
+直接依赖：[read-models/index.ts](read-models/index.ts)、[types.ts](types.ts)。
+
+
+### knowledge-refresh.ts
+
+```mermaid
+classDiagram
+class N_src_logic_knowledge_rules_knowledge_refresh_ts["knowledge-refresh.ts"] {
+  <<module>>
+}
+class N_src_logic_knowledge_rules_knowledge_refresh_ts_KnowledgeRefreshPort["KnowledgeRefreshPort"] {
+  <<interface>>
+  +Assert()
+  +CommittedReceipt()
+  +Commit()
+}
+N_src_logic_knowledge_rules_knowledge_refresh_ts ..> N_src_logic_knowledge_rules_knowledge_refresh_ts_KnowledgeRefreshPort : 声明
+class N_src_logic_knowledge_rules_knowledge_refresh_ts_external_KnowledgeSnapshotReader["KnowledgeSnapshotReader (./types)"] {
+  <<boundary>>
+}
+N_src_logic_knowledge_rules_knowledge_refresh_ts_external_KnowledgeSnapshotReader <|-- N_src_logic_knowledge_rules_knowledge_refresh_ts_KnowledgeRefreshPort
+class N_src_logic_knowledge_rules_knowledge_refresh_ts_KnowledgeRefresh["KnowledgeRefresh"] {
+  +constructor()
+  +Refresh()
+  -workspace
+}
+N_src_logic_knowledge_rules_knowledge_refresh_ts ..> N_src_logic_knowledge_rules_knowledge_refresh_ts_KnowledgeRefresh : 声明
+```
+
+继承／实现来源：`KnowledgeSnapshotReader` → [types.ts](types.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[knowledge-write-input.ts](knowledge-write-input.ts)、[read-models/index.ts](read-models/index.ts)、[types.ts](types.ts)。
+
+
+### knowledge-write-input.ts
 
 ```mermaid
 classDiagram
@@ -344,8 +415,43 @@ class N_src_logic_knowledge_rules_knowledge_write_input_ts["knowledge-write-inpu
 }
 ```
 
+```mermaid
+classDiagram
+class N_src_logic_knowledge_rules_knowledge_write_input_ts["knowledge-write-input.ts"] {
+  <<module>>
+}
+class N_src_logic_knowledge_rules_knowledge_write_input_ts_KnowledgeRefreshInput["KnowledgeRefreshInput"] {
+  <<type>>
 
-### knowledge.ts 公开入口
+}
+N_src_logic_knowledge_rules_knowledge_write_input_ts ..> N_src_logic_knowledge_rules_knowledge_write_input_ts_KnowledgeRefreshInput : 声明
+class N_src_logic_knowledge_rules_knowledge_write_input_ts_KnowledgeWriteReference["KnowledgeWriteReference"] {
+  <<type>>
+
+}
+N_src_logic_knowledge_rules_knowledge_write_input_ts ..> N_src_logic_knowledge_rules_knowledge_write_input_ts_KnowledgeWriteReference : 声明
+```
+
+直接依赖：[planned-commit.ts](planned-commit.ts)、[types.ts](types.ts)。
+
+
+### knowledge-write-observation.ts
+
+```mermaid
+classDiagram
+class N_src_logic_knowledge_rules_knowledge_write_observation_ts["knowledge-write-observation.ts"] {
+  <<module>>
+}
+class N_src_logic_knowledge_rules_knowledge_write_observation_ts_KnowledgeTransactionObservation["KnowledgeTransactionObservation"] {
+  <<type>>
+
+}
+N_src_logic_knowledge_rules_knowledge_write_observation_ts ..> N_src_logic_knowledge_rules_knowledge_write_observation_ts_KnowledgeTransactionObservation : 声明
+```
+
+
+
+### knowledge.ts
 
 ```mermaid
 classDiagram
@@ -356,8 +462,27 @@ class N_src_logic_knowledge_rules_knowledge_ts["knowledge.ts"] {
 }
 ```
 
+```mermaid
+classDiagram
+class N_src_logic_knowledge_rules_knowledge_ts["knowledge.ts"] {
+  <<module>>
+}
+class N_src_logic_knowledge_rules_knowledge_ts_Rules["Rules"] {
+  +assetsRoot
+  +constructor()
+  +Init()
+  +Validate()
+  -validators
+  -Inventory()
+  -Body()
+}
+N_src_logic_knowledge_rules_knowledge_ts ..> N_src_logic_knowledge_rules_knowledge_ts_Rules : 声明
+```
 
-### memory-index.ts 公开入口
+直接依赖：[../../../core/json.ts](../../../core/json.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../connectors/rules/registry.ts](../../connectors/rules/registry.ts)、[types.ts](types.ts)、[../../workspace/rules/module-outline.ts](../../workspace/rules/module-outline.ts)、[../../workspace/rules/workflow-contract.ts](../../workspace/rules/workflow-contract.ts)。
+
+
+### memory-index.ts
 
 ```mermaid
 classDiagram
@@ -369,8 +494,127 @@ class N_src_logic_knowledge_rules_memory_index_ts["memory-index.ts"] {
 }
 ```
 
+```mermaid
+classDiagram
+class N_src_logic_knowledge_rules_memory_index_ts["memory-index.ts"] {
+  <<module>>
+}
+class N_src_logic_knowledge_rules_memory_index_ts_MemoryChunk["MemoryChunk"] {
+  <<interface>>
+  +path
+  +sourceHash
+  +offset
+  +text
+}
+N_src_logic_knowledge_rules_memory_index_ts ..> N_src_logic_knowledge_rules_memory_index_ts_MemoryChunk : 声明
+class N_src_logic_knowledge_rules_memory_index_ts_MemoryIndexPlan["MemoryIndexPlan"] {
+  <<interface>>
+  +version
+  +key
+  +workspaceId
+  +revision
+  +modelHash
+  +dimensions
+  +strategy
+  +chunks
+}
+N_src_logic_knowledge_rules_memory_index_ts ..> N_src_logic_knowledge_rules_memory_index_ts_MemoryIndexPlan : 声明
+class N_src_logic_knowledge_rules_memory_index_ts_MemoryIndex["MemoryIndex"] {
+  <<interface>>
+  +vectors
+}
+N_src_logic_knowledge_rules_memory_index_ts ..> N_src_logic_knowledge_rules_memory_index_ts_MemoryIndex : 声明
+N_src_logic_knowledge_rules_memory_index_ts_MemoryIndexPlan <|-- N_src_logic_knowledge_rules_memory_index_ts_MemoryIndex
+```
 
-### planned-commit.ts 公开入口
+直接依赖：[tool-output-base.ts](tool-output-base.ts)。
+
+
+### object-contract.ts
+
+```mermaid
+classDiagram
+class N_src_logic_knowledge_rules_object_contract_ts["object-contract.ts"] {
+  <<module>>
+}
+class N_src_logic_knowledge_rules_object_contract_ts_ObjectOperation["ObjectOperation"] {
+  <<type>>
+
+}
+N_src_logic_knowledge_rules_object_contract_ts ..> N_src_logic_knowledge_rules_object_contract_ts_ObjectOperation : 声明
+class N_src_logic_knowledge_rules_object_contract_ts_ObjectPreview["ObjectPreview"] {
+  <<interface>>
+  +planId
+  +objects
+  +notice
+}
+N_src_logic_knowledge_rules_object_contract_ts ..> N_src_logic_knowledge_rules_object_contract_ts_ObjectPreview : 声明
+class N_src_logic_knowledge_rules_object_contract_ts_external_Preview["Preview (./types)"] {
+  <<boundary>>
+}
+N_src_logic_knowledge_rules_object_contract_ts_external_Preview <|-- N_src_logic_knowledge_rules_object_contract_ts_ObjectPreview
+class N_src_logic_knowledge_rules_object_contract_ts_ObjectCommit["ObjectCommit"] {
+  <<interface>>
+  +cleanupWarnings
+}
+N_src_logic_knowledge_rules_object_contract_ts ..> N_src_logic_knowledge_rules_object_contract_ts_ObjectCommit : 声明
+class N_src_logic_knowledge_rules_object_contract_ts_external_KnowledgeCommit["KnowledgeCommit (./types)"] {
+  <<boundary>>
+}
+N_src_logic_knowledge_rules_object_contract_ts_external_KnowledgeCommit <|-- N_src_logic_knowledge_rules_object_contract_ts_ObjectCommit
+```
+
+继承／实现来源：`Preview` → [types.ts](types.ts)。
+继承／实现来源：`KnowledgeCommit` → [types.ts](types.ts)。
+直接依赖：[types.ts](types.ts)、[../../team/rules/agent-runtime.ts](../../team/rules/agent-runtime.ts)、[../../workspace/rules/module-outline.ts](../../workspace/rules/module-outline.ts)。
+
+
+### object-crud.ts
+
+```mermaid
+classDiagram
+class N_src_logic_knowledge_rules_object_crud_ts["object-crud.ts"] {
+  <<module>>
+}
+class N_src_logic_knowledge_rules_object_crud_ts_ObjectCrud["ObjectCrud"] {
+  +constructor()
+  +Preview()
+  +Commit()
+  -w
+}
+N_src_logic_knowledge_rules_object_crud_ts ..> N_src_logic_knowledge_rules_object_crud_ts_ObjectCrud : 声明
+```
+
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/json.ts](../../../core/json.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[knowledge.ts](knowledge.ts)、[object-contract.ts](object-contract.ts)、[planned-commit.ts](planned-commit.ts)、[ports.ts](ports.ts)、[types.ts](types.ts)、[../../workspace/rules/workflow-contract.ts](../../workspace/rules/workflow-contract.ts)。
+
+
+### object-storage.ts
+
+```mermaid
+classDiagram
+class N_src_logic_knowledge_rules_object_storage_ts["object-storage.ts"] {
+  <<module>>
+}
+class N_src_logic_knowledge_rules_object_storage_ts_ObjectPlan["ObjectPlan"] {
+  <<type>>
+
+}
+N_src_logic_knowledge_rules_object_storage_ts ..> N_src_logic_knowledge_rules_object_storage_ts_ObjectPlan : 声明
+class N_src_logic_knowledge_rules_object_storage_ts_ObjectStorage["ObjectStorage"] {
+  <<interface>>
+  +AssertAbsent()
+  +AssertKnowledgeOnly()
+  +SavePlan()
+  +ReadPlan()
+  +PruneEmpty()
+}
+N_src_logic_knowledge_rules_object_storage_ts ..> N_src_logic_knowledge_rules_object_storage_ts_ObjectStorage : 声明
+```
+
+直接依赖：[planned-commit.ts](planned-commit.ts)、[types.ts](types.ts)。
+
+
+### planned-commit.ts
 
 ```mermaid
 classDiagram
@@ -381,8 +625,50 @@ class N_src_logic_knowledge_rules_planned_commit_ts["planned-commit.ts"] {
 }
 ```
 
+```mermaid
+classDiagram
+class N_src_logic_knowledge_rules_planned_commit_ts["planned-commit.ts"] {
+  <<module>>
+}
+class N_src_logic_knowledge_rules_planned_commit_ts_ResolvedObjectOperation["ResolvedObjectOperation"] {
+  <<type>>
 
-### portable-package.ts 公开入口
+}
+N_src_logic_knowledge_rules_planned_commit_ts ..> N_src_logic_knowledge_rules_planned_commit_ts_ResolvedObjectOperation : 声明
+class N_src_logic_knowledge_rules_planned_commit_ts_ObjectPlanV2["ObjectPlanV2"] {
+  <<type>>
+
+}
+N_src_logic_knowledge_rules_planned_commit_ts ..> N_src_logic_knowledge_rules_planned_commit_ts_ObjectPlanV2 : 声明
+class N_src_logic_knowledge_rules_planned_commit_ts_PackagePlanV2["PackagePlanV2"] {
+  <<type>>
+
+}
+N_src_logic_knowledge_rules_planned_commit_ts ..> N_src_logic_knowledge_rules_planned_commit_ts_PackagePlanV2 : 声明
+class N_src_logic_knowledge_rules_planned_commit_ts_PlannedKnowledgeCommit["PlannedKnowledgeCommit"] {
+  <<type>>
+
+}
+N_src_logic_knowledge_rules_planned_commit_ts ..> N_src_logic_knowledge_rules_planned_commit_ts_PlannedKnowledgeCommit : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_logic_knowledge_rules_planned_commit_ts["planned-commit.ts"] {
+  <<module>>
+}
+class N_src_logic_knowledge_rules_planned_commit_ts_KnowledgePlanRef["KnowledgePlanRef"] {
+  <<type>>
+  +kind
+  +planId
+}
+N_src_logic_knowledge_rules_planned_commit_ts ..> N_src_logic_knowledge_rules_planned_commit_ts_KnowledgePlanRef : 声明
+```
+
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)。
+
+
+### portable-package.ts
 
 ```mermaid
 classDiagram
@@ -394,6 +680,340 @@ class N_src_logic_knowledge_rules_portable_package_ts["portable-package.ts"] {
   +planWorkspacePackage()
 }
 ```
+
+```mermaid
+classDiagram
+class N_src_logic_knowledge_rules_portable_package_ts["portable-package.ts"] {
+  <<module>>
+}
+class N_src_logic_knowledge_rules_portable_package_ts_WorkspacePackageKind["WorkspacePackageKind"] {
+  <<type>>
+
+}
+N_src_logic_knowledge_rules_portable_package_ts ..> N_src_logic_knowledge_rules_portable_package_ts_WorkspacePackageKind : 声明
+class N_src_logic_knowledge_rules_portable_package_ts_WorkspacePackageMode["WorkspacePackageMode"] {
+  <<type>>
+
+}
+N_src_logic_knowledge_rules_portable_package_ts ..> N_src_logic_knowledge_rules_portable_package_ts_WorkspacePackageMode : 声明
+class N_src_logic_knowledge_rules_portable_package_ts_WorkspacePackage["WorkspacePackage"] {
+  <<interface>>
+  +format
+  +version
+  +kind
+  +name
+  +summary
+  +files
+  +skill
+  +fingerprint
+}
+N_src_logic_knowledge_rules_portable_package_ts ..> N_src_logic_knowledge_rules_portable_package_ts_WorkspacePackage : 声明
+class N_src_logic_knowledge_rules_portable_package_ts_PackageSelection["PackageSelection"] {
+  <<interface>>
+  +kind
+  +objectId
+  +name
+  +summary
+}
+N_src_logic_knowledge_rules_portable_package_ts ..> N_src_logic_knowledge_rules_portable_package_ts_PackageSelection : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_logic_knowledge_rules_portable_package_ts["portable-package.ts"] {
+  <<module>>
+}
+class N_src_logic_knowledge_rules_portable_package_ts_PackagePlacement["PackagePlacement"] {
+  <<interface>>
+  +mode
+  +targetParentId
+  +slug
+}
+N_src_logic_knowledge_rules_portable_package_ts ..> N_src_logic_knowledge_rules_portable_package_ts_PackagePlacement : 声明
+class N_src_logic_knowledge_rules_portable_package_ts_PackageChanges["PackageChanges"] {
+  <<interface>>
+  +changes
+  +targetRoot
+  +createdRoots
+  +deletedRoots
+  +warnings
+  +removedBindings
+}
+N_src_logic_knowledge_rules_portable_package_ts ..> N_src_logic_knowledge_rules_portable_package_ts_PackageChanges : 声明
+```
+
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/json.ts](../../../core/json.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../core/utility/index.ts](../../../core/utility/index.ts)、[knowledge.ts](knowledge.ts)、[types.ts](types.ts)、[../../workspace/rules/workflow-contract.ts](../../workspace/rules/workflow-contract.ts)。
+
+
+### ports.ts
+
+成员 1/2（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_logic_knowledge_rules_ports_ts["ports.ts"] {
+  <<module>>
+}
+class N_src_logic_knowledge_rules_ports_ts_SourceSnapshotReader["SourceSnapshotReader"] {
+  <<interface>>
+  +WithSourceSnapshot()
+}
+N_src_logic_knowledge_rules_ports_ts ..> N_src_logic_knowledge_rules_ports_ts_SourceSnapshotReader : 声明
+class N_src_logic_knowledge_rules_ports_ts_KnowledgeWorkspace["KnowledgeWorkspace"] {
+  <<interface>>
+  +objects
+  +entry
+  +instanceId
+  +paths
+  +rules
+  +tasks
+  +state
+  +Assert()
+  +Read()
+  +Snapshot()
+  +Preview()
+  +Commit()
+  +CommittedReceipt()
+  +CommitPlanned()
+  +PlanMove()
+  +StartTask()
+}
+N_src_logic_knowledge_rules_ports_ts ..> N_src_logic_knowledge_rules_ports_ts_KnowledgeWorkspace : 声明
+```
+
+成员 2/2（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_logic_knowledge_rules_ports_ts["ports.ts"] {
+  <<module>>
+}
+class N_src_logic_knowledge_rules_ports_ts_KnowledgeWorkspace["KnowledgeWorkspace"] {
+  <<interface>>
+  +CancelTask()
+}
+N_src_logic_knowledge_rules_ports_ts ..> N_src_logic_knowledge_rules_ports_ts_KnowledgeWorkspace : 声明
+```
+
+直接依赖：[object-storage.ts](object-storage.ts)、[planned-commit.ts](planned-commit.ts)、[types.ts](types.ts)、[../../workspace/ports/paths.ts](../../workspace/ports/paths.ts)。
+
+
+### tool-output-base.ts
+
+```mermaid
+classDiagram
+class N_src_logic_knowledge_rules_tool_output_base_ts["tool-output-base.ts"] {
+  <<module>>
+}
+class N_src_logic_knowledge_rules_tool_output_base_ts_KnowledgeJsonValue["KnowledgeJsonValue"] {
+  <<type>>
+
+}
+N_src_logic_knowledge_rules_tool_output_base_ts ..> N_src_logic_knowledge_rules_tool_output_base_ts_KnowledgeJsonValue : 声明
+class N_src_logic_knowledge_rules_tool_output_base_ts_KnowledgeSnapshotOutput["KnowledgeSnapshotOutput"] {
+  <<type>>
+
+}
+N_src_logic_knowledge_rules_tool_output_base_ts ..> N_src_logic_knowledge_rules_tool_output_base_ts_KnowledgeSnapshotOutput : 声明
+class N_src_logic_knowledge_rules_tool_output_base_ts_KnowledgeSearchOutput["KnowledgeSearchOutput"] {
+  <<type>>
+
+}
+N_src_logic_knowledge_rules_tool_output_base_ts ..> N_src_logic_knowledge_rules_tool_output_base_ts_KnowledgeSearchOutput : 声明
+```
+
+
+
+### tool-output-builtins.ts
+
+```mermaid
+classDiagram
+class N_src_logic_knowledge_rules_tool_output_builtins_ts["tool-output-builtins.ts"] {
+  <<module>>
+}
+class N_src_logic_knowledge_rules_tool_output_builtins_ts_BuiltinCatalogOutput["BuiltinCatalogOutput"] {
+  <<type>>
+
+}
+N_src_logic_knowledge_rules_tool_output_builtins_ts ..> N_src_logic_knowledge_rules_tool_output_builtins_ts_BuiltinCatalogOutput : 声明
+class N_src_logic_knowledge_rules_tool_output_builtins_ts_BuiltinReadOutput["BuiltinReadOutput"] {
+  <<type>>
+
+}
+N_src_logic_knowledge_rules_tool_output_builtins_ts ..> N_src_logic_knowledge_rules_tool_output_builtins_ts_BuiltinReadOutput : 声明
+```
+
+直接依赖：[tool-output-base.ts](tool-output-base.ts)。
+
+
+### tool-output-queries.ts
+
+```mermaid
+classDiagram
+class N_src_logic_knowledge_rules_tool_output_queries_ts["tool-output-queries.ts"] {
+  <<module>>
+}
+class N_src_logic_knowledge_rules_tool_output_queries_ts_ModuleGetOutput["ModuleGetOutput"] {
+  <<type>>
+
+}
+N_src_logic_knowledge_rules_tool_output_queries_ts ..> N_src_logic_knowledge_rules_tool_output_queries_ts_ModuleGetOutput : 声明
+class N_src_logic_knowledge_rules_tool_output_queries_ts_AgentGetOutput["AgentGetOutput"] {
+  <<type>>
+
+}
+N_src_logic_knowledge_rules_tool_output_queries_ts ..> N_src_logic_knowledge_rules_tool_output_queries_ts_AgentGetOutput : 声明
+```
+
+直接依赖：[tool-output-base.ts](tool-output-base.ts)。
+
+
+### tool-output-transactions.ts
+
+```mermaid
+classDiagram
+class N_src_logic_knowledge_rules_tool_output_transactions_ts["tool-output-transactions.ts"] {
+  <<module>>
+}
+class N_src_logic_knowledge_rules_tool_output_transactions_ts_KnowledgePreviewOutput["KnowledgePreviewOutput"] {
+  <<type>>
+
+}
+N_src_logic_knowledge_rules_tool_output_transactions_ts ..> N_src_logic_knowledge_rules_tool_output_transactions_ts_KnowledgePreviewOutput : 声明
+class N_src_logic_knowledge_rules_tool_output_transactions_ts_KnowledgeCommitOutput["KnowledgeCommitOutput"] {
+  <<type>>
+
+}
+N_src_logic_knowledge_rules_tool_output_transactions_ts ..> N_src_logic_knowledge_rules_tool_output_transactions_ts_KnowledgeCommitOutput : 声明
+class N_src_logic_knowledge_rules_tool_output_transactions_ts_MaintenanceTaskOutput["MaintenanceTaskOutput"] {
+  <<type>>
+
+}
+N_src_logic_knowledge_rules_tool_output_transactions_ts ..> N_src_logic_knowledge_rules_tool_output_transactions_ts_MaintenanceTaskOutput : 声明
+```
+
+直接依赖：[tool-output-base.ts](tool-output-base.ts)。
+
+
+### types.ts
+
+```mermaid
+classDiagram
+class N_src_logic_knowledge_rules_types_ts["types.ts"] {
+  <<module>>
+}
+class N_src_logic_knowledge_rules_types_ts_TaskView["TaskView"] {
+  <<interface>>
+  +id
+  +workspaceId
+  +name
+  +state
+  +progress
+  +result
+  +error
+}
+N_src_logic_knowledge_rules_types_ts ..> N_src_logic_knowledge_rules_types_ts_TaskView : 声明
+class N_src_logic_knowledge_rules_types_ts_KnowledgeFile["KnowledgeFile"] {
+  <<interface>>
+  +path
+  +text
+  +hash
+}
+N_src_logic_knowledge_rules_types_ts ..> N_src_logic_knowledge_rules_types_ts_KnowledgeFile : 声明
+class N_src_logic_knowledge_rules_types_ts_Change["Change"] {
+  <<interface>>
+  +path
+  +text
+}
+N_src_logic_knowledge_rules_types_ts ..> N_src_logic_knowledge_rules_types_ts_Change : 声明
+class N_src_logic_knowledge_rules_types_ts_ChangeRequest["ChangeRequest"] {
+  <<interface>>
+  +workspaceId
+  +instanceId
+  +revision
+  +requestId
+  +changes
+}
+N_src_logic_knowledge_rules_types_ts ..> N_src_logic_knowledge_rules_types_ts_ChangeRequest : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_logic_knowledge_rules_types_ts["types.ts"] {
+  <<module>>
+}
+class N_src_logic_knowledge_rules_types_ts_Issue["Issue"] {
+  <<interface>>
+  +severity
+  +code
+  +message
+  +path
+}
+N_src_logic_knowledge_rules_types_ts ..> N_src_logic_knowledge_rules_types_ts_Issue : 声明
+class N_src_logic_knowledge_rules_types_ts_Validation["Validation"] {
+  <<interface>>
+  +issues
+  +indexes
+  +tree
+  +skills
+  +structural
+  +architecture
+  +business
+}
+N_src_logic_knowledge_rules_types_ts ..> N_src_logic_knowledge_rules_types_ts_Validation : 声明
+class N_src_logic_knowledge_rules_types_ts_ModuleNode["ModuleNode"] {
+  <<interface>>
+  +id
+  +name
+  +summary
+  +sources
+  +children
+  +virtual
+}
+N_src_logic_knowledge_rules_types_ts ..> N_src_logic_knowledge_rules_types_ts_ModuleNode : 声明
+class N_src_logic_knowledge_rules_types_ts_Snapshot["Snapshot"] {
+  <<interface>>
+  +workspaceId
+  +instanceId
+  +revision
+  +files
+  +validation
+}
+N_src_logic_knowledge_rules_types_ts ..> N_src_logic_knowledge_rules_types_ts_Snapshot : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_logic_knowledge_rules_types_ts["types.ts"] {
+  <<module>>
+}
+class N_src_logic_knowledge_rules_types_ts_KnowledgeSnapshotReader["KnowledgeSnapshotReader"] {
+  <<interface>>
+  +Snapshot()
+}
+N_src_logic_knowledge_rules_types_ts ..> N_src_logic_knowledge_rules_types_ts_KnowledgeSnapshotReader : 声明
+class N_src_logic_knowledge_rules_types_ts_KnowledgeCommit["KnowledgeCommit"] {
+  <<interface>>
+  +state
+  +workspaceId
+  +instanceId
+  +requestId
+  +revision
+  +changed
+}
+N_src_logic_knowledge_rules_types_ts ..> N_src_logic_knowledge_rules_types_ts_KnowledgeCommit : 声明
+class N_src_logic_knowledge_rules_types_ts_Preview["Preview"] {
+  <<interface>>
+  +request
+  +changes
+  +validation
+  +affected
+  +diff
+  +fingerprint
+}
+N_src_logic_knowledge_rules_types_ts ..> N_src_logic_knowledge_rules_types_ts_Preview : 声明
+```
+
 
 
 ## 子目录导航

@@ -97,8 +97,8 @@ class N_src_logic_execution_engines_memory_engine_ts_MemoryEngine["MemoryEngine"
   -requests
 }
 N_src_logic_execution_engines_memory_engine_ts ..> N_src_logic_execution_engines_memory_engine_ts_MemoryEngine : 声明
-class N_src_logic_execution_engines_memory_engine_ts_external_AgentEngine["AgentEngine (外部契约)"] {
-  <<external>>
+class N_src_logic_execution_engines_memory_engine_ts_external_AgentEngine["AgentEngine (../../rules/types)"] {
+  <<boundary>>
 }
 N_src_logic_execution_engines_memory_engine_ts_external_AgentEngine <|.. N_src_logic_execution_engines_memory_engine_ts_MemoryEngine
 ```
@@ -118,13 +118,14 @@ class N_src_logic_execution_engines_memory_engine_ts_MemoryEngine["MemoryEngine"
   -Emit()
 }
 N_src_logic_execution_engines_memory_engine_ts ..> N_src_logic_execution_engines_memory_engine_ts_MemoryEngine : 声明
-class N_src_logic_execution_engines_memory_engine_ts_external_AgentEngine["AgentEngine (外部契约)"] {
-  <<external>>
+class N_src_logic_execution_engines_memory_engine_ts_external_AgentEngine["AgentEngine (../../rules/types)"] {
+  <<boundary>>
 }
 N_src_logic_execution_engines_memory_engine_ts_external_AgentEngine <|.. N_src_logic_execution_engines_memory_engine_ts_MemoryEngine
 ```
 
-直接依赖：[../../../../core/utility/index.ts](../../../../core/utility/index.ts)、[../../rules/types.ts](../../rules/types.ts)、[../../rules/engine-adapter.ts](../../rules/engine-adapter.ts)、[../../rules/engine-tools.ts](../../rules/engine-tools.ts)、[../../rules/engine-instructions.ts](../../rules/engine-instructions.ts)、[../../../tools/rules/outcome.ts](../../../tools/rules/outcome.ts)、[../../../tools/rules/results.ts](../../../tools/rules/results.ts)、[../../../knowledge/rules/memory-index.ts](../../../knowledge/rules/memory-index.ts)、[../../../budget/rules/model-request-configuration.ts](../../../budget/rules/model-request-configuration.ts)、[../transport/model-json-requests.ts](../transport/model-json-requests.ts)、[../run-inactivity.ts](../run-inactivity.ts)、[protocol.ts](protocol.ts)、[storage.ts](storage.ts)。
+继承／实现来源：`AgentEngine` → [../../rules/types.ts](../../rules/types.ts)。
+直接依赖：[../../../../core/utility/index.ts](../../../../core/utility/index.ts)、[../../../budget/rules/model-request-configuration.ts](../../../budget/rules/model-request-configuration.ts)、[protocol.ts](protocol.ts)、[storage.ts](storage.ts)、[../run-inactivity.ts](../run-inactivity.ts)、[../transport/model-json-requests.ts](../transport/model-json-requests.ts)、[../../rules/engine-adapter.ts](../../rules/engine-adapter.ts)、[../../rules/engine-instructions.ts](../../rules/engine-instructions.ts)、[../../rules/engine-tools.ts](../../rules/engine-tools.ts)、[../../rules/types.ts](../../rules/types.ts)、[../../../knowledge/rules/memory-index.ts](../../../knowledge/rules/memory-index.ts)、[../../../tools/rules/outcome.ts](../../../tools/rules/outcome.ts)、[../../../tools/rules/results.ts](../../../tools/rules/results.ts)。
 
 ### package.ts
 
@@ -134,7 +135,7 @@ class N_src_logic_execution_engines_memory_package_ts["package.ts"] {
   <<module>>
 }
 ```
-直接依赖：[../../../engines/index.ts](../../../engines/index.ts)、[../../rules/engine-adapter.ts](../../rules/engine-adapter.ts)、[engine.ts](engine.ts)。
+直接依赖：[../../../engines/index.ts](../../../engines/index.ts)、[engine.ts](engine.ts)、[../../rules/engine-adapter.ts](../../rules/engine-adapter.ts)。
 
 ### protocol.ts
 
@@ -188,7 +189,7 @@ class N_src_logic_execution_engines_memory_storage_ts_MemoryIndexCache["MemoryIn
 N_src_logic_execution_engines_memory_storage_ts ..> N_src_logic_execution_engines_memory_storage_ts_MemoryIndexCache : 声明
 ```
 
-直接依赖：[../../../../core/platform/node/files/index.ts](../../../../core/platform/node/files/index.ts)、[../../ports/identity.ts](../../ports/identity.ts)、[../../rules/types.ts](../../rules/types.ts)、[../../../knowledge/rules/memory-index.ts](../../../knowledge/rules/memory-index.ts)、[protocol.ts](protocol.ts)。
+直接依赖：[../../../../core/platform/node/files/index.ts](../../../../core/platform/node/files/index.ts)、[protocol.ts](protocol.ts)、[../../ports/identity.ts](../../ports/identity.ts)、[../../rules/types.ts](../../rules/types.ts)、[../../../knowledge/rules/memory-index.ts](../../../knowledge/rules/memory-index.ts)。
 
 ### 本目录调用边界
 

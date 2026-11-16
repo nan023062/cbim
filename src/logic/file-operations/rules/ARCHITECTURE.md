@@ -77,7 +77,7 @@ class N_src_logic_file_operations_rules_artifact_transition_evidence_ts_Binding[
 N_src_logic_file_operations_rules_artifact_transition_evidence_ts ..> N_src_logic_file_operations_rules_artifact_transition_evidence_ts_Binding : 声明
 ```
 
-直接依赖：[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../workspace/rules/artifact-scope.ts](../../workspace/rules/artifact-scope.ts)、[../../evidence/rules/artifact-evidence.ts](../../evidence/rules/artifact-evidence.ts)、[../../evidence/rules/output-manifest-identity.ts](../../evidence/rules/output-manifest-identity.ts)、[../../evidence/rules/output-manifest.ts](../../evidence/rules/output-manifest.ts)、[artifact-transition.ts](artifact-transition.ts)。
+直接依赖：[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../evidence/rules/artifact-evidence.ts](../../evidence/rules/artifact-evidence.ts)、[../../evidence/rules/output-manifest-identity.ts](../../evidence/rules/output-manifest-identity.ts)、[../../evidence/rules/output-manifest.ts](../../evidence/rules/output-manifest.ts)、[artifact-transition.ts](artifact-transition.ts)、[../../workspace/rules/artifact-scope.ts](../../workspace/rules/artifact-scope.ts)。
 
 ### artifact-transition.ts
 
@@ -121,7 +121,7 @@ class N_src_logic_file_operations_rules_artifact_transition_ts_ArtifactTransitio
 N_src_logic_file_operations_rules_artifact_transition_ts ..> N_src_logic_file_operations_rules_artifact_transition_ts_ArtifactTransitionProof : 声明
 ```
 
-直接依赖：[../../workspace/rules/artifact-scope.ts](../../workspace/rules/artifact-scope.ts)、[../../evidence/rules/artifact-baseline.ts](../../evidence/rules/artifact-baseline.ts)。
+直接依赖：[../../evidence/rules/artifact-baseline.ts](../../evidence/rules/artifact-baseline.ts)、[../../workspace/rules/artifact-scope.ts](../../workspace/rules/artifact-scope.ts)。
 
 ### controlled-file-event.ts
 
@@ -212,7 +212,7 @@ class N_src_logic_file_operations_rules_controlled_file_invariants_ts["controlle
 }
 ```
 
-直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[controlled-file-operation.ts](controlled-file-operation.ts)、[controlled-file-event.ts](controlled-file-event.ts)、[controlled-file-rules.ts](controlled-file-rules.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[controlled-file-event.ts](controlled-file-event.ts)、[controlled-file-operation.ts](controlled-file-operation.ts)、[controlled-file-rules.ts](controlled-file-rules.ts)。
 
 ### controlled-file-operation.ts
 
@@ -393,7 +393,7 @@ class N_src_logic_file_operations_rules_controlled_file_rules_ts_State["State"] 
 N_src_logic_file_operations_rules_controlled_file_rules_ts ..> N_src_logic_file_operations_rules_controlled_file_rules_ts_State : 声明
 ```
 
-直接依赖：[../../team/rules/automatic-execution.ts](../../team/rules/automatic-execution.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../team/rules/member-execution-binding.ts](../../team/rules/member-execution-binding.ts)、[controlled-file-operation.ts](controlled-file-operation.ts)、[controlled-file-event.ts](controlled-file-event.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[controlled-file-event.ts](controlled-file-event.ts)、[controlled-file-operation.ts](controlled-file-operation.ts)、[../../team/rules/automatic-execution.ts](../../team/rules/automatic-execution.ts)、[../../team/rules/member-execution-binding.ts](../../team/rules/member-execution-binding.ts)。
 
 ### isolated-execution-recovery.ts
 
@@ -474,8 +474,8 @@ class N_src_logic_file_operations_rules_controlled_file_invariants_ts["controlle
 }
 N_src_logic_file_operations_rules_artifact_transition_evidence_ts ..> N_src_logic_file_operations_rules_artifact_transition_ts : 导入依赖
 N_src_logic_file_operations_rules_controlled_file_event_ts ..> N_src_logic_file_operations_rules_controlled_file_operation_ts : 导入依赖
-N_src_logic_file_operations_rules_controlled_file_invariants_ts ..> N_src_logic_file_operations_rules_controlled_file_operation_ts : 导入依赖
 N_src_logic_file_operations_rules_controlled_file_invariants_ts ..> N_src_logic_file_operations_rules_controlled_file_event_ts : 导入依赖
+N_src_logic_file_operations_rules_controlled_file_invariants_ts ..> N_src_logic_file_operations_rules_controlled_file_operation_ts : 导入依赖
 ```
 
 ```mermaid
@@ -486,15 +486,15 @@ class N_src_logic_file_operations_rules_controlled_file_invariants_ts["controlle
 class N_src_logic_file_operations_rules_controlled_file_rules_ts["controlled-file-rules.ts"] {
   <<module>>
 }
-class N_src_logic_file_operations_rules_controlled_file_operation_ts["controlled-file-operation.ts"] {
-  <<module>>
-}
 class N_src_logic_file_operations_rules_controlled_file_event_ts["controlled-file-event.ts"] {
   <<module>>
 }
+class N_src_logic_file_operations_rules_controlled_file_operation_ts["controlled-file-operation.ts"] {
+  <<module>>
+}
 N_src_logic_file_operations_rules_controlled_file_invariants_ts ..> N_src_logic_file_operations_rules_controlled_file_rules_ts : 导入依赖
-N_src_logic_file_operations_rules_controlled_file_rules_ts ..> N_src_logic_file_operations_rules_controlled_file_operation_ts : 导入依赖
 N_src_logic_file_operations_rules_controlled_file_rules_ts ..> N_src_logic_file_operations_rules_controlled_file_event_ts : 导入依赖
+N_src_logic_file_operations_rules_controlled_file_rules_ts ..> N_src_logic_file_operations_rules_controlled_file_operation_ts : 导入依赖
 ```
 
 

@@ -50,6 +50,35 @@ N_src_logic_materials_service ..> N_src_logic_materials_contracts_ts : 导入依
 
 - `service` → `contracts.ts`：导入。
 
+### contracts.ts
+
+```mermaid
+classDiagram
+class N_src_logic_materials_contracts_ts["contracts.ts"] {
+  <<module>>
+}
+class N_src_logic_materials_contracts_ts_ChatAttachment["ChatAttachment"] {
+  <<interface>>
+  +id
+  +kind
+  +name
+  +source
+  +note
+}
+N_src_logic_materials_contracts_ts ..> N_src_logic_materials_contracts_ts_ChatAttachment : 声明
+class N_src_logic_materials_contracts_ts_ChatAttachmentPreview["ChatAttachmentPreview"] {
+  <<interface>>
+  +name
+  +source
+  +note
+  +text
+  +image
+}
+N_src_logic_materials_contracts_ts ..> N_src_logic_materials_contracts_ts_ChatAttachmentPreview : 声明
+```
+
+
+
 ## 子目录导航
 
 - [service/](service/ARCHITECTURE.md)：聊天输入、附件与引用材料的本机采集/持久化；保存的快照不自动证明当前来源有效。

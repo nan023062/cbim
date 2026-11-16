@@ -78,7 +78,7 @@ class N_src_logic_execution_engines_transport_model_json_requests_ts_ModelJsonRe
 N_src_logic_execution_engines_transport_model_json_requests_ts ..> N_src_logic_execution_engines_transport_model_json_requests_ts_ModelJsonRequests : 声明
 ```
 
-直接依赖：[../../../engines/index.ts](../../../engines/index.ts)、[../../../budget/rules/request-budget.ts](../../../budget/rules/request-budget.ts)、[../../../budget/rules/model-request-configuration.ts](../../../budget/rules/model-request-configuration.ts)、[../../../budget/rules/model-request-budget-rules.ts](../../../budget/rules/model-request-budget-rules.ts)、[../../../models/index.ts](../../../models/index.ts)、[request-budget-usage.ts](request-budget-usage.ts)。
+直接依赖：[../../../budget/rules/model-request-budget-rules.ts](../../../budget/rules/model-request-budget-rules.ts)、[../../../budget/rules/model-request-configuration.ts](../../../budget/rules/model-request-configuration.ts)、[../../../budget/rules/request-budget.ts](../../../budget/rules/request-budget.ts)、[../../../engines/index.ts](../../../engines/index.ts)、[request-budget-usage.ts](request-budget-usage.ts)、[../../../models/index.ts](../../../models/index.ts)。
 
 ### request-budget-transport.ts
 
@@ -91,7 +91,7 @@ class N_src_logic_execution_engines_transport_request_budget_transport_ts["reque
 }
 ```
 
-直接依赖：[../../../models/index.ts](../../../models/index.ts)、[../../../budget/rules/request-budget.ts](../../../budget/rules/request-budget.ts)、[request-budget-usage.ts](request-budget-usage.ts)、[../../../budget/rules/model-request-budget-rules.ts](../../../budget/rules/model-request-budget-rules.ts)、[../../../../core/errors.ts](../../../../core/errors.ts)、[../../../team/rules/workspace-member-rules.ts](../../../team/rules/workspace-member-rules.ts)。
+直接依赖：[../../../../core/errors.ts](../../../../core/errors.ts)、[../../../budget/rules/model-request-budget-rules.ts](../../../budget/rules/model-request-budget-rules.ts)、[../../../budget/rules/request-budget.ts](../../../budget/rules/request-budget.ts)、[request-budget-usage.ts](request-budget-usage.ts)、[../../../models/index.ts](../../../models/index.ts)、[../../../team/rules/workspace-member-rules.ts](../../../team/rules/workspace-member-rules.ts)。
 
 ### request-budget-usage.ts
 
@@ -128,7 +128,7 @@ class N_src_logic_execution_engines_transport_request_budget_usage_ts_RequestBud
 N_src_logic_execution_engines_transport_request_budget_usage_ts ..> N_src_logic_execution_engines_transport_request_budget_usage_ts_RequestBudgetUsageStream : 声明
 ```
 
-直接依赖：[../../../budget/rules/model-request-budget.ts](../../../budget/rules/model-request-budget.ts)、[../../../../core/errors.ts](../../../../core/errors.ts)。
+直接依赖：[../../../../core/errors.ts](../../../../core/errors.ts)、[../../../budget/rules/model-request-budget.ts](../../../budget/rules/model-request-budget.ts)。
 
 ### 本目录调用边界
 

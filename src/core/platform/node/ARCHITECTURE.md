@@ -88,7 +88,7 @@ N_src_core_platform_node_serialization_ts ..> N_src_core_platform_node_digest_ts
 
 - `serialization.ts` → `digest.ts`：导入。
 
-### digest.ts 公开入口
+### digest.ts
 
 ```mermaid
 classDiagram
@@ -97,6 +97,38 @@ class N_src_core_platform_node_digest_ts["digest.ts"] {
   +sha256()
 }
 ```
+
+
+
+### locking.ts
+
+```mermaid
+classDiagram
+class N_src_core_platform_node_locking_ts["locking.ts"] {
+  <<module>>
+}
+class N_src_core_platform_node_locking_ts_KernelLock["KernelLock"] {
+  +constructor()
+  +Close()
+  -handle
+  -fd
+  -key
+}
+N_src_core_platform_node_locking_ts ..> N_src_core_platform_node_locking_ts_KernelLock : 声明
+```
+
+直接依赖：[../../errors.ts](../../errors.ts)。
+
+
+### serialization.ts
+
+```mermaid
+classDiagram
+class N_src_core_platform_node_serialization_ts["serialization.ts"] {
+  <<module>>
+}
+```
+直接依赖：[digest.ts](digest.ts)、[../../utility/index.ts](../../utility/index.ts)。
 
 
 ## 子目录导航

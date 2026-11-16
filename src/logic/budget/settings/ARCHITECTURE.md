@@ -62,7 +62,7 @@ class N_src_logic_budget_settings_budget_settings_ts_BudgetSettings["BudgetSetti
 N_src_logic_budget_settings_budget_settings_ts ..> N_src_logic_budget_settings_budget_settings_ts_BudgetSettings : 声明
 ```
 
-直接依赖：[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../rules/scope-budget.ts](../rules/scope-budget.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../rules/scope-budget.ts](../rules/scope-budget.ts)。
 
 
 ## 子目录导航

@@ -48,13 +48,13 @@ class RunInactivityTimer {
   -timer
   -closed
   -toolProgress
-  +progress()
-  +observe(event)
-  +dispose()
+  +Progress()
+  +Observe(event)
+  +Dispose()
 }
-class PiEngine { <<external>> }
-class CodexEngine { <<external>> }
-class ClaudeCodeEngine { <<external>> }
+class PiEngine["PiEngine · pi/engine.ts"] { <<boundary>> }
+class CodexEngine["CodexEngine · codex/engine.ts"] { <<boundary>> }
+class ClaudeCodeEngine["ClaudeCodeEngine · claude/engine.ts"] { <<boundary>> }
 PiEngine --> RunInactivityTimer : 本轮持有
 CodexEngine --> RunInactivityTimer : 本轮持有
 ClaudeCodeEngine --> RunInactivityTimer : 本轮持有
@@ -149,12 +149,12 @@ class N_src_logic_execution_engines_runtime_binding_ts["runtime-binding.ts"] {
 - `codex` → `native-tools.ts`：导入。
 - `codex` → `run-inactivity.ts`：导入。
 - `codex` → `transport`：导入。
-- `memory` → `transport`：导入。
 - `memory` → `run-inactivity.ts`：导入。
-- `pi` → `transport`：导入。
+- `memory` → `transport`：导入。
 - `pi` → `run-inactivity.ts`：导入。
+- `pi` → `transport`：导入。
 
-### native-tools.ts 公开入口
+### native-tools.ts
 
 ```mermaid
 classDiagram
@@ -165,8 +165,32 @@ class N_src_logic_execution_engines_native_tools_ts["native-tools.ts"] {
 }
 ```
 
+直接依赖：[../rules/engine-runtime.ts](../rules/engine-runtime.ts)、[../rules/engine-tools.ts](../rules/engine-tools.ts)。
 
-### runtime-binding.ts 公开入口
+
+### run-inactivity.ts
+
+```mermaid
+classDiagram
+class N_src_logic_execution_engines_run_inactivity_ts["run-inactivity.ts"] {
+  <<module>>
+}
+class N_src_logic_execution_engines_run_inactivity_ts_RunInactivityTimer["RunInactivityTimer"] {
+  +constructor()
+  +Progress()
+  +Observe()
+  +Dispose()
+  -timer
+  -closed
+  -toolProgress
+}
+N_src_logic_execution_engines_run_inactivity_ts ..> N_src_logic_execution_engines_run_inactivity_ts_RunInactivityTimer : 声明
+```
+
+直接依赖：[../rules/types.ts](../rules/types.ts)。
+
+
+### runtime-binding.ts
 
 ```mermaid
 classDiagram
@@ -175,6 +199,8 @@ class N_src_logic_execution_engines_runtime_binding_ts["runtime-binding.ts"] {
   +pinRuntimeEngine()
 }
 ```
+
+直接依赖：[../rules/engine-runtime.ts](../rules/engine-runtime.ts)、[../rules/types.ts](../rules/types.ts)。
 
 
 ## 子目录导航

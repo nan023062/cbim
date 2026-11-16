@@ -63,7 +63,7 @@ class N_src_logic_evidence_service_knowledge_effect_reader_ts_KnowledgeEffectOwn
 N_src_logic_evidence_service_knowledge_effect_reader_ts ..> N_src_logic_evidence_service_knowledge_effect_reader_ts_KnowledgeEffectOwner : 声明
 ```
 
-直接依赖：[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../workspace/ports/paths.ts](../../workspace/ports/paths.ts)、[../../knowledge/rules/types.ts](../../knowledge/rules/types.ts)、[../../knowledge/rules/knowledge-write-observation.ts](../../knowledge/rules/knowledge-write-observation.ts)、[../../knowledge/rules/knowledge-write-input.ts](../../knowledge/rules/knowledge-write-input.ts)、[../../knowledge/storage/governance-port.ts](../../knowledge/storage/governance-port.ts)、[../../knowledge/storage/planned-commit.ts](../../knowledge/storage/planned-commit.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../knowledge/rules/knowledge-write-input.ts](../../knowledge/rules/knowledge-write-input.ts)、[../../knowledge/rules/knowledge-write-observation.ts](../../knowledge/rules/knowledge-write-observation.ts)、[../../knowledge/rules/types.ts](../../knowledge/rules/types.ts)、[../../knowledge/storage/governance-port.ts](../../knowledge/storage/governance-port.ts)、[../../knowledge/storage/planned-commit.ts](../../knowledge/storage/planned-commit.ts)、[../../workspace/ports/paths.ts](../../workspace/ports/paths.ts)。
 
 ### persistent-effect-reader.ts
 
@@ -91,7 +91,7 @@ class N_src_logic_evidence_service_persistent_effect_reader_ts_PersistentEffectO
 N_src_logic_evidence_service_persistent_effect_reader_ts ..> N_src_logic_evidence_service_persistent_effect_reader_ts_PersistentEffectOwner : 声明
 ```
 
-直接依赖：[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../tasks/rules/persistent-write-observation.ts](../../tasks/rules/persistent-write-observation.ts)、[../../tasks/rules/persistent-write-input.ts](../../tasks/rules/persistent-write-input.ts)、[../../governance/rules/module-governance.ts](../../governance/rules/module-governance.ts)、[../../workspace/rules/module-ownership.ts](../../workspace/rules/module-ownership.ts)、[../../workspace/rules/module-ownership-rules.ts](../../workspace/rules/module-ownership-rules.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../../governance/service/storage/module-governance-store.ts](../../governance/service/storage/module-governance-store.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../../governance/rules/module-governance.ts](../../governance/rules/module-governance.ts)、[../../governance/service/storage/module-governance-store.ts](../../governance/service/storage/module-governance-store.ts)、[../../tasks/rules/persistent-write-input.ts](../../tasks/rules/persistent-write-input.ts)、[../../tasks/rules/persistent-write-observation.ts](../../tasks/rules/persistent-write-observation.ts)、[../../workspace/rules/module-ownership-rules.ts](../../workspace/rules/module-ownership-rules.ts)、[../../workspace/rules/module-ownership.ts](../../workspace/rules/module-ownership.ts)。
 
 
 ## 子目录导航

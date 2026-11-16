@@ -132,7 +132,7 @@ class N_src_logic_tools_rules_policy_tool_policy_ts_RunPolicyContext["RunPolicyC
 N_src_logic_tools_rules_policy_tool_policy_ts ..> N_src_logic_tools_rules_policy_tool_policy_ts_RunPolicyContext : 声明
 ```
 
-直接依赖：[types.ts](types.ts)、[../types.ts](../types.ts)、[../scope-schema.ts](../scope-schema.ts)、[../../../governance/rules/module-governance-tools.ts](../../../governance/rules/module-governance-tools.ts)、[../../../workspace/rules/module-ownership-tool-policy.ts](../../../workspace/rules/module-ownership-tool-policy.ts)、[../../../team/rules/workspace-member-tools.ts](../../../team/rules/workspace-member-tools.ts)、[../../../feedback/index.ts](../../../feedback/index.ts)。
+直接依赖：[../../../feedback/index.ts](../../../feedback/index.ts)、[../../../governance/rules/module-governance-tools.ts](../../../governance/rules/module-governance-tools.ts)、[../../../team/rules/workspace-member-tools.ts](../../../team/rules/workspace-member-tools.ts)、[types.ts](types.ts)、[../scope-schema.ts](../scope-schema.ts)、[../types.ts](../types.ts)、[../../../workspace/rules/module-ownership-tool-policy.ts](../../../workspace/rules/module-ownership-tool-policy.ts)。
 
 ### types.ts
 

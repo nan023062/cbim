@@ -175,12 +175,13 @@ class N_src_view_foundations_utility_graphs_ts_GraphTopologyError["GraphTopology
   +constructor()
 }
 N_src_view_foundations_utility_graphs_ts ..> N_src_view_foundations_utility_graphs_ts_GraphTopologyError : 声明
-class N_src_view_foundations_utility_graphs_ts_external_Error["Error (外部契约)"] {
+class N_src_view_foundations_utility_graphs_ts_external_Error["Error (全局或跨文件声明，见源码)"] {
   <<external>>
 }
 N_src_view_foundations_utility_graphs_ts_external_Error <|-- N_src_view_foundations_utility_graphs_ts_GraphTopologyError
 ```
 
+继承／实现来源：`Error` → `全局或跨文件声明，见源码`。
 
 ### index.ts
 
@@ -190,7 +191,7 @@ class N_src_view_foundations_utility_index_ts["index.ts"] {
   <<module>>
 }
 ```
-直接依赖：[json.ts](json.ts)、[events.ts](events.ts)、[async.ts](async.ts)、[graphs.ts](graphs.ts)、[storage.ts](storage.ts)。
+直接依赖：[async.ts](async.ts)、[events.ts](events.ts)、[graphs.ts](graphs.ts)、[json.ts](json.ts)、[storage.ts](storage.ts)。
 
 ### json.ts
 
@@ -236,22 +237,22 @@ classDiagram
 class N_src_view_foundations_utility_index_ts["index.ts"] {
   <<module>>
 }
-class N_src_view_foundations_utility_json_ts["json.ts"] {
+class N_src_view_foundations_utility_async_ts["async.ts"] {
   <<module>>
 }
 class N_src_view_foundations_utility_events_ts["events.ts"] {
   <<module>>
 }
-class N_src_view_foundations_utility_async_ts["async.ts"] {
-  <<module>>
-}
 class N_src_view_foundations_utility_graphs_ts["graphs.ts"] {
   <<module>>
 }
-N_src_view_foundations_utility_index_ts ..> N_src_view_foundations_utility_json_ts : 导入依赖
-N_src_view_foundations_utility_index_ts ..> N_src_view_foundations_utility_events_ts : 导入依赖
+class N_src_view_foundations_utility_json_ts["json.ts"] {
+  <<module>>
+}
 N_src_view_foundations_utility_index_ts ..> N_src_view_foundations_utility_async_ts : 导入依赖
+N_src_view_foundations_utility_index_ts ..> N_src_view_foundations_utility_events_ts : 导入依赖
 N_src_view_foundations_utility_index_ts ..> N_src_view_foundations_utility_graphs_ts : 导入依赖
+N_src_view_foundations_utility_index_ts ..> N_src_view_foundations_utility_json_ts : 导入依赖
 ```
 
 ```mermaid

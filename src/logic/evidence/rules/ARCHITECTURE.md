@@ -208,7 +208,7 @@ class N_src_logic_evidence_rules_artifact_evidence_ts_Issue["Issue"] {
 N_src_logic_evidence_rules_artifact_evidence_ts ..> N_src_logic_evidence_rules_artifact_evidence_ts_Issue : 声明
 ```
 
-直接依赖：[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../../file-operations/rules/scoped-execution.ts](../../file-operations/rules/scoped-execution.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../tools/rules/scope-schema.ts](../../tools/rules/scope-schema.ts)、[artifact-baseline.ts](artifact-baseline.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../core/utility/index.ts](../../../core/utility/index.ts)、[artifact-baseline.ts](artifact-baseline.ts)、[../../file-operations/rules/scoped-execution.ts](../../file-operations/rules/scoped-execution.ts)、[../../tools/rules/scope-schema.ts](../../tools/rules/scope-schema.ts)。
 
 ### artifact-tools.ts
 
@@ -236,7 +236,7 @@ class N_src_logic_evidence_rules_artifact_tools_ts_ArtifactTools["ArtifactTools"
 N_src_logic_evidence_rules_artifact_tools_ts ..> N_src_logic_evidence_rules_artifact_tools_ts_ArtifactTools : 声明
 ```
 
-直接依赖：[../../tools/rules/results.ts](../../tools/rules/results.ts)、[artifact-baseline.ts](artifact-baseline.ts)、[../../tasks/rules/member-tool-output.ts](../../tasks/rules/member-tool-output.ts)。
+直接依赖：[artifact-baseline.ts](artifact-baseline.ts)、[../../tasks/rules/member-tool-output.ts](../../tasks/rules/member-tool-output.ts)、[../../tools/rules/results.ts](../../tools/rules/results.ts)。
 
 ### code-check.ts
 
@@ -313,7 +313,7 @@ class N_src_logic_evidence_rules_code_check_ts_CodeCheckPort["CodeCheckPort"] {
 N_src_logic_evidence_rules_code_check_ts ..> N_src_logic_evidence_rules_code_check_ts_CodeCheckPort : 声明
 ```
 
-直接依赖：[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../workspace/rules/code-check.ts](../../workspace/rules/code-check.ts)、[../../workspace/rules/workflow-contract.ts](../../workspace/rules/workflow-contract.ts)、[../../workspace/rules/artifact-scope.ts](../../workspace/rules/artifact-scope.ts)、[output-manifest.ts](output-manifest.ts)、[output-manifest-evidence.ts](output-manifest-evidence.ts)、[artifact-evidence.ts](artifact-evidence.ts)、[../../tools/rules/types.ts](../../tools/rules/types.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[artifact-evidence.ts](artifact-evidence.ts)、[output-manifest-evidence.ts](output-manifest-evidence.ts)、[output-manifest.ts](output-manifest.ts)、[../../tools/rules/types.ts](../../tools/rules/types.ts)、[../../workspace/rules/artifact-scope.ts](../../workspace/rules/artifact-scope.ts)、[../../workspace/rules/code-check.ts](../../workspace/rules/code-check.ts)、[../../workspace/rules/workflow-contract.ts](../../workspace/rules/workflow-contract.ts)。
 
 ### complete-output-evidence.ts
 
@@ -346,7 +346,7 @@ class N_src_logic_evidence_rules_complete_output_evidence_ts_CompleteOutputBindi
 N_src_logic_evidence_rules_complete_output_evidence_ts ..> N_src_logic_evidence_rules_complete_output_evidence_ts_CompleteOutputBinding : 声明
 ```
 
-直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../workspace/rules/artifact-scope.ts](../../workspace/rules/artifact-scope.ts)、[artifact-baseline.ts](artifact-baseline.ts)、[output-manifest.ts](output-manifest.ts)、[output-manifest-evidence.ts](output-manifest-evidence.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[artifact-baseline.ts](artifact-baseline.ts)、[output-manifest-evidence.ts](output-manifest-evidence.ts)、[output-manifest.ts](output-manifest.ts)、[../../workspace/rules/artifact-scope.ts](../../workspace/rules/artifact-scope.ts)。
 
 ### output-manifest-evidence.ts
 
@@ -370,7 +370,7 @@ class N_src_logic_evidence_rules_output_manifest_evidence_ts_Binding["Binding"] 
 N_src_logic_evidence_rules_output_manifest_evidence_ts ..> N_src_logic_evidence_rules_output_manifest_evidence_ts_Binding : 声明
 ```
 
-直接依赖：[../../workspace/rules/artifact-scope.ts](../../workspace/rules/artifact-scope.ts)、[artifact-evidence.ts](artifact-evidence.ts)、[output-manifest.ts](output-manifest.ts)、[output-manifest-identity.ts](output-manifest-identity.ts)、[../../file-operations/rules/artifact-transition-evidence.ts](../../file-operations/rules/artifact-transition-evidence.ts)。
+直接依赖：[artifact-evidence.ts](artifact-evidence.ts)、[output-manifest-identity.ts](output-manifest-identity.ts)、[output-manifest.ts](output-manifest.ts)、[../../file-operations/rules/artifact-transition-evidence.ts](../../file-operations/rules/artifact-transition-evidence.ts)、[../../workspace/rules/artifact-scope.ts](../../workspace/rules/artifact-scope.ts)。
 
 ### output-manifest-identity.ts
 
@@ -384,7 +384,7 @@ class N_src_logic_evidence_rules_output_manifest_identity_ts["output-manifest-id
 }
 ```
 
-直接依赖：[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../workspace/rules/artifact-scope.ts](../../workspace/rules/artifact-scope.ts)、[output-manifest.ts](output-manifest.ts)。
+直接依赖：[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../core/utility/index.ts](../../../core/utility/index.ts)、[output-manifest.ts](output-manifest.ts)、[../../workspace/rules/artifact-scope.ts](../../workspace/rules/artifact-scope.ts)。
 
 ### output-manifest-tools.ts
 
@@ -418,7 +418,7 @@ class N_src_logic_evidence_rules_output_manifest_tools_ts_OutputManifestTools["O
 N_src_logic_evidence_rules_output_manifest_tools_ts ..> N_src_logic_evidence_rules_output_manifest_tools_ts_OutputManifestTools : 声明
 ```
 
-直接依赖：[../../tools/rules/results.ts](../../tools/rules/results.ts)、[../../workspace/rules/artifact-scope.ts](../../workspace/rules/artifact-scope.ts)、[output-manifest.ts](output-manifest.ts)、[output-manifest-evidence.ts](output-manifest-evidence.ts)。
+直接依赖：[output-manifest-evidence.ts](output-manifest-evidence.ts)、[output-manifest.ts](output-manifest.ts)、[../../tools/rules/results.ts](../../tools/rules/results.ts)、[../../workspace/rules/artifact-scope.ts](../../workspace/rules/artifact-scope.ts)。
 
 ### output-manifest.ts
 
@@ -504,7 +504,7 @@ class N_src_logic_evidence_rules_output_manifest_ts_OutputManifestReport["Output
 N_src_logic_evidence_rules_output_manifest_ts ..> N_src_logic_evidence_rules_output_manifest_ts_OutputManifestReport : 声明
 ```
 
-直接依赖：[../../workspace/rules/artifact-scope.ts](../../workspace/rules/artifact-scope.ts)、[artifact-baseline.ts](artifact-baseline.ts)、[../../file-operations/rules/artifact-transition.ts](../../file-operations/rules/artifact-transition.ts)。
+直接依赖：[artifact-baseline.ts](artifact-baseline.ts)、[../../file-operations/rules/artifact-transition.ts](../../file-operations/rules/artifact-transition.ts)、[../../workspace/rules/artifact-scope.ts](../../workspace/rules/artifact-scope.ts)。
 
 ### progress-schema.ts
 
@@ -535,7 +535,7 @@ class N_src_logic_evidence_rules_progress_schema_ts_TaskProgressInspect["TaskPro
 N_src_logic_evidence_rules_progress_schema_ts ..> N_src_logic_evidence_rules_progress_schema_ts_TaskProgressInspect : 声明
 ```
 
-直接依赖：[code-check.ts](code-check.ts)、[../../workspace/rules/workflow-contract.ts](../../workspace/rules/workflow-contract.ts)、[../../tools/rules/receipt-schema.ts](../../tools/rules/receipt-schema.ts)、[artifact-baseline.ts](artifact-baseline.ts)、[validation.ts](validation.ts)、[../../workspace/rules/json-validation-schema.ts](../../workspace/rules/json-validation-schema.ts)、[output-manifest.ts](output-manifest.ts)。
+直接依赖：[artifact-baseline.ts](artifact-baseline.ts)、[code-check.ts](code-check.ts)、[output-manifest.ts](output-manifest.ts)、[validation.ts](validation.ts)、[../../tools/rules/receipt-schema.ts](../../tools/rules/receipt-schema.ts)、[../../workspace/rules/json-validation-schema.ts](../../workspace/rules/json-validation-schema.ts)、[../../workspace/rules/workflow-contract.ts](../../workspace/rules/workflow-contract.ts)。
 
 ### progress-tools.ts
 
@@ -589,7 +589,7 @@ class N_src_logic_evidence_rules_progress_tools_ts_TaskProgressTools["TaskProgre
 N_src_logic_evidence_rules_progress_tools_ts ..> N_src_logic_evidence_rules_progress_tools_ts_TaskProgressTools : 声明
 ```
 
-直接依赖：[code-check.ts](code-check.ts)、[progress.ts](progress.ts)、[../../tools/rules/types.ts](../../tools/rules/types.ts)、[artifact-baseline.ts](artifact-baseline.ts)、[../../tools/rules/results.ts](../../tools/rules/results.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[workflow-evidence.ts](workflow-evidence.ts)、[validation.ts](validation.ts)、[output-manifest.ts](output-manifest.ts)、[complete-output-evidence.ts](complete-output-evidence.ts)、[progress-schema.ts](progress-schema.ts)、[../../tasks/rules/member-tool-output.ts](../../tasks/rules/member-tool-output.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[artifact-baseline.ts](artifact-baseline.ts)、[code-check.ts](code-check.ts)、[complete-output-evidence.ts](complete-output-evidence.ts)、[output-manifest.ts](output-manifest.ts)、[progress-schema.ts](progress-schema.ts)、[progress.ts](progress.ts)、[validation.ts](validation.ts)、[workflow-evidence.ts](workflow-evidence.ts)、[../../tasks/rules/member-tool-output.ts](../../tasks/rules/member-tool-output.ts)、[../../tools/rules/results.ts](../../tools/rules/results.ts)、[../../tools/rules/types.ts](../../tools/rules/types.ts)。
 
 ### progress.ts
 
@@ -630,7 +630,7 @@ class N_src_logic_evidence_rules_progress_ts_TaskProgress["TaskProgress"] {
 N_src_logic_evidence_rules_progress_ts ..> N_src_logic_evidence_rules_progress_ts_TaskProgress : 声明
 ```
 
-直接依赖：[validation.ts](validation.ts)、[output-manifest.ts](output-manifest.ts)、[code-check.ts](code-check.ts)。
+直接依赖：[code-check.ts](code-check.ts)、[output-manifest.ts](output-manifest.ts)、[validation.ts](validation.ts)。
 
 ### validation-evidence.ts
 
@@ -658,7 +658,7 @@ class N_src_logic_evidence_rules_validation_evidence_ts_ValidationWorkflowBindin
 N_src_logic_evidence_rules_validation_evidence_ts ..> N_src_logic_evidence_rules_validation_evidence_ts_ValidationWorkflowBinding : 声明
 ```
 
-直接依赖：[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../workspace/rules/workflow-contract.ts](../../workspace/rules/workflow-contract.ts)、[../../workspace/rules/json-validation-schema.ts](../../workspace/rules/json-validation-schema.ts)、[artifact-evidence.ts](artifact-evidence.ts)、[../../workspace/rules/artifact-scope.ts](../../workspace/rules/artifact-scope.ts)、[output-manifest-evidence.ts](output-manifest-evidence.ts)、[complete-output-evidence.ts](complete-output-evidence.ts)、[artifact-baseline.ts](artifact-baseline.ts)、[validation.ts](validation.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../core/utility/index.ts](../../../core/utility/index.ts)、[artifact-baseline.ts](artifact-baseline.ts)、[artifact-evidence.ts](artifact-evidence.ts)、[complete-output-evidence.ts](complete-output-evidence.ts)、[output-manifest-evidence.ts](output-manifest-evidence.ts)、[validation.ts](validation.ts)、[../../workspace/rules/artifact-scope.ts](../../workspace/rules/artifact-scope.ts)、[../../workspace/rules/json-validation-schema.ts](../../workspace/rules/json-validation-schema.ts)、[../../workspace/rules/workflow-contract.ts](../../workspace/rules/workflow-contract.ts)。
 
 ### validation-tools.ts
 
@@ -687,7 +687,7 @@ class N_src_logic_evidence_rules_validation_tools_ts_ValidationTools["Validation
 N_src_logic_evidence_rules_validation_tools_ts ..> N_src_logic_evidence_rules_validation_tools_ts_ValidationTools : 声明
 ```
 
-直接依赖：[../../tools/rules/results.ts](../../tools/rules/results.ts)、[validation.ts](validation.ts)、[validation-evidence.ts](validation-evidence.ts)、[complete-output-evidence.ts](complete-output-evidence.ts)、[output-manifest.ts](output-manifest.ts)。
+直接依赖：[complete-output-evidence.ts](complete-output-evidence.ts)、[output-manifest.ts](output-manifest.ts)、[validation-evidence.ts](validation-evidence.ts)、[validation.ts](validation.ts)、[../../tools/rules/results.ts](../../tools/rules/results.ts)。
 
 ### validation.ts
 
@@ -736,7 +736,7 @@ class N_src_logic_evidence_rules_validation_ts_ProgressValidationPort["ProgressV
 N_src_logic_evidence_rules_validation_ts ..> N_src_logic_evidence_rules_validation_ts_ProgressValidationPort : 声明
 ```
 
-直接依赖：[artifact-baseline.ts](artifact-baseline.ts)、[../../tools/rules/receipt-schema.ts](../../tools/rules/receipt-schema.ts)、[../../workspace/rules/json-validation-schema.ts](../../workspace/rules/json-validation-schema.ts)、[output-manifest.ts](output-manifest.ts)。
+直接依赖：[artifact-baseline.ts](artifact-baseline.ts)、[output-manifest.ts](output-manifest.ts)、[../../tools/rules/receipt-schema.ts](../../tools/rules/receipt-schema.ts)、[../../workspace/rules/json-validation-schema.ts](../../workspace/rules/json-validation-schema.ts)。
 
 ### workflow-evidence.ts
 
@@ -773,7 +773,7 @@ class N_src_logic_evidence_rules_workflow_evidence_ts_WorkflowProgressContext["W
 N_src_logic_evidence_rules_workflow_evidence_ts ..> N_src_logic_evidence_rules_workflow_evidence_ts_WorkflowProgressContext : 声明
 ```
 
-直接依赖：[../../../core/utility/index.ts](../../../core/utility/index.ts)、[code-check.ts](code-check.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../workspace/rules/workflow-contract.ts](../../workspace/rules/workflow-contract.ts)、[../../tasks/rules/execution-context.ts](../../tasks/rules/execution-context.ts)、[progress.ts](progress.ts)、[../../tasks/rules/types.ts](../../tasks/rules/types.ts)、[../../tools/rules/types.ts](../../tools/rules/types.ts)、[../../tools/rules/native-tools.ts](../../tools/rules/native-tools.ts)、[../../tools/rules/questions.ts](../../tools/rules/questions.ts)、[../../tasks/rules/command-verification.ts](../../tasks/rules/command-verification.ts)、[artifact-evidence.ts](artifact-evidence.ts)、[validation.ts](validation.ts)、[validation-evidence.ts](validation-evidence.ts)、[../../workspace/rules/json-validation-schema.ts](../../workspace/rules/json-validation-schema.ts)、[complete-output-evidence.ts](complete-output-evidence.ts)、[output-manifest.ts](output-manifest.ts)、[output-manifest-evidence.ts](output-manifest-evidence.ts)、[../../workspace/rules/artifact-scope.ts](../../workspace/rules/artifact-scope.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../core/utility/index.ts](../../../core/utility/index.ts)、[artifact-evidence.ts](artifact-evidence.ts)、[code-check.ts](code-check.ts)、[complete-output-evidence.ts](complete-output-evidence.ts)、[output-manifest-evidence.ts](output-manifest-evidence.ts)、[output-manifest.ts](output-manifest.ts)、[progress.ts](progress.ts)、[validation-evidence.ts](validation-evidence.ts)、[validation.ts](validation.ts)、[../../tasks/rules/command-verification.ts](../../tasks/rules/command-verification.ts)、[../../tasks/rules/execution-context.ts](../../tasks/rules/execution-context.ts)、[../../tasks/rules/types.ts](../../tasks/rules/types.ts)、[../../tools/rules/native-tools.ts](../../tools/rules/native-tools.ts)、[../../tools/rules/questions.ts](../../tools/rules/questions.ts)、[../../tools/rules/types.ts](../../tools/rules/types.ts)、[../../workspace/rules/artifact-scope.ts](../../workspace/rules/artifact-scope.ts)、[../../workspace/rules/json-validation-schema.ts](../../workspace/rules/json-validation-schema.ts)、[../../workspace/rules/workflow-contract.ts](../../workspace/rules/workflow-contract.ts)。
 
 ### 本目录调用边界
 
@@ -791,15 +791,12 @@ class N_src_logic_evidence_rules_artifact_tools_ts["artifact-tools.ts"] {
 class N_src_logic_evidence_rules_code_check_ts["code-check.ts"] {
   <<module>>
 }
-class N_src_logic_evidence_rules_output_manifest_ts["output-manifest.ts"] {
-  <<module>>
-}
 class N_src_logic_evidence_rules_output_manifest_evidence_ts["output-manifest-evidence.ts"] {
   <<module>>
 }
 N_src_logic_evidence_rules_artifact_evidence_ts ..> N_src_logic_evidence_rules_artifact_baseline_ts : 导入依赖
 N_src_logic_evidence_rules_artifact_tools_ts ..> N_src_logic_evidence_rules_artifact_baseline_ts : 导入依赖
-N_src_logic_evidence_rules_code_check_ts ..> N_src_logic_evidence_rules_output_manifest_ts : 导入依赖
+N_src_logic_evidence_rules_code_check_ts ..> N_src_logic_evidence_rules_artifact_evidence_ts : 导入依赖
 N_src_logic_evidence_rules_code_check_ts ..> N_src_logic_evidence_rules_output_manifest_evidence_ts : 导入依赖
 ```
 
@@ -808,7 +805,7 @@ classDiagram
 class N_src_logic_evidence_rules_code_check_ts["code-check.ts"] {
   <<module>>
 }
-class N_src_logic_evidence_rules_artifact_evidence_ts["artifact-evidence.ts"] {
+class N_src_logic_evidence_rules_output_manifest_ts["output-manifest.ts"] {
   <<module>>
 }
 class N_src_logic_evidence_rules_complete_output_evidence_ts["complete-output-evidence.ts"] {
@@ -817,16 +814,13 @@ class N_src_logic_evidence_rules_complete_output_evidence_ts["complete-output-ev
 class N_src_logic_evidence_rules_artifact_baseline_ts["artifact-baseline.ts"] {
   <<module>>
 }
-class N_src_logic_evidence_rules_output_manifest_ts["output-manifest.ts"] {
-  <<module>>
-}
 class N_src_logic_evidence_rules_output_manifest_evidence_ts["output-manifest-evidence.ts"] {
   <<module>>
 }
-N_src_logic_evidence_rules_code_check_ts ..> N_src_logic_evidence_rules_artifact_evidence_ts : 导入依赖
+N_src_logic_evidence_rules_code_check_ts ..> N_src_logic_evidence_rules_output_manifest_ts : 导入依赖
 N_src_logic_evidence_rules_complete_output_evidence_ts ..> N_src_logic_evidence_rules_artifact_baseline_ts : 导入依赖
-N_src_logic_evidence_rules_complete_output_evidence_ts ..> N_src_logic_evidence_rules_output_manifest_ts : 导入依赖
 N_src_logic_evidence_rules_complete_output_evidence_ts ..> N_src_logic_evidence_rules_output_manifest_evidence_ts : 导入依赖
+N_src_logic_evidence_rules_complete_output_evidence_ts ..> N_src_logic_evidence_rules_output_manifest_ts : 导入依赖
 ```
 
 ```mermaid
@@ -837,15 +831,15 @@ class N_src_logic_evidence_rules_output_manifest_evidence_ts["output-manifest-ev
 class N_src_logic_evidence_rules_artifact_evidence_ts["artifact-evidence.ts"] {
   <<module>>
 }
-class N_src_logic_evidence_rules_output_manifest_ts["output-manifest.ts"] {
-  <<module>>
-}
 class N_src_logic_evidence_rules_output_manifest_identity_ts["output-manifest-identity.ts"] {
   <<module>>
 }
+class N_src_logic_evidence_rules_output_manifest_ts["output-manifest.ts"] {
+  <<module>>
+}
 N_src_logic_evidence_rules_output_manifest_evidence_ts ..> N_src_logic_evidence_rules_artifact_evidence_ts : 导入依赖
-N_src_logic_evidence_rules_output_manifest_evidence_ts ..> N_src_logic_evidence_rules_output_manifest_ts : 导入依赖
 N_src_logic_evidence_rules_output_manifest_evidence_ts ..> N_src_logic_evidence_rules_output_manifest_identity_ts : 导入依赖
+N_src_logic_evidence_rules_output_manifest_evidence_ts ..> N_src_logic_evidence_rules_output_manifest_ts : 导入依赖
 N_src_logic_evidence_rules_output_manifest_identity_ts ..> N_src_logic_evidence_rules_output_manifest_ts : 导入依赖
 ```
 
@@ -854,10 +848,10 @@ classDiagram
 class N_src_logic_evidence_rules_output_manifest_tools_ts["output-manifest-tools.ts"] {
   <<module>>
 }
-class N_src_logic_evidence_rules_output_manifest_ts["output-manifest.ts"] {
+class N_src_logic_evidence_rules_output_manifest_evidence_ts["output-manifest-evidence.ts"] {
   <<module>>
 }
-class N_src_logic_evidence_rules_output_manifest_evidence_ts["output-manifest-evidence.ts"] {
+class N_src_logic_evidence_rules_output_manifest_ts["output-manifest.ts"] {
   <<module>>
 }
 class N_src_logic_evidence_rules_artifact_baseline_ts["artifact-baseline.ts"] {
@@ -866,13 +860,10 @@ class N_src_logic_evidence_rules_artifact_baseline_ts["artifact-baseline.ts"] {
 class N_src_logic_evidence_rules_progress_schema_ts["progress-schema.ts"] {
   <<module>>
 }
-class N_src_logic_evidence_rules_code_check_ts["code-check.ts"] {
-  <<module>>
-}
-N_src_logic_evidence_rules_output_manifest_tools_ts ..> N_src_logic_evidence_rules_output_manifest_ts : 导入依赖
 N_src_logic_evidence_rules_output_manifest_tools_ts ..> N_src_logic_evidence_rules_output_manifest_evidence_ts : 导入依赖
+N_src_logic_evidence_rules_output_manifest_tools_ts ..> N_src_logic_evidence_rules_output_manifest_ts : 导入依赖
 N_src_logic_evidence_rules_output_manifest_ts ..> N_src_logic_evidence_rules_artifact_baseline_ts : 导入依赖
-N_src_logic_evidence_rules_progress_schema_ts ..> N_src_logic_evidence_rules_code_check_ts : 导入依赖
+N_src_logic_evidence_rules_progress_schema_ts ..> N_src_logic_evidence_rules_artifact_baseline_ts : 导入依赖
 ```
 
 ```mermaid
@@ -880,25 +871,48 @@ classDiagram
 class N_src_logic_evidence_rules_progress_schema_ts["progress-schema.ts"] {
   <<module>>
 }
-class N_src_logic_evidence_rules_artifact_baseline_ts["artifact-baseline.ts"] {
-  <<module>>
-}
-class N_src_logic_evidence_rules_validation_ts["validation.ts"] {
+class N_src_logic_evidence_rules_code_check_ts["code-check.ts"] {
   <<module>>
 }
 class N_src_logic_evidence_rules_output_manifest_ts["output-manifest.ts"] {
   <<module>>
 }
+class N_src_logic_evidence_rules_validation_ts["validation.ts"] {
+  <<module>>
+}
+class N_src_logic_evidence_rules_progress_tools_ts["progress-tools.ts"] {
+  <<module>>
+}
+class N_src_logic_evidence_rules_artifact_baseline_ts["artifact-baseline.ts"] {
+  <<module>>
+}
+N_src_logic_evidence_rules_progress_schema_ts ..> N_src_logic_evidence_rules_code_check_ts : 导入依赖
+N_src_logic_evidence_rules_progress_schema_ts ..> N_src_logic_evidence_rules_output_manifest_ts : 导入依赖
+N_src_logic_evidence_rules_progress_schema_ts ..> N_src_logic_evidence_rules_validation_ts : 导入依赖
+N_src_logic_evidence_rules_progress_tools_ts ..> N_src_logic_evidence_rules_artifact_baseline_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
 class N_src_logic_evidence_rules_progress_tools_ts["progress-tools.ts"] {
   <<module>>
 }
 class N_src_logic_evidence_rules_code_check_ts["code-check.ts"] {
   <<module>>
 }
-N_src_logic_evidence_rules_progress_schema_ts ..> N_src_logic_evidence_rules_artifact_baseline_ts : 导入依赖
-N_src_logic_evidence_rules_progress_schema_ts ..> N_src_logic_evidence_rules_validation_ts : 导入依赖
-N_src_logic_evidence_rules_progress_schema_ts ..> N_src_logic_evidence_rules_output_manifest_ts : 导入依赖
+class N_src_logic_evidence_rules_complete_output_evidence_ts["complete-output-evidence.ts"] {
+  <<module>>
+}
+class N_src_logic_evidence_rules_output_manifest_ts["output-manifest.ts"] {
+  <<module>>
+}
+class N_src_logic_evidence_rules_progress_schema_ts["progress-schema.ts"] {
+  <<module>>
+}
 N_src_logic_evidence_rules_progress_tools_ts ..> N_src_logic_evidence_rules_code_check_ts : 导入依赖
+N_src_logic_evidence_rules_progress_tools_ts ..> N_src_logic_evidence_rules_complete_output_evidence_ts : 导入依赖
+N_src_logic_evidence_rules_progress_tools_ts ..> N_src_logic_evidence_rules_output_manifest_ts : 导入依赖
+N_src_logic_evidence_rules_progress_tools_ts ..> N_src_logic_evidence_rules_progress_schema_ts : 导入依赖
 ```
 
 ```mermaid
@@ -909,71 +923,45 @@ class N_src_logic_evidence_rules_progress_tools_ts["progress-tools.ts"] {
 class N_src_logic_evidence_rules_progress_ts["progress.ts"] {
   <<module>>
 }
-class N_src_logic_evidence_rules_artifact_baseline_ts["artifact-baseline.ts"] {
+class N_src_logic_evidence_rules_validation_ts["validation.ts"] {
   <<module>>
 }
 class N_src_logic_evidence_rules_workflow_evidence_ts["workflow-evidence.ts"] {
   <<module>>
 }
-class N_src_logic_evidence_rules_validation_ts["validation.ts"] {
-  <<module>>
-}
-N_src_logic_evidence_rules_progress_tools_ts ..> N_src_logic_evidence_rules_progress_ts : 导入依赖
-N_src_logic_evidence_rules_progress_tools_ts ..> N_src_logic_evidence_rules_artifact_baseline_ts : 导入依赖
-N_src_logic_evidence_rules_progress_tools_ts ..> N_src_logic_evidence_rules_workflow_evidence_ts : 导入依赖
-N_src_logic_evidence_rules_progress_tools_ts ..> N_src_logic_evidence_rules_validation_ts : 导入依赖
-```
-
-```mermaid
-classDiagram
-class N_src_logic_evidence_rules_progress_tools_ts["progress-tools.ts"] {
-  <<module>>
-}
-class N_src_logic_evidence_rules_output_manifest_ts["output-manifest.ts"] {
-  <<module>>
-}
-class N_src_logic_evidence_rules_complete_output_evidence_ts["complete-output-evidence.ts"] {
-  <<module>>
-}
-class N_src_logic_evidence_rules_progress_schema_ts["progress-schema.ts"] {
-  <<module>>
-}
-class N_src_logic_evidence_rules_progress_ts["progress.ts"] {
-  <<module>>
-}
-class N_src_logic_evidence_rules_validation_ts["validation.ts"] {
-  <<module>>
-}
-N_src_logic_evidence_rules_progress_tools_ts ..> N_src_logic_evidence_rules_output_manifest_ts : 导入依赖
-N_src_logic_evidence_rules_progress_tools_ts ..> N_src_logic_evidence_rules_complete_output_evidence_ts : 导入依赖
-N_src_logic_evidence_rules_progress_tools_ts ..> N_src_logic_evidence_rules_progress_schema_ts : 导入依赖
-N_src_logic_evidence_rules_progress_ts ..> N_src_logic_evidence_rules_validation_ts : 导入依赖
-```
-
-```mermaid
-classDiagram
-class N_src_logic_evidence_rules_progress_ts["progress.ts"] {
-  <<module>>
-}
-class N_src_logic_evidence_rules_output_manifest_ts["output-manifest.ts"] {
-  <<module>>
-}
 class N_src_logic_evidence_rules_code_check_ts["code-check.ts"] {
   <<module>>
 }
+N_src_logic_evidence_rules_progress_tools_ts ..> N_src_logic_evidence_rules_progress_ts : 导入依赖
+N_src_logic_evidence_rules_progress_tools_ts ..> N_src_logic_evidence_rules_validation_ts : 导入依赖
+N_src_logic_evidence_rules_progress_tools_ts ..> N_src_logic_evidence_rules_workflow_evidence_ts : 导入依赖
+N_src_logic_evidence_rules_progress_ts ..> N_src_logic_evidence_rules_code_check_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_logic_evidence_rules_progress_ts["progress.ts"] {
+  <<module>>
+}
+class N_src_logic_evidence_rules_output_manifest_ts["output-manifest.ts"] {
+  <<module>>
+}
+class N_src_logic_evidence_rules_validation_ts["validation.ts"] {
+  <<module>>
+}
 class N_src_logic_evidence_rules_validation_evidence_ts["validation-evidence.ts"] {
+  <<module>>
+}
+class N_src_logic_evidence_rules_artifact_baseline_ts["artifact-baseline.ts"] {
   <<module>>
 }
 class N_src_logic_evidence_rules_artifact_evidence_ts["artifact-evidence.ts"] {
   <<module>>
 }
-class N_src_logic_evidence_rules_output_manifest_evidence_ts["output-manifest-evidence.ts"] {
-  <<module>>
-}
 N_src_logic_evidence_rules_progress_ts ..> N_src_logic_evidence_rules_output_manifest_ts : 导入依赖
-N_src_logic_evidence_rules_progress_ts ..> N_src_logic_evidence_rules_code_check_ts : 导入依赖
+N_src_logic_evidence_rules_progress_ts ..> N_src_logic_evidence_rules_validation_ts : 导入依赖
+N_src_logic_evidence_rules_validation_evidence_ts ..> N_src_logic_evidence_rules_artifact_baseline_ts : 导入依赖
 N_src_logic_evidence_rules_validation_evidence_ts ..> N_src_logic_evidence_rules_artifact_evidence_ts : 导入依赖
-N_src_logic_evidence_rules_validation_evidence_ts ..> N_src_logic_evidence_rules_output_manifest_evidence_ts : 导入依赖
 ```
 
 ```mermaid
@@ -984,7 +972,7 @@ class N_src_logic_evidence_rules_validation_evidence_ts["validation-evidence.ts"
 class N_src_logic_evidence_rules_complete_output_evidence_ts["complete-output-evidence.ts"] {
   <<module>>
 }
-class N_src_logic_evidence_rules_artifact_baseline_ts["artifact-baseline.ts"] {
+class N_src_logic_evidence_rules_output_manifest_evidence_ts["output-manifest-evidence.ts"] {
   <<module>>
 }
 class N_src_logic_evidence_rules_validation_ts["validation.ts"] {
@@ -994,9 +982,9 @@ class N_src_logic_evidence_rules_validation_tools_ts["validation-tools.ts"] {
   <<module>>
 }
 N_src_logic_evidence_rules_validation_evidence_ts ..> N_src_logic_evidence_rules_complete_output_evidence_ts : 导入依赖
-N_src_logic_evidence_rules_validation_evidence_ts ..> N_src_logic_evidence_rules_artifact_baseline_ts : 导入依赖
+N_src_logic_evidence_rules_validation_evidence_ts ..> N_src_logic_evidence_rules_output_manifest_evidence_ts : 导入依赖
 N_src_logic_evidence_rules_validation_evidence_ts ..> N_src_logic_evidence_rules_validation_ts : 导入依赖
-N_src_logic_evidence_rules_validation_tools_ts ..> N_src_logic_evidence_rules_validation_ts : 导入依赖
+N_src_logic_evidence_rules_validation_tools_ts ..> N_src_logic_evidence_rules_complete_output_evidence_ts : 导入依赖
 ```
 
 ```mermaid
@@ -1004,13 +992,10 @@ classDiagram
 class N_src_logic_evidence_rules_validation_tools_ts["validation-tools.ts"] {
   <<module>>
 }
-class N_src_logic_evidence_rules_validation_evidence_ts["validation-evidence.ts"] {
-  <<module>>
-}
-class N_src_logic_evidence_rules_complete_output_evidence_ts["complete-output-evidence.ts"] {
-  <<module>>
-}
 class N_src_logic_evidence_rules_output_manifest_ts["output-manifest.ts"] {
+  <<module>>
+}
+class N_src_logic_evidence_rules_validation_evidence_ts["validation-evidence.ts"] {
   <<module>>
 }
 class N_src_logic_evidence_rules_validation_ts["validation.ts"] {
@@ -1019,9 +1004,9 @@ class N_src_logic_evidence_rules_validation_ts["validation.ts"] {
 class N_src_logic_evidence_rules_artifact_baseline_ts["artifact-baseline.ts"] {
   <<module>>
 }
-N_src_logic_evidence_rules_validation_tools_ts ..> N_src_logic_evidence_rules_validation_evidence_ts : 导入依赖
-N_src_logic_evidence_rules_validation_tools_ts ..> N_src_logic_evidence_rules_complete_output_evidence_ts : 导入依赖
 N_src_logic_evidence_rules_validation_tools_ts ..> N_src_logic_evidence_rules_output_manifest_ts : 导入依赖
+N_src_logic_evidence_rules_validation_tools_ts ..> N_src_logic_evidence_rules_validation_evidence_ts : 导入依赖
+N_src_logic_evidence_rules_validation_tools_ts ..> N_src_logic_evidence_rules_validation_ts : 导入依赖
 N_src_logic_evidence_rules_validation_ts ..> N_src_logic_evidence_rules_artifact_baseline_ts : 导入依赖
 ```
 
@@ -1036,42 +1021,19 @@ class N_src_logic_evidence_rules_output_manifest_ts["output-manifest.ts"] {
 class N_src_logic_evidence_rules_workflow_evidence_ts["workflow-evidence.ts"] {
   <<module>>
 }
-class N_src_logic_evidence_rules_code_check_ts["code-check.ts"] {
-  <<module>>
-}
-class N_src_logic_evidence_rules_progress_ts["progress.ts"] {
-  <<module>>
-}
 class N_src_logic_evidence_rules_artifact_evidence_ts["artifact-evidence.ts"] {
   <<module>>
 }
-N_src_logic_evidence_rules_validation_ts ..> N_src_logic_evidence_rules_output_manifest_ts : 导入依赖
-N_src_logic_evidence_rules_workflow_evidence_ts ..> N_src_logic_evidence_rules_code_check_ts : 导入依赖
-N_src_logic_evidence_rules_workflow_evidence_ts ..> N_src_logic_evidence_rules_progress_ts : 导入依赖
-N_src_logic_evidence_rules_workflow_evidence_ts ..> N_src_logic_evidence_rules_artifact_evidence_ts : 导入依赖
-```
-
-```mermaid
-classDiagram
-class N_src_logic_evidence_rules_workflow_evidence_ts["workflow-evidence.ts"] {
-  <<module>>
-}
-class N_src_logic_evidence_rules_validation_ts["validation.ts"] {
-  <<module>>
-}
-class N_src_logic_evidence_rules_validation_evidence_ts["validation-evidence.ts"] {
+class N_src_logic_evidence_rules_code_check_ts["code-check.ts"] {
   <<module>>
 }
 class N_src_logic_evidence_rules_complete_output_evidence_ts["complete-output-evidence.ts"] {
   <<module>>
 }
-class N_src_logic_evidence_rules_output_manifest_ts["output-manifest.ts"] {
-  <<module>>
-}
-N_src_logic_evidence_rules_workflow_evidence_ts ..> N_src_logic_evidence_rules_validation_ts : 导入依赖
-N_src_logic_evidence_rules_workflow_evidence_ts ..> N_src_logic_evidence_rules_validation_evidence_ts : 导入依赖
+N_src_logic_evidence_rules_validation_ts ..> N_src_logic_evidence_rules_output_manifest_ts : 导入依赖
+N_src_logic_evidence_rules_workflow_evidence_ts ..> N_src_logic_evidence_rules_artifact_evidence_ts : 导入依赖
+N_src_logic_evidence_rules_workflow_evidence_ts ..> N_src_logic_evidence_rules_code_check_ts : 导入依赖
 N_src_logic_evidence_rules_workflow_evidence_ts ..> N_src_logic_evidence_rules_complete_output_evidence_ts : 导入依赖
-N_src_logic_evidence_rules_workflow_evidence_ts ..> N_src_logic_evidence_rules_output_manifest_ts : 导入依赖
 ```
 
 ```mermaid
@@ -1082,7 +1044,30 @@ class N_src_logic_evidence_rules_workflow_evidence_ts["workflow-evidence.ts"] {
 class N_src_logic_evidence_rules_output_manifest_evidence_ts["output-manifest-evidence.ts"] {
   <<module>>
 }
+class N_src_logic_evidence_rules_output_manifest_ts["output-manifest.ts"] {
+  <<module>>
+}
+class N_src_logic_evidence_rules_progress_ts["progress.ts"] {
+  <<module>>
+}
+class N_src_logic_evidence_rules_validation_evidence_ts["validation-evidence.ts"] {
+  <<module>>
+}
 N_src_logic_evidence_rules_workflow_evidence_ts ..> N_src_logic_evidence_rules_output_manifest_evidence_ts : 导入依赖
+N_src_logic_evidence_rules_workflow_evidence_ts ..> N_src_logic_evidence_rules_output_manifest_ts : 导入依赖
+N_src_logic_evidence_rules_workflow_evidence_ts ..> N_src_logic_evidence_rules_progress_ts : 导入依赖
+N_src_logic_evidence_rules_workflow_evidence_ts ..> N_src_logic_evidence_rules_validation_evidence_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_logic_evidence_rules_workflow_evidence_ts["workflow-evidence.ts"] {
+  <<module>>
+}
+class N_src_logic_evidence_rules_validation_ts["validation.ts"] {
+  <<module>>
+}
+N_src_logic_evidence_rules_workflow_evidence_ts ..> N_src_logic_evidence_rules_validation_ts : 导入依赖
 ```
 
 

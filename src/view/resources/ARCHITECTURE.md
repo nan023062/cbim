@@ -189,7 +189,7 @@ class N_src_view_resources_RepositoryConnections_tsx_Connection["Connection"] {
 N_src_view_resources_RepositoryConnections_tsx ..> N_src_view_resources_RepositoryConnections_tsx_Connection : 声明
 ```
 
-直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../../bridge/contracts/ipc-call.ts](../../bridge/contracts/ipc-call.ts)、[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../../bridge/contracts/resources.ts](../../bridge/contracts/resources.ts)、[../../bridge/contracts/repository-connections.ts](../../bridge/contracts/repository-connections.ts)、[repository-connection-state.ts](repository-connection-state.ts)、[repository-connections.css](repository-connections.css)。
+直接依赖：[../../bridge/contracts/ipc-call.ts](../../bridge/contracts/ipc-call.ts)、[../../bridge/contracts/repository-connections.ts](../../bridge/contracts/repository-connections.ts)、[../../bridge/contracts/resources.ts](../../bridge/contracts/resources.ts)、[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[repository-connection-state.ts](repository-connection-state.ts)、[repository-connections.css](repository-connections.css)。
 
 ### resource-application.ts
 
@@ -244,7 +244,7 @@ class N_src_view_resources_ResourceRepositoryView_tsx_Draft["Draft"] {
 N_src_view_resources_ResourceRepositoryView_tsx ..> N_src_view_resources_ResourceRepositoryView_tsx_Draft : 声明
 ```
 
-直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../components/ModalFrame.tsx](../components/ModalFrame.tsx)、[../../bridge/contracts/resources.ts](../../bridge/contracts/resources.ts)、[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[WorkspaceResourceTransfer.tsx](WorkspaceResourceTransfer.tsx)、[RepositoryConnections.tsx](RepositoryConnections.tsx)、[resource-application.ts](resource-application.ts)。
+直接依赖：[../../bridge/contracts/resources.ts](../../bridge/contracts/resources.ts)、[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../components/ModalFrame.tsx](../components/ModalFrame.tsx)、[RepositoryConnections.tsx](RepositoryConnections.tsx)、[WorkspaceResourceTransfer.tsx](WorkspaceResourceTransfer.tsx)、[resource-application.ts](resource-application.ts)。
 
 ### workspace-transfer.css
 
@@ -302,7 +302,7 @@ class N_src_view_resources_WorkspaceResourceTransfer_tsx_WorkspaceResourceTransf
 N_src_view_resources_WorkspaceResourceTransfer_tsx ..> N_src_view_resources_WorkspaceResourceTransfer_tsx_WorkspaceResourceTransferProps : 声明
 ```
 
-直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../components/ModalFrame.tsx](../components/ModalFrame.tsx)、[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../../bridge/contracts/resources.ts](../../bridge/contracts/resources.ts)、[../knowledge/static-owners.ts](../knowledge/static-owners.ts)、[resource-application.ts](resource-application.ts)、[../knowledge/architecture-editor.css](../knowledge/architecture-editor.css)、[workspace-transfer.css](workspace-transfer.css)。
+直接依赖：[../../bridge/contracts/resources.ts](../../bridge/contracts/resources.ts)、[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../components/ModalFrame.tsx](../components/ModalFrame.tsx)、[../knowledge/architecture-editor.css](../knowledge/architecture-editor.css)、[../knowledge/static-owners.ts](../knowledge/static-owners.ts)、[resource-application.ts](resource-application.ts)、[workspace-transfer.css](workspace-transfer.css)。
 
 ### 本目录调用边界
 
@@ -325,8 +325,8 @@ class N_src_view_resources_WorkspaceResourceTransfer_tsx["WorkspaceResourceTrans
 }
 N_src_view_resources_RepositoryConnections_tsx ..> N_src_view_resources_repository_connection_state_ts : 导入依赖
 N_src_view_resources_RepositoryConnections_tsx ..> N_src_view_resources_repository_connections_css : 导入依赖
-N_src_view_resources_ResourceRepositoryView_tsx ..> N_src_view_resources_WorkspaceResourceTransfer_tsx : 导入依赖
 N_src_view_resources_ResourceRepositoryView_tsx ..> N_src_view_resources_RepositoryConnections_tsx : 导入依赖
+N_src_view_resources_ResourceRepositoryView_tsx ..> N_src_view_resources_WorkspaceResourceTransfer_tsx : 导入依赖
 ```
 
 ```mermaid

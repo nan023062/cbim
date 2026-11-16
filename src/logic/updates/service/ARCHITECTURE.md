@@ -240,8 +240,8 @@ class N_src_logic_updates_service_engine_artifacts_ts_EngineArtifacts["EngineArt
   -available
 }
 N_src_logic_updates_service_engine_artifacts_ts ..> N_src_logic_updates_service_engine_artifacts_ts_EngineArtifacts : 声明
-class N_src_logic_updates_service_engine_artifacts_ts_external_EngineArtifactsPort["EngineArtifactsPort (外部契约)"] {
-  <<external>>
+class N_src_logic_updates_service_engine_artifacts_ts_external_EngineArtifactsPort["EngineArtifactsPort (../engine-artifacts)"] {
+  <<boundary>>
 }
 N_src_logic_updates_service_engine_artifacts_ts_external_EngineArtifactsPort <|.. N_src_logic_updates_service_engine_artifacts_ts_EngineArtifacts
 ```
@@ -263,13 +263,14 @@ class N_src_logic_updates_service_engine_artifacts_ts_EngineArtifacts["EngineArt
   -Summary()
 }
 N_src_logic_updates_service_engine_artifacts_ts ..> N_src_logic_updates_service_engine_artifacts_ts_EngineArtifacts : 声明
-class N_src_logic_updates_service_engine_artifacts_ts_external_EngineArtifactsPort["EngineArtifactsPort (外部契约)"] {
-  <<external>>
+class N_src_logic_updates_service_engine_artifacts_ts_external_EngineArtifactsPort["EngineArtifactsPort (../engine-artifacts)"] {
+  <<boundary>>
 }
 N_src_logic_updates_service_engine_artifacts_ts_external_EngineArtifactsPort <|.. N_src_logic_updates_service_engine_artifacts_ts_EngineArtifacts
 ```
 
-直接依赖：[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../engine-artifacts.ts](../engine-artifacts.ts)、[engine-index.ts](engine-index.ts)、[runtime-manifest.ts](runtime-manifest.ts)、[runtime-store.ts](runtime-store.ts)、[runtime-download.ts](runtime-download.ts)。
+继承／实现来源：`EngineArtifactsPort` → [../engine-artifacts.ts](../engine-artifacts.ts)。
+直接依赖：[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../engine-artifacts.ts](../engine-artifacts.ts)、[engine-index.ts](engine-index.ts)、[runtime-download.ts](runtime-download.ts)、[runtime-manifest.ts](runtime-manifest.ts)、[runtime-store.ts](runtime-store.ts)。
 
 ### engine-index.ts
 
@@ -321,7 +322,7 @@ class N_src_logic_updates_service_managed_engines_ts_ManagedEngines["ManagedEngi
 N_src_logic_updates_service_managed_engines_ts ..> N_src_logic_updates_service_managed_engines_ts_ManagedEngines : 声明
 ```
 
-直接依赖：[runtime-manifest.ts](runtime-manifest.ts)、[runtime-store.ts](runtime-store.ts)、[runtime-archive.ts](runtime-archive.ts)、[../contracts.ts](../contracts.ts)。
+直接依赖：[../contracts.ts](../contracts.ts)、[runtime-archive.ts](runtime-archive.ts)、[runtime-manifest.ts](runtime-manifest.ts)、[runtime-store.ts](runtime-store.ts)。
 
 ### nsis-updater.ts
 
@@ -342,13 +343,14 @@ class N_src_logic_updates_service_nsis_updater_ts_NsisUpdateInstaller["NsisUpdat
   -downloaded
 }
 N_src_logic_updates_service_nsis_updater_ts ..> N_src_logic_updates_service_nsis_updater_ts_NsisUpdateInstaller : 声明
-class N_src_logic_updates_service_nsis_updater_ts_external_DesktopUpdateInstaller["DesktopUpdateInstaller (外部契约)"] {
-  <<external>>
+class N_src_logic_updates_service_nsis_updater_ts_external_DesktopUpdateInstaller["DesktopUpdateInstaller (./desktop-updates)"] {
+  <<boundary>>
 }
 N_src_logic_updates_service_nsis_updater_ts_external_DesktopUpdateInstaller <|.. N_src_logic_updates_service_nsis_updater_ts_NsisUpdateInstaller
 ```
 
-直接依赖：[../contracts.ts](../contracts.ts)、[desktop-updates.ts](desktop-updates.ts)、[desktop-releases.ts](desktop-releases.ts)。
+继承／实现来源：`DesktopUpdateInstaller` → [desktop-updates.ts](desktop-updates.ts)。
+直接依赖：[../contracts.ts](../contracts.ts)、[desktop-releases.ts](desktop-releases.ts)、[desktop-updates.ts](desktop-updates.ts)。
 
 ### release-http.ts
 
@@ -600,8 +602,8 @@ class N_src_logic_updates_service_runtime_updates_ts_RuntimeUpdates["RuntimeUpda
   -prepared
 }
 N_src_logic_updates_service_runtime_updates_ts ..> N_src_logic_updates_service_runtime_updates_ts_RuntimeUpdates : 声明
-class N_src_logic_updates_service_runtime_updates_ts_external_DesktopUpdateInstaller["DesktopUpdateInstaller (外部契约)"] {
-  <<external>>
+class N_src_logic_updates_service_runtime_updates_ts_external_DesktopUpdateInstaller["DesktopUpdateInstaller (./desktop-updates)"] {
+  <<boundary>>
 }
 N_src_logic_updates_service_runtime_updates_ts_external_DesktopUpdateInstaller <|.. N_src_logic_updates_service_runtime_updates_ts_RuntimeUpdates
 ```
@@ -618,13 +620,14 @@ class N_src_logic_updates_service_runtime_updates_ts_RuntimeUpdates["RuntimeUpda
   -controller
 }
 N_src_logic_updates_service_runtime_updates_ts ..> N_src_logic_updates_service_runtime_updates_ts_RuntimeUpdates : 声明
-class N_src_logic_updates_service_runtime_updates_ts_external_DesktopUpdateInstaller["DesktopUpdateInstaller (外部契约)"] {
-  <<external>>
+class N_src_logic_updates_service_runtime_updates_ts_external_DesktopUpdateInstaller["DesktopUpdateInstaller (./desktop-updates)"] {
+  <<boundary>>
 }
 N_src_logic_updates_service_runtime_updates_ts_external_DesktopUpdateInstaller <|.. N_src_logic_updates_service_runtime_updates_ts_RuntimeUpdates
 ```
 
-直接依赖：[../contracts.ts](../contracts.ts)、[desktop-updates.ts](desktop-updates.ts)、[desktop-releases.ts](desktop-releases.ts)、[runtime-download.ts](runtime-download.ts)、[runtime-manifest.ts](runtime-manifest.ts)、[runtime-store.ts](runtime-store.ts)、[runtime-journal.ts](runtime-journal.ts)。
+继承／实现来源：`DesktopUpdateInstaller` → [desktop-updates.ts](desktop-updates.ts)。
+直接依赖：[../contracts.ts](../contracts.ts)、[desktop-releases.ts](desktop-releases.ts)、[desktop-updates.ts](desktop-updates.ts)、[runtime-download.ts](runtime-download.ts)、[runtime-journal.ts](runtime-journal.ts)、[runtime-manifest.ts](runtime-manifest.ts)、[runtime-store.ts](runtime-store.ts)。
 
 ### 本目录调用边界
 
@@ -645,13 +648,13 @@ class N_src_logic_updates_service_engine_artifacts_ts["engine-artifacts.ts"] {
 class N_src_logic_updates_service_engine_index_ts["engine-index.ts"] {
   <<module>>
 }
-class N_src_logic_updates_service_runtime_manifest_ts["runtime-manifest.ts"] {
+class N_src_logic_updates_service_runtime_download_ts["runtime-download.ts"] {
   <<module>>
 }
 N_src_logic_updates_service_desktop_releases_ts ..> N_src_logic_updates_service_release_http_ts : 导入依赖
 N_src_logic_updates_service_desktop_updates_ts ..> N_src_logic_updates_service_desktop_releases_ts : 导入依赖
 N_src_logic_updates_service_engine_artifacts_ts ..> N_src_logic_updates_service_engine_index_ts : 导入依赖
-N_src_logic_updates_service_engine_artifacts_ts ..> N_src_logic_updates_service_runtime_manifest_ts : 导入依赖
+N_src_logic_updates_service_engine_artifacts_ts ..> N_src_logic_updates_service_runtime_download_ts : 导入依赖
 ```
 
 ```mermaid
@@ -659,25 +662,25 @@ classDiagram
 class N_src_logic_updates_service_engine_artifacts_ts["engine-artifacts.ts"] {
   <<module>>
 }
-class N_src_logic_updates_service_runtime_store_ts["runtime-store.ts"] {
+class N_src_logic_updates_service_runtime_manifest_ts["runtime-manifest.ts"] {
   <<module>>
 }
-class N_src_logic_updates_service_runtime_download_ts["runtime-download.ts"] {
+class N_src_logic_updates_service_runtime_store_ts["runtime-store.ts"] {
   <<module>>
 }
 class N_src_logic_updates_service_engine_index_ts["engine-index.ts"] {
   <<module>>
 }
-class N_src_logic_updates_service_runtime_manifest_ts["runtime-manifest.ts"] {
-  <<module>>
-}
 class N_src_logic_updates_service_managed_engines_ts["managed-engines.ts"] {
   <<module>>
 }
+class N_src_logic_updates_service_runtime_archive_ts["runtime-archive.ts"] {
+  <<module>>
+}
+N_src_logic_updates_service_engine_artifacts_ts ..> N_src_logic_updates_service_runtime_manifest_ts : 导入依赖
 N_src_logic_updates_service_engine_artifacts_ts ..> N_src_logic_updates_service_runtime_store_ts : 导入依赖
-N_src_logic_updates_service_engine_artifacts_ts ..> N_src_logic_updates_service_runtime_download_ts : 导入依赖
 N_src_logic_updates_service_engine_index_ts ..> N_src_logic_updates_service_runtime_manifest_ts : 导入依赖
-N_src_logic_updates_service_managed_engines_ts ..> N_src_logic_updates_service_runtime_manifest_ts : 导入依赖
+N_src_logic_updates_service_managed_engines_ts ..> N_src_logic_updates_service_runtime_archive_ts : 导入依赖
 ```
 
 ```mermaid
@@ -685,25 +688,25 @@ classDiagram
 class N_src_logic_updates_service_managed_engines_ts["managed-engines.ts"] {
   <<module>>
 }
-class N_src_logic_updates_service_runtime_store_ts["runtime-store.ts"] {
+class N_src_logic_updates_service_runtime_manifest_ts["runtime-manifest.ts"] {
   <<module>>
 }
-class N_src_logic_updates_service_runtime_archive_ts["runtime-archive.ts"] {
+class N_src_logic_updates_service_runtime_store_ts["runtime-store.ts"] {
   <<module>>
 }
 class N_src_logic_updates_service_nsis_updater_ts["nsis-updater.ts"] {
   <<module>>
 }
-class N_src_logic_updates_service_desktop_updates_ts["desktop-updates.ts"] {
-  <<module>>
-}
 class N_src_logic_updates_service_desktop_releases_ts["desktop-releases.ts"] {
   <<module>>
 }
+class N_src_logic_updates_service_desktop_updates_ts["desktop-updates.ts"] {
+  <<module>>
+}
+N_src_logic_updates_service_managed_engines_ts ..> N_src_logic_updates_service_runtime_manifest_ts : 导入依赖
 N_src_logic_updates_service_managed_engines_ts ..> N_src_logic_updates_service_runtime_store_ts : 导入依赖
-N_src_logic_updates_service_managed_engines_ts ..> N_src_logic_updates_service_runtime_archive_ts : 导入依赖
-N_src_logic_updates_service_nsis_updater_ts ..> N_src_logic_updates_service_desktop_updates_ts : 导入依赖
 N_src_logic_updates_service_nsis_updater_ts ..> N_src_logic_updates_service_desktop_releases_ts : 导入依赖
+N_src_logic_updates_service_nsis_updater_ts ..> N_src_logic_updates_service_desktop_updates_ts : 导入依赖
 ```
 
 ```mermaid
@@ -746,16 +749,16 @@ class N_src_logic_updates_service_runtime_manifest_ts["runtime-manifest.ts"] {
 class N_src_logic_updates_service_runtime_updates_ts["runtime-updates.ts"] {
   <<module>>
 }
-class N_src_logic_updates_service_desktop_updates_ts["desktop-updates.ts"] {
+class N_src_logic_updates_service_desktop_releases_ts["desktop-releases.ts"] {
   <<module>>
 }
-class N_src_logic_updates_service_desktop_releases_ts["desktop-releases.ts"] {
+class N_src_logic_updates_service_desktop_updates_ts["desktop-updates.ts"] {
   <<module>>
 }
 N_src_logic_updates_service_runtime_store_ts ..> N_src_logic_updates_service_runtime_download_ts : 导入依赖
 N_src_logic_updates_service_runtime_store_ts ..> N_src_logic_updates_service_runtime_manifest_ts : 导入依赖
-N_src_logic_updates_service_runtime_updates_ts ..> N_src_logic_updates_service_desktop_updates_ts : 导入依赖
 N_src_logic_updates_service_runtime_updates_ts ..> N_src_logic_updates_service_desktop_releases_ts : 导入依赖
+N_src_logic_updates_service_runtime_updates_ts ..> N_src_logic_updates_service_desktop_updates_ts : 导入依赖
 ```
 
 ```mermaid
@@ -766,19 +769,19 @@ class N_src_logic_updates_service_runtime_updates_ts["runtime-updates.ts"] {
 class N_src_logic_updates_service_runtime_download_ts["runtime-download.ts"] {
   <<module>>
 }
+class N_src_logic_updates_service_runtime_journal_ts["runtime-journal.ts"] {
+  <<module>>
+}
 class N_src_logic_updates_service_runtime_manifest_ts["runtime-manifest.ts"] {
   <<module>>
 }
 class N_src_logic_updates_service_runtime_store_ts["runtime-store.ts"] {
   <<module>>
 }
-class N_src_logic_updates_service_runtime_journal_ts["runtime-journal.ts"] {
-  <<module>>
-}
 N_src_logic_updates_service_runtime_updates_ts ..> N_src_logic_updates_service_runtime_download_ts : 导入依赖
+N_src_logic_updates_service_runtime_updates_ts ..> N_src_logic_updates_service_runtime_journal_ts : 导入依赖
 N_src_logic_updates_service_runtime_updates_ts ..> N_src_logic_updates_service_runtime_manifest_ts : 导入依赖
 N_src_logic_updates_service_runtime_updates_ts ..> N_src_logic_updates_service_runtime_store_ts : 导入依赖
-N_src_logic_updates_service_runtime_updates_ts ..> N_src_logic_updates_service_runtime_journal_ts : 导入依赖
 ```
 
 

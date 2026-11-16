@@ -117,7 +117,7 @@ class N_src_core_platform_node_web_index_ts["index.ts"] {
   <<module>>
 }
 ```
-直接依赖：[page-reader.ts](page-reader.ts)、[public-http.ts](public-http.ts)、[browser-proxy.ts](browser-proxy.ts)、[../../../web/index.ts](../../../web/index.ts)。
+直接依赖：[browser-proxy.ts](browser-proxy.ts)、[page-reader.ts](page-reader.ts)、[public-http.ts](public-http.ts)、[../../../web/index.ts](../../../web/index.ts)。
 
 ### page-reader.ts
 
@@ -144,7 +144,7 @@ class N_src_core_platform_node_web_page_reader_ts_WebPageReader["WebPageReader"]
 N_src_core_platform_node_web_page_reader_ts ..> N_src_core_platform_node_web_page_reader_ts_WebPageReader : 声明
 ```
 
-直接依赖：[../../../web/index.ts](../../../web/index.ts)、[public-http.ts](public-http.ts)。
+直接依赖：[public-http.ts](public-http.ts)、[../../../web/index.ts](../../../web/index.ts)。
 
 ### public-http.ts
 
@@ -210,9 +210,9 @@ class N_src_core_platform_node_web_page_reader_ts["page-reader.ts"] {
   <<module>>
 }
 N_src_core_platform_node_web_browser_proxy_ts ..> N_src_core_platform_node_web_public_http_ts : 导入依赖
+N_src_core_platform_node_web_index_ts ..> N_src_core_platform_node_web_browser_proxy_ts : 导入依赖
 N_src_core_platform_node_web_index_ts ..> N_src_core_platform_node_web_page_reader_ts : 导入依赖
 N_src_core_platform_node_web_index_ts ..> N_src_core_platform_node_web_public_http_ts : 导入依赖
-N_src_core_platform_node_web_index_ts ..> N_src_core_platform_node_web_browser_proxy_ts : 导入依赖
 ```
 
 ```mermaid

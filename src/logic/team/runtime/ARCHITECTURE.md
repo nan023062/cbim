@@ -115,7 +115,7 @@ class N_src_logic_team_runtime_agent_manager_ts["agent-manager.ts"] {
 }
 ```
 
-直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../rules/agent-types.ts](../rules/agent-types.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../rules/team-session.ts](../rules/team-session.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../rules/agent-types.ts](../rules/agent-types.ts)、[../rules/team-session.ts](../rules/team-session.ts)。
 
 ### checkpoint-abandonment-service.ts
 
@@ -137,7 +137,7 @@ class N_src_logic_team_runtime_checkpoint_abandonment_service_ts_CheckpointAband
 N_src_logic_team_runtime_checkpoint_abandonment_service_ts ..> N_src_logic_team_runtime_checkpoint_abandonment_service_ts_CheckpointAbandonmentService : 声明
 ```
 
-直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../tasks/runtime/main-command-request.ts](../../tasks/runtime/main-command-request.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../tasks/rules/checkpoint-handoff.ts](../../tasks/rules/checkpoint-handoff.ts)、[../../tasks/rules/checkpoint-handoff-rules.ts](../../tasks/rules/checkpoint-handoff-rules.ts)、[member-checkpoint-verifier.ts](member-checkpoint-verifier.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../tasks/rules/checkpoint-handoff-rules.ts](../../tasks/rules/checkpoint-handoff-rules.ts)、[../../tasks/rules/checkpoint-handoff.ts](../../tasks/rules/checkpoint-handoff.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../tasks/runtime/main-command-request.ts](../../tasks/runtime/main-command-request.ts)、[member-checkpoint-verifier.ts](member-checkpoint-verifier.ts)。
 
 ### member-checkpoint-verifier.ts
 
@@ -171,7 +171,7 @@ class N_src_logic_team_runtime_member_checkpoint_verifier_ts_MemberCheckpointHis
 N_src_logic_team_runtime_member_checkpoint_verifier_ts ..> N_src_logic_team_runtime_member_checkpoint_verifier_ts_MemberCheckpointHistoryPorts : 声明
 ```
 
-直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../tasks/rules/dispatch-execution.ts](../../tasks/rules/dispatch-execution.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../evidence/rules/artifact-baseline.ts](../../evidence/rules/artifact-baseline.ts)、[../../tasks/rules/member-checkpoint.ts](../../tasks/rules/member-checkpoint.ts)、[../../tasks/rules/member-checkpoint-evidence.ts](../../tasks/rules/member-checkpoint-evidence.ts)、[../../execution/context/execution-context.ts](../../execution/context/execution-context.ts)、[../../runtime/monitoring/member-events.ts](../../runtime/monitoring/member-events.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../evidence/rules/artifact-baseline.ts](../../evidence/rules/artifact-baseline.ts)、[../../execution/context/execution-context.ts](../../execution/context/execution-context.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../runtime/monitoring/member-events.ts](../../runtime/monitoring/member-events.ts)、[../../tasks/rules/dispatch-execution.ts](../../tasks/rules/dispatch-execution.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../tasks/rules/member-checkpoint-evidence.ts](../../tasks/rules/member-checkpoint-evidence.ts)、[../../tasks/rules/member-checkpoint.ts](../../tasks/rules/member-checkpoint.ts)。
 
 ### member-execution.ts
 
@@ -287,7 +287,7 @@ class N_src_logic_team_runtime_member_execution_ts_MemberExecutionManager["Membe
 N_src_logic_team_runtime_member_execution_ts ..> N_src_logic_team_runtime_member_execution_ts_MemberExecutionManager : 声明
 ```
 
-直接依赖：[../rules/workspace-member.ts](../rules/workspace-member.ts)、[../rules/team-session.ts](../rules/team-session.ts)、[../../tasks/rules/topic-interruption.ts](../../tasks/rules/topic-interruption.ts)、[../../tasks/rules/member-topic-context-rules.ts](../../tasks/rules/member-topic-context-rules.ts)、[../rules/automatic-execution.ts](../rules/automatic-execution.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../execution/rules/runtime/runtime.ts](../../execution/rules/runtime/runtime.ts)、[../../engines/index.ts](../../engines/index.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../execution/rules/run-failure.ts](../../execution/rules/run-failure.ts)、[../../tasks/rules/dispatch-execution.ts](../../tasks/rules/dispatch-execution.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../execution/rules/business-run.ts](../../execution/rules/business-run.ts)、[../../workspace/rules/workflow-contract.ts](../../workspace/rules/workflow-contract.ts)、[../../tasks/rules/member-commands.ts](../../tasks/rules/member-commands.ts)、[../../execution/context/execution-context.ts](../../execution/context/execution-context.ts)、[../../conversation/runtime/approvals.ts](../../conversation/runtime/approvals.ts)、[../../conversation/runtime/questions.ts](../../conversation/runtime/questions.ts)、[member-state.ts](member-state.ts)、[../../tasks/rules/member-help.ts](../../tasks/rules/member-help.ts)、[../../tasks/rules/member-events.ts](../../tasks/rules/member-events.ts)、[../../runtime/monitoring/member-events.ts](../../runtime/monitoring/member-events.ts)、[../../evidence/runtime/execution-report-service.ts](../../evidence/runtime/execution-report-service.ts)、[../../evidence/runtime/artifact-report-service.ts](../../evidence/runtime/artifact-report-service.ts)、[../../evidence/runtime/output-manifest-report-service.ts](../../evidence/runtime/output-manifest-report-service.ts)、[../../evidence/rules/output-manifest.ts](../../evidence/rules/output-manifest.ts)、[../../evidence/rules/artifact-baseline.ts](../../evidence/rules/artifact-baseline.ts)、[../../tasks/rules/execution-report.ts](../../tasks/rules/execution-report.ts)、[../../execution/admission/admission-wait.ts](../../execution/admission/admission-wait.ts)、[../../budget/runtime/scope-budget-service.ts](../../budget/runtime/scope-budget-service.ts)、[../../tasks/rules/member-checkpoint.ts](../../tasks/rules/member-checkpoint.ts)、[../../tasks/rules/member-checkpoint-chain.ts](../../tasks/rules/member-checkpoint-chain.ts)、[member-checkpoint-verifier.ts](member-checkpoint-verifier.ts)、[member-resume-service.ts](member-resume-service.ts)、[../../tasks/rules/queued-member-resume.ts](../../tasks/rules/queued-member-resume.ts)、[../../tasks/rules/scope-goal.ts](../../tasks/rules/scope-goal.ts)、[../../tasks/rules/scope-active-input.ts](../../tasks/rules/scope-active-input.ts)、[../../tasks/rules/execution-context.ts](../../tasks/rules/execution-context.ts)、[member-workflow.ts](member-workflow.ts)、[../../tasks/rules/workflow-selection.ts](../../tasks/rules/workflow-selection.ts)、[../rules/member-execution-binding.ts](../rules/member-execution-binding.ts)、[../../dispatch/runtime/owner-execution-service.ts](../../dispatch/runtime/owner-execution-service.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../budget/runtime/scope-budget-service.ts](../../budget/runtime/scope-budget-service.ts)、[../../conversation/runtime/approvals.ts](../../conversation/runtime/approvals.ts)、[../../conversation/runtime/questions.ts](../../conversation/runtime/questions.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../../dispatch/runtime/owner-execution-service.ts](../../dispatch/runtime/owner-execution-service.ts)、[../../engines/index.ts](../../engines/index.ts)、[../../evidence/rules/artifact-baseline.ts](../../evidence/rules/artifact-baseline.ts)、[../../evidence/rules/output-manifest.ts](../../evidence/rules/output-manifest.ts)、[../../evidence/runtime/artifact-report-service.ts](../../evidence/runtime/artifact-report-service.ts)、[../../evidence/runtime/execution-report-service.ts](../../evidence/runtime/execution-report-service.ts)、[../../evidence/runtime/output-manifest-report-service.ts](../../evidence/runtime/output-manifest-report-service.ts)、[../../execution/admission/admission-wait.ts](../../execution/admission/admission-wait.ts)、[../../execution/context/execution-context.ts](../../execution/context/execution-context.ts)、[../../execution/rules/business-run.ts](../../execution/rules/business-run.ts)、[../../execution/rules/run-failure.ts](../../execution/rules/run-failure.ts)、[../../execution/rules/runtime/runtime.ts](../../execution/rules/runtime/runtime.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../runtime/monitoring/member-events.ts](../../runtime/monitoring/member-events.ts)、[../../tasks/rules/dispatch-execution.ts](../../tasks/rules/dispatch-execution.ts)、[../../tasks/rules/execution-context.ts](../../tasks/rules/execution-context.ts)、[../../tasks/rules/execution-report.ts](../../tasks/rules/execution-report.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../tasks/rules/member-checkpoint-chain.ts](../../tasks/rules/member-checkpoint-chain.ts)、[../../tasks/rules/member-checkpoint.ts](../../tasks/rules/member-checkpoint.ts)、[../../tasks/rules/member-commands.ts](../../tasks/rules/member-commands.ts)、[../../tasks/rules/member-events.ts](../../tasks/rules/member-events.ts)、[../../tasks/rules/member-help.ts](../../tasks/rules/member-help.ts)、[../../tasks/rules/member-topic-context-rules.ts](../../tasks/rules/member-topic-context-rules.ts)、[../../tasks/rules/queued-member-resume.ts](../../tasks/rules/queued-member-resume.ts)、[../../tasks/rules/scope-active-input.ts](../../tasks/rules/scope-active-input.ts)、[../../tasks/rules/scope-goal.ts](../../tasks/rules/scope-goal.ts)、[../../tasks/rules/topic-interruption.ts](../../tasks/rules/topic-interruption.ts)、[../../tasks/rules/workflow-selection.ts](../../tasks/rules/workflow-selection.ts)、[../rules/automatic-execution.ts](../rules/automatic-execution.ts)、[../rules/member-execution-binding.ts](../rules/member-execution-binding.ts)、[../rules/team-session.ts](../rules/team-session.ts)、[../rules/workspace-member.ts](../rules/workspace-member.ts)、[member-checkpoint-verifier.ts](member-checkpoint-verifier.ts)、[member-resume-service.ts](member-resume-service.ts)、[member-state.ts](member-state.ts)、[member-workflow.ts](member-workflow.ts)、[../../workspace/rules/workflow-contract.ts](../../workspace/rules/workflow-contract.ts)。
 
 ### member-help-state.ts
 
@@ -300,7 +300,7 @@ class N_src_logic_team_runtime_member_help_state_ts["member-help-state.ts"] {
 }
 ```
 
-直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../tasks/rules/dispatch-execution.ts](../../tasks/rules/dispatch-execution.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../tasks/rules/member-help.ts](../../tasks/rules/member-help.ts)、[../../evidence/runtime/execution-report-facts.ts](../../evidence/runtime/execution-report-facts.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../evidence/runtime/execution-report-facts.ts](../../evidence/runtime/execution-report-facts.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../tasks/rules/dispatch-execution.ts](../../tasks/rules/dispatch-execution.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../tasks/rules/member-help.ts](../../tasks/rules/member-help.ts)。
 
 ### member-pause-service.ts
 
@@ -315,8 +315,8 @@ class N_src_logic_team_runtime_member_pause_service_ts_MemberPausePorts["MemberP
   +AssertCurrent()
 }
 N_src_logic_team_runtime_member_pause_service_ts ..> N_src_logic_team_runtime_member_pause_service_ts_MemberPausePorts : 声明
-class N_src_logic_team_runtime_member_pause_service_ts_external_MemberCheckpointVerificationPorts["MemberCheckpointVerificationPorts (外部契约)"] {
-  <<external>>
+class N_src_logic_team_runtime_member_pause_service_ts_external_MemberCheckpointVerificationPorts["MemberCheckpointVerificationPorts (./member-checkpoint-verifier)"] {
+  <<boundary>>
 }
 N_src_logic_team_runtime_member_pause_service_ts_external_MemberCheckpointVerificationPorts <|-- N_src_logic_team_runtime_member_pause_service_ts_MemberPausePorts
 class N_src_logic_team_runtime_member_pause_service_ts_MemberPauseService["MemberPauseService"] {
@@ -335,7 +335,8 @@ class N_src_logic_team_runtime_member_pause_service_ts_MemberPauseService["Membe
 N_src_logic_team_runtime_member_pause_service_ts ..> N_src_logic_team_runtime_member_pause_service_ts_MemberPauseService : 声明
 ```
 
-直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../execution/context/execution-context.ts](../../execution/context/execution-context.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../../tasks/rules/dispatch-scope.ts](../../tasks/rules/dispatch-scope.ts)、[../../tasks/rules/scope-continuation.ts](../../tasks/rules/scope-continuation.ts)、[../../tasks/rules/member-pause.ts](../../tasks/rules/member-pause.ts)、[../../tasks/rules/member-pause-rules.ts](../../tasks/rules/member-pause-rules.ts)、[member-checkpoint-verifier.ts](member-checkpoint-verifier.ts)、[../../dispatch/runtime/owner-execution-service.ts](../../dispatch/runtime/owner-execution-service.ts)。
+继承／实现来源：`MemberCheckpointVerificationPorts` → [member-checkpoint-verifier.ts](member-checkpoint-verifier.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../../dispatch/runtime/owner-execution-service.ts](../../dispatch/runtime/owner-execution-service.ts)、[../../execution/context/execution-context.ts](../../execution/context/execution-context.ts)、[../../tasks/rules/dispatch-scope.ts](../../tasks/rules/dispatch-scope.ts)、[../../tasks/rules/member-pause-rules.ts](../../tasks/rules/member-pause-rules.ts)、[../../tasks/rules/member-pause.ts](../../tasks/rules/member-pause.ts)、[../../tasks/rules/scope-continuation.ts](../../tasks/rules/scope-continuation.ts)、[member-checkpoint-verifier.ts](member-checkpoint-verifier.ts)。
 
 ### member-resume-service.ts
 
@@ -355,7 +356,7 @@ class N_src_logic_team_runtime_member_resume_service_ts_MemberResumeService["Mem
 N_src_logic_team_runtime_member_resume_service_ts ..> N_src_logic_team_runtime_member_resume_service_ts_MemberResumeService : 声明
 ```
 
-直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../tasks/runtime/main-command-request.ts](../../tasks/runtime/main-command-request.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../tasks/rules/queued-member-resume.ts](../../tasks/rules/queued-member-resume.ts)、[../../tasks/rules/queued-member-resume-rules.ts](../../tasks/rules/queued-member-resume-rules.ts)、[../../tasks/rules/scope-active-input.ts](../../tasks/rules/scope-active-input.ts)、[member-state.ts](member-state.ts)、[member-checkpoint-verifier.ts](member-checkpoint-verifier.ts)、[../../dispatch/runtime/owner-execution-service.ts](../../dispatch/runtime/owner-execution-service.ts)、[../../tasks/rules/member-checkpoint-chain.ts](../../tasks/rules/member-checkpoint-chain.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../../dispatch/runtime/owner-execution-service.ts](../../dispatch/runtime/owner-execution-service.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../tasks/rules/member-checkpoint-chain.ts](../../tasks/rules/member-checkpoint-chain.ts)、[../../tasks/rules/queued-member-resume-rules.ts](../../tasks/rules/queued-member-resume-rules.ts)、[../../tasks/rules/queued-member-resume.ts](../../tasks/rules/queued-member-resume.ts)、[../../tasks/rules/scope-active-input.ts](../../tasks/rules/scope-active-input.ts)、[../../tasks/runtime/main-command-request.ts](../../tasks/runtime/main-command-request.ts)、[member-checkpoint-verifier.ts](member-checkpoint-verifier.ts)、[member-state.ts](member-state.ts)。
 
 ### member-state.ts
 
@@ -371,7 +372,7 @@ class N_src_logic_team_runtime_member_state_ts["member-state.ts"] {
 }
 ```
 
-直接依赖：[../../tasks/rules/candidate-review.ts](../../tasks/rules/candidate-review.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../rules/agent-types.ts](../rules/agent-types.ts)、[../../tasks/rules/member-tool-output.ts](../../tasks/rules/member-tool-output.ts)、[member-help-state.ts](member-help-state.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../tasks/rules/candidate-review.ts](../../tasks/rules/candidate-review.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../tasks/rules/member-tool-output.ts](../../tasks/rules/member-tool-output.ts)、[../rules/agent-types.ts](../rules/agent-types.ts)、[member-help-state.ts](member-help-state.ts)。
 
 ### member-workflow.ts
 
@@ -401,7 +402,7 @@ class N_src_logic_team_runtime_member_workflow_ts_WorkflowFileVerification["Work
 N_src_logic_team_runtime_member_workflow_ts ..> N_src_logic_team_runtime_member_workflow_ts_WorkflowFileVerification : 声明
 ```
 
-直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../tasks/rules/scope-goal.ts](../../tasks/rules/scope-goal.ts)、[../../tasks/rules/execution-context.ts](../../tasks/rules/execution-context.ts)、[../../evidence/rules/workflow-evidence.ts](../../evidence/rules/workflow-evidence.ts)、[../../evidence/rules/validation-evidence.ts](../../evidence/rules/validation-evidence.ts)、[../../evidence/rules/complete-output-evidence.ts](../../evidence/rules/complete-output-evidence.ts)、[../../evidence/rules/output-manifest-evidence.ts](../../evidence/rules/output-manifest-evidence.ts)、[../../workspace/rules/artifact-scope.ts](../../workspace/rules/artifact-scope.ts)、[../../evidence/rules/output-manifest.ts](../../evidence/rules/output-manifest.ts)、[../../evidence/rules/artifact-baseline.ts](../../evidence/rules/artifact-baseline.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../tasks/rules/dispatch-execution.ts](../../tasks/rules/dispatch-execution.ts)、[../../runtime/monitoring/member-events.ts](../../runtime/monitoring/member-events.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../evidence/rules/artifact-baseline.ts](../../evidence/rules/artifact-baseline.ts)、[../../evidence/rules/complete-output-evidence.ts](../../evidence/rules/complete-output-evidence.ts)、[../../evidence/rules/output-manifest-evidence.ts](../../evidence/rules/output-manifest-evidence.ts)、[../../evidence/rules/output-manifest.ts](../../evidence/rules/output-manifest.ts)、[../../evidence/rules/validation-evidence.ts](../../evidence/rules/validation-evidence.ts)、[../../evidence/rules/workflow-evidence.ts](../../evidence/rules/workflow-evidence.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../runtime/monitoring/member-events.ts](../../runtime/monitoring/member-events.ts)、[../../tasks/rules/dispatch-execution.ts](../../tasks/rules/dispatch-execution.ts)、[../../tasks/rules/execution-context.ts](../../tasks/rules/execution-context.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../tasks/rules/scope-goal.ts](../../tasks/rules/scope-goal.ts)、[../../workspace/rules/artifact-scope.ts](../../workspace/rules/artifact-scope.ts)。
 
 ### 本目录调用边界
 
@@ -416,16 +417,16 @@ class N_src_logic_team_runtime_member_checkpoint_verifier_ts["member-checkpoint-
 class N_src_logic_team_runtime_member_execution_ts["member-execution.ts"] {
   <<module>>
 }
-class N_src_logic_team_runtime_member_state_ts["member-state.ts"] {
-  <<module>>
-}
 class N_src_logic_team_runtime_member_resume_service_ts["member-resume-service.ts"] {
   <<module>>
 }
+class N_src_logic_team_runtime_member_state_ts["member-state.ts"] {
+  <<module>>
+}
 N_src_logic_team_runtime_checkpoint_abandonment_service_ts ..> N_src_logic_team_runtime_member_checkpoint_verifier_ts : 导入依赖
-N_src_logic_team_runtime_member_execution_ts ..> N_src_logic_team_runtime_member_state_ts : 导入依赖
 N_src_logic_team_runtime_member_execution_ts ..> N_src_logic_team_runtime_member_checkpoint_verifier_ts : 导入依赖
 N_src_logic_team_runtime_member_execution_ts ..> N_src_logic_team_runtime_member_resume_service_ts : 导入依赖
+N_src_logic_team_runtime_member_execution_ts ..> N_src_logic_team_runtime_member_state_ts : 导入依赖
 ```
 
 ```mermaid
@@ -450,8 +451,8 @@ class N_src_logic_team_runtime_member_state_ts["member-state.ts"] {
 }
 N_src_logic_team_runtime_member_execution_ts ..> N_src_logic_team_runtime_member_workflow_ts : 导入依赖
 N_src_logic_team_runtime_member_pause_service_ts ..> N_src_logic_team_runtime_member_checkpoint_verifier_ts : 导入依赖
-N_src_logic_team_runtime_member_resume_service_ts ..> N_src_logic_team_runtime_member_state_ts : 导入依赖
 N_src_logic_team_runtime_member_resume_service_ts ..> N_src_logic_team_runtime_member_checkpoint_verifier_ts : 导入依赖
+N_src_logic_team_runtime_member_resume_service_ts ..> N_src_logic_team_runtime_member_state_ts : 导入依赖
 ```
 
 ```mermaid

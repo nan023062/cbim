@@ -93,8 +93,8 @@ class N_src_core_errors_ts["errors.ts"] {
 class N_src_core_json_ts["json.ts"] {
   <<module>>
 }
-N_src_core_json_ts ..> N_src_core_utility : 导入依赖
 N_src_core_json_ts ..> N_src_core_errors_ts : 导入依赖
+N_src_core_json_ts ..> N_src_core_utility : 导入依赖
 N_src_core_platform ..> N_src_core_contracts : 导入依赖
 N_src_core_platform ..> N_src_core_web : 导入依赖
 N_src_core_platform ..> N_src_core_errors_ts : 导入依赖
@@ -103,14 +103,14 @@ N_src_core_platform ..> N_src_core_utility : 导入依赖
 
 各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
 
-- `json.ts` → `utility`：导入。
 - `json.ts` → `errors.ts`：导入。
+- `json.ts` → `utility`：导入。
 - `platform` → `contracts`：导入。
 - `platform` → `web`：导入。
 - `platform` → `errors.ts`：导入。
 - `platform` → `utility`：导入。
 
-### errors.ts 公开入口
+### errors.ts
 
 ```mermaid
 classDiagram
@@ -120,8 +120,26 @@ class N_src_core_errors_ts["errors.ts"] {
 }
 ```
 
+```mermaid
+classDiagram
+class N_src_core_errors_ts["errors.ts"] {
+  <<module>>
+}
+class N_src_core_errors_ts_Fault["Fault"] {
+  +code
+  +constructor()
+}
+N_src_core_errors_ts ..> N_src_core_errors_ts_Fault : 声明
+class N_src_core_errors_ts_external_Error["Error (全局或跨文件声明，见源码)"] {
+  <<external>>
+}
+N_src_core_errors_ts_external_Error <|-- N_src_core_errors_ts_Fault
+```
 
-### json.ts 公开入口
+继承／实现来源：`Error` → `全局或跨文件声明，见源码`。
+
+
+### json.ts
 
 ```mermaid
 classDiagram
@@ -130,6 +148,8 @@ class N_src_core_json_ts["json.ts"] {
   +parseJson()
 }
 ```
+
+直接依赖：[errors.ts](errors.ts)、[utility/index.ts](utility/index.ts)。
 
 
 ## 子目录导航

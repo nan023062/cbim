@@ -50,7 +50,7 @@
 
 根深度为 0，子调用加 1；深度等于上限可以执行，超出拒绝。真实进程全局准入由 prepare 使用 execution/admission 同步领取，不用父等待规避进程计数。具体限制和支持范围由装配固定，不能由模型参数改变。
 
-调用前 `assertExclusive` 核实父工具批次只有当前已授权调用；子执行期间父新工具被 Runtime 拒绝。直属调用均在等待答复时只放行目录、答复和向上求助工具，写操作与新子调用仍被拒绝。根工作区独占租约持续至后代真实排空。停止通过 AbortSignal 沿调用传播，不影响无关调用树。
+调用前 `AssertExclusive` 核实父工具批次只有当前已授权调用；子执行期间父新工具被 Runtime 拒绝。直属调用均在等待答复时只放行目录、答复和向上求助工具，写操作与新子调用仍被拒绝。根工作区独占租约持续至后代真实排空。停止通过 AbortSignal 沿调用传播，不影响无关调用树。
 
 关闭失败保留 stranded 与全局占用。Runtime 收尾 drain 重试关闭原循环，不重放工具；未确认退出前不得释放根租约。进程内 attempts 只用于当前执行去重，重启后的未知执行仍由原持久日志拒绝重放。
 
@@ -221,13 +221,14 @@ class N_src_logic_agents_contracts_ts_AgentConstraintError["AgentConstraintError
   +constructor()
 }
 N_src_logic_agents_contracts_ts ..> N_src_logic_agents_contracts_ts_AgentConstraintError : 声明
-class N_src_logic_agents_contracts_ts_external_Error["Error (外部契约)"] {
+class N_src_logic_agents_contracts_ts_external_Error["Error (全局或跨文件声明，见源码)"] {
   <<external>>
 }
 N_src_logic_agents_contracts_ts_external_Error <|-- N_src_logic_agents_contracts_ts_AgentConstraintError
 ```
 
-直接依赖：[../tasks/rules/scope-active-input.ts](../tasks/rules/scope-active-input.ts)、[../execution/rules/types.ts](../execution/rules/types.ts)、[../execution/rules/engine-tools.ts](../execution/rules/engine-tools.ts)。
+继承／实现来源：`Error` → `全局或跨文件声明，见源码`。
+直接依赖：[../execution/rules/engine-tools.ts](../execution/rules/engine-tools.ts)、[../execution/rules/types.ts](../execution/rules/types.ts)、[../tasks/rules/scope-active-input.ts](../tasks/rules/scope-active-input.ts)。
 
 ### exchange.ts
 

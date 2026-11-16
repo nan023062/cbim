@@ -22,7 +22,7 @@
 
 ### 业务应用生命周期与宿主协作
 
-Application 只持有业务服务与原生命周期。IPC 分发移至 bridge/server/application.ts，其适配器继承业务实例、只增加 dispatch，不覆盖状态方法；Electron、窗口、原生传输和关闭事件归 Bridge。以下协作约束同时说明业务与宿主的分工。
+Application 只持有业务服务与原生命周期。IPC 分发移至 bridge/server/application.ts，其适配器继承业务实例、只增加 Dispatch，不覆盖状态方法；Electron、窗口、原生传输和关闭事件归 Bridge。以下协作约束同时说明业务与宿主的分工。
 
 <a id="contract-类的设计意图与阅读顺序"></a>
 
@@ -33,11 +33,11 @@ Application 只持有业务服务与原生命周期。IPC 分发移至 bridge/se
 | 阅读顺序 | 成员 | 契约与所有权 |
 | --- | --- | --- |
 | 1 | 私有／公开字段、constructor | 字段区展示状态归属；参数属性已显式列出。独立容器没有跨字段初始化依赖，监管与准入对象仍保持原先相对创建顺序；构造体按原顺序注入服务。 |
-| 2 | init、restore、open | 应用配置先初始化，工作区可延后恢复；同工作区打开请求合并。`open` 先排空旧实例，再在工程持锁阶段加载唯一 Store，随后完成业务装配。 |
-| 3 | workspace、execution 等服务入口 | 取得明确工作区的原服务，不根据页面选择猜测身份，不隐式创建运行。`workspace` 只确认集合中有实例，具体服务继续核实实例就绪状态。 |
-| 4 | retire、bindAdmission、stop | 工作区关闭先进入退役屏障并撤票；运行、文件操作与知识事务排空后才关闭共享存储和工程锁。仅撤销等待不释放真实运行名额。 |
-| 5 | shutdown | 复用同一退出 Promise；先拒绝新业务，再依序关闭各应用／工作区服务。特定真实排空未完成错误允许重试原关闭，不重做业务。 |
-| 6 | modelOptions、chatOptions | 在执行前解析公开选型和附件能力；未显式指定模型时读取主 Agent 配置，不让已受理运行跟随设置热切换。 |
+| 2 | Init、Restore、Open | 应用配置先初始化，工作区可延后恢复；同工作区打开请求合并。`Open` 先排空旧实例，再在工程持锁阶段加载唯一 Store，随后完成业务装配。 |
+| 3 | Workspace、Execution 等服务入口 | 取得明确工作区的原服务，不根据页面选择猜测身份，不隐式创建运行。`Workspace` 只确认集合中有实例，具体服务继续核实实例就绪状态。 |
+| 4 | Retire、BindAdmission、Stop | 工作区关闭先进入退役屏障并撤票；运行、文件操作与知识事务排空后才关闭共享存储和工程锁。仅撤销等待不释放真实运行名额。 |
+| 5 | Shutdown | 复用同一退出 Promise；先拒绝新业务，再依序关闭各应用／工作区服务。特定真实排空未完成错误允许重试原关闭，不重做业务。 |
+| 6 | ModelOptions、ChatOptions | 在执行前解析公开选型和附件能力；未显式指定模型时读取主 Agent 配置，不让已受理运行跟随设置热切换。 |
 
 新增业务端口在 `assembly/` 装配，并明确在本类哪个生命周期创建与释放；稳定的规则与算法继续归原业务模块或 Core。当前打开、重开和关闭路径仍各自保留原顺序，本轮只整理阅读结构，不宣称已提炼所有生命周期共性。
 
@@ -81,7 +81,7 @@ Main 为 `DesktopUpdates` 注入唯一的业务关闭回调，停止终端、等
 
 ```mermaid
 classDiagram
-class main_brand["main.ts"] { <<module>> }
+class main_brand["bridge/server/main.ts"] { <<module>> }
 class brand_assets["assets/branding/（工程外部资源边界）"] { <<resource>> }
 main_brand ..> brand_assets : 固定资源路径装配窗口图标
 note for main_brand "名称与图标只属于桌面呈现，不参与运行身份、更新版本或账户状态。"
@@ -91,14 +91,14 @@ note for main_brand "名称与图标只属于桌面呈现，不参与运行身�
 
 #### 反馈连接诊断与提交端口
 
-`createExecutionManager` 只在桌面 chat 主运行注入反馈服务：`feedbackTools` 捕获固定连接，`feedbackStatus` 独立调用 `GitHubFeedbackAuth.CheckConnection` 并检查工作区仍有效。未连接时只读诊断仍可用，运行中连接变化不替换原提交范围。认证状态及保存归 Logic feedback/service，Main 负责装配和关闭，工具命名／提示归调度层，更新程序不参与。
+`createExecutionManager` 只在桌面 chat 主运行注入反馈服务：`FeedbackTools` 捕获固定连接，`FeedbackStatus` 独立调用 `GitHubFeedbackAuth.CheckConnection` 并检查工作区仍有效。未连接时只读诊断仍可用，运行中连接变化不替换原提交范围。认证状态及保存归 Logic feedback/service，Main 负责装配和关闭，工具命名／提示归调度层，更新程序不参与。
 
 ```mermaid
 classDiagram
-class execution["execution.ts"] { <<module>> }
-class resources["resources/"] { <<directory>> }
+class execution["application/assembly/execution.ts"] { <<module>> }
+class resources["feedback/service/"] { <<directory>> }
 execution ..> resources : 捕获提交端口和只读连接检查
-note for execution "主 chat 分别注入 feedbackTools 与 feedbackStatus；新运行重新捕获，原运行范围不刷新。"
+note for execution "主 chat 分别注入 FeedbackTools 与 FeedbackStatus；新运行重新捕获，原运行范围不刷新。"
 ```
 
 <a id="contract-长期岗位登记的独立装配"></a>
@@ -133,13 +133,13 @@ note for execution "主 chat 分别注入 feedbackTools 与 feedbackStatus；新
 
 `Application.repositoryConnections` 是应用唯一的桌面连接服务，使用 `ResourceRepositories` 当前真实共享闭包和工作区知识事务端口；用户目录保存授权与命令回执，知识目录只保存可移植的链接器定义。初始化读取授权但不自动共享或联网，工作区关闭/重开先取消该工作区在途核验；应用退出先拒绝新连接操作、排空读写，再关闭共享服务。原回执查询不创建运行、调用模型或恢复旧工作区实例。
 
-`createExecutionManager` 仅为 chat 主运行调用 `prepareTools`，把本轮固定的已授权只读端口注入 `ExecutionServices.repositoryTools`。能力捕获不访问 HTTP；实际模型调用才读取，执行成员、未装配的 CLI 和没有就绪连接的主轮不注册两项仓库工具。端口不从 ChatOptions 或模型参数取得授权，不改变原周期模式与本轮权限决定的业务工具能力。
+`createExecutionManager` 仅为 chat 主运行调用 `PrepareTools`，把本轮固定的已授权只读端口注入 `ExecutionServices.repositoryTools`。能力捕获不访问 HTTP；实际模型调用才读取，执行成员、未装配的 CLI 和没有就绪连接的主轮不注册两项仓库工具。端口不从 ChatOptions 或模型参数取得授权，不改变原周期模式与本轮权限决定的业务工具能力。
 
 <a id="contract-正式成员的-workflow-能力装配"></a>
 
 #### 正式成员的 Workflow 能力装配
 
-`member-dispatch.prepare` 从与 Pi 实际注册相同的 `core/tools/native-tools` 清单，按本轮 permission 返回 availableTools；密钥和实际模型留在可信工厂。执行服务在 claim/run 之前预检冻结的模块约定。创建 Runtime 时注入全部 `preparedWorkflowContracts(run.prepared)`，普通主聊天不接正式成员 Workflow 门禁；Auto 的原生业务能力由周期模式与权限独立决定，不因注入成员契约而获得。
+[成员执行装配](assembly/member-dispatch.ts) 中的 `prepareEngine` 从与 Pi 实际注册相同的 `logic/tools/rules/native-tools.ts` 清单，按本轮 permission 返回 availableTools；密钥和实际模型留在可信工厂。执行服务在 claim/run 之前预检冻结的模块约定。创建 Runtime 时注入全部 `preparedWorkflowContracts(run.prepared)`，普通主聊天不接正式成员 Workflow 门禁；Auto 的原生业务能力由周期模式与权限独立决定，不因注入成员契约而获得。
 
 同一工厂通过 `availableValidators:['json-schema-v1','csv-table-v1','png-raster-v1']` 声明实际平台验证能力，不在无约定时冒称已注册验证工具。成员 Runtime 分别注入 `ArtifactFiles.ValidateFile/validateTable/validateImage`，路径与 Schema 来自冻结要求；目标审阅另注入 `normalizeValidationPath/checkValidationFiles`，成员结算复用已有 artifacts 端口。所有者代际与停止覆盖读取，判断使用当前字节，不通过报告服务重入派发事务或创建新运行。
 
@@ -169,7 +169,7 @@ note for execution "主 chat 分别注入 feedbackTools 与 feedbackStatus；新
 
 `execution-admission.ts` 将全局资格与 `WorkspaceExecutionLease` 同步组合。请求键由主/成员来源加稳定命令 SHA-256 摘要组成，满足身份长度与字符约束；撤票只传 `AdmissionIdentity`，不夹带请求权限和来源字段。所有桌面主轮与成员轮使用同一服务，测试或独立装配未传服务时仍沿用已有工作区租约。
 
-主普通聊天在 `LoopRuntime.acquireLease` 成功之后才调用 `beforeRun` 打开目标周期，额度不足不会创建 scope、运行日志或模型请求。主轮按实际权限领取租约：read 可共享，ask/execute 保守独占，防止 beforeRun 恢复 Auto 后超出已取得的占用。Team 与 Auto 均按本轮权限提供业务工具；知识写仍经过知识服务事务和用户权限。成员在派发存储事务内、领取信封和记录 run 之前取得全局及本地资格；准备、原生锁或持久化失败释放已取得资源。成员的未知终态仍保留原有占用规则，不能为了展示空闲而假释放。
+主普通聊天在 `RuntimeOptions.AcquireLease` 成功之后才调用 `RunStartControl.BeforeRun` 打开目标周期，额度不足不会创建 scope、运行日志或模型请求。主轮按实际权限领取租约：read 可共享，ask/execute 保守独占，防止 BeforeRun 恢复 Auto 后超出已取得的占用。Team 与 Auto 均按本轮权限提供业务工具；知识写仍经过知识服务事务和用户权限。成员在派发存储事务内、领取信封和记录 run 之前取得全局及本地资格；准备、原生锁或持久化失败释放已取得资源。成员的未知终态仍保留原有占用规则，不能为了展示空闲而假释放。
 
 成员准备知识、解析模型和最终重查基线后都重新核对批次及工作区代际。装配 `isCurrent` 在工作区退役时立即失效，手动成员启动同样受约束；不依赖稍后才执行的 manager.close。若停止发生在已经开始的持久提交期间，保留真实启动意图并结算取消，但不创建模型。代际同时发出 AbortSignal，成员启动信号贯穿尚未登记 active 的原生准备阶段；异常启动继续按 interrupted 留证，不伪装为未执行。
 
@@ -252,7 +252,7 @@ member-dispatch 的影响端口另装配原知识事务只读适配，借已打�
 
 #### 受控文件统一影响观察（Step40）
 
-影响观察的 `observeControlled` 复用同一已装配 ControlledFiles.Report，读取前后核停止；原报告沿唯一 Store/canonical 验证，不产生 utility、租约、业务文件 IO 或补偿命令。原来源读取和实际写/补偿入口仍分离。
+影响观察的 `ObserveControlled` 复用同一已装配 ControlledFiles.Report，读取前后核停止；原报告沿唯一 Store/canonical 验证，不产生 utility、租约、业务文件 IO 或补偿命令。原来源读取和实际写/补偿入口仍分离。
 
 <a id="contract-持久成员等待的只读装配"></a>
 
@@ -387,6 +387,131 @@ N_src_logic_application_application_ts ..> N_src_logic_application_assembly : �
 各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
 
 - `application.ts` → `assembly`：导入。
+
+### application.ts
+
+成员 1/4（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_logic_application_application_ts["application.ts"] {
+  <<module>>
+}
+class N_src_logic_application_application_ts_ApplicationPlatform["ApplicationPlatform"] {
+  <<interface>>
+  +controlledFiles
+  +engineRuntimes
+  +engineArtifacts
+  +webBrowser
+}
+N_src_logic_application_application_ts ..> N_src_logic_application_application_ts_ApplicationPlatform : 声明
+class N_src_logic_application_application_ts_Application["Application"] {
+  +paths
+  +catalog
+  +rules
+  +running
+  +resources
+  +repositoryConnections
+  +githubFeedback
+  +chatMaterials
+  +models
+  +engineModels
+  +enginePackages
+  +webSettings
+  +mainAgentSettings
+  +runtime
+  +admission
+  +admissionSettings
+}
+N_src_logic_application_application_ts ..> N_src_logic_application_application_ts_Application : 声明
+```
+
+成员 2/4（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_logic_application_application_ts["application.ts"] {
+  <<module>>
+}
+class N_src_logic_application_application_ts_Application["Application"] {
+  +budgetSettings
+  +isStopping
+  +constructor()
+  +Automations()
+  +MemberDispatch()
+  +WorkspaceMembers()
+  +WorkspaceOwnerships()
+  +MemberExecution()
+  +Execution()
+  +AgentHistory()
+  +RequestBudgets()
+  +IsolatedExecutions()
+  +ControlledFiles()
+  +Init()
+  +List()
+  +Workspace()
+}
+N_src_logic_application_application_ts ..> N_src_logic_application_application_ts_Application : 声明
+```
+
+成员 3/4（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_logic_application_application_ts["application.ts"] {
+  <<module>>
+}
+class N_src_logic_application_application_ts_Application["Application"] {
+  +Governance()
+  +Open()
+  +Stop()
+  +Remove()
+  +Restore()
+  +Shutdown()
+  +ModelOptions()
+  +ChatOptions()
+  -platform
+  -opening
+  -web
+  -executions
+  -automationServices
+  -collaborations
+  -dispatchers
+  -memberRegistries
+}
+N_src_logic_application_application_ts ..> N_src_logic_application_application_ts_Application : 声明
+```
+
+成员 4/4（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_logic_application_application_ts["application.ts"] {
+  <<module>>
+}
+class N_src_logic_application_application_ts_Application["Application"] {
+  -ownershipRegistries
+  -memberExecutions
+  -nextAdmissionEpoch
+  -admissionOwners
+  -monitors
+  -histories
+  -retiring
+  -requestBudgetServices
+  -isolatedExecutionServices
+  -controlledFileServices
+  -stopping
+  -shutdownPromise
+  -RetireAdmission()
+  -BindAdmission()
+  -Retire()
+  -AssertServiceAvailable()
+}
+N_src_logic_application_application_ts ..> N_src_logic_application_application_ts_Application : 声明
+```
+
+直接依赖：[../../core/errors.ts](../../core/errors.ts)、[../../core/platform/node/files/index.ts](../../core/platform/node/files/index.ts)、[../../core/platform/node/web/index.ts](../../core/platform/node/web/index.ts)、[assembly/execution-admission.ts](assembly/execution-admission.ts)、[assembly/execution.ts](assembly/execution.ts)、[assembly/member-dispatch.ts](assembly/member-dispatch.ts)、[assembly/runtime-monitor.ts](assembly/runtime-monitor.ts)、[../automation/service/service.ts](../automation/service/service.ts)、[../budget/runtime/model-request-budget-service.ts](../budget/runtime/model-request-budget-service.ts)、[../budget/settings/budget-settings.ts](../budget/settings/budget-settings.ts)、[../connectors/service/repository-connections.ts](../connectors/service/repository-connections.ts)、[../conversation/runtime/execution-manager.ts](../conversation/runtime/execution-manager.ts)、[../dispatch/runtime/auto-collaboration.ts](../dispatch/runtime/auto-collaboration.ts)、[../dispatch/runtime/dispatch-service.ts](../dispatch/runtime/dispatch-service.ts)、[../dispatch/storage/dispatch-store.ts](../dispatch/storage/dispatch-store.ts)、[../engines/packages/index.ts](../engines/packages/index.ts)、[../engines/service/index.ts](../engines/service/index.ts)、[../execution/admission/run-admission.ts](../execution/admission/run-admission.ts)、[../execution/admission/workspace-lease.ts](../execution/admission/workspace-lease.ts)、[../execution/rules/engine-runtime.ts](../execution/rules/engine-runtime.ts)、[../feedback/service/index.ts](../feedback/service/index.ts)、[../file-operations/platform/files/controlled-file-protocol.ts](../file-operations/platform/files/controlled-file-protocol.ts)、[../file-operations/service/controlled-files.ts](../file-operations/service/controlled-files.ts)、[../file-operations/service/isolated-executions.ts](../file-operations/service/isolated-executions.ts)、[../history/runtime/agent-history.ts](../history/runtime/agent-history.ts)、[../history/service/assembly.ts](../history/service/assembly.ts)、[../knowledge/rules/knowledge.ts](../knowledge/rules/knowledge.ts)、[../materials/service/chat-inputs.ts](../materials/service/chat-inputs.ts)、[../materials/service/chat-material-imports.ts](../materials/service/chat-material-imports.ts)、[../models/service/index.ts](../models/service/index.ts)、[../resources/service/index.ts](../resources/service/index.ts)、[../runtime/monitoring/global-runtime.ts](../runtime/monitoring/global-runtime.ts)、[../runtime/settings/admission-settings.ts](../runtime/settings/admission-settings.ts)、[../team/runtime/member-execution.ts](../team/runtime/member-execution.ts)、[../team/service/workspace-members.ts](../team/service/workspace-members.ts)、[../team/settings/main-agent-settings.ts](../team/settings/main-agent-settings.ts)、[../updates/engine-artifacts.ts](../updates/engine-artifacts.ts)、[../web/service/index.ts](../web/service/index.ts)、[../workspace/service/catalog.ts](../workspace/service/catalog.ts)、[../workspace/service/module-ownerships.ts](../workspace/service/module-ownerships.ts)、[../workspace/service/paths.ts](../workspace/service/paths.ts)、[../workspace/service/workspace.ts](../workspace/service/workspace.ts)。
+
 
 ## 子目录导航
 

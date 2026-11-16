@@ -42,38 +42,38 @@ class Workspace {
   +instanceId
   +state
   +knowledgeErrors
-  +open()
-  +assert(identity)
-  +view()
-  +snapshot()
-  +preview(request)
-  +commit(request)
-  +startTask(name)
-  +cancelTask(id)
-  +close()
+  +Open()
+  +Assert(identity)
+  +View()
+  +Snapshot()
+  +Preview(request)
+  +Commit(request)
+  +StartTask(name)
+  +CancelTask(id)
+  +Close()
 }
 class KnowledgeStore {
   <<persistence boundary>>
-  +recover()
-  +initialize()
-  +snapshot()
-  +drain()
+  +Recover()
+  +Initialize()
+  +Snapshot()
+  +Drain()
 }
 class KernelLock {
   <<platform boundary>>
-  +close()
+  +Close()
 }
 Workspace *-- KnowledgeStore : 事务与初始化
 Workspace *-- KernelLock : 打开时持有，关闭时释放
 ```
 
-- `open()` 校验真实路径身份、取得独占锁、核本地历史归属，再 await Main 注入的可信 `beforeDispatchLoad` 阶段，然后读取唯一 Store、恢复事务、初始化缺失知识并校验，之后进入 `running`。该阶段只为 Store 观察器提前恢复历史索引，不接 IPC/模型参数；失败不继续 Store 读取或事务恢复，沿原失败路径释放锁。知识校验错误计入 `knowledgeErrors`，不伪装为生命周期失败。
+- `Open()` 校验真实路径身份、取得独占锁、核本地历史归属，再 await Main 注入的可信 `beforeDispatchLoad` 阶段，然后读取唯一 Store、恢复事务、初始化缺失知识并校验，之后进入 `running`。该阶段只为 Store 观察器提前恢复历史索引，不接 IPC/模型参数；失败不继续 Store 读取或事务恢复，沿原失败路径释放锁。知识校验错误计入 `knowledgeErrors`，不伪装为生命周期失败。
 - `assert(identity)` 拒绝未运行或旧实例请求。`instanceId` 每次创建变化，不能用旧预览跨实例提交。
 - `snapshot/preview/commit` 委托知识存储；运行授权由上层调用边界核验，事务仍校验版本、结构和幂等请求。
-- `governance` 使用私有账本保存显式模块保护、观察、提案、人工决定和实施意图；`governed` 与普通知识提交共用队列。打开先核账本完整性锚，再恢复原事务并核 journal 关联；损坏失败关闭，不默默解除保护。重开不执行旧实施意图。
+- `governance` 使用私有账本保存显式模块保护、观察、提案、人工决定和实施意图；`Governed` 与普通知识提交共用队列。打开先核账本完整性锚，再恢复原事务并核 journal 关联；损坏失败关闭，不默默解除保护。重开不执行旧实施意图。
 - `committedReceipt/hasRecordedRequest` 由当前运行实例只读查询完整原知识请求的 journal。前者核验原指纹和已提交结果，后者仅报告任何记录是否存在；旧实例请求可查但不可重新提交，损坏或未完成记录不能作为“从未受理”证明。两者不写入、回滚或自动恢复。
 - `startTask/cancelTask` 只管理当前实例的知识检查与索引维护任务。取消前核验运行态；未知、其他工作区、对话或成员派发任务 ID 返回 `TASK_NOT_FOUND`。取消请求不伪造终态：正在提交的事务可继续完成，已完成/失败/取消的任务重复调用保持真实结果。
-- `close()` 停止监听、取消维护任务、排空知识事务，最后释放锁。应用先排空执行及成员调度，才关闭工作区。
+- `Close()` 停止监听、取消维护任务、排空知识事务，最后释放锁。应用先排空执行及成员调度，才关闭工作区。
 - 工作区诊断只读展示状态与问题，不提供重启操作。打开流程不修改项目的其他开发工具配置。
 
 知识存储与平台边界分别见 [knowledge](../../knowledge/storage/ARCHITECTURE.md)、[platform](../../execution/platform/ARCHITECTURE.md)。
@@ -88,9 +88,9 @@ Workspace *-- KernelLock : 打开时持有，关闭时释放
 
 元信息修改只改明确选择的字段；能力与模型必须分别采纳，相同模型引用的配置刷新不能夹在普通编辑中。能力内容 hash 不包含整库知识 revision，模型 hash 保守包含完整公开配置及名称。暂停和恢复不要求当前来源可用，仍保留实际 currentDiff；退休终态不可修改或复活。
 
-`list` 只给摘要，按初次登记顺序分页，后续页必须绑定同登记游标。`get` 每次重新读取知识与公开模型配置，返回 same/changed/missing/invalid；外部来源变化不推进登记游标，也不覆盖已采纳正文。详情读取前后再次比较登记游标，发生并发变更时明确要求重读。
+`List` 只给摘要，按初次登记顺序分页，后续页必须绑定同登记游标。`Get` 每次重新读取知识与公开模型配置，返回 same/changed/missing/invalid；外部来源变化不推进登记游标，也不覆盖已采纳正文。详情读取前后再次比较登记游标，发生并发变更时明确要求重读。
 
-提交先以完整原请求指纹查 `commandReceipt`，已提交命令即使原实例退役或来源不可用也返回原紧凑回执。冲突不能覆盖；只读 receipt 不调用 transact、知识读取或模型解析。未查到不等于证明未受理；未知响应只核实原命令，不自动换 ID 或重做操作。容量累计计算退休岗位与历史审计，超限拒绝写入而不删历史。
+提交先以完整原请求指纹查 `CommandReceipt`，已提交命令即使原实例退役或来源不可用也返回原紧凑回执。冲突不能覆盖；只读 receipt 不调用 transact、知识读取或模型解析。未查到不等于证明未受理；未知响应只核实原命令，不自动换 ID 或重做操作。容量累计计算退休岗位与历史审计，超限拒绝写入而不删历史。
 
 <a id="contract-模块岗位负责人服务"></a>
 
@@ -108,7 +108,7 @@ Workspace *-- KernelLock : 打开时持有，关闭时释放
 
 `ArchitectureService` 接收 KnowledgeWorkspace 端口，经严格 schema 和 assert(identity) 核实桌面请求。preview 要求 workspaceId + instanceId + revision + operations，与对象工具复用同一操作；不接受 peopleUpserts、maintenance 或自报确认。不限制为单模块维护确认事务；岗位负责人由独立服务管理。
 
-`commit` 只接受 `workspaceId + instanceId + planId`，使用冻结计划复核并提交，不接受正文覆盖。此服务是用户操作的桌面入口，不加入 Agent 工具注册表；运行中的知识工具仍执行逐次权限门禁。无模型调用、成员启动或业务文件修改副作用。
+`Commit` 只接受 `workspaceId + instanceId + planId`，使用冻结计划复核并提交，不接受正文覆盖。此服务是用户操作的桌面入口，不加入 Agent 工具注册表；运行中的知识工具仍执行逐次权限门禁。无模型调用、成员启动或业务文件修改副作用。
 
 团队图和业务图是工作区共享的静态知识；多个主会话可同时持有各自独立的成员/目标/模块任务图。架构 CRUD 不创建动态成员，也不追改已派发任务中的角色或模块快照。知识版本变化后，由既有执行上下文检查拒绝过期基线，必须核实并重新准备任务。
 
@@ -132,7 +132,7 @@ forRun 的 confirmNotApplied 仅等待原平台排空并读原账本；核对冻
 
 `ControlledFiles` 复用唯一 DispatchStore 保存每条文件阶段；原 member 工厂冻结 scope/run/岗位来源，Runtime 的可靠 allowed 序号只消费一次。文件/备份 IO 全在 Store 回调之外，prepared 和 executing 分别提交后才发送实际 apply；终态不因迟到停止、当前模型或知识变化被撤销。平台或保存未知不重做。原命令查询先于今日实例和文件校验。
 
-`preview` 只取得短只读占用、打开独占句柄并核实原 applied/关闭周期/当前同文件 after/私有 before，返回只读摘要和 basis。`compensate` 是独立本机显式命令，重新持有写占用与同句柄，保存独立意图后恢复原 before；不改写原操作或原 canonical。`receipt` 仅读已有阶段，缺记录不推断未执行。首次确定预拒仅 FILE_COMPENSATION_PRE_ACCEPT_INPUT/REJECTED；任何 Store CAS/IO/保存后异常均保持未知。
+`Preview` 只取得短只读占用、打开独占句柄并核实原 applied/关闭周期/当前同文件 after/私有 before，返回只读摘要和 basis。`Compensate` 是独立本机显式命令，重新持有写占用与同句柄，保存独立意图后恢复原 before；不改写原操作或原 canonical。`Receipt` 仅读已有阶段，缺记录不推断未执行。首次确定预拒仅 FILE_COMPENSATION_PRE_ACCEPT_INPUT/REJECTED；任何 Store CAS/IO/保存后异常均保持未知。
 
 关闭先 abort 在途文件会话并等待真实 child 退出；失败保留 lease/服务及 Store。再次关闭只确认原进程并释放占用，不触发 apply。文件身份证明不覆盖 ACL/ADS/外部恶意进程；readonly mapping 仍可能导致内容写后截断失败，unknown 不自动补偿。
 
@@ -261,7 +261,7 @@ class N_src_logic_workspace_service_catalog_ts_Catalog["Catalog"] {
 N_src_logic_workspace_service_catalog_ts ..> N_src_logic_workspace_service_catalog_ts_Catalog : 声明
 ```
 
-直接依赖：[../../../core/platform/node/locking.ts](../../../core/platform/node/locking.ts)、[paths.ts](paths.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../contracts.ts](../contracts.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/platform/node/locking.ts](../../../core/platform/node/locking.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../contracts.ts](../contracts.ts)、[paths.ts](paths.ts)。
 
 ### main-module-ownership-tools.ts
 
@@ -273,7 +273,7 @@ class N_src_logic_workspace_service_main_module_ownership_tools_ts["main-module-
 }
 ```
 
-直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../execution/rules/conversation-binding.ts](../../execution/rules/conversation-binding.ts)、[../../tasks/rules/types.ts](../../tasks/rules/types.ts)、[../rules/module-ownership.ts](../rules/module-ownership.ts)、[../rules/module-ownership-rules.ts](../rules/module-ownership-rules.ts)、[../rules/module-ownership-tools.ts](../rules/module-ownership-tools.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[module-ownerships.ts](module-ownerships.ts)、[../../team/service/workspace-members.ts](../../team/service/workspace-members.ts)、[../../dispatch/runtime/owner-execution-service.ts](../../dispatch/runtime/owner-execution-service.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../dispatch/runtime/owner-execution-service.ts](../../dispatch/runtime/owner-execution-service.ts)、[../../execution/rules/conversation-binding.ts](../../execution/rules/conversation-binding.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../tasks/rules/types.ts](../../tasks/rules/types.ts)、[../../team/service/workspace-members.ts](../../team/service/workspace-members.ts)、[../rules/module-ownership-rules.ts](../rules/module-ownership-rules.ts)、[../rules/module-ownership-tools.ts](../rules/module-ownership-tools.ts)、[../rules/module-ownership.ts](../rules/module-ownership.ts)、[module-ownerships.ts](module-ownerships.ts)。
 
 ### module-ownerships.ts
 
@@ -332,7 +332,7 @@ class N_src_logic_workspace_service_module_ownerships_ts_ModuleOwnerships["Modul
 N_src_logic_workspace_service_module_ownerships_ts ..> N_src_logic_workspace_service_module_ownerships_ts_ModuleOwnerships : 声明
 ```
 
-直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../knowledge/rules/types.ts](../../knowledge/rules/types.ts)、[../../knowledge/rules/read-models/index.ts](../../knowledge/rules/read-models/index.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../../team/rules/workspace-member.ts](../../team/rules/workspace-member.ts)、[../rules/module-ownership.ts](../rules/module-ownership.ts)、[../rules/module-ownership-rules.ts](../rules/module-ownership-rules.ts)、[../../tasks/rules/module-ownership-invariants.ts](../../tasks/rules/module-ownership-invariants.ts)、[../../knowledge/service/knowledge-sources.ts](../../knowledge/service/knowledge-sources.ts)、[../rules/knowledge-source-rules.ts](../rules/knowledge-source-rules.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../../knowledge/rules/read-models/index.ts](../../knowledge/rules/read-models/index.ts)、[../../knowledge/rules/types.ts](../../knowledge/rules/types.ts)、[../../knowledge/service/knowledge-sources.ts](../../knowledge/service/knowledge-sources.ts)、[../../tasks/rules/module-ownership-invariants.ts](../../tasks/rules/module-ownership-invariants.ts)、[../../team/rules/workspace-member.ts](../../team/rules/workspace-member.ts)、[../rules/knowledge-source-rules.ts](../rules/knowledge-source-rules.ts)、[../rules/module-ownership-rules.ts](../rules/module-ownership-rules.ts)、[../rules/module-ownership.ts](../rules/module-ownership.ts)。
 
 ### paths.ts
 
@@ -352,13 +352,14 @@ class N_src_logic_workspace_service_paths_ts_Paths["Paths"] {
   +Knowledge()
 }
 N_src_logic_workspace_service_paths_ts ..> N_src_logic_workspace_service_paths_ts_Paths : 声明
-class N_src_logic_workspace_service_paths_ts_external_StoragePaths["StoragePaths (外部契约)"] {
-  <<external>>
+class N_src_logic_workspace_service_paths_ts_external_StoragePaths["StoragePaths (../ports/paths)"] {
+  <<boundary>>
 }
 N_src_logic_workspace_service_paths_ts_external_StoragePaths <|.. N_src_logic_workspace_service_paths_ts_Paths
 ```
 
-直接依赖：[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../ports/paths.ts](../ports/paths.ts)。
+继承／实现来源：`StoragePaths` → [../ports/paths.ts](../ports/paths.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../ports/paths.ts](../ports/paths.ts)。
 
 ### source-browser.ts
 
@@ -417,8 +418,8 @@ class N_src_logic_workspace_service_workspace_ts_Workspace["Workspace"] {
   +View()
 }
 N_src_logic_workspace_service_workspace_ts ..> N_src_logic_workspace_service_workspace_ts_Workspace : 声明
-class N_src_logic_workspace_service_workspace_ts_external_KnowledgeWorkspace["KnowledgeWorkspace (外部契约)"] {
-  <<external>>
+class N_src_logic_workspace_service_workspace_ts_external_KnowledgeWorkspace["KnowledgeWorkspace (../../knowledge/rules/ports)"] {
+  <<boundary>>
 }
 N_src_logic_workspace_service_workspace_ts_external_KnowledgeWorkspace <|.. N_src_logic_workspace_service_workspace_ts_Workspace
 ```
@@ -449,8 +450,8 @@ class N_src_logic_workspace_service_workspace_ts_Workspace["Workspace"] {
   +CancelTask()
 }
 N_src_logic_workspace_service_workspace_ts ..> N_src_logic_workspace_service_workspace_ts_Workspace : 声明
-class N_src_logic_workspace_service_workspace_ts_external_KnowledgeWorkspace["KnowledgeWorkspace (外部契约)"] {
-  <<external>>
+class N_src_logic_workspace_service_workspace_ts_external_KnowledgeWorkspace["KnowledgeWorkspace (../../knowledge/rules/ports)"] {
+  <<boundary>>
 }
 N_src_logic_workspace_service_workspace_ts_external_KnowledgeWorkspace <|.. N_src_logic_workspace_service_workspace_ts_Workspace
 ```
@@ -476,13 +477,14 @@ class N_src_logic_workspace_service_workspace_ts_Workspace["Workspace"] {
   -Log()
 }
 N_src_logic_workspace_service_workspace_ts ..> N_src_logic_workspace_service_workspace_ts_Workspace : 声明
-class N_src_logic_workspace_service_workspace_ts_external_KnowledgeWorkspace["KnowledgeWorkspace (外部契约)"] {
-  <<external>>
+class N_src_logic_workspace_service_workspace_ts_external_KnowledgeWorkspace["KnowledgeWorkspace (../../knowledge/rules/ports)"] {
+  <<boundary>>
 }
 N_src_logic_workspace_service_workspace_ts_external_KnowledgeWorkspace <|.. N_src_logic_workspace_service_workspace_ts_Workspace
 ```
 
-直接依赖：[../../knowledge/storage/object-storage.ts](../../knowledge/storage/object-storage.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[paths.ts](paths.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/locking.ts](../../../core/platform/node/locking.ts)、[../../knowledge/rules/knowledge.ts](../../knowledge/rules/knowledge.ts)、[../../knowledge/storage/knowledge-store.ts](../../knowledge/storage/knowledge-store.ts)、[../../governance/service/module-governance.ts](../../governance/service/module-governance.ts)、[../../dispatch/storage/dispatch-store.ts](../../dispatch/storage/dispatch-store.ts)、[../../knowledge/service/knowledge-sources.ts](../../knowledge/service/knowledge-sources.ts)、[../../knowledge/rules/planned-commit.ts](../../knowledge/rules/planned-commit.ts)、[../../knowledge/storage/governance-port.ts](../../knowledge/storage/governance-port.ts)、[../contracts.ts](../contracts.ts)、[../../knowledge/rules/types.ts](../../knowledge/rules/types.ts)。
+继承／实现来源：`KnowledgeWorkspace` → [../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/platform/node/locking.ts](../../../core/platform/node/locking.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../dispatch/storage/dispatch-store.ts](../../dispatch/storage/dispatch-store.ts)、[../../governance/service/module-governance.ts](../../governance/service/module-governance.ts)、[../../knowledge/rules/knowledge.ts](../../knowledge/rules/knowledge.ts)、[../../knowledge/rules/planned-commit.ts](../../knowledge/rules/planned-commit.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../knowledge/rules/types.ts](../../knowledge/rules/types.ts)、[../../knowledge/service/knowledge-sources.ts](../../knowledge/service/knowledge-sources.ts)、[../../knowledge/storage/governance-port.ts](../../knowledge/storage/governance-port.ts)、[../../knowledge/storage/knowledge-store.ts](../../knowledge/storage/knowledge-store.ts)、[../../knowledge/storage/object-storage.ts](../../knowledge/storage/object-storage.ts)、[../contracts.ts](../contracts.ts)、[paths.ts](paths.ts)。
 
 ### 本目录调用边界
 

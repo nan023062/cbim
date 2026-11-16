@@ -69,6 +69,44 @@ N_src_logic_web_service ..> N_src_logic_web_index_ts : 导入依赖
 - `index.ts` → `contracts.ts`：导入。
 - `service` → `index.ts`：导入。
 
+### contracts.ts
+
+```mermaid
+classDiagram
+class N_src_logic_web_contracts_ts["contracts.ts"] {
+  <<module>>
+}
+class N_src_logic_web_contracts_ts_WebSettingsView["WebSettingsView"] {
+  <<interface>>
+  +revision
+  +provider
+  +enabled
+  +hasKey
+  +secureStorage
+  +browserRobotsPolicy
+}
+N_src_logic_web_contracts_ts ..> N_src_logic_web_contracts_ts_WebSettingsView : 声明
+class N_src_logic_web_contracts_ts_WebToolsPort["WebToolsPort"] {
+  <<interface>>
+  +Fetch()
+  +Search()
+}
+N_src_logic_web_contracts_ts ..> N_src_logic_web_contracts_ts_WebToolsPort : 声明
+```
+
+
+
+### index.ts
+
+```mermaid
+classDiagram
+class N_src_logic_web_index_ts["index.ts"] {
+  <<module>>
+}
+```
+直接依赖：[contracts.ts](contracts.ts)。
+
+
 ## 子目录导航
 
 - [service/](service/ARCHITECTURE.md)：WebService 的正文适配和 Brave 搜索；WebSettings 的版本、搜索开关、robots 策略和加密配置。公开服务入口与纯协议分开。

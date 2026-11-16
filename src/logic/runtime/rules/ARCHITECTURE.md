@@ -215,7 +215,7 @@ class N_src_logic_runtime_rules_runtime_scope_ts["runtime-scope.ts"] {
 }
 ```
 
-直接依赖：[../../tasks/rules/dispatch-scope.ts](../../tasks/rules/dispatch-scope.ts)、[types.ts](types.ts)、[runtime-validation.ts](runtime-validation.ts)。
+直接依赖：[runtime-validation.ts](runtime-validation.ts)、[types.ts](types.ts)、[../../tasks/rules/dispatch-scope.ts](../../tasks/rules/dispatch-scope.ts)。
 
 ### runtime-validation.ts
 
@@ -398,8 +398,8 @@ class N_src_logic_runtime_rules_types_ts_RuntimeUsage["RuntimeUsage"] {
   +unpricedRuns
 }
 N_src_logic_runtime_rules_types_ts ..> N_src_logic_runtime_rules_types_ts_RuntimeUsage : 声明
-class N_src_logic_runtime_rules_types_ts_external_RunUsage["RunUsage (外部契约)"] {
-  <<external>>
+class N_src_logic_runtime_rules_types_ts_external_RunUsage["RunUsage (../../execution/rules/usage)"] {
+  <<boundary>>
 }
 N_src_logic_runtime_rules_types_ts_external_RunUsage <|-- N_src_logic_runtime_rules_types_ts_RuntimeUsage
 ```
@@ -449,7 +449,8 @@ class N_src_logic_runtime_rules_types_ts_RuntimeRead["RuntimeRead"] {
 N_src_logic_runtime_rules_types_ts ..> N_src_logic_runtime_rules_types_ts_RuntimeRead : 声明
 ```
 
-直接依赖：[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../execution/rules/usage.ts](../../execution/rules/usage.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../team/rules/agent-types.ts](../../team/rules/agent-types.ts)、[../../execution/rules/member-run.ts](../../execution/rules/member-run.ts)、[../../execution/rules/conversation-binding.ts](../../execution/rules/conversation-binding.ts)。
+继承／实现来源：`RunUsage` → [../../execution/rules/usage.ts](../../execution/rules/usage.ts)。
+直接依赖：[../../execution/rules/conversation-binding.ts](../../execution/rules/conversation-binding.ts)、[../../execution/rules/member-run.ts](../../execution/rules/member-run.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../execution/rules/usage.ts](../../execution/rules/usage.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../team/rules/agent-types.ts](../../team/rules/agent-types.ts)。
 
 ### 本目录调用边界
 
@@ -458,14 +459,14 @@ classDiagram
 class N_src_logic_runtime_rules_runtime_scope_ts["runtime-scope.ts"] {
   <<module>>
 }
-class N_src_logic_runtime_rules_types_ts["types.ts"] {
-  <<module>>
-}
 class N_src_logic_runtime_rules_runtime_validation_ts["runtime-validation.ts"] {
   <<module>>
 }
-N_src_logic_runtime_rules_runtime_scope_ts ..> N_src_logic_runtime_rules_types_ts : 导入依赖
+class N_src_logic_runtime_rules_types_ts["types.ts"] {
+  <<module>>
+}
 N_src_logic_runtime_rules_runtime_scope_ts ..> N_src_logic_runtime_rules_runtime_validation_ts : 导入依赖
+N_src_logic_runtime_rules_runtime_scope_ts ..> N_src_logic_runtime_rules_types_ts : 导入依赖
 N_src_logic_runtime_rules_runtime_validation_ts ..> N_src_logic_runtime_rules_types_ts : 导入依赖
 ```
 

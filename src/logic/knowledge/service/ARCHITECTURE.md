@@ -56,8 +56,8 @@ class N_src_logic_knowledge_service_knowledge_sources_ts_KnowledgeSourceWorkspac
   +WithSourceSnapshot()
 }
 N_src_logic_knowledge_service_knowledge_sources_ts ..> N_src_logic_knowledge_service_knowledge_sources_ts_KnowledgeSourceWorkspace : 声明
-class N_src_logic_knowledge_service_knowledge_sources_ts_external_KnowledgeWorkspace["KnowledgeWorkspace (外部契约)"] {
-  <<external>>
+class N_src_logic_knowledge_service_knowledge_sources_ts_external_KnowledgeWorkspace["KnowledgeWorkspace (../rules/ports)"] {
+  <<boundary>>
 }
 N_src_logic_knowledge_service_knowledge_sources_ts_external_KnowledgeWorkspace <|-- N_src_logic_knowledge_service_knowledge_sources_ts_KnowledgeSourceWorkspace
 class N_src_logic_knowledge_service_knowledge_sources_ts_KnowledgeSources["KnowledgeSources"] {
@@ -76,13 +76,15 @@ class N_src_logic_knowledge_service_knowledge_sources_ts_KnowledgeSources["Knowl
   -store
 }
 N_src_logic_knowledge_service_knowledge_sources_ts ..> N_src_logic_knowledge_service_knowledge_sources_ts_KnowledgeSources : 声明
-class N_src_logic_knowledge_service_knowledge_sources_ts_external_KnowledgeSourceAuthority["KnowledgeSourceAuthority (外部契约)"] {
-  <<external>>
+class N_src_logic_knowledge_service_knowledge_sources_ts_external_KnowledgeSourceAuthority["KnowledgeSourceAuthority (../storage/source-journal)"] {
+  <<boundary>>
 }
 N_src_logic_knowledge_service_knowledge_sources_ts_external_KnowledgeSourceAuthority <|.. N_src_logic_knowledge_service_knowledge_sources_ts_KnowledgeSources
 ```
 
-直接依赖：[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../core/json.ts](../../../core/json.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../rules/types.ts](../rules/types.ts)、[../rules/ports.ts](../rules/ports.ts)、[../rules/planned-commit.ts](../rules/planned-commit.ts)、[../../workspace/rules/knowledge-source.ts](../../workspace/rules/knowledge-source.ts)、[../../workspace/rules/knowledge-source-rules.ts](../../workspace/rules/knowledge-source-rules.ts)、[../storage/source-journal.ts](../storage/source-journal.ts)。
+继承／实现来源：`KnowledgeWorkspace` → [../rules/ports.ts](../rules/ports.ts)。
+继承／实现来源：`KnowledgeSourceAuthority` → [../storage/source-journal.ts](../storage/source-journal.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/json.ts](../../../core/json.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../rules/planned-commit.ts](../rules/planned-commit.ts)、[../rules/ports.ts](../rules/ports.ts)、[../rules/types.ts](../rules/types.ts)、[../storage/source-journal.ts](../storage/source-journal.ts)、[../../workspace/rules/knowledge-source-rules.ts](../../workspace/rules/knowledge-source-rules.ts)、[../../workspace/rules/knowledge-source.ts](../../workspace/rules/knowledge-source.ts)。
 
 
 ## 子目录导航

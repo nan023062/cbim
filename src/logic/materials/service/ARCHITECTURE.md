@@ -118,7 +118,7 @@ class N_src_logic_materials_service_chat_inputs_ts_ChatInputs["ChatInputs"] {
 N_src_logic_materials_service_chat_inputs_ts ..> N_src_logic_materials_service_chat_inputs_ts_ChatInputs : 声明
 ```
 
-直接依赖：[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../tasks/rules/scope-continuation-attachments.ts](../../tasks/rules/scope-continuation-attachments.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../contracts.ts](../contracts.ts)、[../../tasks/rules/continuation-source-snapshot.ts](../../tasks/rules/continuation-source-snapshot.ts)、[chat-source-readers.ts](chat-source-readers.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../contracts.ts](../contracts.ts)、[chat-source-readers.ts](chat-source-readers.ts)、[../../tasks/rules/continuation-source-snapshot.ts](../../tasks/rules/continuation-source-snapshot.ts)、[../../tasks/rules/scope-continuation-attachments.ts](../../tasks/rules/scope-continuation-attachments.ts)。
 
 ### chat-material-imports.ts
 
@@ -173,7 +173,7 @@ class N_src_logic_materials_service_chat_material_imports_ts_ChatMaterialImports
 N_src_logic_materials_service_chat_material_imports_ts ..> N_src_logic_materials_service_chat_material_imports_ts_ChatMaterialImports : 声明
 ```
 
-直接依赖：[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../connectors/rules/repository-tools.ts](../../connectors/rules/repository-tools.ts)、[../../connectors/service/repository-connections.ts](../../connectors/service/repository-connections.ts)、[chat-inputs.ts](chat-inputs.ts)、[chat-source-readers.ts](chat-source-readers.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../../connectors/rules/repository-tools.ts](../../connectors/rules/repository-tools.ts)、[../../connectors/service/repository-connections.ts](../../connectors/service/repository-connections.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[chat-inputs.ts](chat-inputs.ts)、[chat-source-readers.ts](chat-source-readers.ts)。
 
 ### chat-source-readers.ts
 
@@ -187,7 +187,7 @@ class N_src_logic_materials_service_chat_source_readers_ts["chat-source-readers.
 }
 ```
 
-直接依赖：[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../tasks/rules/continuation-source-snapshot.ts](../../tasks/rules/continuation-source-snapshot.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../../tasks/rules/continuation-source-snapshot.ts](../../tasks/rules/continuation-source-snapshot.ts)。
 
 ### 本目录调用边界
 

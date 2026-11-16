@@ -80,7 +80,7 @@ PiBridge ..> ResultsModule : 进入会话前校验
 
 ##### 实际注册表与按需发现
 
-`ToolRegistry` 只登记合法 `cbim_` 名称，并强制声明正整数版本、副作用、输出 Schema、取消语义和恢复说明。解析输入与执行分离；只有本注册表实际解析出的定义可以调用 `invokeResolved`，不能借同名外来对象执行。`list` 保持引擎需要的紧凑输入清单；`catalog/describe` 仅查询该知识注册表，不能执行工具或凭元数据授权。
+`ToolRegistry` 只登记合法 `cbim_` 名称，并强制声明正整数版本、副作用、输出 Schema、取消语义和恢复说明。解析输入与执行分离；只有本注册表实际解析出的定义可以调用 `InvokeResolved`，不能借同名外来对象执行。`List` 保持引擎需要的紧凑输入清单；`Catalog/Describe` 仅查询该知识注册表，不能执行工具或凭元数据授权。
 
 `contracts.ts` 保存取消/恢复和发现输出的纯协议。知识目录返回 `family:knowledge` 与实际名称、可选描述、版本、副作用；详情按名称返回有限输入/输出 JSON Schema 和取消/恢复说明。自描述通过有限 Schema 引用表达，不递归嵌套整个注册表，不公开 `execute`、凭据、原生工具或派发工具。原始定义/人员诊断允许保留任意 JSON 事实（包括自有 `__proto__` 键），不裁剪成看似合格的业务对象。
 
@@ -215,8 +215,8 @@ class N_src_logic_tools_rules_types_ts["types.ts"] {
 }
 N_src_logic_tools_rules_receipt_schema_ts ..> N_src_logic_tools_rules_scope_schema_ts : 导入依赖
 N_src_logic_tools_rules_receipts_ts ..> N_src_logic_tools_rules_types_ts : 导入依赖
-N_src_logic_tools_rules_registry_ts ..> N_src_logic_tools_rules_types_ts : 导入依赖
 N_src_logic_tools_rules_registry_ts ..> N_src_logic_tools_rules_results_ts : 导入依赖
+N_src_logic_tools_rules_registry_ts ..> N_src_logic_tools_rules_types_ts : 导入依赖
 N_src_logic_tools_rules_types_ts ..> N_src_logic_tools_rules_scope_schema_ts : 导入依赖
 ```
 
@@ -224,17 +224,48 @@ N_src_logic_tools_rules_types_ts ..> N_src_logic_tools_rules_scope_schema_ts : �
 
 - `native-tools.ts` → `policy`：导入。
 - `outcome.ts` → `results.ts`：导入。
-- `policy` → `types.ts`：导入。
 - `policy` → `scope-schema.ts`：导入。
+- `policy` → `types.ts`：导入。
 - `receipt-schema.ts` → `scope-schema.ts`：导入。
 - `receipts.ts` → `types.ts`：导入。
-- `registry.ts` → `input-validation.ts`：导入。
-- `registry.ts` → `types.ts`：导入。
-- `registry.ts` → `results.ts`：导入。
 - `registry.ts` → `contracts.ts`：导入。
+- `registry.ts` → `input-validation.ts`：导入。
+- `registry.ts` → `results.ts`：导入。
+- `registry.ts` → `types.ts`：导入。
 - `types.ts` → `scope-schema.ts`：导入。
 
-### input-validation.ts 公开入口
+### contracts.ts
+
+```mermaid
+classDiagram
+class N_src_logic_tools_rules_contracts_ts["contracts.ts"] {
+  <<module>>
+}
+class N_src_logic_tools_rules_contracts_ts_ToolCancellation["ToolCancellation"] {
+  <<type>>
+
+}
+N_src_logic_tools_rules_contracts_ts ..> N_src_logic_tools_rules_contracts_ts_ToolCancellation : 声明
+class N_src_logic_tools_rules_contracts_ts_ToolRecovery["ToolRecovery"] {
+  <<type>>
+
+}
+N_src_logic_tools_rules_contracts_ts ..> N_src_logic_tools_rules_contracts_ts_ToolRecovery : 声明
+class N_src_logic_tools_rules_contracts_ts_KnowledgeToolCatalog["KnowledgeToolCatalog"] {
+  <<type>>
+
+}
+N_src_logic_tools_rules_contracts_ts ..> N_src_logic_tools_rules_contracts_ts_KnowledgeToolCatalog : 声明
+class N_src_logic_tools_rules_contracts_ts_KnowledgeToolDescription["KnowledgeToolDescription"] {
+  <<type>>
+
+}
+N_src_logic_tools_rules_contracts_ts ..> N_src_logic_tools_rules_contracts_ts_KnowledgeToolDescription : 声明
+```
+
+
+
+### input-validation.ts
 
 ```mermaid
 classDiagram
@@ -245,8 +276,10 @@ class N_src_logic_tools_rules_input_validation_ts["input-validation.ts"] {
 }
 ```
 
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)。
 
-### native-tools.ts 公开入口
+
+### native-tools.ts
 
 ```mermaid
 classDiagram
@@ -257,8 +290,10 @@ class N_src_logic_tools_rules_native_tools_ts["native-tools.ts"] {
 }
 ```
 
+直接依赖：[../../engines/index.ts](../../engines/index.ts)、[policy/tool-policy.ts](policy/tool-policy.ts)。
 
-### outcome.ts 公开入口
+
+### outcome.ts
 
 ```mermaid
 classDiagram
@@ -272,8 +307,33 @@ class N_src_logic_tools_rules_outcome_ts["outcome.ts"] {
 }
 ```
 
+```mermaid
+classDiagram
+class N_src_logic_tools_rules_outcome_ts["outcome.ts"] {
+  <<module>>
+}
+class N_src_logic_tools_rules_outcome_ts_ToolReconciliation["ToolReconciliation"] {
+  <<interface>>
+  +tool
+  +args
+}
+N_src_logic_tools_rules_outcome_ts ..> N_src_logic_tools_rules_outcome_ts_ToolReconciliation : 声明
+class N_src_logic_tools_rules_outcome_ts_ToolOutcome["ToolOutcome"] {
+  <<interface>>
+  +status
+  +retryable
+  +terminal
+  +reconcileTool
+  +reconcileArgs
+  +nextStep
+}
+N_src_logic_tools_rules_outcome_ts ..> N_src_logic_tools_rules_outcome_ts_ToolOutcome : 声明
+```
 
-### questions.ts 公开入口
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[results.ts](results.ts)。
+
+
+### questions.ts
 
 ```mermaid
 classDiagram
@@ -283,8 +343,44 @@ class N_src_logic_tools_rules_questions_ts["questions.ts"] {
 }
 ```
 
+```mermaid
+classDiagram
+class N_src_logic_tools_rules_questions_ts["questions.ts"] {
+  <<module>>
+}
+class N_src_logic_tools_rules_questions_ts_QuestionInput["QuestionInput"] {
+  <<type>>
 
-### receipts.ts 公开入口
+}
+N_src_logic_tools_rules_questions_ts ..> N_src_logic_tools_rules_questions_ts_QuestionInput : 声明
+class N_src_logic_tools_rules_questions_ts_PendingQuestion["PendingQuestion"] {
+  <<interface>>
+  +id
+  +taskId
+}
+N_src_logic_tools_rules_questions_ts ..> N_src_logic_tools_rules_questions_ts_PendingQuestion : 声明
+N_src_logic_tools_rules_questions_ts_QuestionInput <|-- N_src_logic_tools_rules_questions_ts_PendingQuestion
+class N_src_logic_tools_rules_questions_ts_QuestionResult["QuestionResult"] {
+  <<type>>
+
+}
+N_src_logic_tools_rules_questions_ts ..> N_src_logic_tools_rules_questions_ts_QuestionResult : 声明
+```
+
+
+
+### receipt-schema.ts
+
+```mermaid
+classDiagram
+class N_src_logic_tools_rules_receipt_schema_ts["receipt-schema.ts"] {
+  <<module>>
+}
+```
+直接依赖：[scope-schema.ts](scope-schema.ts)。
+
+
+### receipts.ts
 
 ```mermaid
 classDiagram
@@ -294,8 +390,48 @@ class N_src_logic_tools_rules_receipts_ts["receipts.ts"] {
 }
 ```
 
+直接依赖：[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[types.ts](types.ts)。
 
-### results.ts 公开入口
+
+### registry.ts
+
+```mermaid
+classDiagram
+class N_src_logic_tools_rules_registry_ts["registry.ts"] {
+  <<module>>
+}
+class N_src_logic_tools_rules_registry_ts_ToolDefinition["ToolDefinition"] {
+  <<interface>>
+  +name
+  +description
+  +inputSchema
+  +outputSchema
+  +version
+  +effects
+  +cancellation
+  +recovery
+  +execute
+}
+N_src_logic_tools_rules_registry_ts ..> N_src_logic_tools_rules_registry_ts_ToolDefinition : 声明
+class N_src_logic_tools_rules_registry_ts_ToolRegistry["ToolRegistry"] {
+  +tools
+  +Register()
+  +List()
+  +Catalog()
+  +Describe()
+  +Resolve()
+  +InvokeResolved()
+  -entries
+  -Summary()
+  -Entry()
+}
+N_src_logic_tools_rules_registry_ts ..> N_src_logic_tools_rules_registry_ts_ToolRegistry : 声明
+```
+
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[contracts.ts](contracts.ts)、[input-validation.ts](input-validation.ts)、[results.ts](results.ts)、[types.ts](types.ts)。
+
+
+### results.ts
 
 ```mermaid
 classDiagram
@@ -306,6 +442,97 @@ class N_src_logic_tools_rules_results_ts["results.ts"] {
   +validateToolResult()
 }
 ```
+
+```mermaid
+classDiagram
+class N_src_logic_tools_rules_results_ts["results.ts"] {
+  <<module>>
+}
+class N_src_logic_tools_rules_results_ts_ToolResultContent["ToolResultContent"] {
+  <<type>>
+
+}
+N_src_logic_tools_rules_results_ts ..> N_src_logic_tools_rules_results_ts_ToolResultContent : 声明
+class N_src_logic_tools_rules_results_ts_ToolResult["ToolResult"] {
+  <<interface>>
+  +content
+  +isError
+  +details
+}
+N_src_logic_tools_rules_results_ts ..> N_src_logic_tools_rules_results_ts_ToolResult : 声明
+```
+
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)。
+
+
+### scope-schema.ts
+
+```mermaid
+classDiagram
+class N_src_logic_tools_rules_scope_schema_ts["scope-schema.ts"] {
+  <<module>>
+}
+class N_src_logic_tools_rules_scope_schema_ts_RepositoryToolScope["RepositoryToolScope"] {
+  <<type>>
+
+}
+N_src_logic_tools_rules_scope_schema_ts ..> N_src_logic_tools_rules_scope_schema_ts_RepositoryToolScope : 声明
+class N_src_logic_tools_rules_scope_schema_ts_ToolScope["ToolScope"] {
+  <<type>>
+
+}
+N_src_logic_tools_rules_scope_schema_ts ..> N_src_logic_tools_rules_scope_schema_ts_ToolScope : 声明
+```
+
+直接依赖：[../../connectors/rules/definition.ts](../../connectors/rules/definition.ts)、[../../feedback/index.ts](../../feedback/index.ts)。
+
+
+### types.ts
+
+```mermaid
+classDiagram
+class N_src_logic_tools_rules_types_ts["types.ts"] {
+  <<module>>
+}
+class N_src_logic_tools_rules_types_ts_ToolCall["ToolCall"] {
+  <<interface>>
+  +id
+  +name
+  +input
+}
+N_src_logic_tools_rules_types_ts ..> N_src_logic_tools_rules_types_ts_ToolCall : 声明
+class N_src_logic_tools_rules_types_ts_ToolEffect["ToolEffect"] {
+  <<type>>
+
+}
+N_src_logic_tools_rules_types_ts ..> N_src_logic_tools_rules_types_ts_ToolEffect : 声明
+class N_src_logic_tools_rules_types_ts_ToolDecision["ToolDecision"] {
+  <<interface>>
+  +allow
+  +reason
+  +effects
+  +scope
+}
+N_src_logic_tools_rules_types_ts ..> N_src_logic_tools_rules_types_ts_ToolDecision : 声明
+class N_src_logic_tools_rules_types_ts_ToolReceipt["ToolReceipt"] {
+  <<interface>>
+  +version
+  +toolCallId
+  +toolName
+  +workspaceId
+  +taskId
+  +runId
+  +outcome
+  +inputHash
+  +resultHash
+  +effects
+  +scope
+  +recordedAt
+}
+N_src_logic_tools_rules_types_ts ..> N_src_logic_tools_rules_types_ts_ToolReceipt : 声明
+```
+
+直接依赖：[scope-schema.ts](scope-schema.ts)。
 
 
 ## 子目录导航

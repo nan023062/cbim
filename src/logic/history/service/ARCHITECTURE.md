@@ -77,7 +77,7 @@ class N_src_logic_history_service_assembly_ts_AgentHistoryWorkspace["AgentHistor
 N_src_logic_history_service_assembly_ts ..> N_src_logic_history_service_assembly_ts_AgentHistoryWorkspace : 声明
 ```
 
-直接依赖：[../../execution/ports/identity.ts](../../execution/ports/identity.ts)、[../runtime/agent-history.ts](../runtime/agent-history.ts)、[file-store.ts](file-store.ts)、[../../execution/storage/run-storage.ts](../../execution/storage/run-storage.ts)。
+直接依赖：[../../execution/ports/identity.ts](../../execution/ports/identity.ts)、[../../execution/storage/run-storage.ts](../../execution/storage/run-storage.ts)、[../runtime/agent-history.ts](../runtime/agent-history.ts)、[file-store.ts](file-store.ts)。
 
 ### file-store.ts
 
@@ -97,13 +97,14 @@ class N_src_logic_history_service_file_store_ts_FileAgentHistoryStore["FileAgent
   -SafeDirectory()
 }
 N_src_logic_history_service_file_store_ts ..> N_src_logic_history_service_file_store_ts_FileAgentHistoryStore : 声明
-class N_src_logic_history_service_file_store_ts_external_AgentHistoryStore["AgentHistoryStore (外部契约)"] {
-  <<external>>
+class N_src_logic_history_service_file_store_ts_external_AgentHistoryStore["AgentHistoryStore (../../team/rules/session-history-storage)"] {
+  <<boundary>>
 }
 N_src_logic_history_service_file_store_ts_external_AgentHistoryStore <|.. N_src_logic_history_service_file_store_ts_FileAgentHistoryStore
 ```
 
-直接依赖：[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../team/rules/session-history-storage.ts](../../team/rules/session-history-storage.ts)。
+继承／实现来源：`AgentHistoryStore` → [../../team/rules/session-history-storage.ts](../../team/rules/session-history-storage.ts)。
+直接依赖：[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../team/rules/session-history-storage.ts](../../team/rules/session-history-storage.ts)。
 
 ### 本目录调用边界
 

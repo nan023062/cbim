@@ -68,13 +68,13 @@ loop-engine 不直接选择具体构造器，也不解析 Pi SDK 路径；通过
 
 #### 递归调用协调
 
-agent-call-scheduler.ts 持有父子调用关联、深度、去重、暂停答复与取消树，直接调用已准备 Runtime.start 并等待 done；finally 经 Runtime.close 确认排空后才释放已有全局准入许可。关闭失败保留原句柄，只重试排空，不重放任务。并发来自 execution/admission，预算来自根请求账本；协调器不另存 reserved 或本根额度，capacity 仅显示权威快照。Agent 对象继续归 agents，不迁入具体引擎。
+agent-call-scheduler.ts 持有父子调用关联、深度、去重、暂停答复与取消树，直接调用已准备 Runtime.Start 并等待 done；finally 经 Runtime.Close 确认排空后才释放已有全局准入许可。关闭失败保留原句柄，只重试排空，不重放任务。并发来自 execution/admission，预算来自根请求账本；协调器不另存 reserved 或本根额度，capacity 仅显示权威快照。Agent 对象继续归 agents，不迁入具体引擎。
 
 <a id="contract-显式业务调用与当前结果核验"></a>
 
 ##### 显式业务调用与当前结果核验
 
-AgentCallScheduler.prepare 可以返回可信 launch 及只读 verify。带 launch 调用同一个 LoopRuntime.StartMember，beforeRun 仍将真实子 task/run 关联父工具；普通调用沿 start。只有 canonical 验证和当前字节复核通过，业务调用才返回 completed + verification。模型结束但验证失败返回工具错误。错误 details 保留工具 outcome，避免适配层把业务错误码二次封装丢失。
+`AgentSchedulerPorts.Prepare` 是注入 `AgentCallScheduler` 的准备端口，返回可信 `launch`、可选 `Verify`、`BeforeRun` 和 `Release`。带 launch 时调用 `LoopRuntime.StartMember`，BeforeRun 将真实子 task/run 关联父工具；普通调用沿 `LoopRuntime.Start`。只有 canonical 验证和当前字节复核通过，业务调用才返回 completed + verification。模型结束但验证失败返回工具错误。错误 details 保留工具 outcome，避免适配层把业务错误码二次封装丢失。
 
 cbim_agent_result_check 仅接受当前父运行已经完成的原 callId；从闭包取得原身份与验证器，模型不能提交路径或证明。外部文件变化返回 WORKFLOW_VALIDATION_STALE；不能据此重放子运行。调用图深度、全局准入、预算、停止及排空逻辑不变。业务 Agent 暴露原产物证据工具及递归求助，旧终止交接/检查点工具仅保留给旧运行。
 
@@ -102,7 +102,7 @@ officeHistory 是可信主装配可选的只读归档工具，与统一 Agent �
 
 #### 业务登记与异步释放
 
-准备结果的 beforeRun 在真实父工具引用保存后执行；登记失败禁止进入子模型主体。release 可异步执行，必须等待原 Runtime.close 与业务登记封存；任何一步失败都保留 stranded 句柄和占用。close 只重试原关闭链，不重新 prepare 或执行模型。
+准备结果的 beforeRun 在真实父工具引用保存后执行；登记失败禁止进入子模型主体。release 可异步执行，必须等待原 Runtime.Close 与业务登记封存；任何一步失败都保留 stranded 句柄和占用。close 只重试原关闭链，不重新 prepare 或执行模型。
 
 <a id="contract-递归-workflow-能力预检"></a>
 
@@ -190,7 +190,7 @@ class N_src_logic_execution_assembly_agent_call_scheduler_ts_AgentCallScheduler[
 N_src_logic_execution_assembly_agent_call_scheduler_ts ..> N_src_logic_execution_assembly_agent_call_scheduler_ts_AgentCallScheduler : 声明
 ```
 
-直接依赖：[../../agents/agent.ts](../../agents/agent.ts)、[../../agents/exchange.ts](../../agents/exchange.ts)、[../../tools/rules/questions.ts](../../tools/rules/questions.ts)、[../rules/member-run.ts](../rules/member-run.ts)、[../rules/runtime/runtime.ts](../rules/runtime/runtime.ts)、[../rules/types.ts](../rules/types.ts)、[../../agents/contracts.ts](../../agents/contracts.ts)、[../../tools/rules/outcome.ts](../../tools/rules/outcome.ts)、[../../tools/rules/results.ts](../../tools/rules/results.ts)。
+直接依赖：[../../agents/agent.ts](../../agents/agent.ts)、[../../agents/contracts.ts](../../agents/contracts.ts)、[../../agents/exchange.ts](../../agents/exchange.ts)、[../rules/member-run.ts](../rules/member-run.ts)、[../rules/runtime/runtime.ts](../rules/runtime/runtime.ts)、[../rules/types.ts](../rules/types.ts)、[../../tools/rules/outcome.ts](../../tools/rules/outcome.ts)、[../../tools/rules/questions.ts](../../tools/rules/questions.ts)、[../../tools/rules/results.ts](../../tools/rules/results.ts)。
 
 ### engine-adapters.ts
 
@@ -202,7 +202,7 @@ class N_src_logic_execution_assembly_engine_adapters_ts["engine-adapters.ts"] {
 }
 ```
 
-直接依赖：[../engines/pi/package.ts](../engines/pi/package.ts)、[../engines/claude/package.ts](../engines/claude/package.ts)、[../engines/codex/package.ts](../engines/codex/package.ts)、[../engines/memory/package.ts](../engines/memory/package.ts)、[../rules/engine-adapter.ts](../rules/engine-adapter.ts)。
+直接依赖：[../engines/claude/package.ts](../engines/claude/package.ts)、[../engines/codex/package.ts](../engines/codex/package.ts)、[../engines/memory/package.ts](../engines/memory/package.ts)、[../engines/pi/package.ts](../engines/pi/package.ts)、[../rules/engine-adapter.ts](../rules/engine-adapter.ts)。
 
 ### engine-package-loader.ts
 
@@ -214,7 +214,7 @@ class N_src_logic_execution_assembly_engine_package_loader_ts["engine-package-lo
 }
 ```
 
-直接依赖：[../rules/engine-adapter.ts](../rules/engine-adapter.ts)、[../rules/engine-runtime.ts](../rules/engine-runtime.ts)、[../../engines/index.ts](../../engines/index.ts)。
+直接依赖：[../../engines/index.ts](../../engines/index.ts)、[engine-adapters.ts](engine-adapters.ts)、[../rules/engine-adapter.ts](../rules/engine-adapter.ts)、[../rules/engine-runtime.ts](../rules/engine-runtime.ts)。
 
 ### loop-engine.ts
 
@@ -320,7 +320,7 @@ class N_src_logic_execution_assembly_loop_engine_ts_ExecutionServices["Execution
 N_src_logic_execution_assembly_loop_engine_ts ..> N_src_logic_execution_assembly_loop_engine_ts_ExecutionServices : 声明
 ```
 
-直接依赖：[../../tools/runtime/office-history-tools.ts](../../tools/runtime/office-history-tools.ts)、[../../tools/runtime/question-tools.ts](../../tools/runtime/question-tools.ts)、[../../tools/runtime/web-tools.ts](../../tools/runtime/web-tools.ts)、[../../web/index.ts](../../web/index.ts)、[../../workspace/ports/paths.ts](../../workspace/ports/paths.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../tools/runtime/knowledge-tools.ts](../../tools/runtime/knowledge-tools.ts)、[../context/team-workflow.ts](../context/team-workflow.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../conversation/runtime/main-agent.ts](../../conversation/runtime/main-agent.ts)、[../../agents/index.ts](../../agents/index.ts)、[../rules/types.ts](../rules/types.ts)、[../../engines/index.ts](../../engines/index.ts)、[../rules/index.ts](../rules/index.ts)、[../rules/engine-adapter.ts](../rules/engine-adapter.ts)、[engine-package-loader.ts](engine-package-loader.ts)、[engine-adapters.ts](engine-adapters.ts)、[../../tools/rules/policy/tool-policy.ts](../../tools/rules/policy/tool-policy.ts)、[../../evidence/rules/progress-tools.ts](../../evidence/rules/progress-tools.ts)、[../engines/runtime-binding.ts](../engines/runtime-binding.ts)、[../../tasks/rules/member-help-tools.ts](../../tasks/rules/member-help-tools.ts)、[../../evidence/rules/artifact-tools.ts](../../evidence/rules/artifact-tools.ts)、[../rules/capabilities/artifact-capture.ts](../rules/capabilities/artifact-capture.ts)、[../rules/capabilities/output-manifest-capture.ts](../rules/capabilities/output-manifest-capture.ts)、[../../evidence/rules/output-manifest-tools.ts](../../evidence/rules/output-manifest-tools.ts)、[../rules/capabilities/run-controlled-file.ts](../rules/capabilities/run-controlled-file.ts)、[../../file-operations/rules/controlled-file-operation.ts](../../file-operations/rules/controlled-file-operation.ts)、[../rules/capabilities/run-artifact-transition.ts](../rules/capabilities/run-artifact-transition.ts)、[../../file-operations/rules/artifact-transition.ts](../../file-operations/rules/artifact-transition.ts)、[../rules/capabilities/run-validation.ts](../rules/capabilities/run-validation.ts)、[../../evidence/rules/validation-tools.ts](../../evidence/rules/validation-tools.ts)、[../../tasks/rules/member-checkpoint-tools.ts](../../tasks/rules/member-checkpoint-tools.ts)、[../../tools/runtime/dispatch-tools.ts](../../tools/runtime/dispatch-tools.ts)、[../rules/capabilities/run-scoped-execution.ts](../rules/capabilities/run-scoped-execution.ts)、[../../file-operations/rules/scoped-execution.ts](../../file-operations/rules/scoped-execution.ts)、[../../workspace/rules/execution-scope.ts](../../workspace/rules/execution-scope.ts)、[../../workspace/rules/workflow-contract.ts](../../workspace/rules/workflow-contract.ts)、[../../tools/rules/native-tools.ts](../../tools/rules/native-tools.ts)、[../../tasks/rules/execution-context.ts](../../tasks/rules/execution-context.ts)、[../../connectors/rules/repository-tools.ts](../../connectors/rules/repository-tools.ts)、[../../tools/runtime/feedback-tools.ts](../../tools/runtime/feedback-tools.ts)、[../../tools/runtime/feedback-status-tool.ts](../../tools/runtime/feedback-status-tool.ts)、[../../feedback/index.ts](../../feedback/index.ts)、[../../tools/runtime/repository-tools.ts](../../tools/runtime/repository-tools.ts)、[../../governance/rules/module-governance-tools.ts](../../governance/rules/module-governance-tools.ts)、[../../tools/runtime/governance-tools.ts](../../tools/runtime/governance-tools.ts)、[../../tools/runtime/coordination-tools.ts](../../tools/runtime/coordination-tools.ts)、[../../tools/runtime/workspace-member-tools.ts](../../tools/runtime/workspace-member-tools.ts)、[../../team/rules/workspace-member-tools.ts](../../team/rules/workspace-member-tools.ts)、[../../tools/runtime/module-ownership-tools.ts](../../tools/runtime/module-ownership-tools.ts)、[../../workspace/rules/module-ownership-tools.ts](../../workspace/rules/module-ownership-tools.ts)、[../../budget/rules/request-budget.ts](../../budget/rules/request-budget.ts)、[../rules/engine-runtime.ts](../rules/engine-runtime.ts)、[../../agents/contracts.ts](../../agents/contracts.ts)、[../../evidence/rules/code-check.ts](../../evidence/rules/code-check.ts)、[../rules/storage.ts](../rules/storage.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../agents/contracts.ts](../../agents/contracts.ts)、[../../agents/index.ts](../../agents/index.ts)、[../../budget/rules/request-budget.ts](../../budget/rules/request-budget.ts)、[../../connectors/rules/repository-tools.ts](../../connectors/rules/repository-tools.ts)、[../../conversation/runtime/main-agent.ts](../../conversation/runtime/main-agent.ts)、[../../engines/index.ts](../../engines/index.ts)、[../../evidence/rules/artifact-tools.ts](../../evidence/rules/artifact-tools.ts)、[../../evidence/rules/code-check.ts](../../evidence/rules/code-check.ts)、[../../evidence/rules/output-manifest-tools.ts](../../evidence/rules/output-manifest-tools.ts)、[../../evidence/rules/progress-tools.ts](../../evidence/rules/progress-tools.ts)、[../../evidence/rules/validation-tools.ts](../../evidence/rules/validation-tools.ts)、[engine-adapters.ts](engine-adapters.ts)、[engine-package-loader.ts](engine-package-loader.ts)、[../context/team-workflow.ts](../context/team-workflow.ts)、[../engines/runtime-binding.ts](../engines/runtime-binding.ts)、[../rules/capabilities/artifact-capture.ts](../rules/capabilities/artifact-capture.ts)、[../rules/capabilities/output-manifest-capture.ts](../rules/capabilities/output-manifest-capture.ts)、[../rules/capabilities/run-artifact-transition.ts](../rules/capabilities/run-artifact-transition.ts)、[../rules/capabilities/run-controlled-file.ts](../rules/capabilities/run-controlled-file.ts)、[../rules/capabilities/run-scoped-execution.ts](../rules/capabilities/run-scoped-execution.ts)、[../rules/capabilities/run-validation.ts](../rules/capabilities/run-validation.ts)、[../rules/engine-adapter.ts](../rules/engine-adapter.ts)、[../rules/engine-runtime.ts](../rules/engine-runtime.ts)、[../rules/index.ts](../rules/index.ts)、[../rules/storage.ts](../rules/storage.ts)、[../rules/types.ts](../rules/types.ts)、[../../feedback/index.ts](../../feedback/index.ts)、[../../file-operations/rules/artifact-transition.ts](../../file-operations/rules/artifact-transition.ts)、[../../file-operations/rules/controlled-file-operation.ts](../../file-operations/rules/controlled-file-operation.ts)、[../../file-operations/rules/scoped-execution.ts](../../file-operations/rules/scoped-execution.ts)、[../../governance/rules/module-governance-tools.ts](../../governance/rules/module-governance-tools.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../tasks/rules/execution-context.ts](../../tasks/rules/execution-context.ts)、[../../tasks/rules/member-checkpoint-tools.ts](../../tasks/rules/member-checkpoint-tools.ts)、[../../tasks/rules/member-help-tools.ts](../../tasks/rules/member-help-tools.ts)、[../../team/rules/workspace-member-tools.ts](../../team/rules/workspace-member-tools.ts)、[../../tools/rules/native-tools.ts](../../tools/rules/native-tools.ts)、[../../tools/rules/policy/tool-policy.ts](../../tools/rules/policy/tool-policy.ts)、[../../tools/runtime/coordination-tools.ts](../../tools/runtime/coordination-tools.ts)、[../../tools/runtime/dispatch-tools.ts](../../tools/runtime/dispatch-tools.ts)、[../../tools/runtime/feedback-status-tool.ts](../../tools/runtime/feedback-status-tool.ts)、[../../tools/runtime/feedback-tools.ts](../../tools/runtime/feedback-tools.ts)、[../../tools/runtime/governance-tools.ts](../../tools/runtime/governance-tools.ts)、[../../tools/runtime/knowledge-tools.ts](../../tools/runtime/knowledge-tools.ts)、[../../tools/runtime/module-ownership-tools.ts](../../tools/runtime/module-ownership-tools.ts)、[../../tools/runtime/office-history-tools.ts](../../tools/runtime/office-history-tools.ts)、[../../tools/runtime/question-tools.ts](../../tools/runtime/question-tools.ts)、[../../tools/runtime/repository-tools.ts](../../tools/runtime/repository-tools.ts)、[../../tools/runtime/web-tools.ts](../../tools/runtime/web-tools.ts)、[../../tools/runtime/workspace-member-tools.ts](../../tools/runtime/workspace-member-tools.ts)、[../../web/index.ts](../../web/index.ts)、[../../workspace/ports/paths.ts](../../workspace/ports/paths.ts)、[../../workspace/rules/execution-scope.ts](../../workspace/rules/execution-scope.ts)、[../../workspace/rules/module-ownership-tools.ts](../../workspace/rules/module-ownership-tools.ts)、[../../workspace/rules/workflow-contract.ts](../../workspace/rules/workflow-contract.ts)。
 
 ### packaged-engine-adapters.ts
 
@@ -338,17 +338,18 @@ class N_src_logic_execution_assembly_packaged_engine_adapters_ts["packaged-engin
 
 ```mermaid
 classDiagram
-class N_src_logic_execution_assembly_loop_engine_ts["loop-engine.ts"] {
-  <<module>>
-}
 class N_src_logic_execution_assembly_engine_package_loader_ts["engine-package-loader.ts"] {
   <<module>>
 }
 class N_src_logic_execution_assembly_engine_adapters_ts["engine-adapters.ts"] {
   <<module>>
 }
-N_src_logic_execution_assembly_loop_engine_ts ..> N_src_logic_execution_assembly_engine_package_loader_ts : 导入依赖
+class N_src_logic_execution_assembly_loop_engine_ts["loop-engine.ts"] {
+  <<module>>
+}
+N_src_logic_execution_assembly_engine_package_loader_ts ..> N_src_logic_execution_assembly_engine_adapters_ts : 导入依赖
 N_src_logic_execution_assembly_loop_engine_ts ..> N_src_logic_execution_assembly_engine_adapters_ts : 导入依赖
+N_src_logic_execution_assembly_loop_engine_ts ..> N_src_logic_execution_assembly_engine_package_loader_ts : 导入依赖
 ```
 
 

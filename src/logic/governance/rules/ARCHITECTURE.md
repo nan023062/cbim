@@ -137,7 +137,7 @@ class N_src_logic_governance_rules_module_governance_feedback_ts_ModuleGovernanc
 N_src_logic_governance_rules_module_governance_feedback_ts ..> N_src_logic_governance_rules_module_governance_feedback_ts_ModuleGovernanceResponseTarget : 声明
 ```
 
-直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[module-governance.ts](module-governance.ts)、[module-governance-rules.ts](module-governance-rules.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[module-governance-rules.ts](module-governance-rules.ts)、[module-governance.ts](module-governance.ts)。
 
 ### module-governance-rules.ts
 
@@ -200,7 +200,7 @@ class N_src_logic_governance_rules_module_governance_rules_ts_ModuleGovernanceWr
 N_src_logic_governance_rules_module_governance_rules_ts ..> N_src_logic_governance_rules_module_governance_rules_ts_ModuleGovernanceWriteInput : 声明
 ```
 
-直接依赖：[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[module-governance.ts](module-governance.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[module-governance.ts](module-governance.ts)。
 
 ### module-governance-tools.ts
 
@@ -495,17 +495,17 @@ classDiagram
 class N_src_logic_governance_rules_module_governance_feedback_ts["module-governance-feedback.ts"] {
   <<module>>
 }
-class N_src_logic_governance_rules_module_governance_ts["module-governance.ts"] {
+class N_src_logic_governance_rules_module_governance_rules_ts["module-governance-rules.ts"] {
   <<module>>
 }
-class N_src_logic_governance_rules_module_governance_rules_ts["module-governance-rules.ts"] {
+class N_src_logic_governance_rules_module_governance_ts["module-governance.ts"] {
   <<module>>
 }
 class N_src_logic_governance_rules_module_governance_tools_ts["module-governance-tools.ts"] {
   <<module>>
 }
-N_src_logic_governance_rules_module_governance_feedback_ts ..> N_src_logic_governance_rules_module_governance_ts : 导入依赖
 N_src_logic_governance_rules_module_governance_feedback_ts ..> N_src_logic_governance_rules_module_governance_rules_ts : 导入依赖
+N_src_logic_governance_rules_module_governance_feedback_ts ..> N_src_logic_governance_rules_module_governance_ts : 导入依赖
 N_src_logic_governance_rules_module_governance_rules_ts ..> N_src_logic_governance_rules_module_governance_ts : 导入依赖
 N_src_logic_governance_rules_module_governance_tools_ts ..> N_src_logic_governance_rules_module_governance_rules_ts : 导入依赖
 ```

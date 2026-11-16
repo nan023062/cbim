@@ -69,7 +69,7 @@ class N_src_view_automation_AutomationEditor_tsx["AutomationEditor.tsx"] {
 }
 ```
 
-直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../../bridge/contracts/automation.ts](../../bridge/contracts/automation.ts)。
+直接依赖：[../../bridge/contracts/automation.ts](../../bridge/contracts/automation.ts)、[../components/Icon.tsx](../components/Icon.tsx)。
 
 ### AutomationView.tsx
 
@@ -81,7 +81,7 @@ class N_src_view_automation_AutomationView_tsx["AutomationView.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../../bridge/contracts/automation.ts](../../bridge/contracts/automation.ts)、[AutomationEditor.tsx](AutomationEditor.tsx)、[automation.css](automation.css)。
+直接依赖：[../../bridge/contracts/automation.ts](../../bridge/contracts/automation.ts)、[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[AutomationEditor.tsx](AutomationEditor.tsx)、[automation.css](automation.css)。
 
 ### 本目录调用边界
 

@@ -208,7 +208,7 @@ class N_src_view_governance_ModuleGovernancePanel_tsx_Props["Props"] {
 N_src_view_governance_ModuleGovernancePanel_tsx ..> N_src_view_governance_ModuleGovernancePanel_tsx_Props : 声明
 ```
 
-直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../../bridge/contracts/ipc-call.ts](../../bridge/contracts/ipc-call.ts)、[../components/ModalFrame.tsx](../components/ModalFrame.tsx)、[../../bridge/contracts/governance.ts](../../bridge/contracts/governance.ts)、[governance-pending.ts](governance-pending.ts)、[GovernanceOrigin.tsx](GovernanceOrigin.tsx)、[GovernanceFeedback.tsx](GovernanceFeedback.tsx)、[governance-feedback.ts](governance-feedback.ts)、[module-governance.css](module-governance.css)。
+直接依赖：[../../bridge/contracts/governance.ts](../../bridge/contracts/governance.ts)、[../../bridge/contracts/ipc-call.ts](../../bridge/contracts/ipc-call.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../components/ModalFrame.tsx](../components/ModalFrame.tsx)、[GovernanceFeedback.tsx](GovernanceFeedback.tsx)、[GovernanceOrigin.tsx](GovernanceOrigin.tsx)、[governance-feedback.ts](governance-feedback.ts)、[governance-pending.ts](governance-pending.ts)、[module-governance.css](module-governance.css)。
 
 ### 本目录调用边界
 
@@ -223,16 +223,13 @@ class N_src_view_governance_governance_feedback_ts["governance-feedback.ts"] {
 class N_src_view_governance_ModuleGovernancePanel_tsx["ModuleGovernancePanel.tsx"] {
   <<component>>
 }
-class N_src_view_governance_governance_pending_ts["governance-pending.ts"] {
-  <<module>>
-}
 class N_src_view_governance_GovernanceOrigin_tsx["GovernanceOrigin.tsx"] {
   <<component>>
 }
 N_src_view_governance_GovernanceFeedback_tsx ..> N_src_view_governance_governance_feedback_ts : 导入依赖
-N_src_view_governance_ModuleGovernancePanel_tsx ..> N_src_view_governance_governance_pending_ts : 导入依赖
-N_src_view_governance_ModuleGovernancePanel_tsx ..> N_src_view_governance_GovernanceOrigin_tsx : 导入依赖
 N_src_view_governance_ModuleGovernancePanel_tsx ..> N_src_view_governance_GovernanceFeedback_tsx : 导入依赖
+N_src_view_governance_ModuleGovernancePanel_tsx ..> N_src_view_governance_GovernanceOrigin_tsx : 导入依赖
+N_src_view_governance_ModuleGovernancePanel_tsx ..> N_src_view_governance_governance_feedback_ts : 导入依赖
 ```
 
 ```mermaid
@@ -240,13 +237,13 @@ classDiagram
 class N_src_view_governance_ModuleGovernancePanel_tsx["ModuleGovernancePanel.tsx"] {
   <<component>>
 }
-class N_src_view_governance_governance_feedback_ts["governance-feedback.ts"] {
+class N_src_view_governance_governance_pending_ts["governance-pending.ts"] {
   <<module>>
 }
 class N_src_view_governance_module_governance_css["module-governance.css"] {
   <<stylesheet>>
 }
-N_src_view_governance_ModuleGovernancePanel_tsx ..> N_src_view_governance_governance_feedback_ts : 导入依赖
+N_src_view_governance_ModuleGovernancePanel_tsx ..> N_src_view_governance_governance_pending_ts : 导入依赖
 N_src_view_governance_ModuleGovernancePanel_tsx ..> N_src_view_governance_module_governance_css : 导入依赖
 ```
 

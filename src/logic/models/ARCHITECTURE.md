@@ -110,13 +110,13 @@ class N_src_logic_models_endpoint_ts["endpoint.ts"] {
 class N_src_logic_models_index_ts["index.ts"] {
   <<module>>
 }
-N_src_logic_models_config_ts ..> N_src_logic_models_endpoint_ts : 导入依赖
 N_src_logic_models_config_ts ..> N_src_logic_models_embedding_ts : 导入依赖
+N_src_logic_models_config_ts ..> N_src_logic_models_endpoint_ts : 导入依赖
 N_src_logic_models_embedding_ts ..> N_src_logic_models_endpoint_ts : 导入依赖
 N_src_logic_models_index_ts ..> N_src_logic_models_catalog_ts : 导入依赖
-N_src_logic_models_index_ts ..> N_src_logic_models_endpoint_ts : 导入依赖
 N_src_logic_models_index_ts ..> N_src_logic_models_config_ts : 导入依赖
 N_src_logic_models_index_ts ..> N_src_logic_models_embedding_ts : 导入依赖
+N_src_logic_models_index_ts ..> N_src_logic_models_endpoint_ts : 导入依赖
 N_src_logic_models_service ..> N_src_logic_models_index_ts : 导入依赖
 ```
 
@@ -139,16 +139,16 @@ N_src_logic_models_provider_connections_ts ..> N_src_logic_models_provider_prese
 
 各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
 
-- `config.ts` → `endpoint.ts`：导入。
 - `config.ts` → `embedding.ts`：导入。
+- `config.ts` → `endpoint.ts`：导入。
 - `embedding.ts` → `endpoint.ts`：导入。
 - `index.ts` → `catalog.ts`：导入。
-- `index.ts` → `endpoint.ts`：导入。
 - `index.ts` → `config.ts`：导入。
+- `index.ts` → `embedding.ts`：导入。
+- `index.ts` → `endpoint.ts`：导入。
+- `index.ts` → `ports.ts`：导入。
 - `index.ts` → `provider-connections.ts`：导入。
 - `index.ts` → `provider-presets.ts`：导入。
-- `index.ts` → `ports.ts`：导入。
-- `index.ts` → `embedding.ts`：导入。
 - `index.ts` → `snapshot.ts`：导入。
 - `ports.ts` → `config.ts`：导入。
 - `ports.ts` → `embedding.ts`：导入。
@@ -157,7 +157,7 @@ N_src_logic_models_provider_connections_ts ..> N_src_logic_models_provider_prese
 - `provider-presets.ts` → `config.ts`：导入。
 - `service` → `index.ts`：导入。
 
-### catalog.ts 公开入口
+### catalog.ts
 
 ```mermaid
 classDiagram
@@ -167,8 +167,160 @@ class N_src_logic_models_catalog_ts["catalog.ts"] {
 }
 ```
 
+```mermaid
+classDiagram
+class N_src_logic_models_catalog_ts["catalog.ts"] {
+  <<module>>
+}
+class N_src_logic_models_catalog_ts_DiscoveredModel["DiscoveredModel"] {
+  <<interface>>
+  +id
+  +name
+  +contextWindow
+  +maxOutputTokens
+  +reasoning
+  +vision
+}
+N_src_logic_models_catalog_ts ..> N_src_logic_models_catalog_ts_DiscoveredModel : 声明
+```
 
-### provider-connections.ts 公开入口
+
+
+### config.ts
+
+```mermaid
+classDiagram
+class N_src_logic_models_config_ts["config.ts"] {
+  <<module>>
+}
+class N_src_logic_models_config_ts_LlmApi["LlmApi"] {
+  <<type>>
+
+}
+N_src_logic_models_config_ts ..> N_src_logic_models_config_ts_LlmApi : 声明
+class N_src_logic_models_config_ts_AlternateConnection["AlternateConnection"] {
+  <<type>>
+
+}
+N_src_logic_models_config_ts ..> N_src_logic_models_config_ts_AlternateConnection : 声明
+class N_src_logic_models_config_ts_LlmModel["LlmModel"] {
+  <<type>>
+
+}
+N_src_logic_models_config_ts ..> N_src_logic_models_config_ts_LlmModel : 声明
+class N_src_logic_models_config_ts_LlmDefinition["LlmDefinition"] {
+  <<type>>
+
+}
+N_src_logic_models_config_ts ..> N_src_logic_models_config_ts_LlmDefinition : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_logic_models_config_ts["config.ts"] {
+  <<module>>
+}
+class N_src_logic_models_config_ts_LlmProfile["LlmProfile"] {
+  <<interface>>
+  +id
+  +hasKey
+}
+N_src_logic_models_config_ts ..> N_src_logic_models_config_ts_LlmProfile : 声明
+class N_src_logic_models_config_ts_LlmDefinition["LlmDefinition"] {
+  <<type>>
+}
+N_src_logic_models_config_ts_LlmDefinition <|-- N_src_logic_models_config_ts_LlmProfile
+class N_src_logic_models_config_ts_LlmSettings["LlmSettings"] {
+  <<interface>>
+  +profiles
+  +selectedId
+  +secureStorage
+}
+N_src_logic_models_config_ts ..> N_src_logic_models_config_ts_LlmSettings : 声明
+```
+
+直接依赖：[embedding.ts](embedding.ts)、[endpoint.ts](endpoint.ts)。
+
+
+### embedding.ts
+
+```mermaid
+classDiagram
+class N_src_logic_models_embedding_ts["embedding.ts"] {
+  <<module>>
+}
+class N_src_logic_models_embedding_ts_EmbeddingModel["EmbeddingModel"] {
+  <<type>>
+
+}
+N_src_logic_models_embedding_ts ..> N_src_logic_models_embedding_ts_EmbeddingModel : 声明
+class N_src_logic_models_embedding_ts_EmbeddingConnection["EmbeddingConnection"] {
+  <<type>>
+
+}
+N_src_logic_models_embedding_ts ..> N_src_logic_models_embedding_ts_EmbeddingConnection : 声明
+class N_src_logic_models_embedding_ts_EmbeddingSnapshot["EmbeddingSnapshot"] {
+  <<type>>
+
+}
+N_src_logic_models_embedding_ts ..> N_src_logic_models_embedding_ts_EmbeddingSnapshot : 声明
+class N_src_logic_models_embedding_ts_ResolvedEmbedding["ResolvedEmbedding"] {
+  <<interface>>
+  +profile
+  +apiKey
+}
+N_src_logic_models_embedding_ts ..> N_src_logic_models_embedding_ts_ResolvedEmbedding : 声明
+```
+
+直接依赖：[endpoint.ts](endpoint.ts)。
+
+
+### endpoint.ts
+
+```mermaid
+classDiagram
+class N_src_logic_models_endpoint_ts["endpoint.ts"] {
+  <<module>>
+}
+```
+
+
+### index.ts
+
+```mermaid
+classDiagram
+class N_src_logic_models_index_ts["index.ts"] {
+  <<module>>
+}
+```
+直接依赖：[catalog.ts](catalog.ts)、[config.ts](config.ts)、[embedding.ts](embedding.ts)、[endpoint.ts](endpoint.ts)、[ports.ts](ports.ts)、[provider-connections.ts](provider-connections.ts)、[provider-presets.ts](provider-presets.ts)、[snapshot.ts](snapshot.ts)。
+
+
+### ports.ts
+
+```mermaid
+classDiagram
+class N_src_logic_models_ports_ts["ports.ts"] {
+  <<module>>
+}
+class N_src_logic_models_ports_ts_ResolvedLlm["ResolvedLlm"] {
+  <<interface>>
+  +profile
+  +apiKey
+}
+N_src_logic_models_ports_ts ..> N_src_logic_models_ports_ts_ResolvedLlm : 声明
+class N_src_logic_models_ports_ts_ResolvedModelOperation["ResolvedModelOperation"] {
+  <<interface>>
+  +profile
+  +apiKey
+}
+N_src_logic_models_ports_ts ..> N_src_logic_models_ports_ts_ResolvedModelOperation : 声明
+```
+
+直接依赖：[../../core/contracts/secrets.ts](../../core/contracts/secrets.ts)、[config.ts](config.ts)、[embedding.ts](embedding.ts)。
+
+
+### provider-connections.ts
 
 ```mermaid
 classDiagram
@@ -178,8 +330,35 @@ class N_src_logic_models_provider_connections_ts["provider-connections.ts"] {
 }
 ```
 
+```mermaid
+classDiagram
+class N_src_logic_models_provider_connections_ts["provider-connections.ts"] {
+  <<module>>
+}
+class N_src_logic_models_provider_connections_ts_ProviderConnections["ProviderConnections"] {
+  <<type>>
 
-### provider-presets.ts 公开入口
+}
+N_src_logic_models_provider_connections_ts ..> N_src_logic_models_provider_connections_ts_ProviderConnections : 声明
+class N_src_logic_models_provider_connections_ts_ModelConnectionRequirement["ModelConnectionRequirement"] {
+  <<interface>>
+  +supportedApis
+  +fallbackApi
+}
+N_src_logic_models_provider_connections_ts ..> N_src_logic_models_provider_connections_ts_ModelConnectionRequirement : 声明
+class N_src_logic_models_provider_connections_ts_SelectedConnection["SelectedConnection"] {
+  <<interface>>
+  +api
+  +baseUrl
+  +source
+}
+N_src_logic_models_provider_connections_ts ..> N_src_logic_models_provider_connections_ts_SelectedConnection : 声明
+```
+
+直接依赖：[config.ts](config.ts)、[provider-presets.ts](provider-presets.ts)。
+
+
+### provider-presets.ts
 
 ```mermaid
 classDiagram
@@ -189,8 +368,26 @@ class N_src_logic_models_provider_presets_ts["provider-presets.ts"] {
 }
 ```
 
+```mermaid
+classDiagram
+class N_src_logic_models_provider_presets_ts["provider-presets.ts"] {
+  <<module>>
+}
+class N_src_logic_models_provider_presets_ts_ProviderPreset["ProviderPreset"] {
+  <<interface>>
+  +id
+  +name
+  +connections
+  +aliases
+  +sources
+}
+N_src_logic_models_provider_presets_ts ..> N_src_logic_models_provider_presets_ts_ProviderPreset : 声明
+```
 
-### snapshot.ts 公开入口
+直接依赖：[config.ts](config.ts)。
+
+
+### snapshot.ts
 
 ```mermaid
 classDiagram
@@ -199,6 +396,7 @@ class N_src_logic_models_snapshot_ts["snapshot.ts"] {
   +checkGenerationSnapshot()
 }
 ```
+
 
 
 ## 子目录导航

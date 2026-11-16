@@ -190,7 +190,7 @@ class N_src_logic_file_operations_platform_isolation_isolated_node_ts_IsolatedNo
 N_src_logic_file_operations_platform_isolation_isolated_node_ts ..> N_src_logic_file_operations_platform_isolation_isolated_node_ts_IsolatedNodeOptions : 声明
 ```
 
-直接依赖：[isolated-node-win32.ts](isolated-node-win32.ts)、[isolation-recovery-win32.ts](isolation-recovery-win32.ts)、[isolation-record.ts](isolation-record.ts)、[isolated-node-protocol.ts](isolated-node-protocol.ts)。
+直接依赖：[isolated-node-protocol.ts](isolated-node-protocol.ts)、[isolated-node-win32.ts](isolated-node-win32.ts)、[isolation-record.ts](isolation-record.ts)、[isolation-recovery-win32.ts](isolation-recovery-win32.ts)。
 
 ### isolation-record.ts
 
@@ -294,7 +294,7 @@ class N_src_logic_file_operations_platform_isolation_isolation_records_ts_Memory
 N_src_logic_file_operations_platform_isolation_isolation_records_ts ..> N_src_logic_file_operations_platform_isolation_isolation_records_ts_MemoryEntry : 声明
 ```
 
-直接依赖：[../../../../core/platform/node/serialization.ts](../../../../core/platform/node/serialization.ts)、[../../../execution/ports/identity.ts](../../../execution/ports/identity.ts)、[../../../../core/errors.ts](../../../../core/errors.ts)、[isolation-record.ts](isolation-record.ts)。
+直接依赖：[../../../../core/errors.ts](../../../../core/errors.ts)、[../../../../core/platform/node/serialization.ts](../../../../core/platform/node/serialization.ts)、[../../../execution/ports/identity.ts](../../../execution/ports/identity.ts)、[isolation-record.ts](isolation-record.ts)。
 
 ### isolation-recovery-win32.ts
 
@@ -349,22 +349,22 @@ classDiagram
 class N_src_logic_file_operations_platform_isolation_isolated_node_ts["isolated-node.ts"] {
   <<module>>
 }
-class N_src_logic_file_operations_platform_isolation_isolated_node_win32_ts["isolated-node-win32.ts"] {
+class N_src_logic_file_operations_platform_isolation_isolated_node_protocol_ts["isolated-node-protocol.ts"] {
   <<module>>
 }
-class N_src_logic_file_operations_platform_isolation_isolation_recovery_win32_ts["isolation-recovery-win32.ts"] {
+class N_src_logic_file_operations_platform_isolation_isolated_node_win32_ts["isolated-node-win32.ts"] {
   <<module>>
 }
 class N_src_logic_file_operations_platform_isolation_isolation_record_ts["isolation-record.ts"] {
   <<module>>
 }
-class N_src_logic_file_operations_platform_isolation_isolated_node_protocol_ts["isolated-node-protocol.ts"] {
+class N_src_logic_file_operations_platform_isolation_isolation_recovery_win32_ts["isolation-recovery-win32.ts"] {
   <<module>>
 }
-N_src_logic_file_operations_platform_isolation_isolated_node_ts ..> N_src_logic_file_operations_platform_isolation_isolated_node_win32_ts : 导入依赖
-N_src_logic_file_operations_platform_isolation_isolated_node_ts ..> N_src_logic_file_operations_platform_isolation_isolation_recovery_win32_ts : 导入依赖
-N_src_logic_file_operations_platform_isolation_isolated_node_ts ..> N_src_logic_file_operations_platform_isolation_isolation_record_ts : 导入依赖
 N_src_logic_file_operations_platform_isolation_isolated_node_ts ..> N_src_logic_file_operations_platform_isolation_isolated_node_protocol_ts : 导入依赖
+N_src_logic_file_operations_platform_isolation_isolated_node_ts ..> N_src_logic_file_operations_platform_isolation_isolated_node_win32_ts : 导入依赖
+N_src_logic_file_operations_platform_isolation_isolated_node_ts ..> N_src_logic_file_operations_platform_isolation_isolation_record_ts : 导入依赖
+N_src_logic_file_operations_platform_isolation_isolated_node_ts ..> N_src_logic_file_operations_platform_isolation_isolation_recovery_win32_ts : 导入依赖
 ```
 
 ```mermaid

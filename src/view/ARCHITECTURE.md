@@ -99,9 +99,9 @@ class N_src_view_shell["shell/"] {
   <<directory>>
 }
 N_src_view_resources ..> N_src_view_knowledge : 导入依赖
-N_src_view_shell ..> N_src_view_settings : 导入依赖
-N_src_view_shell ..> N_src_view_runtime : 导入依赖
 N_src_view_shell ..> N_src_view_resources : 导入依赖
+N_src_view_shell ..> N_src_view_runtime : 导入依赖
+N_src_view_shell ..> N_src_view_settings : 导入依赖
 ```
 
 ```mermaid
@@ -138,11 +138,11 @@ N_src_view_workspace ..> N_src_view_team : 导入依赖
 
 - `automation` → `components`：导入。
 - `conversation` → `components`：导入。
-- `conversation` → `tasks`：导入。
 - `conversation` → `foundations`：导入。
+- `conversation` → `tasks`：导入。
 - `conversation` → `execution-view`：导入。
-- `conversation` → `shell`：导入。
 - `conversation` → `automation`：导入。
+- `conversation` → `shell`：导入。
 - `conversation` → `team`：导入。
 - `diagnostics` → `components`：导入。
 - `execution-view` → `components`：导入。
@@ -161,18 +161,17 @@ N_src_view_workspace ..> N_src_view_team : 导入依赖
 - `settings` → `tasks`：导入。
 - `settings` → `foundations`：导入。
 - `shell` → `components`：导入。
-- `shell` → `settings`：导入。
-- `shell` → `updates`：导入。
 - `shell` → `conversation`：导入。
 - `shell` → `execution-view`：导入。
-- `shell` → `runtime`：导入。
 - `shell` → `resources`：导入。
-- `shell` → `team`：导入。
-- `shell` → `workspace`：导入。
+- `shell` → `runtime`：导入。
+- `shell` → `settings`：导入。
+- `shell` → `updates`：导入。
 - `shell` → `automation`：导入。
 - `shell` → `diagnostics`：导入。
+- `shell` → `team`：导入。
+- `shell` → `workspace`：导入。
 - `shell` → `foundations`：导入。
-- `styles.ts` → `shell`：导入。
 - `styles.ts` → `automation`：导入。
 - `styles.ts` → `components`：导入。
 - `styles.ts` → `conversation`：导入。
@@ -183,6 +182,7 @@ N_src_view_workspace ..> N_src_view_team : 导入依赖
 - `styles.ts` → `resources`：导入。
 - `styles.ts` → `runtime`：导入。
 - `styles.ts` → `settings`：导入。
+- `styles.ts` → `shell`：导入。
 - `styles.ts` → `tasks`：导入。
 - `styles.ts` → `team`：导入。
 - `styles.ts` → `updates`：导入。
@@ -202,13 +202,35 @@ N_src_view_workspace ..> N_src_view_team : 导入依赖
 - `workspace` → `components`：导入。
 - `workspace` → `foundations`：导入。
 - `workspace` → `knowledge`：导入。
-- `workspace` → `resources`：导入。
 - `workspace` → `governance`：导入。
+- `workspace` → `resources`：导入。
+
+### main.tsx
+
+```mermaid
+classDiagram
+class N_src_view_main_tsx["main.tsx"] {
+  <<component>>
+}
+```
+直接依赖：[shell/App.tsx](shell/App.tsx)、[styles.ts](styles.ts)。
+
+
+### styles.ts
+
+```mermaid
+classDiagram
+class N_src_view_styles_ts["styles.ts"] {
+  <<module>>
+}
+```
+直接依赖：[automation/automation.css](automation/automation.css)、[components/agent-model-form.css](components/agent-model-form.css)、[components/interface.css](components/interface.css)、[components/repository-scope.css](components/repository-scope.css)、[components/sidebar.css](components/sidebar.css)、[conversation/conversation-entries.css](conversation/conversation-entries.css)、[conversation/conversation-topics.css](conversation/conversation-topics.css)、[conversation/conversation.css](conversation/conversation.css)、[conversation/inline-conversation.css](conversation/inline-conversation.css)、[conversation/session-tabs.css](conversation/session-tabs.css)、[conversation/usage.css](conversation/usage.css)、[diagnostics/diagnostics.css](diagnostics/diagnostics.css)、[execution-view/knowledge-tool-view.css](execution-view/knowledge-tool-view.css)、[execution-view/message-queue.css](execution-view/message-queue.css)、[execution-view/questions.css](execution-view/questions.css)、[governance/module-governance.css](governance/module-governance.css)、[knowledge/architecture-editor.css](knowledge/architecture-editor.css)、[knowledge/knowledge-files.css](knowledge/knowledge-files.css)、[knowledge/knowledge-source.css](knowledge/knowledge-source.css)、[resources/repository-connections.css](resources/repository-connections.css)、[resources/workspace-transfer.css](resources/workspace-transfer.css)、[runtime/runtime-overview.css](runtime/runtime-overview.css)、[settings/appearance.css](settings/appearance.css)、[settings/budget-settings.css](settings/budget-settings.css)、[settings/models.css](settings/models.css)、[settings/settings.css](settings/settings.css)、[shell/extensions.css](shell/extensions.css)、[shell/shell.css](shell/shell.css)、[shell/workspace-list.css](shell/workspace-list.css)、[tasks/admission.css](tasks/admission.css)、[tasks/artifact-report.css](tasks/artifact-report.css)、[tasks/command-verification.css](tasks/command-verification.css)、[tasks/controlled-file.css](tasks/controlled-file.css)、[tasks/effect-observation.css](tasks/effect-observation.css)、[tasks/execution-report.css](tasks/execution-report.css)、[tasks/human-continuation.css](tasks/human-continuation.css)、[tasks/human-decisions.css](tasks/human-decisions.css)、[tasks/member-activity.css](tasks/member-activity.css)、[tasks/member-checkpoint.css](tasks/member-checkpoint.css)、[tasks/member-dependency.css](tasks/member-dependency.css)、[tasks/member-validation.css](tasks/member-validation.css)、[tasks/office-scene.css](tasks/office-scene.css)、[tasks/owner-execution.css](tasks/owner-execution.css)、[tasks/scope-goal.css](tasks/scope-goal.css)、[tasks/scope-replan.css](tasks/scope-replan.css)、[tasks/scope-usage.css](tasks/scope-usage.css)、[tasks/task-graph.css](tasks/task-graph.css)、[team/agent-history.css](team/agent-history.css)、[team/team-view.css](team/team-view.css)、[team/workspace-members.css](team/workspace-members.css)、[updates/software-updates.css](updates/software-updates.css)、[workspace/module-ownership.css](workspace/module-ownership.css)、[workspace/workspace-view.css](workspace/workspace-view.css)。
+
 
 ## 子目录导航
 
 - [automation/](automation/ARCHITECTURE.md)：当前工作区自动化列表、配置和运行历史；固定页签不接自选工作目录，真实运行通过原会话定位。
-- [components/](components/ARCHITECTURE.md)：通用展示组件，不持有领域服务与运行状态。 EngineModelPicker 固定三引擎目录，按协议筛选统一模型，空目录仍可选择引擎。
+- [components/](components/ARCHITECTURE.md)：通用展示组件，不持有领域服务与运行状态。 EngineModelPicker 使用官方静态引擎目录，按协议筛选统一模型，空目录仍可选择引擎。
 - [conversation/](conversation/ARCHITECTURE.md)：中央主对话、目标摘要、输入、附件及队列；附件区明确显示目录清单、URL指针、网页摘录与仓库静态资料。两处插入口冻结原run，入队成功保留事实，停止锁独立于插入等待。进程准入等待与持久用户等待分别展示，纯等待不累计工作时长；未受理保留草稿。核实与重规划权限分离，可续聊头由后端核实。 双视图共享人工决定控制器，保存意见不清除聊天草稿或消费等待。 主对话栏读写工作区主 Agent 的统一执行配置，与团队配置页双向同步；模型按协议映射，Claude Code/Codex 只保留排队。 加号菜单分别请求 BUG 反馈和需求许愿 Skill，按原会话发送或排队，保留已有草稿及附件。 tasks/ToolActivity 在业务装配层组合原命令核实、影响观察及恢复；公共消息/状态已迁到 execution-view，队列操作名限制为实际四项。 目标摘要可跳转本周期原任务或替代成果，沿已有任务详情导航，不改草稿、附件或执行状态。 原工具记录显式核实保存事实，保留原失败；控制器按四重身份隔离迟到响应，轮询不重复读取，失败保留旧报告并提示时效。 主调用提供显式影响观察；未知不再凭勾选调用 ID 直接续跑，进入独立只读核实，普通草稿不受影响。 当前工作区实例传入成员详情用于补偿预览时效，主聊天草稿不受补偿控制器影响，挂载不触发文件读取或写入。 可信 GitHub submitted 工具回执之后隐藏追加结果文字；失败、未知及后续普通用户输入仍正常显示。 发送捕获原任务/运行，审批使用原审批任务；动态队列按操作解析。
 - [diagnostics/](diagnostics/ARCHITECTURE.md)：只读展示工作区运行状态和知识校验问题，不把工作区就绪视为知识校验通过。
 - [execution-view/](execution-view/ARCHITECTURE.md)：主对话、成员任务和团队履历共用的消息、工具轨道、状态、问答及输入展示。只依赖公开通信契约和通用组件；查询、恢复和处置控制器由页面组合，不反向依赖 conversation、tasks 或 team。主对话、成员与历史共用的消息、工具轨道及运行状态；只消费公开快照和最小展示插槽，不依赖任务或会话控制器。原核实与恢复由页面显式组合，Markdown 的用户链接点击继续通过固定 Bridge。

@@ -74,7 +74,7 @@ class N_src_logic_resources_service_index_ts["index.ts"] {
   <<module>>
 }
 ```
-直接依赖：[resource-store.ts](resource-store.ts)、[resource-http.ts](resource-http.ts)、[resource-repository.ts](resource-repository.ts)。
+直接依赖：[resource-http.ts](resource-http.ts)、[resource-repository.ts](resource-repository.ts)、[resource-store.ts](resource-store.ts)。
 
 ### resource-http.ts
 
@@ -103,13 +103,14 @@ class N_src_logic_resources_service_resource_http_ts_RemoteRepository["RemoteRep
   -Request()
 }
 N_src_logic_resources_service_resource_http_ts ..> N_src_logic_resources_service_resource_http_ts_RemoteRepository : 声明
-class N_src_logic_resources_service_resource_http_ts_external_RepositoryStore["RepositoryStore (外部契约)"] {
-  <<external>>
+class N_src_logic_resources_service_resource_http_ts_external_RepositoryStore["RepositoryStore (./resource-store)"] {
+  <<boundary>>
 }
 N_src_logic_resources_service_resource_http_ts_external_RepositoryStore <|.. N_src_logic_resources_service_resource_http_ts_RemoteRepository
 ```
 
-直接依赖：[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[resource-store.ts](resource-store.ts)。
+继承／实现来源：`RepositoryStore` → [resource-store.ts](resource-store.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/utility/index.ts](../../../core/utility/index.ts)、[resource-store.ts](resource-store.ts)。
 
 ### resource-repository.ts
 
@@ -186,7 +187,7 @@ class N_src_logic_resources_service_resource_repository_ts_ResourceRepositories[
 N_src_logic_resources_service_resource_repository_ts ..> N_src_logic_resources_service_resource_repository_ts_ResourceRepositories : 声明
 ```
 
-直接依赖：[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/utility/index.ts](../../../core/utility/index.ts)、[resource-store.ts](resource-store.ts)、[resource-http.ts](resource-http.ts)、[../index.ts](../index.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../index.ts](../index.ts)、[resource-http.ts](resource-http.ts)、[resource-store.ts](resource-store.ts)。
 
 ### resource-store.ts
 
@@ -218,7 +219,7 @@ N_src_logic_resources_service_resource_store_ts ..> N_src_logic_resources_servic
 N_src_logic_resources_service_resource_store_ts_RepositoryStore <|.. N_src_logic_resources_service_resource_store_ts_LocalRepository
 ```
 
-直接依赖：[../../../core/platform/node/locking.ts](../../../core/platform/node/locking.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/digest.ts](../../../core/platform/node/digest.ts)、[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../index.ts](../index.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/digest.ts](../../../core/platform/node/digest.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/platform/node/locking.ts](../../../core/platform/node/locking.ts)、[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../index.ts](../index.ts)。
 
 ### 本目录调用边界
 
@@ -227,18 +228,18 @@ classDiagram
 class N_src_logic_resources_service_index_ts["index.ts"] {
   <<module>>
 }
-class N_src_logic_resources_service_resource_store_ts["resource-store.ts"] {
-  <<module>>
-}
 class N_src_logic_resources_service_resource_http_ts["resource-http.ts"] {
   <<module>>
 }
 class N_src_logic_resources_service_resource_repository_ts["resource-repository.ts"] {
   <<module>>
 }
-N_src_logic_resources_service_index_ts ..> N_src_logic_resources_service_resource_store_ts : 导入依赖
+class N_src_logic_resources_service_resource_store_ts["resource-store.ts"] {
+  <<module>>
+}
 N_src_logic_resources_service_index_ts ..> N_src_logic_resources_service_resource_http_ts : 导入依赖
 N_src_logic_resources_service_index_ts ..> N_src_logic_resources_service_resource_repository_ts : 导入依赖
+N_src_logic_resources_service_index_ts ..> N_src_logic_resources_service_resource_store_ts : 导入依赖
 N_src_logic_resources_service_resource_http_ts ..> N_src_logic_resources_service_resource_store_ts : 导入依赖
 ```
 
@@ -247,14 +248,14 @@ classDiagram
 class N_src_logic_resources_service_resource_repository_ts["resource-repository.ts"] {
   <<module>>
 }
-class N_src_logic_resources_service_resource_store_ts["resource-store.ts"] {
-  <<module>>
-}
 class N_src_logic_resources_service_resource_http_ts["resource-http.ts"] {
   <<module>>
 }
-N_src_logic_resources_service_resource_repository_ts ..> N_src_logic_resources_service_resource_store_ts : 导入依赖
+class N_src_logic_resources_service_resource_store_ts["resource-store.ts"] {
+  <<module>>
+}
 N_src_logic_resources_service_resource_repository_ts ..> N_src_logic_resources_service_resource_http_ts : 导入依赖
+N_src_logic_resources_service_resource_repository_ts ..> N_src_logic_resources_service_resource_store_ts : 导入依赖
 ```
 
 

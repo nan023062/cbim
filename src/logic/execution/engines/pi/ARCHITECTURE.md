@@ -87,7 +87,7 @@ Pi 仅在可信 `EngineContext.capabilities` 中的 `artifacts` 能力 存在时
 
 `memberCheckpointTools` 同样只按实际端口注册，透传可信调用 ID；指引明确一次 checkpoint/一次 resume，以及命令、动态目录、额外知识查询或未知操作不属于当前可恢复白名单。暂存后正常结束而非发送 abort；引擎不自行发布 checkpointed 或释放调度占用。
 
-专用续执行在启动 Pi 之前及 `get_state` 载入核实后、配置与本轮输入之前调用 `assertMemberResume`，再次核实原 canonical、业务文件、知识和原生字节。Runtime 在 Pi 准备与 running 事务结束后再通过 `assertMemberResumeInputs` 核业务文件、知识与旧日志，随后才发送 prompt。沿原 sessionId/sessionFile 启动同通道的新 run，旧 native 不能悄悄修复或改写后当作原检查点；已核实载入后允许本轮配置合法追加。该复核不是操作系统原子隔离；后续工具仍受新一轮门禁与批准。
+专用续执行在启动 Pi 之前及 `get_state` 载入核实后、配置与本轮输入之前调用 `assertMemberResume`，再次核实原 canonical、业务文件、知识和原生字节。Runtime 在 Pi 准备与 running 事务结束后再通过 `AssertMemberResumeInputs` 核业务文件、知识与旧日志，随后才发送 prompt。沿原 sessionId/sessionFile 启动同通道的新 run，旧 native 不能悄悄修复或改写后当作原检查点；已核实载入后允许本轮配置合法追加。该复核不是操作系统原子隔离；后续工具仍受新一轮门禁与批准。
 
 <a id="contract-当前成员结果接续"></a>
 
@@ -107,7 +107,7 @@ Pi 仅在可信 `EngineContext.capabilities` 中的 `artifacts` 能力 存在时
 
 每个实例只服务一次运行。`start` 完成时已保存原生会话绑定，但尚未发送本轮提示；调用方即使遇到启动失败也必须调用 `close`，释放可能已经创建的工具桥或子进程。`run` 超时抛出结果待核实的错误，不自动重发提示；`close` 关闭进程并排空已接收事件，无论事件处理是否成功都会关闭工具桥。
 
-`stop()` 先记录本轮停止意图再发送 RPC abort。`consume()` 只有在已经停止且供应商错误文本精确匹配标准取消消息时，将该条消息归一为 aborted；真实模型错误不被取消意图吞掉。`run()` 等待 agent_settled，工具结果未知仍由 LoopRuntime 最终标记 interrupted，不把停止视为回滚。
+`Stop()` 先记录本轮停止意图再发送 RPC abort。`Consume()` 只有在已经停止且供应商错误文本精确匹配标准取消消息时，将该条消息归一为 aborted；真实模型错误不被取消意图吞掉。`Run()` 等待 agent_settled，工具结果未知仍由 LoopRuntime 最终标记 interrupted，不把停止视为回滚。
 
 ```mermaid
 classDiagram
@@ -116,12 +116,12 @@ class PiEngine {
   -assistantError
   +start(context)
   +run(message)
-  -consume(event)
+  -Consume(event)
   +stop()
   +close()
 }
 class EngineContext {
-  <<core interface>>
+  <<execution/rules interface>>
   +nativeSessionId
   +memberBinding
   +capabilities
@@ -130,8 +130,8 @@ class EngineContext {
   +beforeTool(call)
 }
 class PiRpc {
-  +request(type, args)
-  +close()
+  +Request(type, args)
+  +Close()
 }
 PiEngine ..> EngineContext : 核对通道及报告事实
 PiEngine ..> PiRpc : 启动和停止子进程
@@ -146,7 +146,7 @@ Pi 的工具桥合并知识、执行进度及当前成员专属求助工具；�
 
 ##### 原生工具能力与执行约定
 
-Pi 的 `--tools` 参数使用 `core/tools/native-tools.ts` 的同一注册表。只读模式仅提供 read/grep/find/ls，ask/execute 才提供 write/edit/bash；可提供不等于某次调用已批准。成员启动前的 Workflow 能力检查读取相同清单，不能从模型提示词或声明推断能力。
+Pi 的 `--tools` 参数使用 `logic/tools/rules/native-tools.ts` 的同一注册表。只读模式仅提供 read/grep/find/ls，ask/execute 才提供 write/edit/bash；可提供不等于某次调用已批准。成员启动前的 Workflow 能力检查读取相同清单，不能从模型提示词或声明推断能力。
 
 Workflow 计划与交付门禁位于共享 Runtime 和任务工具，Pi 仍经既有 gate/call 协议执行，不额外绕过批准或扩大主调度原生工具范围。bash 的成功工具事实不等于命令语义已验证，其影响范围仍为 unknown。
 <a id="contract-原生插入的发送边界"></a>
@@ -272,7 +272,7 @@ class N_src_logic_execution_engines_pi_bridge_ts["bridge.ts"] {
 }
 ```
 
-直接依赖：[../../../tools/rules/outcome.ts](../../../tools/rules/outcome.ts)、[../../rules/types.ts](../../rules/types.ts)、[../../../tools/rules/results.ts](../../../tools/rules/results.ts)、[../../../../core/errors.ts](../../../../core/errors.ts)、[../../rules/input-source.ts](../../rules/input-source.ts)、[../../rules/engine-tools.ts](../../rules/engine-tools.ts)。
+直接依赖：[../../../../core/errors.ts](../../../../core/errors.ts)、[../../rules/engine-tools.ts](../../rules/engine-tools.ts)、[../../rules/input-source.ts](../../rules/input-source.ts)、[../../rules/types.ts](../../rules/types.ts)、[../../../tools/rules/outcome.ts](../../../tools/rules/outcome.ts)、[../../../tools/rules/results.ts](../../../tools/rules/results.ts)。
 
 ### engine.ts
 
@@ -319,8 +319,8 @@ class N_src_logic_execution_engines_pi_engine_ts_PiEngine["PiEngine"] {
   -assistantError
 }
 N_src_logic_execution_engines_pi_engine_ts ..> N_src_logic_execution_engines_pi_engine_ts_PiEngine : 声明
-class N_src_logic_execution_engines_pi_engine_ts_external_AgentEngine["AgentEngine (外部契约)"] {
-  <<external>>
+class N_src_logic_execution_engines_pi_engine_ts_external_AgentEngine["AgentEngine (../../rules/types)"] {
+  <<boundary>>
 }
 N_src_logic_execution_engines_pi_engine_ts_external_AgentEngine <|.. N_src_logic_execution_engines_pi_engine_ts_PiEngine
 ```
@@ -344,13 +344,14 @@ class N_src_logic_execution_engines_pi_engine_ts_PiEngine["PiEngine"] {
   -Redact()
 }
 N_src_logic_execution_engines_pi_engine_ts ..> N_src_logic_execution_engines_pi_engine_ts_PiEngine : 声明
-class N_src_logic_execution_engines_pi_engine_ts_external_AgentEngine["AgentEngine (外部契约)"] {
-  <<external>>
+class N_src_logic_execution_engines_pi_engine_ts_external_AgentEngine["AgentEngine (../../rules/types)"] {
+  <<boundary>>
 }
 N_src_logic_execution_engines_pi_engine_ts_external_AgentEngine <|.. N_src_logic_execution_engines_pi_engine_ts_PiEngine
 ```
 
-直接依赖：[../../../../core/utility/index.ts](../../../../core/utility/index.ts)、[../../rules/engine-runtime.ts](../../rules/engine-runtime.ts)、[../../rules/engine-tools.ts](../../rules/engine-tools.ts)、[../../rules/engine-instructions.ts](../../rules/engine-instructions.ts)、[../../rules/types.ts](../../rules/types.ts)、[rpc.ts](rpc.ts)、[bridge.ts](bridge.ts)、[../../../models/index.ts](../../../models/index.ts)、[../../rules/model-errors.ts](../../rules/model-errors.ts)、[runtime-config.ts](runtime-config.ts)、[../../../tools/rules/native-tools.ts](../../../tools/rules/native-tools.ts)、[../../../../core/errors.ts](../../../../core/errors.ts)、[../../../budget/rules/request-budget.ts](../../../budget/rules/request-budget.ts)、[../transport/request-budget-transport.ts](../transport/request-budget-transport.ts)、[request-budget-bootstrap.ts](request-budget-bootstrap.ts)、[../run-inactivity.ts](../run-inactivity.ts)。
+继承／实现来源：`AgentEngine` → [../../rules/types.ts](../../rules/types.ts)。
+直接依赖：[../../../../core/errors.ts](../../../../core/errors.ts)、[../../../../core/utility/index.ts](../../../../core/utility/index.ts)、[../../../budget/rules/request-budget.ts](../../../budget/rules/request-budget.ts)、[bridge.ts](bridge.ts)、[request-budget-bootstrap.ts](request-budget-bootstrap.ts)、[rpc.ts](rpc.ts)、[runtime-config.ts](runtime-config.ts)、[../run-inactivity.ts](../run-inactivity.ts)、[../transport/request-budget-transport.ts](../transport/request-budget-transport.ts)、[../../rules/engine-instructions.ts](../../rules/engine-instructions.ts)、[../../rules/engine-runtime.ts](../../rules/engine-runtime.ts)、[../../rules/engine-tools.ts](../../rules/engine-tools.ts)、[../../rules/model-errors.ts](../../rules/model-errors.ts)、[../../rules/types.ts](../../rules/types.ts)、[../../../models/index.ts](../../../models/index.ts)、[../../../tools/rules/native-tools.ts](../../../tools/rules/native-tools.ts)。
 
 ### package.ts
 
@@ -360,7 +361,7 @@ class N_src_logic_execution_engines_pi_package_ts["package.ts"] {
   <<module>>
 }
 ```
-直接依赖：[engine.ts](engine.ts)、[../../../engines/index.ts](../../../engines/index.ts)、[../../rules/engine-adapter.ts](../../rules/engine-adapter.ts)。
+直接依赖：[../../../engines/index.ts](../../../engines/index.ts)、[engine.ts](engine.ts)、[../../rules/engine-adapter.ts](../../rules/engine-adapter.ts)。
 
 ### request-budget-bootstrap.ts
 
@@ -421,22 +422,22 @@ classDiagram
 class N_src_logic_execution_engines_pi_engine_ts["engine.ts"] {
   <<module>>
 }
-class N_src_logic_execution_engines_pi_rpc_ts["rpc.ts"] {
-  <<module>>
-}
 class N_src_logic_execution_engines_pi_bridge_ts["bridge.ts"] {
-  <<module>>
-}
-class N_src_logic_execution_engines_pi_runtime_config_ts["runtime-config.ts"] {
   <<module>>
 }
 class N_src_logic_execution_engines_pi_request_budget_bootstrap_ts["request-budget-bootstrap.ts"] {
   <<module>>
 }
-N_src_logic_execution_engines_pi_engine_ts ..> N_src_logic_execution_engines_pi_rpc_ts : 导入依赖
+class N_src_logic_execution_engines_pi_rpc_ts["rpc.ts"] {
+  <<module>>
+}
+class N_src_logic_execution_engines_pi_runtime_config_ts["runtime-config.ts"] {
+  <<module>>
+}
 N_src_logic_execution_engines_pi_engine_ts ..> N_src_logic_execution_engines_pi_bridge_ts : 导入依赖
-N_src_logic_execution_engines_pi_engine_ts ..> N_src_logic_execution_engines_pi_runtime_config_ts : 导入依赖
 N_src_logic_execution_engines_pi_engine_ts ..> N_src_logic_execution_engines_pi_request_budget_bootstrap_ts : 导入依赖
+N_src_logic_execution_engines_pi_engine_ts ..> N_src_logic_execution_engines_pi_rpc_ts : 导入依赖
+N_src_logic_execution_engines_pi_engine_ts ..> N_src_logic_execution_engines_pi_runtime_config_ts : 导入依赖
 ```
 
 ```mermaid

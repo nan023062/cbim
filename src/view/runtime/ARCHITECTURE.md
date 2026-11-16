@@ -131,7 +131,7 @@ class N_src_view_runtime_runtime_feed_ts_RuntimeFeed["RuntimeFeed"] {
 N_src_view_runtime_runtime_feed_ts ..> N_src_view_runtime_runtime_feed_ts_RuntimeFeed : 声明
 ```
 
-直接依赖：[../foundations/utility/index.ts](../foundations/utility/index.ts)、[../../bridge/contracts/runtime.ts](../../bridge/contracts/runtime.ts)、[runtime-view-state.ts](runtime-view-state.ts)。
+直接依赖：[../../bridge/contracts/runtime.ts](../../bridge/contracts/runtime.ts)、[../foundations/utility/index.ts](../foundations/utility/index.ts)、[runtime-view-state.ts](runtime-view-state.ts)。
 
 ### runtime-overview.css
 
@@ -192,7 +192,7 @@ class N_src_view_runtime_RuntimeOverview_tsx["RuntimeOverview.tsx"] {
 }
 ```
 
-直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../components/ViewTabs.tsx](../components/ViewTabs.tsx)、[../../bridge/contracts/runtime.ts](../../bridge/contracts/runtime.ts)、[../../bridge/contracts/usage.ts](../../bridge/contracts/usage.ts)、[../tasks/useAdmission.ts](../tasks/useAdmission.ts)、[useRuntime.ts](useRuntime.ts)、[runtime-view-state.ts](runtime-view-state.ts)、[RuntimeRows.tsx](RuntimeRows.tsx)、[runtime-overview.css](runtime-overview.css)。
+直接依赖：[../../bridge/contracts/runtime.ts](../../bridge/contracts/runtime.ts)、[../../bridge/contracts/usage.ts](../../bridge/contracts/usage.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../components/ViewTabs.tsx](../components/ViewTabs.tsx)、[RuntimeRows.tsx](RuntimeRows.tsx)、[runtime-overview.css](runtime-overview.css)、[runtime-view-state.ts](runtime-view-state.ts)、[useRuntime.ts](useRuntime.ts)、[../tasks/useAdmission.ts](../tasks/useAdmission.ts)。
 
 ### RuntimeRows.tsx
 
@@ -224,7 +224,7 @@ class N_src_view_runtime_RuntimeRows_tsx_RowProps["RowProps"] {
 N_src_view_runtime_RuntimeRows_tsx ..> N_src_view_runtime_RuntimeRows_tsx_RowProps : 声明
 ```
 
-直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../components/state-labels.ts](../components/state-labels.ts)、[../../bridge/contracts/runtime.ts](../../bridge/contracts/runtime.ts)、[../../bridge/contracts/admission.ts](../../bridge/contracts/admission.ts)、[../../bridge/contracts/usage.ts](../../bridge/contracts/usage.ts)、[runtime-view-state.ts](runtime-view-state.ts)。
+直接依赖：[../../bridge/contracts/admission.ts](../../bridge/contracts/admission.ts)、[../../bridge/contracts/runtime.ts](../../bridge/contracts/runtime.ts)、[../../bridge/contracts/usage.ts](../../bridge/contracts/usage.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../components/state-labels.ts](../components/state-labels.ts)、[runtime-view-state.ts](runtime-view-state.ts)。
 
 ### useRuntime.ts
 
@@ -253,16 +253,16 @@ class N_src_view_runtime_runtime_view_state_ts["runtime-view-state.ts"] {
 class N_src_view_runtime_RuntimeOverview_tsx["RuntimeOverview.tsx"] {
   <<component>>
 }
-class N_src_view_runtime_useRuntime_ts["useRuntime.ts"] {
-  <<module>>
-}
 class N_src_view_runtime_RuntimeRows_tsx["RuntimeRows.tsx"] {
   <<component>>
 }
+class N_src_view_runtime_runtime_overview_css["runtime-overview.css"] {
+  <<stylesheet>>
+}
 N_src_view_runtime_runtime_feed_ts ..> N_src_view_runtime_runtime_view_state_ts : 导入依赖
-N_src_view_runtime_RuntimeOverview_tsx ..> N_src_view_runtime_useRuntime_ts : 导入依赖
-N_src_view_runtime_RuntimeOverview_tsx ..> N_src_view_runtime_runtime_view_state_ts : 导入依赖
 N_src_view_runtime_RuntimeOverview_tsx ..> N_src_view_runtime_RuntimeRows_tsx : 导入依赖
+N_src_view_runtime_RuntimeOverview_tsx ..> N_src_view_runtime_runtime_overview_css : 导入依赖
+N_src_view_runtime_RuntimeOverview_tsx ..> N_src_view_runtime_runtime_view_state_ts : 导入依赖
 ```
 
 ```mermaid
@@ -270,8 +270,8 @@ classDiagram
 class N_src_view_runtime_RuntimeOverview_tsx["RuntimeOverview.tsx"] {
   <<component>>
 }
-class N_src_view_runtime_runtime_overview_css["runtime-overview.css"] {
-  <<stylesheet>>
+class N_src_view_runtime_useRuntime_ts["useRuntime.ts"] {
+  <<module>>
 }
 class N_src_view_runtime_RuntimeRows_tsx["RuntimeRows.tsx"] {
   <<component>>
@@ -279,13 +279,10 @@ class N_src_view_runtime_RuntimeRows_tsx["RuntimeRows.tsx"] {
 class N_src_view_runtime_runtime_view_state_ts["runtime-view-state.ts"] {
   <<module>>
 }
-class N_src_view_runtime_useRuntime_ts["useRuntime.ts"] {
-  <<module>>
-}
 class N_src_view_runtime_runtime_feed_ts["runtime-feed.ts"] {
   <<module>>
 }
-N_src_view_runtime_RuntimeOverview_tsx ..> N_src_view_runtime_runtime_overview_css : 导入依赖
+N_src_view_runtime_RuntimeOverview_tsx ..> N_src_view_runtime_useRuntime_ts : 导入依赖
 N_src_view_runtime_RuntimeRows_tsx ..> N_src_view_runtime_runtime_view_state_ts : 导入依赖
 N_src_view_runtime_useRuntime_ts ..> N_src_view_runtime_runtime_feed_ts : 导入依赖
 ```

@@ -91,7 +91,7 @@ WebTools 将可信主进程端口装为 cbim_web_fetch 与 cbim_web_search，分
 
 `RepositoryTools` 只消费本轮可信捕获的 `RepositoryToolsPort`，注册 `cbim_repository_list/get` 两项真实只读工具；不并入 `cbim_knowledge_tool_catalog/describe` 的知识工具族。执行成员和没有端口的兼容装配不注册它们。工具描述提供有界目标名称/ID，资料正文、名称和目录都不构成新的指令或授权。
 
-模型只能提供 connectorId、目录分页或明确资源/版本/正文分块参数；严格拒绝额外 URL、令牌、仓库身份、连接代际或授权字段。`describe` 同步核验参数并从私有目标表生成 `repository` scope，未授权 ID 在网络前拒绝。真实 `list/get` 交原捕获闭包，不重新选择当前共享来源。
+模型只能提供 connectorId、目录分页或明确资源/版本/正文分块参数；严格拒绝额外 URL、令牌、仓库身份、连接代际或授权字段。`Describe` 同步核验参数并从私有目标表生成 `repository` scope，未授权 ID 在网络前拒绝。真实 `List/Get` 交原捕获闭包，不重新选择当前共享来源。
 
 领域执行一次后复用 `checkedJsonToolResult` 核唯一 JSON 快照，除 Logic 领域规则 输出形状外还核原 scope、请求版本、资源 ID、offset 与请求上限。输出无效不返回正文，也不自动重读；取消信号前后检查。最多 50 项目录摘要或 4096 个 Unicode codepoint，全文哈希和 totalCharacters 不会被分块哈希或末页标记替代。返回仅说明资料读取事实，不能充当工作区业务验证、文件采集或可恢复检查点依据。
 
@@ -119,21 +119,17 @@ WebTools 将可信主进程端口装为 cbim_web_fetch 与 cbim_web_search，分
 
 `cbim_goal_plan` 的主角色分工仍可绑定治理 moduleIds，但不得带 `workflowSelections`；工具在实际端口前拒绝，避免将未执行的业务流程包装为知识治理完成。执行角色选择规则不变。
 
-当前适配器已实现 `cbim_dispatch_task`、`cbim_dispatch_inspect`、`cbim_dispatch_cancel`、`cbim_dispatch_replace_dependency`、`cbim_dispatch_add_dependency`、`cbim_dispatch_revise_dependencies`、`cbim_dispatch_resume` 和 `cbim_dispatch_abandon_checkpoint`。撤销、各类依赖变更、预约与放弃分别只有对应真实端口存在时注册；兼容装配不广告或接受不存在的能力。主 Agent 不能被派成独立成员；未配置自定义岗位的模块由主 Agent 在当前会话执行。派发给自定义岗位时必须显式提供当前 `ownerSelection` 与对应 `agentId`，失效配置不回退。执行成员没有派发、撤销、依赖修订、续执行预约或检查点放弃权，其他未实现名称不进入活动清单。
+当前适配器已实现 `cbim_dispatch_task`、`cbim_dispatch_inspect`、`cbim_dispatch_command_report`、`cbim_dispatch_cancel`、`cbim_dispatch_replace_dependency`、`cbim_dispatch_add_dependency`、`cbim_dispatch_revise_dependencies`、`cbim_dispatch_resume` 和 `cbim_dispatch_abandon_checkpoint`。原命令报告、撤销、各类依赖变更、预约与放弃分别只有对应真实端口存在时注册；兼容装配不广告或接受不存在的能力。主 Agent 不能被派成独立成员；未配置自定义岗位的模块由主 Agent 在当前会话执行。派发给自定义岗位时必须显式提供当前 `ownerSelection` 与对应 `agentId`，失效配置不回退。执行成员没有派发、撤销、依赖修订、续执行预约或检查点放弃权，其他未实现名称不进入活动清单。
 
 `DispatchTools` 可以通过第二个构造参数组合真实 `GoalTools`。缺省不注册任何目标工具，已有派发端口保持不变；组合后 list、has、describe、call 都按实际名称转交目标适配器，不因 `cbim_goal_` 前缀接受未知操作。
 
-工具全部使用 `cbim_` 前缀，由内部 Loop 通过工具网关调用调度服务。`DispatchTools` 严格解析参数，拒绝额外身份、授权和状态字段；调用 ID 来自已通过一次性 gate 的桥元数据，缺少时拒绝，不能在模型参数或输入哈希中猜测。`dispatch` 仅可靠入队，主轮结束后启动与结果续跑由注入的调度服务负责；`inspect` 不启动、不重试、不确认收件。只有真实服务可用时才将 Schema 加入模型能力清单。
+工具全部使用 `cbim_` 前缀，由内部 Loop 通过工具网关调用调度服务。`DispatchTools` 严格解析参数，拒绝额外身份、授权和状态字段；调用 ID 来自已通过一次性 gate 的桥元数据，缺少时拒绝，不能在模型参数或输入哈希中猜测。`Dispatch` 仅可靠入队，主轮结束后启动与结果续跑由注入的调度服务负责；`Inspect` 不启动、不重试、不确认收件。只有真实服务可用时才将 Schema 加入模型能力清单。
 
 | 工具与状态 | 模型提交内容 | 服务返回内容 |
 | --- | --- | --- |
 | `cbim_dispatch_task`（当前） | 自定义负责岗位、moduleIds、ownerSelection、可选 workflowSelections、goal、acceptance、前置版本；拒绝 cbim:main 与已退役的 cbim:executor | taskId、messageId、图游标；本周期创建独立执行实例，不是执行结果 |
 | `cbim_dispatch_inspect`（当前） | 可选本图 taskId，缺省查本图 | 经授权的任务/依赖/有效结果，不含其他成员私有上下文；当前不接收模型图游标 |
 | `cbim_dispatch_cancel`（当前，未启动任务） | expectedGraphCursor 的 streamId/seq、targets 的 taskId/expectedRevision、reason | 当前周期明确集合的原子撤销回执；不自动扩展后继，不停止活动运行，不造候选或执行日志 |
-| `cbim_dispatch_wait`（待实现） | 当前任务的 children（taskId + planRevision）与 reason | staged 等待提交；大脑安全让出执行槽后才切换 waiting |
-| `cbim_dispatch_result`（待实现） | summary、evidenceRefs、limitations、预期计划版本 | staged 结果提交；安全结束并复核后才发布候选，不自动验收 |
-| `cbim_dispatch_message`（待实现） | 同图接收成员、关联 taskId、question/answer 正文及 replyTo | 消息接收回执；不能通过聊天正文创建未登记任务 |
-| `cbim_dispatch_revise`（待实现） | 本任务 expectedRevision、变更候选、reason | 修订回执或冲突；运行中影响范围的变更先停止旧范围执行 |
 
 取消复用 Logic 领域规则 `cancelQueuedTasksInputSchema`，禁止模型夹带 scope/run/command/权限/cascade。服务核实未领取、无运行和依赖后继；缺项或版本变化整批拒绝，错误不能被适配器包装成成功。可信调用 ID 与主运行共同生成稳定命令键，回执只证明待办已撤销。运行中取消、递归派发子树和任意依赖修订仍未通过此工具开放。
 
@@ -151,13 +147,13 @@ WebTools 将可信主进程端口装为 cbim_web_fetch 与 cbim_web_search，分
 | `cbim_goal_plan` | `expectedRevision` 与 Logic 领域规则 声明的目标、约束、验收项、分工和原因 | 保存计划候选；不派发成员、不改原始用户输入、不扩大权限 |
 | `cbim_goal_review` | `expectedRevision` 与 Logic 领域规则 声明的检查、真实证据引用、缺口和下一步决定 | 保存审阅；`decision=complete` 仅申请当前主运行可靠结算后的门禁复核 |
 
-`GoalToolsPort` 为只读 `binding` 加 `inspect()`、`plan(input, invocation)`、`review(input, invocation)`；`DispatchToolsPort` 同样要求绑定本轮 workspace/root/scope/run。构造时复制身份，`invocation` 只携带桥提供的 `toolCallId` 和 `AbortSignal`。持久化 commandId 由可信原 run/call 生成，模型不能夹带这些身份，也不能通过 approved、人工通过等字段签发批准。读取只声明 `read`，计划/审阅只声明 `maintenance`；工具描述不是业务写授权。缺失可信调用 ID、已取消调用、未知名称或非法输入均不得进入服务。
+`GoalToolsPort` 为只读 `binding`、可选 `collaborationMode`、`Inspect()`、可选 `PreviewPause()`、`Plan(input, invocation)` 和 `Review(input, invocation)`；`DispatchToolsPort` 同样要求绑定本轮 workspace/root/scope/run。构造时复制身份，`invocation` 只携带桥提供的 `toolCallId` 和 `AbortSignal`。持久化 commandId 由可信原 run/call 生成，模型不能夹带这些身份，也不能通过 approved、人工通过等字段签发批准。读取只声明 `read`，计划/审阅只声明 `maintenance`；工具描述不是业务写授权。缺失可信调用 ID、已取消调用、未知名称或非法输入均不得进入服务。
 
-九项主工具统一经 `checkedJsonToolResult`：领域方法只执行一次，原始公开值只序列化一次，严格 Schema 及可信调用关联校验针对同一 wire；校验后发送原字符串，不使用解析结果裁剪、补默认值或二次编码。首次 await 前独立复制原请求，端口不能修改传入对象后与自身比较绕过输出核验。`main-tool-contracts.ts` 复用已存在的命令键算法，新增追加使用独立 `auto-add-dependency-` 域；输出的 commandId、根会话、scope/run、请求版本和操作对象按实际字段核对。续执行回执没有新 runId 或 commandId，不能添加这些字段冒称已经运行；完整图可保留同根历史周期。
+派发与目标主工具统一经 `checkedJsonToolResult`：领域方法只执行一次，原始公开值只序列化一次，严格 Schema 及可信调用关联校验针对同一 wire；校验后发送原字符串，不使用解析结果裁剪、补默认值或二次编码。首次 await 前独立复制原请求，端口不能修改传入对象后与自身比较绕过输出核验。`main-tool-contracts.ts` 复用已存在的命令键算法，新增追加使用独立 `auto-add-dependency-` 域；输出的 commandId、根会话、scope/run、请求版本和操作对象按实际字段核对。续执行回执没有新 runId 或 commandId，不能添加这些字段冒称已经运行；完整图可保留同根历史周期。
 
 `cbim_goal_inspect` 使用同一次权威存储读取的 scope 与 graph。公开 scope 保留原输入、计划、人工意见、等待和补充、只读核实与业务重规划的来源/权限/约束，剔除 recovery/replan 的私有原生上下文；公开 Schema 不接受未知字段。空值和损坏输出报告 `TOOL_OUTPUT_INVALID`，明确操作可能已发生，原已提交记录不回滚、不自动重试，也不把新模型调用当作原命令恢复。
 
-九项工具的实际 list 条目含 outputSchema、version、effects、cancellation、recovery；它们不加入知识工具 catalog/describe。取消说明为 `preflight_only`：入口及服务支持的受理前边界可检查停止，已进入事务不承诺中断或回滚。查询可显式重新读取；写操作未知结果先查询现有事实，不能更换调用 ID 盲目再派发或决策。是否具备证据、是否存在在途执行、目标和知识版本是否有效仍由可信服务及主运行结算负责；输出结构通过不能签发业务完成或人工批准。
+已注册工具的实际 List 条目含 outputSchema、version、effects、cancellation、recovery；它们不加入知识工具 catalog/describe。取消说明为 `preflight_only`：入口及服务支持的受理前边界可检查停止，已进入事务不承诺中断或回滚。查询可显式重新读取；写操作未知结果先查询现有事实，不能更换调用 ID 盲目再派发或决策。是否具备证据、是否存在在途执行、目标和知识版本是否有效仍由可信服务及主运行结算负责；输出结构通过不能签发业务完成或人工批准。
 
 <a id="contract-未领取任务追加前置"></a>
 
@@ -189,24 +185,28 @@ commandId 由工具网关把当前可信 runId/toolCallId 映射到持久化调�
 
 适配器只校验/转换输入和输出，任务不变量、状态迁移、权限与版本规则归调度/Logic 领域规则。派发和消息工具受策略控制，结果写入必须来自绑定的责任成员与当前运行。用户的“本次任务全部通过”只在现有授权生命周期内生效，不传播到新成员任务。
 
-`cbim_dispatch_wait` 登记等待后不无限挂起工具 Promise 占住成员槽；需大脑适配器明确支持在安全片段边界停止本轮并回传等待事实。未接通此能力前不把 wait 工具交给模型。任务分析可使用现有知识查询，但正式 dispatch 缺模块/维护关系时返回结构化 gap，禁止伪造成已派发。
+当前工具表没有 `cbim_dispatch_wait/result/message/revise` 这组历史草案入口。实际求助、检查点和候选使用各自已经注册的工具及后端结算协议。任务分析可使用现有知识查询，但正式 dispatch 缺模块/维护关系时返回结构化 gap，禁止伪造成已派发。
 
 <a id="contract-目标结构类图待实现"></a>
 
-###### 目标结构类图（待实现）
+###### 当前工具适配关系
 
 ```mermaid
 classDiagram
-class DispatchToolAdapter { <<planned>> }
-class TrustedRunContext { <<contract>> }
-class AgentDispatchService { <<scheduler boundary>> }
-class ToolPolicy { <<core boundary>> }
-DispatchToolAdapter ..> TrustedRunContext : 注入身份与幂等键
-DispatchToolAdapter ..> ToolPolicy : 按作用域授权
-DispatchToolAdapter ..> AgentDispatchService : 提交请求
+class DispatchTools
+class DispatchToolsPort { <<interface>> }
+class DispatchToolInvocation { <<interface>> }
+class GoalToolInvocation { <<interface>> }
+class GoalTools
+class GoalToolsPort { <<interface>> }
+DispatchTools ..> DispatchToolsPort : 固定身份与真实服务入口
+DispatchTools ..> DispatchToolInvocation : 可信调用 ID 与取消
+GoalTools ..> GoalToolsPort : 计划与审阅
+GoalTools ..> GoalToolInvocation : 可信调用 ID 与取消
 ```
 
-验证须覆盖伪造身份/审批拒绝、工具重发不重复派发、过期版本、成员读模式写拒绝、接收确认与业务结果区分、无实现不注册。工具测试通过也不替代真实多成员大脑运行验收。
+工具及调用身份分别声明在 [dispatch-tools.ts](dispatch-tools.ts) 和 [goal-tools.ts](goal-tools.ts)；输出绑定与核验契约见 [main-tool-contracts.ts](main-tool-contracts.ts)。工具只使用注入端口，实际服务及权限由执行装配连接，不继承或直接创建业务服务。
+
 <a id="contract-已消费人工意见的目标引用"></a>
 
 ### 已消费人工意见的目标引用
@@ -216,7 +216,7 @@ DispatchToolAdapter ..> AgentDispatchService : 提交请求
 
 ##### 结构化提问工具包装
 
-`QuestionTools` 仅在真实用户交互端口存在时提供 `cbim_ask_user_question`，不加入知识工具目录。list、describe 和 call 共用严格输入；分类仍为 read，不扩大主或成员权限，也不触发工具审批。元数据公开真实输出 Schema、等待期间可取消及先核实后重试的限制。
+`QuestionTools` 仅在真实用户交互端口存在时提供 `cbim_ask_user_question`，不加入知识工具目录。List、Describe 和 Call 共用严格输入；分类仍为 read，不扩大主或成员权限，也不触发工具审批。元数据公开真实输出 Schema、等待期间可取消及先核实后重试的限制。
 
 调用前独立冻结已解析原题，传给端口的对象变异不能改变核验依据。领域等待只调用一次，结果沿 `checkedJsonToolResult` 单次编码、校验原 wire 并直接发送，保持 answers 或 cancelled 形状，不补用户、批准或运行身份。用户回答已消费后发生 `TOOL_OUTPUT_INVALID` 仍不回滚、不重新弹题、不自动重复请求；输出异常不泄露正文。
 
@@ -395,7 +395,7 @@ class N_src_logic_tools_runtime_candidate_review_tools_ts_CandidateReviewTools["
 N_src_logic_tools_runtime_candidate_review_tools_ts ..> N_src_logic_tools_runtime_candidate_review_tools_ts_CandidateReviewTools : 声明
 ```
 
-直接依赖：[../../tasks/rules/candidate-review.ts](../../tasks/rules/candidate-review.ts)、[../../tasks/rules/graph-rules.ts](../../tasks/rules/graph-rules.ts)、[../rules/results.ts](../rules/results.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../tasks/rules/main-tool-output.ts](../../tasks/rules/main-tool-output.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../tasks/rules/candidate-review.ts](../../tasks/rules/candidate-review.ts)、[../../tasks/rules/graph-rules.ts](../../tasks/rules/graph-rules.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../tasks/rules/main-tool-output.ts](../../tasks/rules/main-tool-output.ts)、[../rules/results.ts](../rules/results.ts)。
 
 ### command-report-contract.ts
 
@@ -408,7 +408,7 @@ class N_src_logic_tools_runtime_command_report_contract_ts["command-report-contr
 }
 ```
 
-直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../tasks/rules/command-verification.ts](../../tasks/rules/command-verification.ts)、[../rules/results.ts](../rules/results.ts)、[../rules/contracts.ts](../rules/contracts.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../tasks/rules/command-verification.ts](../../tasks/rules/command-verification.ts)、[../rules/contracts.ts](../rules/contracts.ts)、[../rules/results.ts](../rules/results.ts)。
 
 ### coordination-contracts.ts
 
@@ -456,7 +456,7 @@ class N_src_logic_tools_runtime_coordination_tools_ts_CoordinationTools["Coordin
 N_src_logic_tools_runtime_coordination_tools_ts ..> N_src_logic_tools_runtime_coordination_tools_ts_CoordinationTools : 声明
 ```
 
-直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../tasks/rules/coordination-preview.ts](../../tasks/rules/coordination-preview.ts)、[../../tasks/rules/main-tool-output.ts](../../tasks/rules/main-tool-output.ts)、[../rules/results.ts](../rules/results.ts)、[../../execution/rules/engine-tools.ts](../../execution/rules/engine-tools.ts)、[../rules/policy/tool-policy.ts](../rules/policy/tool-policy.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../execution/rules/engine-tools.ts](../../execution/rules/engine-tools.ts)、[../../tasks/rules/coordination-preview.ts](../../tasks/rules/coordination-preview.ts)、[../../tasks/rules/main-tool-output.ts](../../tasks/rules/main-tool-output.ts)、[../rules/policy/tool-policy.ts](../rules/policy/tool-policy.ts)、[../rules/results.ts](../rules/results.ts)。
 
 ### dispatch-tools.ts
 
@@ -511,7 +511,7 @@ class N_src_logic_tools_runtime_dispatch_tools_ts_DispatchTools["DispatchTools"]
 N_src_logic_tools_runtime_dispatch_tools_ts ..> N_src_logic_tools_runtime_dispatch_tools_ts_DispatchTools : 声明
 ```
 
-直接依赖：[candidate-review-tools.ts](candidate-review-tools.ts)、[../rules/outcome.ts](../rules/outcome.ts)、[coordination-contracts.ts](coordination-contracts.ts)、[../../tasks/rules/coordination-preview.ts](../../tasks/rules/coordination-preview.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../tasks/rules/dispatch-commands.ts](../../tasks/rules/dispatch-commands.ts)、[../../tasks/rules/workflow-selection.ts](../../tasks/rules/workflow-selection.ts)、[../../tasks/rules/queued-task-cancel.ts](../../tasks/rules/queued-task-cancel.ts)、[../../tasks/rules/queued-dependency-replacement.ts](../../tasks/rules/queued-dependency-replacement.ts)、[../../tasks/rules/queued-dependency-addition.ts](../../tasks/rules/queued-dependency-addition.ts)、[../../tasks/rules/queued-dependency-revision.ts](../../tasks/rules/queued-dependency-revision.ts)、[../../tasks/rules/main-tool-output.ts](../../tasks/rules/main-tool-output.ts)、[main-tool-contracts.ts](main-tool-contracts.ts)、[command-report-contract.ts](command-report-contract.ts)、[../../tasks/rules/command-verification.ts](../../tasks/rules/command-verification.ts)、[office-history-tools.ts](office-history-tools.ts)、[goal-tools.ts](goal-tools.ts)、[../../tasks/rules/queued-member-resume.ts](../../tasks/rules/queued-member-resume.ts)、[../../tasks/rules/checkpoint-handoff.ts](../../tasks/rules/checkpoint-handoff.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../tasks/rules/checkpoint-handoff.ts](../../tasks/rules/checkpoint-handoff.ts)、[../../tasks/rules/command-verification.ts](../../tasks/rules/command-verification.ts)、[../../tasks/rules/coordination-preview.ts](../../tasks/rules/coordination-preview.ts)、[../../tasks/rules/dispatch-commands.ts](../../tasks/rules/dispatch-commands.ts)、[../../tasks/rules/main-tool-output.ts](../../tasks/rules/main-tool-output.ts)、[../../tasks/rules/queued-dependency-addition.ts](../../tasks/rules/queued-dependency-addition.ts)、[../../tasks/rules/queued-dependency-replacement.ts](../../tasks/rules/queued-dependency-replacement.ts)、[../../tasks/rules/queued-dependency-revision.ts](../../tasks/rules/queued-dependency-revision.ts)、[../../tasks/rules/queued-member-resume.ts](../../tasks/rules/queued-member-resume.ts)、[../../tasks/rules/queued-task-cancel.ts](../../tasks/rules/queued-task-cancel.ts)、[../../tasks/rules/workflow-selection.ts](../../tasks/rules/workflow-selection.ts)、[../rules/outcome.ts](../rules/outcome.ts)、[candidate-review-tools.ts](candidate-review-tools.ts)、[command-report-contract.ts](command-report-contract.ts)、[coordination-contracts.ts](coordination-contracts.ts)、[goal-tools.ts](goal-tools.ts)、[main-tool-contracts.ts](main-tool-contracts.ts)、[office-history-tools.ts](office-history-tools.ts)。
 
 ### feedback-status-tool.ts
 
@@ -535,7 +535,7 @@ class N_src_logic_tools_runtime_feedback_status_tool_ts_FeedbackStatusTool["Feed
 N_src_logic_tools_runtime_feedback_status_tool_ts ..> N_src_logic_tools_runtime_feedback_status_tool_ts_FeedbackStatusTool : 声明
 ```
 
-直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../rules/results.ts](../rules/results.ts)、[../rules/policy/tool-policy.ts](../rules/policy/tool-policy.ts)、[../../feedback/index.ts](../../feedback/index.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../feedback/index.ts](../../feedback/index.ts)、[../rules/policy/tool-policy.ts](../rules/policy/tool-policy.ts)、[../rules/results.ts](../rules/results.ts)。
 
 ### feedback-tools.ts
 
@@ -557,7 +557,7 @@ class N_src_logic_tools_runtime_feedback_tools_ts_FeedbackTools["FeedbackTools"]
 N_src_logic_tools_runtime_feedback_tools_ts ..> N_src_logic_tools_runtime_feedback_tools_ts_FeedbackTools : 声明
 ```
 
-直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../rules/results.ts](../rules/results.ts)、[../rules/scope-schema.ts](../rules/scope-schema.ts)、[../rules/policy/tool-policy.ts](../rules/policy/tool-policy.ts)、[../../feedback/index.ts](../../feedback/index.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../feedback/index.ts](../../feedback/index.ts)、[../rules/policy/tool-policy.ts](../rules/policy/tool-policy.ts)、[../rules/results.ts](../rules/results.ts)、[../rules/scope-schema.ts](../rules/scope-schema.ts)。
 
 ### goal-tools.ts
 
@@ -601,7 +601,7 @@ class N_src_logic_tools_runtime_goal_tools_ts_GoalTools["GoalTools"] {
 N_src_logic_tools_runtime_goal_tools_ts ..> N_src_logic_tools_runtime_goal_tools_ts_GoalTools : 声明
 ```
 
-直接依赖：[../rules/outcome.ts](../rules/outcome.ts)、[coordination-contracts.ts](coordination-contracts.ts)、[../../tasks/rules/coordination-preview.ts](../../tasks/rules/coordination-preview.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../tasks/rules/scope-goal.ts](../../tasks/rules/scope-goal.ts)、[../../tasks/rules/main-tool-output.ts](../../tasks/rules/main-tool-output.ts)、[main-tool-contracts.ts](main-tool-contracts.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../tasks/rules/coordination-preview.ts](../../tasks/rules/coordination-preview.ts)、[../../tasks/rules/main-tool-output.ts](../../tasks/rules/main-tool-output.ts)、[../../tasks/rules/scope-goal.ts](../../tasks/rules/scope-goal.ts)、[../rules/outcome.ts](../rules/outcome.ts)、[coordination-contracts.ts](coordination-contracts.ts)、[main-tool-contracts.ts](main-tool-contracts.ts)。
 
 ### governance-tools.ts
 
@@ -633,7 +633,7 @@ class N_src_logic_tools_runtime_governance_tools_ts_GovernanceTools["GovernanceT
 N_src_logic_tools_runtime_governance_tools_ts ..> N_src_logic_tools_runtime_governance_tools_ts_GovernanceTools : 声明
 ```
 
-直接依赖：[../rules/outcome.ts](../rules/outcome.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../rules/results.ts](../rules/results.ts)、[../rules/policy/tool-policy.ts](../rules/policy/tool-policy.ts)、[../../governance/rules/module-governance-rules.ts](../../governance/rules/module-governance-rules.ts)、[../../governance/rules/module-governance-tools.ts](../../governance/rules/module-governance-tools.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../governance/rules/module-governance-rules.ts](../../governance/rules/module-governance-rules.ts)、[../../governance/rules/module-governance-tools.ts](../../governance/rules/module-governance-tools.ts)、[../rules/outcome.ts](../rules/outcome.ts)、[../rules/policy/tool-policy.ts](../rules/policy/tool-policy.ts)、[../rules/results.ts](../rules/results.ts)。
 
 ### knowledge-contracts.ts
 
@@ -645,7 +645,7 @@ class N_src_logic_tools_runtime_knowledge_contracts_ts["knowledge-contracts.ts"]
 }
 ```
 
-直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../knowledge/rules/builtins.ts](../../knowledge/rules/builtins.ts)、[../../knowledge/rules/tool-output-base.ts](../../knowledge/rules/tool-output-base.ts)、[../../knowledge/rules/tool-output-queries.ts](../../knowledge/rules/tool-output-queries.ts)、[../../knowledge/rules/tool-output-builtins.ts](../../knowledge/rules/tool-output-builtins.ts)、[../../knowledge/rules/tool-output-transactions.ts](../../knowledge/rules/tool-output-transactions.ts)、[../rules/contracts.ts](../rules/contracts.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../knowledge/rules/builtins.ts](../../knowledge/rules/builtins.ts)、[../../knowledge/rules/tool-output-base.ts](../../knowledge/rules/tool-output-base.ts)、[../../knowledge/rules/tool-output-builtins.ts](../../knowledge/rules/tool-output-builtins.ts)、[../../knowledge/rules/tool-output-queries.ts](../../knowledge/rules/tool-output-queries.ts)、[../../knowledge/rules/tool-output-transactions.ts](../../knowledge/rules/tool-output-transactions.ts)、[../rules/contracts.ts](../rules/contracts.ts)。
 
 ### knowledge-tools.ts
 
@@ -677,7 +677,7 @@ class N_src_logic_tools_runtime_knowledge_tools_ts_KnowledgeTools["KnowledgeTool
 N_src_logic_tools_runtime_knowledge_tools_ts ..> N_src_logic_tools_runtime_knowledge_tools_ts_KnowledgeTools : 声明
 ```
 
-直接依赖：[../rules/registry.ts](../rules/registry.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../knowledge/rules/builtins.ts](../../knowledge/rules/builtins.ts)、[../../knowledge/rules/knowledge-queries.ts](../../knowledge/rules/knowledge-queries.ts)、[../../knowledge/rules/knowledge-refresh.ts](../../knowledge/rules/knowledge-refresh.ts)、[../../knowledge/rules/object-crud.ts](../../knowledge/rules/object-crud.ts)、[../rules/types.ts](../rules/types.ts)、[knowledge-contracts.ts](knowledge-contracts.ts)、[../../knowledge/rules/knowledge-write-input.ts](../../knowledge/rules/knowledge-write-input.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../knowledge/rules/builtins.ts](../../knowledge/rules/builtins.ts)、[../../knowledge/rules/knowledge-queries.ts](../../knowledge/rules/knowledge-queries.ts)、[../../knowledge/rules/knowledge-refresh.ts](../../knowledge/rules/knowledge-refresh.ts)、[../../knowledge/rules/knowledge-write-input.ts](../../knowledge/rules/knowledge-write-input.ts)、[../../knowledge/rules/object-crud.ts](../../knowledge/rules/object-crud.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../rules/registry.ts](../rules/registry.ts)、[../rules/types.ts](../rules/types.ts)、[knowledge-contracts.ts](knowledge-contracts.ts)。
 
 ### main-tool-contracts.ts
 
@@ -713,7 +713,7 @@ class N_src_logic_tools_runtime_module_ownership_tools_ts_ModuleOwnershipTools["
 N_src_logic_tools_runtime_module_ownership_tools_ts ..> N_src_logic_tools_runtime_module_ownership_tools_ts_ModuleOwnershipTools : 声明
 ```
 
-直接依赖：[../rules/outcome.ts](../rules/outcome.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../rules/results.ts](../rules/results.ts)、[../rules/policy/tool-policy.ts](../rules/policy/tool-policy.ts)、[../../workspace/rules/module-ownership-rules.ts](../../workspace/rules/module-ownership-rules.ts)、[../../workspace/rules/module-ownership.ts](../../workspace/rules/module-ownership.ts)、[../../workspace/rules/module-ownership-tool-policy.ts](../../workspace/rules/module-ownership-tool-policy.ts)、[../../workspace/rules/module-ownership-tools.ts](../../workspace/rules/module-ownership-tools.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../rules/outcome.ts](../rules/outcome.ts)、[../rules/policy/tool-policy.ts](../rules/policy/tool-policy.ts)、[../rules/results.ts](../rules/results.ts)、[../../workspace/rules/module-ownership-rules.ts](../../workspace/rules/module-ownership-rules.ts)、[../../workspace/rules/module-ownership-tool-policy.ts](../../workspace/rules/module-ownership-tool-policy.ts)、[../../workspace/rules/module-ownership-tools.ts](../../workspace/rules/module-ownership-tools.ts)、[../../workspace/rules/module-ownership.ts](../../workspace/rules/module-ownership.ts)。
 
 ### office-history-tools.ts
 
@@ -734,7 +734,7 @@ class N_src_logic_tools_runtime_office_history_tools_ts_OfficeHistoryTools["Offi
 N_src_logic_tools_runtime_office_history_tools_ts ..> N_src_logic_tools_runtime_office_history_tools_ts_OfficeHistoryTools : 声明
 ```
 
-直接依赖：[../../tasks/rules/office-history.ts](../../tasks/rules/office-history.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../rules/results.ts](../rules/results.ts)、[../../../core/errors.ts](../../../core/errors.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../tasks/rules/office-history.ts](../../tasks/rules/office-history.ts)、[../rules/results.ts](../rules/results.ts)。
 
 ### question-tools.ts
 
@@ -755,7 +755,7 @@ class N_src_logic_tools_runtime_question_tools_ts_QuestionTools["QuestionTools"]
 N_src_logic_tools_runtime_question_tools_ts ..> N_src_logic_tools_runtime_question_tools_ts_QuestionTools : 声明
 ```
 
-直接依赖：[../rules/questions.ts](../rules/questions.ts)、[../rules/results.ts](../rules/results.ts)、[../rules/contracts.ts](../rules/contracts.ts)、[../rules/policy/tool-policy.ts](../rules/policy/tool-policy.ts)、[../../../core/errors.ts](../../../core/errors.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../rules/contracts.ts](../rules/contracts.ts)、[../rules/policy/tool-policy.ts](../rules/policy/tool-policy.ts)、[../rules/questions.ts](../rules/questions.ts)、[../rules/results.ts](../rules/results.ts)。
 
 ### repository-tools.ts
 
@@ -779,7 +779,7 @@ class N_src_logic_tools_runtime_repository_tools_ts_RepositoryTools["RepositoryT
 N_src_logic_tools_runtime_repository_tools_ts ..> N_src_logic_tools_runtime_repository_tools_ts_RepositoryTools : 声明
 ```
 
-直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../rules/results.ts](../rules/results.ts)、[../rules/policy/tool-policy.ts](../rules/policy/tool-policy.ts)、[../../connectors/rules/repository-tools.ts](../../connectors/rules/repository-tools.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../connectors/rules/repository-tools.ts](../../connectors/rules/repository-tools.ts)、[../rules/policy/tool-policy.ts](../rules/policy/tool-policy.ts)、[../rules/results.ts](../rules/results.ts)。
 
 ### web-tools.ts
 
@@ -800,7 +800,7 @@ class N_src_logic_tools_runtime_web_tools_ts_WebTools["WebTools"] {
 N_src_logic_tools_runtime_web_tools_ts ..> N_src_logic_tools_runtime_web_tools_ts_WebTools : 声明
 ```
 
-直接依赖：[../../web/index.ts](../../web/index.ts)、[../rules/results.ts](../rules/results.ts)、[../rules/policy/tool-policy.ts](../rules/policy/tool-policy.ts)。
+直接依赖：[../rules/policy/tool-policy.ts](../rules/policy/tool-policy.ts)、[../rules/results.ts](../rules/results.ts)、[../../web/index.ts](../../web/index.ts)。
 
 ### workspace-member-tools.ts
 
@@ -821,7 +821,7 @@ class N_src_logic_tools_runtime_workspace_member_tools_ts_WorkspaceMemberTools["
 N_src_logic_tools_runtime_workspace_member_tools_ts ..> N_src_logic_tools_runtime_workspace_member_tools_ts_WorkspaceMemberTools : 声明
 ```
 
-直接依赖：[../rules/outcome.ts](../rules/outcome.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../rules/results.ts](../rules/results.ts)、[../rules/policy/tool-policy.ts](../rules/policy/tool-policy.ts)、[../../team/rules/workspace-member-rules.ts](../../team/rules/workspace-member-rules.ts)、[../../team/rules/workspace-member-tools.ts](../../team/rules/workspace-member-tools.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../team/rules/workspace-member-rules.ts](../../team/rules/workspace-member-rules.ts)、[../../team/rules/workspace-member-tools.ts](../../team/rules/workspace-member-tools.ts)、[../rules/outcome.ts](../rules/outcome.ts)、[../rules/policy/tool-policy.ts](../rules/policy/tool-policy.ts)、[../rules/results.ts](../rules/results.ts)。
 
 ### 本目录调用边界
 
@@ -833,24 +833,27 @@ class N_src_logic_tools_runtime_dispatch_tools_ts["dispatch-tools.ts"] {
 class N_src_logic_tools_runtime_candidate_review_tools_ts["candidate-review-tools.ts"] {
   <<module>>
 }
-class N_src_logic_tools_runtime_coordination_contracts_ts["coordination-contracts.ts"] {
-  <<module>>
-}
-class N_src_logic_tools_runtime_main_tool_contracts_ts["main-tool-contracts.ts"] {
-  <<module>>
-}
 class N_src_logic_tools_runtime_command_report_contract_ts["command-report-contract.ts"] {
   <<module>>
 }
+class N_src_logic_tools_runtime_coordination_contracts_ts["coordination-contracts.ts"] {
+  <<module>>
+}
+class N_src_logic_tools_runtime_goal_tools_ts["goal-tools.ts"] {
+  <<module>>
+}
 N_src_logic_tools_runtime_dispatch_tools_ts ..> N_src_logic_tools_runtime_candidate_review_tools_ts : 导入依赖
-N_src_logic_tools_runtime_dispatch_tools_ts ..> N_src_logic_tools_runtime_coordination_contracts_ts : 导入依赖
-N_src_logic_tools_runtime_dispatch_tools_ts ..> N_src_logic_tools_runtime_main_tool_contracts_ts : 导入依赖
 N_src_logic_tools_runtime_dispatch_tools_ts ..> N_src_logic_tools_runtime_command_report_contract_ts : 导入依赖
+N_src_logic_tools_runtime_dispatch_tools_ts ..> N_src_logic_tools_runtime_coordination_contracts_ts : 导入依赖
+N_src_logic_tools_runtime_dispatch_tools_ts ..> N_src_logic_tools_runtime_goal_tools_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_logic_tools_runtime_dispatch_tools_ts["dispatch-tools.ts"] {
+  <<module>>
+}
+class N_src_logic_tools_runtime_main_tool_contracts_ts["main-tool-contracts.ts"] {
   <<module>>
 }
 class N_src_logic_tools_runtime_office_history_tools_ts["office-history-tools.ts"] {
@@ -862,11 +865,8 @@ class N_src_logic_tools_runtime_goal_tools_ts["goal-tools.ts"] {
 class N_src_logic_tools_runtime_coordination_contracts_ts["coordination-contracts.ts"] {
   <<module>>
 }
-class N_src_logic_tools_runtime_main_tool_contracts_ts["main-tool-contracts.ts"] {
-  <<module>>
-}
+N_src_logic_tools_runtime_dispatch_tools_ts ..> N_src_logic_tools_runtime_main_tool_contracts_ts : 导入依赖
 N_src_logic_tools_runtime_dispatch_tools_ts ..> N_src_logic_tools_runtime_office_history_tools_ts : 导入依赖
-N_src_logic_tools_runtime_dispatch_tools_ts ..> N_src_logic_tools_runtime_goal_tools_ts : 导入依赖
 N_src_logic_tools_runtime_goal_tools_ts ..> N_src_logic_tools_runtime_coordination_contracts_ts : 导入依赖
 N_src_logic_tools_runtime_goal_tools_ts ..> N_src_logic_tools_runtime_main_tool_contracts_ts : 导入依赖
 ```

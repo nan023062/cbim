@@ -71,9 +71,9 @@
 
 #### SerialQueue
 
-每实例独立持有 Promise 尾链，同实例按 run 提交顺序串行执行。本次结果或错误原样返回，同步抛错、异步拒绝均不阻断后续任务；无重试、取消或自动关闭。
+每实例独立持有 Promise 尾链，同实例按 Run 提交顺序串行执行。本次结果或错误原样返回，同步抛错、异步拒绝均不阻断后续任务；无重试、取消或自动关闭。
 
-`drain` 只等待调用时的队尾，不汇总错误、不封闭队列；错误由各次 run 的调用者处理。任务内等待同队列的后续任务会自锁，禁止重入等待。业务 revision、模型短锁、当前工作区验证、写后发布顺序仍归消费者。RunJournal、IsolationRecords 的失败屏障不能用此队列替换。
+`Drain` 只等待调用时的队尾，不汇总错误、不封闭队列；错误由各次 Run 的调用者处理。任务内等待同队列的后续任务会自锁，禁止重入等待。业务 revision、模型短锁、当前工作区验证、写后发布顺序仍归消费者。RunJournal、IsolationRecords 的失败屏障不能用此队列替换。
 
 <a id="contract-数据算法"></a>
 
@@ -233,7 +233,7 @@ class N_src_core_utility_bytes_ts_ByteLimitError["ByteLimitError"] {
   +constructor()
 }
 N_src_core_utility_bytes_ts ..> N_src_core_utility_bytes_ts_ByteLimitError : 声明
-class N_src_core_utility_bytes_ts_external_RangeError["RangeError (外部契约)"] {
+class N_src_core_utility_bytes_ts_external_RangeError["RangeError (全局或跨文件声明，见源码)"] {
   <<external>>
 }
 N_src_core_utility_bytes_ts_external_RangeError <|-- N_src_core_utility_bytes_ts_ByteLimitError
@@ -244,6 +244,7 @@ class N_src_core_utility_bytes_ts_ByteUtils["ByteUtils"] {
 N_src_core_utility_bytes_ts ..> N_src_core_utility_bytes_ts_ByteUtils : 声明
 ```
 
+继承／实现来源：`RangeError` → `全局或跨文件声明，见源码`。
 
 ### graphs.ts
 
@@ -268,7 +269,7 @@ class N_src_core_utility_index_ts["index.ts"] {
   <<module>>
 }
 ```
-直接依赖：[json.ts](json.ts)、[async.ts](async.ts)、[bytes.ts](bytes.ts)、[strings.ts](strings.ts)、[graphs.ts](graphs.ts)。
+直接依赖：[async.ts](async.ts)、[bytes.ts](bytes.ts)、[graphs.ts](graphs.ts)、[json.ts](json.ts)、[strings.ts](strings.ts)。
 
 ### json.ts
 
@@ -283,7 +284,7 @@ class N_src_core_utility_json_ts_StrictJsonError["StrictJsonError"] {
   +constructor()
 }
 N_src_core_utility_json_ts ..> N_src_core_utility_json_ts_StrictJsonError : 声明
-class N_src_core_utility_json_ts_external_SyntaxError["SyntaxError (外部契约)"] {
+class N_src_core_utility_json_ts_external_SyntaxError["SyntaxError (全局或跨文件声明，见源码)"] {
   <<external>>
 }
 N_src_core_utility_json_ts_external_SyntaxError <|-- N_src_core_utility_json_ts_StrictJsonError
@@ -302,6 +303,7 @@ class N_src_core_utility_json_ts_JsonUtils["JsonUtils"] {
 N_src_core_utility_json_ts ..> N_src_core_utility_json_ts_JsonUtils : 声明
 ```
 
+继承／实现来源：`SyntaxError` → `全局或跨文件声明，见源码`。
 
 ### strings.ts
 
@@ -338,22 +340,22 @@ classDiagram
 class N_src_core_utility_index_ts["index.ts"] {
   <<module>>
 }
-class N_src_core_utility_json_ts["json.ts"] {
-  <<module>>
-}
 class N_src_core_utility_async_ts["async.ts"] {
   <<module>>
 }
 class N_src_core_utility_bytes_ts["bytes.ts"] {
   <<module>>
 }
-class N_src_core_utility_strings_ts["strings.ts"] {
+class N_src_core_utility_graphs_ts["graphs.ts"] {
   <<module>>
 }
-N_src_core_utility_index_ts ..> N_src_core_utility_json_ts : 导入依赖
+class N_src_core_utility_json_ts["json.ts"] {
+  <<module>>
+}
 N_src_core_utility_index_ts ..> N_src_core_utility_async_ts : 导入依赖
 N_src_core_utility_index_ts ..> N_src_core_utility_bytes_ts : 导入依赖
-N_src_core_utility_index_ts ..> N_src_core_utility_strings_ts : 导入依赖
+N_src_core_utility_index_ts ..> N_src_core_utility_graphs_ts : 导入依赖
+N_src_core_utility_index_ts ..> N_src_core_utility_json_ts : 导入依赖
 ```
 
 ```mermaid
@@ -361,10 +363,10 @@ classDiagram
 class N_src_core_utility_index_ts["index.ts"] {
   <<module>>
 }
-class N_src_core_utility_graphs_ts["graphs.ts"] {
+class N_src_core_utility_strings_ts["strings.ts"] {
   <<module>>
 }
-N_src_core_utility_index_ts ..> N_src_core_utility_graphs_ts : 导入依赖
+N_src_core_utility_index_ts ..> N_src_core_utility_strings_ts : 导入依赖
 ```
 
 

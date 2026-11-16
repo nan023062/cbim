@@ -74,12 +74,13 @@ class N_src_core_platform_electron_web_reader_ts_ElectronBrowserReader["Electron
   -busy
 }
 N_src_core_platform_electron_web_reader_ts ..> N_src_core_platform_electron_web_reader_ts_ElectronBrowserReader : 声明
-class N_src_core_platform_electron_web_reader_ts_external_BrowserReader["BrowserReader (外部契约)"] {
-  <<external>>
+class N_src_core_platform_electron_web_reader_ts_external_BrowserReader["BrowserReader (../../web)"] {
+  <<boundary>>
 }
 N_src_core_platform_electron_web_reader_ts_external_BrowserReader <|.. N_src_core_platform_electron_web_reader_ts_ElectronBrowserReader
 ```
 
+继承／实现来源：`BrowserReader` → [../../web/index.ts](../../web/index.ts)。
 直接依赖：[../node/web/index.ts](../node/web/index.ts)、[../../web/index.ts](../../web/index.ts)。
 
 

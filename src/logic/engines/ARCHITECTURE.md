@@ -38,8 +38,8 @@
 #### 兼容与凭据
 
 - `ResolvedLlm` 是通用模型连接；`ResolvedEngineModel` 在其公开 profile 上组合可选 engine。仅调用者明确给出引擎才加入该字段，旧缺省快照不补字段、不改哈希，也不迁移用户配置。
-- `withConfigurations` 一次捕获全部引用，在同一个模型队列内使用对应快照；回调内不能重新进入模型设置队列。
-- `withRuntimeConfiguration` 只在原回调存活期间解密已捕获定义。即使外层已有缓存，每次 resolve 仍检查原锁的有效期；回调结束后拒绝。预算和准入在调用方核实，启动引擎发生在锁释放之后。
+- `WithConfigurations` 一次捕获全部引用，在同一个模型队列内使用对应快照；回调内不能重新进入模型设置队列。
+- `WithRuntimeConfiguration` 只在原回调存活期间解密已捕获定义。即使外层已有缓存，每次 resolve 仍检查原锁的有效期；回调结束后拒绝。预算和准入在调用方核实，启动引擎发生在锁释放之后。
 - 不兼容时由引擎层将 LLM_CONNECTION_API 转为已有 LLM_ENGINE_API；缺失模型、密钥、存储错误及业务停止原样传播。失败没有自动重试或任务重启。
 - Bridge 的 `engines.ts` 仅公开目录及兼容预览；`agent-settings.ts` 公开团队角色选型；`models.ts` 不再混合上述两种职责。IPC 的 models.test 仍兼容原请求与响应，由引擎服务投影后交给模型服务探测。
 
@@ -113,8 +113,8 @@ class N_src_logic_engines_model_roles_ts["model-roles.ts"] {
 }
 N_src_logic_engines_catalog ..> N_src_logic_engines_model_roles_ts : 导入依赖
 N_src_logic_engines_index_ts ..> N_src_logic_engines_catalog : 导入依赖
-N_src_logic_engines_index_ts ..> N_src_logic_engines_rules : 导入依赖
 N_src_logic_engines_index_ts ..> N_src_logic_engines_model_roles_ts : 导入依赖
+N_src_logic_engines_index_ts ..> N_src_logic_engines_rules : 导入依赖
 N_src_logic_engines_packages ..> N_src_logic_engines_index_ts : 导入依赖
 N_src_logic_engines_rules ..> N_src_logic_engines_catalog : 导入依赖
 N_src_logic_engines_rules ..> N_src_logic_engines_model_roles_ts : 导入依赖
@@ -135,10 +135,10 @@ class N_src_logic_engines_package_status_ts["package-status.ts"] {
 
 - `catalog` → `model-roles.ts`：导入。
 - `index.ts` → `catalog`：导入。
-- `index.ts` → `rules`：导入。
-- `index.ts` → `model.ts`：导入。
 - `index.ts` → `model-roles.ts`：导入。
+- `index.ts` → `model.ts`：导入。
 - `index.ts` → `package-status.ts`：导入。
+- `index.ts` → `rules`：导入。
 - `model.ts` → `catalog`：导入。
 - `model.ts` → `model-roles.ts`：导入。
 - `package-status.ts` → `catalog`：导入。
@@ -147,7 +147,18 @@ class N_src_logic_engines_package_status_ts["package-status.ts"] {
 - `rules` → `model-roles.ts`：导入。
 - `service` → `index.ts`：导入。
 
-### model-roles.ts 公开入口
+### index.ts
+
+```mermaid
+classDiagram
+class N_src_logic_engines_index_ts["index.ts"] {
+  <<module>>
+}
+```
+直接依赖：[catalog/supported-engines.ts](catalog/supported-engines.ts)、[model-roles.ts](model-roles.ts)、[model.ts](model.ts)、[package-status.ts](package-status.ts)、[rules/model-choices.ts](rules/model-choices.ts)、[rules/model-roles.ts](rules/model-roles.ts)、[rules/model-selection.ts](rules/model-selection.ts)。
+
+
+### model-roles.ts
 
 ```mermaid
 classDiagram
@@ -156,6 +167,84 @@ class N_src_logic_engines_model_roles_ts["model-roles.ts"] {
   +modelRolesMatch()
 }
 ```
+
+```mermaid
+classDiagram
+class N_src_logic_engines_model_roles_ts["model-roles.ts"] {
+  <<module>>
+}
+class N_src_logic_engines_model_roles_ts_ModelRolesSelection["ModelRolesSelection"] {
+  <<type>>
+
+}
+N_src_logic_engines_model_roles_ts ..> N_src_logic_engines_model_roles_ts_ModelRolesSelection : 声明
+class N_src_logic_engines_model_roles_ts_ModelRolesSnapshot["ModelRolesSnapshot"] {
+  <<type>>
+
+}
+N_src_logic_engines_model_roles_ts ..> N_src_logic_engines_model_roles_ts_ModelRolesSnapshot : 声明
+class N_src_logic_engines_model_roles_ts_ModelRoleDescriptor["ModelRoleDescriptor"] {
+  <<type>>
+  +id
+  +label
+  +required
+  +modelIds
+}
+N_src_logic_engines_model_roles_ts ..> N_src_logic_engines_model_roles_ts_ModelRoleDescriptor : 声明
+```
+
+直接依赖：[../models/index.ts](../models/index.ts)。
+
+
+### model.ts
+
+```mermaid
+classDiagram
+class N_src_logic_engines_model_ts["model.ts"] {
+  <<module>>
+}
+class N_src_logic_engines_model_ts_ResolvedEngineModel["ResolvedEngineModel"] {
+  <<interface>>
+  +profile
+  +apiKey
+  +modelRoles
+}
+N_src_logic_engines_model_ts ..> N_src_logic_engines_model_ts_ResolvedEngineModel : 声明
+```
+
+直接依赖：[catalog/supported-engines.ts](catalog/supported-engines.ts)、[model-roles.ts](model-roles.ts)、[../models/index.ts](../models/index.ts)。
+
+
+### package-status.ts
+
+```mermaid
+classDiagram
+class N_src_logic_engines_package_status_ts["package-status.ts"] {
+  <<module>>
+}
+class N_src_logic_engines_package_status_ts_EnginePackageStatus["EnginePackageStatus"] {
+  <<interface>>
+  +kind
+  +enabled
+  +active
+  +candidate
+  +installed
+  +references
+  +preparing
+  +preparation
+  +error
+}
+N_src_logic_engines_package_status_ts ..> N_src_logic_engines_package_status_ts_EnginePackageStatus : 声明
+class N_src_logic_engines_package_status_ts_EnginePackageSettings["EnginePackageSettings"] {
+  <<interface>>
+  +managed
+  +revision
+  +items
+}
+N_src_logic_engines_package_status_ts ..> N_src_logic_engines_package_status_ts_EnginePackageSettings : 声明
+```
+
+直接依赖：[catalog/supported-engines.ts](catalog/supported-engines.ts)、[../updates/engine-artifacts.ts](../updates/engine-artifacts.ts)。
 
 
 ## 子目录导航

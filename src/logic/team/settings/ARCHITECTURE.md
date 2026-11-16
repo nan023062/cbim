@@ -70,7 +70,7 @@ class N_src_logic_team_settings_main_agent_settings_ts_MainAgentSettings["MainAg
 N_src_logic_team_settings_main_agent_settings_ts ..> N_src_logic_team_settings_main_agent_settings_ts_MainAgentSettings : 声明
 ```
 
-直接依赖：[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../rules/agent-runtime.ts](../rules/agent-runtime.ts)、[../../engines/service/index.ts](../../engines/service/index.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../../engines/service/index.ts](../../engines/service/index.ts)、[../rules/agent-runtime.ts](../rules/agent-runtime.ts)。
 
 
 ## 子目录导航

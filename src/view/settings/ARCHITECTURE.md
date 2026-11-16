@@ -178,7 +178,7 @@ class N_src_view_settings_AboutSettings_tsx["AboutSettings.tsx"] {
 }
 ```
 
-直接依赖：[../components/BrandMark.tsx](../components/BrandMark.tsx)、[../../bridge/contracts/desktop-updates.ts](../../bridge/contracts/desktop-updates.ts)、[../updates/useSoftwareUpdates.ts](../updates/useSoftwareUpdates.ts)。
+直接依赖：[../../bridge/contracts/desktop-updates.ts](../../bridge/contracts/desktop-updates.ts)、[../components/BrandMark.tsx](../components/BrandMark.tsx)、[../updates/useSoftwareUpdates.ts](../updates/useSoftwareUpdates.ts)。
 
 ### AccountSettings.tsx
 
@@ -202,7 +202,7 @@ class N_src_view_settings_AdmissionSettings_tsx["AdmissionSettings.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/admission.ts](../../bridge/contracts/admission.ts)、[../tasks/useAdmission.ts](../tasks/useAdmission.ts)、[../tasks/admission.css](../tasks/admission.css)。
+直接依赖：[../../bridge/contracts/admission.ts](../../bridge/contracts/admission.ts)、[../tasks/admission.css](../tasks/admission.css)、[../tasks/useAdmission.ts](../tasks/useAdmission.ts)。
 
 ### appearance-state.ts
 
@@ -262,7 +262,7 @@ class N_src_view_settings_AppearanceSettings_tsx["AppearanceSettings.tsx"] {
 }
 ```
 
-直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[useAppearance.ts](useAppearance.ts)、[appearance-state.ts](appearance-state.ts)。
+直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[appearance-state.ts](appearance-state.ts)、[useAppearance.ts](useAppearance.ts)。
 
 ### budget-settings-state.ts
 
@@ -318,7 +318,7 @@ class N_src_view_settings_budget_settings_state_ts_BudgetSettingsController["Bud
 N_src_view_settings_budget_settings_state_ts ..> N_src_view_settings_budget_settings_state_ts_BudgetSettingsController : 声明
 ```
 
-直接依赖：[../foundations/utility/index.ts](../foundations/utility/index.ts)、[../../bridge/contracts/scope-budget.ts](../../bridge/contracts/scope-budget.ts)。
+直接依赖：[../../bridge/contracts/scope-budget.ts](../../bridge/contracts/scope-budget.ts)、[../foundations/utility/index.ts](../foundations/utility/index.ts)。
 
 ### budget-settings.css
 
@@ -387,7 +387,7 @@ class N_src_view_settings_GitHubFeedbackSettings_tsx["GitHubFeedbackSettings.tsx
 }
 ```
 
-直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../../bridge/contracts/ipc-call.ts](../../bridge/contracts/ipc-call.ts)、[../../bridge/contracts/github-feedback.ts](../../bridge/contracts/github-feedback.ts)。
+直接依赖：[../../bridge/contracts/github-feedback.ts](../../bridge/contracts/github-feedback.ts)、[../../bridge/contracts/ipc-call.ts](../../bridge/contracts/ipc-call.ts)、[../components/Icon.tsx](../components/Icon.tsx)。
 
 ### models.css
 
@@ -408,7 +408,7 @@ class N_src_view_settings_ModelSettings_tsx["ModelSettings.tsx"] {
 }
 ```
 
-直接依赖：[EmbeddingModels.tsx](EmbeddingModels.tsx)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[models.css](models.css)、[ProviderConnections.tsx](ProviderConnections.tsx)。
+直接依赖：[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[EmbeddingModels.tsx](EmbeddingModels.tsx)、[ProviderConnections.tsx](ProviderConnections.tsx)、[models.css](models.css)。
 
 ### ProviderConnections.tsx
 
@@ -422,7 +422,7 @@ class N_src_view_settings_ProviderConnections_tsx["ProviderConnections.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../../bridge/contracts/model-actions.ts](../../bridge/contracts/model-actions.ts)。
+直接依赖：[../../bridge/contracts/model-actions.ts](../../bridge/contracts/model-actions.ts)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)。
 
 ### ResourceSettings.tsx
 
@@ -497,7 +497,7 @@ class N_src_view_settings_SettingsView_tsx_SettingsViewProps["SettingsViewProps"
 N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_SettingsView_tsx_SettingsViewProps : 声明
 ```
 
-直接依赖：[../components/sidebar.css](../components/sidebar.css)、[../components/Icon.tsx](../components/Icon.tsx)、[ModelSettings.tsx](ModelSettings.tsx)、[AdmissionSettings.tsx](AdmissionSettings.tsx)、[BudgetSettings.tsx](BudgetSettings.tsx)、[WebSettings.tsx](WebSettings.tsx)、[ResourceSettings.tsx](ResourceSettings.tsx)、[AccountSettings.tsx](AccountSettings.tsx)、[AppearanceSettings.tsx](AppearanceSettings.tsx)、[AboutSettings.tsx](AboutSettings.tsx)、[settings-sections.ts](settings-sections.ts)、[useAppearance.ts](useAppearance.ts)、[../updates/useSoftwareUpdates.ts](../updates/useSoftwareUpdates.ts)、[settings.css](settings.css)。
+直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../components/sidebar.css](../components/sidebar.css)、[AboutSettings.tsx](AboutSettings.tsx)、[AccountSettings.tsx](AccountSettings.tsx)、[AdmissionSettings.tsx](AdmissionSettings.tsx)、[AppearanceSettings.tsx](AppearanceSettings.tsx)、[BudgetSettings.tsx](BudgetSettings.tsx)、[ModelSettings.tsx](ModelSettings.tsx)、[ResourceSettings.tsx](ResourceSettings.tsx)、[WebSettings.tsx](WebSettings.tsx)、[settings-sections.ts](settings-sections.ts)、[settings.css](settings.css)、[useAppearance.ts](useAppearance.ts)、[../updates/useSoftwareUpdates.ts](../updates/useSoftwareUpdates.ts)。
 
 ### useAppearance.ts
 
@@ -538,7 +538,7 @@ class N_src_view_settings_WebSettings_tsx["WebSettings.tsx"] {
 }
 ```
 
-直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../../bridge/contracts/ipc-settings.ts](../../bridge/contracts/ipc-settings.ts)。
+直接依赖：[../../bridge/contracts/ipc-settings.ts](../../bridge/contracts/ipc-settings.ts)、[../components/Icon.tsx](../components/Icon.tsx)。
 
 ### 本目录调用边界
 
@@ -553,10 +553,10 @@ class N_src_view_settings_GitHubFeedbackSettings_tsx["GitHubFeedbackSettings.tsx
 class N_src_view_settings_AppearanceSettings_tsx["AppearanceSettings.tsx"] {
   <<component>>
 }
-class N_src_view_settings_useAppearance_ts["useAppearance.ts"] {
+class N_src_view_settings_appearance_state_ts["appearance-state.ts"] {
   <<module>>
 }
-class N_src_view_settings_appearance_state_ts["appearance-state.ts"] {
+class N_src_view_settings_useAppearance_ts["useAppearance.ts"] {
   <<module>>
 }
 class N_src_view_settings_BudgetSettings_tsx["BudgetSettings.tsx"] {
@@ -566,8 +566,8 @@ class N_src_view_settings_budget_settings_state_ts["budget-settings-state.ts"] {
   <<module>>
 }
 N_src_view_settings_AccountSettings_tsx ..> N_src_view_settings_GitHubFeedbackSettings_tsx : 导入依赖
-N_src_view_settings_AppearanceSettings_tsx ..> N_src_view_settings_useAppearance_ts : 导入依赖
 N_src_view_settings_AppearanceSettings_tsx ..> N_src_view_settings_appearance_state_ts : 导入依赖
+N_src_view_settings_AppearanceSettings_tsx ..> N_src_view_settings_useAppearance_ts : 导入依赖
 N_src_view_settings_BudgetSettings_tsx ..> N_src_view_settings_budget_settings_state_ts : 导入依赖
 ```
 
@@ -591,13 +591,13 @@ class N_src_view_settings_ModelSettings_tsx["ModelSettings.tsx"] {
 class N_src_view_settings_EmbeddingModels_tsx["EmbeddingModels.tsx"] {
   <<component>>
 }
-class N_src_view_settings_models_css["models.css"] {
-  <<stylesheet>>
+class N_src_view_settings_ProviderConnections_tsx["ProviderConnections.tsx"] {
+  <<component>>
 }
 N_src_view_settings_BudgetSettings_tsx ..> N_src_view_settings_budget_settings_css : 导入依赖
 N_src_view_settings_EngineSettings_tsx ..> N_src_view_settings_EngineOverview_tsx : 导入依赖
 N_src_view_settings_ModelSettings_tsx ..> N_src_view_settings_EmbeddingModels_tsx : 导入依赖
-N_src_view_settings_ModelSettings_tsx ..> N_src_view_settings_models_css : 导入依赖
+N_src_view_settings_ModelSettings_tsx ..> N_src_view_settings_ProviderConnections_tsx : 导入依赖
 ```
 
 ```mermaid
@@ -605,22 +605,48 @@ classDiagram
 class N_src_view_settings_ModelSettings_tsx["ModelSettings.tsx"] {
   <<component>>
 }
-class N_src_view_settings_ProviderConnections_tsx["ProviderConnections.tsx"] {
-  <<component>>
+class N_src_view_settings_models_css["models.css"] {
+  <<stylesheet>>
 }
 class N_src_view_settings_SettingsView_tsx["SettingsView.tsx"] {
+  <<component>>
+}
+class N_src_view_settings_AboutSettings_tsx["AboutSettings.tsx"] {
+  <<component>>
+}
+class N_src_view_settings_AccountSettings_tsx["AccountSettings.tsx"] {
   <<component>>
 }
 class N_src_view_settings_AdmissionSettings_tsx["AdmissionSettings.tsx"] {
   <<component>>
 }
+N_src_view_settings_ModelSettings_tsx ..> N_src_view_settings_models_css : 导入依赖
+N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_AboutSettings_tsx : 导入依赖
+N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_AccountSettings_tsx : 导入依赖
+N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_AdmissionSettings_tsx : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_view_settings_SettingsView_tsx["SettingsView.tsx"] {
+  <<component>>
+}
+class N_src_view_settings_AppearanceSettings_tsx["AppearanceSettings.tsx"] {
+  <<component>>
+}
 class N_src_view_settings_BudgetSettings_tsx["BudgetSettings.tsx"] {
   <<component>>
 }
-N_src_view_settings_ModelSettings_tsx ..> N_src_view_settings_ProviderConnections_tsx : 导入依赖
-N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_ModelSettings_tsx : 导入依赖
-N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_AdmissionSettings_tsx : 导入依赖
+class N_src_view_settings_ModelSettings_tsx["ModelSettings.tsx"] {
+  <<component>>
+}
+class N_src_view_settings_ResourceSettings_tsx["ResourceSettings.tsx"] {
+  <<component>>
+}
+N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_AppearanceSettings_tsx : 导入依赖
 N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_BudgetSettings_tsx : 导入依赖
+N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_ModelSettings_tsx : 导入依赖
+N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_ResourceSettings_tsx : 导入依赖
 ```
 
 ```mermaid
@@ -631,42 +657,19 @@ class N_src_view_settings_SettingsView_tsx["SettingsView.tsx"] {
 class N_src_view_settings_WebSettings_tsx["WebSettings.tsx"] {
   <<component>>
 }
-class N_src_view_settings_ResourceSettings_tsx["ResourceSettings.tsx"] {
-  <<component>>
-}
-class N_src_view_settings_AccountSettings_tsx["AccountSettings.tsx"] {
-  <<component>>
-}
-class N_src_view_settings_AppearanceSettings_tsx["AppearanceSettings.tsx"] {
-  <<component>>
-}
-N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_WebSettings_tsx : 导入依赖
-N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_ResourceSettings_tsx : 导入依赖
-N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_AccountSettings_tsx : 导入依赖
-N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_AppearanceSettings_tsx : 导入依赖
-```
-
-```mermaid
-classDiagram
-class N_src_view_settings_SettingsView_tsx["SettingsView.tsx"] {
-  <<component>>
-}
-class N_src_view_settings_AboutSettings_tsx["AboutSettings.tsx"] {
-  <<component>>
-}
 class N_src_view_settings_settings_sections_ts["settings-sections.ts"] {
-  <<module>>
-}
-class N_src_view_settings_useAppearance_ts["useAppearance.ts"] {
   <<module>>
 }
 class N_src_view_settings_settings_css["settings.css"] {
   <<stylesheet>>
 }
-N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_AboutSettings_tsx : 导入依赖
+class N_src_view_settings_useAppearance_ts["useAppearance.ts"] {
+  <<module>>
+}
+N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_WebSettings_tsx : 导入依赖
 N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_settings_sections_ts : 导入依赖
-N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_useAppearance_ts : 导入依赖
 N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_settings_css : 导入依赖
+N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_useAppearance_ts : 导入依赖
 ```
 
 ```mermaid

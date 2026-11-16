@@ -100,7 +100,7 @@ class N_src_view_updates_SoftwareUpdateButton_tsx["SoftwareUpdateButton.tsx"] {
 }
 ```
 
-直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[useSoftwareUpdates.ts](useSoftwareUpdates.ts)、[update-button-state.ts](update-button-state.ts)、[software-updates.css](software-updates.css)。
+直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[software-updates.css](software-updates.css)、[update-button-state.ts](update-button-state.ts)、[useSoftwareUpdates.ts](useSoftwareUpdates.ts)。
 
 ### SoftwareUpdates.tsx
 
@@ -113,7 +113,7 @@ class N_src_view_updates_SoftwareUpdates_tsx["SoftwareUpdates.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/desktop-updates.ts](../../bridge/contracts/desktop-updates.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[useSoftwareUpdates.ts](useSoftwareUpdates.ts)、[software-updates.css](software-updates.css)。
+直接依赖：[../../bridge/contracts/desktop-updates.ts](../../bridge/contracts/desktop-updates.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[software-updates.css](software-updates.css)、[useSoftwareUpdates.ts](useSoftwareUpdates.ts)。
 
 ### update-button-state.ts
 
@@ -167,22 +167,22 @@ classDiagram
 class N_src_view_updates_SoftwareUpdateButton_tsx["SoftwareUpdateButton.tsx"] {
   <<component>>
 }
-class N_src_view_updates_useSoftwareUpdates_ts["useSoftwareUpdates.ts"] {
-  <<module>>
+class N_src_view_updates_software_updates_css["software-updates.css"] {
+  <<stylesheet>>
 }
 class N_src_view_updates_update_button_state_ts["update-button-state.ts"] {
   <<module>>
 }
-class N_src_view_updates_software_updates_css["software-updates.css"] {
-  <<stylesheet>>
+class N_src_view_updates_useSoftwareUpdates_ts["useSoftwareUpdates.ts"] {
+  <<module>>
 }
 class N_src_view_updates_SoftwareUpdates_tsx["SoftwareUpdates.tsx"] {
   <<component>>
 }
-N_src_view_updates_SoftwareUpdateButton_tsx ..> N_src_view_updates_useSoftwareUpdates_ts : 导入依赖
-N_src_view_updates_SoftwareUpdateButton_tsx ..> N_src_view_updates_update_button_state_ts : 导入依赖
 N_src_view_updates_SoftwareUpdateButton_tsx ..> N_src_view_updates_software_updates_css : 导入依赖
-N_src_view_updates_SoftwareUpdates_tsx ..> N_src_view_updates_useSoftwareUpdates_ts : 导入依赖
+N_src_view_updates_SoftwareUpdateButton_tsx ..> N_src_view_updates_update_button_state_ts : 导入依赖
+N_src_view_updates_SoftwareUpdateButton_tsx ..> N_src_view_updates_useSoftwareUpdates_ts : 导入依赖
+N_src_view_updates_SoftwareUpdates_tsx ..> N_src_view_updates_software_updates_css : 导入依赖
 ```
 
 ```mermaid
@@ -190,10 +190,10 @@ classDiagram
 class N_src_view_updates_SoftwareUpdates_tsx["SoftwareUpdates.tsx"] {
   <<component>>
 }
-class N_src_view_updates_software_updates_css["software-updates.css"] {
-  <<stylesheet>>
+class N_src_view_updates_useSoftwareUpdates_ts["useSoftwareUpdates.ts"] {
+  <<module>>
 }
-N_src_view_updates_SoftwareUpdates_tsx ..> N_src_view_updates_software_updates_css : 导入依赖
+N_src_view_updates_SoftwareUpdates_tsx ..> N_src_view_updates_useSoftwareUpdates_ts : 导入依赖
 ```
 
 

@@ -88,7 +88,7 @@ class N_src_logic_engines_service_model_profiles_ts_EngineModelProfiles["EngineM
 N_src_logic_engines_service_model_profiles_ts ..> N_src_logic_engines_service_model_profiles_ts_EngineModelProfiles : 声明
 ```
 
-直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../models/index.ts](../../models/index.ts)、[../../models/service/index.ts](../../models/service/index.ts)、[../index.ts](../index.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../index.ts](../index.ts)、[../../models/index.ts](../../models/index.ts)、[../../models/service/index.ts](../../models/service/index.ts)。
 
 ### 本目录调用边界
 

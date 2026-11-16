@@ -327,7 +327,7 @@ class N_src_bridge_server_ipc_chat_handlers_ts["chat-handlers.ts"] {
 }
 ```
 
-直接依赖：[services.ts](services.ts)、[../../contracts/ipc-call.ts](../../contracts/ipc-call.ts)、[../../contracts/ipc-chat.ts](../../contracts/ipc-chat.ts)、[../../../logic/materials/service/chat-inputs.ts](../../../logic/materials/service/chat-inputs.ts)。
+直接依赖：[../../contracts/ipc-call.ts](../../contracts/ipc-call.ts)、[../../contracts/ipc-chat.ts](../../contracts/ipc-chat.ts)、[services.ts](services.ts)、[../../../logic/materials/service/chat-inputs.ts](../../../logic/materials/service/chat-inputs.ts)。
 
 ### dispatch-handlers.ts
 
@@ -339,7 +339,7 @@ class N_src_bridge_server_ipc_dispatch_handlers_ts["dispatch-handlers.ts"] {
 }
 ```
 
-直接依赖：[services.ts](services.ts)、[../../contracts/ipc-call.ts](../../contracts/ipc-call.ts)、[../../contracts/ipc-dispatch.ts](../../contracts/ipc-dispatch.ts)。
+直接依赖：[../../contracts/ipc-call.ts](../../contracts/ipc-call.ts)、[../../contracts/ipc-dispatch.ts](../../contracts/ipc-dispatch.ts)、[services.ts](services.ts)。
 
 ### dispatch.ts
 
@@ -351,7 +351,7 @@ class N_src_bridge_server_ipc_dispatch_ts["dispatch.ts"] {
 }
 ```
 
-直接依赖：[request.ts](request.ts)、[services.ts](services.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../contracts/ipc-call.ts](../../contracts/ipc-call.ts)、[../../contracts/ipc-desktop.ts](../../contracts/ipc-desktop.ts)、[agent-history.ts](agent-history.ts)、[people-handlers.ts](people-handlers.ts)、[governance-handlers.ts](governance-handlers.ts)、[dispatch-handlers.ts](dispatch-handlers.ts)、[settings-handlers.ts](settings-handlers.ts)、[loop-handlers.ts](loop-handlers.ts)、[chat-handlers.ts](chat-handlers.ts)、[resources-handlers.ts](resources-handlers.ts)、[workspace-handlers.ts](workspace-handlers.ts)、[automation-actions.ts](automation-actions.ts)。
+直接依赖：[../../contracts/ipc-call.ts](../../contracts/ipc-call.ts)、[../../contracts/ipc-desktop.ts](../../contracts/ipc-desktop.ts)、[agent-history.ts](agent-history.ts)、[automation-actions.ts](automation-actions.ts)、[chat-handlers.ts](chat-handlers.ts)、[dispatch-handlers.ts](dispatch-handlers.ts)、[governance-handlers.ts](governance-handlers.ts)、[loop-handlers.ts](loop-handlers.ts)、[people-handlers.ts](people-handlers.ts)、[request.ts](request.ts)、[resources-handlers.ts](resources-handlers.ts)、[services.ts](services.ts)、[settings-handlers.ts](settings-handlers.ts)、[workspace-handlers.ts](workspace-handlers.ts)、[../../../core/errors.ts](../../../core/errors.ts)。
 
 ### governance-handlers.ts
 
@@ -363,7 +363,7 @@ class N_src_bridge_server_ipc_governance_handlers_ts["governance-handlers.ts"] {
 }
 ```
 
-直接依赖：[services.ts](services.ts)、[../../contracts/ipc-call.ts](../../contracts/ipc-call.ts)、[../../contracts/ipc-governance.ts](../../contracts/ipc-governance.ts)。
+直接依赖：[../../contracts/ipc-call.ts](../../contracts/ipc-call.ts)、[../../contracts/ipc-governance.ts](../../contracts/ipc-governance.ts)、[services.ts](services.ts)。
 
 ### loop-handlers.ts
 
@@ -375,7 +375,7 @@ class N_src_bridge_server_ipc_loop_handlers_ts["loop-handlers.ts"] {
 }
 ```
 
-直接依赖：[services.ts](services.ts)、[../../contracts/ipc-call.ts](../../contracts/ipc-call.ts)、[../../contracts/ipc-loop.ts](../../contracts/ipc-loop.ts)、[../../../logic/materials/service/chat-inputs.ts](../../../logic/materials/service/chat-inputs.ts)、[../../../core/errors.ts](../../../core/errors.ts)。
+直接依赖：[../../contracts/ipc-call.ts](../../contracts/ipc-call.ts)、[../../contracts/ipc-loop.ts](../../contracts/ipc-loop.ts)、[services.ts](services.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../../logic/materials/service/chat-inputs.ts](../../../logic/materials/service/chat-inputs.ts)。
 
 ### people-handlers.ts
 
@@ -387,7 +387,7 @@ class N_src_bridge_server_ipc_people_handlers_ts["people-handlers.ts"] {
 }
 ```
 
-直接依赖：[services.ts](services.ts)、[../../contracts/ipc-call.ts](../../contracts/ipc-call.ts)、[../../contracts/ipc-people.ts](../../contracts/ipc-people.ts)。
+直接依赖：[../../contracts/ipc-call.ts](../../contracts/ipc-call.ts)、[../../contracts/ipc-people.ts](../../contracts/ipc-people.ts)、[services.ts](services.ts)。
 
 ### request.ts
 
@@ -411,7 +411,7 @@ class N_src_bridge_server_ipc_resources_handlers_ts["resources-handlers.ts"] {
 }
 ```
 
-直接依赖：[services.ts](services.ts)、[../../contracts/ipc-call.ts](../../contracts/ipc-call.ts)、[../../contracts/ipc-resources.ts](../../contracts/ipc-resources.ts)、[../../../logic/resources/packages/workspace-packages.ts](../../../logic/resources/packages/workspace-packages.ts)。
+直接依赖：[../../contracts/ipc-call.ts](../../contracts/ipc-call.ts)、[../../contracts/ipc-resources.ts](../../contracts/ipc-resources.ts)、[services.ts](services.ts)、[../../../logic/resources/packages/workspace-packages.ts](../../../logic/resources/packages/workspace-packages.ts)。
 
 ### services.ts
 
@@ -489,7 +489,7 @@ class N_src_bridge_server_ipc_services_ts_ApplicationServices["ApplicationServic
 N_src_bridge_server_ipc_services_ts ..> N_src_bridge_server_ipc_services_ts_ApplicationServices : 声明
 ```
 
-直接依赖：[../../../logic/web/service/index.ts](../../../logic/web/service/index.ts)、[../../../logic/automation/service/service.ts](../../../logic/automation/service/service.ts)、[../../../logic/workspace/service/catalog.ts](../../../logic/workspace/service/catalog.ts)、[../../../logic/workspace/service/workspace.ts](../../../logic/workspace/service/workspace.ts)、[../../../logic/workspace/service/paths.ts](../../../logic/workspace/service/paths.ts)、[../../../logic/team/settings/main-agent-settings.ts](../../../logic/team/settings/main-agent-settings.ts)、[../../../logic/models/service/index.ts](../../../logic/models/service/index.ts)、[../../../logic/engines/service/index.ts](../../../logic/engines/service/index.ts)、[../../../logic/engines/packages/index.ts](../../../logic/engines/packages/index.ts)、[../../../logic/resources/service/index.ts](../../../logic/resources/service/index.ts)、[../../../logic/connectors/service/repository-connections.ts](../../../logic/connectors/service/repository-connections.ts)、[../../../logic/feedback/service/index.ts](../../../logic/feedback/service/index.ts)、[../../../logic/governance/service/module-governance.ts](../../../logic/governance/service/module-governance.ts)、[../../../logic/conversation/runtime/execution-manager.ts](../../../logic/conversation/runtime/execution-manager.ts)、[../../../logic/dispatch/runtime/dispatch-service.ts](../../../logic/dispatch/runtime/dispatch-service.ts)、[../../../logic/team/runtime/member-execution.ts](../../../logic/team/runtime/member-execution.ts)、[../../../logic/history/runtime/agent-history.ts](../../../logic/history/runtime/agent-history.ts)、[../../../logic/runtime/rules/types.ts](../../../logic/runtime/rules/types.ts)、[../../contracts/workspace.ts](../../contracts/workspace.ts)、[../../../logic/runtime/settings/admission-settings.ts](../../../logic/runtime/settings/admission-settings.ts)、[../../../logic/budget/settings/budget-settings.ts](../../../logic/budget/settings/budget-settings.ts)、[../../../logic/team/service/workspace-members.ts](../../../logic/team/service/workspace-members.ts)、[../../../logic/workspace/service/module-ownerships.ts](../../../logic/workspace/service/module-ownerships.ts)、[../../../logic/file-operations/service/controlled-files.ts](../../../logic/file-operations/service/controlled-files.ts)、[../../../logic/file-operations/service/isolated-executions.ts](../../../logic/file-operations/service/isolated-executions.ts)、[../../../logic/materials/service/chat-material-imports.ts](../../../logic/materials/service/chat-material-imports.ts)、[../../../logic/runtime/rules/admission.ts](../../../logic/runtime/rules/admission.ts)、[../../../logic/budget/runtime/model-request-budget-service.ts](../../../logic/budget/runtime/model-request-budget-service.ts)。
+直接依赖：[../../contracts/workspace.ts](../../contracts/workspace.ts)、[../../../logic/automation/service/service.ts](../../../logic/automation/service/service.ts)、[../../../logic/budget/runtime/model-request-budget-service.ts](../../../logic/budget/runtime/model-request-budget-service.ts)、[../../../logic/budget/settings/budget-settings.ts](../../../logic/budget/settings/budget-settings.ts)、[../../../logic/connectors/service/repository-connections.ts](../../../logic/connectors/service/repository-connections.ts)、[../../../logic/conversation/runtime/execution-manager.ts](../../../logic/conversation/runtime/execution-manager.ts)、[../../../logic/dispatch/runtime/dispatch-service.ts](../../../logic/dispatch/runtime/dispatch-service.ts)、[../../../logic/engines/packages/index.ts](../../../logic/engines/packages/index.ts)、[../../../logic/engines/service/index.ts](../../../logic/engines/service/index.ts)、[../../../logic/feedback/service/index.ts](../../../logic/feedback/service/index.ts)、[../../../logic/file-operations/service/controlled-files.ts](../../../logic/file-operations/service/controlled-files.ts)、[../../../logic/file-operations/service/isolated-executions.ts](../../../logic/file-operations/service/isolated-executions.ts)、[../../../logic/governance/service/module-governance.ts](../../../logic/governance/service/module-governance.ts)、[../../../logic/history/runtime/agent-history.ts](../../../logic/history/runtime/agent-history.ts)、[../../../logic/materials/service/chat-material-imports.ts](../../../logic/materials/service/chat-material-imports.ts)、[../../../logic/models/service/index.ts](../../../logic/models/service/index.ts)、[../../../logic/resources/service/index.ts](../../../logic/resources/service/index.ts)、[../../../logic/runtime/rules/admission.ts](../../../logic/runtime/rules/admission.ts)、[../../../logic/runtime/rules/types.ts](../../../logic/runtime/rules/types.ts)、[../../../logic/runtime/settings/admission-settings.ts](../../../logic/runtime/settings/admission-settings.ts)、[../../../logic/team/runtime/member-execution.ts](../../../logic/team/runtime/member-execution.ts)、[../../../logic/team/service/workspace-members.ts](../../../logic/team/service/workspace-members.ts)、[../../../logic/team/settings/main-agent-settings.ts](../../../logic/team/settings/main-agent-settings.ts)、[../../../logic/web/service/index.ts](../../../logic/web/service/index.ts)、[../../../logic/workspace/service/catalog.ts](../../../logic/workspace/service/catalog.ts)、[../../../logic/workspace/service/module-ownerships.ts](../../../logic/workspace/service/module-ownerships.ts)、[../../../logic/workspace/service/paths.ts](../../../logic/workspace/service/paths.ts)、[../../../logic/workspace/service/workspace.ts](../../../logic/workspace/service/workspace.ts)。
 
 ### settings-handlers.ts
 
@@ -501,7 +501,7 @@ class N_src_bridge_server_ipc_settings_handlers_ts["settings-handlers.ts"] {
 }
 ```
 
-直接依赖：[services.ts](services.ts)、[../../contracts/ipc-call.ts](../../contracts/ipc-call.ts)、[../../contracts/ipc-settings.ts](../../contracts/ipc-settings.ts)。
+直接依赖：[../../contracts/ipc-call.ts](../../contracts/ipc-call.ts)、[../../contracts/ipc-settings.ts](../../contracts/ipc-settings.ts)、[services.ts](services.ts)。
 
 ### workspace-handlers.ts
 
@@ -513,7 +513,7 @@ class N_src_bridge_server_ipc_workspace_handlers_ts["workspace-handlers.ts"] {
 }
 ```
 
-直接依赖：[services.ts](services.ts)、[../../contracts/ipc-call.ts](../../contracts/ipc-call.ts)、[../../contracts/ipc-workspace.ts](../../contracts/ipc-workspace.ts)、[../../../logic/workspace/service/source-browser.ts](../../../logic/workspace/service/source-browser.ts)、[../../../logic/workspace/service/architecture-service.ts](../../../logic/workspace/service/architecture-service.ts)、[../../../core/errors.ts](../../../core/errors.ts)。
+直接依赖：[../../contracts/ipc-call.ts](../../contracts/ipc-call.ts)、[../../contracts/ipc-workspace.ts](../../contracts/ipc-workspace.ts)、[services.ts](services.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../../logic/workspace/service/architecture-service.ts](../../../logic/workspace/service/architecture-service.ts)、[../../../logic/workspace/service/source-browser.ts](../../../logic/workspace/service/source-browser.ts)。
 
 ### 本目录调用边界
 
@@ -534,13 +534,13 @@ class N_src_bridge_server_ipc_dispatch_handlers_ts["dispatch-handlers.ts"] {
 class N_src_bridge_server_ipc_dispatch_ts["dispatch.ts"] {
   <<module>>
 }
-class N_src_bridge_server_ipc_request_ts["request.ts"] {
+class N_src_bridge_server_ipc_agent_history_ts["agent-history.ts"] {
   <<module>>
 }
 N_src_bridge_server_ipc_automation_actions_ts ..> N_src_bridge_server_ipc_services_ts : 导入依赖
 N_src_bridge_server_ipc_chat_handlers_ts ..> N_src_bridge_server_ipc_services_ts : 导入依赖
 N_src_bridge_server_ipc_dispatch_handlers_ts ..> N_src_bridge_server_ipc_services_ts : 导入依赖
-N_src_bridge_server_ipc_dispatch_ts ..> N_src_bridge_server_ipc_request_ts : 导入依赖
+N_src_bridge_server_ipc_dispatch_ts ..> N_src_bridge_server_ipc_agent_history_ts : 导入依赖
 ```
 
 ```mermaid
@@ -548,21 +548,21 @@ classDiagram
 class N_src_bridge_server_ipc_dispatch_ts["dispatch.ts"] {
   <<module>>
 }
-class N_src_bridge_server_ipc_services_ts["services.ts"] {
+class N_src_bridge_server_ipc_automation_actions_ts["automation-actions.ts"] {
   <<module>>
 }
-class N_src_bridge_server_ipc_agent_history_ts["agent-history.ts"] {
+class N_src_bridge_server_ipc_chat_handlers_ts["chat-handlers.ts"] {
   <<module>>
 }
-class N_src_bridge_server_ipc_people_handlers_ts["people-handlers.ts"] {
+class N_src_bridge_server_ipc_dispatch_handlers_ts["dispatch-handlers.ts"] {
   <<module>>
 }
 class N_src_bridge_server_ipc_governance_handlers_ts["governance-handlers.ts"] {
   <<module>>
 }
-N_src_bridge_server_ipc_dispatch_ts ..> N_src_bridge_server_ipc_services_ts : 导入依赖
-N_src_bridge_server_ipc_dispatch_ts ..> N_src_bridge_server_ipc_agent_history_ts : 导入依赖
-N_src_bridge_server_ipc_dispatch_ts ..> N_src_bridge_server_ipc_people_handlers_ts : 导入依赖
+N_src_bridge_server_ipc_dispatch_ts ..> N_src_bridge_server_ipc_automation_actions_ts : 导入依赖
+N_src_bridge_server_ipc_dispatch_ts ..> N_src_bridge_server_ipc_chat_handlers_ts : 导入依赖
+N_src_bridge_server_ipc_dispatch_ts ..> N_src_bridge_server_ipc_dispatch_handlers_ts : 导入依赖
 N_src_bridge_server_ipc_dispatch_ts ..> N_src_bridge_server_ipc_governance_handlers_ts : 导入依赖
 ```
 
@@ -571,22 +571,22 @@ classDiagram
 class N_src_bridge_server_ipc_dispatch_ts["dispatch.ts"] {
   <<module>>
 }
-class N_src_bridge_server_ipc_dispatch_handlers_ts["dispatch-handlers.ts"] {
-  <<module>>
-}
-class N_src_bridge_server_ipc_settings_handlers_ts["settings-handlers.ts"] {
-  <<module>>
-}
 class N_src_bridge_server_ipc_loop_handlers_ts["loop-handlers.ts"] {
   <<module>>
 }
-class N_src_bridge_server_ipc_chat_handlers_ts["chat-handlers.ts"] {
+class N_src_bridge_server_ipc_people_handlers_ts["people-handlers.ts"] {
   <<module>>
 }
-N_src_bridge_server_ipc_dispatch_ts ..> N_src_bridge_server_ipc_dispatch_handlers_ts : 导入依赖
-N_src_bridge_server_ipc_dispatch_ts ..> N_src_bridge_server_ipc_settings_handlers_ts : 导入依赖
+class N_src_bridge_server_ipc_request_ts["request.ts"] {
+  <<module>>
+}
+class N_src_bridge_server_ipc_resources_handlers_ts["resources-handlers.ts"] {
+  <<module>>
+}
 N_src_bridge_server_ipc_dispatch_ts ..> N_src_bridge_server_ipc_loop_handlers_ts : 导入依赖
-N_src_bridge_server_ipc_dispatch_ts ..> N_src_bridge_server_ipc_chat_handlers_ts : 导入依赖
+N_src_bridge_server_ipc_dispatch_ts ..> N_src_bridge_server_ipc_people_handlers_ts : 导入依赖
+N_src_bridge_server_ipc_dispatch_ts ..> N_src_bridge_server_ipc_request_ts : 导入依赖
+N_src_bridge_server_ipc_dispatch_ts ..> N_src_bridge_server_ipc_resources_handlers_ts : 导入依赖
 ```
 
 ```mermaid
@@ -594,24 +594,21 @@ classDiagram
 class N_src_bridge_server_ipc_dispatch_ts["dispatch.ts"] {
   <<module>>
 }
-class N_src_bridge_server_ipc_resources_handlers_ts["resources-handlers.ts"] {
+class N_src_bridge_server_ipc_services_ts["services.ts"] {
+  <<module>>
+}
+class N_src_bridge_server_ipc_settings_handlers_ts["settings-handlers.ts"] {
   <<module>>
 }
 class N_src_bridge_server_ipc_workspace_handlers_ts["workspace-handlers.ts"] {
   <<module>>
 }
-class N_src_bridge_server_ipc_automation_actions_ts["automation-actions.ts"] {
-  <<module>>
-}
 class N_src_bridge_server_ipc_governance_handlers_ts["governance-handlers.ts"] {
   <<module>>
 }
-class N_src_bridge_server_ipc_services_ts["services.ts"] {
-  <<module>>
-}
-N_src_bridge_server_ipc_dispatch_ts ..> N_src_bridge_server_ipc_resources_handlers_ts : 导入依赖
+N_src_bridge_server_ipc_dispatch_ts ..> N_src_bridge_server_ipc_services_ts : 导入依赖
+N_src_bridge_server_ipc_dispatch_ts ..> N_src_bridge_server_ipc_settings_handlers_ts : 导入依赖
 N_src_bridge_server_ipc_dispatch_ts ..> N_src_bridge_server_ipc_workspace_handlers_ts : 导入依赖
-N_src_bridge_server_ipc_dispatch_ts ..> N_src_bridge_server_ipc_automation_actions_ts : 导入依赖
 N_src_bridge_server_ipc_governance_handlers_ts ..> N_src_bridge_server_ipc_services_ts : 导入依赖
 ```
 

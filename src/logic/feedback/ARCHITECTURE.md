@@ -78,7 +78,7 @@ N_src_logic_feedback_service ..> N_src_logic_feedback_index_ts : 导入依赖
 - `index.ts` → `contracts.ts`：导入。
 - `service` → `index.ts`：导入。
 
-### contracts.ts 公开入口
+### contracts.ts
 
 ```mermaid
 classDiagram
@@ -87,6 +87,77 @@ class N_src_logic_feedback_contracts_ts["contracts.ts"] {
   +feedbackIssue()
 }
 ```
+
+```mermaid
+classDiagram
+class N_src_logic_feedback_contracts_ts["contracts.ts"] {
+  <<module>>
+}
+class N_src_logic_feedback_contracts_ts_FeedbackInput["FeedbackInput"] {
+  <<type>>
+
+}
+N_src_logic_feedback_contracts_ts ..> N_src_logic_feedback_contracts_ts_FeedbackInput : 声明
+class N_src_logic_feedback_contracts_ts_FeedbackScope["FeedbackScope"] {
+  <<type>>
+
+}
+N_src_logic_feedback_contracts_ts ..> N_src_logic_feedback_contracts_ts_FeedbackScope : 声明
+class N_src_logic_feedback_contracts_ts_FeedbackResult["FeedbackResult"] {
+  <<type>>
+
+}
+N_src_logic_feedback_contracts_ts ..> N_src_logic_feedback_contracts_ts_FeedbackResult : 声明
+class N_src_logic_feedback_contracts_ts_FeedbackToolsPort["FeedbackToolsPort"] {
+  <<interface>>
+  +scope
+  +Submit()
+  +Receipt()
+}
+N_src_logic_feedback_contracts_ts ..> N_src_logic_feedback_contracts_ts_FeedbackToolsPort : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_logic_feedback_contracts_ts["contracts.ts"] {
+  <<module>>
+}
+class N_src_logic_feedback_contracts_ts_FeedbackConnectionCheck["FeedbackConnectionCheck"] {
+  <<type>>
+
+}
+N_src_logic_feedback_contracts_ts ..> N_src_logic_feedback_contracts_ts_FeedbackConnectionCheck : 声明
+class N_src_logic_feedback_contracts_ts_FeedbackAvailability["FeedbackAvailability"] {
+  <<type>>
+
+}
+N_src_logic_feedback_contracts_ts ..> N_src_logic_feedback_contracts_ts_FeedbackAvailability : 声明
+class N_src_logic_feedback_contracts_ts_GitHubFeedbackConfig["GitHubFeedbackConfig"] {
+  <<type>>
+
+}
+N_src_logic_feedback_contracts_ts ..> N_src_logic_feedback_contracts_ts_GitHubFeedbackConfig : 声明
+class N_src_logic_feedback_contracts_ts_GitHubFeedbackStatus["GitHubFeedbackStatus"] {
+  <<interface>>
+  +secureStorage
+  +config
+  +connected
+  +flow
+}
+N_src_logic_feedback_contracts_ts ..> N_src_logic_feedback_contracts_ts_GitHubFeedbackStatus : 声明
+```
+
+
+
+### index.ts
+
+```mermaid
+classDiagram
+class N_src_logic_feedback_index_ts["index.ts"] {
+  <<module>>
+}
+```
+直接依赖：[contracts.ts](contracts.ts)。
 
 
 ## 子目录导航

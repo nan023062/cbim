@@ -27,7 +27,7 @@
 
 ### 正式知识物理事务
 
-`KnowledgeStore` 是正式知识写入的唯一串行队列。所有普通提交继续核实例、读取版本、完整结构、逐文件外部冲突及原请求幂等；治理登记和决定通过 `governed` 共享此队列，避免批准检查与提交之间出现其他决定或写入。
+`KnowledgeStore` 是正式知识写入的唯一串行队列。所有普通提交继续核实例、读取版本、完整结构、逐文件外部冲突及原请求幂等；治理登记和决定通过 `Governed` 共享此队列，避免批准检查与提交之间出现其他决定或写入。
 
 `governance-port.ts` 只声明 Main 内部端口，不进入 ChangeRequest 或模型工具输入。普通 `commit(request)` 永远不接 permit。可信 `apply(intentId)` 由私有治理账本解析精确请求，最终投影门禁在 prepared journal 之前执行；任何准备失败都不取得额外权限。
 
@@ -47,7 +47,7 @@ Journal 的可选 governance 绑定保留 intent/protection/proposal/decision ID
 
 prepared 保存或 Store prepare 异常时，只有严格核实原 Store 屏障才能继续提供只读诊断；否则实例进入 recovery_required，防止后来事务覆盖未核实的 before。重开遇 prepared 且无 Store 受理，只能在全部文件仍等 before 时标 rolled_back，绝不把外部恰等 after 的内容写回；冲突零文件写并保留证据。旧无来源 journal 保留原恢复协议，不自动升级或补造来源。
 
-`withSourceSnapshot` 为明确岗位/责任采纳固定知识快照，再进入唯一 Store；关闭先 drain 该队列与来源结算，再关闭 Store 和释放工作区锁。
+`WithSourceSnapshot` 为明确岗位/责任采纳固定知识快照，再进入唯一 Store；关闭先 drain 该队列与来源结算，再关闭 Store 和释放工作区锁。
 
 <a id="contract-历史人员文件兼容"></a>
 
@@ -87,7 +87,7 @@ class N_src_logic_knowledge_storage_files_ts["files.ts"] {
 }
 ```
 
-直接依赖：[../../workspace/ports/paths.ts](../../workspace/ports/paths.ts)、[../rules/types.ts](../rules/types.ts)、[../rules/knowledge.ts](../rules/knowledge.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../rules/knowledge.ts](../rules/knowledge.ts)、[../rules/types.ts](../rules/types.ts)、[../../workspace/ports/paths.ts](../../workspace/ports/paths.ts)。
 
 ### governance-port.ts
 
@@ -131,7 +131,7 @@ class N_src_logic_knowledge_storage_governance_port_ts_KnowledgeGovernanceTransa
 N_src_logic_knowledge_storage_governance_port_ts ..> N_src_logic_knowledge_storage_governance_port_ts_KnowledgeGovernanceTransaction : 声明
 ```
 
-直接依赖：[../rules/types.ts](../rules/types.ts)、[../rules/ports.ts](../rules/ports.ts)。
+直接依赖：[../rules/ports.ts](../rules/ports.ts)、[../rules/types.ts](../rules/types.ts)。
 
 ### knowledge-store.ts
 
@@ -225,7 +225,7 @@ class N_src_logic_knowledge_storage_knowledge_store_ts_KnowledgeStore["Knowledge
 N_src_logic_knowledge_storage_knowledge_store_ts ..> N_src_logic_knowledge_storage_knowledge_store_ts_KnowledgeStore : 声明
 ```
 
-直接依赖：[files.ts](files.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../workspace/ports/paths.ts](../../workspace/ports/paths.ts)、[../rules/knowledge.ts](../rules/knowledge.ts)、[../rules/types.ts](../rules/types.ts)、[governance-port.ts](governance-port.ts)、[planned-commit.ts](planned-commit.ts)、[../rules/planned-commit.ts](../rules/planned-commit.ts)、[source-journal.ts](source-journal.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../rules/knowledge.ts](../rules/knowledge.ts)、[../rules/planned-commit.ts](../rules/planned-commit.ts)、[../rules/types.ts](../rules/types.ts)、[files.ts](files.ts)、[governance-port.ts](governance-port.ts)、[planned-commit.ts](planned-commit.ts)、[source-journal.ts](source-journal.ts)、[../../workspace/ports/paths.ts](../../workspace/ports/paths.ts)。
 
 ### object-storage.ts
 
@@ -245,13 +245,14 @@ class N_src_logic_knowledge_storage_object_storage_ts_FileObjectStorage["FileObj
   -PlanPath()
 }
 N_src_logic_knowledge_storage_object_storage_ts ..> N_src_logic_knowledge_storage_object_storage_ts_FileObjectStorage : 声明
-class N_src_logic_knowledge_storage_object_storage_ts_external_ObjectStorage["ObjectStorage (外部契约)"] {
-  <<external>>
+class N_src_logic_knowledge_storage_object_storage_ts_external_ObjectStorage["ObjectStorage (../rules/object-storage)"] {
+  <<boundary>>
 }
 N_src_logic_knowledge_storage_object_storage_ts_external_ObjectStorage <|.. N_src_logic_knowledge_storage_object_storage_ts_FileObjectStorage
 ```
 
-直接依赖：[../rules/object-storage.ts](../rules/object-storage.ts)、[../rules/types.ts](../rules/types.ts)、[../../workspace/ports/paths.ts](../../workspace/ports/paths.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../core/errors.ts](../../../core/errors.ts)。
+继承／实现来源：`ObjectStorage` → [../rules/object-storage.ts](../rules/object-storage.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../rules/object-storage.ts](../rules/object-storage.ts)、[../rules/types.ts](../rules/types.ts)、[../../workspace/ports/paths.ts](../../workspace/ports/paths.ts)。
 
 ### planned-commit.ts
 
@@ -263,7 +264,7 @@ class N_src_logic_knowledge_storage_planned_commit_ts["planned-commit.ts"] {
 }
 ```
 
-直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../rules/planned-commit.ts](../rules/planned-commit.ts)、[../../workspace/ports/paths.ts](../../workspace/ports/paths.ts)、[../rules/types.ts](../rules/types.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../rules/planned-commit.ts](../rules/planned-commit.ts)、[../rules/types.ts](../rules/types.ts)、[../../workspace/ports/paths.ts](../../workspace/ports/paths.ts)。
 
 ### source-journal.ts
 
@@ -299,7 +300,7 @@ class N_src_logic_knowledge_storage_source_journal_ts_KnowledgeSourceAuthority["
 N_src_logic_knowledge_storage_source_journal_ts ..> N_src_logic_knowledge_storage_source_journal_ts_KnowledgeSourceAuthority : 声明
 ```
 
-直接依赖：[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../rules/planned-commit.ts](../rules/planned-commit.ts)、[../../workspace/rules/knowledge-source.ts](../../workspace/rules/knowledge-source.ts)、[../../workspace/rules/knowledge-source-rules.ts](../../workspace/rules/knowledge-source-rules.ts)、[../rules/types.ts](../rules/types.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../rules/planned-commit.ts](../rules/planned-commit.ts)、[../rules/types.ts](../rules/types.ts)、[../../workspace/rules/knowledge-source-rules.ts](../../workspace/rules/knowledge-source-rules.ts)、[../../workspace/rules/knowledge-source.ts](../../workspace/rules/knowledge-source.ts)。
 
 ### 本目录调用边界
 

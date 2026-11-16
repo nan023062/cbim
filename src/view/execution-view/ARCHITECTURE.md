@@ -148,7 +148,7 @@ class N_src_view_execution_view_AgentCallDetails_tsx["AgentCallDetails.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[transcript.ts](transcript.ts)、[MarkdownMessage.tsx](MarkdownMessage.tsx)、[ToolTimeline.tsx](ToolTimeline.tsx)、[../components/Icon.tsx](../components/Icon.tsx)、[agent-call-details.css](agent-call-details.css)。
+直接依赖：[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[MarkdownMessage.tsx](MarkdownMessage.tsx)、[ToolTimeline.tsx](ToolTimeline.tsx)、[agent-call-details.css](agent-call-details.css)、[transcript.ts](transcript.ts)。
 
 ### ComposerAttachments.tsx
 
@@ -212,7 +212,7 @@ class N_src_view_execution_view_MessageQueue_tsx["MessageQueue.tsx"] {
 }
 ```
 
-直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[message-queue.css](message-queue.css)。
+直接依赖：[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[message-queue.css](message-queue.css)。
 
 ### QuestionCard.tsx
 
@@ -309,7 +309,7 @@ class N_src_view_execution_view_ToolTimeline_tsx["ToolTimeline.tsx"] {
 }
 ```
 
-直接依赖：[tool-labels.ts](tool-labels.ts)、[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../components/RepositoryScopeDetails.tsx](../components/RepositoryScopeDetails.tsx)、[knowledge-tool-view.ts](knowledge-tool-view.ts)、[tool-failure-view.ts](tool-failure-view.ts)、[knowledge-tool-view.css](knowledge-tool-view.css)。
+直接依赖：[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../components/RepositoryScopeDetails.tsx](../components/RepositoryScopeDetails.tsx)、[knowledge-tool-view.css](knowledge-tool-view.css)、[knowledge-tool-view.ts](knowledge-tool-view.ts)、[tool-failure-view.ts](tool-failure-view.ts)、[tool-labels.ts](tool-labels.ts)。
 
 ### transcript.ts
 
@@ -352,7 +352,7 @@ class N_src_view_execution_view_WorkStatus_tsx["WorkStatus.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[tool-labels.ts](tool-labels.ts)、[ToolTimeline.tsx](ToolTimeline.tsx)。
+直接依赖：[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[ToolTimeline.tsx](ToolTimeline.tsx)、[tool-labels.ts](tool-labels.ts)。
 
 ### 本目录调用边界
 
@@ -360,9 +360,6 @@ class N_src_view_execution_view_WorkStatus_tsx["WorkStatus.tsx"] {
 classDiagram
 class N_src_view_execution_view_AgentCallDetails_tsx["AgentCallDetails.tsx"] {
   <<component>>
-}
-class N_src_view_execution_view_transcript_ts["transcript.ts"] {
-  <<module>>
 }
 class N_src_view_execution_view_MarkdownMessage_tsx["MarkdownMessage.tsx"] {
   <<component>>
@@ -373,10 +370,13 @@ class N_src_view_execution_view_ToolTimeline_tsx["ToolTimeline.tsx"] {
 class N_src_view_execution_view_agent_call_details_css["agent-call-details.css"] {
   <<stylesheet>>
 }
-N_src_view_execution_view_AgentCallDetails_tsx ..> N_src_view_execution_view_transcript_ts : 导入依赖
+class N_src_view_execution_view_transcript_ts["transcript.ts"] {
+  <<module>>
+}
 N_src_view_execution_view_AgentCallDetails_tsx ..> N_src_view_execution_view_MarkdownMessage_tsx : 导入依赖
 N_src_view_execution_view_AgentCallDetails_tsx ..> N_src_view_execution_view_ToolTimeline_tsx : 导入依赖
 N_src_view_execution_view_AgentCallDetails_tsx ..> N_src_view_execution_view_agent_call_details_css : 导入依赖
+N_src_view_execution_view_AgentCallDetails_tsx ..> N_src_view_execution_view_transcript_ts : 导入依赖
 ```
 
 ```mermaid
@@ -402,13 +402,13 @@ class N_src_view_execution_view_questions_css["questions.css"] {
 class N_src_view_execution_view_ToolTimeline_tsx["ToolTimeline.tsx"] {
   <<component>>
 }
-class N_src_view_execution_view_tool_labels_ts["tool-labels.ts"] {
-  <<module>>
+class N_src_view_execution_view_knowledge_tool_view_css["knowledge-tool-view.css"] {
+  <<stylesheet>>
 }
 N_src_view_execution_view_MarkdownMessage_tsx ..> N_src_view_execution_view_repairStreamingMarkdown_ts : 导入依赖
 N_src_view_execution_view_MessageQueue_tsx ..> N_src_view_execution_view_message_queue_css : 导入依赖
 N_src_view_execution_view_QuestionCard_tsx ..> N_src_view_execution_view_questions_css : 导入依赖
-N_src_view_execution_view_ToolTimeline_tsx ..> N_src_view_execution_view_tool_labels_ts : 导入依赖
+N_src_view_execution_view_ToolTimeline_tsx ..> N_src_view_execution_view_knowledge_tool_view_css : 导入依赖
 ```
 
 ```mermaid
@@ -422,19 +422,16 @@ class N_src_view_execution_view_knowledge_tool_view_ts["knowledge-tool-view.ts"]
 class N_src_view_execution_view_tool_failure_view_ts["tool-failure-view.ts"] {
   <<module>>
 }
-class N_src_view_execution_view_knowledge_tool_view_css["knowledge-tool-view.css"] {
-  <<stylesheet>>
+class N_src_view_execution_view_tool_labels_ts["tool-labels.ts"] {
+  <<module>>
 }
 class N_src_view_execution_view_WorkStatus_tsx["WorkStatus.tsx"] {
   <<component>>
 }
-class N_src_view_execution_view_tool_labels_ts["tool-labels.ts"] {
-  <<module>>
-}
 N_src_view_execution_view_ToolTimeline_tsx ..> N_src_view_execution_view_knowledge_tool_view_ts : 导入依赖
 N_src_view_execution_view_ToolTimeline_tsx ..> N_src_view_execution_view_tool_failure_view_ts : 导入依赖
-N_src_view_execution_view_ToolTimeline_tsx ..> N_src_view_execution_view_knowledge_tool_view_css : 导入依赖
-N_src_view_execution_view_WorkStatus_tsx ..> N_src_view_execution_view_tool_labels_ts : 导入依赖
+N_src_view_execution_view_ToolTimeline_tsx ..> N_src_view_execution_view_tool_labels_ts : 导入依赖
+N_src_view_execution_view_WorkStatus_tsx ..> N_src_view_execution_view_ToolTimeline_tsx : 导入依赖
 ```
 
 ```mermaid
@@ -442,10 +439,10 @@ classDiagram
 class N_src_view_execution_view_WorkStatus_tsx["WorkStatus.tsx"] {
   <<component>>
 }
-class N_src_view_execution_view_ToolTimeline_tsx["ToolTimeline.tsx"] {
-  <<component>>
+class N_src_view_execution_view_tool_labels_ts["tool-labels.ts"] {
+  <<module>>
 }
-N_src_view_execution_view_WorkStatus_tsx ..> N_src_view_execution_view_ToolTimeline_tsx : 导入依赖
+N_src_view_execution_view_WorkStatus_tsx ..> N_src_view_execution_view_tool_labels_ts : 导入依赖
 ```
 
 

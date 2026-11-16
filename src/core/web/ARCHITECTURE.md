@@ -102,7 +102,7 @@ class N_src_core_web_index_ts["index.ts"] {
   <<module>>
 }
 ```
-直接依赖：[contracts.ts](contracts.ts)、[browser-reader.ts](browser-reader.ts)、[web-content.ts](web-content.ts)。
+直接依赖：[browser-reader.ts](browser-reader.ts)、[contracts.ts](contracts.ts)、[web-content.ts](web-content.ts)。
 
 ### web-content.ts
 
@@ -135,17 +135,17 @@ classDiagram
 class N_src_core_web_index_ts["index.ts"] {
   <<module>>
 }
-class N_src_core_web_contracts_ts["contracts.ts"] {
+class N_src_core_web_browser_reader_ts["browser-reader.ts"] {
   <<module>>
 }
-class N_src_core_web_browser_reader_ts["browser-reader.ts"] {
+class N_src_core_web_contracts_ts["contracts.ts"] {
   <<module>>
 }
 class N_src_core_web_web_content_ts["web-content.ts"] {
   <<module>>
 }
-N_src_core_web_index_ts ..> N_src_core_web_contracts_ts : 导入依赖
 N_src_core_web_index_ts ..> N_src_core_web_browser_reader_ts : 导入依赖
+N_src_core_web_index_ts ..> N_src_core_web_contracts_ts : 导入依赖
 N_src_core_web_index_ts ..> N_src_core_web_web_content_ts : 导入依赖
 ```
 

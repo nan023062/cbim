@@ -89,7 +89,7 @@ class N_src_logic_file_operations_platform_files_artifact_files_ts_ArtifactFiles
 N_src_logic_file_operations_platform_files_artifact_files_ts ..> N_src_logic_file_operations_platform_files_artifact_files_ts_ArtifactFiles : 声明
 ```
 
-直接依赖：[../../../../core/errors.ts](../../../../core/errors.ts)、[../../../evidence/rules/artifact-baseline.ts](../../../evidence/rules/artifact-baseline.ts)、[../../../workspace/rules/json-validation-schema.ts](../../../workspace/rules/json-validation-schema.ts)、[../../../workspace/rules/csv-validation-schema.ts](../../../workspace/rules/csv-validation-schema.ts)、[../../../workspace/rules/png-validation-schema.ts](../../../workspace/rules/png-validation-schema.ts)、[png-validator.ts](png-validator.ts)、[../../../tasks/rules/effect-observation.ts](../../../tasks/rules/effect-observation.ts)。
+直接依赖：[../../../../core/errors.ts](../../../../core/errors.ts)、[../../../evidence/rules/artifact-baseline.ts](../../../evidence/rules/artifact-baseline.ts)、[png-validator.ts](png-validator.ts)、[../../../tasks/rules/effect-observation.ts](../../../tasks/rules/effect-observation.ts)、[../../../workspace/rules/csv-validation-schema.ts](../../../workspace/rules/csv-validation-schema.ts)、[../../../workspace/rules/json-validation-schema.ts](../../../workspace/rules/json-validation-schema.ts)、[../../../workspace/rules/png-validation-schema.ts](../../../workspace/rules/png-validation-schema.ts)。
 
 ### code-check-runner.ts
 
@@ -108,13 +108,14 @@ class N_src_logic_file_operations_platform_files_code_check_runner_ts_CodeCheckR
   -Command()
 }
 N_src_logic_file_operations_platform_files_code_check_runner_ts ..> N_src_logic_file_operations_platform_files_code_check_runner_ts_CodeCheckRunner : 声明
-class N_src_logic_file_operations_platform_files_code_check_runner_ts_external_CodeCheckPort["CodeCheckPort (外部契约)"] {
-  <<external>>
+class N_src_logic_file_operations_platform_files_code_check_runner_ts_external_CodeCheckPort["CodeCheckPort (../../../evidence/rules/code-check)"] {
+  <<boundary>>
 }
 N_src_logic_file_operations_platform_files_code_check_runner_ts_external_CodeCheckPort <|.. N_src_logic_file_operations_platform_files_code_check_runner_ts_CodeCheckRunner
 ```
 
-直接依赖：[../../../../core/platform/node/serialization.ts](../../../../core/platform/node/serialization.ts)、[../../../../core/errors.ts](../../../../core/errors.ts)、[../../../workspace/rules/code-check.ts](../../../workspace/rules/code-check.ts)、[../../../evidence/rules/code-check.ts](../../../evidence/rules/code-check.ts)、[../../../evidence/rules/output-manifest-evidence.ts](../../../evidence/rules/output-manifest-evidence.ts)、[output-manifest-files.ts](output-manifest-files.ts)。
+继承／实现来源：`CodeCheckPort` → [../../../evidence/rules/code-check.ts](../../../evidence/rules/code-check.ts)。
+直接依赖：[../../../../core/errors.ts](../../../../core/errors.ts)、[../../../../core/platform/node/serialization.ts](../../../../core/platform/node/serialization.ts)、[../../../evidence/rules/code-check.ts](../../../evidence/rules/code-check.ts)、[../../../evidence/rules/output-manifest-evidence.ts](../../../evidence/rules/output-manifest-evidence.ts)、[output-manifest-files.ts](output-manifest-files.ts)、[../../../workspace/rules/code-check.ts](../../../workspace/rules/code-check.ts)。
 
 ### controlled-file-blobs.ts
 
@@ -135,7 +136,7 @@ class N_src_logic_file_operations_platform_files_controlled_file_blobs_ts_Contro
 N_src_logic_file_operations_platform_files_controlled_file_blobs_ts ..> N_src_logic_file_operations_platform_files_controlled_file_blobs_ts_ControlledFileBlobs : 声明
 ```
 
-直接依赖：[../../../../core/errors.ts](../../../../core/errors.ts)、[../../rules/controlled-file-operation.ts](../../rules/controlled-file-operation.ts)、[../../rules/controlled-file-event.ts](../../rules/controlled-file-event.ts)。
+直接依赖：[../../../../core/errors.ts](../../../../core/errors.ts)、[../../rules/controlled-file-event.ts](../../rules/controlled-file-event.ts)、[../../rules/controlled-file-operation.ts](../../rules/controlled-file-operation.ts)。
 
 ### controlled-file-protocol.ts
 
@@ -280,7 +281,7 @@ class N_src_logic_file_operations_platform_files_output_manifest_files_ts_Output
 N_src_logic_file_operations_platform_files_output_manifest_files_ts ..> N_src_logic_file_operations_platform_files_output_manifest_files_ts_OutputManifestFiles : 声明
 ```
 
-直接依赖：[../../../../core/errors.ts](../../../../core/errors.ts)、[../../../workspace/rules/artifact-scope.ts](../../../workspace/rules/artifact-scope.ts)、[../../../evidence/rules/output-manifest.ts](../../../evidence/rules/output-manifest.ts)、[../../../evidence/rules/output-manifest-evidence.ts](../../../evidence/rules/output-manifest-evidence.ts)、[artifact-files.ts](artifact-files.ts)。
+直接依赖：[../../../../core/errors.ts](../../../../core/errors.ts)、[../../../evidence/rules/output-manifest-evidence.ts](../../../evidence/rules/output-manifest-evidence.ts)、[../../../evidence/rules/output-manifest.ts](../../../evidence/rules/output-manifest.ts)、[artifact-files.ts](artifact-files.ts)、[../../../workspace/rules/artifact-scope.ts](../../../workspace/rules/artifact-scope.ts)。
 
 ### png-validator.ts
 
@@ -336,13 +337,14 @@ class N_src_logic_file_operations_platform_files_scoped_execution_files_ts_Scope
   -koffiPath
 }
 N_src_logic_file_operations_platform_files_scoped_execution_files_ts ..> N_src_logic_file_operations_platform_files_scoped_execution_files_ts_ScopedExecutionFiles : 声明
-class N_src_logic_file_operations_platform_files_scoped_execution_files_ts_external_ScopedExecutionPort["ScopedExecutionPort (外部契约)"] {
-  <<external>>
+class N_src_logic_file_operations_platform_files_scoped_execution_files_ts_external_ScopedExecutionPort["ScopedExecutionPort (../../../execution/rules/capabilities/run-scoped-execution)"] {
+  <<boundary>>
 }
 N_src_logic_file_operations_platform_files_scoped_execution_files_ts_external_ScopedExecutionPort <|.. N_src_logic_file_operations_platform_files_scoped_execution_files_ts_ScopedExecutionFiles
 ```
 
-直接依赖：[../../../workspace/rules/execution-scope.ts](../../../workspace/rules/execution-scope.ts)、[../../rules/scoped-execution.ts](../../rules/scoped-execution.ts)、[../../../execution/rules/capabilities/run-scoped-execution.ts](../../../execution/rules/capabilities/run-scoped-execution.ts)、[controlled-file-win32.ts](controlled-file-win32.ts)、[../isolation/isolated-node.ts](../isolation/isolated-node.ts)、[../../../../core/errors.ts](../../../../core/errors.ts)、[../../rules/isolated-execution-recovery.ts](../../rules/isolated-execution-recovery.ts)、[../isolation/isolation-record.ts](../isolation/isolation-record.ts)。
+继承／实现来源：`ScopedExecutionPort` → [../../../execution/rules/capabilities/run-scoped-execution.ts](../../../execution/rules/capabilities/run-scoped-execution.ts)。
+直接依赖：[../../../../core/errors.ts](../../../../core/errors.ts)、[../../../execution/rules/capabilities/run-scoped-execution.ts](../../../execution/rules/capabilities/run-scoped-execution.ts)、[controlled-file-win32.ts](controlled-file-win32.ts)、[../isolation/isolated-node.ts](../isolation/isolated-node.ts)、[../isolation/isolation-record.ts](../isolation/isolation-record.ts)、[../../rules/isolated-execution-recovery.ts](../../rules/isolated-execution-recovery.ts)、[../../rules/scoped-execution.ts](../../rules/scoped-execution.ts)、[../../../workspace/rules/execution-scope.ts](../../../workspace/rules/execution-scope.ts)。
 
 ### 本目录调用边界
 

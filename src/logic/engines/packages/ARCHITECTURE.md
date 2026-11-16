@@ -94,8 +94,8 @@ class N_src_logic_engines_packages_engine_packages_ts_EnginePackages["EnginePack
   -preparations
 }
 N_src_logic_engines_packages_engine_packages_ts ..> N_src_logic_engines_packages_engine_packages_ts_EnginePackages : 声明
-class N_src_logic_engines_packages_engine_packages_ts_external_EngineRuntimeResolver["EngineRuntimeResolver (外部契约)"] {
-  <<external>>
+class N_src_logic_engines_packages_engine_packages_ts_external_EngineRuntimeResolver["EngineRuntimeResolver (../../execution/rules/engine-runtime)"] {
+  <<boundary>>
 }
 N_src_logic_engines_packages_engine_packages_ts_external_EngineRuntimeResolver <|.. N_src_logic_engines_packages_engine_packages_ts_EnginePackages
 ```
@@ -117,13 +117,14 @@ class N_src_logic_engines_packages_engine_packages_ts_EnginePackages["EnginePack
   -InstallNow()
 }
 N_src_logic_engines_packages_engine_packages_ts ..> N_src_logic_engines_packages_engine_packages_ts_EnginePackages : 声明
-class N_src_logic_engines_packages_engine_packages_ts_external_EngineRuntimeResolver["EngineRuntimeResolver (外部契约)"] {
-  <<external>>
+class N_src_logic_engines_packages_engine_packages_ts_external_EngineRuntimeResolver["EngineRuntimeResolver (../../execution/rules/engine-runtime)"] {
+  <<boundary>>
 }
 N_src_logic_engines_packages_engine_packages_ts_external_EngineRuntimeResolver <|.. N_src_logic_engines_packages_engine_packages_ts_EnginePackages
 ```
 
-直接依赖：[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../index.ts](../index.ts)、[../../updates/engine-artifacts.ts](../../updates/engine-artifacts.ts)、[../../execution/rules/engine-runtime.ts](../../execution/rules/engine-runtime.ts)。
+继承／实现来源：`EngineRuntimeResolver` → [../../execution/rules/engine-runtime.ts](../../execution/rules/engine-runtime.ts)。
+直接依赖：[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../index.ts](../index.ts)、[../../execution/rules/engine-runtime.ts](../../execution/rules/engine-runtime.ts)、[../../updates/engine-artifacts.ts](../../updates/engine-artifacts.ts)。
 
 ### index.ts
 
@@ -133,7 +134,7 @@ class N_src_logic_engines_packages_index_ts["index.ts"] {
   <<module>>
 }
 ```
-直接依赖：[engine-packages.ts](engine-packages.ts)、[../index.ts](../index.ts)。
+直接依赖：[../index.ts](../index.ts)、[engine-packages.ts](engine-packages.ts)。
 
 ### 本目录调用边界
 

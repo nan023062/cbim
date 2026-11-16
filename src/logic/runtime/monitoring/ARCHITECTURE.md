@@ -24,13 +24,13 @@
 
 ##### 终态原因的公开投影
 
-`projectRunEvent` 的 `run.interrupted/run.settled` 与任务卡共用 Core `publicRunFailure`，保留可识别的超时、事件限制、模型输出上限等诊断，不再全部变成统一“执行中断”。任意私密错误正文仍不透传，未决调用 ID 与回执保持原字段。历史详情按读取时投影展示，不迁移原日志或授权任何恢复操作。
+`projectRunEvent` 的 `run.interrupted/run.settled` 与任务卡共用 [执行规则](../../execution/rules/run-failure.ts) 的 `publicRunFailure`，保留可识别的超时、事件限制、模型输出上限等诊断，不再全部变成统一“执行中断”。任意私密错误正文仍不透传，未决调用 ID 与回执保持原字段。历史详情按读取时投影展示，不迁移原日志或授权任何恢复操作。
 
 <a id="contract-静态-agent-的-session-历史已实现"></a>
 
 ##### 静态 Agent 的 Session 历史（已实现）
 
-`AgentHistoryService` 按 `workspaceId + agentId → sessionId → taskId/runId` 建立独立只读归档。它接收已经持久化的两套运行事件和派发领取意图；不启动模型、不领取任务、不确认信封，不持有审批能力。静态定义删除与实例 released 不删归档，也不把历史记录计为当前人员活动。
+[AgentHistoryService](../../history/runtime/agent-history.ts) 按 `workspaceId + agentId → sessionId → taskId/runId` 建立独立只读归档。它接收已经持久化的两套运行事件和派发领取意图；不启动模型、不领取任务、不确认信封，不持有审批能力。静态定义删除与实例 released 不删归档，也不把历史记录计为当前人员活动。
 
 - 已登记主/成员分别采用日志中的 `conversationBinding / memberBinding`，从原 `agentSessionId` 分组，不能按角色名或最近会话补造实例。旧日志仅有明确 `TaskSpec.agentId` 时使用 `legacy:<taskId>` 分组；这不是新的运行通道，实例/通道字段保持缺省。没有角色、跨工作区或矛盾绑定登记诊断，不猜归属。
 - `restoreDispatch / dispatchCommitted` 保留模型与日志创建前的 `DispatchRun` 意图，启动失败也有一条履历。`restoreRun / observeRun` 只更新已核实的摘要，保持 canonical 日志唯一；重复恢复幂等。成员终态以派发事务为准，不被迟到的原生日志覆盖。
@@ -47,7 +47,7 @@ GlobalRuntimeManager 由 Application 单例持有，管理所有接入工作区�
 
 - begin/ready/unavailable/detach/forget/rename 管理接入代际和可用性；旧 epoch 不污染新实例，关闭保留历史并清除活动观察。
 - restoreDispatch/dispatchCommitted 接收初始基线与新事务；增量只更新受影响对象，不读取磁盘。邮箱只计 pending，claimed/processed 事务使信封退出待消费负载。
-- 目标周期从同一 `DispatchObserver.Loaded/committed` 白名单投影到 `WorkspaceIndex.scopes`。store 在可靠提交后按工作区串行同步通知；scope-only 提交独立推进全局游标，不借用图序号或 goalRevision。同一公开投影重放保持 noop，一次成员/任务/周期组合提交只增加一次全局版本；先核整批周期身份，失败不留下半批周期、成员或任务。
+- 目标周期从同一 `DispatchObserver.Loaded/Committed` 白名单投影到 `WorkspaceIndex.scopes`。store 在可靠提交后按工作区串行同步通知；scope-only 提交独立推进全局游标，不借用图序号或 goalRevision。同一公开投影重放保持 noop，一次成员/任务/周期组合提交只增加一次全局版本；先核整批周期身份，失败不留下半批周期、成员或任务。
 - 周期覆盖保留持久插入顺序，不按时间推断最新；旧日志没有 scopes 时不造周期。关闭工作区只改变可用性和当前运行观察，不改写持久等待或关闭结果；重开由新的 epoch 恢复真实周期，旧代际回调被忽略。Loop 最近运行 completed 与目标 waiting 可以同时存在，界面必须分开展示。
 - restoreRun/runEvent 按 workspace/task/run/seq 去重；较新未结束的恢复记录不会把 live run 判成中断，有真实终态时收口。成员绑定从 run.started 或 RunSummary 明确读取并校验，摘要与起始记录冲突时拒绝发布。
 - 带 memberBinding 的轮次计入运行与累计消耗，业务任务只使用 dispatch 图节点；不会再合成第二个 source=loop 任务。普通主对话使用 conversationBinding 对应的实例和对话通道，同一轮次禁止同时携带两种绑定。摘要与起始会话绑定冲突时拒绝发布；同角色名的既有无绑定对话仍保持 role-only。
@@ -57,24 +57,24 @@ GlobalRuntimeManager 由 Application 单例持有，管理所有接入工作区�
 - 周期释放事务携带的成员 lifecycle= released 立即投影为非当前活动；公开成员、任务与运行历史保留，当前实例数和活跃/排队压力排除释放的执行实例。主调度实例没有执行周期，保持会话身份；累计 Token 消费不随释放清零。
 - snapshot/read 输出公开 DTO；issue 明示不完整来源。未知价格和未报告消费不当成免费。
 
-负载是观察量，不是并发配额。成员执行槽与邮箱领取由 execution 服务管理，GlobalRuntimeManager 只接收事实；全局准入由本目录独立的 GlobalRunAdmission 实现，周期预算由 execution 的可信运行门禁核实，不能使用此监管用量授权。main 的 WorkspaceRuntimeMonitor 在恢复前订阅对话与成员运行，启动恢复不调用模型；历史分别扫描 loop-engine/tasks 与 dispatch/runs/tasks，并核验来源、任务与成员绑定。
+负载是观察量，不是并发配额。成员执行槽与邮箱领取由 team/runtime 的成员服务管理，GlobalRuntimeManager 只接收事实；全局准入由 [execution/admission](../../execution/admission/ARCHITECTURE.md) 的 `GlobalRunAdmission` 实现，周期预算由 execution 的可信运行门禁核实，不能使用此监管用量授权。main 的 WorkspaceRuntimeMonitor 在恢复前订阅对话与成员运行，启动恢复不调用模型；历史分别扫描 loop-engine/tasks 与 dispatch/runs/tasks，并核验来源、任务与成员绑定。
 
 <a id="contract-当前关键协作关系"></a>
 
 ###### 当前关键协作关系
 
-下面补充上方自动类图中因成员数量限制未展开的公开入口；GlobalRuntimeManager、WorkspaceIndex 与 ObservedRun 是同一批实际代码节点，不是另一套管理器。
+下面聚焦跨文件投影关系，完整成员列表见生成类图；GlobalRuntimeManager、WorkspaceIndex 与 ObservedRun 是同一批实际代码节点，不是另一套管理器。
 
 ```mermaid
 classDiagram
 class GlobalRuntimeManager {
-  +restoreDispatch(id, epoch, state)
-  +dispatchCommitted(id, epoch, mutation)
-  +restoreRun(id, epoch, summary)
-  +runEvent(id, epoch, event)
-  +queue(id, epoch, counts)
-  +snapshot()
-  +read(cursor)
+  +RestoreDispatch(id, epoch, state)
+  +DispatchCommitted(id, epoch, mutation)
+  +RestoreRun(id, epoch, summary)
+  +RunEvent(id, epoch, event)
+  +Queue(id, epoch, counts)
+  +Snapshot()
+  +Read(cursor)
 }
 class WorkspaceIndex {
   <<interface>>
@@ -92,21 +92,21 @@ class ObservedRun {
   liveEstablished
 }
 class RuntimeMember {
-  <<core-contract>>
+  <<runtime/rules contract>>
 }
 class RuntimeDispatchTask {
-  <<core-contract>>
+  <<runtime/rules contract>>
 }
 class RuntimeScope {
-  <<core-contract>>
+  <<runtime/rules contract>>
   status
   outcome
   reviewDecision
 }
 class RuntimeSnapshot {
-  <<core-contract>>
+  <<runtime/rules contract>>
 }
-class BrainUsage["core/execution/usage.ts"] {
+class BrainUsage["logic/execution/rules/usage.ts"] {
   <<module>>
   +runUsage(events)
 }
@@ -127,9 +127,9 @@ GlobalRuntimeManager ..> RuntimeSnapshot : 返回隔离副本
 
 等待采用 FIFO，但只选择当前本地可领取的请求。更早 writer（ask/execute）即使暂时被本地读占用阻塞，仍阻止同工作区后来 reader 插队；其它工作区可绕过本地阻塞推进。direct 不排票且不能抢占更早 eligible 票据所需的最后名额。内部短暂计算通知顺序，不把通知当作预占许可，真正启动仍须原协调器再次 attempt 并验证任务版本与停止状态。
 
-`wake` 合并到微任务，仅通知可轮到的原 onReady。释放、显式配置、本地租约变化、撤票或失效清理可触发；等待 attempt 本身不自唤醒重试，避免空转。`withdraw` 只移除明确身份等待票；`retireOwner` 使旧工作区装配代际永久失效并撤票，既有占用仍计入额度直到真实释放。release 幂等，先移全局占用，再释放本地并通知重试；读取和重启都不会创建任务。
+`wake` 合并到微任务，仅通知可轮到的原 onReady。释放、显式配置、本地租约变化、撤票或失效清理可触发；等待 attempt 本身不自唤醒重试，避免空转。`withdraw` 只移除明确身份等待票；`RetireOwner` 使旧工作区装配代际永久失效并撤票，既有占用仍计入额度直到真实释放。release 幂等，先移全局占用，再释放本地并通知重试；读取和重启都不会创建任务。
 
-`restorePolicy` 只允许首次 attempt/configure 前的空态启动恢复一次。`configure` 按当前 policy.revision 做 CAS，返回递增后的策略；调用方先可靠保存再调用，下降不取消已运行任务。`snapshot/read` 仅复制内存中的公开事实，不调用本地端口、不清理票据、不扫描日志；observeChange 只是隔离异常的更新通知。进程内流标识和票据不会从历史重建。此准入器只控制已接入运行的数量及既有本地冲突，不提供费用预算、操作系统沙箱、抢占或成员恢复。
+`RestorePolicy` 只允许首次 attempt/configure 前的空态启动恢复一次。`configure` 按当前 policy.revision 做 CAS，返回递增后的策略；调用方先可靠保存再调用，下降不取消已运行任务。`snapshot/read` 仅复制内存中的公开事实，不调用本地端口、不清理票据、不扫描日志；observeChange 只是隔离异常的更新通知。进程内流标识和票据不会从历史重建。此准入器只控制已接入运行的数量及既有本地冲突，不提供费用预算、操作系统沙箱、抢占或成员恢复。
 
 ## 开闭边界
 
@@ -223,7 +223,7 @@ class N_src_logic_runtime_monitoring_global_runtime_ts_GlobalRuntimeManager["Glo
 N_src_logic_runtime_monitoring_global_runtime_ts ..> N_src_logic_runtime_monitoring_global_runtime_ts_GlobalRuntimeManager : 声明
 ```
 
-直接依赖：[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../execution/rules/member-run.ts](../../execution/rules/member-run.ts)、[../../execution/rules/conversation-binding.ts](../../execution/rules/conversation-binding.ts)、[../../execution/rules/usage.ts](../../execution/rules/usage.ts)、[../rules/runtime-scope.ts](../rules/runtime-scope.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../team/rules/agent-types.ts](../../team/rules/agent-types.ts)、[../rules/types.ts](../rules/types.ts)。
+直接依赖：[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../../execution/rules/conversation-binding.ts](../../execution/rules/conversation-binding.ts)、[../../execution/rules/member-run.ts](../../execution/rules/member-run.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../execution/rules/usage.ts](../../execution/rules/usage.ts)、[../rules/runtime-scope.ts](../rules/runtime-scope.ts)、[../rules/types.ts](../rules/types.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../team/rules/agent-types.ts](../../team/rules/agent-types.ts)。
 
 ### member-events.ts
 
@@ -268,7 +268,7 @@ class N_src_logic_runtime_monitoring_member_events_ts_MemberEventStreams["Member
 N_src_logic_runtime_monitoring_member_events_ts ..> N_src_logic_runtime_monitoring_member_events_ts_MemberEventStreams : 声明
 ```
 
-直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../tasks/rules/dispatch-execution.ts](../../tasks/rules/dispatch-execution.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../evidence/rules/progress.ts](../../evidence/rules/progress.ts)、[../../tasks/rules/member-events.ts](../../tasks/rules/member-events.ts)、[public-run-events.ts](public-run-events.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../evidence/rules/progress.ts](../../evidence/rules/progress.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[public-run-events.ts](public-run-events.ts)、[../../tasks/rules/dispatch-execution.ts](../../tasks/rules/dispatch-execution.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../tasks/rules/member-events.ts](../../tasks/rules/member-events.ts)。
 
 ### public-run-events.ts
 
@@ -294,7 +294,7 @@ class N_src_logic_runtime_monitoring_public_run_events_ts_PublicRunIdentity["Pub
 N_src_logic_runtime_monitoring_public_run_events_ts ..> N_src_logic_runtime_monitoring_public_run_events_ts_PublicRunIdentity : 声明
 ```
 
-直接依赖：[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../evidence/rules/progress.ts](../../evidence/rules/progress.ts)、[../../tools/rules/types.ts](../../tools/rules/types.ts)、[../../tools/rules/scope-schema.ts](../../tools/rules/scope-schema.ts)、[../../evidence/rules/validation.ts](../../evidence/rules/validation.ts)、[../../execution/rules/run-failure.ts](../../execution/rules/run-failure.ts)。
+直接依赖：[../../evidence/rules/progress.ts](../../evidence/rules/progress.ts)、[../../evidence/rules/validation.ts](../../evidence/rules/validation.ts)、[../../execution/rules/run-failure.ts](../../execution/rules/run-failure.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../tools/rules/scope-schema.ts](../../tools/rules/scope-schema.ts)、[../../tools/rules/types.ts](../../tools/rules/types.ts)。
 
 ### 本目录调用边界
 

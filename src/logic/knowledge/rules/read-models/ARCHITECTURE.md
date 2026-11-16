@@ -52,7 +52,7 @@ class N_src_logic_knowledge_rules_read_models_index_ts["index.ts"] {
   <<module>>
 }
 ```
-直接依赖：[team.ts](team.ts)、[workspace.ts](workspace.ts)、[snapshot.ts](snapshot.ts)。
+直接依赖：[snapshot.ts](snapshot.ts)、[team.ts](team.ts)、[workspace.ts](workspace.ts)。
 
 ### snapshot.ts
 
@@ -84,7 +84,7 @@ class N_src_logic_knowledge_rules_read_models_team_ts_Team["Team"] {
 N_src_logic_knowledge_rules_read_models_team_ts ..> N_src_logic_knowledge_rules_read_models_team_ts_Team : 声明
 ```
 
-直接依赖：[snapshot.ts](snapshot.ts)、[../../../../core/json.ts](../../../../core/json.ts)、[../../../../core/errors.ts](../../../../core/errors.ts)、[../types.ts](../types.ts)。
+直接依赖：[../../../../core/errors.ts](../../../../core/errors.ts)、[../../../../core/json.ts](../../../../core/json.ts)、[snapshot.ts](snapshot.ts)、[../types.ts](../types.ts)。
 
 ### workspace.ts
 
@@ -102,7 +102,7 @@ class N_src_logic_knowledge_rules_read_models_workspace_ts_BusinessWorkspace["Bu
 N_src_logic_knowledge_rules_read_models_workspace_ts ..> N_src_logic_knowledge_rules_read_models_workspace_ts_BusinessWorkspace : 声明
 ```
 
-直接依赖：[snapshot.ts](snapshot.ts)、[../../../../core/json.ts](../../../../core/json.ts)、[../../../../core/errors.ts](../../../../core/errors.ts)、[../types.ts](../types.ts)、[../../../workspace/rules/project-root.ts](../../../workspace/rules/project-root.ts)。
+直接依赖：[../../../../core/errors.ts](../../../../core/errors.ts)、[../../../../core/json.ts](../../../../core/json.ts)、[snapshot.ts](snapshot.ts)、[../types.ts](../types.ts)、[../../../workspace/rules/project-root.ts](../../../workspace/rules/project-root.ts)。
 
 ### 本目录调用边界
 
@@ -111,18 +111,18 @@ classDiagram
 class N_src_logic_knowledge_rules_read_models_index_ts["index.ts"] {
   <<module>>
 }
+class N_src_logic_knowledge_rules_read_models_snapshot_ts["snapshot.ts"] {
+  <<module>>
+}
 class N_src_logic_knowledge_rules_read_models_team_ts["team.ts"] {
   <<module>>
 }
 class N_src_logic_knowledge_rules_read_models_workspace_ts["workspace.ts"] {
   <<module>>
 }
-class N_src_logic_knowledge_rules_read_models_snapshot_ts["snapshot.ts"] {
-  <<module>>
-}
+N_src_logic_knowledge_rules_read_models_index_ts ..> N_src_logic_knowledge_rules_read_models_snapshot_ts : 导入依赖
 N_src_logic_knowledge_rules_read_models_index_ts ..> N_src_logic_knowledge_rules_read_models_team_ts : 导入依赖
 N_src_logic_knowledge_rules_read_models_index_ts ..> N_src_logic_knowledge_rules_read_models_workspace_ts : 导入依赖
-N_src_logic_knowledge_rules_read_models_index_ts ..> N_src_logic_knowledge_rules_read_models_snapshot_ts : 导入依赖
 N_src_logic_knowledge_rules_read_models_team_ts ..> N_src_logic_knowledge_rules_read_models_snapshot_ts : 导入依赖
 ```
 

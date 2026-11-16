@@ -27,7 +27,7 @@
 
 ##### 办公室逻辑对话
 
-`teamSessions` 和原派发记录共用追加日志与 fsync 屏障；不另建会话正文文件。Store 核验工作区、主会话图、已登记角色和团队，一办公室同一 Agent 不可重复登记，已存在身份不可改绑。关闭任务/周期不移除登记，旧日志没有登记仍按原样恢复。`sessionRead` 只返回所请求办公室的登记，未登记的旧响应保持缺省；读取不补造新身份。
+`teamSessions` 和原派发记录共用追加日志与 fsync 屏障；不另建会话正文文件。Store 核验工作区、主会话图、已登记角色和团队，一办公室同一 Agent 不可重复登记，已存在身份不可改绑。关闭任务/周期不移除登记，旧日志没有登记仍按原样恢复。`SessionRead` 只返回所请求办公室的登记，未登记的旧响应保持缺省；读取不补造新身份。
 
 <a id="contract-新旧负责人执行协议"></a>
 
@@ -41,7 +41,7 @@ FileDispatchStore 在自身 transaction body 写入 `executionProtocol:module_ow
 
 ##### 任务派发图持久化职责
 
-已实现 `FileDispatchStore`：工作区单写入者串行事务、哈希链追加日志、fsync 后发布、幂等回执、成员/通道/图/执行意图/结果信封原子恢复，以及内存 Snapshot/Delta。日志位于应用用户目录的工作区 dispatch/dispatch.jsonl，不写入目标项目 .cbim。成员运行、领取、启动、结算与消息确认共用事务，跨对象约束交给 Logic 领域规则的 `dispatch-invariants.ts`；本存储不启动模型或自动重试。`RunJournal.seq` 与整图序号仍分别维护。
+已实现 `FileDispatchStore`：工作区单写入者串行事务、哈希链追加日志、fsync 后发布、幂等回执、成员/通道/图/执行意图/结果信封原子恢复，以及内存 Snapshot/Delta。日志位于应用用户目录的工作区 dispatch/dispatch.jsonl，不写入目标项目 .cbim。成员运行、领取、启动、结算与消息确认共用事务，跨对象约束交给 Logic 领域规则的 `dispatch-invariants.ts`；本存储不启动模型或自动重试。`RunJournal` 写入的 `StoredEvent.seq` 与整图序号仍分别维护。
 
 成员运行日志保存并校验成员、通道、任务与预分配 runId 的绑定；旧日志可无此字段，不把 completed 直接视作结果就绪。
 
@@ -98,7 +98,7 @@ interface DispatchStore {
 }
 ```
 
-`DispatchCommand` 含 commandId 与规范化请求 fingerprint，`DispatchMutation` 包含成员、Session、图批次、assignment/result 消息、runs、scopes 和回执。只有调度层生成 mutation；模型或前端不能直接提交它。公开图查询不返回 read() 的全工作区状态、冻结知识正文或私有原生会话路径。`runs/scopes` 是 v1 日志的可选兼容扩展；旧记录按空集合恢复，不重写历史记录与校验和，`read()` 总是返回数组。
+`DispatchCommand` 含 commandId 与规范化请求 fingerprint，`DispatchMutation` 包含成员、Session、图批次、assignment/result 消息、runs、scopes 和回执。只有调度层生成 mutation；模型或前端不能直接提交它。公开图查询不返回 read() 的全工作区状态、冻结知识正文或私有原生会话路径。`runs/scopes` 是 v1 日志的可选兼容扩展；旧记录按空集合恢复，不重写历史记录与校验和，`Read()` 总是返回数组。
 
 成员唯一键按生命周期区分：主实例使用 `mainRootSessionId`，周期执行实例使用 `executionScopeId + executionTaskId`，旧无周期角色使用 agentId。已有实例的范围和通道用途不可重绑；释放只标记历史记录，不删除节点或证据。周期、执行实例和任务的联合约束由 `validateDispatchScopes` 核验，关闭与取消、租约递增、实例 released 在同一 fsync 事务里保存。已释放实例、通道与闭周期任务拒绝迟到写入。
 
@@ -138,7 +138,7 @@ interface DispatchStore {
 
 `FileDispatchStore.SessionRead` 先等待原事务队列，再同步读取 graph delta、scope summary delta 与选中 scope detail，不在三份响应之间执行异步读取。此接口不创建根/周期、不读知识、不启动成员、不确认信封；原 `snapshot / delta` 接口保持兼容。
 
-周期投影只由已落盘 `scopes` 变更派生，和正常重放共用 `publish`。每主会话独立编号，不受其他会话事务、图事件或幂等回执重发影响。scope 摘要保存在内存，事件和重放证明最多保留 256 批；超窗客户端 reset 到摘要快照。原 `dispatch.jsonl` 不变，不另建权威记录；正常重启重建相同 streamId、seq 和详情 stamp。单独 plan/review/block/close 不制造图批次，因此不会让已保存的审阅证据自行过期。
+周期投影只由已落盘 `scopes` 变更派生，和正常重放共用 `Publish`。每主会话独立编号，不受其他会话事务、图事件或幂等回执重发影响。scope 摘要保存在内存，事件和重放证明最多保留 256 批；超窗客户端 reset 到摘要快照。原 `dispatch.jsonl` 不变，不另建权威记录；正常重启重建相同 streamId、seq 和详情 stamp。单独 plan/review/block/close 不制造图批次，因此不会让已保存的审阅证据自行过期。
 
 公开请求可选择本会话历史周期；缺省优先 active，再选最后创建的周期。无目标旧记录不补造。列表仅传小摘要，完整原始输入/计划/审阅在所选 stamp 变化时才返回；每秒无变化轮询只返回三份游标/noop。原始业务文本本身不做自动敏感内容识别，详情不包含运行私有路径、冻结知识或邮箱。
 
@@ -178,7 +178,7 @@ interface DispatchStore {
 
 加载和新提交使用同一领域校验；即使重算外层日志校验和，伪造版本、源快照指纹、actor、命令、回执或直接岗位头仍拒绝。旧 v1 日志没有登记字段时按空数组/null 恢复，不写迁移记录、不修改旧字节。正常重开恢复相同岗位 ID、原采纳、全部审计与登记游标。
 
-`commandReceipt(commandId)` 从已恢复的命令索引等待提交屏障后返回深拷贝，不调用事务回调、知识或模型端口；未找到不是“肯定未受理”的证明。岗位命令仍遵循先查原指纹的幂等规则。fsync 或写入结果未确认时封闭当前 Store，不能返回过时投影；重新打开只按原完整日志核实，不自动重放登记。
+`CommandReceipt(commandId)` 从已恢复的命令索引等待提交屏障后返回深拷贝，不调用事务回调、知识或模型端口；未找到不是“肯定未受理”的证明。岗位命令仍遵循先查原指纹的幂等规则。fsync 或写入结果未确认时封闭当前 Store，不能返回过时投影；重新打开只按原完整日志核实，不自动重放登记。
 
 <a id="contract-模块负责人沿用同一事务与历史前缀"></a>
 
@@ -198,9 +198,9 @@ prepared/resolved 为来源独立事务，原 journal 指纹属于内部可信�
 
 ### 原命令前态证据（Step35 已实现协议）
 
-`commandEvidence` 只从原 commands 索引派生事实：实时提交可靠 fsync 后、历史重放完成原校验后，用同一 publish 路径保存提交前 graph.root.revision 和前后图游标。无前图不补默认版本；旧 journal 不改格式或字节，也不保存第二账本。查询等待现有提交屏障返回隔离副本，不能调用 prepare/transact 或再扫描日志。
+`CommandEvidence` 只从原 commands 索引派生事实：实时提交可靠 fsync 后、历史重放完成原校验后，用同一 publish 路径保存提交前 graph.root.revision 和前后图游标。无前图不补默认版本；旧 journal 不改格式或字节，也不保存第二账本。查询等待现有提交屏障返回隔离副本，不能调用 prepare/transact 或再扫描日志。
 
-原 `commandReceipt` 仍只含 fingerprint/receipt；新增证据不自动扩散给旧消费者。IO 未确认或损坏不能返回 absent。应用报告只接已打开且初始化完成的工作区，不以查询触发 open/init/recover；内部完整回执不可直接返回 UI/模型。
+原 `CommandReceipt` 仍只含 fingerprint/receipt；新增证据不自动扩散给旧消费者。IO 未确认或损坏不能返回 absent。应用报告只接已打开且初始化完成的工作区，不以查询触发 open/init/recover；内部完整回执不可直接返回 UI/模型。
 <a id="contract-影响处置附录step36-协议实施中"></a>
 
 ### 影响处置附录（Step36 协议实施中）
@@ -306,8 +306,8 @@ class N_src_logic_dispatch_storage_dispatch_store_ts_FileDispatchStore["FileDisp
   -events
 }
 N_src_logic_dispatch_storage_dispatch_store_ts ..> N_src_logic_dispatch_storage_dispatch_store_ts_FileDispatchStore : 声明
-class N_src_logic_dispatch_storage_dispatch_store_ts_external_DispatchStore["DispatchStore (外部契约)"] {
-  <<external>>
+class N_src_logic_dispatch_storage_dispatch_store_ts_external_DispatchStore["DispatchStore (../rules/dispatch-storage)"] {
+  <<boundary>>
 }
 N_src_logic_dispatch_storage_dispatch_store_ts_external_DispatchStore <|.. N_src_logic_dispatch_storage_dispatch_store_ts_FileDispatchStore
 ```
@@ -338,8 +338,8 @@ class N_src_logic_dispatch_storage_dispatch_store_ts_FileDispatchStore["FileDisp
   -Graph()
 }
 N_src_logic_dispatch_storage_dispatch_store_ts ..> N_src_logic_dispatch_storage_dispatch_store_ts_FileDispatchStore : 声明
-class N_src_logic_dispatch_storage_dispatch_store_ts_external_DispatchStore["DispatchStore (外部契约)"] {
-  <<external>>
+class N_src_logic_dispatch_storage_dispatch_store_ts_external_DispatchStore["DispatchStore (../rules/dispatch-storage)"] {
+  <<boundary>>
 }
 N_src_logic_dispatch_storage_dispatch_store_ts_external_DispatchStore <|.. N_src_logic_dispatch_storage_dispatch_store_ts_FileDispatchStore
 ```
@@ -357,13 +357,14 @@ class N_src_logic_dispatch_storage_dispatch_store_ts_FileDispatchStore["FileDisp
   -Load()
 }
 N_src_logic_dispatch_storage_dispatch_store_ts ..> N_src_logic_dispatch_storage_dispatch_store_ts_FileDispatchStore : 声明
-class N_src_logic_dispatch_storage_dispatch_store_ts_external_DispatchStore["DispatchStore (外部契约)"] {
-  <<external>>
+class N_src_logic_dispatch_storage_dispatch_store_ts_external_DispatchStore["DispatchStore (../rules/dispatch-storage)"] {
+  <<boundary>>
 }
 N_src_logic_dispatch_storage_dispatch_store_ts_external_DispatchStore <|.. N_src_logic_dispatch_storage_dispatch_store_ts_FileDispatchStore
 ```
 
-直接依赖：[../../execution/rules/business-run-invariants.ts](../../execution/rules/business-run-invariants.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../tasks/rules/graph-reducer.ts](../../tasks/rules/graph-reducer.ts)、[../../tasks/rules/dispatch-invariants.ts](../../tasks/rules/dispatch-invariants.ts)、[../../tasks/rules/dispatch-scope-invariants.ts](../../tasks/rules/dispatch-scope-invariants.ts)、[../../tasks/rules/workspace-member-invariants.ts](../../tasks/rules/workspace-member-invariants.ts)、[../../tasks/rules/module-ownership-invariants.ts](../../tasks/rules/module-ownership-invariants.ts)、[../../tasks/rules/effect-observation-invariants.ts](../../tasks/rules/effect-observation-invariants.ts)、[../../file-operations/rules/controlled-file-invariants.ts](../../file-operations/rules/controlled-file-invariants.ts)、[../../budget/rules/model-request-budget-invariants.ts](../../budget/rules/model-request-budget-invariants.ts)、[../rules/dispatch-storage.ts](../rules/dispatch-storage.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../tasks/rules/scope-view.ts](../../tasks/rules/scope-view.ts)、[../../tasks/rules/dispatch-scope.ts](../../tasks/rules/dispatch-scope.ts)、[../../tasks/rules/knowledge-source-invariants.ts](../../tasks/rules/knowledge-source-invariants.ts)、[../../tasks/rules/owner-execution-invariants.ts](../../tasks/rules/owner-execution-invariants.ts)、[../../team/rules/team-session.ts](../../team/rules/team-session.ts)。
+继承／实现来源：`DispatchStore` → [../rules/dispatch-storage.ts](../rules/dispatch-storage.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../budget/rules/model-request-budget-invariants.ts](../../budget/rules/model-request-budget-invariants.ts)、[../rules/dispatch-storage.ts](../rules/dispatch-storage.ts)、[../../execution/rules/business-run-invariants.ts](../../execution/rules/business-run-invariants.ts)、[../../file-operations/rules/controlled-file-invariants.ts](../../file-operations/rules/controlled-file-invariants.ts)、[../../tasks/rules/dispatch-invariants.ts](../../tasks/rules/dispatch-invariants.ts)、[../../tasks/rules/dispatch-scope-invariants.ts](../../tasks/rules/dispatch-scope-invariants.ts)、[../../tasks/rules/dispatch-scope.ts](../../tasks/rules/dispatch-scope.ts)、[../../tasks/rules/effect-observation-invariants.ts](../../tasks/rules/effect-observation-invariants.ts)、[../../tasks/rules/graph-reducer.ts](../../tasks/rules/graph-reducer.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../tasks/rules/knowledge-source-invariants.ts](../../tasks/rules/knowledge-source-invariants.ts)、[../../tasks/rules/module-ownership-invariants.ts](../../tasks/rules/module-ownership-invariants.ts)、[../../tasks/rules/owner-execution-invariants.ts](../../tasks/rules/owner-execution-invariants.ts)、[../../tasks/rules/scope-view.ts](../../tasks/rules/scope-view.ts)、[../../tasks/rules/workspace-member-invariants.ts](../../tasks/rules/workspace-member-invariants.ts)、[../../team/rules/team-session.ts](../../team/rules/team-session.ts)。
 
 ### request-budget-store.ts
 
@@ -375,7 +376,7 @@ class N_src_logic_dispatch_storage_request_budget_store_ts["request-budget-store
 }
 ```
 
-直接依赖：[../rules/dispatch-storage.ts](../rules/dispatch-storage.ts)、[../../budget/rules/model-request-budget-storage.ts](../../budget/rules/model-request-budget-storage.ts)。
+直接依赖：[../../budget/rules/model-request-budget-storage.ts](../../budget/rules/model-request-budget-storage.ts)、[../rules/dispatch-storage.ts](../rules/dispatch-storage.ts)。
 
 
 ## 子目录导航

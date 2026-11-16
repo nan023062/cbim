@@ -82,7 +82,7 @@ class N_src_view_diagnostics_WorkspaceDiagnostics_tsx_WorkspaceDiagnosticsProps[
 N_src_view_diagnostics_WorkspaceDiagnostics_tsx ..> N_src_view_diagnostics_WorkspaceDiagnostics_tsx_WorkspaceDiagnosticsProps : 声明
 ```
 
-直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[diagnostics.css](diagnostics.css)。
+直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[diagnostics.css](diagnostics.css)。
 
 ### 本目录调用边界
 

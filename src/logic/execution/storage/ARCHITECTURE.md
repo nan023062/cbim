@@ -77,7 +77,7 @@ class N_src_logic_execution_storage_business_runs_ts_AgentBusinessRuns["AgentBus
 N_src_logic_execution_storage_business_runs_ts ..> N_src_logic_execution_storage_business_runs_ts_AgentBusinessRuns : 声明
 ```
 
-直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../rules/business-run.ts](../rules/business-run.ts)、[../../agents/contracts.ts](../../agents/contracts.ts)、[../rules/types.ts](../rules/types.ts)、[../rules/business-run-invariants.ts](../rules/business-run-invariants.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../agents/contracts.ts](../../agents/contracts.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../rules/business-run-invariants.ts](../rules/business-run-invariants.ts)、[../rules/business-run.ts](../rules/business-run.ts)、[../rules/types.ts](../rules/types.ts)。
 
 ### run-journal.ts
 
@@ -101,7 +101,7 @@ class N_src_logic_execution_storage_run_journal_ts_RunJournal["RunJournal"] {
 N_src_logic_execution_storage_run_journal_ts ..> N_src_logic_execution_storage_run_journal_ts_RunJournal : 声明
 ```
 
-直接依赖：[../rules/types.ts](../rules/types.ts)、[../../tools/rules/types.ts](../../tools/rules/types.ts)、[../rules/member-run.ts](../rules/member-run.ts)、[../rules/input-source.ts](../rules/input-source.ts)、[../rules/conversation-binding.ts](../rules/conversation-binding.ts)、[../../../core/errors.ts](../../../core/errors.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../rules/conversation-binding.ts](../rules/conversation-binding.ts)、[../rules/input-source.ts](../rules/input-source.ts)、[../rules/member-run.ts](../rules/member-run.ts)、[../rules/types.ts](../rules/types.ts)、[../../tools/rules/types.ts](../../tools/rules/types.ts)。
 
 ### run-storage.ts
 
@@ -117,13 +117,14 @@ class N_src_logic_execution_storage_run_storage_ts_FileRunStorage["FileRunStorag
   +List()
 }
 N_src_logic_execution_storage_run_storage_ts ..> N_src_logic_execution_storage_run_storage_ts_FileRunStorage : 声明
-class N_src_logic_execution_storage_run_storage_ts_external_RunStorage["RunStorage (外部契约)"] {
-  <<external>>
+class N_src_logic_execution_storage_run_storage_ts_external_RunStorage["RunStorage (../rules/storage)"] {
+  <<boundary>>
 }
 N_src_logic_execution_storage_run_storage_ts_external_RunStorage <|.. N_src_logic_execution_storage_run_storage_ts_FileRunStorage
 ```
 
-直接依赖：[../rules/storage.ts](../rules/storage.ts)、[../../tasks/rules/types.ts](../../tasks/rules/types.ts)、[../ports/identity.ts](../ports/identity.ts)、[run-journal.ts](run-journal.ts)。
+继承／实现来源：`RunStorage` → [../rules/storage.ts](../rules/storage.ts)。
+直接依赖：[../ports/identity.ts](../ports/identity.ts)、[../rules/storage.ts](../rules/storage.ts)、[run-journal.ts](run-journal.ts)、[../../tasks/rules/types.ts](../../tasks/rules/types.ts)。
 
 ### 本目录调用边界
 

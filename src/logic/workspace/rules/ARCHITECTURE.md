@@ -400,7 +400,7 @@ class N_src_logic_workspace_rules_json_validation_schema_ts_JsonValidationOutcom
 N_src_logic_workspace_rules_json_validation_schema_ts ..> N_src_logic_workspace_rules_json_validation_schema_ts_JsonValidationOutcome : 声明
 ```
 
-直接依赖：[../../../core/json.ts](../../../core/json.ts)、[../../../core/errors.ts](../../../core/errors.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/json.ts](../../../core/json.ts)。
 
 ### knowledge-source-rules.ts
 
@@ -439,7 +439,7 @@ class N_src_logic_workspace_rules_knowledge_source_rules_ts_KnowledgeSourceRegis
 N_src_logic_workspace_rules_knowledge_source_rules_ts ..> N_src_logic_workspace_rules_knowledge_source_rules_ts_KnowledgeSourceRegistry : 声明
 ```
 
-直接依赖：[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[knowledge-source.ts](knowledge-source.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../core/utility/index.ts](../../../core/utility/index.ts)、[knowledge-source.ts](knowledge-source.ts)。
 
 ### knowledge-source.ts
 
@@ -620,7 +620,7 @@ class N_src_logic_workspace_rules_module_ownership_rules_ts_ModuleOwnershipRegis
 N_src_logic_workspace_rules_module_ownership_rules_ts ..> N_src_logic_workspace_rules_module_ownership_rules_ts_ModuleOwnershipRegistry : 声明
 ```
 
-直接依赖：[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../team/rules/workspace-member-rules.ts](../../team/rules/workspace-member-rules.ts)、[../../team/rules/workspace-member.ts](../../team/rules/workspace-member.ts)、[module-ownership.ts](module-ownership.ts)、[knowledge-source.ts](knowledge-source.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../team/rules/workspace-member-rules.ts](../../team/rules/workspace-member-rules.ts)、[../../team/rules/workspace-member.ts](../../team/rules/workspace-member.ts)、[knowledge-source.ts](knowledge-source.ts)、[module-ownership.ts](module-ownership.ts)。
 
 ### module-ownership-tool-policy.ts
 
@@ -702,7 +702,7 @@ class N_src_logic_workspace_rules_module_ownership_tools_ts_ModuleOwnershipTools
 N_src_logic_workspace_rules_module_ownership_tools_ts ..> N_src_logic_workspace_rules_module_ownership_tools_ts_ModuleOwnershipToolsPort : 声明
 ```
 
-直接依赖：[module-ownership.ts](module-ownership.ts)、[../../team/rules/workspace-member.ts](../../team/rules/workspace-member.ts)、[../../team/rules/owner-execution-discovery.ts](../../team/rules/owner-execution-discovery.ts)。
+直接依赖：[../../team/rules/owner-execution-discovery.ts](../../team/rules/owner-execution-discovery.ts)、[../../team/rules/workspace-member.ts](../../team/rules/workspace-member.ts)、[module-ownership.ts](module-ownership.ts)。
 
 ### module-ownership.ts
 
@@ -877,7 +877,7 @@ class N_src_logic_workspace_rules_module_ownership_ts_ModuleOwnershipDetail["Mod
 N_src_logic_workspace_rules_module_ownership_ts ..> N_src_logic_workspace_rules_module_ownership_ts_ModuleOwnershipDetail : 声明
 ```
 
-直接依赖：[knowledge-source.ts](knowledge-source.ts)、[../../team/rules/workspace-member.ts](../../team/rules/workspace-member.ts)。
+直接依赖：[../../team/rules/workspace-member.ts](../../team/rules/workspace-member.ts)、[knowledge-source.ts](knowledge-source.ts)。
 
 ### png-validation-schema.ts
 
@@ -1000,7 +1000,7 @@ class N_src_logic_workspace_rules_workflow_contract_ts_WorkflowCapabilities["Wor
 N_src_logic_workspace_rules_workflow_contract_ts ..> N_src_logic_workspace_rules_workflow_contract_ts_WorkflowCapabilities : 声明
 ```
 
-直接依赖：[code-check.ts](code-check.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/json.ts](../../../core/json.ts)、[json-validation-schema.ts](json-validation-schema.ts)、[csv-validation-schema.ts](csv-validation-schema.ts)、[png-validation-schema.ts](png-validation-schema.ts)、[artifact-scope.ts](artifact-scope.ts)、[execution-scope.ts](execution-scope.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/json.ts](../../../core/json.ts)、[artifact-scope.ts](artifact-scope.ts)、[code-check.ts](code-check.ts)、[csv-validation-schema.ts](csv-validation-schema.ts)、[execution-scope.ts](execution-scope.ts)、[json-validation-schema.ts](json-validation-schema.ts)、[png-validation-schema.ts](png-validation-schema.ts)。
 
 ### 本目录调用边界
 
@@ -1024,13 +1024,10 @@ class N_src_logic_workspace_rules_knowledge_source_ts["knowledge-source.ts"] {
 class N_src_logic_workspace_rules_module_ownership_rules_ts["module-ownership-rules.ts"] {
   <<module>>
 }
-class N_src_logic_workspace_rules_module_ownership_ts["module-ownership.ts"] {
-  <<module>>
-}
 N_src_logic_workspace_rules_code_check_ts ..> N_src_logic_workspace_rules_artifact_scope_ts : 导入依赖
 N_src_logic_workspace_rules_execution_scope_ts ..> N_src_logic_workspace_rules_artifact_scope_ts : 导入依赖
 N_src_logic_workspace_rules_knowledge_source_rules_ts ..> N_src_logic_workspace_rules_knowledge_source_ts : 导入依赖
-N_src_logic_workspace_rules_module_ownership_rules_ts ..> N_src_logic_workspace_rules_module_ownership_ts : 导入依赖
+N_src_logic_workspace_rules_module_ownership_rules_ts ..> N_src_logic_workspace_rules_knowledge_source_ts : 导入依赖
 ```
 
 ```mermaid
@@ -1038,47 +1035,24 @@ classDiagram
 class N_src_logic_workspace_rules_module_ownership_rules_ts["module-ownership-rules.ts"] {
   <<module>>
 }
-class N_src_logic_workspace_rules_knowledge_source_ts["knowledge-source.ts"] {
+class N_src_logic_workspace_rules_module_ownership_ts["module-ownership.ts"] {
   <<module>>
 }
 class N_src_logic_workspace_rules_module_ownership_tools_ts["module-ownership-tools.ts"] {
   <<module>>
 }
-class N_src_logic_workspace_rules_module_ownership_ts["module-ownership.ts"] {
+class N_src_logic_workspace_rules_knowledge_source_ts["knowledge-source.ts"] {
   <<module>>
 }
 class N_src_logic_workspace_rules_workflow_contract_ts["workflow-contract.ts"] {
-  <<module>>
-}
-class N_src_logic_workspace_rules_code_check_ts["code-check.ts"] {
-  <<module>>
-}
-N_src_logic_workspace_rules_module_ownership_rules_ts ..> N_src_logic_workspace_rules_knowledge_source_ts : 导入依赖
-N_src_logic_workspace_rules_module_ownership_tools_ts ..> N_src_logic_workspace_rules_module_ownership_ts : 导入依赖
-N_src_logic_workspace_rules_module_ownership_ts ..> N_src_logic_workspace_rules_knowledge_source_ts : 导入依赖
-N_src_logic_workspace_rules_workflow_contract_ts ..> N_src_logic_workspace_rules_code_check_ts : 导入依赖
-```
-
-```mermaid
-classDiagram
-class N_src_logic_workspace_rules_workflow_contract_ts["workflow-contract.ts"] {
-  <<module>>
-}
-class N_src_logic_workspace_rules_json_validation_schema_ts["json-validation-schema.ts"] {
-  <<module>>
-}
-class N_src_logic_workspace_rules_csv_validation_schema_ts["csv-validation-schema.ts"] {
-  <<module>>
-}
-class N_src_logic_workspace_rules_png_validation_schema_ts["png-validation-schema.ts"] {
   <<module>>
 }
 class N_src_logic_workspace_rules_artifact_scope_ts["artifact-scope.ts"] {
   <<module>>
 }
-N_src_logic_workspace_rules_workflow_contract_ts ..> N_src_logic_workspace_rules_json_validation_schema_ts : 导入依赖
-N_src_logic_workspace_rules_workflow_contract_ts ..> N_src_logic_workspace_rules_csv_validation_schema_ts : 导入依赖
-N_src_logic_workspace_rules_workflow_contract_ts ..> N_src_logic_workspace_rules_png_validation_schema_ts : 导入依赖
+N_src_logic_workspace_rules_module_ownership_rules_ts ..> N_src_logic_workspace_rules_module_ownership_ts : 导入依赖
+N_src_logic_workspace_rules_module_ownership_tools_ts ..> N_src_logic_workspace_rules_module_ownership_ts : 导入依赖
+N_src_logic_workspace_rules_module_ownership_ts ..> N_src_logic_workspace_rules_knowledge_source_ts : 导入依赖
 N_src_logic_workspace_rules_workflow_contract_ts ..> N_src_logic_workspace_rules_artifact_scope_ts : 导入依赖
 ```
 
@@ -1087,10 +1061,33 @@ classDiagram
 class N_src_logic_workspace_rules_workflow_contract_ts["workflow-contract.ts"] {
   <<module>>
 }
+class N_src_logic_workspace_rules_code_check_ts["code-check.ts"] {
+  <<module>>
+}
+class N_src_logic_workspace_rules_csv_validation_schema_ts["csv-validation-schema.ts"] {
+  <<module>>
+}
 class N_src_logic_workspace_rules_execution_scope_ts["execution-scope.ts"] {
   <<module>>
 }
+class N_src_logic_workspace_rules_json_validation_schema_ts["json-validation-schema.ts"] {
+  <<module>>
+}
+N_src_logic_workspace_rules_workflow_contract_ts ..> N_src_logic_workspace_rules_code_check_ts : 导入依赖
+N_src_logic_workspace_rules_workflow_contract_ts ..> N_src_logic_workspace_rules_csv_validation_schema_ts : 导入依赖
 N_src_logic_workspace_rules_workflow_contract_ts ..> N_src_logic_workspace_rules_execution_scope_ts : 导入依赖
+N_src_logic_workspace_rules_workflow_contract_ts ..> N_src_logic_workspace_rules_json_validation_schema_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_logic_workspace_rules_workflow_contract_ts["workflow-contract.ts"] {
+  <<module>>
+}
+class N_src_logic_workspace_rules_png_validation_schema_ts["png-validation-schema.ts"] {
+  <<module>>
+}
+N_src_logic_workspace_rules_workflow_contract_ts ..> N_src_logic_workspace_rules_png_validation_schema_ts : 导入依赖
 ```
 
 

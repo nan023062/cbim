@@ -90,7 +90,7 @@ class N_src_logic_governance_service_storage_module_governance_store_ts_ModuleGo
 N_src_logic_governance_service_storage_module_governance_store_ts ..> N_src_logic_governance_service_storage_module_governance_store_ts_ModuleGovernanceStore : 声明
 ```
 
-直接依赖：[../../../../core/platform/node/files/index.ts](../../../../core/platform/node/files/index.ts)、[../../../../core/platform/node/serialization.ts](../../../../core/platform/node/serialization.ts)、[../../../../core/errors.ts](../../../../core/errors.ts)、[../../rules/module-governance.ts](../../rules/module-governance.ts)、[../../rules/module-governance-rules.ts](../../rules/module-governance-rules.ts)、[../../rules/module-governance-feedback.ts](../../rules/module-governance-feedback.ts)。
+直接依赖：[../../../../core/errors.ts](../../../../core/errors.ts)、[../../../../core/platform/node/files/index.ts](../../../../core/platform/node/files/index.ts)、[../../../../core/platform/node/serialization.ts](../../../../core/platform/node/serialization.ts)、[../../rules/module-governance-feedback.ts](../../rules/module-governance-feedback.ts)、[../../rules/module-governance-rules.ts](../../rules/module-governance-rules.ts)、[../../rules/module-governance.ts](../../rules/module-governance.ts)。
 
 
 ## 子目录导航

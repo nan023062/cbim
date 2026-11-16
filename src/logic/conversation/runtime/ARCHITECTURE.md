@@ -26,7 +26,7 @@
 
 ##### 排队话题身份
 
-`pump` 将持久队列项 ID 传入可信启动钩子作为新周期身份，编辑、排序和运行登记不换 ID。原记录已受理但队列移除失败时，不能靠随机新周期把同项自动重复执行。等待、异常、停止与重启的原暂停屏障保留；普通发送不消费等待检查点。
+`Pump` 将持久队列项 ID 传入可信启动钩子作为新周期身份，编辑、排序和运行登记不换 ID。原记录已受理但队列移除失败时，不能靠随机新周期把同项自动重复执行。等待、异常、停止与重启的原暂停屏障保留；普通发送不消费等待检查点。
 
 <a id="contract-主会话直接执行与独立成员边界"></a>
 
@@ -78,7 +78,7 @@ note for mainAgentInstructions "BUG／需求分别读对应 Skill；缺操作工
 
 `main-agent.ts` 只声明内置调度角色 `cbim:main`，不再存在主角色的业务执行模式：
 
-- `mainAgentInstructions` 用于 Team 与无模式的历史主会话。该模式对业务只调度，先定位真实业务模块、岗位责任和 Team 能力，再派发给独立执行 Agent，最后核实实际返回；不实现、修改或运行验证业务产物。其他主会话的实例和图保持独立。
+- `mainAgentInstructions` 用于 Team 与无模式的历史主会话。该模式先定位真实业务模块和岗位责任：有效自定义岗位承担其绑定模块，未配置岗位的模块由主会话直接实现、修改和验证；配置失效时报告缺口，不按未配置处理。其他主会话的实例和图保持独立。
 - 主 Agent 同时是具备工程、架构和结构化思维的团队与技术管理者：核实现状、目标与约束，维护模块职责、依赖及岗位责任；按执行者、模块列表、目标与验收证据组织任务，区分依赖、风险和未知；审阅候选、安排返工或后续。架构演进按证据渐进，重大治理决策交人，不能靠自称管理者绕过权限或人工审核。
 - 团队与业务知识治理可由主 Agent 直接通过 `cbim_` 知识服务完成，不必先派业务执行任务；包括 Agent、Module、Skill、Workflow 的查询及授权增删改，岗位负责人使用独立受控服务。`read` 仅查询/预览，`ask` 写入经过当前审批，`execute` 仍须通过版本、Schema 和事务检查；不允许原生工具直接读写 `.cbim/`，知识提交成功不代表业务产物已经实现。
 - 新业务先查询模块负责岗位。`execution=main` 的模块由主 Agent 在当前会话执行，不提交 ownerSelection，也不派发给自己。`execution=member` 才把同组实际 `ownerSelection` 提交给目标计划与派发。自定义岗位的能力、模型或来源失效时说明缺口，不自动回退已退役的 `cbim:executor`，也不降级为主会话冒充该岗位。动态实例与静态 Agent、长期 memberId 分离。
@@ -166,9 +166,9 @@ Auto 与 Team 主指引都说明 cbim_dispatch_review：先核对具体候选、
 
 #### 指定话题补充与排空
 
-`interruptTopic` 是显式整话题补充入口，同一主根的相同在途请求共享 Promise，改变请求则冲突。主轮停止等待 runtime 和管理器真实清理后才交回检查点；原队列不被用作补充正文。随后复用 continueGoal 接续原 scope，来源带 interruptionId；一般等待接续仍要求 completed，只有可靠整话题暂停可接安全 cancelled，未知/失败不能续接。持久意图已存在时查询原回执，成功后不重复启动；主动 stop 的代次在暂停与重启前均检查。
+`InterruptTopic` 是显式整话题补充入口，同一主根的相同在途请求共享 Promise，改变请求则冲突。主轮停止等待 runtime 和管理器真实清理后才交回检查点；原队列不被用作补充正文。随后复用 ContinueGoal 接续原 scope，来源带 interruptionId；一般等待接续仍要求 completed，只有可靠整话题暂停可接安全 cancelled，未知/失败不能续接。持久意图已存在时查询原回执，成功后不重复启动；主动 stop 的代次在暂停与重启前均检查。
 
-活动话题的安全等待通过 `holdCollaboration` 占位，不把普通 pending 队列改写为 paused；文本和人工接续只解除本次话题的内存推进屏障，不批量恢复或暂停已有条目。原话题可靠完成后自动处理队首 pending。用户停止、未知结果、应用重启和既有 paused 队首仍要求明确继续，不能因话题完成而越过。
+活动话题的安全等待通过 `HoldCollaboration` 占位，不把普通 pending 队列改写为 paused；文本和人工接续只解除本次话题的内存推进屏障，不批量恢复或暂停已有条目。原话题可靠完成后自动处理队首 pending。用户停止、未知结果、应用重启和既有 paused 队首仍要求明确继续，不能因话题完成而越过。
 
 历史后续通过 enqueue 的 followupOf 明确关联，先核实同根已关闭话题再保存新队列身份。正文编辑不改变来源，真实 beforeRun 将该来源交给新 scope；不能借旧 queueInsert 把关联任务塞回原运行。已有异常/重启暂停和队首顺序仍保留。
 
@@ -448,7 +448,7 @@ class N_src_logic_conversation_runtime_execution_manager_ts_WorkspaceExecutionMa
 N_src_logic_conversation_runtime_execution_manager_ts ..> N_src_logic_conversation_runtime_execution_manager_ts_WorkspaceExecutionManager : 声明
 ```
 
-直接依赖：[message-queue.ts](message-queue.ts)、[approvals.ts](approvals.ts)、[questions.ts](questions.ts)、[main-agent.ts](main-agent.ts)、[../../engines/index.ts](../../engines/index.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../execution/ports/identity.ts](../../execution/ports/identity.ts)、[../../execution/rules/storage.ts](../../execution/rules/storage.ts)、[../../execution/rules/index.ts](../../execution/rules/index.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../execution/rules/input-source.ts](../../execution/rules/input-source.ts)、[../../execution/assembly/loop-engine.ts](../../execution/assembly/loop-engine.ts)、[../../execution/context/team-workflow.ts](../../execution/context/team-workflow.ts)、[../../knowledge/rules/read-models/index.ts](../../knowledge/rules/read-models/index.ts)、[../../tasks/rules/topic-interruption.ts](../../tasks/rules/topic-interruption.ts)、[../../tasks/rules/dispatch-scope.ts](../../tasks/rules/dispatch-scope.ts)、[../../tasks/rules/scope-continuation.ts](../../tasks/rules/scope-continuation.ts)、[../../tasks/rules/scope-active-input.ts](../../tasks/rules/scope-active-input.ts)、[../../tasks/rules/scope-active-input-rules.ts](../../tasks/rules/scope-active-input-rules.ts)、[../../tasks/rules/scope-goal.ts](../../tasks/rules/scope-goal.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../tasks/rules/scope-continuation-attachments.ts](../../tasks/rules/scope-continuation-attachments.ts)、[../../tasks/rules/scope-recovery.ts](../../tasks/rules/scope-recovery.ts)、[../../tasks/rules/fresh-context.ts](../../tasks/rules/fresh-context.ts)、[../../execution/admission/admission-wait.ts](../../execution/admission/admission-wait.ts)、[../../tasks/rules/scope-replan.ts](../../tasks/rules/scope-replan.ts)、[../../tasks/rules/human-continue.ts](../../tasks/rules/human-continue.ts)、[../../tasks/rules/queue.ts](../../tasks/rules/queue.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[approvals.ts](approvals.ts)、[main-agent.ts](main-agent.ts)、[message-queue.ts](message-queue.ts)、[questions.ts](questions.ts)、[../../engines/index.ts](../../engines/index.ts)、[../../execution/admission/admission-wait.ts](../../execution/admission/admission-wait.ts)、[../../execution/assembly/loop-engine.ts](../../execution/assembly/loop-engine.ts)、[../../execution/context/team-workflow.ts](../../execution/context/team-workflow.ts)、[../../execution/ports/identity.ts](../../execution/ports/identity.ts)、[../../execution/rules/index.ts](../../execution/rules/index.ts)、[../../execution/rules/input-source.ts](../../execution/rules/input-source.ts)、[../../execution/rules/storage.ts](../../execution/rules/storage.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../knowledge/rules/read-models/index.ts](../../knowledge/rules/read-models/index.ts)、[../../tasks/rules/dispatch-scope.ts](../../tasks/rules/dispatch-scope.ts)、[../../tasks/rules/fresh-context.ts](../../tasks/rules/fresh-context.ts)、[../../tasks/rules/human-continue.ts](../../tasks/rules/human-continue.ts)、[../../tasks/rules/queue.ts](../../tasks/rules/queue.ts)、[../../tasks/rules/scope-active-input-rules.ts](../../tasks/rules/scope-active-input-rules.ts)、[../../tasks/rules/scope-active-input.ts](../../tasks/rules/scope-active-input.ts)、[../../tasks/rules/scope-continuation-attachments.ts](../../tasks/rules/scope-continuation-attachments.ts)、[../../tasks/rules/scope-continuation.ts](../../tasks/rules/scope-continuation.ts)、[../../tasks/rules/scope-goal.ts](../../tasks/rules/scope-goal.ts)、[../../tasks/rules/scope-recovery.ts](../../tasks/rules/scope-recovery.ts)、[../../tasks/rules/scope-replan.ts](../../tasks/rules/scope-replan.ts)、[../../tasks/rules/topic-interruption.ts](../../tasks/rules/topic-interruption.ts)。
 
 ### main-agent.ts
 
@@ -552,22 +552,22 @@ classDiagram
 class N_src_logic_conversation_runtime_execution_manager_ts["execution-manager.ts"] {
   <<module>>
 }
-class N_src_logic_conversation_runtime_message_queue_ts["message-queue.ts"] {
-  <<module>>
-}
 class N_src_logic_conversation_runtime_approvals_ts["approvals.ts"] {
-  <<module>>
-}
-class N_src_logic_conversation_runtime_questions_ts["questions.ts"] {
   <<module>>
 }
 class N_src_logic_conversation_runtime_main_agent_ts["main-agent.ts"] {
   <<module>>
 }
-N_src_logic_conversation_runtime_execution_manager_ts ..> N_src_logic_conversation_runtime_message_queue_ts : 导入依赖
+class N_src_logic_conversation_runtime_message_queue_ts["message-queue.ts"] {
+  <<module>>
+}
+class N_src_logic_conversation_runtime_questions_ts["questions.ts"] {
+  <<module>>
+}
 N_src_logic_conversation_runtime_execution_manager_ts ..> N_src_logic_conversation_runtime_approvals_ts : 导入依赖
-N_src_logic_conversation_runtime_execution_manager_ts ..> N_src_logic_conversation_runtime_questions_ts : 导入依赖
 N_src_logic_conversation_runtime_execution_manager_ts ..> N_src_logic_conversation_runtime_main_agent_ts : 导入依赖
+N_src_logic_conversation_runtime_execution_manager_ts ..> N_src_logic_conversation_runtime_message_queue_ts : 导入依赖
+N_src_logic_conversation_runtime_execution_manager_ts ..> N_src_logic_conversation_runtime_questions_ts : 导入依赖
 ```
 
 

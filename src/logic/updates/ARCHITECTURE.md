@@ -65,6 +65,88 @@ N_src_logic_updates_service ..> N_src_logic_updates_engine_artifacts_ts : 导入
 - `service` → `contracts.ts`：导入。
 - `service` → `engine-artifacts.ts`：导入。
 
+### contracts.ts
+
+```mermaid
+classDiagram
+class N_src_logic_updates_contracts_ts["contracts.ts"] {
+  <<module>>
+}
+class N_src_logic_updates_contracts_ts_DesktopRelease["DesktopRelease"] {
+  <<interface>>
+  +version
+  +tag
+  +notes
+  +publishedAt
+  +delivery
+  +resourceVersion
+}
+N_src_logic_updates_contracts_ts ..> N_src_logic_updates_contracts_ts_DesktopRelease : 声明
+class N_src_logic_updates_contracts_ts_DesktopUpdateStatus["DesktopUpdateStatus"] {
+  <<interface>>
+  +currentVersion
+  +currentNotes
+  +enabled
+  +currentResourceVersion
+  +enginePreparations
+  +phase
+  +release
+  +progress
+  +checkedAt
+  +error
+}
+N_src_logic_updates_contracts_ts ..> N_src_logic_updates_contracts_ts_DesktopUpdateStatus : 声明
+class N_src_logic_updates_contracts_ts_ManagedEngineStatus["ManagedEngineStatus"] {
+  <<interface>>
+  +engine
+  +state
+  +version
+  +installedVersion
+  +progress
+  +error
+}
+N_src_logic_updates_contracts_ts ..> N_src_logic_updates_contracts_ts_ManagedEngineStatus : 声明
+```
+
+
+
+### engine-artifacts.ts
+
+```mermaid
+classDiagram
+class N_src_logic_updates_engine_artifacts_ts["engine-artifacts.ts"] {
+  <<module>>
+}
+class N_src_logic_updates_engine_artifacts_ts_EngineArtifact["EngineArtifact"] {
+  <<interface>>
+  +kind
+  +identity
+  +version
+  +nativeVersion
+  +protocol
+  +dependencies
+}
+N_src_logic_updates_engine_artifacts_ts ..> N_src_logic_updates_engine_artifacts_ts_EngineArtifact : 声明
+class N_src_logic_updates_engine_artifacts_ts_PreparedEngineArtifact["PreparedEngineArtifact"] {
+  <<interface>>
+  +root
+  +version
+  +entry
+  +identity
+  +adapter
+}
+N_src_logic_updates_engine_artifacts_ts ..> N_src_logic_updates_engine_artifacts_ts_PreparedEngineArtifact : 声明
+class N_src_logic_updates_engine_artifacts_ts_EngineArtifactsPort["EngineArtifactsPort"] {
+  <<interface>>
+  +List()
+  +Check()
+  +Prepare()
+}
+N_src_logic_updates_engine_artifacts_ts ..> N_src_logic_updates_engine_artifacts_ts_EngineArtifactsPort : 声明
+```
+
+
+
 ## 子目录导航
 
 - [service/](service/ARCHITECTURE.md)：独立桌面更新子系统：公开 Release 读取、稳定版本筛选、后台预下载与用户确认重启的状态机和 NSIS 适配均在此目录。只组合本域更新契约、获准的便携 Core utility 及系统/第三方库，不依赖普通应用服务或业务编排；仅明确安装时通过关闭回调等待主程序排空。安装包缓存独立于运行数据。 C/R 复用一个准备和显式应用状态机；Ed25519 清单、完整 ZIP 文件集合、不可变包缓存和激活日志属于冷壳可信机制。候选一旦接触数据，失败只能恢复，不能自动降级。

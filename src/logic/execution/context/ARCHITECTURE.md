@@ -45,7 +45,7 @@
 
 已实现 `resolveDispatchAgent` 与 `resolveDispatchModules`：同快照解析自定义执行角色、继承 Skill、多个真实模块及各自 Workflow。`cbim:main` 与已退役的 `cbim:executor` 不能作为独立成员准备或恢复；主会话直接工作不通过该业务任务入口。缺失关系抛出明确错误码；默认采用各模块 Workflow 清单首项，空清单明确标为 general，不继承父模块。`prepareDispatchExecutionContext` 在执行前冻结完整角色、模块与流程正文；`recheckDispatchExecutionContext` 在启动或恢复时核对知识和内置规范版本。旧 `prepareTeamTask` 继续处理原单模块执行。新任务模型见 [core/tasks](../../tasks/rules/ARCHITECTURE.md#contract)。
 
-`resolveConversationAgent` 只用于主会话图根与普通对话实例登记：要求快照有工作区身份和版本，返回固定内置主角色、Team 和主指引，不加载业务 Skill。因此结构校验失败时用户仍能与主助手诊断知识问题；正式 `createMember`、`dispatchTask`、执行冻结仍使用严格解析入口，不能借普通对话身份绕过知识、岗位责任或完整 Skill 校验。
+`resolveConversationAgent` 只用于主会话图根与普通对话实例登记：要求快照有工作区身份和版本，返回固定内置主角色、Team 和主指引，不加载业务 Skill。因此结构校验失败时用户仍能与主助手诊断知识问题；正式 `CreateMember`、`dispatchTask`、执行冻结仍使用严格解析入口，不能借普通对话身份绕过知识、岗位责任或完整 Skill 校验。
 
 <a id="contract-从分析到固定执行输入"></a>
 
@@ -96,7 +96,7 @@ ModuleSchema 的 authors 只记录来源，旧 maintenance 仅兼容读取。res
 
 角色的默认指引/Skill 与业务 Workflow 分开。调度职责是“核实现状、目标与约束 → 定位模块与团队 → 明确执行者、模块列表、目标、验收证据及依赖/风险 → 派发独立执行者 → 核实候选并安排返工或后续”；受控知识管理维护真实职责、依赖和责任关系，架构演进基于证据渐进，重大治理决策交人。执行职责是“理解已派发目标 → 自主探索 Team 与目标模块 → 实现/验证 → 报告候选或协作缺口”。个人配置与知识里的分工建议不能扩大本轮职责、模块边界、权限或改变验收基线；执行者需要范围外架构调整时报告主 Agent，不获得无限知识改写权。
 
-`memberExecutionPrompt` 组装当前成员、当前任务的完整指引，要求使用 `cbim_task_plan`、`cbim_task_inspect`、`cbim_task_step` 和 `cbim_delivery_prepare` 形成可核实交付候选。所有正式任务只能由独立执行角色运行，不能交给 `cbim:main`；不再次派工，超出模块或需他人协作时向主调度报告事实、所需能力和限制。原单模块 `loopInstructions` 采用同一职责边界。计划目标与验收原文、顺序保持派发值；步骤可以修订，目标、范围或验收变化则报告限制并等待重新派发。模型回合结束不等于业务验收。
+`memberExecutionPrompt` 组装当前成员、当前任务的完整指引，要求使用 `cbim_task_plan`、`cbim_task_inspect`、`cbim_task_step` 和 `cbim_delivery_prepare` 形成可核实交付候选。本入口准备的正式成员任务只能由独立执行角色运行，不能交给 `cbim:main`；不再次派工，超出模块或需他人协作时向主调度报告事实、所需能力和限制。原单模块 `loopInstructions` 采用同一职责边界。计划目标与验收原文、顺序保持派发值；步骤可以修订，目标、范围或验收变化则报告限制并等待重新派发。模型回合结束不等于业务验收。
 
 空闲、工作、等待和沟通状态来自可靠调度与运行/工具事件，不由模型正文自行修改。本阶段未提供执行成员的递归派发、等待或通信工具，不能把记录协作需求说成已经联系其他成员；提示词不能代替执行入口的工具门禁。
 
@@ -120,10 +120,10 @@ class DispatchContext["dispatch-context.ts"] {
   +resolveDispatchAgent(snapshot, agentId)
   +resolveDispatchModules(snapshot, moduleIds, workflowSelections)
 }
-class BusinessWorkspace { <<core boundary>> }
-class KnowledgeWorkspace { <<core boundary>> }
-class Builtins { <<core boundary>> }
-class PreparedDispatchKnowledge { <<core contract>> }
+class BusinessWorkspace["BusinessWorkspace · knowledge/rules/read-models/workspace.ts"] { <<boundary>> }
+class KnowledgeWorkspace["KnowledgeWorkspace · knowledge/rules/ports.ts"] { <<interface>> }
+class Builtins["Builtins · knowledge/rules/builtins.ts"] { <<boundary>> }
+class PreparedDispatchKnowledge { <<type>> }
 ExecutionContext ..> DispatchContext : 核对角色与已派发绑定
 ExecutionContext ..> BusinessWorkspace : 同快照完整模块正文
 ExecutionContext ..> KnowledgeWorkspace : 读取及复核版本
@@ -192,7 +192,7 @@ class N_src_logic_execution_context_automatic_context_ts["automatic-context.ts"]
 }
 ```
 
-直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../team/rules/automatic-execution.ts](../../team/rules/automatic-execution.ts)、[../../knowledge/rules/types.ts](../../knowledge/rules/types.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../tasks/rules/workflow-selection.ts](../../tasks/rules/workflow-selection.ts)、[dispatch-context.ts](dispatch-context.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[dispatch-context.ts](dispatch-context.ts)、[../../knowledge/rules/types.ts](../../knowledge/rules/types.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../tasks/rules/workflow-selection.ts](../../tasks/rules/workflow-selection.ts)、[../../team/rules/automatic-execution.ts](../../team/rules/automatic-execution.ts)。
 
 ### dispatch-context.ts
 
@@ -206,7 +206,7 @@ class N_src_logic_execution_context_dispatch_context_ts["dispatch-context.ts"] {
 }
 ```
 
-直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../knowledge/rules/read-models/index.ts](../../knowledge/rules/read-models/index.ts)、[../../knowledge/rules/types.ts](../../knowledge/rules/types.ts)、[../../team/rules/agent-types.ts](../../team/rules/agent-types.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../tasks/rules/workflow-selection.ts](../../tasks/rules/workflow-selection.ts)、[../../conversation/runtime/main-agent.ts](../../conversation/runtime/main-agent.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../conversation/runtime/main-agent.ts](../../conversation/runtime/main-agent.ts)、[../../knowledge/rules/read-models/index.ts](../../knowledge/rules/read-models/index.ts)、[../../knowledge/rules/types.ts](../../knowledge/rules/types.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../tasks/rules/workflow-selection.ts](../../tasks/rules/workflow-selection.ts)、[../../team/rules/agent-types.ts](../../team/rules/agent-types.ts)。
 
 ### execution-context.ts
 
@@ -232,7 +232,7 @@ class N_src_logic_execution_context_execution_context_ts_DispatchKnowledgeWorksp
 N_src_logic_execution_context_execution_context_ts ..> N_src_logic_execution_context_execution_context_ts_DispatchKnowledgeWorkspace : 声明
 ```
 
-直接依赖：[../../../core/utility/index.ts](../../../core/utility/index.ts)、[automatic-context.ts](automatic-context.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../knowledge/rules/read-models/index.ts](../../knowledge/rules/read-models/index.ts)、[../../knowledge/rules/builtins.ts](../../knowledge/rules/builtins.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../knowledge/rules/types.ts](../../knowledge/rules/types.ts)、[../../team/rules/workspace-member.ts](../../team/rules/workspace-member.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../tasks/rules/execution-context.ts](../../tasks/rules/execution-context.ts)、[dispatch-context.ts](dispatch-context.ts)、[../../conversation/runtime/main-agent.ts](../../conversation/runtime/main-agent.ts)、[../../workspace/rules/workflow-contract.ts](../../workspace/rules/workflow-contract.ts)、[../../tasks/rules/workflow-selection.ts](../../tasks/rules/workflow-selection.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../../conversation/runtime/main-agent.ts](../../conversation/runtime/main-agent.ts)、[automatic-context.ts](automatic-context.ts)、[dispatch-context.ts](dispatch-context.ts)、[../../knowledge/rules/builtins.ts](../../knowledge/rules/builtins.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../knowledge/rules/read-models/index.ts](../../knowledge/rules/read-models/index.ts)、[../../knowledge/rules/types.ts](../../knowledge/rules/types.ts)、[../../tasks/rules/execution-context.ts](../../tasks/rules/execution-context.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../tasks/rules/workflow-selection.ts](../../tasks/rules/workflow-selection.ts)、[../../team/rules/workspace-member.ts](../../team/rules/workspace-member.ts)、[../../workspace/rules/workflow-contract.ts](../../workspace/rules/workflow-contract.ts)。
 
 ### team-workflow.ts
 
@@ -257,7 +257,7 @@ class N_src_logic_execution_context_team_workflow_ts_TeamTaskInput["TeamTaskInpu
 N_src_logic_execution_context_team_workflow_ts ..> N_src_logic_execution_context_team_workflow_ts_TeamTaskInput : 声明
 ```
 
-直接依赖：[../../knowledge/rules/knowledge-queries.ts](../../knowledge/rules/knowledge-queries.ts)、[../../knowledge/rules/builtins.ts](../../knowledge/rules/builtins.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../rules/index.ts](../rules/index.ts)、[../../workspace/rules/workflow-contract.ts](../../workspace/rules/workflow-contract.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../rules/index.ts](../rules/index.ts)、[../../knowledge/rules/builtins.ts](../../knowledge/rules/builtins.ts)、[../../knowledge/rules/knowledge-queries.ts](../../knowledge/rules/knowledge-queries.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../workspace/rules/workflow-contract.ts](../../workspace/rules/workflow-contract.ts)。
 
 ### 本目录调用边界
 

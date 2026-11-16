@@ -91,7 +91,7 @@ class N_src_logic_budget_rules_model_request_budget_invariants_ts["model-request
 }
 ```
 
-直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[model-request-configuration.ts](model-request-configuration.ts)、[../../team/rules/workspace-member-rules.ts](../../team/rules/workspace-member-rules.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[model-request-budget.ts](model-request-budget.ts)、[model-request-budget-rules.ts](model-request-budget-rules.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[model-request-budget-rules.ts](model-request-budget-rules.ts)、[model-request-budget.ts](model-request-budget.ts)、[model-request-configuration.ts](model-request-configuration.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../../team/rules/workspace-member-rules.ts](../../team/rules/workspace-member-rules.ts)。
 
 ### model-request-budget-rules.ts
 
@@ -110,7 +110,7 @@ class N_src_logic_budget_rules_model_request_budget_rules_ts["model-request-budg
 }
 ```
 
-直接依赖：[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[scope-budget.ts](scope-budget.ts)、[model-request-budget.ts](model-request-budget.ts)。
+直接依赖：[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[model-request-budget.ts](model-request-budget.ts)、[scope-budget.ts](scope-budget.ts)。
 
 ### model-request-budget-storage.ts
 
@@ -161,7 +161,7 @@ class N_src_logic_budget_rules_model_request_budget_storage_ts_RequestBudgetAdmi
 N_src_logic_budget_rules_model_request_budget_storage_ts ..> N_src_logic_budget_rules_model_request_budget_storage_ts_RequestBudgetAdmission : 声明
 ```
 
-直接依赖：[scope-budget.ts](scope-budget.ts)、[model-request-budget.ts](model-request-budget.ts)。
+直接依赖：[model-request-budget.ts](model-request-budget.ts)、[scope-budget.ts](scope-budget.ts)。
 
 ### model-request-budget.ts
 
@@ -265,7 +265,7 @@ class N_src_logic_budget_rules_model_request_configuration_ts_RequestBudgetExecu
 N_src_logic_budget_rules_model_request_configuration_ts ..> N_src_logic_budget_rules_model_request_configuration_ts_RequestBudgetExecutionModel : 声明
 ```
 
-直接依赖：[../../engines/index.ts](../../engines/index.ts)、[../../team/rules/workspace-member-rules.ts](../../team/rules/workspace-member-rules.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[model-request-budget.ts](model-request-budget.ts)。
+直接依赖：[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[model-request-budget.ts](model-request-budget.ts)、[../../engines/index.ts](../../engines/index.ts)、[../../team/rules/workspace-member-rules.ts](../../team/rules/workspace-member-rules.ts)。
 
 ### request-budget.ts
 
@@ -309,7 +309,7 @@ class N_src_logic_budget_rules_scope_budget_invariants_ts["scope-budget-invarian
 }
 ```
 
-直接依赖：[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../../tasks/rules/dispatch-scope.ts](../../tasks/rules/dispatch-scope.ts)、[scope-budget.ts](scope-budget.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/utility/index.ts](../../../core/utility/index.ts)、[scope-budget.ts](scope-budget.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../../tasks/rules/dispatch-scope.ts](../../tasks/rules/dispatch-scope.ts)。
 
 ### scope-budget.ts
 
@@ -436,22 +436,19 @@ classDiagram
 class N_src_logic_budget_rules_model_request_budget_invariants_ts["model-request-budget-invariants.ts"] {
   <<module>>
 }
-class N_src_logic_budget_rules_model_request_configuration_ts["model-request-configuration.ts"] {
+class N_src_logic_budget_rules_model_request_budget_rules_ts["model-request-budget-rules.ts"] {
   <<module>>
 }
 class N_src_logic_budget_rules_model_request_budget_ts["model-request-budget.ts"] {
   <<module>>
 }
-class N_src_logic_budget_rules_model_request_budget_rules_ts["model-request-budget-rules.ts"] {
+class N_src_logic_budget_rules_model_request_configuration_ts["model-request-configuration.ts"] {
   <<module>>
 }
-class N_src_logic_budget_rules_scope_budget_ts["scope-budget.ts"] {
-  <<module>>
-}
-N_src_logic_budget_rules_model_request_budget_invariants_ts ..> N_src_logic_budget_rules_model_request_configuration_ts : 导入依赖
-N_src_logic_budget_rules_model_request_budget_invariants_ts ..> N_src_logic_budget_rules_model_request_budget_ts : 导入依赖
 N_src_logic_budget_rules_model_request_budget_invariants_ts ..> N_src_logic_budget_rules_model_request_budget_rules_ts : 导入依赖
-N_src_logic_budget_rules_model_request_budget_rules_ts ..> N_src_logic_budget_rules_scope_budget_ts : 导入依赖
+N_src_logic_budget_rules_model_request_budget_invariants_ts ..> N_src_logic_budget_rules_model_request_budget_ts : 导入依赖
+N_src_logic_budget_rules_model_request_budget_invariants_ts ..> N_src_logic_budget_rules_model_request_configuration_ts : 导入依赖
+N_src_logic_budget_rules_model_request_budget_rules_ts ..> N_src_logic_budget_rules_model_request_budget_ts : 导入依赖
 ```
 
 ```mermaid
@@ -459,21 +456,21 @@ classDiagram
 class N_src_logic_budget_rules_model_request_budget_rules_ts["model-request-budget-rules.ts"] {
   <<module>>
 }
-class N_src_logic_budget_rules_model_request_budget_ts["model-request-budget.ts"] {
+class N_src_logic_budget_rules_scope_budget_ts["scope-budget.ts"] {
   <<module>>
 }
 class N_src_logic_budget_rules_model_request_budget_storage_ts["model-request-budget-storage.ts"] {
   <<module>>
 }
-class N_src_logic_budget_rules_scope_budget_ts["scope-budget.ts"] {
+class N_src_logic_budget_rules_model_request_budget_ts["model-request-budget.ts"] {
   <<module>>
 }
 class N_src_logic_budget_rules_model_request_configuration_ts["model-request-configuration.ts"] {
   <<module>>
 }
-N_src_logic_budget_rules_model_request_budget_rules_ts ..> N_src_logic_budget_rules_model_request_budget_ts : 导入依赖
-N_src_logic_budget_rules_model_request_budget_storage_ts ..> N_src_logic_budget_rules_scope_budget_ts : 导入依赖
+N_src_logic_budget_rules_model_request_budget_rules_ts ..> N_src_logic_budget_rules_scope_budget_ts : 导入依赖
 N_src_logic_budget_rules_model_request_budget_storage_ts ..> N_src_logic_budget_rules_model_request_budget_ts : 导入依赖
+N_src_logic_budget_rules_model_request_budget_storage_ts ..> N_src_logic_budget_rules_scope_budget_ts : 导入依赖
 N_src_logic_budget_rules_model_request_configuration_ts ..> N_src_logic_budget_rules_model_request_budget_ts : 导入依赖
 ```
 

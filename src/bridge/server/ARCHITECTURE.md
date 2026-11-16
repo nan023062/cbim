@@ -27,7 +27,7 @@
 
 #### Application 的设计意图
 
-[application.ts](application.ts) 中的 `Application` 是 Logic Application 的实例适配子类，只增加 `dispatch`，沿用父类的全部业务状态、构造和关闭行为。继承用于让桌面调用方继续持有同一个应用对象，不通过重载生命周期建立第二份服务集合。
+[application.ts](application.ts) 中的 `Application` 是 Logic Application 的实例适配子类，只增加 `Dispatch`，沿用父类的全部业务状态、构造和关闭行为。继承用于让桌面调用方继续持有同一个应用对象，不通过重载生命周期建立第二份服务集合。
 
 三个连续声明分别是已知操作的配对响应签名、动态字符串的 unknown 响应签名和实际分派实现。全部请求委托 [IPC 分派器](ipc/dispatch.ts) 做解析及业务路由；解析或业务异常原样传播，适配器不授予额外权限。新增操作修改通信契约及对应处理器，普通业务服务不依赖本子类。
 
@@ -84,19 +84,47 @@ class N_src_bridge_server_main_ts["main.ts"] {
   <<module>>
 }
 N_src_bridge_server_application_ts ..> N_src_bridge_server_ipc : 导入依赖
+N_src_bridge_server_bootstrap ..> N_src_bridge_server_main_ts : 导入依赖
 N_src_bridge_server_commands ..> N_src_bridge_server_application_ts : 导入依赖
-N_src_bridge_server_main_ts ..> N_src_bridge_server_platform : 导入依赖
 N_src_bridge_server_main_ts ..> N_src_bridge_server_application_ts : 导入依赖
+N_src_bridge_server_main_ts ..> N_src_bridge_server_platform : 导入依赖
 ```
 
 各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
 
 - `application.ts` → `ipc`：导入。
+- `bootstrap` → `main.ts`：导入。
 - `commands` → `application.ts`：导入。
-- `main.ts` → `platform`：导入。
 - `main.ts` → `application.ts`：导入。
+- `main.ts` → `platform`：导入。
 
-### main.ts 公开入口
+### application.ts
+
+```mermaid
+classDiagram
+class N_src_bridge_server_application_ts["application.ts"] {
+  <<module>>
+}
+class N_src_bridge_server_application_ts_Application["Application"] {
+  +Dispatch()
+}
+N_src_bridge_server_application_ts ..> N_src_bridge_server_application_ts_Application : 声明
+class N_src_bridge_server_application_ts_external_ApplicationRuntime["ApplicationRuntime (../../logic/application/application)"] {
+  <<boundary>>
+}
+N_src_bridge_server_application_ts_external_ApplicationRuntime <|-- N_src_bridge_server_application_ts_Application
+class N_src_bridge_server_application_ts_external_ApplicationServices["ApplicationServices (./ipc/services)"] {
+  <<boundary>>
+}
+N_src_bridge_server_application_ts_external_ApplicationServices <|.. N_src_bridge_server_application_ts_Application
+```
+
+继承／实现来源：`ApplicationRuntime` → [../../logic/application/application.ts](../../logic/application/application.ts)。
+继承／实现来源：`ApplicationServices` → [ipc/services.ts](ipc/services.ts)。
+直接依赖：[../contracts/ipc-call.ts](../contracts/ipc-call.ts)、[ipc/dispatch.ts](ipc/dispatch.ts)、[ipc/services.ts](ipc/services.ts)、[../../logic/application/application.ts](../../logic/application/application.ts)。
+
+
+### main.ts
 
 ```mermaid
 classDiagram
@@ -105,6 +133,8 @@ class N_src_bridge_server_main_ts["main.ts"] {
   +startDesktop()
 }
 ```
+
+直接依赖：[../contracts/ipc-call.ts](../contracts/ipc-call.ts)、[application.ts](application.ts)、[platform/controlled-file-transport.ts](platform/controlled-file-transport.ts)、[../../core/platform/electron/secrets.ts](../../core/platform/electron/secrets.ts)、[../../core/platform/electron/web-reader.ts](../../core/platform/electron/web-reader.ts)、[../../core/platform/node/serialization.ts](../../core/platform/node/serialization.ts)、[../../logic/materials/service/chat-inputs.ts](../../logic/materials/service/chat-inputs.ts)、[../../logic/terminal/service/terminal.ts](../../logic/terminal/service/terminal.ts)、[../../logic/tools/runtime/knowledge-tools.ts](../../logic/tools/runtime/knowledge-tools.ts)、[../../logic/updates/service/desktop-releases.ts](../../logic/updates/service/desktop-releases.ts)、[../../logic/updates/service/desktop-updates.ts](../../logic/updates/service/desktop-updates.ts)、[../../logic/updates/service/nsis-updater.ts](../../logic/updates/service/nsis-updater.ts)、[../../logic/updates/service/restart-profile.ts](../../logic/updates/service/restart-profile.ts)、[../../logic/updates/service/runtime-host.ts](../../logic/updates/service/runtime-host.ts)、[../../logic/workspace/service/paths.ts](../../logic/workspace/service/paths.ts)。
 
 
 ## 子目录导航

@@ -133,7 +133,7 @@ class N_src_view_shell_App_tsx["App.tsx"] {
 }
 ```
 
-直接依赖：[../components/DeferredView.tsx](../components/DeferredView.tsx)、[../components/InterfaceHelp.tsx](../components/InterfaceHelp.tsx)、[../../bridge/contracts/ipc-call.ts](../../bridge/contracts/ipc-call.ts)、[../components/sidebar.css](../components/sidebar.css)、[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../settings/useAppearance.ts](../settings/useAppearance.ts)、[../settings/settings-sections.ts](../settings/settings-sections.ts)、[../updates/SoftwareUpdates.tsx](../updates/SoftwareUpdates.tsx)、[../updates/useSoftwareUpdates.ts](../updates/useSoftwareUpdates.ts)、[../conversation/conversation-activity.ts](../conversation/conversation-activity.ts)、[WorkspaceList.tsx](WorkspaceList.tsx)、[ExtensionArea.tsx](ExtensionArea.tsx)、[../../bridge/contracts/resources.ts](../../bridge/contracts/resources.ts)、[tabs.ts](tabs.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../components/BrandMark.tsx](../components/BrandMark.tsx)、[../components/Empty.tsx](../components/Empty.tsx)、[../execution-view/team-conversations.ts](../execution-view/team-conversations.ts)、[UserMenu.tsx](UserMenu.tsx)、[useSidebarWidth.ts](useSidebarWidth.ts)、[../runtime/runtime-view-state.ts](../runtime/runtime-view-state.ts)、[runtime-navigation.ts](runtime-navigation.ts)、[../resources/ResourceRepositoryView.tsx](../resources/ResourceRepositoryView.tsx)、[../settings/SettingsView.tsx](../settings/SettingsView.tsx)、[../conversation/Conversation.tsx](../conversation/Conversation.tsx)、[../runtime/RuntimeOverview.tsx](../runtime/RuntimeOverview.tsx)。
+直接依赖：[../../bridge/contracts/ipc-call.ts](../../bridge/contracts/ipc-call.ts)、[../../bridge/contracts/resources.ts](../../bridge/contracts/resources.ts)、[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../components/BrandMark.tsx](../components/BrandMark.tsx)、[../components/DeferredView.tsx](../components/DeferredView.tsx)、[../components/Empty.tsx](../components/Empty.tsx)、[../components/Icon.tsx](../components/Icon.tsx)、[../components/InterfaceHelp.tsx](../components/InterfaceHelp.tsx)、[../components/sidebar.css](../components/sidebar.css)、[../conversation/Conversation.tsx](../conversation/Conversation.tsx)、[../conversation/conversation-activity.ts](../conversation/conversation-activity.ts)、[../execution-view/team-conversations.ts](../execution-view/team-conversations.ts)、[../resources/ResourceRepositoryView.tsx](../resources/ResourceRepositoryView.tsx)、[../runtime/RuntimeOverview.tsx](../runtime/RuntimeOverview.tsx)、[../runtime/runtime-view-state.ts](../runtime/runtime-view-state.ts)、[../settings/SettingsView.tsx](../settings/SettingsView.tsx)、[../settings/settings-sections.ts](../settings/settings-sections.ts)、[../settings/useAppearance.ts](../settings/useAppearance.ts)、[ExtensionArea.tsx](ExtensionArea.tsx)、[UserMenu.tsx](UserMenu.tsx)、[WorkspaceList.tsx](WorkspaceList.tsx)、[runtime-navigation.ts](runtime-navigation.ts)、[tabs.ts](tabs.ts)、[useSidebarWidth.ts](useSidebarWidth.ts)、[../updates/SoftwareUpdates.tsx](../updates/SoftwareUpdates.tsx)、[../updates/useSoftwareUpdates.ts](../updates/useSoftwareUpdates.ts)。
 
 ### ExtensionArea.tsx
 
@@ -163,7 +163,7 @@ class N_src_view_shell_ExtensionArea_tsx_Panel["Panel"] {
 N_src_view_shell_ExtensionArea_tsx ..> N_src_view_shell_ExtensionArea_tsx_Panel : 声明
 ```
 
-直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../components/DeferredView.tsx](../components/DeferredView.tsx)、[../components/Icon.tsx](../components/Icon.tsx)、[extensions.css](extensions.css)、[../team/TeamView.tsx](../team/TeamView.tsx)、[../workspace/WorkspaceView.tsx](../workspace/WorkspaceView.tsx)、[../automation/AutomationView.tsx](../automation/AutomationView.tsx)、[../diagnostics/WorkspaceDiagnostics.tsx](../diagnostics/WorkspaceDiagnostics.tsx)。
+直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../automation/AutomationView.tsx](../automation/AutomationView.tsx)、[../components/DeferredView.tsx](../components/DeferredView.tsx)、[../components/Icon.tsx](../components/Icon.tsx)、[../diagnostics/WorkspaceDiagnostics.tsx](../diagnostics/WorkspaceDiagnostics.tsx)、[extensions.css](extensions.css)、[../team/TeamView.tsx](../team/TeamView.tsx)、[../workspace/WorkspaceView.tsx](../workspace/WorkspaceView.tsx)。
 
 ### extensions.css
 
@@ -196,8 +196,8 @@ class N_src_view_shell_runtime_navigation_ts_RuntimeNavigationRequest["RuntimeNa
   +instanceId
 }
 N_src_view_shell_runtime_navigation_ts ..> N_src_view_shell_runtime_navigation_ts_RuntimeNavigationRequest : 声明
-class N_src_view_shell_runtime_navigation_ts_external_RuntimeNavigationTarget["RuntimeNavigationTarget (外部契约)"] {
-  <<external>>
+class N_src_view_shell_runtime_navigation_ts_external_RuntimeNavigationTarget["RuntimeNavigationTarget (../runtime/runtime-view-state)"] {
+  <<boundary>>
 }
 N_src_view_shell_runtime_navigation_ts_external_RuntimeNavigationTarget <|-- N_src_view_shell_runtime_navigation_ts_RuntimeNavigationRequest
 class N_src_view_shell_runtime_navigation_ts_VerifiedRuntimeNavigation["VerifiedRuntimeNavigation"] {
@@ -236,7 +236,8 @@ class N_src_view_shell_runtime_navigation_ts_RuntimeNavigationResolver["RuntimeN
 N_src_view_shell_runtime_navigation_ts ..> N_src_view_shell_runtime_navigation_ts_RuntimeNavigationResolver : 声明
 ```
 
-直接依赖：[../foundations/utility/index.ts](../foundations/utility/index.ts)、[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[../runtime/runtime-view-state.ts](../runtime/runtime-view-state.ts)、[tabs.ts](tabs.ts)。
+继承／实现来源：`RuntimeNavigationTarget` → [../runtime/runtime-view-state.ts](../runtime/runtime-view-state.ts)。
+直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../foundations/utility/index.ts](../foundations/utility/index.ts)、[../runtime/runtime-view-state.ts](../runtime/runtime-view-state.ts)、[tabs.ts](tabs.ts)。
 
 ### shell.css
 
@@ -342,7 +343,7 @@ class N_src_view_shell_WorkspaceList_tsx["WorkspaceList.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[tabs.ts](tabs.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../conversation/ConversationEntries.tsx](../conversation/ConversationEntries.tsx)、[../execution-view/team-conversations.ts](../execution-view/team-conversations.ts)、[../components/state-labels.ts](../components/state-labels.ts)、[workspace-list.css](workspace-list.css)。
+直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../components/state-labels.ts](../components/state-labels.ts)、[../conversation/ConversationEntries.tsx](../conversation/ConversationEntries.tsx)、[../execution-view/team-conversations.ts](../execution-view/team-conversations.ts)、[tabs.ts](tabs.ts)、[workspace-list.css](workspace-list.css)。
 
 ### 本目录调用边界
 
@@ -351,22 +352,22 @@ classDiagram
 class N_src_view_shell_App_tsx["App.tsx"] {
   <<component>>
 }
-class N_src_view_shell_WorkspaceList_tsx["WorkspaceList.tsx"] {
-  <<component>>
-}
 class N_src_view_shell_ExtensionArea_tsx["ExtensionArea.tsx"] {
   <<component>>
-}
-class N_src_view_shell_tabs_ts["tabs.ts"] {
-  <<module>>
 }
 class N_src_view_shell_UserMenu_tsx["UserMenu.tsx"] {
   <<component>>
 }
-N_src_view_shell_App_tsx ..> N_src_view_shell_WorkspaceList_tsx : 导入依赖
+class N_src_view_shell_WorkspaceList_tsx["WorkspaceList.tsx"] {
+  <<component>>
+}
+class N_src_view_shell_runtime_navigation_ts["runtime-navigation.ts"] {
+  <<module>>
+}
 N_src_view_shell_App_tsx ..> N_src_view_shell_ExtensionArea_tsx : 导入依赖
-N_src_view_shell_App_tsx ..> N_src_view_shell_tabs_ts : 导入依赖
 N_src_view_shell_App_tsx ..> N_src_view_shell_UserMenu_tsx : 导入依赖
+N_src_view_shell_App_tsx ..> N_src_view_shell_WorkspaceList_tsx : 导入依赖
+N_src_view_shell_App_tsx ..> N_src_view_shell_runtime_navigation_ts : 导入依赖
 ```
 
 ```mermaid
@@ -374,10 +375,10 @@ classDiagram
 class N_src_view_shell_App_tsx["App.tsx"] {
   <<component>>
 }
-class N_src_view_shell_useSidebarWidth_ts["useSidebarWidth.ts"] {
+class N_src_view_shell_tabs_ts["tabs.ts"] {
   <<module>>
 }
-class N_src_view_shell_runtime_navigation_ts["runtime-navigation.ts"] {
+class N_src_view_shell_useSidebarWidth_ts["useSidebarWidth.ts"] {
   <<module>>
 }
 class N_src_view_shell_ExtensionArea_tsx["ExtensionArea.tsx"] {
@@ -386,11 +387,11 @@ class N_src_view_shell_ExtensionArea_tsx["ExtensionArea.tsx"] {
 class N_src_view_shell_extensions_css["extensions.css"] {
   <<stylesheet>>
 }
-class N_src_view_shell_tabs_ts["tabs.ts"] {
+class N_src_view_shell_runtime_navigation_ts["runtime-navigation.ts"] {
   <<module>>
 }
+N_src_view_shell_App_tsx ..> N_src_view_shell_tabs_ts : 导入依赖
 N_src_view_shell_App_tsx ..> N_src_view_shell_useSidebarWidth_ts : 导入依赖
-N_src_view_shell_App_tsx ..> N_src_view_shell_runtime_navigation_ts : 导入依赖
 N_src_view_shell_ExtensionArea_tsx ..> N_src_view_shell_extensions_css : 导入依赖
 N_src_view_shell_runtime_navigation_ts ..> N_src_view_shell_tabs_ts : 导入依赖
 ```

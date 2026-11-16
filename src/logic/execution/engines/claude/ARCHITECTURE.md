@@ -148,8 +148,8 @@ class N_src_logic_execution_engines_claude_engine_ts_ClaudeCodeEngine["ClaudeCod
   -nativeId
 }
 N_src_logic_execution_engines_claude_engine_ts ..> N_src_logic_execution_engines_claude_engine_ts_ClaudeCodeEngine : 声明
-class N_src_logic_execution_engines_claude_engine_ts_external_AgentEngine["AgentEngine (外部契约)"] {
-  <<external>>
+class N_src_logic_execution_engines_claude_engine_ts_external_AgentEngine["AgentEngine (../../rules/types)"] {
+  <<boundary>>
 }
 N_src_logic_execution_engines_claude_engine_ts_external_AgentEngine <|.. N_src_logic_execution_engines_claude_engine_ts_ClaudeCodeEngine
 ```
@@ -173,13 +173,14 @@ class N_src_logic_execution_engines_claude_engine_ts_ClaudeCodeEngine["ClaudeCod
   -Consume()
 }
 N_src_logic_execution_engines_claude_engine_ts ..> N_src_logic_execution_engines_claude_engine_ts_ClaudeCodeEngine : 声明
-class N_src_logic_execution_engines_claude_engine_ts_external_AgentEngine["AgentEngine (外部契约)"] {
-  <<external>>
+class N_src_logic_execution_engines_claude_engine_ts_external_AgentEngine["AgentEngine (../../rules/types)"] {
+  <<boundary>>
 }
 N_src_logic_execution_engines_claude_engine_ts_external_AgentEngine <|.. N_src_logic_execution_engines_claude_engine_ts_ClaudeCodeEngine
 ```
 
-直接依赖：[../../../../core/utility/index.ts](../../../../core/utility/index.ts)、[../run-inactivity.ts](../run-inactivity.ts)、[../../rules/types.ts](../../rules/types.ts)、[../../../engines/index.ts](../../../engines/index.ts)、[../../../budget/rules/request-budget.ts](../../../budget/rules/request-budget.ts)、[../../rules/engine-tools.ts](../../rules/engine-tools.ts)、[../../rules/engine-instructions.ts](../../rules/engine-instructions.ts)、[../transport/request-budget-transport.ts](../transport/request-budget-transport.ts)、[sdk.ts](sdk.ts)、[../../rules/engine-runtime.ts](../../rules/engine-runtime.ts)、[tools.ts](tools.ts)。
+继承／实现来源：`AgentEngine` → [../../rules/types.ts](../../rules/types.ts)。
+直接依赖：[../../../../core/utility/index.ts](../../../../core/utility/index.ts)、[../../../budget/rules/request-budget.ts](../../../budget/rules/request-budget.ts)、[../../../engines/index.ts](../../../engines/index.ts)、[sdk.ts](sdk.ts)、[tools.ts](tools.ts)、[../run-inactivity.ts](../run-inactivity.ts)、[../transport/request-budget-transport.ts](../transport/request-budget-transport.ts)、[../../rules/engine-instructions.ts](../../rules/engine-instructions.ts)、[../../rules/engine-runtime.ts](../../rules/engine-runtime.ts)、[../../rules/engine-tools.ts](../../rules/engine-tools.ts)、[../../rules/types.ts](../../rules/types.ts)。
 
 ### package.ts
 
@@ -189,7 +190,7 @@ class N_src_logic_execution_engines_claude_package_ts["package.ts"] {
   <<module>>
 }
 ```
-直接依赖：[engine.ts](engine.ts)、[../../../engines/index.ts](../../../engines/index.ts)、[../../rules/engine-adapter.ts](../../rules/engine-adapter.ts)。
+直接依赖：[../../../engines/index.ts](../../../engines/index.ts)、[engine.ts](engine.ts)、[../../rules/engine-adapter.ts](../../rules/engine-adapter.ts)。
 
 ### sdk.ts
 
@@ -215,7 +216,7 @@ class N_src_logic_execution_engines_claude_tools_ts["tools.ts"] {
 }
 ```
 
-直接依赖：[../../../tools/rules/outcome.ts](../../../tools/rules/outcome.ts)、[../../rules/types.ts](../../rules/types.ts)、[../../rules/engine-tools.ts](../../rules/engine-tools.ts)。
+直接依赖：[../../rules/engine-tools.ts](../../rules/engine-tools.ts)、[../../rules/types.ts](../../rules/types.ts)、[../../../tools/rules/outcome.ts](../../../tools/rules/outcome.ts)。
 
 ### 本目录调用边界
 

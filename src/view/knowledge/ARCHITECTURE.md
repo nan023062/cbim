@@ -74,7 +74,7 @@ ArchitectureEditor 读取 models.list 提供引擎/模型选择，提交预览�
 
 ##### Agent 引擎与模型
 
-ArchitectureEditor 使用与主 Agent 相同的 AgentModelSelection 和 providerSupportsEngine，三引擎固定存在，模型来自统一启用目录。提交前按该模型的主接口、预设或自定义接口核实兼容性和型号范围；自定义 Agent 的能力与 runtime 仍一次知识事务提交。
+ArchitectureEditor 使用与主 Agent 相同的 AgentModelSelection 和 providerSupportsEngine，引擎选项来自官方静态目录，模型来自统一启用目录。提交前按该模型的主接口、预设或自定义接口核实兼容性和型号范围；自定义 Agent 的能力与 runtime 仍一次知识事务提交。
 
 <a id="contract-共用文件树与编辑"></a>
 
@@ -169,7 +169,7 @@ class N_src_view_knowledge_ArchitectureEditor_tsx_ArchitectureEditorProps["Archi
 N_src_view_knowledge_ArchitectureEditor_tsx ..> N_src_view_knowledge_ArchitectureEditor_tsx_ArchitectureEditorProps : 声明
 ```
 
-直接依赖：[../../bridge/contracts/ipc-call.ts](../../bridge/contracts/ipc-call.ts)、[../components/EngineModelPicker.tsx](../components/EngineModelPicker.tsx)、[../../bridge/contracts/engines.ts](../../bridge/contracts/engines.ts)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../../bridge/contracts/agent-settings.ts](../../bridge/contracts/agent-settings.ts)、[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../../bridge/contracts/architecture.ts](../../bridge/contracts/architecture.ts)、[static-owners.ts](static-owners.ts)、[architecture-editor.css](architecture-editor.css)。
+直接依赖：[../../bridge/contracts/agent-settings.ts](../../bridge/contracts/agent-settings.ts)、[../../bridge/contracts/architecture.ts](../../bridge/contracts/architecture.ts)、[../../bridge/contracts/engines.ts](../../bridge/contracts/engines.ts)、[../../bridge/contracts/ipc-call.ts](../../bridge/contracts/ipc-call.ts)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../components/EngineModelPicker.tsx](../components/EngineModelPicker.tsx)、[architecture-editor.css](architecture-editor.css)、[static-owners.ts](static-owners.ts)。
 
 ### GovernanceLaunch.tsx
 
@@ -252,7 +252,7 @@ class N_src_view_knowledge_KnowledgeFilePreview_tsx["KnowledgeFilePreview.tsx"] 
 }
 ```
 
-直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../components/ModalFrame.tsx](../components/ModalFrame.tsx)、[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../execution-view/MarkdownMessage.tsx](../execution-view/MarkdownMessage.tsx)、[knowledge-files.css](knowledge-files.css)。
+直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../components/ModalFrame.tsx](../components/ModalFrame.tsx)、[../execution-view/MarkdownMessage.tsx](../execution-view/MarkdownMessage.tsx)、[knowledge-files.css](knowledge-files.css)。
 
 ### KnowledgeFileTree.tsx
 
@@ -276,7 +276,7 @@ class N_src_view_knowledge_KnowledgeFileTree_tsx_KnowledgeTreeAction["KnowledgeT
 N_src_view_knowledge_KnowledgeFileTree_tsx ..> N_src_view_knowledge_KnowledgeFileTree_tsx_KnowledgeTreeAction : 声明
 ```
 
-直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[knowledge-file-tree.ts](knowledge-file-tree.ts)、[knowledge-files.css](knowledge-files.css)、[../components/TreeActions.tsx](../components/TreeActions.tsx)。
+直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../components/TreeActions.tsx](../components/TreeActions.tsx)、[knowledge-file-tree.ts](knowledge-file-tree.ts)、[knowledge-files.css](knowledge-files.css)。
 
 ### KnowledgeSourceDetails.tsx
 
@@ -310,11 +310,11 @@ classDiagram
 class N_src_view_knowledge_ArchitectureEditor_tsx["ArchitectureEditor.tsx"] {
   <<component>>
 }
-class N_src_view_knowledge_static_owners_ts["static-owners.ts"] {
-  <<module>>
-}
 class N_src_view_knowledge_architecture_editor_css["architecture-editor.css"] {
   <<stylesheet>>
+}
+class N_src_view_knowledge_static_owners_ts["static-owners.ts"] {
+  <<module>>
 }
 class N_src_view_knowledge_KnowledgeFilePreview_tsx["KnowledgeFilePreview.tsx"] {
   <<component>>
@@ -328,8 +328,8 @@ class N_src_view_knowledge_KnowledgeFileTree_tsx["KnowledgeFileTree.tsx"] {
 class N_src_view_knowledge_knowledge_file_tree_ts["knowledge-file-tree.ts"] {
   <<module>>
 }
-N_src_view_knowledge_ArchitectureEditor_tsx ..> N_src_view_knowledge_static_owners_ts : 导入依赖
 N_src_view_knowledge_ArchitectureEditor_tsx ..> N_src_view_knowledge_architecture_editor_css : 导入依赖
+N_src_view_knowledge_ArchitectureEditor_tsx ..> N_src_view_knowledge_static_owners_ts : 导入依赖
 N_src_view_knowledge_KnowledgeFilePreview_tsx ..> N_src_view_knowledge_knowledge_files_css : 导入依赖
 N_src_view_knowledge_KnowledgeFileTree_tsx ..> N_src_view_knowledge_knowledge_file_tree_ts : 导入依赖
 ```

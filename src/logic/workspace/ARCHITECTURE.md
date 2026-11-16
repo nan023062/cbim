@@ -60,6 +60,46 @@ N_src_logic_workspace_service ..> N_src_logic_workspace_ports : 导入依赖
 - `service` → `rules`：导入。
 - `service` → `ports`：导入。
 
+### contracts.ts
+
+```mermaid
+classDiagram
+class N_src_logic_workspace_contracts_ts["contracts.ts"] {
+  <<module>>
+}
+class N_src_logic_workspace_contracts_ts_WorkspaceEntry["WorkspaceEntry"] {
+  <<interface>>
+  +id
+  +path
+  +name
+  +lastOpened
+  +previousIds
+}
+N_src_logic_workspace_contracts_ts ..> N_src_logic_workspace_contracts_ts_WorkspaceEntry : 声明
+class N_src_logic_workspace_contracts_ts_Catalog["Catalog"] {
+  <<interface>>
+  +version
+  +entries
+  +recent
+}
+N_src_logic_workspace_contracts_ts ..> N_src_logic_workspace_contracts_ts_Catalog : 声明
+class N_src_logic_workspace_contracts_ts_WorkspaceView["WorkspaceView"] {
+  <<interface>>
+  +state
+  +error
+  +tasks
+  +revision
+  +changed
+  +instanceId
+  +knowledgeErrors
+}
+N_src_logic_workspace_contracts_ts ..> N_src_logic_workspace_contracts_ts_WorkspaceView : 声明
+N_src_logic_workspace_contracts_ts_WorkspaceEntry <|-- N_src_logic_workspace_contracts_ts_WorkspaceView
+```
+
+直接依赖：[../knowledge/rules/types.ts](../knowledge/rules/types.ts)。
+
+
 ## 子目录导航
 
 - [ports/](ports/ARCHITECTURE.md)：工作区存储路径的结构化端口，规则不依赖宿主 Paths 实现。

@@ -88,13 +88,14 @@ class N_src_logic_web_service_web_service_ts_WebService["WebService"] {
   -Pace()
 }
 N_src_logic_web_service_web_service_ts ..> N_src_logic_web_service_web_service_ts_WebService : 声明
-class N_src_logic_web_service_web_service_ts_external_WebToolsPort["WebToolsPort (外部契约)"] {
-  <<external>>
+class N_src_logic_web_service_web_service_ts_external_WebToolsPort["WebToolsPort (..)"] {
+  <<boundary>>
 }
 N_src_logic_web_service_web_service_ts_external_WebToolsPort <|.. N_src_logic_web_service_web_service_ts_WebService
 ```
 
-直接依赖：[../index.ts](../index.ts)、[../../../core/platform/node/web/index.ts](../../../core/platform/node/web/index.ts)、[web-settings.ts](web-settings.ts)。
+继承／实现来源：`WebToolsPort` → [../index.ts](../index.ts)。
+直接依赖：[../../../core/platform/node/web/index.ts](../../../core/platform/node/web/index.ts)、[../index.ts](../index.ts)、[web-settings.ts](web-settings.ts)。
 
 ### web-settings.ts
 
@@ -117,7 +118,7 @@ class N_src_logic_web_service_web_settings_ts_WebSettings["WebSettings"] {
 N_src_logic_web_service_web_settings_ts ..> N_src_logic_web_service_web_settings_ts_WebSettings : 声明
 ```
 
-直接依赖：[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../index.ts](../index.ts)、[../../../core/contracts/secrets.ts](../../../core/contracts/secrets.ts)。
+直接依赖：[../../../core/contracts/secrets.ts](../../../core/contracts/secrets.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../index.ts](../index.ts)。
 
 ### 本目录调用边界
 

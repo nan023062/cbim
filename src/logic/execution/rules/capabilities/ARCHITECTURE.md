@@ -98,7 +98,7 @@ class N_src_logic_execution_rules_capabilities_artifact_capture_ts_RunArtifactCa
 N_src_logic_execution_rules_capabilities_artifact_capture_ts ..> N_src_logic_execution_rules_capabilities_artifact_capture_ts_RunArtifactCapture : 声明
 ```
 
-直接依赖：[../../../../core/errors.ts](../../../../core/errors.ts)、[../../../evidence/rules/artifact-tools.ts](../../../evidence/rules/artifact-tools.ts)、[../../../evidence/rules/artifact-baseline.ts](../../../evidence/rules/artifact-baseline.ts)、[../../../evidence/rules/artifact-evidence.ts](../../../evidence/rules/artifact-evidence.ts)、[../../../evidence/rules/progress.ts](../../../evidence/rules/progress.ts)、[../member-run.ts](../member-run.ts)、[../types.ts](../types.ts)。
+直接依赖：[../../../../core/errors.ts](../../../../core/errors.ts)、[../../../evidence/rules/artifact-baseline.ts](../../../evidence/rules/artifact-baseline.ts)、[../../../evidence/rules/artifact-evidence.ts](../../../evidence/rules/artifact-evidence.ts)、[../../../evidence/rules/artifact-tools.ts](../../../evidence/rules/artifact-tools.ts)、[../../../evidence/rules/progress.ts](../../../evidence/rules/progress.ts)、[../member-run.ts](../member-run.ts)、[../types.ts](../types.ts)。
 
 ### member-checkpoint.ts
 
@@ -125,7 +125,7 @@ class N_src_logic_execution_rules_capabilities_member_checkpoint_ts_RunMemberChe
 N_src_logic_execution_rules_capabilities_member_checkpoint_ts ..> N_src_logic_execution_rules_capabilities_member_checkpoint_ts_RunMemberCheckpoint : 声明
 ```
 
-直接依赖：[../../../../core/errors.ts](../../../../core/errors.ts)、[../../../tasks/rules/member-checkpoint-tools.ts](../../../tasks/rules/member-checkpoint-tools.ts)、[../../../tasks/rules/member-checkpoint.ts](../../../tasks/rules/member-checkpoint.ts)、[../../../tasks/rules/member-checkpoint-evidence.ts](../../../tasks/rules/member-checkpoint-evidence.ts)、[../member-run.ts](../member-run.ts)、[../types.ts](../types.ts)、[artifact-capture.ts](artifact-capture.ts)、[../../../evidence/rules/progress.ts](../../../evidence/rules/progress.ts)。
+直接依赖：[../../../../core/errors.ts](../../../../core/errors.ts)、[../../../evidence/rules/progress.ts](../../../evidence/rules/progress.ts)、[artifact-capture.ts](artifact-capture.ts)、[../member-run.ts](../member-run.ts)、[../types.ts](../types.ts)、[../../../tasks/rules/member-checkpoint-evidence.ts](../../../tasks/rules/member-checkpoint-evidence.ts)、[../../../tasks/rules/member-checkpoint-tools.ts](../../../tasks/rules/member-checkpoint-tools.ts)、[../../../tasks/rules/member-checkpoint.ts](../../../tasks/rules/member-checkpoint.ts)。
 
 ### member-tool-capabilities.ts
 
@@ -158,7 +158,7 @@ class N_src_logic_execution_rules_capabilities_member_tool_capabilities_ts_Membe
 N_src_logic_execution_rules_capabilities_member_tool_capabilities_ts ..> N_src_logic_execution_rules_capabilities_member_tool_capabilities_ts_MemberToolPorts : 声明
 ```
 
-直接依赖：[../engine-tools.ts](../engine-tools.ts)、[run-code-check.ts](run-code-check.ts)、[../../../evidence/rules/progress-tools.ts](../../../evidence/rules/progress-tools.ts)、[../../../tasks/rules/member-help-tools.ts](../../../tasks/rules/member-help-tools.ts)、[../../../evidence/rules/artifact-tools.ts](../../../evidence/rules/artifact-tools.ts)、[../../../evidence/rules/output-manifest-tools.ts](../../../evidence/rules/output-manifest-tools.ts)、[../../../tasks/rules/member-checkpoint-tools.ts](../../../tasks/rules/member-checkpoint-tools.ts)、[../../../evidence/rules/validation-tools.ts](../../../evidence/rules/validation-tools.ts)、[run-controlled-file.ts](run-controlled-file.ts)、[../../../file-operations/rules/artifact-transition.ts](../../../file-operations/rules/artifact-transition.ts)、[run-scoped-execution.ts](run-scoped-execution.ts)。
+直接依赖：[../../../evidence/rules/artifact-tools.ts](../../../evidence/rules/artifact-tools.ts)、[../../../evidence/rules/output-manifest-tools.ts](../../../evidence/rules/output-manifest-tools.ts)、[../../../evidence/rules/progress-tools.ts](../../../evidence/rules/progress-tools.ts)、[../../../evidence/rules/validation-tools.ts](../../../evidence/rules/validation-tools.ts)、[run-code-check.ts](run-code-check.ts)、[run-controlled-file.ts](run-controlled-file.ts)、[run-scoped-execution.ts](run-scoped-execution.ts)、[../engine-tools.ts](../engine-tools.ts)、[../../../file-operations/rules/artifact-transition.ts](../../../file-operations/rules/artifact-transition.ts)、[../../../tasks/rules/member-checkpoint-tools.ts](../../../tasks/rules/member-checkpoint-tools.ts)、[../../../tasks/rules/member-help-tools.ts](../../../tasks/rules/member-help-tools.ts)。
 
 ### output-manifest-capture.ts
 
@@ -212,7 +212,7 @@ class N_src_logic_execution_rules_capabilities_output_manifest_capture_ts_RunOut
 N_src_logic_execution_rules_capabilities_output_manifest_capture_ts ..> N_src_logic_execution_rules_capabilities_output_manifest_capture_ts_RunOutputManifestCapture : 声明
 ```
 
-直接依赖：[../../../../core/errors.ts](../../../../core/errors.ts)、[../../../workspace/rules/artifact-scope.ts](../../../workspace/rules/artifact-scope.ts)、[../../../evidence/rules/output-manifest-tools.ts](../../../evidence/rules/output-manifest-tools.ts)、[../../../evidence/rules/output-manifest.ts](../../../evidence/rules/output-manifest.ts)、[../../../evidence/rules/complete-output-evidence.ts](../../../evidence/rules/complete-output-evidence.ts)、[../../../evidence/rules/output-manifest-evidence.ts](../../../evidence/rules/output-manifest-evidence.ts)、[../../../file-operations/rules/artifact-transition-evidence.ts](../../../file-operations/rules/artifact-transition-evidence.ts)、[../../../evidence/rules/artifact-evidence.ts](../../../evidence/rules/artifact-evidence.ts)、[../../../evidence/rules/progress.ts](../../../evidence/rules/progress.ts)、[../member-run.ts](../member-run.ts)、[../types.ts](../types.ts)。
+直接依赖：[../../../../core/errors.ts](../../../../core/errors.ts)、[../../../evidence/rules/artifact-evidence.ts](../../../evidence/rules/artifact-evidence.ts)、[../../../evidence/rules/complete-output-evidence.ts](../../../evidence/rules/complete-output-evidence.ts)、[../../../evidence/rules/output-manifest-evidence.ts](../../../evidence/rules/output-manifest-evidence.ts)、[../../../evidence/rules/output-manifest-tools.ts](../../../evidence/rules/output-manifest-tools.ts)、[../../../evidence/rules/output-manifest.ts](../../../evidence/rules/output-manifest.ts)、[../../../evidence/rules/progress.ts](../../../evidence/rules/progress.ts)、[../member-run.ts](../member-run.ts)、[../types.ts](../types.ts)、[../../../file-operations/rules/artifact-transition-evidence.ts](../../../file-operations/rules/artifact-transition-evidence.ts)、[../../../workspace/rules/artifact-scope.ts](../../../workspace/rules/artifact-scope.ts)。
 
 ### run-artifact-transition.ts
 
@@ -254,8 +254,8 @@ class N_src_logic_execution_rules_capabilities_run_artifact_transition_ts_RunArt
   -events
 }
 N_src_logic_execution_rules_capabilities_run_artifact_transition_ts ..> N_src_logic_execution_rules_capabilities_run_artifact_transition_ts_RunArtifactTransition : 声明
-class N_src_logic_execution_rules_capabilities_run_artifact_transition_ts_external_ArtifactTransitionToolPort["ArtifactTransitionToolPort (外部契约)"] {
-  <<external>>
+class N_src_logic_execution_rules_capabilities_run_artifact_transition_ts_external_ArtifactTransitionToolPort["ArtifactTransitionToolPort (../../../file-operations/rules/artifact-transition)"] {
+  <<boundary>>
 }
 N_src_logic_execution_rules_capabilities_run_artifact_transition_ts_external_ArtifactTransitionToolPort <|.. N_src_logic_execution_rules_capabilities_run_artifact_transition_ts_RunArtifactTransition
 ```
@@ -275,13 +275,14 @@ class N_src_logic_execution_rules_capabilities_run_artifact_transition_ts_RunArt
   -Release()
 }
 N_src_logic_execution_rules_capabilities_run_artifact_transition_ts ..> N_src_logic_execution_rules_capabilities_run_artifact_transition_ts_RunArtifactTransition : 声明
-class N_src_logic_execution_rules_capabilities_run_artifact_transition_ts_external_ArtifactTransitionToolPort["ArtifactTransitionToolPort (外部契约)"] {
-  <<external>>
+class N_src_logic_execution_rules_capabilities_run_artifact_transition_ts_external_ArtifactTransitionToolPort["ArtifactTransitionToolPort (../../../file-operations/rules/artifact-transition)"] {
+  <<boundary>>
 }
 N_src_logic_execution_rules_capabilities_run_artifact_transition_ts_external_ArtifactTransitionToolPort <|.. N_src_logic_execution_rules_capabilities_run_artifact_transition_ts_RunArtifactTransition
 ```
 
-直接依赖：[../../../../core/utility/index.ts](../../../../core/utility/index.ts)、[../../../../core/platform/node/serialization.ts](../../../../core/platform/node/serialization.ts)、[../../../../core/errors.ts](../../../../core/errors.ts)、[../../../tools/rules/results.ts](../../../tools/rules/results.ts)、[../../../workspace/rules/artifact-scope.ts](../../../workspace/rules/artifact-scope.ts)、[../../../file-operations/rules/artifact-transition.ts](../../../file-operations/rules/artifact-transition.ts)、[../../../file-operations/rules/artifact-transition-evidence.ts](../../../file-operations/rules/artifact-transition-evidence.ts)、[../../../evidence/rules/output-manifest-evidence.ts](../../../evidence/rules/output-manifest-evidence.ts)、[../../../evidence/rules/output-manifest.ts](../../../evidence/rules/output-manifest.ts)、[output-manifest-capture.ts](output-manifest-capture.ts)、[../member-run.ts](../member-run.ts)、[../types.ts](../types.ts)。
+继承／实现来源：`ArtifactTransitionToolPort` → [../../../file-operations/rules/artifact-transition.ts](../../../file-operations/rules/artifact-transition.ts)。
+直接依赖：[../../../../core/errors.ts](../../../../core/errors.ts)、[../../../../core/platform/node/serialization.ts](../../../../core/platform/node/serialization.ts)、[../../../../core/utility/index.ts](../../../../core/utility/index.ts)、[../../../evidence/rules/output-manifest-evidence.ts](../../../evidence/rules/output-manifest-evidence.ts)、[../../../evidence/rules/output-manifest.ts](../../../evidence/rules/output-manifest.ts)、[output-manifest-capture.ts](output-manifest-capture.ts)、[../member-run.ts](../member-run.ts)、[../types.ts](../types.ts)、[../../../file-operations/rules/artifact-transition-evidence.ts](../../../file-operations/rules/artifact-transition-evidence.ts)、[../../../file-operations/rules/artifact-transition.ts](../../../file-operations/rules/artifact-transition.ts)、[../../../tools/rules/results.ts](../../../tools/rules/results.ts)、[../../../workspace/rules/artifact-scope.ts](../../../workspace/rules/artifact-scope.ts)。
 
 ### run-code-check.ts
 
@@ -328,7 +329,7 @@ class N_src_logic_execution_rules_capabilities_run_code_check_ts_RunCodeCheck["R
 N_src_logic_execution_rules_capabilities_run_code_check_ts ..> N_src_logic_execution_rules_capabilities_run_code_check_ts_RunCodeCheck : 声明
 ```
 
-直接依赖：[../../../../core/errors.ts](../../../../core/errors.ts)、[../../../workspace/rules/code-check.ts](../../../workspace/rules/code-check.ts)、[../../../workspace/rules/artifact-scope.ts](../../../workspace/rules/artifact-scope.ts)、[../../../evidence/rules/output-manifest-evidence.ts](../../../evidence/rules/output-manifest-evidence.ts)、[../../../evidence/rules/code-check.ts](../../../evidence/rules/code-check.ts)、[../types.ts](../types.ts)。
+直接依赖：[../../../../core/errors.ts](../../../../core/errors.ts)、[../../../evidence/rules/code-check.ts](../../../evidence/rules/code-check.ts)、[../../../evidence/rules/output-manifest-evidence.ts](../../../evidence/rules/output-manifest-evidence.ts)、[../types.ts](../types.ts)、[../../../workspace/rules/artifact-scope.ts](../../../workspace/rules/artifact-scope.ts)、[../../../workspace/rules/code-check.ts](../../../workspace/rules/code-check.ts)。
 
 ### run-controlled-file.ts
 
@@ -383,7 +384,7 @@ class N_src_logic_execution_rules_capabilities_run_controlled_file_ts_RunControl
 N_src_logic_execution_rules_capabilities_run_controlled_file_ts ..> N_src_logic_execution_rules_capabilities_run_controlled_file_ts_RunControlledFile : 声明
 ```
 
-直接依赖：[../../../../core/utility/index.ts](../../../../core/utility/index.ts)、[../../../../core/platform/node/serialization.ts](../../../../core/platform/node/serialization.ts)、[../../../../core/errors.ts](../../../../core/errors.ts)、[../../../tools/rules/results.ts](../../../tools/rules/results.ts)、[../../../file-operations/rules/controlled-file-operation.ts](../../../file-operations/rules/controlled-file-operation.ts)、[../../../file-operations/rules/controlled-file-rules.ts](../../../file-operations/rules/controlled-file-rules.ts)。
+直接依赖：[../../../../core/errors.ts](../../../../core/errors.ts)、[../../../../core/platform/node/serialization.ts](../../../../core/platform/node/serialization.ts)、[../../../../core/utility/index.ts](../../../../core/utility/index.ts)、[../../../file-operations/rules/controlled-file-operation.ts](../../../file-operations/rules/controlled-file-operation.ts)、[../../../file-operations/rules/controlled-file-rules.ts](../../../file-operations/rules/controlled-file-rules.ts)、[../../../tools/rules/results.ts](../../../tools/rules/results.ts)。
 
 ### run-scoped-execution.ts
 
@@ -421,7 +422,7 @@ class N_src_logic_execution_rules_capabilities_run_scoped_execution_ts_RunScoped
 N_src_logic_execution_rules_capabilities_run_scoped_execution_ts ..> N_src_logic_execution_rules_capabilities_run_scoped_execution_ts_RunScopedExecution : 声明
 ```
 
-直接依赖：[../../../../core/utility/index.ts](../../../../core/utility/index.ts)、[../../../../core/platform/node/serialization.ts](../../../../core/platform/node/serialization.ts)、[../../../../core/errors.ts](../../../../core/errors.ts)、[../../../tools/rules/results.ts](../../../tools/rules/results.ts)、[../../../file-operations/rules/scoped-execution.ts](../../../file-operations/rules/scoped-execution.ts)、[../../../workspace/rules/execution-scope.ts](../../../workspace/rules/execution-scope.ts)、[../../../file-operations/rules/controlled-file-operation.ts](../../../file-operations/rules/controlled-file-operation.ts)、[../../../file-operations/rules/isolated-execution-recovery.ts](../../../file-operations/rules/isolated-execution-recovery.ts)。
+直接依赖：[../../../../core/errors.ts](../../../../core/errors.ts)、[../../../../core/platform/node/serialization.ts](../../../../core/platform/node/serialization.ts)、[../../../../core/utility/index.ts](../../../../core/utility/index.ts)、[../../../file-operations/rules/controlled-file-operation.ts](../../../file-operations/rules/controlled-file-operation.ts)、[../../../file-operations/rules/isolated-execution-recovery.ts](../../../file-operations/rules/isolated-execution-recovery.ts)、[../../../file-operations/rules/scoped-execution.ts](../../../file-operations/rules/scoped-execution.ts)、[../../../tools/rules/results.ts](../../../tools/rules/results.ts)、[../../../workspace/rules/execution-scope.ts](../../../workspace/rules/execution-scope.ts)。
 
 ### run-validation.ts
 
@@ -495,7 +496,7 @@ class N_src_logic_execution_rules_capabilities_run_validation_ts_RunValidation["
 N_src_logic_execution_rules_capabilities_run_validation_ts ..> N_src_logic_execution_rules_capabilities_run_validation_ts_RunValidation : 声明
 ```
 
-直接依赖：[../../../../core/errors.ts](../../../../core/errors.ts)、[../../../workspace/rules/json-validation-schema.ts](../../../workspace/rules/json-validation-schema.ts)、[../../../workspace/rules/csv-validation-schema.ts](../../../workspace/rules/csv-validation-schema.ts)、[../../../workspace/rules/png-validation-schema.ts](../../../workspace/rules/png-validation-schema.ts)、[../../../evidence/rules/artifact-baseline.ts](../../../evidence/rules/artifact-baseline.ts)、[../../../evidence/rules/artifact-evidence.ts](../../../evidence/rules/artifact-evidence.ts)、[../../../evidence/rules/output-manifest-evidence.ts](../../../evidence/rules/output-manifest-evidence.ts)、[../../../evidence/rules/output-manifest.ts](../../../evidence/rules/output-manifest.ts)、[../../../evidence/rules/complete-output-evidence.ts](../../../evidence/rules/complete-output-evidence.ts)、[../../../workspace/rules/artifact-scope.ts](../../../workspace/rules/artifact-scope.ts)、[../../../evidence/rules/validation.ts](../../../evidence/rules/validation.ts)、[../../../evidence/rules/validation-tools.ts](../../../evidence/rules/validation-tools.ts)、[../../../evidence/rules/validation-evidence.ts](../../../evidence/rules/validation-evidence.ts)、[../../../tasks/rules/execution-context.ts](../../../tasks/rules/execution-context.ts)、[../../../evidence/rules/progress.ts](../../../evidence/rules/progress.ts)、[artifact-capture.ts](artifact-capture.ts)、[../member-run.ts](../member-run.ts)、[../types.ts](../types.ts)。
+直接依赖：[../../../../core/errors.ts](../../../../core/errors.ts)、[../../../evidence/rules/artifact-baseline.ts](../../../evidence/rules/artifact-baseline.ts)、[../../../evidence/rules/artifact-evidence.ts](../../../evidence/rules/artifact-evidence.ts)、[../../../evidence/rules/complete-output-evidence.ts](../../../evidence/rules/complete-output-evidence.ts)、[../../../evidence/rules/output-manifest-evidence.ts](../../../evidence/rules/output-manifest-evidence.ts)、[../../../evidence/rules/output-manifest.ts](../../../evidence/rules/output-manifest.ts)、[../../../evidence/rules/progress.ts](../../../evidence/rules/progress.ts)、[../../../evidence/rules/validation-evidence.ts](../../../evidence/rules/validation-evidence.ts)、[../../../evidence/rules/validation-tools.ts](../../../evidence/rules/validation-tools.ts)、[../../../evidence/rules/validation.ts](../../../evidence/rules/validation.ts)、[artifact-capture.ts](artifact-capture.ts)、[../member-run.ts](../member-run.ts)、[../types.ts](../types.ts)、[../../../tasks/rules/execution-context.ts](../../../tasks/rules/execution-context.ts)、[../../../workspace/rules/artifact-scope.ts](../../../workspace/rules/artifact-scope.ts)、[../../../workspace/rules/csv-validation-schema.ts](../../../workspace/rules/csv-validation-schema.ts)、[../../../workspace/rules/json-validation-schema.ts](../../../workspace/rules/json-validation-schema.ts)、[../../../workspace/rules/png-validation-schema.ts](../../../workspace/rules/png-validation-schema.ts)。
 
 ### 本目录调用边界
 

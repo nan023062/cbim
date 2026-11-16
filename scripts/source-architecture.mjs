@@ -3,11 +3,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import ts from 'typescript';
+import { auditDependencies } from './check-dependencies.mjs';
 
 const norm=p=>p.replaceAll('\\','/');
 const walk=p=>fs.readdirSync(p,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(p+'/'+e.name):[p+'/'+e.name]);
 const allFiles=walk('src');
-const files=allFiles.filter(f=>/\.(tsx?|jsx?|mjs|cjs|css)$/.test(f));
+const files=allFiles.filter(f=>/\.(tsx?|jsx?|mjs|cjs|mts|cts|css)$/.test(f));
 const directories=[...new Set(allFiles.flatMap(f=>{const a=[];let d=path.posix.dirname(f);while(d==='src'||d.startsWith('src/')){a.push(d);if(d==='src')break;d=path.posix.dirname(d)}return a}))].sort();
 const generatedStart='<!-- architecture:generated:start -->';
 const generatedEnd='<!-- architecture:generated:end -->';
@@ -32,7 +33,19 @@ function documentParts(directory){
 const documents=new Map(directories.map(directory=>[directory,documentParts(directory)]));
 const text=new Map(files.map(f=>[f,fs.readFileSync(f,'utf8')]));
 const ast=new Map(files.filter(f=>!f.endsWith('.css')).map(f=>[f,ts.createSourceFile(f,text.get(f),ts.ScriptTarget.Latest,true)]));
-function imports(f){const s=ast.get(f);if(!s)return [];const out=[];const visit=n=>{if(ts.isStringLiteral(n)&&n.text.startsWith('.')){const p=n.parent;if(ts.isImportDeclaration(p)||ts.isExportDeclaration(p)||(ts.isLiteralTypeNode(p)&&ts.isImportTypeNode(p.parent))){const t=norm(path.normalize(path.join(path.dirname(f),n.text)));const resolved=[t,t+'.ts',t+'.tsx',t+'/index.ts'].find(x=>text.has(x));if(resolved)out.push(resolved)}}ts.forEachChild(n,visit)};visit(s);return [...new Set(out)]}
+// 与依赖检查共用实际解析结果，包含类型、动态导入、require 和已登记构建入口；CSS 单独补入。
+const dependencyReport=auditDependencies(process.cwd(),{roots:['src']});
+const unresolved=[...dependencyReport.unresolved,...dependencyReport.dynamic].filter(item=>item.file.startsWith('src/'));
+if(unresolved.length)throw Error('源码依赖无法解析，不能生成不完整类图：'+JSON.stringify(unresolved));
+function imports(f){
+ const targets=dependencyReport.edges.filter(edge=>edge.from===f&&text.has(edge.to)).map(edge=>edge.to);
+ for(const statement of ast.get(f)?.statements||[]){
+  if(!ts.isImportDeclaration(statement)||!ts.isStringLiteral(statement.moduleSpecifier))continue;
+  const spec=statement.moduleSpecifier.text;
+  if(spec.startsWith('.')&&spec.endsWith('.css')){const target=norm(path.normalize(path.join(path.dirname(f),spec)));if(!text.has(target))throw Error('源码依赖无法解析：'+f+' → '+spec);targets.push(target)}
+ }
+ return [...new Set(targets)].sort();
+}
 const deps=new Map(files.map(f=>[f,imports(f)]));
 const id=s=>'N_'+s.replace(/[^a-zA-Z0-9_]/g,'_');
 const link=(from,to)=>norm(path.relative(from,to));
@@ -94,12 +107,24 @@ function functionDiagrams(f){
  const groups=chunks(exportedFunctions(f),12);
  return groups.map((group,index)=>(groups.length>1?`公开入口 ${index+1}/${groups.length}（同一模块）。\n\n`:'')+diagram([node(f,undefined,false,group)])+'\n').join('');
 }
+/** 跨文件继承保留实际 import 来源和本地别名；不能把项目内契约笼统写成第三方类。 */
+function heritageOrigin(f,name){
+ const local=name.split('.')[0];
+ for(const statement of ast.get(f).statements){
+  if(!ts.isImportDeclaration(statement)||!ts.isStringLiteral(statement.moduleSpecifier))continue;
+  const clause=statement.importClause,bindings=clause?.namedBindings;
+  if(clause?.name?.text!==local&&!(bindings&&(ts.isNamespaceImport(bindings)?bindings.name.text===local:bindings.elements.some(element=>element.name.text===local))))continue;
+  const spec=statement.moduleSpecifier.text;
+  return {spec,target:dependencyReport.edges.find(edge=>edge.from===f&&edge.spec===spec)?.to};
+ }
+ return {spec:'全局或跨文件声明，见源码'};
+}
 function heritage(f,n,key,decl,a,visible){
  const lines=[];
  for(const h of n.heritageClauses||[])for(const t of h.types){
   const name=t.expression.getText(a),parent=decl.find(x=>x.name.text===name);
   const target=parent?id(f+'_'+parent.name.text):id(f+'_external_'+name);
-  if(!parent)lines.push(`class ${target}["${clean(name)} (外部契约)"] {\n  <<external>>\n}`);
+  if(!parent){const origin=heritageOrigin(f,name);lines.push(`class ${target}["${clean(name+' ('+origin.spec+')')}"] {\n  <<${origin.target?'boundary':'external'}>>\n}`)}
   // 分图不改变声明归属：同文件的父接口在另一段时，仍以同一节点表示其边界。
   else if(!visible.includes(parent)){const kind=ts.isInterfaceDeclaration(parent)?'interface':ts.isTypeAliasDeclaration(parent)?'type':null;lines.push(`class ${target}["${parent.name.text}"] {\n${kind?'  <<'+kind+'>>\n':''}}`)}
   lines.push(`${target} <|${h.token===ts.SyntaxKind.ImplementsKeyword?'..':'--'} ${key}`);
@@ -107,6 +132,28 @@ function heritage(f,n,key,decl,a,visible){
  return lines;
 }
 function diagram(lines){return '```mermaid\nclassDiagram\n'+lines.join('\n')+'\n```\n'}
+/** 叶子和父层的直接文件共用声明展示；有子目录不能成为省略本层类、接口和成员的理由。 */
+function fileDiagrams(f,d){
+ let out=`### ${path.posix.basename(f)}\n\n`;
+ const a=ast.get(f),decl=declarations(f),functions=functionDiagrams(f);out+=functions;
+ if(!decl.length&&!functions)out+=diagram([node(f)]);
+ for(const group of chunks(decl,4)){
+  const memberGroups=group.map(n=>{const parts=chunks(members(n,a),16);return parts.length?parts:[[]]});
+  const count=Math.max(...memberGroups.map(parts=>parts.length));
+  for(let section=0;section<count;section++){
+   if(count>1)out+=`成员 ${section+1}/${count}（同名节点为同一声明，跨图合并阅读）。\n\n`;
+   const lines=[node(f)],visible=group.filter((_,index)=>memberGroups[index][section]);
+   group.forEach((n,index)=>{const part=memberGroups[index][section];if(!part)return;const key=id(f+'_'+n.name.text),kind=ts.isClassDeclaration(n)?null:ts.isInterfaceDeclaration(n)?'interface':'type';lines.push(`class ${key}["${n.name.text}"] {\n${kind?'  <<'+kind+'>>\n':''}${part.join('\n')}\n}`);lines.push(`${id(f)} ..> ${key} : 声明`);lines.push(...heritage(f,n,key,decl,a,visible))});
+   out+=diagram(lines)+'\n';
+  }
+ }
+ const origins=new Map();
+ for(const n of decl)for(const h of n.heritageClauses||[])for(const t of h.types){const name=t.expression.getText(a);if(!decl.some(local=>local.name.text===name))origins.set(name,heritageOrigin(f,name))}
+ for(const [name,origin] of origins)out+=`继承／实现来源：\`${name}\` → ${origin.target?`[${link(d,origin.target)}](${link(d,origin.target)})`:'`'+origin.spec+'`'}。\n`;
+ const references=deps.get(f)||[];
+ if(references.length)out+='直接依赖：'+references.map(t=>`[${link(d,t)}](${link(d,t)})`).join('、')+'。\n';
+ return out+'\n';
+}
 const changed=[];
 for(const d of directories){
  const own=files.filter(f=>path.posix.dirname(f)===d),children=directories.filter(c=>path.posix.dirname(c)===d);
@@ -124,25 +171,9 @@ for(const d of directories){
   for(let i=0;i<boundaries.length;i+=6){const group=boundaries.slice(i,i+6),ids=new Set(group.map(id));out+=diagram([...group.map(f=>node(f,path.posix.basename(f)+(children.includes(f)?'/':''),children.includes(f))),...[...edges].filter(e=>{const [a,,b]=e.split(' ');return ids.has(a)&&ids.has(b)})])+'\n'}
   out+='各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：\n\n';
   out+=[...edges].map(e=>{const [a,,b]=e.split(' ');const f=boundaries.find(f=>id(f)===a),t=boundaries.find(f=>id(f)===b);return `- \`${path.posix.basename(f)}\` → \`${path.posix.basename(t)}\`：导入。`}).join('\n')||'本层无目录间直接导入关系。';out+='\n';
-  for(const f of own){const functions=functionDiagrams(f);if(functions)out+=`\n### ${path.posix.basename(f)} 公开入口\n\n`+functions}
+  for(const f of own)out+='\n'+fileDiagrams(f,d);
  }else{
-  for(const f of own){out+=`### ${path.posix.basename(f)}\n\n`;const a=ast.get(f),decl=declarations(f);
-   const functions=functionDiagrams(f);out+=functions;
-   if(!decl.length&&!functions)out+=diagram([node(f)]);
-   for(const group of chunks(decl,4)){
-    const memberGroups=group.map(n=>{const parts=chunks(members(n,a),16);return parts.length?parts:[[]]});
-    const count=Math.max(...memberGroups.map(parts=>parts.length));
-    for(let section=0;section<count;section++){
-     if(count>1)out+=`成员 ${section+1}/${count}（同名节点为同一声明，跨图合并阅读）。\n\n`;
-     const lines=[node(f)];
-     const visible=group.filter((_,index)=>memberGroups[index][section]);
-     group.forEach((n,index)=>{const part=memberGroups[index][section];if(!part)return;const key=id(f+'_'+n.name.text),kind=ts.isClassDeclaration(n)?null:ts.isInterfaceDeclaration(n)?'interface':'type';lines.push(`class ${key}["${n.name.text}"] {\n${kind?'  <<'+kind+'>>\n':''}${part.join('\n')}\n}`);lines.push(`${id(f)} ..> ${key} : 声明`);lines.push(...heritage(f,n,key,decl,a,visible))});
-     out+=diagram(lines)+'\n';
-    }
-   }
-   const references=deps.get(f)||[];if(references.length)out+='直接依赖：'+references.map(t=>`[${link(d,t)}](${link(d,t)})`).join('、')+'。\n';
-   out+='\n';
-  }
+  for(const f of own)out+=fileDiagrams(f,d);
   const edges=[];for(const f of own)for(const t of deps.get(f)||[])if(own.includes(t))edges.push([f,t]);
   if(edges.length){out+='### 本目录调用边界\n\n';for(let i=0;i<edges.length;i+=4){const group=edges.slice(i,i+4),nodes=[...new Set(group.flat())];out+=diagram([...nodes.map(f=>node(f)),...group.map(([f,t])=>`${id(f)} ..> ${id(t)} : 导入依赖`)])+'\n'}}
  }

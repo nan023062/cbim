@@ -66,7 +66,7 @@ class N_src_logic_automation_service_service_ts_WorkspaceAutomations["WorkspaceA
 N_src_logic_automation_service_service_ts ..> N_src_logic_automation_service_service_ts_WorkspaceAutomations : 声明
 ```
 
-直接依赖：[../../workspace/service/workspace.ts](../../workspace/service/workspace.ts)、[../../conversation/runtime/execution-manager.ts](../../conversation/runtime/execution-manager.ts)、[../../dispatch/runtime/auto-collaboration.ts](../../dispatch/runtime/auto-collaboration.ts)、[../../dispatch/runtime/dispatch-service.ts](../../dispatch/runtime/dispatch-service.ts)、[../runtime/scheduler.ts](../runtime/scheduler.ts)、[storage.ts](storage.ts)、[../rules/contracts.ts](../rules/contracts.ts)、[../../knowledge/rules/read-models/index.ts](../../knowledge/rules/read-models/index.ts)、[../../knowledge/rules/builtins.ts](../../knowledge/rules/builtins.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../team/rules/member-execution-binding.ts](../../team/rules/member-execution-binding.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../rules/contracts.ts](../rules/contracts.ts)、[../runtime/scheduler.ts](../runtime/scheduler.ts)、[storage.ts](storage.ts)、[../../conversation/runtime/execution-manager.ts](../../conversation/runtime/execution-manager.ts)、[../../dispatch/runtime/auto-collaboration.ts](../../dispatch/runtime/auto-collaboration.ts)、[../../dispatch/runtime/dispatch-service.ts](../../dispatch/runtime/dispatch-service.ts)、[../../knowledge/rules/builtins.ts](../../knowledge/rules/builtins.ts)、[../../knowledge/rules/read-models/index.ts](../../knowledge/rules/read-models/index.ts)、[../../team/rules/member-execution-binding.ts](../../team/rules/member-execution-binding.ts)、[../../workspace/service/workspace.ts](../../workspace/service/workspace.ts)。
 
 ### storage.ts
 
@@ -83,13 +83,14 @@ class N_src_logic_automation_service_storage_ts_FileAutomations["FileAutomations
   -workspaceId
 }
 N_src_logic_automation_service_storage_ts ..> N_src_logic_automation_service_storage_ts_FileAutomations : 声明
-class N_src_logic_automation_service_storage_ts_external_AutomationStorage["AutomationStorage (外部契约)"] {
-  <<external>>
+class N_src_logic_automation_service_storage_ts_external_AutomationStorage["AutomationStorage (../rules/contracts)"] {
+  <<boundary>>
 }
 N_src_logic_automation_service_storage_ts_external_AutomationStorage <|.. N_src_logic_automation_service_storage_ts_FileAutomations
 ```
 
-直接依赖：[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../rules/contracts.ts](../rules/contracts.ts)。
+继承／实现来源：`AutomationStorage` → [../rules/contracts.ts](../rules/contracts.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../rules/contracts.ts](../rules/contracts.ts)。
 
 ### 本目录调用边界
 

@@ -23,3 +23,7 @@ dependenciesReady 同时供自动协调器和实际成员领取使用：有候�
 ### 多角色执行准备
 
 领取从被冻结版本的岗位 RuntimePolicy 或正式 fallbackBinding 恢复 modelRoles，连同 primary 在模型配置短锁中准备。完整 configurationHash 和成员版本仍由领取事务核对；公开预览不携带密钥，解密准备不能在回调结束后重新调用。
+
+## 旧成员 Workflow 预检复用
+
+MemberExecutionManager 在持有准入、冻结知识之后且领取/运行登记之前，调用 workspace/rules 的 assertWorkflowCapabilities。原 PreparedEngine 提供可信普通/范围工具和验证器清单，artifacts 端口仍单独检查；规则与新递归入口共用，旧事务、错误码和失败释放语义不变。

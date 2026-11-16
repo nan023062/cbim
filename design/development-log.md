@@ -1,3 +1,20 @@
+## 2026-11-16 — #94 Workflow 启动预检接入递归链路
+
+基线 b9849f52。迁移真实 Workflow 四场景时，正常、停止、并发证据均通过；缺能力场景发现新递归调用绕过了旧 MemberExecutionManager 的启动能力检查，只读权限仍启动要求 write 的模型。这是产品缺口，未通过更改预期或放开权限解决。
+
+S1–S7 简要：本次限 Logic 规则/启动装配，C2/L1。规则由 workspace/rules/workflow-contract 的 assertWorkflowCapabilities 持有，旧成员与 createWorkspaceLoop 两个真实消费者复用。可信装配提供当前引擎、权限和实际范围/验证端口；缺能力在受管引擎准备、运行登记和模型请求前拒绝。保护现有 LoopRuntime、权限策略、DispatchStore 和验证算法，不新增调度或生命周期。四问：语义为冻结 Workflow 能否在当前能力下执行；来源来自原准备/可信端口；状态仍属于原运行；共性是同一能力条件和错误码。第五问未发现需新增的通用架构规则。后续新增验证器只更新能力声明和实际端口，不改通用循环。
+
+测试迁移为 cbim_agent_call/result_check，审批集中主对话；旧图为空。保留计划前拒写、审批前无文件、仅 write 不可交付、实际 read 证据、并发旧 read 失效、停止和重开无重放。八种日志篡改反例仍执行既有验证器；输入投影取自真实业务登记/原日志，与生产 agent-business 的私有投影一致，不持久化伪造旧图。主循环 completed 不声称缺能力业务完成或人工验收。
+
+验证：
+- 初次 workflow-condition 四项：3 通过/缺能力 1 失败，保留真实问题证据。
+- 修复后 pnpm exec vitest run tests/workflow-condition-pi.test.ts -t missing-capability（build/recursive-workflow-preflight.json）：1/1，通过前模型请求与业务登记均为零。
+- pnpm exec vitest run tests/workflow-contract.test.ts tests/workflow-runtime.test.ts tests/agent-call-assembly.test.ts tests/application-runtime.test.ts（build/recursive-workflow-capabilities.json）：35/35 通过。
+- 新增隔离能力规则用例 -t '显式隔离范围'（build/workflow-capability-scope.json）：1/1 通过，不回退原生工具。
+- pnpm exec vitest run tests/member-execution.test.ts tests/workflow-condition-pi.test.ts（build/recursive-workflow-consumers.json）：25/25 通过，包含旧入口 21 和真实递归 Workflow 4；源码变化后重新验证消费者。
+- pnpm typecheck、pnpm check:test-modules、pnpm check:architecture 通过；1660 文件/7893 依赖，无环/无违规。首次类型验证提示测试传了模型目录项，已改为真实 resolve 的冻结模型快照。
+- 三处源码注释及 workspace/rules、team/runtime、execution/assembly 的 CONTRACT/ARCHITECTURE 已同步。共享 workflow-condition-ui-smoke 仍使用旧页面/图定位，未冒称桌面验收通过；后续发布须迁移并实际验收。新 CI 43790338820 尚运行于 ee9c3047，不含本切片。
+
 ## 2026-11-16 — #94 仓库只读工具新主调用协议
 
 repository-tools-provider 识别当前 cbim_agent_call 并拒绝旧 cbim_dispatch_task。新主 Agent 也可执行任务，不再以“不列出 write/edit/bash”充当角色权限断言；实际授权仍由 permission=read 和工具策略控制。五个真实 HTTP 集成保留资源 scope、真实内容 hash、撤销/服务代次变化后的内容不回流、停止、未授权不列工具、历史脱敏和重启不重放，没有替换网络结果或删减这些断言。此测试范围验证仓库读取，不声称覆盖原生写工具拒绝；该权限边界由现有执行策略用例负责。

@@ -63,7 +63,8 @@ import type {DispatchTools} from '../../tools/runtime/dispatch-tools';
 import type {ScopedExecutionPort} from '../rules/capabilities/run-scoped-execution';
 import {scopedReadToolName,scopedNodeToolName,scopedReadInputSchema,scopedNodeInputSchema} from '../../file-operations/rules/scoped-execution';
 import {preparedExecutionScope,executionScopeCovers} from '../../workspace/rules/execution-scope';
-import {nativeToolDescriptor} from '../../tools/rules/native-tools';
+import {assertWorkflowCapabilities} from '../../workspace/rules/workflow-contract';
+import {nativeToolDescriptor,nativeToolNames} from '../../tools/rules/native-tools';
 import type {WorkflowContractBinding} from '../../tasks/rules/execution-context';
 import type {RepositoryToolsPort} from '../../connectors/rules/repository-tools';
 import {FeedbackTools} from '../../tools/runtime/feedback-tools';
@@ -194,10 +195,17 @@ export async function createWorkspaceLoop(paths:Paths,owner:KnowledgeWorkspace,o
   const engine=options.engine??options.llm?.profile.engine??'pi';
   if(options.engine&&options.llm&&options.engine!==(options.llm.profile.engine??'pi'))throw Error('引擎与模型配置不一致');
   const agentHome=path.join(directory,engineDescriptor(engine).storageDirectory);
+  const permission=options.permission??(options.allowNativeExecution?'execute':'read');
+  // 在受管引擎准备、登记子运行和发送模型请求前，按实际权限与端口核对冻结 Workflow。
+  assertWorkflowCapabilities(services.member?.workflowContracts??[],{
+    availableTools:nativeToolNames(permission!=='read',engine),
+    scopedTools:services.scopedExecution?['cbim_scoped_read',...(permission!=='read'?['cbim_scoped_node',...(services.controlledFiles?['cbim_file_write_controlled']:[])]:[])]:undefined,
+    availableValidators:services.validations?['json-schema-v1',...(services.validations.validateTable?['csv-table-v1']:[]),...(services.validations.validateImage?['png-raster-v1']:[])]:[],
+    artifacts:!!services.artifacts,
+  });
   const managedRuntime=await options.engineRuntimes?.resolveEngine(engine);
   const adapter=managedRuntime?packagedEngineAdapter(engine,managedRuntime):sourceEngineAdapter(engine);
   const executionScope=preparedExecutionScope(services.member?.workflowContracts??[]);
-  const permission=options.permission??(options.allowNativeExecution?'execute':'read');
   // 主角色与自定义成员共用真实权限；协作模式只改变分工建议，不改变文件或命令能力。
   const coordinator=!services.member&&!services.agent&&options.mode==='chat';
   let activeMode:'auto'|'team'='team';

@@ -59,3 +59,7 @@ officeHistory 是可信主装配可选的只读归档工具，与统一 Agent �
 ## 业务登记与异步释放
 
 准备结果的 beforeRun 在真实父工具引用保存后执行；登记失败禁止进入子模型主体。release 可异步执行，必须等待原 Runtime.close 与业务登记封存；任何一步失败都保留 stranded 句柄和占用。close 只重试原关闭链，不重新 prepare 或执行模型。
+
+## 递归 Workflow 能力预检
+
+createWorkspaceLoop 在解析受管引擎包前，按当前引擎/权限的 nativeToolNames 与实际范围/验证端口调用 assertWorkflowCapabilities。显式业务调用准备阶段即拒绝缺能力，尚未登记子运行或发模型请求；审批仍留在后续每个工具执行。该纯规则与旧成员领取共用，不再只在旧派工入口保护 Workflow。

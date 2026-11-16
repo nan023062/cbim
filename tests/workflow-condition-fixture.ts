@@ -33,5 +33,5 @@ export async function seedWorkflowCondition(app:Application,project:string,provi
   const contract={version:1,beforeEffects:{requirePlan:true},delivery:{requiredToolEvidence:[{id:'inspect-result',toolName:'read'},...(mode==='missing-capability'?[{id:'write-result',toolName:'write'}]:[])]}},text='# 构建与核实流程\n\n此模块要求先保存计划，交付前读取真实产物。\n\n```cbim-workflow\n'+JSON.stringify(contract,null,2)+'\n```\n';
   await workspace.commit(request(snapshot,[{path:modulePath,text:JSON.stringify(definition)},{path:workflow,text},{path:'.cbim/team/people.json',text:JSON.stringify({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})}]));
   const owner=await registerExplicitFixtureOwner(app,entry.id,{agentId:team.input.agentId,moduleIds:[team.input.moduleId],profileId:profile.id,modelId:data.model,name:'Workflow条件验证岗位'});provider.bind(team.input.agentId,team.input.moduleId,owner.selection);
-  return {entry,team,workflow,contract,text,owner};
+  return {entry,team,workflow,contract,text,owner,profile:(await app.models.resolve(profile.id,data.model)).profile};
 }

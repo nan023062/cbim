@@ -3210,3 +3210,11 @@ coordination-pi 迁移至新主责任工具：统一只读目录 Schema 实际�
 验证选择：新证据组合及普通人工意见直接受影响，完整清单和 JSON/CSV/PNG 为共享业务 verify 消费者。初跑 human-decisions-pi 3 通过、过期接受失败，暴露上述缺口。修复后定向 stale acceptance 1/1 通过。pnpm exec vitest run tests/agent-artifact-verification.test.ts tests/human-decisions-pi.test.ts tests/complete-output-pi.test.ts tests/artifact-baseline-pi.test.ts --reporter=default --reporter=json --outputFile=build/recursive-human-artifact-consumers.json：12/12 通过。按路径合并证明后 pnpm exec vitest run tests/json-validation-pi.test.ts --reporter=default --reporter=json --outputFile=build/recursive-artifact-validation-consumers.json：15/15 通过。
 
 pnpm typecheck、check:architecture、check:test-modules、git diff --check 通过；依赖 1663 文件/7915 边、零环，541 测试文件。首次架构检查发现新公共入口尚未登记，精确补入后通过，没有扩大整个目录权限。新文件按静态类/中文成员说明组织；现有 agent-business 保留装配函数与闭包生命周期，未顺带重排全部装配源码。未运行全套桌面、安装升级、完整本地回归；远端 43794310879 为本片之前的提交，不能充作本片通过依据。
+
+## 2026-11-16 · #94 人工继续迁移与统一副作用限制
+
+迁移 human-continuation-pi 的 8 项场景到同一 cbim_agent_result_review 工具内的明确继续：接受/拒绝/补证、仅保存、保存后文件变化、停止及根请求预算拒绝。真实 Pi、文件、canonical 与重开验证保留，不生成旧目标等待。旧 humanContinue 的 CAS/跨等待服务兼容覆盖仍由原服务测试负责，不将新工具伪装成旧入口。
+
+修复：原 humanBlocked 只限制子调用，主运行原生 write 可绕过否定或仅保存意见。AgentToolsBinding.guardEffects 只收紧权限，Runtime 放行前应用同一 runId 的副作用屏障；read/preview 可用，未知/写入/命令拒绝。同步 agents、execution/assembly、rules/runtime 的契约、注释和生成类图。
+
+验证选择：调度器拥有屏障，人工继续集成覆盖真实原生工具与持久状态，人工决定消费者覆盖共享夹具提取。初次 12 项中 11 通过；唯一失败为模型替身把真实 read 文本误作 JSON，已修正解析而保留实际读回内容断言。human-continuation-pi 重跑 8/8；human-decisions-pi 初次 4/4；agent-call-scheduler 20/20。pnpm typecheck、pnpm check:architecture（1663 文件/7911 边/0 环）、pnpm check:test-modules（541 文件）通过。未跑全量与桌面安装验收，未发布。

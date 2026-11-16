@@ -162,6 +162,10 @@ it('records negative human feedback before a separate continuation and blocks au
  expect(result(await f.tools.call('cbim_agent_call',{agentId:'B',message:'rework'},signal,'new')).error.code).toBe('AGENT_HUMAN_DECISION_REQUIRED');
  expect(await f.tools.call('cbim_agent_call',{agentId:'B',message:'work'},signal,'original')).toEqual(f.original);
  expect(f.prepare).toHaveBeenCalledTimes(1);expect(request).toHaveBeenCalledTimes(2);
+ const guard=f.scheduler.bind(context()).guardEffects!;
+ expect(guard(['read','preview'])).toBeUndefined();
+ for(const effects of [undefined,[],['write'],['read','command'],['external']])expect(guard(effects)).toContain('AGENT_HUMAN_DECISION_REQUIRED');
+ expect(f.scheduler.bind(context('other')).guardEffects?.(['write'])).toBeUndefined();
 });
 it('rechecks bytes after an accept choice and never stores acceptance for a changed candidate',async()=>{
  let f:Awaited<ReturnType<typeof reviewFixture>>;

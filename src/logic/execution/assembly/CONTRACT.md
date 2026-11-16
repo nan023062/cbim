@@ -63,3 +63,6 @@ officeHistory 是可信主装配可选的只读归档工具，与统一 Agent �
 ## 递归 Workflow 能力预检
 
 createWorkspaceLoop 在解析受管引擎包前，按当前引擎/权限的 nativeToolNames 与实际范围/验证端口调用 assertWorkflowCapabilities。显式业务调用准备阶段即拒绝缺能力，尚未登记子运行或发模型请求；审批仍留在后续每个工具执行。该纯规则与旧成员领取共用，不再只在旧派工入口保护 Workflow。
+
+## 人工决定与直接工具一致
+humanBlocked 同时约束新子调用与原运行的直接工具。guardEffects 从同一 runId 集合读取，只允许明确只读与预览；不能通过原生 write、命令或未分类工具绕开“只保存意见”、否定意见或复核失败后的限制。普通工具回执记录拒绝，不生成新的 Agent 层级，也不重放已完成调用。

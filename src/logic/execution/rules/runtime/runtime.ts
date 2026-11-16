@@ -451,6 +451,9 @@ export class LoopRuntime {
               }
             }catch(error){inputFailure=toolInputError(error);error=inputFailure;const code=(error as {code?:string})?.code;decision={allow:false,reason:(code?.startsWith('WORKFLOW_')?code+': ':'')+(error instanceof Error?error.message:String(error)),...(descriptor?{effects:descriptor.effects}:{})}}
             if(stopping){inputFailure=undefined;decision={...decision,allow:false,reason:'任务正在停止'}};
+            // 人工意见只授权处理意见；子调用和主运行直接工具必须遵守同一副作用屏障。
+            const humanReason=decision.allow?agentTools?.guardEffects?.(descriptor?.effects??decision.effects):undefined;
+            if(humanReason)decision={...decision,allow:false,reason:humanReason};
             // Workflow 首片仅约束业务副作用；知识提交仍沿用原来的证据失效规则，不能因分类拆分保留旧证据。
             if(decision.allow&&((descriptor?.effects??decision.effects)?.some(effect=>['business-write','knowledge-write','external-write','command'].includes(effect))||(!descriptor&&['write','edit','bash'].includes(call.name)))){
               if(workflows.length){

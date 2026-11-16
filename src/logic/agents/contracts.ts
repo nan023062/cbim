@@ -22,7 +22,10 @@ export interface AgentCallContext {task:TaskSpec;runId:string;depth:number}
 /** 调用协议只限定深度；真实并发和预算由 execution 准入与根账本持有。 */
 export interface AgentCallLimits {maxDepth:number}
 export interface AgentToolContext {task:TaskSpec;runId:string;assertExclusive(id:string):void;assertQuestionWait?():void;emit(event:EngineEvent):Promise<void>}
-export interface AgentToolsBinding {capability:EngineCapability;active():boolean;allowsWhileWaiting?(name:string):boolean;stop():Promise<void>}
+export interface AgentToolsBinding {
+  /** 由当前调用的人工决定收紧工具副作用；返回拒绝理由，不授予任何新权限。 */
+  guardEffects?(effects:readonly string[]|undefined):string|undefined;
+  capability:EngineCapability;active():boolean;allowsWhileWaiting?(name:string):boolean;stop():Promise<void>}
 /** 根运行的输入和收尾边界；回执仍由既有目标服务持久化，不复制队列状态。 */
 export interface AgentLifecycle {
   /** 使用原运行的持久插入事务；失败回执不能自动重发。 */

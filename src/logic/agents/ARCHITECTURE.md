@@ -104,6 +104,7 @@ class N_src_logic_agents_contracts_ts["contracts.ts"] {
 }
 class N_src_logic_agents_contracts_ts_AgentToolsBinding["AgentToolsBinding"] {
   <<interface>>
+  +guardEffects()
   +capability
   +active()
   +allowsWhileWaiting()
@@ -247,3 +248,6 @@ Exchange 校验并持有原题与答案，publish 适配器只取得深拷贝快
 ## 持久调用引用校验
 
 agentCallReferenceSchema 是日志读取与派生索引共用的严格格式；checkedAgentCallReference 另校验工作区、当前子 task/run，拒绝自引用。它不证明父级授权或周期归属；用量报告仍从可信父工具事实逐层核验，历史索引仍匹配 canonical 首条记录。
+
+## 人工意见后的副作用边界
+AgentToolsBinding.guardEffects 只返回当前调用的拒绝理由，不授予权限。它由执行调度绑定原 runId；人工意见不授权返工时只允许明确 read/preview，未知或混合副作用均拒绝。独立新运行不继承旧运行的阻止集合，仍重新经过权限和业务校验。

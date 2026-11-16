@@ -157,3 +157,6 @@ assertQuestionWait 要求唯一已授权问题工具且无其他在途操作。�
 ### 业务 Agent 的统一启动
 
 startMember 接受 RunStartControl.beforeRun，供可信调用装配记录原父工具与子运行关系；它仍执行 checkedMemberRunLaunch，不能将普通 chat 冒充业务身份。有 agentTools 的业务运行保留产物/验证门禁，但不创建旧 MemberHelpTools 或 RunMemberCheckpoint；求助统一经当前调用的问答端口暂停与继续。历史无 agentTools 的业务运行维持原交接行为。
+
+## 原运行人工意见的副作用门禁
+Runtime 在通常工具授权之后、实际放行和证据失效之前应用 agentTools.guardEffects。该门禁只能收紧已有决定，不能授权原来被拒绝的调用。拒绝进入普通工具回执，未知副作用默认拒绝；没有绑定该端口的历史运行保留原行为。

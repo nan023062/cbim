@@ -152,6 +152,16 @@ export class AgentCallScheduler {
       const next=questionResultForInput(continuation).parse(await this.ports.requestReview!(continuation,signal));
       signal.throwIfAborted();
       const continued=!('cancelled' in next)&&next.answers[0].answer==='继续处理意见';
+      // 保存意见与交回模型之间可能隔很久；继续不能消费已经过期的接受。
+      // 原 humanDecision 是历史事实，复核失败只记录拒绝释放，不改写旧意见或重放子运行。
+      if(continued&&decision==='accept'){
+        try{await check(signal);signal.throwIfAborted()}
+        catch(error){
+          this.humanBlocked.add(context.runId);
+          if(!signal.aborted)await context.emit({type:'tool.updated',data:{id,name:'cbim_agent_result_review',phase:'decision_released',continued:false,reason:'verification_failed'}});
+          throw error;
+        }
+      }
       if(!continued)this.humanBlocked.add(context.runId);
       await context.emit({type:'tool.updated',data:{id,name:'cbim_agent_result_review',phase:'decision_released',continued}});
       return jsonToolResult('cbim_agent_result_review',{record,continued,executionAuthorized:false});

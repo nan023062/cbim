@@ -2997,3 +2997,12 @@ pnpm exec vitest run tests/global-admission-pi.test.ts --reporter=default --repo
 验证选择：装配契约、受控删除/移动 Runtime 与证据规则，另跑真实平台集成。pnpm exec vitest run tests/agent-call-assembly.test.ts tests/artifact-transition-runtime.test.ts tests/artifact-transition-evidence.test.ts --reporter=default --reporter=json --outputFile=build/recursive-transition-contracts.json：51/51 通过。artifact-transition-pi 首轮 changed 通过，另两项因夹具误读 result_check 的 state 层级失败；校正后 -t 'automatic|human' 两项通过；追加 -t 'stale acceptance' 两项通过，共 5 个不同集成用例通过。详情分别 build/recursive-transition.json、recursive-transition-review.json、recursive-transition-stale.json，无永久 skip。pnpm typecheck、pnpm check:architecture（0 环/0 违规）、pnpm check:test-modules（537 文件）和 git diff --check 通过；测试归属不变。
 
 核实完整 CI 43743143208（d22cfff5）失败：三片完整报告共 113 个失败，第 3 片取消，不能当作全量统计。尚有受控写入/补偿、隔离执行、旧预算/持久等待等迁移缺口。本步不合并、不公开旧候选、不把单项平台验收当安装升级验收。
+
+
+## 2026-11-16 · #94 已保存接受在继续前重新核验
+
+基线 8744ccbc。发现新二阶段评审在用户保存 accept 后等待继续，原实现不再次检查文件：该间隙的修改可能消费过期接受。现由既有 AgentCallScheduler 在交回模型前按原 callId 再调用只读验证器；失败保留已存 humanDecision，追加 continued=false/verification_failed，返回原错误并阻止本轮自动新建子调用。不新增等待服务、不改派发持久协议或重放工具。同步执行装配注释、CONTRACT 与 ARCHITECTURE。
+
+迁移 complete-output-pi 的 3 项到新 Agent 业务工具，保留真实 Pi 文件写、完整目录集合/JSON 同清单证明、额外文件导致拒绝、人工两阶段、重启文件/原日志字节及请求计数不变；新增第四项在已接受但未继续时增加文件，验证意见不改写且继续拒绝。旧 humanContinue 跨重启补充机制没有冒充为新能力，原历史服务覆盖仍保留。
+
+pnpm exec vitest run tests/agent-call-scheduler.test.ts --reporter=default --reporter=json --outputFile=build/review-continuation-contract.json：18/18 通过，包含新增过期接受拒绝、原工具幂等、禁止自动返工断言。pnpm exec vitest run tests/complete-output-pi.test.ts --reporter=default --reporter=json --outputFile=build/complete-output-recursive.json：4/4 通过。选取原因是实际修改人工评审释放边界及其完整清单消费者；未重复其它已通过测试。两片累计 78 个不同用例通过，非全仓测试结论。完整发布仍被其它旧业务迁移与全量 CI 阻塞。

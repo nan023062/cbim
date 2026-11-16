@@ -1,29 +1,59 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import {randomUUID} from 'node:crypto';
 import {it,expect,vi} from 'vitest';
 import {fixture} from './helpers';
 import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
-import {humanDecisionPreviewSchema,humanDecisionReceiptSchema} from '../src/logic/tasks/rules/human-decisions';
+import {FileRunStorage} from '../src/logic/execution/storage/run-storage';
+import type {PendingQuestion} from '../src/logic/tools/rules/questions';
 import {completeOutputProvider,completeOutputData as d} from './complete-output-provider';
-import {seedCompleteOutput,completeOutputRecords,completeOutputSourceBytes} from './complete-output-pi-fixture';
+import {seedCompleteOutput,completeOutputRecords} from './complete-output-pi-fixture';
 
-it.each(['automatic','changed','human'] as const)('真实 Pi 完整交付、集合变化阻断及人工接受后重新核实（%s）',async mode=>{
-  const f=await fixture(),provider=await completeOutputProvider(mode);let reopened:Application|undefined;
+// Real Pi writes, complete-set validation, and canonical identity; no legacy graph is manufactured.
+it.each(['automatic','changed','human','human-saved-change'] as const)('recursive complete output and original-proof review (%s)',async mode=>{
+  const human=mode.startsWith('human'),stale=mode==='human-saved-change';
+  const f=await fixture(),provider=await completeOutputProvider(human?'human':mode as 'automatic'|'changed',false,false,true,stale);let app=f.app;
   try{
-    const {entry,profileId}=await seedCompleteOutput(f.app,f.a,provider),start=await f.app.dispatch('loop.chat',{id:entry.id,message:d.goal,options:{permission:'execute',turnTimeoutMs:60000}})as{taskId:string},identity={workspaceId:entry.id,rootSessionId:start.taskId},records=()=>completeOutputRecords(f.user,entry.id),extra=path.join(f.a,d.root,'extra.txt');
-    await vi.waitFor(()=>{expect(provider.errors).toEqual([]);expect(provider.state.readyForReview).toBe(true)},{timeout:60000,interval:40});expect(provider.member).toHaveLength(8);expect(provider.state.manifest.entryCount).toBe(3);expect(provider.state.delivery.delivery.workflow.validationChecks[0].manifest).toEqual(provider.state.validation.manifest);expect(provider.state.validation.manifest.manifestId).toBe(provider.state.manifest.manifestId);
+    const {entry}=await seedCompleteOutput(app,f.a,provider),start=await app.dispatch('loop.chat',{id:entry.id,message:d.goal,options:{permission:'execute',turnTimeoutMs:60000}});
+    const records=()=>completeOutputRecords(f.user,entry.id),extra=path.join(f.a,d.root,'extra.txt'),file=path.join(f.a,d.file);
+    const rootDir=path.join(f.user,entry.id,'loop-engine/tasks',start.taskId,start.runId),readRoot=()=>new FileRunStorage().read(rootDir);
+    const questions=()=>app.dispatch('loop.questions',{id:entry.id,taskId:start.taskId}) as Promise<PendingQuestion[]>;
+    const until=async(check:()=>Promise<void>|void)=>{await vi.waitFor(async()=>{if(provider.errors.length)return;await check()},{timeout:60000,interval:40});expect(provider.errors).toEqual([])};
+    await until(()=>expect(provider.state.readyForReview).toBe(true));
+    expect(provider.member).toHaveLength(8);expect(provider.state.manifest.entryCount).toBe(3);
+    expect(provider.state.delivery.delivery.workflow.validationChecks[0].manifest).toEqual(provider.state.validation.manifest);
+    expect(provider.state.validation.manifest.manifestId).toBe(provider.state.manifest.manifestId);
+    const ref=provider.state.call.agentCall,childDir=path.join(f.user,entry.id,'loop-engine/tasks',ref.taskId,ref.runId),childBytes=await fs.readFile(path.join(childDir,'events.jsonl'),'utf8');
     if(mode==='changed')await fs.writeFile(extra,'new file outside old JSON');provider.releaseReview();
-    await vi.waitFor(async()=>{expect(provider.errors).toEqual([]);expect((await records()).scopes[0].status).toBe(mode==='human'?'waiting':'closed')},{timeout:60000,interval:40});
-    if(mode==='human'){
-      const scope=(await records()).scopes[0],input={...identity,scopeId:scope.scopeId,criterionId:d.humanId,baselines:[]},menu=humanDecisionPreviewSchema.parse(await f.app.dispatch('dispatch.humanPreview',input));expect(menu.candidates[0].baselines).toEqual([]);expect(menu.candidates[0].selectedManifest).toBeUndefined();
-      const candidate=menu.candidates[0],manifests=[{taskId:candidate.taskId,runId:candidate.runId,manifestId:candidate.manifest!.manifestId}],selected={...input,manifests},preview=humanDecisionPreviewSchema.parse(await f.app.dispatch('dispatch.humanPreview',selected)),saved=humanDecisionReceiptSchema.parse(await f.app.dispatch('dispatch.humanDecide',{...selected,commandId:randomUUID(),expectedDecisionRevision:preview.decisionRevision,expectedBasis:preview.basis,decision:'accept',comment:'明确接受完整目录及全部后代'}));
-      const request={...identity,scopeId:scope.scopeId,waitId:scope.wait!.waitId,expectedGoalRevision:scope.goal!.revision,expectedInputRevision:scope.goal!.inputRevision??1,expectedDecisionRevision:saved.decisionRevision,commandId:randomUUID(),decisionIds:[saved.record.decisionId],options:{provider:'cbim-'+profileId,profileId,model:d.model,permission:'execute',turnTimeoutMs:60000}},before=await records(),bytes=await completeOutputSourceBytes(f.user,entry.id),sequence=[...provider.sequence];
-      await fs.writeFile(extra,'changed after acceptance');await expect(f.app.dispatch('loop.humanContinue',request)).rejects.toMatchObject({code:'HUMAN_CONTINUATION_STALE'});expect(await records()).toEqual(before);expect(await completeOutputSourceBytes(f.user,entry.id)).toEqual(bytes);expect(provider.sequence).toEqual(sequence);
-      await f.app.shutdown();reopened=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await reopened.init();expect(await records()).toEqual(before);expect(provider.sequence).toEqual(sequence);await expect(reopened.dispatch('loop.humanContinue',request)).rejects.toMatchObject({code:'HUMAN_CONTINUATION_STALE'});
-      await fs.unlink(extra);await reopened.dispatch('loop.humanContinue',request);await vi.waitFor(()=>expect(provider.main).toHaveLength(7),{timeout:60000});provider.releaseContinuation();await vi.waitFor(async()=>{expect(provider.errors).toEqual([]);expect((await records()).scopes[0].status).toBe('closed')},{timeout:60000,interval:40});expect(await completeOutputSourceBytes(f.user,entry.id)).toMatchObject(bytes);expect(provider.main).toHaveLength(11);expect((await records()).scopes[0].humanDecisions?.records[0]).toEqual(saved.record);
+    if(human){
+      await until(async()=>expect(await questions()).toHaveLength(1));
+      const question=(await questions())[0];expect(question.questions[0].options[0].label).toBe('接受此成果');
+      await app.dispatch('loop.answerQuestion',{id:entry.id,taskId:start.taskId,questionId:question.id,answers:[{option:0,other:'接受完整目录及其后代'}]});
+      await until(async()=>{const list=await questions();expect(list).toHaveLength(1);expect(list[0].id).not.toBe(question.id)});
+      const before=await readRoot(),record=before.events.find(e=>e.data.humanDecision)!.data.humanDecision as any;
+      expect(record).toMatchObject({callerTaskId:start.taskId,callerRunId:start.runId,callId:'full-call',decision:'accept',original:provider.state.call.verification});
+      expect(provider.main).toHaveLength(3);expect(before.events.some(e=>e.type==='tool.finished'&&e.data.id==='full-human')).toBe(false);
+      if(stale)await fs.writeFile(extra,'changed after acceptance');
+      const continuation=(await questions())[0];
+      await app.dispatch('loop.answerQuestion',{id:entry.id,taskId:start.taskId,questionId:continuation.id,answers:[{option:0,other:''}]});
+      await until(()=>expect(provider.state.humanReview).toBeDefined());
+      if(stale){
+        expect(provider.state.humanReview.error).toBeTruthy();expect(provider.state.humanReview.record).toBeUndefined();
+        const after=await readRoot();expect(after.events.filter(e=>e.data.humanDecision).map(e=>e.data.humanDecision)).toEqual([record]);
+        expect(after.events.find(e=>e.data.phase==='decision_released')?.data).toMatchObject({continued:false,reason:'verification_failed'});
+      }else expect(provider.state.humanReview).toMatchObject({record,continued:true,executionAuthorized:false});
     }
-    const settled=await records();expect(settled.scopes[0].outcome).toBe(mode==='changed'?'failed':'completed');expect(provider.member).toHaveLength(8);expect(provider.main).toHaveLength(mode==='human'?11:mode==='changed'?7:6);expect(provider.errors).toEqual([]);expect(await fs.readFile(path.join(f.a,d.file),'utf8')).toBe(d.content);
-  }finally{provider.releaseAll();await reopened?.shutdown();await f.cleanup();await provider.close()}
+    await until(async()=>{expect((await records()).scopes[0].status).toBe('closed');expect(app.runtime.snapshot().pressure.activeRuns).toBe(0)});
+    expect(provider.member).toHaveLength(8);expect(provider.main).toHaveLength(human?4:3);
+    if(mode==='changed')expect(provider.state.review.error).toBeTruthy();else expect(provider.state.review.state).toBe('verified');
+    expect(await fs.readFile(file,'utf8')).toBe(d.content);expect(await fs.readFile(childDir+'/events.jsonl','utf8')).toBe(childBytes);
+    expect((await app.dispatch('dispatch.graphSnapshot',{identity:{workspaceId:entry.id,rootSessionId:start.taskId}})).tasks).toHaveLength(0);
+    const final=await records(),rootBytes=await fs.readFile(path.join(rootDir,'events.jsonl'),'utf8'),sequence=[...provider.sequence],stat=await fs.stat(file);
+    await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.init();
+    expect(await records()).toEqual(final);expect(await fs.readFile(path.join(rootDir,'events.jsonl'),'utf8')).toBe(rootBytes);
+    expect(await fs.readFile(path.join(childDir,'events.jsonl'),'utf8')).toBe(childBytes);expect(provider.sequence).toEqual(sequence);
+    expect((await fs.stat(file)).mtimeMs).toBe(stat.mtimeMs);expect(await fs.readFile(file,'utf8')).toBe(d.content);expect(await questions()).toEqual([]);
+    if(stale||mode==='changed')expect(await fs.readFile(extra,'utf8')).toBe(stale?'changed after acceptance':'new file outside old JSON');
+  }catch(error){await fs.mkdir('test-results',{recursive:true});await fs.writeFile('test-results/complete-output-recursive-'+mode+'.json',JSON.stringify({error:String(error),providerErrors:provider.errors,state:provider.state,lastMain:provider.main.at(-1)},null,2));throw error}
+  finally{provider.releaseAll();await app.shutdown();await f.cleanup();await provider.close()}
 },180000);

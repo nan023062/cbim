@@ -199,3 +199,20 @@ it('does not turn a typed accept into approval when only negative decisions are 
  expect(result(await f.tools.call('cbim_agent_result_review',{callId:'original'},new AbortController().signal,'review')).error.code).toBe('AGENT_REVIEW_INPUT');
  expect(f.events.some(e=>e.data.humanDecision)).toBe(false);expect(request).toHaveBeenCalledTimes(1);
 });
+
+it('rechecks saved acceptance before continuation without rewriting the decision or replaying execution',async()=>{
+ let f:Awaited<ReturnType<typeof reviewFixture>>;
+ const request=vi.fn(async(input:any)=>{
+   if(request.mock.calls.length===1)return {answers:[{question:input.questions[0].question,answer:'接受此成果'}]};
+   f.stale();return {answers:[{question:input.questions[0].question,answer:'继续处理意见'}]};
+ });
+ f=await reviewFixture(request);const signal=new AbortController().signal;
+ const receipt=await f.tools.call('cbim_agent_result_review',{callId:'original'},signal,'review');
+ expect(result(receipt)).toMatchObject({error:{code:'WORKFLOW_VALIDATION_STALE'}});
+ const decisions=f.events.filter(e=>e.data.humanDecision);expect(decisions).toHaveLength(1);
+ expect(decisions[0].data.humanDecision).toMatchObject({decision:'accept',original:{files:[{sha256:'original'}]}});
+ expect(f.events.find(e=>e.data.phase==='decision_released')?.data).toMatchObject({continued:false,reason:'verification_failed'});
+ expect(result(await f.tools.call('cbim_agent_call',{agentId:'B',message:'rework'},signal,'new')).error.code).toBe('AGENT_HUMAN_DECISION_REQUIRED');
+ expect(await f.tools.call('cbim_agent_result_review',{callId:'original'},signal,'review')).toEqual(receipt);
+ expect(f.events.filter(e=>e.data.humanDecision)).toEqual(decisions);expect(request).toHaveBeenCalledTimes(2);expect(f.prepare).toHaveBeenCalledTimes(1);
+});

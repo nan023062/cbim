@@ -297,3 +297,6 @@ humanDecision 通过原父运行的 tool.updated 可靠追加，绑定 callerTas
 ### 统一主会话归档
 
 officeHistory 是可信主装配可选的只读归档工具，与统一 Agent 工具并存；目录、参数描述及实际调用使用同一实例。未装配时不可调用，子循环不继承。
+
+
+接受意见保存后的继续仍须按原 callId 重新核验当前交付。复核失败保留原 humanDecision，仅追加 decision_released（continued=false、verification_failed）并返回原核验错误，同时禁止本轮自动创建子调用；不能把此前接受当作当前文件的证明，不恢复旧运行。

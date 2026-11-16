@@ -61,12 +61,12 @@ it('逐请求剩余容量不足时，安全等待补充在受理前拒绝，修�
 },60000);
 
 it.each(['main-block','member-block','complete'] as const)('实际主轮与正式岗位成员共用冻结请求额度：%s',async mode=>{
-  const f=await fixture(),provider=await scopeBudgetProvider('complete');try{
+  const f=await fixture(),provider=await scopeBudgetProvider('complete',true);try{
     const {entry,profileId}=await seedScopeBudget(f.app,f.a,provider,'complete');await f.app.dispatch('budget.configure',{revision:1,enabled:true,enforcement:'request',limits:{tokens:mode==='main-block'?69700:mode==='member-block'?70000:80000}});
     provider.releaseAll();const start=await f.app.dispatch('loop.chat',{id:entry.id,message:scopeBudgetFixture.goal,options:{profileId,model:scopeBudgetFixture.model,permission:'read',turnTimeoutMs:60000}});
     await vi.waitFor(async()=>expect((await budgetScopes(f.user,entry.id))[0]?.status).toBe('closed'),{timeout:45000});const scope=(await budgetScopes(f.user,entry.id))[0];const report=requestBudgetReportSchema.parse(await f.app.dispatch('dispatch.requestBudget',{workspaceId:entry.id,rootSessionId:start.taskId,scopeId:scope.scopeId}));
     expect(provider.errors).toEqual([]);expect(report.reported).toBe(provider.main.length+provider.member.length);expect(report.unknown).toBe(0);expect(report.reservedTokens).toBe(0);
-    if(mode==='main-block'){expect(provider.main).toHaveLength(1);expect(provider.member).toHaveLength(0);expect(report.denied).toBe(1)}else if(mode==='member-block'){expect(provider.main).toHaveLength(3);expect(provider.member).toHaveLength(1);expect(report.denied).toBe(1)}else{expect(provider.main,JSON.stringify({outcome:scope.outcome,report,sequence:provider.sequence})).toHaveLength(6);expect(provider.member).toHaveLength(5);expect(report.tokens).toBe(1920);expect(report.denied).toBe(0)}
+    if(mode==='main-block'){expect(provider.main).toHaveLength(1);expect(provider.member).toHaveLength(0);expect(report.denied).toBe(1)}else if(mode==='member-block'){expect(provider.main).toHaveLength(2);expect(provider.member).toHaveLength(1);expect(report).toMatchObject({requests:5,reported:3,denied:2,tokens:480,lastDenial:'token_reserve'})}else{expect(provider.main,JSON.stringify({outcome:scope.outcome,report,sequence:provider.sequence})).toHaveLength(4);expect(provider.member).toHaveLength(5);expect(report.tokens).toBe(1680);expect(report.denied).toBe(0)}
     expect(scope.outcome).toBe(mode==='complete'?'completed':'failed');
   }finally{provider.releaseAll();await provider.close();await f.cleanup()}
 },60000);

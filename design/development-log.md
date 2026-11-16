@@ -3169,3 +3169,11 @@ coordination-pi 迁移至新主责任工具：统一只读目录 Schema 实际�
 - 保留 8 种旧参数兼容组合的真实文件/命令、read 禁写、ask 两次审批、忙碌准入、知识目录保护、无团队开工和重开无重放验证；没有用提示词代替权限行为测试。
 - pnpm exec vitest run tests/direct-main-execution-pi.test.ts --reporter=default --reporter=json --outputFile=build/recursive-direct-main-before.json：8 项旧文案断言失败。
 - 同命令输出 build/recursive-direct-main.json：8/8 通过。仅测试断言与说明变化，无产品源码/类型/导入修改，不重复产品静态检查；未运行桌面或发布验收。
+
+
+## 2026-11-16 · #94 递归主子调用共用请求预算
+- scope-budget-provider 增加显式递归场景供逐请求预算测试使用；旧持久等待/轮次预算的供应商不假称已迁移。新根先读取身份，再调用业务 Agent 和复核实际返回，成员计划、读取、交付均为真实工具。
+- main-block 阻止第二次主请求且无子运行；member-block 在原共享冻结账本内同时拒绝子后续请求与父接收后续请求，实际 3 次上游请求、2 次拒绝、480 token，无额外重试；完整链路 4 主 + 5 子请求，1680 token，真实结果复核 verified。
+- pnpm exec vitest run tests/model-request-budget-pi.test.ts -t '实际主轮与正式岗位成员' --reporter=default --reporter=json --outputFile=build/recursive-request-budget.json：2 通过，1 旧拒绝计数断言失败。改为核对实际父子共同门禁的两次拒绝，而非只计旧成员下一轮。
+- pnpm exec vitest run tests/model-request-budget-pi.test.ts -t '实际主轮与正式岗位成员.*(member-block|complete)' --reporter=default --reporter=json --outputFile=build/recursive-request-budget-fixed.json：2/2 通过；main-block 已通过且不受结果复核断言变化影响，未重复。
+- pnpm check:test-modules 通过；无产品源码变化。持久等待补充预算用例尚未迁移，不将以上三项报告为整个文件或全量 CI 通过。

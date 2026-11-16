@@ -1,5 +1,6 @@
 import type {OwnerExecutionSelection} from '../src/logic/team/rules/member-execution-binding';
 import assert from 'node:assert/strict';
+import {mainToolValue} from './main-tool-contract-provider';
 import http from 'node:http';
 import {goalCompleteArguments,goalInspection,goalPlanArguments,type GoalFixtureRequest} from './goal-provider-fixture';
 
@@ -18,15 +19,22 @@ type Request=GoalFixtureRequest&{model:string;tools?:{function:{name:string}}[]}
 function gate(){let release=()=>{};const promise=new Promise<void>(resolve=>{release=resolve});return {promise,release}}
 
 /** Each real Pi run may cross the limit internally; deterministic usage makes the next-run boundary observable. */
-export async function scopeBudgetProvider(mode:BudgetFixtureMode){
+export async function scopeBudgetProvider(mode:BudgetFixtureMode,recursive=false){
   const d=scopeBudgetFixture,main:Request[]=[],member:Request[]=[],errors:string[]=[],sequence:string[]=[],mainGate=gate(),memberGate=gate();let ownerSelection:OwnerExecutionSelection|undefined;let agentId='',moduleId='';
   const server=http.createServer(async(req,res)=>{try{
     assert.equal(req.method,'POST');assert.ok(req.url?.endsWith('/chat/completions'));let raw='';for await(const chunk of req)raw+=chunk;
-    const body=JSON.parse(raw) as Request;assert.equal(body.model,d.model);const isMain=body.tools?.some(tool=>tool.function.name==='cbim_dispatch_task')===true,requests=isMain?main:member,turn=requests.length;requests.push(body);sequence.push(`${isMain?'main':'member'}:${turn}`);
+    const body=JSON.parse(raw) as Request;assert.equal(body.model,d.model);const isMain=body.tools?.some(tool=>tool.function.name===(recursive?'cbim_agent_result_review':'cbim_dispatch_task'))===true,requests=isMain?main:member,turn=requests.length;requests.push(body);sequence.push(`${isMain?'main':'member'}:${turn}`);
     res.writeHead(200,{'Content-Type':'text/event-stream'});
     const emit=(delta:unknown,finish_reason:string|null=null)=>res.write('data: '+JSON.stringify({id:'budget-'+sequence.length,object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason}],...(finish_reason?{usage:{prompt_tokens:isMain?100:200,completion_tokens:isMain?20:40,total_tokens:isMain?120:240}}:{})})+'\n\n');
     const tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]});emit({},'tool_calls')},reply=(text:string)=>{emit({role:'assistant',content:text});emit({},'stop')};
-    if(isMain){
+    if(isMain&&recursive){
+      assert.equal(mode,'complete','递归预算场景单独验证请求门禁，不冒充旧持久等待');
+      if(turn===0)tool('budget-identity','cbim_workspace_identity',{});
+      else if(turn===1){assert.ok(ownerSelection);await mainGate.promise;tool('budget-call','cbim_agent_call',{agentId:ownerSelection.memberId,message:d.memberGoal,business:{moduleIds:[moduleId],acceptance:d.acceptance}})}
+      else if(turn===2){const call=mainToolValue(body,'budget-call');assert.equal(call.status,'completed');assert.equal(call.verification.state,'verified');tool('budget-check','cbim_agent_result_check',{callId:'budget-call'})}
+      else if(turn===3){assert.equal(mainToolValue(body,'budget-check').state,'verified');reply('本轮业务读取已复核；不等于人工验收。')}
+      else throw Error('Unexpected recursive budget root request '+turn);
+    }else if(isMain){
       assert.ok(body.tools?.every(item=>!['write','edit','bash'].includes(item.function.name)));
       if(turn===0){const plan=goalPlanArguments({objective:d.goal,agentId,ownerSelection,moduleIds:[moduleId],acceptance:d.acceptance});tool('budget-goal-plan','cbim_goal_plan',mode==='waiting'?{...plan,criteria:[...plan.criteria,{id:d.humanId,text:d.humanCriterion,kind:'human'}],assignments:plan.assignments.map(item=>({...item,criterionIds:[...item.criterionIds,d.humanId]}))}:plan)}
       else if(turn===1)tool('budget-dispatch','cbim_dispatch_task',{agentId,ownerSelection,moduleIds:[moduleId],goal:d.memberGoal,acceptance:d.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});

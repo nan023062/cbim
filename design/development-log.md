@@ -3294,3 +3294,11 @@ member-pause-pi 四项改用真实递归 Agent 工具：A 实际写入、读取�
 - owner-execution-checkpoint 三项改为原调用冻结负责人/模型、暂停时换负责人、答复后改模型。已经启动的调用继续使用原冻结身份与 4096 请求上限；下一次调用分别被 AGENT_BUSINESS_OWNER / AGENT_CONFIGURATION_CHANGED 拒绝，不接管或切换执行。
 - 首次 checkpoint 测试将尚未封口 canonical 的读取投影误认为实时 running，改为检查持久 active 登记、真实在途问答及无终态事件；命令失效用例的进度版本增加一，确保拒绝来自旧采集而非未提交交付。build/recursive-checkpoint-exit-followup.json 3/4，build/recursive-checkpoint-command.json 补跑 1/1。owner 初轮 2/3，按冻结在途/新调用复核的真实契约修正断言后 build/recursive-owner-pause-change.json 1/1。pnpm typecheck、pnpm check:test-modules 通过。
 - 完整 CI 43798125917（30a98c15）结束失败：分片 1 为 1110/22/0，分片 2 为 868/13/0，分片 4 为 788/18/1（通过/失败/待定）；分片 3 达 30 分钟任务上限，仅留下选择清单和执行日志，无完整 JSON。不能给出全量准确失败总数，也不把本地修复从旧 CI 数字相减冒充当前结果。制品与日志留在 build/ci-43798125917。
+
+
+## 2026-11-16：本地交接与后继引用迁移（Issue #94 / PR #96）
+
+- checkpoint-handoff 四项使用真实用户答复结束旧岗位的原调用，并由当前注册岗位 B 的独立模型分别重新读取三个文件。旧 A 真实写入一次、没有交付；新 B 的不同 run/native 及其证据不借旧候选。覆盖正常、重复答案拒绝、停止、真实新调用完成后的确认丢失；丢失后只按原 callId 复核。
+- abandoned-checkpoint-dependency 四项在新岗位第一项已验证后暂停父模型，后续调用指令只携带当前新调用的 task/run 证明，排除旧 A 身份。正常与坏回包继续；停止或关闭重开不再启动后继。既成的两份 canonical/native 与冻结身份逐字节保留。
+- 未恢复旧检查点预约、换边事务或任务图；这些兼容服务及其原子性单元/契约覆盖保留。新流程按用户设计使用问答与普通 Agent 工具。
+- build/recursive-handoff.json 4/4、build/recursive-handoff-successors.json 4/4 通过；pnpm typecheck、pnpm check:test-modules 通过。新的供应商是独立集成辅助文件，没有将 Vitest 注入桌面共享种子。

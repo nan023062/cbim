@@ -1,3 +1,20 @@
+## 2026-11-16：源码阅读整理——Application 生命周期入口
+
+- 延续用户按文档 05 整理源码的直接要求，基于 `6becfe58`。本片完整阅读 Logic Application、Bridge 适配器及初始化协作者，整理两个源码文件，保护原服务注册、并发打开、退出和失败恢复语义。
+- Logic Application 按私有／公开及字段／属性／构造／方法分区，显式列出 paths/platform 字段，补齐逐成员中文说明，展开构造、open、stop、shutdown 等压缩控制流。同文件 ApplicationPlatform 仅命名原有宿主能力形状；Bridge Application 保持三个重载连续，仍只委托 IPC 路由，未另建生命周期或服务。
+- 初始化核对：调整位置的初值为独立 Map、标记与监管／准入对象，没有跨字段读取；两个带 UUID 的对象仍保持原先相对创建顺序。构造体中原服务装配顺序不变。编译后逐成员 AST 比较确认所有方法体（含构造参数赋值）与字段初值保持一致；这项核对不代替真实行为验证。
+- 同步两文件的文件头、字段、方法、内部契约及分区，更新 Logic application 和 Bridge server 的 CONTRACT 及 ARCHITECTURE；新增类意图、状态所有权和阅读顺序说明。两份契约的本地链接、分区配对及类／接口逐成员说明检查通过。
+- 验证选择：Application runtime 覆盖多工作区、实例重开、活动投影与历史；workspace lifecycle 覆盖并发打开、失败重试、事务排空与退出；core domains integration 保留关闭后快照读取；desktop update lifecycle 覆盖延后恢复和关闭调用方，不属于实际安装验收。
+
+```powershell
+pnpm exec vitest run tests/application-runtime.test.ts tests/workspace-lifecycle.test.ts tests/core-domains-integration.test.ts tests/desktop-update-lifecycle.test.ts --reporter=default --reporter=json --outputFile=build/source-reading-application-tests.json
+pnpm typecheck
+pnpm check:architecture
+```
+
+- 4 文件 / 13 用例通过，报告保留在 `build/source-reading-application-tests.json`。类型检查通过；架构检查无漂移，1674 文件 / 7938 依赖、无环无违规。测试归属和导入未改变，未重复测试模块登记检查。开发进程中断后已核对文件、提交和测试报告；原类型检查回执丢失且进程已结束，仅补跑该项并取得成功结果，没有重复前两次提交或已通过的测试。
+- 本片仍保留原打开／关闭流程，未提炼新的生命周期抽象、移动业务目录或修改权限／持久化协议。未运行全量回归、桌面真机、构建、安装升级或发布；全仓其它业务源码仍需按内聚模块逐成员整理，不能从导航覆盖率推断已经完成。
+
 ## 2026-11-16：源码阅读整理——全局导航与完整目录清单
 
 - 延续用户按文档 05 熟悉并整理源码的直接要求，基于首片 `119e873a`。核对四层实际依赖、桌面/IPC 入口、Conversation.send、WorkspaceExecutionManager.launch、应用装配、Agent 调用及日志路径；现有边界仍适用，本片不移动业务目录或改运行行为。

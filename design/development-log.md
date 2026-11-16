@@ -3256,3 +3256,11 @@ member-pause-pi 四项改用真实递归 Agent 工具：A 实际写入、读取�
 - 将 active-goal-input 的 10 种真实 Pi 场景迁移到同一根运行的 steer / ACK 及原 Agent 结果复核，不再依赖旧 goal plan/review 或成员派工。覆盖两次插入、暂停提问、ACK 未知、保存失败、发送前停止、确认后停止；旧 stale-review 场景改为实际拒绝已退出目录的工具，不能复活旧流程。
 - 保留接受事实、原生会话及重启不重放断言。停止竞态等待 scope 持久关闭后再比较幂等快照，避免把合法生命周期收尾误判为重复插入。共享供应商保持默认旧路径，尚未迁移的桌面夹具不被隐式改写。
 - 验证：首次专项 9/10 通过（build/recursive-active-input.json）；调整终态等待后，pnpm exec vitest run tests/active-goal-input-pi.test.ts -t "ack-stop|before-send-stop" --reporter=json --outputFile=build/recursive-active-input-stop.json 为 2/2 通过。pnpm typecheck、pnpm check:test-modules 通过（541 文件）。本步只改测试，未运行安装/升级验收；30a98c15 的完整 CI 仍在运行，不以本地结果代替其结论。
+
+
+## 2026-11-16：岗位独立模型调用与原结果复核（Issue #94 / PR #96）
+
+- owner-execution 六项集成迁移到 cbim_agent_call：实际注册岗位、独立 HTTP 路由/模型、适配和继承 Skill；调用前换负责人/改模型拒绝，不隐式切换。调用开始后改配置仍使用冻结的 4096 请求额度。未启动停止没有子运行，响应丢失后按原 callId 核验而不重放。
+- 原旧队列 ABA/领取语义不冒充新调用生命周期；兼容服务测试仍保留。bad-wire 改为真实子执行完成后丢失返回确认，未声称新 Agent 工具已有旧 dispatch 输出 Schema。所有根/子 canonical 和 native 在重启后逐字节保持，任务图为空。
+- pnpm exec vitest run tests/owner-execution-pi.test.ts tests/module-ownership-pi.test.ts --reporter=json --outputFile=build/recursive-owner-verified.json：13/13 通过。首次 6 项运行均在测试读取日志路径时误用 TaskSpec.id 失败，修正为实际 taskId 后通过；pnpm typecheck 通过。未跑完整桌面/安装升级。
+- 当前 30a98c15 CI 分片 2：868 通过、13 失败；发现源文件头使用“设计意图”而非强制“设计原因”，同步修正；架构生成器核查 135 目录、836 源码，结构与行为未变，无文档差异；其余属于待迁移业务/附件测试。

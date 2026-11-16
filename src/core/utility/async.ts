@@ -16,11 +16,9 @@ export class SerialQueue
     const result = this.tail.then(work);
 
     this.tail = result.then(
-
       () => { },
 
       () => { }
-
     );
 
     return result;
@@ -111,11 +109,9 @@ export class InFlightOperations
       this.pending.add(operation);
 
       void operation.then(
-
         () => { this.pending.delete(operation); },
 
         () => { this.pending.delete(operation); }
-
       );
     }
     return operation;

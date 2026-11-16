@@ -703,7 +703,6 @@ export class Application
 
                 businessRuns,
               } = createMemberServices(
-
                 ws,
 
                 this.engineModels,
@@ -719,11 +718,9 @@ export class Application
                 this.platform.controlledFiles,
 
                 this.enginePackages ?? this.platform.engineRuntimes
-
               ),
 
               execution = createExecutionManager(
-
                 ws,
 
                 this.engineModels,
@@ -737,6 +734,7 @@ export class Application
                 admission,
 
                 this.repositoryConnections,
+
                 { service: moduleOwnerships, members: workspaceMembers },
 
                 requestBudgets,
@@ -748,8 +746,8 @@ export class Application
                 this.enginePackages ?? this.platform.engineRuntimes,
 
                 this.platform.controlledFiles,
-                { runs: businessRuns, controlledFiles, isolatedExecutions }
 
+                { runs: businessRuns, controlledFiles, isolatedExecutions }
               );
 
             this.dispatchers.set(id, service);
@@ -972,7 +970,6 @@ export class Application
       return input;
 
     const { profile } = await this.engineModels.Resolve(
-
       input?.profileId,
 
       input?.model,
@@ -980,7 +977,6 @@ export class Application
       input?.engine,
 
       input?.modelRoles
-
     );
 
     return {

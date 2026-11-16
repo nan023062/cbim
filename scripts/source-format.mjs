@@ -83,14 +83,16 @@ function isSignature(node)
 
 function layout(source)
 {
-  const text = source.text, entries = lexemes(source), breaks = new Map(), groups = [], protectedRanges = [];
+  const text = source.text, entries = lexemes(source), breaks = new Map(), groups = [], protectedRanges = [], tightCallEdges = new Set();
   const eol = text.includes('\r\n') ? '\r\n' : '\n';
   const entryAt = new Map(entries.map((entry, index) => [entry.start, index]));
   const mark = (position, priority = 3) => breaks.set(position, Math.max(priority, breaks.get(position) ?? 0));
-  const before = node => {
+  const before = (node, priority = 3) => {
     const comments = ts.getLeadingCommentRanges(text, node.pos) ?? [];
-    mark(comments[0]?.pos ?? node.getStart(source));
-    if (comments.length) mark(node.getStart(source));
+    const position = comments[0]?.pos ?? node.getStart(source);
+    mark(position, priority);
+    if (comments.length) mark(node.getStart(source), priority);
+    return position;
   };
   const single = (node, end = node.end, priority = 5, rule = 'single-line') => {
     const start = node.getStart(source);
@@ -113,6 +115,22 @@ function layout(source)
     else sawBody = true;
   }
   const visit = node => {
+    // 换行由维护者按阅读需要选择；只规整已有分行的实参，不猜测数量阈值。
+    // 调用布局优先级低于必须单行的导出、声明头及箭头函数。
+    if (ts.isCallExpression(node) && node.arguments.length > 1)
+    {
+      const children = node.getChildren(source);
+      const open = children.find(child => child.kind === ts.SyntaxKind.OpenParenToken);
+      const close = children.findLast(child => child.kind === ts.SyntaxKind.CloseParenToken);
+      const multiline = open && close && (node.arguments.some((argument, index) => /[\r\n]/.test(text.slice(index ? node.arguments[index - 1].end : open.end, argument.getStart(source)))) || /[\r\n]/.test(text.slice(node.arguments.at(-1).end, close.getStart(source))));
+      if (multiline)
+      {
+        for (const argument of node.arguments) before(argument, 0.5);
+        tightCallEdges.add(before(node.arguments[0], 0.5));
+        mark(close.getStart(source), 0.5);
+        tightCallEdges.add(close.getStart(source));
+      }
+    }
     if (isBraceContainer(node))
     {
       const children = node.getChildren(source);
@@ -179,13 +197,16 @@ function layout(source)
       output += original + current.text;
       continue;
     }
-    const brace = previous.kind === ts.SyntaxKind.OpenBraceToken || current.kind === ts.SyntaxKind.OpenBraceToken || current.kind === ts.SyntaxKind.CloseBraceToken;
+    const next = entries[index + 1];
+    // 行内对象参数的左大括号不是独占行，不能抵消参数之间的留白。
+    const openingBraceLine = current.kind === ts.SyntaxKind.OpenBraceToken && (forced >= 3 || next && /[\r\n]/.test(text.slice(current.end, next.start)));
+    const brace = previous.kind === ts.SyntaxKind.OpenBraceToken || openingBraceLine || current.kind === ts.SyntaxKind.CloseBraceToken;
     // 右大括号后的表达式收尾符号与大括号共同构成一行，不额外留白。
     const braceEnding = /^\s*}[);,\]]*\s*$/.test(output.slice(output.lastIndexOf('\n') + 1));
     const previousLine = output.slice(output.lastIndexOf('\n') + 1);
     const trailingComment = previous.comment && !/[\r\n]/.test(previous.text) && previousLine.slice(0, -previous.text.length).trim().length > 0;
     const comment = previous.comment && !trailingComment && (lineComment || /[\r\n]/.test(original) || forced);
-    const count = brace || braceEnding || comment ? 1 : 2;
+    const count = tightCallEdges.has(current.start) || brace || braceEnding || comment ? 1 : 2;
     const indent = /(?:\r?\n)([ \t]*)$/.exec(original)?.[1] ?? '';
     output += eol.repeat(count) + indent + current.text;
   }

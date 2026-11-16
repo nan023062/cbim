@@ -874,8 +874,11 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
         <ComposerAttachments items={attachments} workspaceId={workspace.id} disabled={busy || attachmentBusy} onRemove={id => onAttachments(attachments.filter(a => a.id !== id))} />
         <textarea ref={input} aria-label="对话草稿" disabled={busy} value={tab.draft || ''} onChange={e => onDraft(e.target.value)} placeholder={waiting ? '补充要求，继续当前目标…' : '向主 Agent 发送指令…'} title="Enter 发送，Shift+Enter 换行；执行期间的消息按实际引擎能力处理" onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && canSend) { e.preventDefault(); void send() } }} />
         <div className="chat-controls"><div className="chat-controls-left"><AttachmentMenu workspaceId={workspace.id} disabled={busy || attachmentBusy} attachmentsFull={attachments.length >= 12} skillsDisabled={!canSendRequest} onBusy={setAttachmentBusy} onAdd={addAttachments} onSkill={skill => { if (canSendRequest) void send(skill) }} /><ComposerPicker label="执行权限" value={permission} onChange={v => { setPermission(v as ChatPermission); if (taskOpen) setNextTip(Date.now()) }} disabled={busy} warning={permission === 'execute'} options={[
+
             { value: 'read', label: '只读访问', icon: 'knowledge', description: '只查看、分析和预览，不修改业务文件或正式知识，不执行命令' },
+
             { value: 'ask', label: '默认权限', icon: 'hand', description: '修改业务文件、提交知识和运行命令前逐次确认' },
+
             { value: 'execute', label: '完全访问', icon: 'warning', description: '自动执行业务文件、知识提交和命令操作；仍检查工作区边界及知识版本' },
 
           ]} /></div>

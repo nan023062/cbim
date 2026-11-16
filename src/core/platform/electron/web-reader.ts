@@ -117,13 +117,11 @@ export class ElectronBrowserReader implements BrowserReader
     try
     {
       proxy = await openBrowserProxy(
-
         active,
 
         (error) => { documentFailure ??= error; },
 
         this.transport
-
       );
 
       await ses.setProxy({

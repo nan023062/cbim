@@ -227,10 +227,9 @@ export class WebPageReader
         signal.throwIfAborted();
 
         throw Error(
-
           `${failure instanceof Error ? failure.message : String(failure)}；静态读取失败：${reason}`,
-          { cause: failure }
 
+          { cause: failure }
         );
       }
     }

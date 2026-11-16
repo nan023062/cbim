@@ -63,6 +63,33 @@ test('导出中的普通函数正文仍展开，箭头正文仍单行', () => {
   expect(result).toContain('other: () => { return 2; }');
 });
 
+test('分行调用每个参数一行且对齐，首尾圆括号内侧不空行', () => {
+  expect(format('SaveDocument(\n\n documentId, content,\noptions, cancellationToken\n\n);')).toBe('SaveDocument(\n  documentId,\n\n  content,\n\n  options,\n\n  cancellationToken\n);\n');
+});
+
+test('调用参数分行不拆方法声明、导出声明及完整箭头，也不猜测数量阈值', () => {
+  const text = 'function Save(a: string,\nb: string,\nc: string,\nd: string) {}\nSave(a, b, c, d);\nexport const result = Save(\na, b, c, d\n);\nconst run = () => Save(\na, b, c, d\n);';
+  const result = format(text);
+  expect(result).toContain('function Save(a: string, b: string, c: string, d: string)');
+  expect(result).toContain('Save(a, b, c, d);');
+  expect(result).toContain('export const result = Save(a, b, c, d);');
+  expect(result).toContain('const run = () => Save(a, b, c, d);');
+});
+
+test('嵌套调用各自对齐，参数内部的逗号和箭头不误作外层参数', () => {
+  const result = format('Outer(\nInner(\na,b\n), { first: 1, second: 2 }, (value: number) => value * 2\n);');
+  expect(result).toBe('Outer(\n  Inner(\n    a,\n\n    b\n  ),\n\n  { first: 1, second: 2 },\n\n  (value: number) => value * 2\n);\n');
+});
+
+test('调用首参数说明紧贴括号，保留模板、行注释及参数求值顺序', () => {
+  const text = 'Save(\n\n/** 第一个参数。 */\nRead(), // 先读\n`first\nsecond`, ...remaining\n\n);';
+  const result = format(text);
+  expect(result).toContain('Save(\n  /** 第一个参数。 */\n  Read(), // 先读');
+  expect(result).toContain('`first\nsecond`');
+  expect(result).toContain('...remaining\n);');
+  expect(() => assertEquivalent('example.ts', text, result)).not.toThrow();
+});
+
 test('说明紧贴成员，保留行末注释及编译指令的行边界', () => {
   const text = 'class A {\n/** 成员说明。 */\nprivate _x = 1; // 单位：次\n/** 读取当前值。 */\nRead() {\n// @ts-expect-error 有意验证外部错误\nMissing();\nreturn this._x;\n}\n}';
   const result = format(text);

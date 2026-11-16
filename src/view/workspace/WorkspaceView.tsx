@@ -161,10 +161,15 @@ export function BusinessArchitecture({ workspace, tabId, dirty, snapshot, refres
     if (target === '.cbim/workspace')
 
       return [
+
         { id: 'business-govern', label: launch.label, icon: 'sparkles', disabled: launch.disabled, OnSelect: wrap(() => void launch.start()) },
+
         { id: 'module-new', label: '新建工程模块', icon: 'plus', OnSelect: wrap(() => setEditor({ kind: 'module', parentId: target })) },
+
         { id: 'ownerships', label: '负责人记录', icon: 'clock', OnSelect: wrap(() => setOwnership({})) },
+
         { id: 'architecture-publish', label: '发布架构', icon: 'upload', disabled: !tree?.roots.length, OnSelect: wrap(() => setTransfer('publish')) },
+
         { id: 'architecture-import', label: '使用模板', icon: 'download', OnSelect: wrap(() => setTransfer('import')) },
 
       ];
@@ -174,11 +179,17 @@ export function BusinessArchitecture({ workspace, tabId, dirty, snapshot, refres
       return [];
 
     return [
+
       { id: 'module-child', label: '新建子模块', icon: 'plus', OnSelect: wrap(() => setEditor({ kind: 'module', parentId: target })) },
+
       { id: 'module-edit', label: '编辑模块', icon: 'edit', OnSelect: wrap(() => setEditor({ kind: 'module', id: target })) },
+
       { id: 'module-delete', label: '删除模块', icon: 'trash', OnSelect: wrap(() => setEditor({ kind: 'module', id: target, mode: 'delete' })) },
+
       { id: 'module-governance', label: '知识治理记录', icon: 'knowledge', OnSelect: wrap(() => setGovernance(target)) },
+
       { id: 'module-ownership', label: '负责人记录', icon: 'clock', OnSelect: wrap(() => setOwnership({ moduleId: target })) },
+
       { id: 'workflow-new', label: '新建 Workflow', icon: 'flow', OnSelect: wrap(() => setEditor({ kind: 'workflow', parentId: target })) },
 
     ];

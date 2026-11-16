@@ -35,7 +35,9 @@ export class FeedbackTools
   List()
   {
     return [
+
       { name: 'cbim_feedback_submit', version: 1, effects: ['external-write'], description: '将用户愿意提供的 BUG／愿望直接创建 GitHub Issue。仅 kind 和 summary 必填，其余字段可省略或留空，缺项显示用户未提供，不强制追问。账号和目标已由设置授权；不读取整段会话或工程。成功后静默结束，未知结果只核实原提交。', inputSchema: zodToJsonSchema(feedbackInputSchema) as Record<string, unknown> },
+
       { name: 'cbim_feedback_receipt', version: 1, effects: ['read'], description: '只核实当前工作区唯一待核实的 GitHub 原提交，或本会话最近提交；可在硬中断后的新会话核实。不查开发进度，不重发，不能把另一条原提交当作当前新反馈成功。成功后不追加结果消息；未找到仍未知。', inputSchema: zodToJsonSchema(feedbackReceiptInputSchema) as Record<string, unknown> },
 
     ]

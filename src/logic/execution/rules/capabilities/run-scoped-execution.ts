@@ -169,6 +169,7 @@ export class RunScopedExecution
     const base = { version: 1, cancellation: { mode: 'during_execution' as const, description: '停止同一次读取或隔离Job；实际退出前保留运行占用。' }, recovery: { mode: 'inspect_before_retry' as const, description: '先查原调用回执；不自动重放未知执行，私有输出不回写工程。' } };
 
     return [
+
       { ...base, name: scopedReadToolName, effects: ['read'] as const, description: '完整读取冻结读范围内一个普通UTF-8文件，最多1MiB，返回同字节指纹。替代本模式的原生read。', inputSchema: zodToJsonSchema(scopedReadInputSchema), outputSchema: zodToJsonSchema(scopedReadOutputSchema) },
 
       ...(this.scope.node ? [{ ...base, name: scopedNodeToolName, effects: ['command'] as const, description: '复制明确的允许文件，用固定Node在无网络LPAC/Job中执行。入口脚本通过__dirname读取快照，cwd为私有输出目录；只能返回明确输出，不能自动写回工程。预算来自冻结Workflow；退出零不代表专业验收。', inputSchema: zodToJsonSchema(scopedNodeInputSchema), outputSchema: zodToJsonSchema(scopedNodeOutputSchema) }] : []),

@@ -2,7 +2,7 @@
 
 <img src="assets/branding/cbim-mark.svg" width="64" height="64" alt="CBIM Assistant 图标">
 
-本地／多端定位的 AI Native 工作流工具，当前以单人本地使用为主。完整产品名为 **CBIM Assistant**，简称 **CBIM**。品牌资源与生成方式见 [品牌规范](assets/branding/README.md)；官网构建与维护见 [网站说明](website/README.md)。
+本地／多端定位的 AI Native 工作流工具，当前以单人本地使用为主。完整产品名为 **CBIM Assistant**，简称 **CBIM**。品牌图形源为 [cbim-mark.svg](assets/branding/cbim-mark.svg)，使用 `pnpm build:brand` 生成 PNG／ICO、`pnpm check:brand` 核对摘要；官网构建与维护见 [网站说明](website/README.md)。
 
 [产品官网](https://nan023062.github.io/cbim/) · [Windows 下载与更新日志](https://nan023062.github.io/cbim/download.html)
 
@@ -95,6 +95,7 @@ pnpm start
 | `src/view/` | React 页面、控制器、hooks 和视图专属适配 |
 | `docs/` | 01–04 概念设计、05 工程文件组织设计及 06–07 架构标准与治理准则 |
 | `design/` | 产品目标、核心取舍、未落地设计和原型 |
+| `assets/` | 实际使用的品牌图像、内置 Skill／运行规范与 Schema；不放维护者说明文档 |
 | `legal/` | 随包分发的第三方许可和 NOTICE |
 | `tests/` | 隔离工程、规则、内部工具、调度与故障恢复测试 |
 | `scripts/` | 构建与桌面验证脚本 |

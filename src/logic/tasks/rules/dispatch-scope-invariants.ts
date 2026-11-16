@@ -138,6 +138,10 @@ export function validateDispatchScopes(previous:DispatchState,next:DispatchState
         valid(owners.length===1&&owners[0].scopeId===source.scopeId,'主核实来源必须属于唯一原周期');
         valid(origin.sourceGoalRevision===source.goal?.revision&&origin.sourceInputRevision===(source.goal?(source.goal.inputRevision??1):undefined)&&origin.sourcePlanRevision===source.goal?.plan?.revision,'主核实来源目标版本不一致');
         valid(next.sessions.some(s=>s.workspaceId===scope.workspaceId&&s.rootSessionId===scope.rootSessionId&&s.purpose==='conversation'&&s.agentId==='cbim:main'&&s.agentInstanceId===graph.root.agent.agentInstanceId),'主核实来源缺少真实对话通道');
+      }else if('executionModel' in origin){
+        // 递归来源只核真实登记与终态，不推造旧任务版本或按邻近时间选择来源。
+        const run=next.agentBusinessRuns?.find(r=>r.binding.workspaceId===scope.workspaceId&&r.binding.rootSessionId===scope.rootSessionId&&r.binding.taskId===origin.taskId&&r.binding.runId===origin.runId);
+        valid(origin.executionModel==='agent-tools-v1'&&run?.scopeId===source.scopeId&&run.status==='closed','递归核实来源必须是同主会话原周期的已关闭业务调用');
       }else{
         const task=graph.tasks.find(item=>item.taskId===origin.taskId);
         valid(task&&task.scopeId===source.scopeId&&task.revision===origin.taskRevision&&task.planRevision===origin.planRevision&&!task.activeRunId,'核实来源任务的身份或冻结版本不一致');

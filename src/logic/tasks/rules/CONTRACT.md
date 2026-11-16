@@ -881,3 +881,8 @@ graph-rules 的 acyclic 委托后端 isDirectedAcyclic。validateGraph 仍先校
 ## 递归执行记录核实
 
 执行记录报告 basis 的 agent-tools-v1 分支只公开原登记和冻结计划版本，禁止携带旧任务版本或状态。历史分支仍要求 taskRevision/planRevision/taskStatus，不能使用递归 active/closed。报告只读，不构成恢复或业务验收授权。
+
+
+## 递归业务来源的只读核实
+
+`scope-recovery.ts` 的 member_run 记录增加严格的 agent-tools-v1 变体：固定真实 taskId/runId/toolCallIds、原周期与日志观察，禁止携带旧 taskRevision/planRevision。`dispatch-scope-invariants.ts` 以 agentBusinessRuns 的工作区、根会话、原周期和 closed 状态核实该变体；旧来源继续按旧任务版本验证，不能混用身份。公开投影继承此来源契约，但仍不公开隔离上下文。

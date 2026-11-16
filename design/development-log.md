@@ -3311,3 +3311,16 @@ member-pause-pi 四项改用真实递归 Agent 工具：A 实际写入、读取�
 首次执行暴露测试模型对含 JSON 引号的目标文本匹配错误，导致计划未发出，后续版本检查正确拒绝；修正序列化匹配，并将前置输入限制为原证明身份字段。产品源码未改动，旧队列服务契约测试保留。
 
 实际验证：`pnpm exec vitest run tests/queued-dependency-addition-pi.test.ts tests/queued-dependency-replacement-pi.test.ts tests/queued-dependency-revision-pi.test.ts --reporter=json --outputFile=build/recursive-dependencies-verified.json`：11/11 通过。`pnpm typecheck`、`pnpm check:test-modules` 通过（541 套件，174 unit / 166 contract / 201 integration）。仅覆盖本步依赖行为，未代表全量 CI、桌面安装或发布验收通过。
+
+
+### 2026-11-16 · #94 递归未知副作用观察与独立只读核实
+
+本步迁移 3 项影响观察与 3 项 inspection-cycle 集成场景。真实写入后丢失结束事件保留 unknown；命令失败及无交付的成功编辑不推断业务成功。文件变化使原处置依据过期，删除文件后报告 missing；跨根读取不泄露来源，重启不重放。
+
+发现并修复产品缺口：原 recovery 要求旧任务修订号、fresh 运行强制 legacy、递归登记一律禁止 recovery。现增加严格 agent-tools-v1 原业务来源记录，由真实 agentBusinessRuns 核原周期/身份/关闭状态；可信预检决定新根协议，意图接受后由 AgentLifecycle 拥有预算、子调用和终态，旧 Auto 不另建 cycles。核实只允许 read，持久事务也拒绝 ask/execute 及旧恢复周期混入。
+
+测试故障定位：初次夹具误将工具 unknown 结构视为 error，丢失结束事件实际为 interrupted；其次发现实际 legacy 选择及登记门禁缺口。一次参数位置编辑错误已修正。保留各次失败报告，最终按失败场景选择器复验：`recursive-effect-observation-followup.json` 的 unsupported/edit 2 项通过，`recursive-effect-changed.json` changed 1 项通过；`recursive-inspection-verified.json` stop 1 项通过，`recursive-inspection-successors.json` complete-restart/again 2 项通过。旧日志以真实损坏字节验证，未伪造旧任务。
+
+相关验证：`pnpm exec vitest run tests/business-run-registry.test.ts tests/scope-recovery.test.ts tests/recovery-start-race.test.ts tests/scope-detail-recovery.test.ts --reporter=json --outputFile=build/recursive-recovery-boundaries.json` 29/29 通过，包含新增 4 项持久权限边界。`pnpm check:architecture`、`pnpm check:test-modules` 通过；源码涉及 conversation/runtime、dispatch/runtime、execution/rules、tasks/rules、tasks/runtime 的注释与 CONTRACT/ARCHITECTURE 已同步。正式业务重规划、补充材料、原控制调用核查及剩余桌面迁移尚未在本步完成；不声明全量 CI 或发布通过。
+
+类型复验：修正新增单元夹具缺少 profileId 及可选字段断言后，`pnpm typecheck` 通过。CI 43801296964（旧头 47ef1e8b）四片全部返回：3663 通过、41 失败、2 pending；这是新交接/依赖/核实提交之前的历史基线，不代表当前头剩余失败数。

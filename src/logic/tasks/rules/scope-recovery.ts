@@ -38,7 +38,9 @@ const logFacts={logPrefixHash:digest.optional(),throughSeq:z.number().int().nonn
 const legacyRecordedSource=legacySource.extend({taskRevision:revision,planRevision:revision,...facts}).strict();
 const memberRecordedSource=memberSource.extend({scopeId:sourceScopeId,taskRevision:revision,planRevision:revision,...facts,...logFacts}).strict();
 const mainRecordedSource=mainSource.extend({scopeId:sourceScopeId,...facts,...logFacts,sourceGoalRevision:revision.optional(),sourceInputRevision:revision.optional(),sourcePlanRevision:revision.optional()}).strict();
-export const recoveryRecordedSourceSchema=z.union([legacyRecordedSource,memberRecordedSource,mainRecordedSource]).superRefine((v,c)=>{
+/** 递归来源由原业务运行身份确定，没有旧 TaskNode 的修订号；与旧协议明确区分。 */
+const recursiveRecordedSource=memberRecordedSource.omit({taskRevision:true,planRevision:true}).extend({executionModel:z.literal('agent-tools-v1')}).strict();
+export const recoveryRecordedSourceSchema=z.union([legacyRecordedSource,memberRecordedSource,recursiveRecordedSource,mainRecordedSource]).superRefine((v,c)=>{
   if('kind' in v&&((v.logPrefixHash===undefined)!==(v.throughSeq===undefined)))c.addIssue({code:'custom',message:'新核实来源的日志指纹与序号须成对'});
   if('kind' in v&&v.kind==='main_run'&&((v.sourceGoalRevision===undefined)!==(v.sourceInputRevision===undefined)||v.sourcePlanRevision!==undefined&&v.sourceGoalRevision===undefined))c.addIssue({code:'custom',message:'主来源目标版本不完整'});
 });

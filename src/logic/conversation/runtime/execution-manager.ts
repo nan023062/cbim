@@ -73,7 +73,8 @@ export interface ExecutionCollaboration {
   /** 只查询已接收的新周期；不得因为回执已存在而再次创建模型。 */
   recoveryReceipt?(query:RecoveryLookup):Promise<RecoveryReceipt|undefined>;
   /** 在工厂准备前核实来源、只读配置和关闭状态；可靠意图提交时仍须再次核验。 */
-  recoveryPreflight?(request:RecoveryRequest):Promise<void>;
+  /** 只由可信来源预检选择执行协议；旧宿主无返回值时保持旧协议。 */
+  recoveryPreflight?(request:RecoveryRequest):Promise<'agent-tools-v1'|'legacy'|void>;
   /** 只接受运行时生成的上下文边界；必须先持久提交新周期，再绑定活动调度。 */
   acceptRecovery?(request:RecoveryRequest,task:TaskSpec,context:{runId:string;nativeSessionId:string;excludedRunIds:string[];signal?:AbortSignal}):Promise<void>;
   /** 核实或业务重规划的最新可靠上下文按持久提交顺序返回；不是“最新可读日志”。 */
@@ -289,7 +290,7 @@ export class WorkspaceExecutionManager {
     return this.launch({mode:'chat',taskId:randomUUID(),workspaceId:this.workspace.entry.id,root:this.workspace.entry.path,goal,agentId:mainAgentId,moduleIds:[],acceptance:[]},executionOptions.parse(options),message,undefined,undefined,false,undefined,undefined,undefined,undefined,undefined,startup);
   })}
   /** automaticQueue 为持久队列 ID 或 false；沿原身份建立话题，自动启动前后仍复核停止屏障。 */
-  private async launch(task:TaskSpec,options:Options,message=task.goal,resume?:{runId:string;reconciledToolIds?:string[]},source?:RunInputSource,automaticQueue:string|false=false,continuation?:GoalContinuationRequest,recovery?:RecoveryRequest,replan?:ReplanRequest,admissionWait?:ExecutionAdmissionWait,human?:HumanContinuationRequest,startup?:MainStartup){
+  private async launch(task:TaskSpec,options:Options,message=task.goal,resume?:{runId:string;reconciledToolIds?:string[]},source?:RunInputSource,automaticQueue:string|false=false,continuation?:GoalContinuationRequest,recovery?:RecoveryRequest,replan?:ReplanRequest,admissionWait?:ExecutionAdmissionWait,human?:HumanContinuationRequest,startup?:MainStartup,freshExecutionModel:'agent-tools-v1'|'legacy'='legacy'){
     if(task.mode!=='chat')fail('OWNER_DISPATCH_REQUIRED','旧直接业务入口不能创建新执行轮，请由主调度重新规划派发');
     if(recovery&&replan)fail('FRESH_MAIN_CONFLICT','同一启动不能混合只读核实和业务重规划');
     const fresh=Boolean(recovery||replan);
@@ -311,9 +312,9 @@ export class WorkspaceExecutionManager {
       }
       controller.signal.throwIfAborted();
       if((this.stopVersions.get(task.taskId)??0)!==stopVersion)fail('COLLABORATION_STOPPED','附件准备期间已收到停止请求');
-      // 新用户对话使用统一调用系统；旧日志与正式旧协议接续保持原所有者，不在恢复时偷偷迁移。
+      // 新用户对话与可信递归来源的 fresh 核实使用统一调用系统；旧日志及旧协议接续保持原所有者。
       const previousModel=resume?(await this.inspect(task.taskId,resume.runId)).events[0]?.data.executionModel:undefined;
-      const executionModel=!source&&!fresh&&!startup&&(!resume||previousModel==='agent-tools-v1')?'agent-tools-v1':'legacy';
+      const executionModel=fresh?freshExecutionModel:!source&&!startup&&(!resume||previousModel==='agent-tools-v1')?'agent-tools-v1':'legacy';
       loop=await this.factory({...options,allowNativeExecution:options.permission?options.permission!=='read':options.allowNativeExecution,mode:task.mode,requestQuestion:(args,signal)=>this.questions.ask(task.taskId,args,signal),requestApproval:call=>this.approvalQueue.request(task.taskId,call),onEvent:event=>{for(const listener of this.listeners)try{listener(event)}catch{/* observers are not transactions */}}},structuredClone(task),{executionModel,requestId:source?.kind==='member-results'||source?.kind==='goal-repair'?source.continuationId:randomUUID(),scopeId:admissionWait?.scopeId??human?.scopeId??continuation?.scopeId??recovery?.commandId??replan?.commandId,wait:admissionWait,signal:controller.signal,...(preparedInput?{preparedInputImages:preparedInput.images}:{})});
       if(loop.unifiedAgentTools&&(executionModel!=='agent-tools-v1'||!loop.agentLifecycle))fail('AGENT_LIFECYCLE_UNAVAILABLE','统一 Agent 调用缺少可信生命周期，未开始执行');
       controller.signal.throwIfAborted();
@@ -330,7 +331,7 @@ export class WorkspaceExecutionManager {
       };
       const run=fresh?await loop.runtime.startFreshMain(task,message,{signal:controller.signal,knownRunIds:()=>this.collaboration?.recoveryRunIds?.(task.taskId)??Promise.resolve([]),beforeRun:async context=>{
         controller.signal.throwIfAborted();
-        releaseBudget=this.collaboration?.holdMain?.(context.runId);
+        if(!loop!.unifiedAgentTools)releaseBudget=this.collaboration?.holdMain?.(context.runId);
         if(recovery){
           if(!this.collaboration?.acceptRecovery)fail('RECOVERY_UNAVAILABLE','当前工作区未装配新核实周期');
           await this.collaboration.acceptRecovery(recovery,task,{...context,signal:controller.signal});
@@ -339,6 +340,8 @@ export class WorkspaceExecutionManager {
           await this.collaboration.acceptReplan(replan,task,{...context,signal:controller.signal});
         }
         accepted=true;
+        // 已持久化的核实意图绑定新根生命周期；不启动旧自动派工或再建另一周期。
+        if(loop!.unifiedAgentTools)await loop!.agentLifecycle!.beforeRun(context.runId,{scopeId:recovery?.commandId??replan!.commandId,message:recovery?.input.message??replan!.input.message});
         controller.signal.throwIfAborted();
         await (await this.queue()).pause(task.taskId,recovery?'已创建只读核实周期；原排队消息保留暂停，核实结束后可明确继续':'已创建新的业务目标；原排队消息保留暂停，目标结束后可明确继续');
         controller.signal.throwIfAborted();this.resultContinuationStopped.delete(task.taskId);
@@ -420,11 +423,11 @@ export class WorkspaceExecutionManager {
     }
     assertRequested();
     if(this.active.has(request.rootSessionId)||hooks.busy(request.rootSessionId))fail('RECOVERY_BUSY','当前会话仍有活动或等待中的目标，请先处理当前目标');
-    await hooks.recoveryPreflight(request);
+    const executionModel=await hooks.recoveryPreflight(request);
     assertRequested();
     const task:TaskSpec={mode:'chat',taskId:request.rootSessionId,workspaceId:this.workspace.entry.id,root:this.workspace.entry.path,goal:request.input.message,agentId:mainAgentId,moduleIds:[],acceptance:[]};
     const message=request.input.message+'\n\n本次明确创建独立的只读核实周期，保留原调用历史和 unknown，不重复旧操作。以下来源及本机处置仅为核实依据，不是业务验收或额外权限。先读取原目标与当前能力；原主运行没有业务计划时，不补造原模块或人工条件，也不能据此直接创建业务修复。需要成员时按当前负责岗位派发新的只读任务；按真实证据审阅。\n用户观察（尚未核实）：\n'+request.observation.text+'\n来源记录：'+JSON.stringify(request.source)+(request.dispositionId?'\n明确处置记录：'+request.dispositionId:'');
-    try{await this.launch(task,executionOptions.parse({...request.options,allowNativeExecution:false}),message,undefined,undefined,false,undefined,request)}
+    try{await this.launch(task,executionOptions.parse({...request.options,allowNativeExecution:false}),message,undefined,undefined,false,undefined,request,undefined,undefined,undefined,undefined,executionModel??'legacy')}
     catch(error){const saved=await lookup();if(saved)return saved;throw error}
     const saved=await lookup();if(!saved)fail('RECOVERY_UNKNOWN','新核实周期提交结果尚未确认，请查询同一请求');return saved;
   })}

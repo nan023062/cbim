@@ -141,3 +141,8 @@ resume 只对本进程 active Map 中 taskId/runId 完全匹配的活动主运�
 
 ## 关闭时的统一 Agent 结算
 ExecutionManager.close 禁止新工作后排空原循环，并等待每个捕获运行的 settled。统一 Agent 的生命周期结算在 closing 时仍执行，把真实终态封存到原 scope；关闭不再跳过它。关闭期间不 pump 队列、不继续模型；结算失败向关闭调用方报告，不冒充成功释放。旧协作协议的关闭协调保持原所有者。
+
+
+## 递归来源的全新只读核实
+
+WorkspaceExecutionManager 从可信 recoveryPreflight 返回值选择新核实运行的执行协议。递归来源在 startFreshMain 接受原核实意图后绑定同一 scopeId 的 AgentLifecycle，继续使用普通 Agent 工具、请求预算及停止收尾；旧来源或旧宿主无协议返回时保持 legacy。协议不能由公开请求指定，恢复不读取损坏历史作为模型上下文。

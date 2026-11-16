@@ -21,20 +21,30 @@ export const effectFixture={
 type Request=GoalFixtureRequest&{model:string;tools?:{function:{name:string}}[]};
 
 /** 本机确定性供应商只提出真实工具调用；旧写、只读核实、新修复都由实际 Pi 执行。 */
-export async function effectObservationProvider(options:{unsupported?:boolean;edit?:boolean}={}){
+export async function effectObservationProvider(options:{unsupported?:boolean;edit?:boolean;recursive?:boolean;holdInspection?:boolean}={}){
   assert.ok(!(options.unsupported&&options.edit));
   const main:Request[]=[],member:Request[]=[],other:Request[]=[],errors:string[]=[];
   let agentId='',moduleId='',selection:OwnerExecutionSelection|undefined;
-  const d=effectFixture;
+  const d=effectFixture;let releaseInspection!:()=>void;const inspectionGate=new Promise<void>(r=>releaseInspection=r);if(!options.holdInspection)releaseInspection();
   const server=http.createServer(async(req,res)=>{try{
     assert.equal(req.method,'POST');assert.ok(req.url?.endsWith('/chat/completions'));let raw='';for await(const chunk of req)raw+=chunk;const body=JSON.parse(raw)as Request;assert.equal(body.model,d.model);
-    const auxiliary=JSON.stringify(body.messages).includes(d.otherGoal),isMain=body.tools?.some(item=>item.function.name==='cbim_dispatch_task')===true,list=auxiliary?other:isMain?main:member,turn=list.length;list.push(body);
+    const auxiliary=JSON.stringify(body.messages).includes(d.otherGoal),isMain=body.tools?.some(item=>item.function.name===(options.recursive?'cbim_agent_result_review':'cbim_dispatch_task'))===true,list=auxiliary?other:isMain?main:member,turn=list.length;list.push(body);
     res.writeHead(200,{'Content-Type':'text/event-stream'});
     const emit=(delta:unknown,finish_reason:string|null=null)=>res.write('data: '+JSON.stringify({id:'effect-'+(main.length+member.length+other.length),object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason}]})+'\n\n');
     const tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]});emit({},'tool_calls')},reply=(content:string)=>{emit({role:'assistant',content});emit({},'stop')};
     const plan=(id:string,objective:string)=>{assert.ok(selection);tool(id,'cbim_goal_plan',goalPlanArguments({objective,agentId,moduleIds:[moduleId],ownerSelection:selection,acceptance:d.acceptance}))};
     const dispatch=(id:string,goal:string)=>{assert.ok(selection);tool(id,'cbim_dispatch_task',{agentId,moduleIds:[moduleId],ownerSelection:selection,goal,acceptance:d.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]})};
     if(auxiliary){assert.equal(turn,0);reply('独立会话没有执行原来源的操作。')}
+    else if(isMain&&options.recursive){
+      assert.ok(selection);
+      if(turn===0)tool('effect-old-call','cbim_agent_call',{agentId:selection.memberId,message:d.oldMemberGoal,business:{moduleIds:[moduleId],acceptance:d.acceptance}});
+      else if(turn===1){const failed=mainToolValue(body,'effect-old-call');assert.equal(failed.status,'unknown');assert.equal(JSON.parse(failed.message).status,options.unsupported||options.edit?'failed':'interrupted');reply('Original operation has no verified delivery. Inspect its actual effects before deciding what to do next.')}
+      else if(body.messages.every(m=>m.role==='system'||m.role==='user')){
+        assert.ok(JSON.stringify(body.messages).includes(d.inspectGoal));emit({role:'assistant',content:'Fresh read-only inspection is ready.'});await inspectionGate;
+        tool('effect-inspect-call','cbim_agent_call',{agentId:selection.memberId,message:d.inspectMemberGoal,business:{moduleIds:[moduleId],acceptance:d.acceptance}});
+      }else{assert.equal(mainToolValue(body,'effect-inspect-call').verification?.state,'verified',JSON.stringify(mainToolValue(body,'effect-inspect-call')));reply('Fresh inspection completed without replaying the original effect.')}
+
+    }
     else if(isMain){
       assert.ok(body.tools?.every(item=>!['cbim_task_help','cbim_task_checkpoint'].includes(item.function.name)));
       if(turn===0)plan('effect-old-plan',d.oldGoal);
@@ -79,5 +89,5 @@ export async function effectObservationProvider(options:{unsupported?:boolean;ed
     res.end('data: [DONE]\n\n');
   }catch(error){errors.push(String(error));if(!res.headersSent)res.writeHead(500);res.end('Effect fixture failed')}});
   await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();assert.ok(address&&typeof address!=='string');
-  return {url:`http://127.0.0.1:${address.port}/v1`,main,member,other,errors,bind:(agent:string,module:string,owner:OwnerExecutionSelection)=>{agentId=agent;moduleId=module;selection=structuredClone(owner)},close:async()=>{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
+  return {url:`http://127.0.0.1:${address.port}/v1`,main,member,other,errors,releaseInspection,bind:(agent:string,module:string,owner:OwnerExecutionSelection)=>{agentId=agent;moduleId=module;selection=structuredClone(owner)},close:async()=>{releaseInspection();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
 }

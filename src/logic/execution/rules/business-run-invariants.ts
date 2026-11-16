@@ -38,7 +38,9 @@ export function projectAgentBusinessRuns(previous:DispatchState,mutation:Dispatc
   check(Number.isFinite(Date.parse(value.createdAt)),'运行时间无效');
   const prior=old.find(run=>run.binding.runId===b.runId),scope=previous.scopes?.find(s=>s.scopeId===value.scopeId&&s.workspaceId===b.workspaceId&&s.rootSessionId===b.rootSessionId);
   if(!prior){
-    check(value.status==='active'&&value.closedAt===undefined&&scope?.status==='active'&&!scope.recovery&&!scope.budget?.blocked,'新业务运行必须属于活动周期');
+    check(value.status==='active'&&value.closedAt===undefined&&scope?.status==='active'&&!scope.budget?.blocked,'新业务运行必须属于活动周期');
+    // 新核实允许普通递归读取，但持久事务也必须拒绝写权限和旧协议混入。
+    if(scope?.recovery)check('executionModel' in scope.recovery.source&&scope.recovery.source.executionModel==='agent-tools-v1'&&value.permission==='read','只读递归核实不得扩大权限或借用旧恢复周期');
     check(!previous.runs?.some(run=>run.binding.runId===b.runId||run.binding.taskId===b.taskId)&&!old.some(run=>run.binding.taskId===b.taskId||(run.parent.callerRunId===p.callerRunId&&run.parent.toolCallId===p.toolCallId)),'运行身份不得复用');
     const parent=old.find(run=>run.binding.taskId===p.callerTaskId&&run.binding.runId===p.callerRunId&&run.scopeId===value.scopeId);
     const root=value.lineage.at(-1)!;

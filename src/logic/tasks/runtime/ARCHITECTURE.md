@@ -665,4 +665,4 @@ ScopeActiveInputService.send 是新根生命周期与旧协调器共用的输入
 
 ## 递归执行记录核实
 
-ScopeRecoveryService 的旧任务执行报告来源明确拒绝递归 executionModel 或缺少旧任务版本的报告，不能由原子调用报告冒充旧派工恢复凭据；此边界不实现新的递归恢复入口。
+ScopeRecoveryService 的旧任务执行报告来源明确拒绝递归 executionModel 或缺少旧任务版本的报告。递归来源必须使用 member_run 影响观察及精确 taskId/runId/toolCallIds；冻结 executionModel=agent-tools-v1、原周期、日志前缀和观察依据，由 Store 核验原业务调用已关闭且归属一致，不伪造 TaskNode 修订号。只读核实建立独立原生上下文，原调用与副作用事实不被改写。

@@ -147,7 +147,8 @@ export class AutoCollaboration {
   private async recoveryPreflight(request:RecoveryRequest){
     if(this.closed)fail('COLLABORATION_STOPPED','协作调度正在关闭');
     if(this.busy(request.rootSessionId)||this.resuming.has(request.rootSessionId))fail('RECOVERY_BUSY','当前主会话还有未结束目标');
-    await this.dispatch.recoveries.preflight(request);
+    const source=await this.dispatch.recoveries.preflight(request);
+    return 'executionModel' in source&&source.executionModel==='agent-tools-v1'?'agent-tools-v1' as const:'legacy' as const;
   }
   /** 新周期不复活旧成员；可靠意图先落盘，之后绑定同一主实例的全新原生上下文，等待停止屏障收束。 */
   private acceptRecovery(request:RecoveryRequest,task:TaskSpec,context:{runId:string;nativeSessionId:string;excludedRunIds:string[];signal?:AbortSignal}):Promise<void>{
@@ -157,6 +158,8 @@ export class AutoCollaboration {
       if(this.busy(task.taskId))fail('RECOVERY_BUSY','当前主会话还有未结束目标');
       const accepted=await this.dispatch.recoveries.accept(request,context);
       if(!accepted.fresh)fail('RECOVERY_REPLAY','核实意图已受理，请查询原记录，不重复启动');
+      // 递归核实由新根生命周期拥有运行与收尾；旧协调器只提交可信核实意图。
+      if('executionModel' in accepted.recovery.source)return;
       this.cycles.set(task.taskId,{task:structuredClone(task),scopeId:accepted.scope.scopeId,collaborationMode:accepted.scope.executionPolicy?.mode??'team',tasks:new Set(),operations:new Set(),mainRuns:new Set([context.runId]),workRequested:true,stopped:false,readOnly:true});
     })().catch(async error=>{
       // 已提交后读取失败也不能撤销或复用启动意图，只收束本次运行，不能误关闭同 ID 的旧回执。

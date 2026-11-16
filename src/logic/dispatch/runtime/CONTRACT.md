@@ -52,3 +52,8 @@ MainToolContext 的公共定义移至 execution/rules/conversation-binding；Aut
 ## 递归用量只读装配
 
 WorkspaceDispatchService 的 goalPorts 可同时提供 ScopeUsageLogs.inspectAgent，交给原 ScopeUsageService 读取递归后代。旧目标审核仍只消费自己的 inspectMain/inspectMember，不通过新增用量读取端口获得恢复或执行能力。
+
+
+## 递归核实意图的所有权
+
+AutoCollaboration.recoveryPreflight 返回已核实来源的协议。acceptRecovery 仍提交真实新核实意图，但对 agent-tools-v1 来源不创建旧 cycles；预算、子调用和终态由新根 AgentLifecycle 负责。旧来源继续保留旧协调器的恢复语义，不将旧任务冒充新调用。

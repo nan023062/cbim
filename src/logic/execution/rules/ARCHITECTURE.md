@@ -739,3 +739,6 @@ business-run 定义受控文件消费者共用的最小运行来源与 AgentBusi
 ## 主控制面生命周期契约
 
 MainToolContext 随 ConversationAgentBinding 归属 execution/rules，供新递归装配和旧 Auto 历史协议共同实现；不再由具体旧调度器声明公共类型。固定 workspace/root/scope/run，assertCurrent 复核有效性，track 在启动操作前登记原提交，不能签发权限或创建周期。
+
+
+递归只读核实：business-run-invariants 仅允许 agent-tools-v1 来源的新 recovery 周期登记 permission=read 子调用。ask/execute 和旧恢复周期即使直接写 Store 也拒绝；仍核原父调用、根运行、模块范围和已冻结身份。

@@ -53,3 +53,12 @@ it('refuses closing a business ancestor while an indirect business descendant re
  next=apply(next,child);expect(()=>apply(next,{...run,status:'closed',closedAt:run.createdAt})).toThrow();
  next=apply(next,{...child,status:'closed',closedAt:child.createdAt});expect(apply(next,{...run,status:'closed',closedAt:run.createdAt}).agentBusinessRuns?.every(r=>r.status==='closed')).toBe(true);
 });
+
+it.each(['read','ask','execute','legacy'] as const)('enforces the recursive inspection permission at the persisted registration boundary (%s)',mode=>{
+ const {state,run,apply}=fixture(),time=run.createdAt;
+ state.scopes![0].recovery={recoveryId:'00000000-0000-4000-8000-000000000001',acceptedAt:time,source:{kind:'member_run',executionModel:'agent-tools-v1',scopeId:'original',taskId:'original-task',runId:'original-run',toolCallIds:['original-write'],reportBasis:'a'.repeat(64),scopeOutcome:'interrupted',reportExecution:'unknown',logState:'verified',unknownToolCount:1},operation:'inspect_effects',observation:{text:'Inspect actual effects'},input:{message:'Read only'},options:{provider:'fixture',profileId:'00000000-0000-4000-8000-000000000002',model:'fixture',permission:'read'},context:{initialRunId:'root-run',nativeSessionId:'fresh-native',excludedRunIds:['original-run']}};
+ if(mode==='legacy')state.scopes![0].recovery!.source={kind:'member_run',scopeId:'original',taskId:'original-task',runId:'original-run',toolCallIds:['original-write'],reportBasis:'a'.repeat(64),scopeOutcome:'interrupted',reportExecution:'unknown',logState:'verified',unknownToolCount:1,taskRevision:1,planRevision:1};
+ const value={...run,permission:mode==='legacy'?'read' as const:mode};
+ if(mode==='read')expect(apply(state,value).agentBusinessRuns).toEqual([value]);
+ else expect(()=>apply(state,value)).toThrow(/只读递归核实/);
+});

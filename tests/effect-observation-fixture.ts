@@ -46,7 +46,7 @@ export async function prepareUnknownEffect(app:Application,user:string,project:s
   }finally{fault?.restore()}
 }
 
-export async function assertOriginalEffectUnchanged(original:Awaited<ReturnType<typeof prepareUnknownEffect>>['original']){assert.deepEqual(await fs.readFile(original.canonicalPath),original.canonical);assert.deepEqual(await fs.readFile(original.nativePath),original.native)}
+export async function assertOriginalEffectUnchanged(original:Pick<Awaited<ReturnType<typeof prepareUnknownEffect>>['original'],'canonicalPath'|'nativePath'|'canonical'|'native'>){assert.deepEqual(await fs.readFile(original.canonicalPath),original.canonical);assert.deepEqual(await fs.readFile(original.nativePath),original.native)}
 
 /** 核实每个真实主/成员绑定；fresh 周期本来就有不同 native，不把它们误判成同一会话文件。 */
 export async function effectRunBytes(app:Application,user:string,workspaceId:string,rootSessionId:string){

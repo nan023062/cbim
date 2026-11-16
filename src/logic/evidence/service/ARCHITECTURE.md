@@ -1,10 +1,30 @@
 # src/logic/evidence/service 架构
 
-## 目录定位
+本目录只维护这一份说明。设计与契约直接编辑本文；文件清单、类图和导航由 [架构脚本](../../../../scripts/source-architecture.mjs) 更新，生成区域之外的人工说明会保留。
+
+## 封装意图
 
 真实工程效果读取适配：在明确范围和版本下采集观察供证据服务使用。
 
-本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
+## 类与模块的设计意图
+
+下表依据源码声明及文件头说明定位封装。字段表示该实例持有的状态或协作引用，不表示它拥有被引用服务的生命周期；实际资源责任和调用限制见下文契约及源码注释。
+
+| 类／模块 | 实现形式与实例字段 | 封装依据 |
+| --- | --- | --- |
+| [knowledge-effect-reader.ts](knowledge-effect-reader.ts) | 函数／契约模块 | 完整 journal 校验复用唯一知识串行队列，原对象计划只从固定私有缓存加载；不把工具失败当作事务回滚，也不借当前实例补造历史请求。 |
+| [persistent-effect-reader.ts](persistent-effect-reader.ts) | 函数／契约模块 | 治理账本借用知识串行队列，责任事件与回执复用唯一 DispatchStore；完整原请求与来源均核实，不从当前保护或负责人倒推旧结果。 |
+
+## 接口设计契约
+
+- [knowledge-effect-reader.ts](knowledge-effect-reader.ts)：职责边界：不提交知识、不刷新索引、不修剪目录、不恢复事务或创建另一个 Store；前后正文仅参与私有摘要，不进入公开报告。
+- [persistent-effect-reader.ts](persistent-effect-reader.ts)：职责边界：不调用提交、预览、恢复或初始化；不查询新模型，不把保存当作批准、实施、迁移或交接。正文只参与私有指纹。
+
+## 开闭边界
+
+本目录的职责及允许协作由[封装意图](#封装意图)限定，输入输出、状态与失败语义以[接口设计契约](#接口设计契约)为准。扩展从已有公开入口及实际装配位置进入；没有明确可替换契约的部分按真实影响修改和验证，不预建未使用的基类或插件入口。
+
+<!-- architecture:generated:start -->
 
 ## 文件清单
 
@@ -81,3 +101,5 @@ N_src_logic_evidence_service_persistent_effect_reader_ts ..> N_src_logic_evidenc
 [返回上层](../ARCHITECTURE.md)。
 
 每次修改本目录代码，同步维护文件头、关键契约说明及本图。未实现的治理、证据验收和自动编排能力不列入当前类图。
+
+<!-- architecture:generated:end -->

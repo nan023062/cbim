@@ -1,3 +1,13 @@
+## 2026-11-16：源码目录统一为一份 ARCHITECTURE.md
+
+- 来源：用户要求每个维护中的源码目录只保留一份 ARCHITECTURE.md，统一封装意图、完整直接文件清单、类设计意图、接口契约、开闭边界及类图导航；基线 `a7a004d9`，无关联 Issue。范围为源码说明文档，源码、样式、配置和资源继续保留，不扩大为删除工程文件。
+- 将 106 份 CONTRACT.md 和 READING、BOUNDARIES、SCHEDULING、FEEDBACK 四份说明合入所属目录，删除已合并的 110 份旧文件；135 个目录均只保留 ARCHITECTURE.md。契约按原章节保留稳定锚点，阅读路线与协作边界也在同一文件；每个直接类/模块依据真实声明与已有文件头补充阅读索引，不凭字段持有关系推断外部服务生命周期。引擎模型服务补充配置锁、公开快照、延迟凭据、错误与扩展责任说明。
+- 生成器移除独立的目录定位表和契约附加逻辑：人工设计与契约在本文件维护，脚本只替换 `architecture:generated:start/end` 之间的清单、类图和导航，区域前后的正文逐字保留。目录定位从人工章节读取；缺少必需说明、生成标记损坏或出现多余 Markdown 文档时拒绝整批写入。资源目录同样纳入清单，不虚构代码类。
+- 同步文档 05、AGENTS、CLAUDE、三套开发入口、README、分层说明与相关导航，清除活跃规范中的独立契约要求；历史验证只更新迁移链接，原日期、数字和结论不变，链接继续指向当前源码说明而非历史版本证据。三套同名入口逐字节一致，`.gitattributes` 保留唯一架构文档的 LF 约束。
+- 验证选择：直接影响架构文档生成器，运行其隔离夹具测试，不运行产品行为套件。`pnpm exec vitest run tests/source-architecture.test.ts` 为 10/10 通过，覆盖完整清单/成员/目录边界、人工正文保留、只读漂移检查、多余文档拒绝、损坏标记的批次保护、唯一目录定位与资源目录。`pnpm check:architecture` 为 135 目录、0 生成漂移、1,680 文件、7,942 条依赖、0 循环/越界；`pnpm check:test-modules` 为 543 文件、归属与边界检查通过。
+- 独立迁移核对 `node build/verify-architecture-consolidation.mjs`：837 个非 Markdown 文件摘要不变，1,532 张生成结构图逐字一致；110 份原说明的 3,187 段内容迁入，另有 3 段旧文档维护指引按新规则更新；6,319 个源码说明及迁移导航链接没有新增失效。所有目录具备要求的章节及唯一生成区域，三套入口一致；`git -c core.safecrlf=false diff --check` 通过。
+- 现有缺口：`legal/cindy-LICENSE`、`legal/cindy-NOTICE` 在本次开始前已删除，造成 Pi 与会话说明中的 3 条原有许可证链接不可达；保留这两项工作区删除及 `.idea/`，不纳入本次提交。未做全仓业务语义重新审计，未运行产品类型检查、全量回归、桌面、构建或发布，未推送。
+
 ## 2026-11-16：按独立语句留白，并修正 if 执行体布局
 
 - 来源：用户指出 if 与执行体之间、同一构造调用的参数之间不应插空行；基线 `a14f6378`，无关联 Issue。将先前按物理行插空的实现改为按独立语句和成员分隔：参数、链式表达式、多变量声明、数组和普通对象表达式内部连续排列，函数与成员之间仍空一行。
@@ -348,7 +358,7 @@ question-tool-contract 的四种真实 Pi 情况迁入同一主运行：主偏�
 - 验证按变化选择：`pnpm exec vitest run tests/runtime-continuation.test.ts tests/runtime-failed-retry.test.ts tests/runtime-fresh-main.test.ts tests/engine-session.test.ts` 38 项通过；对象/循环/调度/真实装配及消费者使用 `pnpm exec vitest run tests/agent-object.test.ts tests/agent-execution-loop.test.ts tests/agent-call-scheduler.test.ts tests/agent-call-assembly.test.ts tests/execution-collaboration.test.ts tests/main-history-context.test.ts` 40 项通过，包含真实三层调用（外部 Pi 引擎替身）、父身份区分、根预算、权限与准入拒绝、取消和关闭失败保留占用。
 - `pnpm typecheck` 通过。`pnpm check:architecture` 最初发现新组件公开入口未登记，修正后 0 循环、0 违规。`pnpm check:test-modules` 通过，505 文件（unit=153、contract=156、integration=196）。架构检测器专项 `tests/dependencies.test.ts` 151 项、`tests/source-architecture.test.ts` 4 项通过；`tests/layer-boundaries.test.ts` 初次发现新增出口文件头缺设计原因，补齐后 2 项通过。同步全部修改源码注释、相关 CONTRACT 及 11 个目录架构文档（含新增 agents）。
 - 浏览器专项：`$env:CBIM_UI_ROOT='C:\XDTWorkspace\cbim-ai'; node scripts/agent-call-ui-smoke.mjs` 和 `node scripts/waiting-chat-ui-smoke.mjs` 通过，报告位于忽略的 `test-results/agent-call-ui-report.json`、`waiting-chat-ui-report.json`；包含递归只读、身份错配拒绝、320px 返回保留草稿、原等待续接与未知回执防重。页面异常为空，详情交互执行写入为 0；这些是隔离 Edge 组件验收，不是安装后的真实桌面验收。
-- 支持边界：目前只支持与根相同冻结模型；启用旧汇总预算及同调用暂停提问返回明确 unsupported，未伪造完成。旧办公室外壳、旧恢复和旧工具适配尚未全部退出。完整 CI、多引擎在线集成、桌面安装、合并与发布未执行，#94 保持开放。后续修改入口见 [Agent 契约](../src/logic/agents/CONTRACT.md)、[装配契约](../src/logic/application/assembly/CONTRACT.md) 与 [工程交接](agent-tool-engineering.md)。
+- 支持边界：目前只支持与根相同冻结模型；启用旧汇总预算及同调用暂停提问返回明确 unsupported，未伪造完成。旧办公室外壳、旧恢复和旧工具适配尚未全部退出。完整 CI、多引擎在线集成、桌面安装、合并与发布未执行，#94 保持开放。后续修改入口见 [Agent 契约](../src/logic/agents/ARCHITECTURE.md#contract)、[装配契约](../src/logic/application/assembly/ARCHITECTURE.md#contract) 与 [工程交接](agent-tool-engineering.md)。
 
 - 前端选取连续正文、历史展示、输入等待和续接消费者：`pnpm exec vitest run tests/inline-conversation.test.ts tests/team-conversation-view.test.ts tests/chat-chrome.test.ts tests/conversation-waiting.test.ts tests/continuation-chat-inputs.test.ts` 初次 24 通过、旧 SVG 断言 1 失败；改为真实禁用状态断言后单独运行 `tests/conversation-waiting.test.ts` 3 项通过。补齐 continuing 参数后以同一命令前缀运行 `tests/chat-chrome.test.ts tests/conversation-waiting.test.ts tests/continuation-chat-inputs.test.ts` 10 项通过，五套累计 25 项最终通过，未重复重跑已通过且未再改变的套件。
 
@@ -872,7 +882,7 @@ pnpm exec vitest run tests/engine-build-cli.test.ts --reporter=default 通过：
 - EngineModelProfiles 组合原 LlmProfiles，复用唯一配置队列与锁内延迟解密；ResolvedEngineModel 组合可选 engine，旧缺省快照不补字段、不改哈希。Application、主 Agent 设置、岗位/领取、执行装配和 Bridge/View 迁移到对应入口。models.test 的公开请求/回执保持兼容，内部由引擎服务投影。模型模块禁止反向依赖引擎，静态清单禁止加载 SDK/平台，冷启动及更新模块禁止导入新清单。
 - 行为与验证选择：静态目录及通用连接为责任单元；引擎/模型、SSR 选型和历史快照为契约；主 Agent、IPC、岗位与领取为受影响的应用集成。先运行 `pnpm exec vitest run tests/unit/logic/engines/catalog.test.ts tests/unit/logic/models/provider-connections.test.ts tests/engine-configuration.test.ts tests/provider-connections.test.ts tests/llm.test.ts tests/owner-model-configuration.test.ts tests/model-actions.test.ts tests/main-agent-settings.test.ts tests/workspace-member-service.test.ts tests/dependencies.test.ts --reporter=dot`：10 文件、238/238。再核执行装配直接消费者 `pnpm exec vitest run tests/owner-execution-service.test.ts tests/member-execution.test.ts --reporter=default`：2 文件、27/27。共 265/265，保留重复启动、失败上限、停止屏障、原回执复用及恢复不重放断言。
 - 静态验证：`pnpm typecheck` 通过；`pnpm check:test-modules` 通过（496 文件，unit=147 / contract=155 / integration=194）；`pnpm check:architecture` 通过（1520 文件、7381 条依赖、0 循环、0 违规）。首次类型检查用于定位尚未迁移的调用方和测试夹具，迁移后通过；首次依赖检查发现 model-actions 缺少新 engines 桥入口许可，按实际公开契约补齐后通过。
-- 注释与资料同步：新增 engines 四个目录的文件头、接口语义和类图；更新 models/service、Team 选型、Application/assembly、Bridge、执行及 View 消费目录的类图和对应契约。维护入口为 [引擎契约](../src/logic/engines/CONTRACT.md)、[通用模型连接](../src/logic/models/provider-connections.ts)、[引擎模型服务](../src/logic/engines/service/model-profiles.ts)。状态、凭据和恢复仍由原服务拥有，不增重试、调度器或数据迁移。
+- 注释与资料同步：新增 engines 四个目录的文件头、接口语义和类图；更新 models/service、Team 选型、Application/assembly、Bridge、执行及 View 消费目录的类图和对应契约。维护入口为 [引擎契约](../src/logic/engines/ARCHITECTURE.md#contract)、[通用模型连接](../src/logic/models/provider-connections.ts)、[引擎模型服务](../src/logic/engines/service/model-profiles.ts)。状态、凭据和恢复仍由原服务拥有，不增重试、调度器或数据迁移。
 - 验证边界：未运行全仓 CI、真实厂商 SDK 联网、桌面安装/升级或打包；现有界面只迁移契约来源，新增引擎管理页面、多模型角色、已下载包清单、通用冷壳及独立引擎发布属于后续切片。本步不等于整套包架构或发布已完成，不改当前安装版本。
 
 ## 2026-11-14：发布复盘改进——真实升级通过，固定最终完整检查输入
@@ -1557,7 +1567,7 @@ pnpm exec vitest run tests/engine-build-cli.test.ts --reporter=default 通过：
 
 - 来源：用户要求实施“常见供应商预设、自定义兼容接口、按引擎匹配模型”，并询问改动文件。基线 `e38ddb70`，`nan023062/cbim` 开放 Issues 查询为空，按直接需求开发，未创建工单。
 - 行为：旧 DeepSeek 官方配置无需复制或迁移，Pi 保持原接口，Claude Code / Codex 在需要时选择 Anthropic Messages / Responses。增加 DeepSeek、Kimi 国际 API、MiniMax 国际 API、OpenAI、Anthropic 预设；地域、套餐及代理地址不模糊匹配，供应商明确限制的型号也参与筛选。自定义供应商可保存另外两种协议地址及适用型号，所有接口只共用原供应商一份加密 Key。新增或改动自定义凭据目标仍需重输 Key；读取、切换和预览不联网。
-- 职责与 review 入口：先读 [接口选择契约](../src/logic/budget/rules/CONTRACT.md) → `provider-presets.ts`（已核对官方资料的可变地址策略）→ `provider-connections.ts`（纯选型）→ [LlmProfiles 契约](../src/logic/models/service/CONTRACT.md)（配置锁与延迟解密）→ `ProviderConnections.tsx` / `ModelSettings.tsx`。运行只冻结选中的 api/baseUrl，候选接口及自动识别不进入任务/岗位快照；主会话、Agent 编辑、岗位和模块负责人入口共用解析，保持原引擎、型号、权限与运行生命周期。今后增加供应商预设只改策略数据及其验证，不修改原生引擎或请求传输。
+- 职责与 review 入口：先读 [接口选择契约](../src/logic/budget/rules/ARCHITECTURE.md#contract) → `provider-presets.ts`（已核对官方资料的可变地址策略）→ `provider-connections.ts`（纯选型）→ [LlmProfiles 契约](../src/logic/models/service/ARCHITECTURE.md#contract)（配置锁与延迟解密）→ `ProviderConnections.tsx` / `ModelSettings.tsx`。运行只冻结选中的 api/baseUrl，候选接口及自动识别不进入任务/岗位快照；主会话、Agent 编辑、岗位和模块负责人入口共用解析，保持原引擎、型号、权限与运行生命周期。今后增加供应商预设只改策略数据及其验证，不修改原生引擎或请求传输。
 - 完整产品改动范围（16 个代码/样式文件）：`src/backend/core/models/{config.ts,ports.ts,provider-presets.ts,provider-connections.ts}`；`src/backend/main/models/llm-profiles.ts`；`src/backend/main/ipc/settings-handlers.ts`；`src/bridge/contracts/{models.ts,model-actions.ts}`；`src/frontend/settings/{ModelSettings.tsx,ProviderConnections.tsx,models.css}`；`src/frontend/components/EngineModelPicker.tsx`；`src/frontend/conversation/Conversation.tsx`；`src/frontend/knowledge/ArchitectureEditor.tsx`；`src/frontend/team/WorkspaceMemberForm.tsx`；`src/frontend/workspace/inline-module-ownership.ts`。相关文件头/关键说明与上述涉及的 10 个目录、以及 main/settings 的契约和 11 份架构文档同步；未调整其他业务行为。
 - 单元选取依据：纯接口解析和 UI 筛选、加密保存/HTTP 测试、旧快照兼容、主 Agent 保存、岗位配置锁、IPC 及模块登记是实际消费者。`pnpm exec vitest run tests/provider-connections.test.ts tests/llm.test.ts tests/engine-configuration.test.ts tests/main-agent-settings.test.ts tests/owner-model-configuration.test.ts tests/model-actions.test.ts tests/inline-module-ownership.test.ts --reporter=dot` 首批 7 文件 / 60 项通过。补齐模块卡片实际采纳 Anthropic 接口及调整设置控件后，`pnpm exec vitest run tests/provider-connections.test.ts tests/inline-module-ownership.test.ts --reporter=dot` 23 项通过；去重现行覆盖 61 项。随后 IPC 改走已有公开重导出，`pnpm exec vitest run tests/model-actions.test.ts --reporter=dot` 3 项通过。
 - 界面验证：`node scripts/provider-connections-ui-smoke.mjs` 使用真实 React 设置组件和确定性 IPC，6 组检查通过、0 页面错误：旧供应商跨引擎可选、显式测试目标、失败保留目录、取消草稿、自定义地址/型号范围保存、预设填写及 390px 布局。初次两次在新增预设控件的精确标签定位处失败，保留失败报告并补齐明确 aria-label 后通过；未掩盖页面异常。结果位于 `test-results/provider-connections-ui-report.json` 与 `provider-connections-mobile.png`，失败记录为 `provider-connections-ui-failure.json`。真实 HTTP 路径、鉴权头和失败不降级由 `llm.test.ts` 的本地 HTTP 服务验证。
@@ -1610,7 +1620,7 @@ pnpm exec vitest run tests/engine-build-cli.test.ts --reporter=default 通过：
 
 - 来源：用户直接要求实现缺口 1 并运行相关测试；开放 GitHub Issues 查询为空，未创建工单。保留此前文档清理等未提交改动。
 - 实现：Workflow 冻结命令、cwd、超时及成功判据；成员授权后运行整组真实进程，保存可信检查事件。交付与历史重算核对命令要求、知识版本和最终完整源码集合。零测试、失败、超时及检查期间源码变化拒绝通过。
-- 阅读入口：[验证契约](../src/logic/evidence/rules/CONTRACT.md)。范围复用 artifactScope，支持显式输入集合，不声称覆盖未声明依赖或环境；受原完整清单容量限制。测试适配脚本负责输出结构化摘要。
+- 阅读入口：[验证契约](../src/logic/evidence/rules/ARCHITECTURE.md#contract)。范围复用 artifactScope，支持显式输入集合，不声称覆盖未声明依赖或环境；受原完整清单容量限制。测试适配脚本负责输出结构化摘要。
 - 验证：`pnpm exec vitest run tests/code-check.test.ts tests/workflow-contract.test.ts tests/workflow-evidence.test.ts tests/workflow-runtime.test.ts tests/complete-output-runtime.test.ts tests/task-progress.test.ts tests/member-tool-output-core.test.ts` 首轮 72 项通过；新增真实运行到持久日志重算用例后，`pnpm exec vitest run tests/code-check.test.ts` 9 项通过，共 73 个相关用例。覆盖平台执行、失败判据、新交付链及原 Workflow 消费者；未运行全量、桌面模型实测、构建或发布。
 - 静态检查：类型检查发现并修复新增测试回执缺字段及公开证明类型遗漏；最终 `pnpm typecheck`、`pnpm check:architecture` 通过，依赖零循环。同步相关源码说明、证据契约和八个受影响目录架构图。
 - 本次仍需人工代码 review；未实现自动返工或自动恢复，未推送。
@@ -1649,7 +1659,7 @@ pnpm exec vitest run tests/engine-build-cli.test.ts --reporter=default 通过：
 - 构建工具：新增 R/E 制作、验证及手动投放入口；普通 R 只编译 JS，不打 Electron/NSIS，不复制引擎。冷指纹拒绝原生/固定入口变化冒充 R。新 C 继续原发布流程并检查初始 E 已公开；资源投放先不可变附件回读、最后清单。没有内置完整发布 CI/人工门禁，正式发布仍走原验收授权。
 - 验证按清单/缓存/激活、真实引擎、更新生命周期、路径消费者、UI 与依赖检测分批指定受影响文件，最终通过；命令、选择依据、修正和范围见[专项记录](verification/desktop-runtime-20261112.md)。最终 E 装载/打包补测 4 文件 5 项通过。真实 App 浏览器 11 组通过；真实 Electron 隔离 R1→R2 10 项通过、0 页面错误，证明后台准备、普通退出不安装、显式重启切换和用户数据标记保留。样本 R ZIP 约 3.82 MiB，不作为生产耗时/下载量承诺。
 - `pnpm typecheck`、新增 CLI 专项类型检查、`pnpm check:architecture` 通过；后者 87 目录/681 源码样式、1340 文件/6799 依赖，0 循环/违规。同步全部受影响源码注释、契约、类图和父层导航，以及架构维护/发布三入口。新增冷壳动态装载也纳入源依赖审计。没有运行全仓回归、正式冷包、安装升级、合并、推送或公开投放。
-- 交接：从 [bootstrap 契约](../src/bridge/server/bootstrap/CONTRACT.md)、[更新契约](../src/logic/updates/service/CONTRACT.md)、[引擎契约](../src/logic/execution/engines/CONTRACT.md) 到[构建/发布运行说明](task/desktop-runtime-release.md) review。保护低频 C 及原数据，将日常需求/BUGFix 限制到 R、外部引擎变化限制到 E。旧用户仍需一次冷更迁移；生产资源签名身份需发布者配置。首版不含文件级增量、主进程 HMR、旧 E 自动选择/跨 E 会话迁移和缓存自动回收，不把目标设计中的扩展写成已实现。
+- 交接：从 [bootstrap 契约](../src/bridge/server/bootstrap/ARCHITECTURE.md#contract)、[更新契约](../src/logic/updates/service/ARCHITECTURE.md#contract)、[引擎契约](../src/logic/execution/engines/ARCHITECTURE.md#contract) 到[构建/发布运行说明](task/desktop-runtime-release.md) review。保护低频 C 及原数据，将日常需求/BUGFix 限制到 R、外部引擎变化限制到 E。旧用户仍需一次冷更迁移；生产资源签名身份需发布者配置。首版不含文件级增量、主进程 HMR、旧 E 自动选择/跨 E 会话迁移和缓存自动回收，不把目标设计中的扩展写成已实现。
 
 ## 2026-11-12：团队与工作区网络核心模型及 Cindy 承载边界
 
@@ -1741,7 +1751,7 @@ pnpm exec vitest run tests/engine-build-cli.test.ts --reporter=default 通过：
 - 用户直接授权重新整理项目；开放 Issues 为空。基线 `63497206` 的产品源码与上一轮 V&B 快照一致，复用已有映射，迁移 185 个源码文件并同步真实消费者、Forge 平台入口、源码定位注释和类图。
 - Core 持有执行/模型契约，具体 SDK 与传输归 backend/engines；仅调度 assembly 选择引擎。预算、证据、派发、知识读模型和本机存储按职责集中；已有事务、状态、权限与运行数据不变。运行内核、目标服务与共享 Store 的高依赖密度仍保留。
 - 621 个源码脚本除引用路径/JSDoc 外无语法差异，3075 条源码引用对应不变。类型、架构和依赖检查通过；23 个定向测试文件/152 个用例通过。选择依据及首次夹具旧路径失败/修正详见报告；未运行全仓、全部 UI、原生制品/安装或发布，未获得人工 review。
-- 同步 86 个代码目录的现状类图、相关契约与三份维护入口；[模块导航](../src/logic/BOUNDARIES.md)、[迁移清单、四问与验证边界](verification/source-reorganization-20261112.md)。历史 V&B 快照、发布和恢复资料保留原样；本次不修复隔离恢复竞争。
+- 同步 86 个代码目录的现状类图、相关契约与三份维护入口；[模块导航](../src/logic/ARCHITECTURE.md#boundaries)、[迁移清单、四问与验证边界](verification/source-reorganization-20261112.md)。历史 V&B 快照、发布和恢复资料保留原样；本次不修复隔离恢复竞争。
 
 ## 2026-11-12：0.1.12 缓存修复正式发布
 

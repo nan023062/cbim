@@ -1,17 +1,71 @@
 # src/core 架构
 
-## 目录定位
+本目录只维护这一份说明。设计与契约直接编辑本文；文件清单、类图和导航由 [架构脚本](../../scripts/source-architecture.mjs) 更新，生成区域之外的人工说明会保留。
+
+## 封装意图
 
 四层架构的共享基础公共层：utility 提供便携算法与数据结构，platform 隔离运行环境；不依赖业务、桥接或视图。前端比较和后端指纹适配组合相同排序实现，业务策略留在消费者。
 
-本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
+## 类与模块的设计意图
+
+下表依据源码声明及文件头说明定位封装。字段表示该实例持有的状态或协作引用，不表示它拥有被引用服务的生命周期；实际资源责任和调用限制见下文契约及源码注释。
+
+| 类／模块 | 实现形式与实例字段 | 封装依据 |
+| --- | --- | --- |
+| [Fault](errors.ts) | 实例类；持有 `code` | 作用定位：不依赖业务或平台的带错误码异常与抛出入口。 设计原因：调用方决定错误码和文案，Core 仅保留异常身份；旧后端兼容出口与新 Logic 共用同一构造器。 |
+| [json.ts](json.ts) | 函数／契约模块 | 语法算法由共享 Core utility 提供，业务适配只单向引用它；快照与规则消费者继续得到同一 Fault.code、name 和提示。 |
+
+## 接口设计契约
+
+<a id="contract"></a>
+
+<a id="contract-共享-core"></a>
+
+### 共享 Core
+
+Core 是四层架构的基础公共层，不含业务规则、通信操作、页面状态或应用装配。前端和后端可以组合相同公开能力；运行环境是独立约束，Node 能力不经便携入口加载。
+
+<a id="contract-源码阅读约定"></a>
+
+#### 源码阅读约定
+
+按 [源码阅读规范](../../docs/05-工程文件组织与代码阅读设计.md) 使用 Allman 大括号和逐行语句：先通过类／接口与成员分区识别封装，再逐条阅读控制流和副作用。空方法、构造和短代码块同样展开；排版不改变字段初始化、取消、错误或持久化顺序。类图表达实际声明和依赖，排版变化不增造关系；其它成员语义和工具类组织仍按实际模块逐片核实。
+
+<a id="contract-能力与依赖边界"></a>
+
+#### 能力与依赖边界
+
+当前公开能力包括 [utility](utility/ARCHITECTURE.md#contract)、errors.ts 的 Fault/fail、json.ts 的严格解析适配、[纯网页契约与算法](web/ARCHITECTURE.md#contract)、contracts/secrets.ts 的加密端口、[Node 实现](platform/node/ARCHITECTURE.md#contract) 及 [Electron 适配](platform/electron/ARCHITECTURE.md#contract)。utility 仅使用语言/Web Streams 原语及 jsonc-parser；platform/node/digest.ts 仅使用 node:crypto。它们都不依赖 logic、bridge、view 或旧 backend/frontend，包含类型引用。跨模块仅使用已登记公开入口；新 Core 模块必须登记职责、入口及第三方依赖，否则检查失败。
+
+前端 equalJson 是第一条双端复用路径：控制器 → 前端比较适配 → Core JsonUtils.OrderJsonValue；后端历史指纹适配也调用同一算法。比较器、字段选择、错误映射和业务接受条件仍由消费者拥有。共享实现不要求不同策略产生相同字节。
+
+旧领域规则已迁入 Logic；identity 与 StoragePaths 归各自业务端口。json.ts 提供严格 JSON 解析的 Fault 适配，platform/node/serialization.ts 保留 hash/json 的既有字节语义。旧 errors 转发已移除，所有消费者使用同一 Core Fault 构造器。服务、调度、桥接和视图均已按四层归属迁移。
+
+没有全局 Core 容器或统一大导出。公共函数不持有业务状态，队列/集合由调用方逐实例创建并负责关闭策略。通用入口不能经重导出或间接依赖加载 Node/Electron；业务数据、路径权限、事务和进程生命周期不因使用基础库而转移。
+
+
+Web 迁移补充：core/web 为纯契约与正文算法，platform/node/web 为抓取编排，platform/electron/web-reader.ts 为宿主渲染适配。contracts/secrets.ts 提供独立加密端口；模型保留原类型兼容出口，Web 不依赖模型模块。
+
+Node 原生锁位于 platform/node/locking.ts，保留旧锁身份与释放行为；业务决定持有范围。SecretCipher 同时用于模型、Web 和反馈服务，Core 不依赖这些消费者。
+
+
+<a id="contract-共享算法调用边界"></a>
+
+#### 共享算法调用边界
+
+本目录通过 Core 公开入口调用 `JsonUtils.ParseStrictJson`。静态类只承载原算法；本目录继续决定字段、比较器、错误映射及资源生命周期。函数改为静态方法不改变原持久化字节或失败语义。
+
+## 开闭边界
+
+本目录的职责及允许协作由[封装意图](#封装意图)限定，输入输出、状态与失败语义以[接口设计契约](#接口设计契约)为准。扩展从已有公开入口及实际装配位置进入；没有明确可替换契约的部分按真实影响修改和验证，不预建未使用的基类或插件入口。
+
+<!-- architecture:generated:start -->
 
 ## 文件清单
 
 | 文件 | 形式 | 当前职责 |
 | --- | --- | --- |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
-| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
 | [errors.ts](errors.ts) | 源码模块 | 不依赖业务或平台的带错误码异常与抛出入口。 |
 | [json.ts](json.ts) | 源码模块 | 将 utility 的严格 JSON 解析事实适配为 Core 原有 JSON 错误协议。 |
 
@@ -89,34 +143,4 @@ class N_src_core_json_ts["json.ts"] {
 
 每次修改本目录代码，同步维护文件头、关键契约说明及本图。未实现的治理、证据验收和自动编排能力不列入当前类图。
 
-## 设计契约 v1 与落地范围
-
-以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
-
-# 共享 Core
-
-Core 是四层架构的基础公共层，不含业务规则、通信操作、页面状态或应用装配。前端和后端可以组合相同公开能力；运行环境是独立约束，Node 能力不经便携入口加载。
-
-## 源码阅读约定
-
-按 [源码阅读规范](../../docs/05-工程文件组织与代码阅读设计.md) 使用 Allman 大括号和逐行语句：先通过类／接口与成员分区识别封装，再逐条阅读控制流和副作用。空方法、构造和短代码块同样展开；排版不改变字段初始化、取消、错误或持久化顺序。类图表达实际声明和依赖，排版变化不增造关系；其它成员语义和工具类组织仍按实际模块逐片核实。
-
-## 能力与依赖边界
-
-当前公开能力包括 [utility](utility/CONTRACT.md)、errors.ts 的 Fault/fail、json.ts 的严格解析适配、[纯网页契约与算法](web/CONTRACT.md)、contracts/secrets.ts 的加密端口、[Node 实现](platform/node/CONTRACT.md) 及 [Electron 适配](platform/electron/CONTRACT.md)。utility 仅使用语言/Web Streams 原语及 jsonc-parser；platform/node/digest.ts 仅使用 node:crypto。它们都不依赖 logic、bridge、view 或旧 backend/frontend，包含类型引用。跨模块仅使用已登记公开入口；新 Core 模块必须登记职责、入口及第三方依赖，否则检查失败。
-
-前端 equalJson 是第一条双端复用路径：控制器 → 前端比较适配 → Core JsonUtils.OrderJsonValue；后端历史指纹适配也调用同一算法。比较器、字段选择、错误映射和业务接受条件仍由消费者拥有。共享实现不要求不同策略产生相同字节。
-
-旧领域规则已迁入 Logic；identity 与 StoragePaths 归各自业务端口。json.ts 提供严格 JSON 解析的 Fault 适配，platform/node/serialization.ts 保留 hash/json 的既有字节语义。旧 errors 转发已移除，所有消费者使用同一 Core Fault 构造器。服务、调度、桥接和视图均已按四层归属迁移。
-
-没有全局 Core 容器或统一大导出。公共函数不持有业务状态，队列/集合由调用方逐实例创建并负责关闭策略。通用入口不能经重导出或间接依赖加载 Node/Electron；业务数据、路径权限、事务和进程生命周期不因使用基础库而转移。
-
-
-Web 迁移补充：core/web 为纯契约与正文算法，platform/node/web 为抓取编排，platform/electron/web-reader.ts 为宿主渲染适配。contracts/secrets.ts 提供独立加密端口；模型保留原类型兼容出口，Web 不依赖模型模块。
-
-Node 原生锁位于 platform/node/locking.ts，保留旧锁身份与释放行为；业务决定持有范围。SecretCipher 同时用于模型、Web 和反馈服务，Core 不依赖这些消费者。
-
-
-## 共享算法调用边界
-
-本目录通过 Core 公开入口调用 `JsonUtils.ParseStrictJson`。静态类只承载原算法；本目录继续决定字段、比较器、错误映射及资源生命周期。函数改为静态方法不改变原持久化字节或失败语义。
+<!-- architecture:generated:end -->

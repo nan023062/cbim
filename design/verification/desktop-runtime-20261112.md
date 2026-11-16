@@ -57,7 +57,7 @@ pnpm exec vitest run tests/engine-runtime-loader.test.ts tests/claude-packaging.
 - 同步 bootstrap、updater、engines、main 及 assembly/file-operations/platform/resources、core/execution/foundation、scheduler-engine/assembly、bridge/contracts、frontend/updates 的文件头、关键端口说明、契约和受影响类图/父层导航。
 - 架构维护与发布入口的 `.agents`、`.claude`、`.codex` 三份内容同步。新 bootstrap → main 计算式依赖显式进入审计，不以动态加载规避层级或循环检查。
 
-阅读顺序：[方案及新旧流程](../task/desktop-hot-update-design.md) → [bootstrap 契约](../../src/bridge/server/bootstrap/CONTRACT.md) → [更新契约](../../src/logic/updates/service/CONTRACT.md) → [引擎契约](../../src/logic/execution/engines/CONTRACT.md) → [候选构建与发布](../task/desktop-runtime-release.md)。调整业务 JS 改 R；调整兼容引擎及会话边界改 E 装配；固定入口、原生基础或信任根变化改 C。
+阅读顺序：[方案及新旧流程](../task/desktop-hot-update-design.md) → [bootstrap 契约](../../src/bridge/server/bootstrap/ARCHITECTURE.md#contract) → [更新契约](../../src/logic/updates/service/ARCHITECTURE.md#contract) → [引擎契约](../../src/logic/execution/engines/ARCHITECTURE.md#contract) → [候选构建与发布](../task/desktop-runtime-release.md)。调整业务 JS 改 R；调整兼容引擎及会话边界改 E 装配；固定入口、原生基础或信任根变化改 C。
 
 ## 首次投放及未验收部分
 

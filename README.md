@@ -102,11 +102,11 @@ pnpm start
 
 实现说明随源码维护，可从以下入口逐层阅读：
 
-- [后端模块、源码映射与修改入口](src/logic/BOUNDARIES.md)
+- [后端模块、源码映射与修改入口](src/logic/ARCHITECTURE.md#boundaries)
 - [执行引擎与生命周期](src/logic/execution/rules/ARCHITECTURE.md)
-- [任务身份与派发契约](src/logic/tasks/rules/CONTRACT.md)
+- [任务身份与派发契约](src/logic/tasks/rules/ARCHITECTURE.md#contract)
 - [调度与成员执行](src/logic/ARCHITECTURE.md)
-- [运行统计与准入](src/logic/runtime/rules/CONTRACT.md)
+- [运行统计与准入](src/logic/runtime/rules/ARCHITECTURE.md#contract)
 - [桌面视图与交互](src/view/ARCHITECTURE.md)
 - [开发事实、验证证据与限制](design/development-log.md)
 

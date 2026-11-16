@@ -1,17 +1,43 @@
 # src/logic/team/service 架构
 
-## 目录定位
+本目录只维护这一份说明。设计与契约直接编辑本文；文件清单、类图和导航由 [架构脚本](../../../../scripts/source-architecture.mjs) 更新，生成区域之外的人工说明会保留。
+
+## 封装意图
 
 岗位、来源与责任登记的应用服务；协调知识、文件实现和 Logic 领域规则，不拥有正式运行准入。
 
-本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
+## 类与模块的设计意图
+
+下表依据源码声明及文件头说明定位封装。字段表示该实例持有的状态或协作引用，不表示它拥有被引用服务的生命周期；实际资源责任和调用限制见下文契约及源码注释。
+
+| 类／模块 | 实现形式与实例字段 | 封装依据 |
+| --- | --- | --- |
+| [main-workspace-member-tools.ts](main-workspace-member-tools.ts) | 函数／契约模块 | 登记/采纳复用唯一 Store，不建立第二份成员表；模型选型继承静态 Agent，停止排空与回执核实沿原周期。 |
+| [WorkspaceMembers](workspace-members.ts) | 实例类；持有 `owner`、`store`、`models`、`isCurrent` | 每个工作区实例只装配一次，共用派发存储；本服务没有执行、领取或停止模型的端口。 |
+
+## 接口设计契约
+
+<a id="contract"></a>
+
+<a id="contract-多角色模型采纳"></a>
+
+##### 多角色模型采纳
+
+岗位预览调用 EngineModelProfiles 一次捕获 primary 与全部附加角色，公开快照和选型一起保存；变化检测包含角色引用，额外角色改变须重新采纳，不能沿用旧配置指纹。
+
+main-workspace-member-tools 依赖 execution 的 MainToolContext，不再依赖 AutoCollaboration 类型。新主调用与旧主批次都可提供已受理身份，岗位提交仍绑定原 actor 与 commandId，保留来源采纳、明确模型配置和停止排空规则。
+
+## 开闭边界
+
+本目录的职责及允许协作由[封装意图](#封装意图)限定，输入输出、状态与失败语义以[接口设计契约](#接口设计契约)为准。扩展从已有公开入口及实际装配位置进入；没有明确可替换契约的部分按真实影响修改和验证，不预建未使用的基类或插件入口。
+
+<!-- architecture:generated:start -->
 
 ## 文件清单
 
 | 文件 | 形式 | 当前职责 |
 | --- | --- | --- |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
-| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
 | [main-workspace-member-tools.ts](main-workspace-member-tools.ts) | 源码模块 | 把岗位服务装配到真实主运行；工作区、actor 和命令身份由闭包持有。 |
 | [workspace-members.ts](workspace-members.ts) | 源码模块 | 将桌面岗位登记、采纳与当前差异查询接到工作区唯一 DispatchStore，公开模型配置由 Main 注入。 |
 
@@ -118,12 +144,4 @@ N_src_logic_team_service_main_workspace_member_tools_ts ..> N_src_logic_team_ser
 
 每次修改本目录代码，同步维护文件头、关键契约说明及本图。未实现的治理、证据验收和自动编排能力不列入当前类图。
 
-## 设计契约 v1 与落地范围
-
-以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
-
-### 多角色模型采纳
-
-岗位预览调用 EngineModelProfiles 一次捕获 primary 与全部附加角色，公开快照和选型一起保存；变化检测包含角色引用，额外角色改变须重新采纳，不能沿用旧配置指纹。
-
-main-workspace-member-tools 依赖 execution 的 MainToolContext，不再依赖 AutoCollaboration 类型。新主调用与旧主批次都可提供已受理身份，岗位提交仍绑定原 actor 与 commandId，保留来源采纳、明确模型配置和停止排空规则。
+<!-- architecture:generated:end -->

@@ -1,6 +1,6 @@
 # 后台预下载与增量下载：验证与测试方法
 
-> 历史快照：正文中的目录、完成状态与验证数字保留记录日期的事实，不是当前实现清单。四层迁移后的现状请看 [源码契约](../../src/CONTRACT.md) 和 [Logic 边界](../../src/logic/BOUNDARIES.md)。
+> 历史快照：正文中的目录、完成状态与验证数字保留记录日期的事实，不是当前实现清单。四层迁移后的现状请看 [源码契约](../../src/ARCHITECTURE.md#contract) 和 [Logic 边界](../../src/logic/ARCHITECTURE.md#boundaries)。
 
 > 2026-11-12 后续正式安装实测：A/B 的 NSIS 缓存目录与应用配置不一致，默认安装状态下会全量回退；下文基于手动准备缓存的下载器结果不能代替安装版差分验收。参见 [实际发布与失败结果](desktop-release-0.1.11-20261112.md) 和 [缓存调查](desktop-update-cache-diagnosis-20261112.md)。0.1.12 修复候选尚未公开。
 

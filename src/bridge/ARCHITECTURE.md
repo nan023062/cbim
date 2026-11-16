@@ -1,17 +1,40 @@
 # src/bridge 架构
 
-## 目录定位
+本目录只维护这一份说明。设计与契约直接编辑本文；文件清单、类图和导航由 [架构脚本](../../scripts/source-architecture.mjs) 更新，生成区域之外的人工说明会保留。
+
+## 封装意图
 
 通信契约、可信服务端和 preload；业务状态归 Logic，平台技术机制归 Core 独立入口。
 
-本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
+## 类与模块的设计意图
+
+本层没有直接源码声明，负责组合下级封装；各子系统的类、状态与公开入口见本文的[子目录导航](#子目录导航)。
+
+## 接口设计契约
+
+<a id="contract"></a>
+
+<a id="contract-桥接层"></a>
+
+### 桥接层
+
+contracts 定义消息和纯数据，server 负责可信宿主消息分发、桌面/CLI 与启动，preload 负责受限渲染进程接入。服务端可使用 Logic 的明确入口；契约与浏览器端不能加载 Node/Electron 或业务服务。业务数据类型归 Logic，Bridge 具名转接所需类型。
+
+server/application.ts 只给 Logic Application 增加 dispatch，复用同一个构造和生命周期；IPC handlers 面向 ApplicationServices，不反向导入具体 Application。server/platform 处理 Electron utility 的私有传输，业务权限、Win32 操作与恢复仍归 Logic。
+
+bootstrap 只加载验签后的固定业务入口与更新服务。构建仍输出 desktop.js、main.js、controlled-file-child.js 等原文件名；用户数据、R/E 缓存和升级清单格式没有改变。
+
+## 开闭边界
+
+本目录的职责及允许协作由[封装意图](#封装意图)限定，输入输出、状态与失败语义以[接口设计契约](#接口设计契约)为准。扩展从已有公开入口及实际装配位置进入；没有明确可替换契约的部分按真实影响修改和验证，不预建未使用的基类或插件入口。
+
+<!-- architecture:generated:start -->
 
 ## 文件清单
 
 | 文件 | 形式 | 当前职责 |
 | --- | --- | --- |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
-| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
 
 本层无直接代码文件。
 
@@ -49,14 +72,4 @@ N_src_bridge_server ..> N_src_bridge_contracts : 导入依赖
 
 每次修改本目录代码，同步维护文件头、关键契约说明及本图。未实现的治理、证据验收和自动编排能力不列入当前类图。
 
-## 设计契约 v1 与落地范围
-
-以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
-
-# 桥接层
-
-contracts 定义消息和纯数据，server 负责可信宿主消息分发、桌面/CLI 与启动，preload 负责受限渲染进程接入。服务端可使用 Logic 的明确入口；契约与浏览器端不能加载 Node/Electron 或业务服务。业务数据类型归 Logic，Bridge 具名转接所需类型。
-
-server/application.ts 只给 Logic Application 增加 dispatch，复用同一个构造和生命周期；IPC handlers 面向 ApplicationServices，不反向导入具体 Application。server/platform 处理 Electron utility 的私有传输，业务权限、Win32 操作与恢复仍归 Logic。
-
-bootstrap 只加载验签后的固定业务入口与更新服务。构建仍输出 desktop.js、main.js、controlled-file-child.js 等原文件名；用户数据、R/E 缓存和升级清单格式没有改变。
+<!-- architecture:generated:end -->

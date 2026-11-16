@@ -34,4 +34,4 @@
 
 修改源码、拆分或移动模块、检查依赖、更新注释与架构文档时，按上述 `architecture-maintenance` 流程执行。通用项目、Claude Code 和 Codex 三个入口内容保持同步。
 
-新人先从 [src 整体架构](src/ARCHITECTURE.md) 下钻相关目录的 `ARCHITECTURE.md` 与 `CONTRACT.md`，结合源码核实当前实现。使用 `pnpm check:architecture` 检查类图同步及包含类型引用的循环依赖；该检查不能替代对职责和注释语义的人工 review。
+新人先从 [src 整体架构](src/ARCHITECTURE.md) 下钻相关目录的 `ARCHITECTURE.md` 的设计、契约与类图章节，结合源码核实当前实现。使用 `pnpm check:architecture` 检查类图同步及包含类型引用的循环依赖；该检查不能替代对职责和注释语义的人工 review。

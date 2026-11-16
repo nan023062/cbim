@@ -96,7 +96,7 @@ P0 为治理前置，P1 为核心整改，P2 为外围完善与收口；它们�
 - **交付物：** 各领域最小端口、状态／事务归属和真实消费者迁移；底层可以继续共享日志或存储。
 - **验收标准：** 迁移后的业务服务不再取得无关状态和修改能力；原事务内读取、原子提交、并发冲突、幂等与回执语义保留。跨域原子命令不得被拆成缺乏一致性保护的多次写入。
 - **验证方式：** 被迁移领域、事务投影、重放、冲突和实际参与的跨域命令；按真实影响选择消费者。
-- **阅读入口：** [持久化边界](../src/logic/application/ARCHITECTURE.md)、[执行服务边界](../src/logic/SCHEDULING.md)。
+- **阅读入口：** [持久化边界](../src/logic/application/ARCHITECTURE.md)、[执行服务边界](../src/logic/ARCHITECTURE.md#scheduling)。
 
 #### G05：分离运行循环与具体业务能力
 
@@ -104,7 +104,7 @@ P0 为治理前置，P1 为核心整改，P2 为外围完善与收口；它们�
 - **交付物：** 一次只迁移一种能力，说明运行机制、业务策略与装配各自负责什么。
 - **验收标准：** 在既有契约范围内新增同类能力主要修改业务实现与装配；通用循环不新增对应业务分支。授权、日志先落盘、取消、结算和资源释放的语义保持，责任不能在提取过程中丢失。
 - **验证方式：** 本次能力、相关运行机制及实际受影响引擎入口，重点覆盖失败、停止顺序与资源释放。
-- **阅读入口：** [运行循环](../src/logic/execution/assembly/loop-engine.ts)、[引擎契约](../src/logic/execution/rules/types.ts)、[工具边界](../src/logic/tools/runtime/CONTRACT.md)。
+- **阅读入口：** [运行循环](../src/logic/execution/assembly/loop-engine.ts)、[引擎契约](../src/logic/execution/rules/types.ts)、[工具边界](../src/logic/tools/runtime/ARCHITECTURE.md#contract)。
 
 #### G06：隔离引擎 SDK、进程与平台适配
 
@@ -112,7 +112,7 @@ P0 为治理前置，P1 为核心整改，P2 为外围完善与收口；它们�
 - **交付物：** 稳定执行契约、具体适配边界、装配迁移及兼容说明；契约演进与目录调整分别解释。
 - **验收标准：** 核心规则和执行机制不导入具体适配器，类型引用也符合约束；供应商差异局限于实现。各实现满足共同生命周期要求，合法的供应商差异显式保留，不伪造一致能力。
 - **验证方式：** 每次迁移引擎的契约、启动／停止／恢复及加载入口；真实打包和安装验收留给集成／发布阶段。
-- **阅读入口：** [引擎契约与实现边界](../src/logic/execution/rules/CONTRACT.md)、[应用装配](../src/logic/application/application.ts)。
+- **阅读入口：** [引擎契约与实现边界](../src/logic/execution/rules/ARCHITECTURE.md#contract)、[应用装配](../src/logic/application/application.ts)。
 
 #### G07：建立有类型约束的 IPC 操作契约
 
@@ -120,7 +120,7 @@ P0 为治理前置，P1 为核心整改，P2 为外围完善与收口；它们�
 - **交付物：** 每组操作的公开契约、调用方与处理方迁移、类型及运行时边界验证。
 - **验收标准：** 已迁移操作的错误名称、请求参数和响应使用受类型检查约束；非法身份、错误输入在运行时仍被拒绝。公开契约不泄露后端服务实现，类型正确不等于运行输入可信。
 - **验证方式：** 类型检查、该操作的输入／身份／错误边界及实际受影响前端消费者。
-- **阅读入口：** [Bridge 契约](../src/bridge/contracts/CONTRACT.md)、[Preload](../src/bridge/preload/preload.ts)。
+- **阅读入口：** [Bridge 契约](../src/bridge/contracts/ARCHITECTURE.md#contract)、[Preload](../src/bridge/preload/preload.ts)。
 
 #### G08：拆清前端业务编排与公共展示能力
 
@@ -128,7 +128,7 @@ P0 为治理前置，P1 为核心整改，P2 为外围完善与收口；它们�
 - **交付物：** 公共展示入口、业务控制边界、消费者迁移及各状态的所有者说明。
 - **验收标准：** 会话、任务通过明确入口协作，不互相导入内部实现；公共展示不反向依赖页面或业务控制器。原交互和状态同步语义保持，不以共享可变状态隐藏耦合。
 - **验证方式：** 迁移组件和相关会话／任务交互用例；涉及通信语义时协调 G07 的相关验证。
-- **阅读入口：** [会话边界](../src/view/conversation/CONTRACT.md)、[任务边界](../src/view/tasks/CONTRACT.md)。
+- **阅读入口：** [会话边界](../src/view/conversation/ARCHITECTURE.md#contract)、[任务边界](../src/view/tasks/ARCHITECTURE.md#contract)。
 
 #### G09：完成剩余依赖治理与检查覆盖
 

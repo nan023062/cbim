@@ -10,7 +10,7 @@
 2. 主轮结算、成员启动前持久保存精确待回传批次。宿主意外退出后，仅当全部成员可靠交付、原主链与当前声明的证据仍有效、模型未变、结果信封未消费，自动启动新的主接收轮并完成原目标。成员不再次执行；启动意图已登记但日志缺失的情况不再次发送。
 3. 运行中断、未知副作用、损坏日志、已停止目标、旧无批次记录、人工等待和过期证据仍按原边界停放或封存。本次不是任意断点恢复或命令重试框架；文件有效性仅覆盖原交付声明的验证范围。正常退出会关闭活动周期，不等同意外崩溃。
 
-当前协议及维护入口见[任务契约](../../src/logic/tasks/rules/CONTRACT.md)。主代码入口：
+当前协议及维护入口见[任务契约](../../src/logic/tasks/rules/ARCHITECTURE.md#contract)。主代码入口：
 
 - [goal-repair.ts](../../src/logic/dispatch/runtime/goal-repair.ts)：错误分类、反馈及限次。
 - [scope-goal-service.ts](../../src/logic/tasks/runtime/scope-goal-service.ts)：`repairContext` 与旧候选/当前交付证据核验。

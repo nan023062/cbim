@@ -1,17 +1,93 @@
 # src/logic/execution/engines/claude 架构
 
-## 目录定位
+本目录只维护这一份说明。设计与契约直接编辑本文；文件清单、类图和导航由 [架构脚本](../../../../../scripts/source-architecture.mjs) 更新，生成区域之外的人工说明会保留。
+
+## 封装意图
 
 Claude Agent SDK 适配、内部工具门禁与真实原生会话生命周期；环境和账号归 CBIM，工具复用上层契约，不提供对外 MCP。原生工具开关只读可信能力的 disableNativeTools 策略，不认识具体业务工具槽位。 SDK 入口可由签名 E 包提供，仍限制适配器支持的版本，账号/历史目录不随缓存迁移。
 
-本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
+## 类与模块的设计意图
+
+下表依据源码声明及文件头说明定位封装。字段表示该实例持有的状态或协作引用，不表示它拥有被引用服务的生命周期；实际资源责任和调用限制见下文契约及源码注释。
+
+| 类／模块 | 实现形式与实例字段 | 封装依据 |
+| --- | --- | --- |
+| [ClaudeCodeEngine](engine.ts) | 实例类；持有 `kind`、`context`、`query`、`tools`、`transport`、`push`、`endInput`、`stopped`、`bound`、`nativeId`、`fatal`、`inactivity`、`options` | 参照 Cindy 的 SDK Query 接法，模型、权限和指引在运行开始时冻结；事件转为公共回执，不记录私有推理。 |
+| [package.ts](package.ts) | 函数／契约模块 | 包只获得统一模型、工具和预算端口，SDK 加载、会话与停止细节封装在适配器内。 |
+| [sdk.ts](sdk.ts) | 函数／契约模块 | SDK 自带 CLI 与平台二进制保留独立目录，打包后不借用 Cindy 或用户外部 Claude 安装。 |
+| [tools.ts](tools.ts) | 函数／契约模块 | PreToolUse 先等模型请求结算再持久化授权；内部调用用一次性原调用 ID 绑定精确参数，禁止依名称放行。 |
+
+## 接口设计契约
+
+<a id="contract"></a>
+
+<a id="contract-claude-code-适配契约"></a>
+
+### Claude Code 适配契约
+
+<a id="contract-无进展超时"></a>
+
+#### 无进展超时
+
+`ClaudeCodeEngine.run` 使用共享 [无进展计时器](../ARCHITECTURE.md#contract-按执行进展续期)。SDK 文本/推理/参数的非空增量（包括子任务）和工具 Hook 的实际开始/完成续期，普通 status 消息不续期。连续静默时关闭 Query 并保存具体原因；迟到 result 不能覆盖已发生的超时，显式停止仍为取消。
+
+engine.ts 使用固定 Claude Agent SDK Query，sdk.ts 只解析 CBIM 自带 claude-runtime 或开发依赖；SDK 与平台二进制独立随包，不访问 Cindy 的安装或账号。settingSources 为空，strictMcpConfig 开启，插件清单为空；继承的 Claude/Anthropic 凭据与启动注入被移除。真实模型、地址及推理开关取冻结快照。Pi 专属工作上下文/压缩阈值不映射成 Claude 保证。
+
+工具经 tools.ts 的 PreToolUse 调用同一 beforeTool，先保存授权及 started，再允许执行。内部 SDK MCP 不监听端口；每次内部调用用真实 tool_use_id 绑定准确原参数并消耗一次性许可，模型不能提供该身份。原生 Read/Write/Edit/Bash/Glob/Grep 映射到现有规范名称。scopedExecutionTools 存在时不提供任何原生文件/命令工具。初始化必须确认 hooks_applied 与 hook_on_failure_supported，失败默认阻断；实际活动目录与准备目录逐名核对。
+
+Claude 原生工具可在 SSE 终态到达前启动。PreToolUse 必须先等待本轮实际请求全部可靠结算，再进入业务授权；结算失败或停止会关闭 Query 并阻止副作用，不能只靠暂存终态帧作工具屏障。已有调用与已知用量不重放或撤销。
+
+Anthropic API 不接受顶层 anyOf/oneOf。目录将联合输入投影为对象字段和共同必填项；投影前把原 Schema 留在不冲突的 definitions 节点，本地引用同步迁移到原图，避免删除顶层分支后指针悬空，也不通过无限展开破坏递归。原 CBIM 参数校验仍在可信入口严格执行；这不放宽领域授权。MCP 不发布不兼容的联合 outputSchema，实际结果仍经原端口及通用结果校验。私有推理不进入公开事件，工具结果保存后才返回模型。
+
+首轮在 SDK result 时核实实际 JSONL 路径、身份及工作区，再发布 session.bound；不预造会话文件。成员 ready 允许此首轮延迟绑定，结算时核实同一原生身份。续执行在启动前核实原文件并复核检查点，主会话切换由上层选择目标引擎文件。停止先中止内部工具及请求传输，再中断/关闭 Query；未知工具仍由 Runtime 保留。只认真实 result，不把正文当完成；当前没有 steer。
+
+SDK 0.3.322 的实际 schema 运行依赖是 zod/v4 与 zod/v4/core。工程保留 zod 3.25.76 的双版本入口，对该 SDK 显式允许这一已核实组合；未全局升级业务 Zod 3 Schema。复制运行资源时包含 SDK peer 与本平台二进制依赖。
+
+<a id="contract-通用能力注入"></a>
+
+##### 通用能力注入
+
+工具从 EngineContext.capabilities 的通用工具目录注册；可信能力 disableNativeTools=true 时关闭全部原生文件和命令，不依赖某个业务工具槽位。业务指引作为可信装配说明传入，授权、原调用身份、结果保存与停止顺序保持原协议。
+
+<a id="contract-失败后的核实"></a>
+
+##### 失败后的核实
+
+内部调用沿共同端口返回统一错误结构；原生 PostToolUseFailure 保留错误并用相同 outcome 记录日志及 additionalContext。没有领域回执时明确 null，不把异常当回滚或授权重放。
+
+
+<a id="contract-凭据文本替换"></a>
+
+##### 凭据文本替换
+
+精确字符串替换使用后端 utility 的 StringUtils.RedactLiteral，仍由引擎选择凭据及触发路径。Pi 保留 api-key 条件，Claude 无凭据时保留事件引用；JSON 编码后替换与异常路径保持原顺序，不新增凭据搜集、正则或解码规则。
+
+<a id="contract-包工厂"></a>
+
+##### 包工厂
+
+package.ts 导出协议 1、适配器版本 1.0.0 的统一工厂；SDK 仍由 sdk.ts 按原受管入口与版本校验，工厂不加载 SDK 或发起模型请求。
+
+适配包版本为 1.1.1；本次递归预算契约改变了包内代码，必须使用新版本身份。固定依赖、旧包缓存和原生会话身份核验继续生效，不覆盖公开 1.1.0 制品。
+
+
+<a id="contract-共享算法调用边界"></a>
+
+#### 共享算法调用边界
+
+本目录通过 Core 公开入口调用 `StringUtils.RedactLiteral`。静态类只承载原算法；本目录继续决定字段、比较器、错误映射及资源生命周期。函数改为静态方法不改变原持久化字节或失败语义。
+
+## 开闭边界
+
+本目录的职责及允许协作由[封装意图](#封装意图)限定，输入输出、状态与失败语义以[接口设计契约](#接口设计契约)为准。扩展从已有公开入口及实际装配位置进入；没有明确可替换契约的部分按真实影响修改和验证，不预建未使用的基类或插件入口。
+
+<!-- architecture:generated:start -->
 
 ## 文件清单
 
 | 文件 | 形式 | 当前职责 |
 | --- | --- | --- |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
-| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
 | [engine.ts](engine.ts) | 源码模块 | Claude Code 的 AgentEngine 适配器，管理 SDK 与原生会话；目标返工沿合成系统资料输入，不带入新授权。 |
 | [package.ts](package.ts) | 源码模块 | Claude Code 官方包的版本化工厂入口。 |
 | [sdk.ts](sdk.ts) | 源码模块 | 从 CBIM 自带资源或开发依赖加载固定版本的 Claude Agent SDK。 |
@@ -171,48 +247,4 @@ N_src_logic_execution_engines_claude_package_ts ..> N_src_logic_execution_engine
 
 每次修改本目录代码，同步维护文件头、关键契约说明及本图。未实现的治理、证据验收和自动编排能力不列入当前类图。
 
-## 设计契约 v1 与落地范围
-
-以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
-
-# Claude Code 适配契约
-
-## 无进展超时
-
-`ClaudeCodeEngine.run` 使用共享 [无进展计时器](../CONTRACT.md#按执行进展续期)。SDK 文本/推理/参数的非空增量（包括子任务）和工具 Hook 的实际开始/完成续期，普通 status 消息不续期。连续静默时关闭 Query 并保存具体原因；迟到 result 不能覆盖已发生的超时，显式停止仍为取消。
-
-engine.ts 使用固定 Claude Agent SDK Query，sdk.ts 只解析 CBIM 自带 claude-runtime 或开发依赖；SDK 与平台二进制独立随包，不访问 Cindy 的安装或账号。settingSources 为空，strictMcpConfig 开启，插件清单为空；继承的 Claude/Anthropic 凭据与启动注入被移除。真实模型、地址及推理开关取冻结快照。Pi 专属工作上下文/压缩阈值不映射成 Claude 保证。
-
-工具经 tools.ts 的 PreToolUse 调用同一 beforeTool，先保存授权及 started，再允许执行。内部 SDK MCP 不监听端口；每次内部调用用真实 tool_use_id 绑定准确原参数并消耗一次性许可，模型不能提供该身份。原生 Read/Write/Edit/Bash/Glob/Grep 映射到现有规范名称。scopedExecutionTools 存在时不提供任何原生文件/命令工具。初始化必须确认 hooks_applied 与 hook_on_failure_supported，失败默认阻断；实际活动目录与准备目录逐名核对。
-
-Claude 原生工具可在 SSE 终态到达前启动。PreToolUse 必须先等待本轮实际请求全部可靠结算，再进入业务授权；结算失败或停止会关闭 Query 并阻止副作用，不能只靠暂存终态帧作工具屏障。已有调用与已知用量不重放或撤销。
-
-Anthropic API 不接受顶层 anyOf/oneOf。目录将联合输入投影为对象字段和共同必填项；投影前把原 Schema 留在不冲突的 definitions 节点，本地引用同步迁移到原图，避免删除顶层分支后指针悬空，也不通过无限展开破坏递归。原 CBIM 参数校验仍在可信入口严格执行；这不放宽领域授权。MCP 不发布不兼容的联合 outputSchema，实际结果仍经原端口及通用结果校验。私有推理不进入公开事件，工具结果保存后才返回模型。
-
-首轮在 SDK result 时核实实际 JSONL 路径、身份及工作区，再发布 session.bound；不预造会话文件。成员 ready 允许此首轮延迟绑定，结算时核实同一原生身份。续执行在启动前核实原文件并复核检查点，主会话切换由上层选择目标引擎文件。停止先中止内部工具及请求传输，再中断/关闭 Query；未知工具仍由 Runtime 保留。只认真实 result，不把正文当完成；当前没有 steer。
-
-SDK 0.3.322 的实际 schema 运行依赖是 zod/v4 与 zod/v4/core。工程保留 zod 3.25.76 的双版本入口，对该 SDK 显式允许这一已核实组合；未全局升级业务 Zod 3 Schema。复制运行资源时包含 SDK peer 与本平台二进制依赖。
-
-### 通用能力注入
-
-工具从 EngineContext.capabilities 的通用工具目录注册；可信能力 disableNativeTools=true 时关闭全部原生文件和命令，不依赖某个业务工具槽位。业务指引作为可信装配说明传入，授权、原调用身份、结果保存与停止顺序保持原协议。
-
-### 失败后的核实
-
-内部调用沿共同端口返回统一错误结构；原生 PostToolUseFailure 保留错误并用相同 outcome 记录日志及 additionalContext。没有领域回执时明确 null，不把异常当回滚或授权重放。
-
-
-### 凭据文本替换
-
-精确字符串替换使用后端 utility 的 StringUtils.RedactLiteral，仍由引擎选择凭据及触发路径。Pi 保留 api-key 条件，Claude 无凭据时保留事件引用；JSON 编码后替换与异常路径保持原顺序，不新增凭据搜集、正则或解码规则。
-
-### 包工厂
-
-package.ts 导出协议 1、适配器版本 1.0.0 的统一工厂；SDK 仍由 sdk.ts 按原受管入口与版本校验，工厂不加载 SDK 或发起模型请求。
-
-适配包版本为 1.1.1；本次递归预算契约改变了包内代码，必须使用新版本身份。固定依赖、旧包缓存和原生会话身份核验继续生效，不覆盖公开 1.1.0 制品。
-
-
-## 共享算法调用边界
-
-本目录通过 Core 公开入口调用 `StringUtils.RedactLiteral`。静态类只承载原算法；本目录继续决定字段、比较器、错误映射及资源生命周期。函数改为静态方法不改变原持久化字节或失败语义。
+<!-- architecture:generated:end -->

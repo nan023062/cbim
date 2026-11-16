@@ -17,7 +17,7 @@
 | 模块 | 当前职责与源码入口 | 保留的边界 |
 | --- | --- | --- |
 | 知识与工作区 | [core/workspace](../../src/logic/workspace/rules/ARCHITECTURE.md)、[main/knowledge](../../src/logic/knowledge/storage/ARCHITECTURE.md) | 模块、来源、Skill/Workflow 与知识事务；作者来源不是执行许可 |
-| 目标与任务 | [scope-goal-service](../../src/logic/tasks/runtime/scope-goal-service.ts)、[任务契约](../../src/logic/tasks/rules/CONTRACT.md) | 目标计划、任务分配、版本化 review 与交付核验；执行完成不等于验收完成 |
+| 目标与任务 | [scope-goal-service](../../src/logic/tasks/runtime/scope-goal-service.ts)、[任务契约](../../src/logic/tasks/rules/ARCHITECTURE.md#contract) | 目标计划、任务分配、版本化 review 与交付核验；执行完成不等于验收完成 |
 | 调度与成员 | [auto-collaboration](../../src/logic/dispatch/runtime/auto-collaboration.ts)、[member-execution](../../src/logic/team/runtime/member-execution.ts) | 领取、占用、结果回流、主运行接续与成员求助 |
 | 执行与引擎 | [执行内核](../../src/logic/execution/rules/ARCHITECTURE.md)、[引擎适配](../../src/logic/execution/engines/ARCHITECTURE.md) | 运行事件、权限、取消与协议转换；不由引擎裁决业务完成 |
 | 证据与恢复 | [core/evidence](../../src/logic/evidence/rules/ARCHITECTURE.md)、[scope-recovery-service](../../src/logic/tasks/runtime/scope-recovery-service.ts) | 核实真实日志、知识版本和副作用；未知结果不重放 |

@@ -12,7 +12,7 @@
 3. 岗位引用独立携带 engine。旧字段缺省时从已采纳 snapshot.engine 读取，未声明 Pi 不补字段，不改变历史哈希。配置当前差异、采纳、派发和领取沿同一独立选型；同一模型多引擎按完整配置指纹匹配。
 4. 稳定机制保持：模型加密、设置短锁、知识事务、岗位审计、工具授权、请求预算和原生恢复均复用原服务；新增引擎协议规则应在 llm/engine.ts 维护，不能回到供应商表单加引擎分类。
 
-入口：[模型纯规则](../../src/logic/models/engine.ts)、[设置存储契约](../../src/logic/runtime/settings/CONTRACT.md)、[主 Agent UI 契约](../../src/view/team/CONTRACT.md)、[运行装配契约](../../src/logic/SCHEDULING.md)。本次精读相关选型、持久化、岗位与运行链，不宣称全仓逐行审计。
+入口：[模型纯规则](../../src/logic/models/engine.ts)、[设置存储契约](../../src/logic/runtime/settings/ARCHITECTURE.md#contract)、[主 Agent UI 契约](../../src/view/team/ARCHITECTURE.md#contract)、[运行装配契约](../../src/logic/ARCHITECTURE.md#scheduling)。本次精读相关选型、持久化、岗位与运行链，不宣称全仓逐行审计。
 
 ## 开发验证
 

@@ -1,6 +1,6 @@
 # 四层架构与迁移落地
 
-来源：2026-11-13 用户明确选择 Core、逻辑层、桥接层、视图层，并授权分批迁移。本文维护分层设计、当前落地和保留的边界，不作为实时待办。实际模块以 [源码契约](../src/CONTRACT.md)、[源码架构](../src/ARCHITECTURE.md) 和依赖检查器为准；历史分片及验证见 [开发记录](development-log.md)。
+来源：2026-11-13 用户明确选择 Core、逻辑层、桥接层、视图层，并授权分批迁移。本文维护分层设计、当前落地和保留的边界，不作为实时待办。实际模块以 [源码契约](../src/ARCHITECTURE.md#contract)、[源码架构](../src/ARCHITECTURE.md) 和依赖检查器为准；历史分片及验证见 [开发记录](development-log.md)。
 
 ## 当前目录与职责
 
@@ -75,4 +75,4 @@ src/
 
 2026-11-14 针对 eaa85d9d 的 [全量 CI](https://github.com/nan023062/cbim/actions/runs/43458901536) 已通过：482 测试文件、3283 通过、0 失败、2 项依赖历史 EXE 的条件跳过；类型、架构、模块边界和官网浏览器检查通过。该结果不包含桌面打包、安装升级或发布验收，也不证明两项跳过用例通过。
 
-后续阅读从 [Core](../src/core/CONTRACT.md)、[Logic 边界](../src/logic/BOUNDARIES.md)、[Bridge](../src/bridge/CONTRACT.md)、[View](../src/view/CONTRACT.md) 下钻。改业务应按实际影响选择模块与契约测试；纯文档核事实、引用及生成同步，不重复产品回归。
+后续阅读从 [Core](../src/core/ARCHITECTURE.md#contract)、[Logic 边界](../src/logic/ARCHITECTURE.md#boundaries)、[Bridge](../src/bridge/ARCHITECTURE.md#contract)、[View](../src/view/ARCHITECTURE.md#contract) 下钻。改业务应按实际影响选择模块与契约测试；纯文档核事实、引用及生成同步，不重复产品回归。

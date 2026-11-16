@@ -1,17 +1,77 @@
 # src/logic/evidence/rules 架构
 
-## 目录定位
+本目录只维护这一份说明。设计与契约直接编辑本文；文件清单、类图和导航由 [架构脚本](../../../../scripts/source-architecture.mjs) 更新，生成区域之外的人工说明会保留。
+
+## 封装意图
 
 证据领域：输出清单、产物、命令/人工/效果观察与完成报告规则。记录、有效性和业务验收分别核实；业务读取适配在 logic/evidence/service，编排在 logic/evidence/runtime。
 
-本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
+## 类与模块的设计意图
+
+下表依据源码声明及文件头说明定位封装。字段表示该实例持有的状态或协作引用，不表示它拥有被引用服务的生命周期；实际资源责任和调用限制见下文契约及源码注释。
+
+| 类／模块 | 实现形式与实例字段 | 封装依据 |
+| --- | --- | --- |
+| [artifact-baseline.ts](artifact-baseline.ts) | 函数／契约模块 | 模型只选择真实工具调用，文件字节与日志身份由可信端口采集；基线只覆盖所列文件，不签发业务验收或成员恢复。 |
+| [artifact-evidence.ts](artifact-evidence.ts) | 函数／契约模块 | 工具成功、采集暂存事件及文件字节不能互相代替；参数与结果哈希、调用顺序、固定身份全部匹配后才发布引用，避免两套较宽松证据规则。 |
+| [ArtifactTools](artifact-tools.ts) | 实例类；持有 `knowledgeRevision`、`binding`、`ports` | 参数中没有路径、哈希或运行身份；真实采集由运行时负责，返回值只按唯一 JSON 正文核实绑定与原请求，避免解析修复或自动重采。 |
+| [code-check.ts](code-check.ts) | 函数／契约模块 | 成功工具回执只说明已检查；必须重算每项结果、原输入集合和交付 manifest 的同一性。 |
+| [complete-output-evidence.ts](complete-output-evidence.ts) | 函数／契约模块 | 声明的全部范围必须随同一原清单进入各出口，不能选一个未变文件子集、缺失输出或较新引用来替代。 |
+| [output-manifest-evidence.ts](output-manifest-evidence.ts) | 函数／契约模块 | 范围、条目及引用须独立重算；暂存事件、模型返回的摘要或缺少终态的工具均不能单独形成完整证明。 |
+| [output-manifest-identity.ts](output-manifest-identity.ts) | 函数／契约模块 | 操作证据要核前后集合，不能反向依赖遍历 canonical 的验证器而形成循环。 |
+| [OutputManifestTools](output-manifest-tools.ts) | 实例类；持有 `binding`、`knowledgeRevision`、`scopes`、`ports` | 真实范围在构造时冻结，实际 wire 独立核对一次；坏回包保留已保存事件，不通过重采掩盖原错误。 |
+| [output-manifest.ts](output-manifest.ts) | 函数／契约模块 | 目录条目和缺失根与文件指纹共同形成集合身份，新增文件或空目录不能在旧文件哈希相同的情况下被遗漏。 |
+| [progress-schema.ts](progress-schema.ts) | 函数／契约模块 | TaskProgress 自身没有运行身份；JSON 检查事实和精确出口为可选结构，旧流程不补空证明，也不将 rejected 的执行事实改成通过。 |
+| [TaskProgressTools](progress-tools.ts) | 实例类；持有 `state`、`evidence`、`generation`、`tail`、`planEstablished`、`workflow`、`identity`、`save`、`ports` | 每个运行独立持有计划与证据代次；变更串行落盘，正式派发图的状态由外层调度结算。 |
+| [progress.ts](progress.ts) | 函数／契约模块 | 目标与步骤修订必须留痕；JSON 结构出口另存精确文件证明，工具成功或结构通过都不能由模型解释为人工验收。 |
+| [validation-evidence.ts](validation-evidence.ts) | 函数／契约模块 | 结果正文和 succeeded 回执都不能单独声明通过；要求、基线、真实调用、文件字节指纹及事件顺序必须一致。 |
+| [ValidationTools](validation-tools.ts) | 实例类；持有 `knowledgeRevision`、`bindings`、`binding`、`port` | 模型只选择已有要求与产物身份；完整模式在调用前固定可信范围/内容摘要，坏回包不重试，也不把 rejected 修复成通过。 |
+| [validation.ts](validation.ts) | 函数／契约模块 | 工具成功不代表结构通过；身份、要求和文件指纹来自可信冻结上下文，不接受模型传入 Schema、路径或结论。 |
+| [workflow-evidence.ts](workflow-evidence.ts) | 函数／契约模块 | 工具调用事实必须与固定模块约定、当前运行及最后副作用的真实结束边界一致；并发早读不能替代写入后的验证，不能相信模型自报 pass 或只检查内存状态。 |
+
+## 接口设计契约
+
+<a id="contract"></a>
+
+<a id="contract-代码检查与交付"></a>
+
+### 代码检查与交付
+
+对象排序机制由 utility.orderJsonValue 提供，各证据适配保留原字段与指纹规则：artifact-evidence 使用 localeCompare，workflow-evidence/validation-evidence 使用字符序且省略 undefined，output-manifest-identity 使用字符序并保留属性。最终 JSON 序列化、Schema 复核、证据来源和验收均留在本目录，未升级历史摘要或统一排序策略。
+
+Workflow 的 `delivery.requiredCodeChecks` 冻结检查 ID、目的、program、args、cwd、timeoutMs 和 success。必须同时声明 `artifactScope` 和 `requireCompleteManifest`，暂不支持 `executionScope` 混用。旧 Workflow 无此字段时行为不变。
+
+`cbim_code_check_run` 只接受空对象，运行时经 command 权限执行整组检查并保存 `code.validation_checked`。同一组绑定同一份输入快照；非零退出、超时、输出超限、源码在检查期间变化均拒绝通过。test-summary-json 要求 stdout 唯一一行 `CBIM_TEST_SUMMARY {"passed":1,"failed":0,"skipped":0}`，通过数不得低于 minPassed；摘要由项目测试适配脚本输出，其真实性取决于冻结脚本，系统不推断测试覆盖了全部需求。
+
+检查后重新 inspect 进度、用检查调用 ID 更新步骤，再采集完整清单并准备交付。交付证明绑定命令要求摘要、源码集合摘要和知识版本；历史结算从授权、可信事件和完成回包重算，当前源码由已有完整清单机制复核。
+
+范围必须显式包含相关源码、测试、构建配置和锁文件；未声明的依赖、环境和外部服务不在证明范围。沿用完整清单上限：16 个根、512 条目、单文件 8 MiB、总计 32 MiB。构建输出应放在输入范围之外。每组最多 8 项，每项最长 5 分钟，输出最多 256 KiB。平台执行是宿主进程，不提供沙箱隔离。
+
+阅读顺序：logic/workspace/rules/code-check.ts 定义要求，logic/evidence/rules/code-check.ts 核验事实，logic/execution/rules/capabilities/run-code-check.ts 管理生命周期，logic/file-operations/platform/files/code-check-runner.ts 执行真实进程。新增项目检查优先修改 Workflow 和项目适配脚本；新增成功判据才修改契约与平台解析，并补充失败回归。
+
+<a id="contract-显式业务调用的基本交付"></a>
+
+#### 显式业务调用的基本交付
+validateWorkflowEvidence 的可信 requireDelivery 选项用于没有附加 Workflow 的业务 Agent。仍核原目标、连续 canonical、成功计划/交付回执、实际步骤证据及副作用结束顺序；不构造虚假 Workflow 或证明。历史无约定调用不传此选项，保留原兼容规则。返回 undefined 仅表示没有额外 Workflow 证明，不表示跳过基本交付校验。
+
+
+<a id="contract-共享算法调用边界"></a>
+
+#### 共享算法调用边界
+
+本目录通过 Core 公开入口调用 `JsonUtils.OrderJsonValue`。静态类只承载原算法；本目录继续决定字段、比较器、错误映射及资源生命周期。函数改为静态方法不改变原持久化字节或失败语义。
+
+## 开闭边界
+
+本目录的职责及允许协作由[封装意图](#封装意图)限定，输入输出、状态与失败语义以[接口设计契约](#接口设计契约)为准。扩展从已有公开入口及实际装配位置进入；没有明确可替换契约的部分按真实影响修改和验证，不预建未使用的基类或插件入口。
+
+<!-- architecture:generated:start -->
 
 ## 文件清单
 
 | 文件 | 形式 | 当前职责 |
 | --- | --- | --- |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
-| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
 | [artifact-baseline.ts](artifact-baseline.ts) | 源码模块 | 显式文件基线、工具输入及独立只读核实报告的序列化契约。 |
 | [artifact-evidence.ts](artifact-evidence.ts) | 源码模块 | 从本轮已提交事件核实文件采集来源与不可变基线，供运行时和只读报告共用。 |
 | [artifact-tools.ts](artifact-tools.ts) | 源码模块 | 正式成员的显式文件基线工具包装，校验模型输入并委托本轮可信采集端口。 |
@@ -1034,28 +1094,4 @@ N_src_logic_evidence_rules_workflow_evidence_ts ..> N_src_logic_evidence_rules_o
 
 每次修改本目录代码，同步维护文件头、关键契约说明及本图。未实现的治理、证据验收和自动编排能力不列入当前类图。
 
-## 设计契约 v1 与落地范围
-
-以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
-
-# 代码检查与交付
-
-对象排序机制由 utility.orderJsonValue 提供，各证据适配保留原字段与指纹规则：artifact-evidence 使用 localeCompare，workflow-evidence/validation-evidence 使用字符序且省略 undefined，output-manifest-identity 使用字符序并保留属性。最终 JSON 序列化、Schema 复核、证据来源和验收均留在本目录，未升级历史摘要或统一排序策略。
-
-Workflow 的 `delivery.requiredCodeChecks` 冻结检查 ID、目的、program、args、cwd、timeoutMs 和 success。必须同时声明 `artifactScope` 和 `requireCompleteManifest`，暂不支持 `executionScope` 混用。旧 Workflow 无此字段时行为不变。
-
-`cbim_code_check_run` 只接受空对象，运行时经 command 权限执行整组检查并保存 `code.validation_checked`。同一组绑定同一份输入快照；非零退出、超时、输出超限、源码在检查期间变化均拒绝通过。test-summary-json 要求 stdout 唯一一行 `CBIM_TEST_SUMMARY {"passed":1,"failed":0,"skipped":0}`，通过数不得低于 minPassed；摘要由项目测试适配脚本输出，其真实性取决于冻结脚本，系统不推断测试覆盖了全部需求。
-
-检查后重新 inspect 进度、用检查调用 ID 更新步骤，再采集完整清单并准备交付。交付证明绑定命令要求摘要、源码集合摘要和知识版本；历史结算从授权、可信事件和完成回包重算，当前源码由已有完整清单机制复核。
-
-范围必须显式包含相关源码、测试、构建配置和锁文件；未声明的依赖、环境和外部服务不在证明范围。沿用完整清单上限：16 个根、512 条目、单文件 8 MiB、总计 32 MiB。构建输出应放在输入范围之外。每组最多 8 项，每项最长 5 分钟，输出最多 256 KiB。平台执行是宿主进程，不提供沙箱隔离。
-
-阅读顺序：logic/workspace/rules/code-check.ts 定义要求，logic/evidence/rules/code-check.ts 核验事实，logic/execution/rules/capabilities/run-code-check.ts 管理生命周期，logic/file-operations/platform/files/code-check-runner.ts 执行真实进程。新增项目检查优先修改 Workflow 和项目适配脚本；新增成功判据才修改契约与平台解析，并补充失败回归。
-
-## 显式业务调用的基本交付
-validateWorkflowEvidence 的可信 requireDelivery 选项用于没有附加 Workflow 的业务 Agent。仍核原目标、连续 canonical、成功计划/交付回执、实际步骤证据及副作用结束顺序；不构造虚假 Workflow 或证明。历史无约定调用不传此选项，保留原兼容规则。返回 undefined 仅表示没有额外 Workflow 证明，不表示跳过基本交付校验。
-
-
-## 共享算法调用边界
-
-本目录通过 Core 公开入口调用 `JsonUtils.OrderJsonValue`。静态类只承载原算法；本目录继续决定字段、比较器、错误映射及资源生命周期。函数改为静态方法不改变原持久化字节或失败语义。
+<!-- architecture:generated:end -->

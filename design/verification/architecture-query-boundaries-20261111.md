@@ -49,7 +49,7 @@ pnpm exec vitest run tests/knowledge-queries.test.ts -t '刷新先核|原成功�
 
 完整改动通过 `git diff 7fad631e..refactor/query-boundaries` 或本片提交查看，包括所有源码、测试、检测器与资料。建议依次阅读：
 
-1. [知识边界矩阵与状态归属](../../src/logic/knowledge/rules/CONTRACT.md#固定快照读取的逻辑边界与公共入口)、[snapshot.ts](../../src/logic/knowledge/rules/read-models/snapshot.ts)、[ports.ts](../../src/logic/knowledge/rules/ports.ts)。
+1. [知识边界矩阵与状态归属](../../src/logic/knowledge/rules/ARCHITECTURE.md#contract-固定快照读取的逻辑边界与公共入口)、[snapshot.ts](../../src/logic/knowledge/rules/read-models/snapshot.ts)、[ports.ts](../../src/logic/knowledge/rules/ports.ts)。
 2. [查询编排](../../src/logic/knowledge/rules/knowledge-queries.ts) 与 [索引刷新](../../src/logic/knowledge/rules/knowledge-refresh.ts)：确认读写分离，原提交顺序未改。
 3. [工具装配](../../src/logic/tools/runtime/knowledge-tools.ts)、[任务准备](../../src/logic/execution/context/team-workflow.ts)：确认真实消费者和原版本/权限门禁。
 4. [依赖规则](../../scripts/check-dependencies.mjs)、[领域环境](../../tests/knowledge-fixture.ts)、[查询/刷新回归](../../tests/knowledge-queries.test.ts)。

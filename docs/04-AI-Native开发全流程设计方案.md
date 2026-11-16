@@ -58,7 +58,7 @@ C 保存可复用能力，B 保存业务事实，M 可保存个人临时线索�
 
 产品加载范围由 [内置知识白名单](../src/logic/knowledge/rules/builtins.ts) 决定。被白名单加载的运行知识属于产品资产，不能因普通 Markdown 引用少就删除。项目开发 Skill 与产品内置 Skill 分别维护。
 
-模块、Agent、Skill 与 Workflow 的具体布局和字段由运行 Schema 定义并校验；任务与恢复以 [任务契约](../src/logic/tasks/rules/CONTRACT.md) 及真实存储为准，本文不复制 Schema 或猜测用户数据路径。
+模块、Agent、Skill 与 Workflow 的具体布局和字段由运行 Schema 定义并校验；任务与恢复以 [任务契约](../src/logic/tasks/rules/ARCHITECTURE.md#contract) 及真实存储为准，本文不复制 Schema 或猜测用户数据路径。
 
 现行入口是桌面应用与内部 TypeScript 服务。旧 Python 工具、旧方法副本和模块预览器已退出维护，原文可从 Git 历史查阅。
 

@@ -353,7 +353,7 @@ Cindy 为什么没有采用这套双版本方案：**公开源码不能证明作
 
 阅读入口：
 
-- 现状：[更新契约](../../src/logic/updates/service/CONTRACT.md)、[状态机](../../src/logic/updates/service/desktop-updates.ts)、[NSIS 适配](../../src/logic/updates/service/nsis-updater.ts)。
+- 现状：[更新契约](../../src/logic/updates/service/ARCHITECTURE.md#contract)、[状态机](../../src/logic/updates/service/desktop-updates.ts)、[NSIS 适配](../../src/logic/updates/service/nsis-updater.ts)。
 - 启动与数据：[Main](../../src/bridge/server/main.ts)、[Application](../../src/logic/application/application.ts)、[Paths](../../src/logic/workspace/service/paths.ts)。
 - 构建：[Forge](../../forge.config.ts)、[主进程 Vite](../../vite.main.config.ts)、[引擎依赖打包](../../scripts/package-pi-runtime.mjs)、[正式构建](../../scripts/make-desktop.mjs)。
 - 引擎：[Pi 装配](../../src/logic/execution/assembly/loop-engine.ts)、[Pi RPC 子进程](../../src/logic/execution/engines/pi/rpc.ts)、[Claude SDK 加载](../../src/logic/execution/engines/claude/sdk.ts)、[Codex 二进制解析](../../src/logic/execution/engines/codex/binary.ts)、[宿主 Pi 工具库](../../src/logic/execution/engines/native-tools.ts)。

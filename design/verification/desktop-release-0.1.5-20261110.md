@@ -70,7 +70,7 @@
 
 [PR #30 全部文件](https://github.com/nan023062/cbim/pull/30/files) 对应上述 base 到 ca5128ec 的完整范围；功能 a4472ecb、界面 af3ce53a、可信核证租约 f9c2892d 和验证 ca5128ec 保留为独立提交。测试通过、本人代码自查、桌面验收与人工 review 是不同事实，本记录不宣称已获得维护者人工审阅接受。
 
-阅读顺序：先看 [引擎契约](../../src/logic/execution/rules/CONTRACT.md) 与 [模型配置](../../src/logic/execution/engines/ARCHITECTURE.md)，再看 [Claude 适配](../../src/logic/execution/engines/claude/ARCHITECTURE.md) / [Codex 适配](../../src/logic/execution/engines/codex/ARCHITECTURE.md)（现行入口；原 docs 文档已按文档清理提交删除）；随后看 [执行装配](../../src/logic/execution/ARCHITECTURE.md)、[主会话装配](../../src/logic/application/ARCHITECTURE.md) 和 [共用下拉菜单](../../src/view/components/ARCHITECTURE.md)。引擎只负责原生协议和会话，任务/权限/知识事务/请求账本仍由原服务拥有；新增协议主要改适配器和装配，不复制业务规则。可信主核证通过原主占用派生独立释放的读占用，桌面预览/决定仍独立获取权限，不扩大外部入口。
+阅读顺序：先看 [引擎契约](../../src/logic/execution/rules/ARCHITECTURE.md#contract) 与 [模型配置](../../src/logic/execution/engines/ARCHITECTURE.md)，再看 [Claude 适配](../../src/logic/execution/engines/claude/ARCHITECTURE.md) / [Codex 适配](../../src/logic/execution/engines/codex/ARCHITECTURE.md)（现行入口；原 docs 文档已按文档清理提交删除）；随后看 [执行装配](../../src/logic/execution/ARCHITECTURE.md)、[主会话装配](../../src/logic/application/ARCHITECTURE.md) 和 [共用下拉菜单](../../src/view/components/ARCHITECTURE.md)。引擎只负责原生协议和会话，任务/权限/知识事务/请求账本仍由原服务拥有；新增协议主要改适配器和装配，不复制业务规则。可信主核证通过原主占用派生独立释放的读占用，桌面预览/决定仍独立获取权限，不扩大外部入口。
 
 已同步变更源码的文件头、重要接口/字段说明；受影响 ARCHITECTURE 清单如下，各条链接给出实际职责和类图，不以目录统计代替源码审阅：
 
@@ -85,7 +85,7 @@
 - [src/backend/core/team/ARCHITECTURE.md](../../src/logic/team/rules/ARCHITECTURE.md)
 - [src/backend/core/tools/ARCHITECTURE.md](../../src/logic/tools/rules/ARCHITECTURE.md)
 - [src/backend/main/ARCHITECTURE.md](../../src/logic/application/ARCHITECTURE.md)
-- [src/backend/main/persistence/settings/ARCHITECTURE.md](../../src/logic/BOUNDARIES.md)
+- [src/backend/main/persistence/settings/ARCHITECTURE.md](../../src/logic/ARCHITECTURE.md#boundaries)
 - [src/backend/main/platform/ARCHITECTURE.md](../../src/logic/execution/platform/ARCHITECTURE.md)
 - [src/backend/scheduler-engine/ARCHITECTURE.md](../../src/logic/ARCHITECTURE.md)
 - [src/backend/scheduler-engine/context/ARCHITECTURE.md](../../src/logic/execution/context/ARCHITECTURE.md)

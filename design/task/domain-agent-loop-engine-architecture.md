@@ -4,7 +4,7 @@
 
 收尾核对到 `f45db507`：新增变化仅在桌面验收脚本、对应测试与开发记录；本轮分析的 `src/` 和引擎打包入口未变化，以上源码结论仍适用。
 
-**状态：用户已授权按顺序实施后续切片，实际完成与验证以开发记录为准。** 实施基线为 `74019e20`，仅调整引擎/模型职责、官方静态清单及消费者；不迁移用户数据，不发布安装包。当前实现见 [引擎契约](../../src/logic/engines/CONTRACT.md)，实际验证见 [开发记录](../development-log.md)。本文保留完整目标设计，不作为实时任务清单；后续实施按用户追加授权逐步提交，本文保留设计依据，不承担实时进度清单。
+**状态：用户已授权按顺序实施后续切片，实际完成与验证以开发记录为准。** 实施基线为 `74019e20`，仅调整引擎/模型职责、官方静态清单及消费者；不迁移用户数据，不发布安装包。当前实现见 [引擎契约](../../src/logic/engines/ARCHITECTURE.md#contract)，实际验证见 [开发记录](../development-log.md)。本文保留完整目标设计，不作为实时任务清单；后续实施按用户追加授权逐步提交，本文保留设计依据，不承担实时进度清单。
 
 ## 1. 结论与设计边界
 
@@ -27,7 +27,7 @@
 
 | 已核实事实 | 当前入口 | 对新设计的影响 |
 | --- | --- | --- |
-| 引擎 ID、显示名、协议选择和 Agent 选型都定义在模型模块；三引擎为固定枚举 | 原 `models/engine.ts`（切片 1 已迁至 [engines](../../src/logic/engines/CONTRACT.md)）、[provider-connections.ts](../../src/logic/models/provider-connections.ts) | 新增引擎会修改模型核心及其多个消费者；引擎身份的归属需要调整 |
+| 引擎 ID、显示名、协议选择和 Agent 选型都定义在模型模块；三引擎为固定枚举 | 原 `models/engine.ts`（切片 1 已迁至 [engines](../../src/logic/engines/ARCHITECTURE.md#contract)）、[provider-connections.ts](../../src/logic/models/provider-connections.ts) | 新增引擎会修改模型核心及其多个消费者；引擎身份的归属需要调整 |
 | Agent 选型只有一组 `engine/profileId/modelId`；岗位保存单模型快照 | [main-agent-settings.ts](../../src/logic/team/settings/main-agent-settings.ts)、[workspace-member.ts](../../src/logic/team/rules/workspace-member.ts) | 无法完整表达记忆引擎的语言模型与向量模型；配置、岗位采纳和任务冻结必须一起考虑 |
 | 模型服务在配置解析中按引擎挑接口；模型 schema 是生成式模型结构 | [llm-profiles.ts](../../src/logic/models/service/llm-profiles.ts)、[config.ts](../../src/logic/models/config.ts) | 不能只加 embedding 模型名；请求协议、字段、能力、测试和计量都需区分 |
 | `AgentEngine` 已有 start/run/stop/close，`LoopRuntime` 持有租约、日志、授权、在途工具和终态 | [types.ts](../../src/logic/execution/rules/types.ts)、[runtime.ts](../../src/logic/execution/rules/runtime/runtime.ts) | 已有可复用宿主边界，无需重写任务运行内核；协议仍偏文本和图片 |
@@ -37,7 +37,7 @@
 | 原生会话旁路记录固定 E 摘要和辅助工具摘要，版本不符拒绝恢复 | [runtime-binding.ts](../../src/logic/execution/engines/runtime-binding.ts) | 不能把历史会话绑定简单替换成 latest；迁移须保留精确制品身份 |
 | 前端从模型桥导入引擎枚举与兼容函数，模型页的连接测试还要求选择引擎 | [models.ts](../../src/bridge/contracts/models.ts)、[ProviderConnections.tsx](../../src/view/settings/ProviderConnections.tsx)、[Conversation.tsx](../../src/view/conversation/Conversation.tsx) | 引擎目录和选型结果应有独立公开契约；模型连接测试与引擎验证拆开 |
 | 请求预算端口固定一个模型，并以生成输出 token 上限预留 | [request-budget.ts](../../src/logic/budget/rules/request-budget.ts) | 多模型与向量请求不能只改 UI；必须保留逐请求预算与未知结算语义 |
-| 正式知识已有唯一事务队列、版本和治理规则；本轮检索未发现现成向量索引服务 | [knowledge/storage/CONTRACT.md](../../src/logic/knowledge/storage/CONTRACT.md)、[knowledge-queries.ts](../../src/logic/knowledge/rules/knowledge-queries.ts) | 记忆引擎复用知识服务，向量索引属于新增能力，不应直接接管知识文件写入 |
+| 正式知识已有唯一事务队列、版本和治理规则；本轮检索未发现现成向量索引服务 | [knowledge/storage/CONTRACT.md](../../src/logic/knowledge/storage/ARCHITECTURE.md#contract)、[knowledge-queries.ts](../../src/logic/knowledge/rules/knowledge-queries.ts) | 记忆引擎复用知识服务，向量索引属于新增能力，不应直接接管知识文件写入 |
 
 已阅读本表入口、调用方、相关契约/目录说明、引擎实现入口及 `tests/modules.json`；这是针对引擎演进的局部精读，不是全仓逐行审计。本轮未运行产品测试、在线模型、桌面或发布验证。
 

@@ -8,10 +8,21 @@ const generator=path.resolve('scripts/source-architecture.mjs');
 const temporary:string[]=[];
 afterEach(()=>{for(const root of temporary.splice(0))fs.rmSync(root,{recursive:true,force:true})});
 
+function manual(name:string,contract='完成不表示验收。'){
+  return `# ${name}\n\n## 封装意图\n\n测试封装：${name}，接口供夹具调用。\n\n## 类与模块的设计意图\n\nSample 保存本次测试的独立状态。\n\n## 接口设计契约\n\n${contract}\n\n## 开闭边界\n\n测试只组合已声明入口，不增加运行服务。\n`;
+}
+
 function fixture(files:Record<string,string>){
   const root=fs.mkdtempSync(path.join(os.tmpdir(),'cbim-architecture-'));temporary.push(root);
   for(const [name,content] of Object.entries(files)){
     const file=path.join(root,name);fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file,content);
+    let directory=path.posix.dirname(name);
+    while(directory==='src'||directory.startsWith('src/')){
+      const document=path.join(root,directory,'ARCHITECTURE.md');
+      if(!fs.existsSync(document))fs.writeFileSync(document,manual(directory));
+      if(directory==='src')break;
+      directory=path.posix.dirname(directory);
+    }
   }
   return {
     run:(check=false)=>spawnSync(process.execPath,[generator,...(check?['--check']:[])],{cwd:root,encoding:'utf8',timeout:15000}),
@@ -77,18 +88,17 @@ test('非叶子目录保持子目录边界，并列出本层模块公开入口',
   expect(document).toContain('[runtime/](runtime/ARCHITECTURE.md)');
 });
 
-test('文件清单覆盖契约、说明、样式和资源，首次生成后即可通过漂移检查',()=>{
+test('文件清单保留源码、样式和资源，契约只在唯一架构文档维护',()=>{
   const project=fixture({
     'src/view/foundations/utility/sample.ts':'export class Sample {}',
-    'src/view/foundations/utility/CONTRACT.md':'# 本模块契约\n\n状态独立。\n',
-    'src/view/foundations/utility/NOTES.md':'# 实际用途说明\n',
+    'src/view/foundations/utility/ARCHITECTURE.md':manual('实际用途说明','状态独立。'),
     'src/view/foundations/utility/style.css':'.sample {}',
     'src/view/foundations/utility/defaults.json':'{"limit":12}',
   });
   expect(project.run().status).toBe(0);
   expect(project.run(true).status).toBe(0);
   const document=project.read('src/view/foundations/utility/ARCHITECTURE.md');
-  for(const name of ['sample.ts','CONTRACT.md','NOTES.md','style.css','defaults.json','ARCHITECTURE.md']){
+  for(const name of ['sample.ts','style.css','defaults.json','ARCHITECTURE.md']){
     expect(document).toContain(`| [${name}](${name}) |`);
   }
   expect(document).toContain('实际用途说明');
@@ -119,9 +129,9 @@ test('类图区分静态与实例成员，保留私有构造及运行时私有�
   expect(document).not.toContain('+#count');
 });
 
-test('--check 检测源码及契约漂移但不写文档，再生成时保留独立契约',()=>{
-  const source='src/logic/tasks/rules/sample.ts',contract='src/logic/tasks/rules/CONTRACT.md',architecture='src/logic/tasks/rules/ARCHITECTURE.md';
-  const project=fixture({[source]:'export function inspect(){}',[contract]:'# 执行边界\n\n完成不表示验收。\n'});
+test('--check 检测生成区漂移，重新生成逐字保留同一文件前后的人工契约',()=>{
+  const source='src/logic/tasks/rules/sample.ts',architecture='src/logic/tasks/rules/ARCHITECTURE.md';
+  const project=fixture({[source]:'export function inspect(){}',[architecture]:manual('执行边界')});
   expect(project.run().status).toBe(0);
   expect(project.run(true).status).toBe(0);
   const initial=project.read(architecture);
@@ -132,7 +142,63 @@ test('--check 检测源码及契约漂移但不写文档，再生成时保留独
   const generated=project.read(architecture);
   expect(generated).toContain('+recover()');
   expect(generated).toContain('完成不表示验收。');
-  project.write(contract,'# 执行边界\n\n恢复不重放未知操作。\n');
+  const revised=generated.replace('完成不表示验收。','恢复不重放未知操作。')+'\n### 后置说明\n\n人工维护的字节原样保留。\n';
+  project.write(architecture,revised);
+  expect(project.run(true).status).toBe(0);
+  project.write(source,'export function inspect(){}\nexport function recover(){}\nexport function close(){}');
   expect(project.run(true).status).toBe(1);
-  expect(project.read(architecture)).toBe(generated);
+  expect(project.read(architecture)).toBe(revised);
+  expect(project.run().status).toBe(0);
+  const final=project.read(architecture);
+  expect(final.split('<!-- architecture:generated:start -->')[0]).toBe(revised.split('<!-- architecture:generated:start -->')[0]);
+  expect(final.split('<!-- architecture:generated:end -->')[1]).toBe(revised.split('<!-- architecture:generated:end -->')[1]);
+  expect(final).toContain('+close()');
 },20000);
+
+test('多余说明文档拒绝整批生成，不能删除契约或覆盖已经维护的正文',()=>{
+  const project=fixture({'src/sample.ts':'export function Read(){}','src/NOTES.md':'必须合并的重要约束'});
+  const before=project.read('src/ARCHITECTURE.md');
+  for(const check of [true,false]){
+    const result=project.run(check);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('请先合并说明内容');
+    expect(project.read('src/ARCHITECTURE.md')).toBe(before);
+    expect(project.read('src/NOTES.md')).toBe('必须合并的重要约束');
+  }
+});
+
+test('缺失、重复和倒置的生成标记拒绝写入，后续目录错误也不能留下部分更新',()=>{
+  const marker='<!-- architecture:generated:start -->',end='<!-- architecture:generated:end -->';
+  const project=fixture({'src/sample.ts':'export function Read(){}','src/core/sample.ts':'export class Value{}'});
+  const before=project.read('src/ARCHITECTURE.md');
+  for(const tail of [marker,end,`${end}\n${marker}`,`${marker}\n${end}\n${marker}\n${end}`]){
+    const invalid=manual('core')+'\n'+tail;
+    project.write('src/core/ARCHITECTURE.md',invalid);
+    expect(project.run().status).toBe(1);
+    expect(project.read('src/ARCHITECTURE.md')).toBe(before);
+    expect(project.read('src/core/ARCHITECTURE.md')).toBe(invalid);
+  }
+});
+
+test('目录意图只有一个来源，子目录修改会使父导航漂移',()=>{
+  const project=fixture({'src/new-domain/item.ts':'export interface Input {name:string}'});
+  expect(project.run().status).toBe(0);
+  const child=project.read('src/new-domain/ARCHITECTURE.md');
+  project.write('src/new-domain/ARCHITECTURE.md',child.replace('测试封装：src/new-domain，接口供夹具调用。','新边界说明：只读固定输入，不访问磁盘。'));
+  expect(project.run(true).status).toBe(1);
+  expect(project.run().status).toBe(0);
+  expect(project.read('src/ARCHITECTURE.md')).toContain('新边界说明：只读固定输入，不访问磁盘。');
+  expect(project.run(true).status).toBe(0);
+});
+
+test('只含资源的子目录也有清单和导航，未编写人工语义不能生成空壳',()=>{
+  const project=fixture({'src/resources/defaults.json':'{}'});
+  expect(project.run().status).toBe(0);
+  const document=project.read('src/resources/ARCHITECTURE.md');
+  expect(document).toContain('[defaults.json](defaults.json)');
+  expect(document).toContain('本目录无代码，无类图');
+  project.write('src/resources/ARCHITECTURE.md','# 只有标题');
+  const result=project.run();
+  expect(result.status).toBe(1);
+  expect(result.stderr).toContain('缺少人工说明章节');
+});

@@ -19,7 +19,7 @@
 
 ### A03 / P1：统一主 Agent 实际职责
 
-修正 [main-agent.ts](../../src/logic/conversation/runtime/main-agent.ts) 的 Team 指引，与 Auto 及已实现行为一致：未配置自定义负责岗位时，主 Agent 在当前主会话直接实现和验证；显式岗位按原计划和可信绑定派发。保留“主角色不得派成独立成员”的限制。同步 [团队契约](../../src/logic/team/rules/CONTRACT.md)、[会话契约](../../src/logic/conversation/runtime/CONTRACT.md)、README 和执行身份注释。
+修正 [main-agent.ts](../../src/logic/conversation/runtime/main-agent.ts) 的 Team 指引，与 Auto 及已实现行为一致：未配置自定义负责岗位时，主 Agent 在当前主会话直接实现和验证；显式岗位按原计划和可信绑定派发。保留“主角色不得派成独立成员”的限制。同步 [团队契约](../../src/logic/team/rules/ARCHITECTURE.md#contract)、[会话契约](../../src/logic/conversation/runtime/ARCHITECTURE.md#contract)、README 和执行身份注释。
 
 验收：真实 Pi 加本地确定性模型服务的 8 种场景覆盖 Team/Auto、read/ask/execute、存在业务模块等组合；检查实际发送的提示不再包含相互冲突的禁止语句，同时保留审批、工作区知识保护与不生成伪成员任务的断言。默认执行角色退役、正式目标及统一工具策略用例通过。现行源码、运行资料和 README 未再检出旧禁止语句。
 

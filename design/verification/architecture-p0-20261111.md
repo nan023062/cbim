@@ -89,7 +89,7 @@ pnpm exec vitest run tests/dependencies.test.ts --reporter=default --reporter=js
 
 ## 源码同步与 review 入口
 
-维护 [知识契约](../../src/logic/knowledge/rules/CONTRACT.md)，更新九个涉及源码文件（含新入口）的文件头，并用 `node scripts/source-architecture.mjs` 同步七份架构文档：
+维护 [知识契约](../../src/logic/knowledge/rules/ARCHITECTURE.md#contract)，更新九个涉及源码文件（含新入口）的文件头，并用 `node scripts/source-architecture.mjs` 同步七份架构文档：
 
 - [core](../../src/logic/ARCHITECTURE.md)、[knowledge](../../src/logic/knowledge/rules/ARCHITECTURE.md)、[team](../../src/logic/team/rules/ARCHITECTURE.md)、[workspace](../../src/logic/workspace/rules/ARCHITECTURE.md)。
 - [Main workspace](../../src/logic/workspace/service/ARCHITECTURE.md)、[Scheduler context](../../src/logic/execution/context/ARCHITECTURE.md)、[Scheduler execution](../../src/logic/execution/ARCHITECTURE.md)。

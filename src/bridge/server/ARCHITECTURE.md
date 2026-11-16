@@ -1,17 +1,61 @@
 # src/bridge/server 架构
 
-## 目录定位
+本目录只维护这一份说明。设计与契约直接编辑本文；文件清单、类图和导航由 [架构脚本](../../../scripts/source-architecture.mjs) 更新，生成区域之外的人工说明会保留。
+
+## 封装意图
 
 可信宿主桥接：桌面/CLI 入口、IPC 处理和业务 Application 的通信适配；业务状态与生命周期归 Logic。
 
-本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
+## 类与模块的设计意图
+
+下表依据源码声明及文件头说明定位封装。字段表示该实例持有的状态或协作引用，不表示它拥有被引用服务的生命周期；实际资源责任和调用限制见下文契约及源码注释。
+
+| 类／模块 | 实现形式与实例字段 | 封装依据 |
+| --- | --- | --- |
+| [Application](application.ts) | 实例类；无实例字段声明 | 可替换业务实例的桥接适配，仅将消息委托给独立路由。 |
+| [main.ts](main.ts) | 函数／契约模块 | 把 Electron 窗口与 IPC 留在唯一桌面入口，服务层可以脱离窗口验证；模型凭据加密通过系统 safeStorage 注入；手动终端固定工作区目录，退出时释放子进程。 |
+
+## 接口设计契约
+
+<a id="contract"></a>
+
+<a id="contract-桌面宿主与业务应用适配"></a>
+
+### 桌面宿主与业务应用适配
+
+<a id="contract-application-的设计意图"></a>
+
+#### Application 的设计意图
+
+[application.ts](application.ts) 中的 `Application` 是 Logic Application 的实例适配子类，只增加 `dispatch`，沿用父类的全部业务状态、构造和关闭行为。继承用于让桌面调用方继续持有同一个应用对象，不通过重载生命周期建立第二份服务集合。
+
+三个连续声明分别是已知操作的配对响应签名、动态字符串的 unknown 响应签名和实际分派实现。全部请求委托 [IPC 分派器](ipc/dispatch.ts) 做解析及业务路由；解析或业务异常原样传播，适配器不授予额外权限。新增操作修改通信契约及对应处理器，普通业务服务不依赖本子类。
+
+<a id="contract-桌面引擎管理入口"></a>
+
+#### 桌面引擎管理入口
+
+主 Frame 的 desktop.engines.status 返回无路径目录；desktop.engines.prepare 仅接受严格枚举 engine，不能指定下载地址或命令。安装应用期间拒绝准备；用户点击准备后不启动模型、不选择引擎。Codex 准备同时保证其 Pi 原生工具依赖，失败保留各自真实状态。旧宿主缺端口明确拒绝，开发态标记 bundled。
+
+桌面 Main 将冷壳 engineArtifacts 窄端口交给 Application；冷壳不再承担引擎活动选择，正式主/成员由 Application 的包管理服务固定版本。
+
+<a id="contract-内置运行资源边界"></a>
+
+#### 内置运行资源边界
+
+桌面 Application 读取当前 R 的 assets，开发态读取仓库 assets；不再从 design 注入运行规则。
+
+## 开闭边界
+
+本目录的职责及允许协作由[封装意图](#封装意图)限定，输入输出、状态与失败语义以[接口设计契约](#接口设计契约)为准。扩展从已有公开入口及实际装配位置进入；没有明确可替换契约的部分按真实影响修改和验证，不预建未使用的基类或插件入口。
+
+<!-- architecture:generated:start -->
 
 ## 文件清单
 
 | 文件 | 形式 | 当前职责 |
 | --- | --- | --- |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
-| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
 | [application.ts](application.ts) | 源码模块 | 为业务 Application 增加类型化 IPC 分发入口。 |
 | [main.ts](main.ts) | 源码模块 | 本机后端的 Electron 装配入口，区分开发与打包品牌资源路径，管理窗口、固定 IPC、原生文件选择、附件预览与打包验证；前端只通过 bridge/preload 请求服务。 |
 
@@ -74,24 +118,4 @@ class N_src_bridge_server_main_ts["main.ts"] {
 
 每次修改本目录代码，同步维护文件头、关键契约说明及本图。未实现的治理、证据验收和自动编排能力不列入当前类图。
 
-## 设计契约 v1 与落地范围
-
-以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
-
-# 桌面宿主与业务应用适配
-
-## Application 的设计意图
-
-[application.ts](application.ts) 中的 `Application` 是 Logic Application 的实例适配子类，只增加 `dispatch`，沿用父类的全部业务状态、构造和关闭行为。继承用于让桌面调用方继续持有同一个应用对象，不通过重载生命周期建立第二份服务集合。
-
-三个连续声明分别是已知操作的配对响应签名、动态字符串的 unknown 响应签名和实际分派实现。全部请求委托 [IPC 分派器](ipc/dispatch.ts) 做解析及业务路由；解析或业务异常原样传播，适配器不授予额外权限。新增操作修改通信契约及对应处理器，普通业务服务不依赖本子类。
-
-## 桌面引擎管理入口
-
-主 Frame 的 desktop.engines.status 返回无路径目录；desktop.engines.prepare 仅接受严格枚举 engine，不能指定下载地址或命令。安装应用期间拒绝准备；用户点击准备后不启动模型、不选择引擎。Codex 准备同时保证其 Pi 原生工具依赖，失败保留各自真实状态。旧宿主缺端口明确拒绝，开发态标记 bundled。
-
-桌面 Main 将冷壳 engineArtifacts 窄端口交给 Application；冷壳不再承担引擎活动选择，正式主/成员由 Application 的包管理服务固定版本。
-
-## 内置运行资源边界
-
-桌面 Application 读取当前 R 的 assets，开发态读取仓库 assets；不再从 design 注入运行规则。
+<!-- architecture:generated:end -->

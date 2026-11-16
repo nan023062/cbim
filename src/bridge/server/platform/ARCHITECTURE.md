@@ -1,10 +1,31 @@
 # src/bridge/server/platform 架构
 
-## 目录定位
+本目录只维护这一份说明。设计与契约直接编辑本文；文件清单、类图和导航由 [架构脚本](../../../../scripts/source-architecture.mjs) 更新，生成区域之外的人工说明会保留。
+
+## 封装意图
 
 Electron utility 文件传输和子进程入口；处理可信私有协议，业务文件规则与 Win32 实现归 Logic。
 
-本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
+## 类与模块的设计意图
+
+下表依据源码声明及文件头说明定位封装。字段表示该实例持有的状态或协作引用，不表示它拥有被引用服务的生命周期；实际资源责任和调用限制见下文契约及源码注释。
+
+| 类／模块 | 实现形式与实例字段 | 封装依据 |
+| --- | --- | --- |
+| [controlled-file-child.ts](controlled-file-child.ts) | 函数／契约模块 | 同步 Win32 与 GetLastError 留在同线程；父进程可靠保存 executing 后才发送一次内容替换或冻结的删除/移动。 |
+| [UtilityControlledFiles](controlled-file-transport.ts) | 实例类；持有 `sessions`、`closing`、`entryPath`、`koffiPath` | 关闭失败保留活动 child；再次 close 可核实原进程，不创建替代工人或重发 apply。 |
+| [UtilityFileSession](controlled-file-transport.ts) | 实例类；持有 `token`、`seq`、`dead`、`closing`、`pending`、`before`、`issued`、`exited`、`resolveExit`、`abort`、`child`、`signal` | seq、token、唯一 apply 和 exit promise 均绑定真实进程；退出码不作为业务成功依据。 |
+
+## 接口设计契约
+
+- [controlled-file-child.ts](controlled-file-child.ts)：独立 Electron utility 文件工人入口，只接收固定私有消息，不启动 Application 或模型。
+- [controlled-file-transport.ts](controlled-file-transport.ts)：Electron 主进程为每次受控内容替换或删除/移动创建专用 utility 子进程，并返回不透明会话。
+
+## 开闭边界
+
+本目录的职责及允许协作由[封装意图](#封装意图)限定，输入输出、状态与失败语义以[接口设计契约](#接口设计契约)为准。扩展从已有公开入口及实际装配位置进入；没有明确可替换契约的部分按真实影响修改和验证，不预建未使用的基类或插件入口。
+
+<!-- architecture:generated:start -->
 
 ## 文件清单
 
@@ -132,3 +153,5 @@ N_src_bridge_server_platform_controlled_file_transport_ts_external_ExclusiveCont
 [返回上层](../ARCHITECTURE.md)。
 
 每次修改本目录代码，同步维护文件头、关键契约说明及本图。未实现的治理、证据验收和自动编排能力不列入当前类图。
+
+<!-- architecture:generated:end -->

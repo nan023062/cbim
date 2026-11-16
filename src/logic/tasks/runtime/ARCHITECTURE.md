@@ -1,17 +1,85 @@
 # src/logic/tasks/runtime 架构
 
-## 目录定位
+本目录只维护这一份说明。设计与契约直接编辑本文；文件清单、类图和导航由 [架构脚本](../../../../scripts/source-architecture.mjs) 更新，生成区域之外的人工说明会保留。
+
+## 封装意图
 
 目标周期、等待、续执行、恢复与重计划编排。ScopeGoalService 的跨域依赖仍在，目录迁移不冒充职责重构。
 
-本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
+## 类与模块的设计意图
+
+下表依据源码声明及文件头说明定位封装。字段表示该实例持有的状态或协作引用，不表示它拥有被引用服务的生命周期；实际资源责任和调用限制见下文契约及源码注释。
+
+| 类／模块 | 实现形式与实例字段 | 封装依据 |
+| --- | --- | --- |
+| [main-command-request.ts](main-command-request.ts) | 函数／契约模块 | 运行原始 inputHash 与领域解析后的指纹不同；复原保留 trim、缺省和键序，不能用今日执行资格拒绝旧命令查询。 |
+| [OfficeHistoryService](office-history-service.ts) | 实例类；持有 `workspaceId`、`store`、`ports` | 保存的是原 canonical；此服务只生成可重建目录并读取明确选择的一份内容。 |
+| [QueuedDependencyAdditionService](queued-dependency-addition-service.ts) | 实例类；持有 `owner`、`store`、`goals`、`owners` | 后创建的任务也能成为先前待办的前置；在 Knowledge→模型→Store 锁序内重核全部待办岗位、角色和 Workflow，审计和等待状态一起保存，不能靠事件名称绕过门禁。 |
+| [QueuedDependencyReplacementService](queued-dependency-replacement-service.ts) | 实例类；持有 `owner`、`store`、`goals`、`owners` | 图上的 result_ready 不足以授权后续执行；失败/求助或已放弃检查点及新候选按原日志核实，未领取闭包在 Knowledge→模型→Store 锁序中核当前岗位；旧边与原执行保持。 |
+| [QueuedDependencyRevisionService](queued-dependency-revision-service.ts) | 实例类；持有 `owner`、`store`、`goals`、`owners` | 知识→模型→Store 固定锁序核全部受影响岗位，增删后的图一次生效；不改原计划、实例或信封。 |
+| [QueuedTaskCancelService](queued-task-cancel-service.ts) | 实例类；持有 `owner`、`store` | 只依赖当前工作区有效性与派发存储；不读取模型密钥、知识正文或运行工具。 |
+| [scope-active-input-evidence.ts](scope-active-input-evidence.ts) | 函数／契约模块 | Scope 与运行日志是两个真实存储，不能靠单边记录推断原生已经接收；未知不会被旧 review 或普通聊天完成例外洗白。 |
+| [ScopeActiveInputService](scope-active-input-service.ts) | 实例类；持有 `owner`、`store` | 发送前先占用输入额度，确认后才提升目标版本；原生发送与磁盘事务不冒称原子，失败保留原尝试且不重放。 |
+| [ScopeContinuationService](scope-continuation-service.ts) | 实例类；持有 `owner`、`store`、`budgets`、`memberPauses` | 先查原命令，再由可信启动闭包提交清单；运行中插入与等待补充共用输入次数和正文额度。预算读取后及提交前复核停止，拒绝不会消费等待或运行额度。 |
+| [ScopeGoalService](scope-goal-service.ts) | 实例类；持有 `owner`、`store`、`ports`、`humanPorts`、`owners`、`memberPauses` | 业务计划重核岗位、来源和模型后冻结绑定；候选按原岗位及 Workflow 比较，不用当前登记覆盖历史。模型只能申请完成或等待，结算再核证据、任务压力与副作用；明确返工不把旧文件再次放行。 |
+| [ScopeHumanContinuationService](scope-human-continuation-service.ts) | 实例类；持有 `owner`、`store`、`goals`、`logs`、`artifacts`、`budgets` | 保存意见和恢复运行分开；先在任务事务外核证，再按知识快照→任务短事务消费等待、提高输入版本，避免来源提交与证据读取形成逆序锁；预算拒绝保持检查点。 |
+| [ScopeHumanDecisionService](scope-human-decision-service.ts) | 实例类；持有 `owner`、`store`、`goals`、`logs`、`ports`、`assertCurrent` | 历史候选真实性与当前接受许可分开；提交在事务外重建文件及日志依据，再按知识快照→任务短事务核版本，避免知识来源写入与验收形成逆向等待。 |
+| [ScopeRecoveryService](scope-recovery-service.ts) | 实例类；持有 `owner`、`store`、`logs`、`budgets`、`effects` | 旧运行未知时不能续接或重放；成员/主来源在事务外核实，再以短事务核原身份和会话槽。原请求先查回执，新周期冻结明确处置且不放宽只读权限。 |
+| [ScopeReplanService](scope-replan-service.ts) | 实例类；持有 `owner`、`store`、`goals`、`logs`、`budgets`、`effects` | 旧任务和未知回执保持封存；事务外核实主/成员来源及完整只读证据，知识短锁内仅做 Store CAS。重复命令先读原回执，明确处置只关联新目标，不修正旧失败。 |
+| [TopicInterruptionService](topic-interruption-service.ts) | 实例类；持有 `owner`、`store` | 复用原目标接续事务推进输入版本，独立记录停止前的请求；无法证实退出时保持原意图，不恢复旧运行或伪造暂停成功。 |
+
+## 接口设计契约
+
+<a id="contract"></a>
+
+<a id="contract-候选批准与最终目标审阅"></a>
+
+#### 候选批准与最终目标审阅
+
+ScopeGoalService.ReviewCandidate 由当前主运行调用，要求活动且已规划目标、无未核实插入、精确任务版本及未审阅候选。复用原运行、工具证据、岗位、知识与产物核实，在同一 DispatchStore 事务内追加 candidateReview；相同命令返回原回执，不重新审阅，不允许改判。磁盘 RunSummary 对尚未结算日志也标 interrupted，所以活性使用调用闭包与当前主身份，可靠事件用于排除已有终态，不能以磁盘 status=running 判断。
+
+accept 仅允许后继使用此结果；reject 的候选不能作为最终目标证据。最终 cbim_goal_review 及 human 决定仍独立。拒绝后应撤销相关未启动后继并新建返工链；不把 rejected/result_ready 当作已有 replace_dependency 所允许的失败来源。追加、替换和修订依赖的新边统一启用 reviewRequired。
+
+<a id="contract-指定话题补充与排空"></a>
+
+#### 指定话题补充与排空
+
+`TopicInterruptionService` 负责用户指定话题补充的持久意图和排空后的等待提交，不停止引擎。prepare 检查原输入版本、剩余主轮/决策/正文额度并保存原请求；park 重核可信主轮日志完整性、原生文件身份和全部原话题成员终态。新等待不伪造 awaiting_user 审阅；ScopeContinuationService 只消费同一 commandId、原文、附件和选型，拒绝更换权限或冒充人工决定。可靠等待重启可显式查询/接续，未可靠排空不自动执行。
+
+OfficeHistoryService 从原 DispatchStore、mainRunIds、task.scopeId 和信封生成归档目录，仅选中引用才读 canonical 正文；不另存正文。完整公开消息按版本分块，内部成员提示词、原生会话和工具正文仍走公开白名单；旧记录缺少明确归属不按时间猜测。主归档和当前模型工作窗口分开，查询不启动、复活或验收历史运行。
+
+
+<a id="contract-根运行插入回执"></a>
+
+#### 根运行插入回执
+
+ScopeActiveInputService.Send 是新根生命周期与旧协调器共用的输入事务入口：发送前持久 prepare，可信 ACK 后 accepted，停止/失效 rejected，回执丢失 unknown；原尝试不可自动重放。持久核证继续由 prepare/resolve/inspect 承担，不复制状态账本。
+
+
+<a id="contract-递归执行记录核实"></a>
+
+#### 递归执行记录核实
+
+ScopeRecoveryService 的旧任务执行报告来源明确拒绝递归 executionModel 或缺少旧任务版本的报告。递归来源必须使用 member_run 影响观察及精确 taskId/runId/toolCallIds；冻结 executionModel=agent-tools-v1、原周期、日志前缀和观察依据，由 Store 核验原业务调用已关闭且归属一致，不伪造 TaskNode 修订号。只读核实建立独立原生上下文，原调用与副作用事实不被改写。
+
+
+<a id="contract-递归工具迁移收口"></a>
+
+##### 递归工具迁移收口
+
+ScopeReplanService 对递归来源要求原 AgentBusinessRun.request，缺少原验收要求时拒绝自动推断。ScopeGoalService 委托 RecursiveInspectionEvidence 重读完整根与子调用、冻结 Workflow、当前文件及来源身份，并二次读取检测变化。原业务影响仍按原主体观察，旧记录不改写；事务再次核依据，只有显式新意图可进入 ask/execute。
+
+## 开闭边界
+
+本目录的职责及允许协作由[封装意图](#封装意图)限定，输入输出、状态与失败语义以[接口设计契约](#接口设计契约)为准。扩展从已有公开入口及实际装配位置进入；没有明确可替换契约的部分按真实影响修改和验证，不预建未使用的基类或插件入口。
+
+<!-- architecture:generated:start -->
 
 ## 文件清单
 
 | 文件 | 形式 | 当前职责 |
 | --- | --- | --- |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
-| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
 | [main-command-request.ts](main-command-request.ts) | 源码模块 | 共享主调度原命令的指纹构造，从已核实 canonical 参数复原历史请求，包含原子前置增删。 |
 | [office-history-service.ts](office-history-service.ts) | 源码模块 | 按主 Session → 原话题 → 内容引用读取现有调度及公开对话日志。 |
 | [queued-dependency-addition-service.ts](queued-dependency-addition-service.ts) | 源码模块 | 在同一派发事务核实未领取任务及两端后继，为原目标追加一条结果前置。 |
@@ -673,33 +741,4 @@ N_src_logic_tasks_runtime_scope_replan_service_ts ..> N_src_logic_tasks_runtime_
 
 每次修改本目录代码，同步维护文件头、关键契约说明及本图。未实现的治理、证据验收和自动编排能力不列入当前类图。
 
-## 设计契约 v1 与落地范围
-
-以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
-
-## 候选批准与最终目标审阅
-
-ScopeGoalService.ReviewCandidate 由当前主运行调用，要求活动且已规划目标、无未核实插入、精确任务版本及未审阅候选。复用原运行、工具证据、岗位、知识与产物核实，在同一 DispatchStore 事务内追加 candidateReview；相同命令返回原回执，不重新审阅，不允许改判。磁盘 RunSummary 对尚未结算日志也标 interrupted，所以活性使用调用闭包与当前主身份，可靠事件用于排除已有终态，不能以磁盘 status=running 判断。
-
-accept 仅允许后继使用此结果；reject 的候选不能作为最终目标证据。最终 cbim_goal_review 及 human 决定仍独立。拒绝后应撤销相关未启动后继并新建返工链；不把 rejected/result_ready 当作已有 replace_dependency 所允许的失败来源。追加、替换和修订依赖的新边统一启用 reviewRequired。
-
-## 指定话题补充与排空
-
-`TopicInterruptionService` 负责用户指定话题补充的持久意图和排空后的等待提交，不停止引擎。prepare 检查原输入版本、剩余主轮/决策/正文额度并保存原请求；park 重核可信主轮日志完整性、原生文件身份和全部原话题成员终态。新等待不伪造 awaiting_user 审阅；ScopeContinuationService 只消费同一 commandId、原文、附件和选型，拒绝更换权限或冒充人工决定。可靠等待重启可显式查询/接续，未可靠排空不自动执行。
-
-OfficeHistoryService 从原 DispatchStore、mainRunIds、task.scopeId 和信封生成归档目录，仅选中引用才读 canonical 正文；不另存正文。完整公开消息按版本分块，内部成员提示词、原生会话和工具正文仍走公开白名单；旧记录缺少明确归属不按时间猜测。主归档和当前模型工作窗口分开，查询不启动、复活或验收历史运行。
-
-
-## 根运行插入回执
-
-ScopeActiveInputService.Send 是新根生命周期与旧协调器共用的输入事务入口：发送前持久 prepare，可信 ACK 后 accepted，停止/失效 rejected，回执丢失 unknown；原尝试不可自动重放。持久核证继续由 prepare/resolve/inspect 承担，不复制状态账本。
-
-
-## 递归执行记录核实
-
-ScopeRecoveryService 的旧任务执行报告来源明确拒绝递归 executionModel 或缺少旧任务版本的报告。递归来源必须使用 member_run 影响观察及精确 taskId/runId/toolCallIds；冻结 executionModel=agent-tools-v1、原周期、日志前缀和观察依据，由 Store 核验原业务调用已关闭且归属一致，不伪造 TaskNode 修订号。只读核实建立独立原生上下文，原调用与副作用事实不被改写。
-
-
-### 递归工具迁移收口
-
-ScopeReplanService 对递归来源要求原 AgentBusinessRun.request，缺少原验收要求时拒绝自动推断。ScopeGoalService 委托 RecursiveInspectionEvidence 重读完整根与子调用、冻结 Workflow、当前文件及来源身份，并二次读取检测变化。原业务影响仍按原主体观察，旧记录不改写；事务再次核依据，只有显式新意图可进入 ask/execute。
+<!-- architecture:generated:end -->

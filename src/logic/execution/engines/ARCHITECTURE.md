@@ -1,17 +1,102 @@
 # src/logic/execution/engines 架构
 
-## 目录定位
+本目录只维护这一份说明。设计与契约直接编辑本文；文件清单、类图和导航由 [架构脚本](../../../../scripts/source-architecture.mjs) 更新，生成区域之外的人工说明会保留。
+
+## 封装意图
 
 执行域的具体引擎适配边界：Pi、Claude、Codex 及其共享 HTTP 预算传输和原生工具加载。依赖 Logic 引擎/模型契约，由 execution/assembly 选择并注入；不持有任务派发与应用存储。 runtime-binding 在 agentHome 固定原生会话的 E 摘要；包变化时拒绝无兼容依据的恢复，历史不删除、不自动迁移。 可组合 utility 通用入口的分帧与在途集合，不依赖其 Node 入口或其他基础方案。
 
-本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
+## 类与模块的设计意图
+
+下表依据源码声明及文件头说明定位封装。字段表示该实例持有的状态或协作引用，不表示它拥有被引用服务的生命周期；实际资源责任和调用限制见下文契约及源码注释。
+
+| 类／模块 | 实现形式与实例字段 | 封装依据 |
+| --- | --- | --- |
+| [native-tools.ts](native-tools.ts) | 函数／契约模块 | Codex 内置执行不能覆盖每次 CBIM 授权；复用已有读取、编辑、输出截断及取消行为，避免维护第二套文件语义。 |
+| [RunInactivityTimer](run-inactivity.ts) | 实例类；持有 `timer`、`closed`、`toolProgress` | 每轮创建一次；过期或 dispose 后迟到事件不能重新启用计时器。 |
+| [runtime-binding.ts](runtime-binding.ts) | 函数／契约模块 | 资源更新可更换下载包，但不能让新引擎静默改写旧原生历史；不修改 SDK 历史文件或业务审计格式。 |
+
+## 接口设计契约
+
+<a id="contract"></a>
+
+<a id="contract-受管引擎包与原生历史"></a>
+
+### 受管引擎包与原生历史
+
+<a id="contract-通用机制组合"></a>
+
+#### 通用机制组合
+
+Pi/Codex RPC 的文本缓冲由 `core/utility` 的 LineFramer 持有，协议策略留在各适配器；Pi 按 UTF-16 长度、Codex 按 UTF-8 字节保留原限额，完整空白帧/CR/未终止尾部按原规则处理。Codex 的工具调用与 RPC 处理使用实例 InFlightOperations；通知链、停止接单、取消、原请求身份及真实进程退出仍归引擎。引擎只允许依赖 utility 通用公开入口，不访问其他基础方案或其私有实现。
+
+<a id="contract-按执行进展续期"></a>
+
+#### 按执行进展续期
+
+`turnTimeoutMs` 保留参数名、范围和持久化格式，含义改为连续无可观察进展的毫秒数，缺省 30 分钟；整轮累计时长不再触发此超时。既有数据不迁移，新启动/显式恢复的运行按新规则使用原选项，已经运行的旧进程不会热切换。
+
+`RunInactivityTimer` 是 Pi、Codex、Claude Code 三个真实消费者共用的计时机制，只拥有本轮 timer 和工具快照摘要。适配器自行识别原生文本、推理及参数增量；统一消息与工具开始、完成、新的非空输出续期。空输出、重复工具快照、状态刷新和自动重试通知不续期。没有可观察输出的长命令仍可能达到无进展上限；这里不根据 CPU、模型自述或“进程还在”推断进展。
+
+原生协议识别留在各适配器，共享计时器不认识供应商、不调用工具或重试。推理只触发时间更新，不保存/公开正文。正常结束、失败、停止和关闭释放 timer；过期后迟到事件不能复活窗口。无进展中断沿原关闭、排空、日志结算路径处理，在途操作保持未知，不自动重放。
+
+此边界由本次重复硬超时缺陷提炼，接口及实现仍属稳定候选，变化频率没有统计依据。新增引擎只组合 `progress/observe/dispose` 并映射自身协议；新增进展类型修改其所属协议适配或公共事件判定，不修改任务调度核心。原生 RPC 单请求超时、工具自身超时及资源排空限制不由此计时器代替。
+
+```mermaid
+classDiagram
+class RunInactivityTimer {
+  -timer
+  -closed
+  -toolProgress
+  +progress()
+  +observe(event)
+  +dispose()
+}
+class PiEngine { <<external>> }
+class CodexEngine { <<external>> }
+class ClaudeCodeEngine { <<external>> }
+PiEngine --> RunInactivityTimer : 本轮持有
+CodexEngine --> RunInactivityTimer : 本轮持有
+ClaudeCodeEngine --> RunInactivityTimer : 本轮持有
+note for RunInactivityTimer "run-inactivity.ts：续期/到期/释放；工具快照只保留摘要。"
+note for PiEngine "pi/engine.ts；原生进展识别留在适配器。"
+note for CodexEngine "codex/engine.ts；thread/turn 核实后更新时间。"
+note for ClaudeCodeEngine "claude/engine.ts；SDK 增量及工具 Hook。"
+```
+
+具体适配器仍依赖 Core，调度装配选择适配器。EngineRuntimeResolver 由可信主进程注入，返回完整验证后的 root、entry、version、identity；不接受 renderer、模型或工作区提供下载路径。开发/CLI 未注入时保留原依赖解析方式。
+
+Pi 的 CLI、Claude Agent SDK 和 Codex EXE 使用预编译依赖包；用户机器不执行 npm install 或原生编译。当前适配器继续固定 Pi 1.5.0、Claude 0.3.322、Codex 0.167.0，不能仅把远端 version 改为 latest 来升级。Codex 的本机文件工具仍显式依赖受管 Pi 包。
+
+`native-tools.ts` 的 `nativeToolInput` 在 Windows 上将 read/write/edit/find/grep/ls 的单根分隔符路径按工作区解析成完整路径，与授权侧的工作区路径解析一致；不再由 SDK 按宿主进程盘符补齐。原参数不改写，完整盘符路径、UNC、普通相对路径和 POSIX 平台行为保留。这里不解释 Bash/MSYS 挂载表，也不重写命令正文；跨工具传递文件仍优先使用完整 Windows 路径。
+
+程序包与 agentHome 分离；模型账号、凭据和原生历史留在原用户目录。runtime-binding 在 session.bound 前同步保存原生 sessionId 对应的 E 摘要及辅助工具摘要。恢复前先核对；不同摘要不启动新 SDK/EXE 来尝试旧会话。旧整包没有旁路记录时只允许原固定版本迁移，今后提高适配器版本不得同步放宽 legacyVersions。
+
+第一版对不兼容旧会话明确报错并要求新建对话，保留历史；尚未实现按旧会话自动选择旧 E 或跨 E 历史迁移。当前/旧 E 缓存不自动清理，也不把文件留存等同于已验证可恢复。新会话可以使用随新 R 选择的已验证 E。
+
+<a id="contract-独立工厂制品"></a>
+
+##### 独立工厂制品
+
+pi/claude/codex/memory 各有 package.ts，当前适配器版本 1.1.0，与厂商 SDK 版本分开。scripts/build-engine-adapters.mjs 可按官方 ID 单独生成 adapter.cjs 和 adapter.json；两者都携带本包编译时的能力声明，并包含在已签名的完整文件清单中。构建结果可在不加载 SDK、不连接模型时实例化与关闭。现有具体适配器继续持有取消、超时续期、原生历史和未知工具行为。源码开发装配使用兼容表；正式构建把适配器写入各自 E 归档，并通过通用加载器读取。
+
+正式加载在调用 create 前核对包声明与 R 静态选型规则：主模型协议、额外角色/必填项/型号限制、固定依赖和原生历史格式必须一致。缺声明或不一致明确拒绝，不把新 R 的预设套到旧 E，也不自动下载替代包。显示名/业务介绍等展示变化无需更换 E。兼容实现或 SDK 升级可只发 E；改变执行兼容规则需协调 R/E，仍无需更换通用 C。
+
+运行包包装器保留整个依赖闭包引用，真实 close 成功后释放，stop 或失败关闭不释放。历史 schema 1 的 Pi 工具摘要保持 toolsIdentity，其它依赖按名称固定摘要；不改写旧会话内容。
+
+自定义 memory 包使用同一工厂协议和包引用机制，细节见 [记忆引擎契约](memory/ARCHITECTURE.md#contract)。其自研运行库与适配器同版，不需要厂商 SDK；模型请求、知识权限、工具回执和失败界限均沿宿主注入端口。
+
+## 开闭边界
+
+本目录的职责及允许协作由[封装意图](#封装意图)限定，输入输出、状态与失败语义以[接口设计契约](#接口设计契约)为准。扩展从已有公开入口及实际装配位置进入；没有明确可替换契约的部分按真实影响修改和验证，不预建未使用的基类或插件入口。
+
+<!-- architecture:generated:start -->
 
 ## 文件清单
 
 | 文件 | 形式 | 当前职责 |
 | --- | --- | --- |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
-| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
 | [native-tools.ts](native-tools.ts) | 源码模块 | 向宿主托管引擎提供已有文件/命令工具操作，复用 Pi SDK 的独立工具实现而不创建 Pi Loop。 |
 | [run-inactivity.ts](run-inactivity.ts) | 源码模块 | 官方引擎共用的无进展计时器；适配器识别真实增量，工具事件复用统一协议。 |
 | [runtime-binding.ts](runtime-binding.ts) | 源码模块 | 在具体引擎之外固定原生会话使用的受管 E 包身份，保存在原 agentHome 的私有旁路记录。 |
@@ -104,64 +189,4 @@ class N_src_logic_execution_engines_runtime_binding_ts["runtime-binding.ts"] {
 
 每次修改本目录代码，同步维护文件头、关键契约说明及本图。未实现的治理、证据验收和自动编排能力不列入当前类图。
 
-## 设计契约 v1 与落地范围
-
-以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
-
-# 受管引擎包与原生历史
-
-## 通用机制组合
-
-Pi/Codex RPC 的文本缓冲由 `core/utility` 的 LineFramer 持有，协议策略留在各适配器；Pi 按 UTF-16 长度、Codex 按 UTF-8 字节保留原限额，完整空白帧/CR/未终止尾部按原规则处理。Codex 的工具调用与 RPC 处理使用实例 InFlightOperations；通知链、停止接单、取消、原请求身份及真实进程退出仍归引擎。引擎只允许依赖 utility 通用公开入口，不访问其他基础方案或其私有实现。
-
-## 按执行进展续期
-
-`turnTimeoutMs` 保留参数名、范围和持久化格式，含义改为连续无可观察进展的毫秒数，缺省 30 分钟；整轮累计时长不再触发此超时。既有数据不迁移，新启动/显式恢复的运行按新规则使用原选项，已经运行的旧进程不会热切换。
-
-`RunInactivityTimer` 是 Pi、Codex、Claude Code 三个真实消费者共用的计时机制，只拥有本轮 timer 和工具快照摘要。适配器自行识别原生文本、推理及参数增量；统一消息与工具开始、完成、新的非空输出续期。空输出、重复工具快照、状态刷新和自动重试通知不续期。没有可观察输出的长命令仍可能达到无进展上限；这里不根据 CPU、模型自述或“进程还在”推断进展。
-
-原生协议识别留在各适配器，共享计时器不认识供应商、不调用工具或重试。推理只触发时间更新，不保存/公开正文。正常结束、失败、停止和关闭释放 timer；过期后迟到事件不能复活窗口。无进展中断沿原关闭、排空、日志结算路径处理，在途操作保持未知，不自动重放。
-
-此边界由本次重复硬超时缺陷提炼，接口及实现仍属稳定候选，变化频率没有统计依据。新增引擎只组合 `progress/observe/dispose` 并映射自身协议；新增进展类型修改其所属协议适配或公共事件判定，不修改任务调度核心。原生 RPC 单请求超时、工具自身超时及资源排空限制不由此计时器代替。
-
-```mermaid
-classDiagram
-class RunInactivityTimer {
-  -timer
-  -closed
-  -toolProgress
-  +progress()
-  +observe(event)
-  +dispose()
-}
-class PiEngine { <<external>> }
-class CodexEngine { <<external>> }
-class ClaudeCodeEngine { <<external>> }
-PiEngine --> RunInactivityTimer : 本轮持有
-CodexEngine --> RunInactivityTimer : 本轮持有
-ClaudeCodeEngine --> RunInactivityTimer : 本轮持有
-note for RunInactivityTimer "run-inactivity.ts：续期/到期/释放；工具快照只保留摘要。"
-note for PiEngine "pi/engine.ts；原生进展识别留在适配器。"
-note for CodexEngine "codex/engine.ts；thread/turn 核实后更新时间。"
-note for ClaudeCodeEngine "claude/engine.ts；SDK 增量及工具 Hook。"
-```
-
-具体适配器仍依赖 Core，调度装配选择适配器。EngineRuntimeResolver 由可信主进程注入，返回完整验证后的 root、entry、version、identity；不接受 renderer、模型或工作区提供下载路径。开发/CLI 未注入时保留原依赖解析方式。
-
-Pi 的 CLI、Claude Agent SDK 和 Codex EXE 使用预编译依赖包；用户机器不执行 npm install 或原生编译。当前适配器继续固定 Pi 1.5.0、Claude 0.3.322、Codex 0.167.0，不能仅把远端 version 改为 latest 来升级。Codex 的本机文件工具仍显式依赖受管 Pi 包。
-
-`native-tools.ts` 的 `nativeToolInput` 在 Windows 上将 read/write/edit/find/grep/ls 的单根分隔符路径按工作区解析成完整路径，与授权侧的工作区路径解析一致；不再由 SDK 按宿主进程盘符补齐。原参数不改写，完整盘符路径、UNC、普通相对路径和 POSIX 平台行为保留。这里不解释 Bash/MSYS 挂载表，也不重写命令正文；跨工具传递文件仍优先使用完整 Windows 路径。
-
-程序包与 agentHome 分离；模型账号、凭据和原生历史留在原用户目录。runtime-binding 在 session.bound 前同步保存原生 sessionId 对应的 E 摘要及辅助工具摘要。恢复前先核对；不同摘要不启动新 SDK/EXE 来尝试旧会话。旧整包没有旁路记录时只允许原固定版本迁移，今后提高适配器版本不得同步放宽 legacyVersions。
-
-第一版对不兼容旧会话明确报错并要求新建对话，保留历史；尚未实现按旧会话自动选择旧 E 或跨 E 历史迁移。当前/旧 E 缓存不自动清理，也不把文件留存等同于已验证可恢复。新会话可以使用随新 R 选择的已验证 E。
-
-### 独立工厂制品
-
-pi/claude/codex/memory 各有 package.ts，当前适配器版本 1.1.0，与厂商 SDK 版本分开。scripts/build-engine-adapters.mjs 可按官方 ID 单独生成 adapter.cjs 和 adapter.json；两者都携带本包编译时的能力声明，并包含在已签名的完整文件清单中。构建结果可在不加载 SDK、不连接模型时实例化与关闭。现有具体适配器继续持有取消、超时续期、原生历史和未知工具行为。源码开发装配使用兼容表；正式构建把适配器写入各自 E 归档，并通过通用加载器读取。
-
-正式加载在调用 create 前核对包声明与 R 静态选型规则：主模型协议、额外角色/必填项/型号限制、固定依赖和原生历史格式必须一致。缺声明或不一致明确拒绝，不把新 R 的预设套到旧 E，也不自动下载替代包。显示名/业务介绍等展示变化无需更换 E。兼容实现或 SDK 升级可只发 E；改变执行兼容规则需协调 R/E，仍无需更换通用 C。
-
-运行包包装器保留整个依赖闭包引用，真实 close 成功后释放，stop 或失败关闭不释放。历史 schema 1 的 Pi 工具摘要保持 toolsIdentity，其它依赖按名称固定摘要；不改写旧会话内容。
-
-自定义 memory 包使用同一工厂协议和包引用机制，细节见 [记忆引擎契约](memory/CONTRACT.md)。其自研运行库与适配器同版，不需要厂商 SDK；模型请求、知识权限、工具回执和失败界限均沿宿主注入端口。
+<!-- architecture:generated:end -->

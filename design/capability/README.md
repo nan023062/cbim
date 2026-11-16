@@ -10,4 +10,4 @@
 
 产品采用 [统一 Agent 工具模型](../agent-tool-product-requirements.md)：Team 配置可调用 Agent、职责与权限；主 Agent 与用户交互，执行 Agent 与直接调用方交互，任意已授权 Agent 可递归调用工具和 Agent。界面使用同一种对话流与工具展开，不使用独立团队聊天模式。
 
-现有注册表、能力目录分组和 Skill 继承是存储与检索约定，不是调用层级。产品加载的 [Agent 定义规范](agent-spec.md) 和 Schema 仍描述实际支持的格式；递归执行接通前不通过修改提示词开放原本不存在的权限。实现与目标的差异见 [工程交接](../agent-tool-engineering.md)。
+现有注册表、能力目录分组和 Skill 继承是存储与检索约定，不是调用层级。产品加载的 [Agent 定义规范](../../assets/capability/agent-spec.md) 和 Schema 仍描述实际支持的格式；递归执行接通前不通过修改提示词开放原本不存在的权限。实现与目标的差异见 [工程交接](../agent-tool-engineering.md)。

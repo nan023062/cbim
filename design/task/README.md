@@ -1,20 +1,17 @@
-# Task：单一任务
+# 工程方案与操作指南
 
-产品目标已统一为 [Agent 工具调用需求](../agent-tool-product-requirements.md) 与 [UX](../agent-tool-ux-design.md)，原办公室／话题设计入口已同步替换。以下产品加载规范和带日期实施记录描述既有运行格式与事实；涉及“只有主 Agent 派发”等限制须在对应执行迁移中退出，不作为新产品需求。
+本目录保留仍用于开发、发布和维护的方案。已完成的旧功能切片及专项验证从 [固定历史版本](../README.md#历史追溯与维护边界) 查询；当前业务实现从 [源码架构](../../src/ARCHITECTURE.md) 逐层阅读。
 
-本说明面向人，帮助了解任务目录；Agent 按需读取专用规范。Task 将一个AI 成员、由它维护的模块集合和一个验收目标组合起来。CBIM AI 助理组织任务，执行者使用 CBIM 内部大脑循环。
+| 指南 | 用途 |
+| --- | --- |
+| [CI 验证](ci-validation.md) | 按变更路径选择检查、测试分片与汇总结果 |
+| [桌面发布](desktop-release.md) | 构建、安装升级及验收进程的操作边界 |
+| [C/R/E 构建与发布](desktop-runtime-release.md) | 冷包、运行资源和引擎制品的身份、签名与发布顺序 |
+| [分层更新设计](desktop-hot-update-design.md) | 冷更、资源更新和独立引擎包的设计取舍 |
+| [官方引擎包](engine-package-release.md) | 引擎登记、构建、兼容与更新 |
+| [Windows 签名](windows-signing.md) | 签名配置和版本迁移；历史重发方案不构成新授权 |
+| [GitHub 反馈连接](github-feedback-setup.md) | OAuth 配置、Device Flow 与线上验证 |
+| [领域引擎架构](domain-agent-loop-engine-architecture.md) | 引擎、模型与安装职责的设计依据 |
+| [品牌与官网](product-brand-website.md) | 品牌源、官网构建和真实发布信息同步 |
 
-本目录同时保存产品加载的规范、仍适用的操作指南和带日期的历史方案。`architecture-spec.md`、`task-baseline.md`、`task-spec.md`、`task-loop.md`、`base-task.md` 由产品内置资料白名单读取，不能当作临时文档清理。Step／R 编号表示历史设计切片；其中的验收数字、支持范围与“下一步”只对应记录时点，当前实现见 [任务规则契约](../../src/logic/tasks/rules/ARCHITECTURE.md#contract) 及相关源码，开发清单统一见 [GitHub Issues](https://github.com/nan023062/cbim/issues)。
-
-- [构建与维护规范](task-spec.md)：字段语义、维护依据、合并拆分及恢复要求。
-- [BaseTask 与执行接口](base-task.md)：结构图、派发与执行边界。
-- [Task Loop](task-loop.md)：CBIM AI 助理的任务构建与结果反馈。
-- [知识基线与恢复](task-baseline.md)：版本绑定与恢复证据。
-- [模块负责人索引历史方案](module-owner-index.md)：工作区成员、责任查询、按负责人派发与更换交接的开发切片；不是运行时 Skill，当前实现见 [任务契约](../../src/logic/tasks/rules/ARCHITECTURE.md#contract)，方案不是实时进度。
-- [反馈／许愿 Skill 与软件更新日志](user-feedback-intake.md)：对话加号菜单调用两项产品 Skill，一句问题或愿望即可提交，参考字段自愿填写，经真实 GitHub 授权提交 Issue；版本日志已接入，实际线上结果另记。
-- [正式桌面发布与更新](desktop-release.md)：Windows 安装包、独立 updater 目录、GitHub 桌面通道、后台检查和下载、用户明确点击重启安装。
-- [桌面分层更新设计](desktop-hot-update-design.md)：C/R 双版本、完整资源 ZIP、独立 Agent 引擎及新旧流程取舍；首版已实现，本地验证不等于公开升级验收。
-- [分层更新构建与发布](desktop-runtime-release.md)：C/R/E 候选、资源签名、发布顺序、首次冷更迁移和实际恢复边界。
-- [GitHub OAuth 配置与线上验收](github-feedback-setup.md)：OAuth App 注册字段、Device Flow 登录与单条真实测试 Issue 的操作指南。
-
-本目录保存抽象，具体任务由 CBIM 内部调度与持久化服务承载；可靠入队不代表成员已自动执行。
+产品运行时读取的五份 Task 规范已归 [assets/task](../../assets/task/README.md)，本目录不保留副本，也不作为运行资料根。开发状态和优先级仍以 [GitHub Issues](https://github.com/nan023062/cbim/issues) 为准。

@@ -1,6 +1,6 @@
 # GitHub OAuth 配置与一次真实 Issue 验收
 
-适用日期：2026-11-08。适用版本：CBIM Assistant Windows x64 桌面 `0.1.0`。这是一份操作指南；实际执行结果单独记在[线上验收记录](../verification/github-feedback-online-20261108.md)，不能把下列步骤当成已通过的证据。
+适用日期：2026-11-08。适用版本：CBIM Assistant Windows x64 桌面 `0.1.0`。这是一份操作指南；实际执行结果单独记在[线上验收记录](https://github.com/nan023062/cbim/blob/c3178be11e24259d99ed59db60cc4781afb15782/design/verification/github-feedback-online-20261108.md)，不能把下列步骤当成已通过的证据。
 
 **0.1.9 行为更新（#41）：** 反馈成功后保留 Agent 的最终回复，以一句话反馈真实提交事实，可引用原回执链接；提交不代表开发完成。当前行为见 [BUG 反馈](../../assets/runtime/bug-feedback.md) 与 [需求许愿](../../assets/runtime/feature-wish.md)。下文 0.1.0 测试样例及其“成功静默”条件保留为历史，不用于要求当前版本隐藏最终回复。
 
@@ -56,7 +56,7 @@
 
 ## 3. 线上只创建这一条测试 Issue
 
-执行前先读[验收记录](../verification/github-feedback-online-20261108.md)，核对本机是否已有待核实或成功回执，以及 GitHub 是否已有下列测试标识。发现未知结果时先核实原提交，不以新工作区、新正文或新对话绕过去重。
+执行前先读[验收记录](https://github.com/nan023062/cbim/blob/c3178be11e24259d99ed59db60cc4781afb15782/design/verification/github-feedback-online-20261108.md)，核对本机是否已有待核实或成功回执，以及 GitHub 是否已有下列测试标识。发现未知结果时先核实原提交，不以新工作区、新正文或新对话绕过去重。
 
 使用一个明确的 CBIM 验收工作区和新对话，选择已配置可用的主会话模型，权限选择 **ask** 或 **execute**；read 会话不能提交。点击 **“+” → BUG 反馈**，确认调用 `cbim_skill_bug_feedback`。#21 后只需一句描述、其他自愿，不应强制追问；旧版仍显示格式。以下完整上下文仅是验收参考，线上测试必须另有明确授权且只发送一次：
 
@@ -112,4 +112,4 @@
 
 当前实现没有自动刷新 Token、GitHub Enterprise、自动附件上传、反馈进度查询或本机未知记录强制清除入口；这些限制不以一次线上成功为由抹去。
 
-2026-11-09 新增的 `cbim_feedback_status` 与工具清单诊断已随 [0.1.1 正式版](https://github.com/nan023062/cbim/releases/tag/desktop-v0.1.1) 交付，原 0.1.0 不含这些诊断。真实安装及在线升级见[发布验收](../verification/desktop-release-0.1.1-20261109.md)；NAN-LI 的原故障、已确认错误提示与本机复现分别记入[缺陷与验证报告](../verification/feedback-tool-availability-20261109.md)，该设备尚未复验。连接状态查询不证明原 Issue 结果；已有未知提交保持未知，不重发。
+2026-11-09 新增的 `cbim_feedback_status` 与工具清单诊断已随 [0.1.1 正式版](https://github.com/nan023062/cbim/releases/tag/desktop-v0.1.1) 交付，原 0.1.0 不含这些诊断。真实安装及在线升级见[发布验收](https://github.com/nan023062/cbim/blob/c3178be11e24259d99ed59db60cc4781afb15782/design/verification/desktop-release-0.1.1-20261109.md)；NAN-LI 的原故障、已确认错误提示与本机复现分别记入[缺陷与验证报告](https://github.com/nan023062/cbim/blob/c3178be11e24259d99ed59db60cc4781afb15782/design/verification/feedback-tool-availability-20261109.md)，该设备尚未复验。连接状态查询不证明原 Issue 结果；已有未知提交保持未知，不重发。

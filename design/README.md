@@ -1,76 +1,52 @@
-# CBIM 开发设计与记录
+# CBIM 项目设计
 
-开发清单、优先级、依赖和实时进度统一从当前仓库 [GitHub Issues](https://github.com/nan023062/cbim/issues) 获取。`design/` 保存 Issue 关联方案、设计说明及历史验证事实；产品运行资源统一归 assets/，不维护另一份实时待办。方案和 Issue 内容本身不扩大当前任务的权限。
+本目录保留仍有阅读价值的产品设计、架构方案、UX 原型和工程操作指南。通用准则在 [docs](../docs/05-工程文件组织与代码阅读设计.md)，当前实现从 [src 架构模型](../src/ARCHITECTURE.md) 逐层阅读，产品实际加载的规范与 Schema 在 [assets](../assets/README.md)。
 
-通用标准与治理准则统一维护在 `docs/`；本目录依据它们保存具体方案和验证记录；运行资产归 `assets/`，`docs/` 不反向引用本目录。
+开发清单与实时进度以 [GitHub Issues](https://github.com/nan023062/cbim/issues) 为准。方案描述目标与取舍，不证明已经实施，也不扩大当前任务授权。
 
-## 从这里继续开发
+## 产品与架构设计
 
-| 入口 | 用途 |
+| 设计入口 | 阅读目的 |
 | --- | --- |
-| [GitHub Issues](https://github.com/nan023062/cbim/issues) | 当前开发清单；读取正文、最新讨论、依赖、负责人及关联 PR，按用户范围选择工作 |
-| [开发记录](development-log.md) | 已实施步骤的范围、验证证据、限制和交接；历史“下一步”不自动成为新任务 |
-| [文档 1：通用项目架构设计规范与原则](../docs/06-通用项目架构设计规范与原则.md) | 设计与开发的强制约束：十二条原则、依赖、契约及维护交付 |
-| [文档 2：架构治理规范与治理流程](../docs/07-架构治理规范与治理流程.md) | 治理的标准流程、分级、迁移与验收，不维护项目整改清单 |
-| [CBIM 架构治理基线](cbim-architecture-governance-baseline.md) | 项目映射与 G01–G09 历史整改规格，当前进度仍查 Issues |
-| [设计文档](../README.md#设计文档) | `docs/` 保存 01–04 概念设计、05 工程文件组织设计及 06–07 架构标准与治理准则，说明理念与目标流程 |
-| [Agent 与 Team 产品模型](team-workspace-network.md) · [产品需求](agent-tool-product-requirements.md) · [UX 设计](agent-tool-ux-design.md) · [工程交接](agent-tool-engineering.md) | 统一 Agent 对话、递归工具调用与调用内限额；取代旧频道中心和团队聊天模式；目标不等于已实现 |
-| [CBIM UX 与风格系统提案](cbim-ux-system-proposal.md) · [可切换界面原型](cbim-ux-prototype.html) | 连续对话、普通工具与递归 Agent 调用的体验设计；自包含原型仅使用示例数据，不代表产品已经实现 |
-| [全界面 UX 与统一设计语言](cbim-complete-ux-design.md) · [42 页评审原型](cbim-complete-ux-prototype.html) | 补齐 34 个原有操作面的逐页布局、动作、恢复与窄屏设计；共用规范及 7 个新增提案单列，默认优先展示原有界面 |
-| [图标、动效与提示系统](cbim-icon-motion-system.md) · [图标目录](cbim-ux-prototype.html#icons) | CBIM Outline 母版、状态与操作映射、动效和 Tooltip 规范，含可导出的 SVG sprite |
-| [源码整体架构](../src/ARCHITECTURE.md) | 当前模块边界、依赖与数据流，须结合实际源码核实 |
-| [四层架构与迁移记录](four-layer-architecture.md) | Core、Logic、Bridge、View 的当前职责、已完成迁移与保留边界 |
-| [模块测试入口](../tests/README.md) | 单元/契约/集成归属、独立夹具与按模块执行；不维护任务进度 |
+| [产品模型](team-workspace-network.md) · [产品需求](agent-tool-product-requirements.md) | 理解 Agent、Team、工作区与递归工具调用的目标关系 |
+| [交互设计](agent-tool-ux-design.md) · [工程落地方案](agent-tool-engineering.md) | 理解统一对话、调用反馈及迁移边界；实施状态回到 Issues 与源码核实 |
+| [四层架构](four-layer-architecture.md) | 理解 Core、Logic、Bridge、View 的职责与依赖方向 |
+| [领域引擎设计](task/domain-agent-loop-engine-architecture.md) | 理解引擎、模型、包与装配点的分工 |
+| [Agent 概念模型](capability/base-agent.md) · [Module 概念模型](business/base-module.md) | 理解产品对象；不替代真实代码类图 |
 
-先核实仓库与查询范围，拉取 Issues 并处理分页，再读取选定工单、相关记录和实际代码。查询失败不从历史 roadmap 重建清单。每个 Issue 独立开发、验证、提交；完成、暂停或受阻时，在已有授权内回填该 Issue，并在开发记录保存实际结果。单元通过不等于合并或发布通过，部分完成不提前关闭工单。
+## UX 与设计资产
+
+| 入口 | 阅读目的 |
+| --- | --- |
+| [UX 系统提案](cbim-ux-system-proposal.md) · [交互原型](cbim-ux-prototype.html) | 主对话与递归工具详情的设计演示 |
+| [全界面设计](cbim-complete-ux-design.md) · [评审原型](cbim-complete-ux-prototype.html) | 各操作面的布局、动作、恢复与窄屏设计 |
+| [图标与动效](cbim-icon-motion-system.md) · [图标母版](cbim-icon-sprite.svg) | 统一视觉语义及配套资产 |
+
+原型只使用示例数据。配套预览、母版及生成／检查脚本继续保留，不作为产品行为验证证据。
+
+## 工程操作与记录
+
+- [发布、签名、CI 与反馈指南](task/README.md)：仍由开发流程使用的操作入口。
+- [发布说明](releases/)：构建会读取的版本正文及资源签名公钥，保留原字节；发布正文直接引用的一份验证说明同时保留。
+- [近期开发记录](development-log.md)：2026-11-16 起的实际范围、验证和限制；不是待办清单。
+- [模块测试入口](../tests/README.md)：测试归属、独立夹具与按模块执行。
+- [旧格式识别](business/README.md)：仅供迁移参考的 Schema；当前运行规范归 assets。
 
 ## 开发入口
 
 | 职责 | 通用项目 | Claude Code | Codex |
 | --- | --- | --- | --- |
-| 从 Issues 推进开发、语义分析与 review 交付 | [cbim-development](../.agents/skills/cbim-development/SKILL.md) | [入口](../.claude/skills/cbim-development/SKILL.md) | [入口](../.codex/skills/cbim-development/SKILL.md) |
-| 按业务变化点评估抽象与渐进演进 | [architecture-evolution](../.agents/skills/architecture-evolution/SKILL.md) | [入口](../.claude/skills/architecture-evolution/SKILL.md) | [入口](../.codex/skills/architecture-evolution/SKILL.md) |
-| 源码注释、类图与维护者认知交接 | [architecture-maintenance](../.agents/skills/architecture-maintenance/SKILL.md) | [入口](../.claude/skills/architecture-maintenance/SKILL.md) | [入口](../.codex/skills/architecture-maintenance/SKILL.md) |
-| 冻结制品、CI、签名与真实安装升级验收 | [cbim-release](../.agents/skills/cbim-release/SKILL.md) | [入口](../.claude/skills/cbim-release/SKILL.md) | [入口](../.codex/skills/cbim-release/SKILL.md) |
+| 从 Issues 推进已授权开发 | [cbim-development](../.agents/skills/cbim-development/SKILL.md) | [入口](../.claude/skills/cbim-development/SKILL.md) | [入口](../.codex/skills/cbim-development/SKILL.md) |
+| 按变化点评估架构演进 | [architecture-evolution](../.agents/skills/architecture-evolution/SKILL.md) | [入口](../.claude/skills/architecture-evolution/SKILL.md) | [入口](../.codex/skills/architecture-evolution/SKILL.md) |
+| 同步源码说明与架构模型 | [architecture-maintenance](../.agents/skills/architecture-maintenance/SKILL.md) | [入口](../.claude/skills/architecture-maintenance/SKILL.md) | [入口](../.codex/skills/architecture-maintenance/SKILL.md) |
+| 验证制品并发布桌面版本 | [cbim-release](../.agents/skills/cbim-release/SKILL.md) | [入口](../.claude/skills/cbim-release/SKILL.md) | [入口](../.codex/skills/cbim-release/SKILL.md) |
 
-强制关系：`cbim-development` 必须读取并遵守文档 1；项目架构治理入口 `architecture-evolution` 必须读取并遵守文档 1，并按文档 2 的 S1–S7 流程执行；`architecture-maintenance` 遵守文档 1，并在治理中承接文档 2 的资料与认知交付。两份规范只维护一份正文，Skill 引用同一来源，不属于产品内置业务 Skill 的自动改写。
+三个宿主入口同名同内容。设计和开发遵守 [通用架构规范](../docs/06-通用项目架构设计规范与原则.md)，架构治理同时遵守 [治理流程](../docs/07-架构治理规范与治理流程.md)。按 [实际影响选择验证](../AGENTS.md#日常验证范围)；纯文档清理只检查内容、引用和入口一致性。
 
-每项的三个入口及引用资料保持一致。只读评估不自动重构；已授权开发不重复请求逐步批准。源码改动同步维护受影响注释及目录唯一的 `ARCHITECTURE.md`（本层设计意图、类定位与关系，子模块作为虚拟封装），并提供完整 diff、调用链阅读顺序与下次修改入口，功能验收不能替代代码 review。
+## 历史追溯与维护边界
 
-日常按 [受影响单元验证规则](../AGENTS.md#日常验证范围) 选择测试，通过后记录并收尾；全量回归由后续 PR 自动化执行，制品验收留给集成／发布阶段。记录选取理由、实际命令与结果以及未运行范围，历史全量／桌面报告不是下一步必跑清单。纯文档与 Skill 修改只核对事实、格式、引用与多入口一致性。
+2026-11-16 清理了已完成的旧功能切片、旧治理基线、历史验证报告及配套快照。完整原文保存在已推送的 [清理前版本](https://github.com/nan023062/cbim/tree/c3178be11e24259d99ed59db60cc4781afb15782/design)，保留文档中的历史证据链接已指向固定提交。更早开发记录同样沿该版本查询。
 
-## 状态与历史证据
+本机可使用 `git show c3178be11e24259d99ed59db60cc4781afb15782:design/<原相对路径>` 阅读历史原文，无须在当前目录复制旧方案。历史版本、失败与验收数字只证明当时事实，不代表当前状态。
 
-[本地自动开发闭环审计与清理记录](verification/local-ai-workflow-audit-20261112.md) 区分已有能力、缺口和已删除的旧资产；开发优先级仍以 Issues 为准。
-
-当前公开版本与运行方式统一见 [项目说明](../README.md#运行)。[发布说明](releases/) 和 [验证记录](verification/) 按版本、日期保存事实；不在本入口另维护“本轮版本”或候选状态。
-
-[2026-11-08 阶段收尾总结](verification/development-closeout-20261108.md)、历次安装升级、架构审阅及 UX 验证均为历史证据。报告中的版本、未推送状态、失败与后续建议只对应当时的代码和授权。
-
-当前工作在 Issues 中表达待开发、开发中、部分完成、待验证、完成或受阻，使用仓库实际支持的字段、标签或评论，不假定已有某套状态机。结果未知、验证失败或外部回填未成功时明确说明，不能标成完成。没有关联 Issue 的用户直接维护请求如实记录，不虚构编号或擅自创建工单。
-
-旧 roadmap 占位、R01–R20 剩余交付清单和 Cindy 岗位开发管线方案已退出维护；开发入口统一使用上方项目 Skill 和 Issues。历史记录需要这些原文时链接到固定 Git 提交，不再保留一套过期的本地接续指令。2026-11-15 清理前原文可用 `git show 14bf63f0a3b1adf90d5293f9df70f81a7f2535f4:<原仓库相对路径>` 查阅；更早清理的文档仍按其记录中的提交定位。
-
-## 资料维护边界
-
-Agent／Team 的新旧设计边界见 [设计替换范围](agent-tool-design-replacement.md)：当前需求和 UX 已切换到统一工具调用模型；历史证据保留当时事实，真实运行规范随对应源码迁移同步更新。
-
-- 产品运行规范、Schema 及被实际代码读取的文档继续保留；不能因文件较旧或链接少而删除。
-- 关联方案保留设计理由和支持边界；带 Step／日期的实施记录不作为当前行为说明，现状以 `src/` 契约及实际代码为准。
-- UX 原型、图标母版及配套生成／检查脚本仍用于设计评审；静态预览图是配套资产。历史架构 HTML 保存源码映射和离线快照，与 Markdown 摘要共同保留。
-- 缓存、一次性扫描输出放在忽略的临时目录，不作为设计资产。清理仅移除已核实失效的文件，并同步引用；保留尚未提交的独立工作。
-
-## 设计目录与运行资源
-
-产品运行规范、Schema 与流程正文见 [assets](../assets/README.md)，不再从 design 加载。以下目录仅保存设计说明、方案与记录；项目开发 Skill 与产品内置业务流程分别维护。
-
-| 目录 | 内容 |
-| --- | --- |
-| [capability/](capability/README.md) | Team/Agent 设计说明；规范与 Schema 归 assets/capability |
-| [business/](business/README.md) | Module 设计说明与旧格式参考；运行规范及 Schema 见 assets/business |
-| [task/](task/README.md) | 任务与执行的开发方案；内置五份规范归 assets/task |
-| [connector/](connector/README.md) | 连接器设计说明；运行声明规范及 Schema 归 assets/connector |
-| [memory/](memory/memory-spec.md) | 产品记忆机制说明 |
-| [runtime/](runtime/README.md) | 运行资源迁移说明；全部流程正文归 assets/runtime |
-
-概念设计维护 [01–04](../README.md#设计文档)，工程组织规范见 [05](../docs/05-工程文件组织与代码阅读设计.md)，当前实现说明在 `src/` 的契约与架构文档中更新。
+持续维护的设计与实际使用的资源保留；完成切片与历史报告可在记录固定版本后退出当前目录。新工作的关键验证事实仍写入开发记录或对应版本报告，并回填已获授权的 Issue／PR。不能删除实际加载的规范、Schema、发布正文或独立未提交工作，也不因删除历史报告而取消产品测试或发布验收。

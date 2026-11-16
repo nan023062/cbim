@@ -1,6 +1,6 @@
 # C/R/E 更新构建与发布
 
-2026-11-12：实现运行说明。源码已接通；没有在本次开发中发布新冷包、公开 R/E、安装用户客户端或完成正式 CI/升级验收。本地证据与限制见[专项验证记录](../verification/desktop-runtime-20261112.md)。
+2026-11-12：实现运行说明。源码已接通；没有在本次开发中发布新冷包、公开 R/E、安装用户客户端或完成正式 CI/升级验收。本地证据与限制见[专项验证记录](https://github.com/nan023062/cbim/blob/c3178be11e24259d99ed59db60cc4781afb15782/design/verification/desktop-runtime-20261112.md)。
 
 ## 制品与身份
 

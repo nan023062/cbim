@@ -113,7 +113,7 @@ pnpm make:desktop --unsigned
 
 ## 安装器缓存衔接与回退诊断
 
-验收器也支持 0.1.11 的同一预下载界面。新候选全新安装后必须只读核对 app-update.yml 指向目录中的 installer.exe，摘要须等于刚安装的真实附件；不得在验收中手动复制旧包补足前提。默认在线验收仍要求真实 Range 和无全量回退。transfer_expectation=full-fallback 仅为明确命名的在线诊断，结果必须标注回退，不能计为差分通过。A/B 的已知缓存目录衔接问题见 design/verification/desktop-update-cache-diagnosis-20261112.md；已公开附件不覆盖，修复用更高版本候选。
+验收器也支持 0.1.11 的同一预下载界面。新候选全新安装后必须只读核对 app-update.yml 指向目录中的 installer.exe，摘要须等于刚安装的真实附件；不得在验收中手动复制旧包补足前提。默认在线验收仍要求真实 Range 和无全量回退。transfer_expectation=full-fallback 仅为明确命名的在线诊断，结果必须标注回退，不能计为差分通过。A/B 的已知缓存目录衔接问题见 [历史缓存诊断](https://github.com/nan023062/cbim/blob/c3178be11e24259d99ed59db60cc4781afb15782/design/verification/desktop-update-cache-diagnosis-20261112.md)；已公开附件不覆盖，修复用更高版本候选。
 
 
 ## 0.1.12 起的真实增量验收

@@ -2,15 +2,15 @@
 
 2026-11-08：用户将交付顺序调整为先发布正式 APP，再完成新版提醒、用户主动下载／重启安装，以及正式 APP 内的 BUG 反馈／需求许愿线上验收。本步骤不恢复 Step55 后的旧开发计划。
 
-2026-11-09：账号菜单的版本更新与最近一次更新已随 [0.1.1 正式版](https://github.com/nan023062/cbim/releases/tag/desktop-v0.1.1) 发布，见[界面验证](../verification/account-updates-20261109.md)与[发布／升级验收](../verification/desktop-release-0.1.1-20261109.md)。0.1.0 用户从原设置页检查并手动升级；升级后使用左下角账号菜单。
+2026-11-09：账号菜单的版本更新与最近一次更新已随 [0.1.1 正式版](https://github.com/nan023062/cbim/releases/tag/desktop-v0.1.1) 发布，见[界面验证](https://github.com/nan023062/cbim/blob/c3178be11e24259d99ed59db60cc4781afb15782/design/verification/account-updates-20261109.md)与[发布／升级验收](https://github.com/nan023062/cbim/blob/c3178be11e24259d99ed59db60cc4781afb15782/design/verification/desktop-release-0.1.1-20261109.md)。0.1.0 用户从原设置页检查并手动升级；升级后使用左下角账号菜单。
 
-2026-11-09：[0.1.2](https://github.com/nan023062/cbim/releases/tag/desktop-v0.1.2) 已按用户选择未签名发行，包含四项 Issue 修复和统一品牌；全新安装、0.1.1 线上发现／下载／显式重启升级及数据保留已验证，见[本版发布验收](../verification/desktop-release-0.1.2-20261109.md)。后续签名以更高版本交付。
+2026-11-09：[0.1.2](https://github.com/nan023062/cbim/releases/tag/desktop-v0.1.2) 已按用户选择未签名发行，包含四项 Issue 修复和统一品牌；全新安装、0.1.1 线上发现／下载／显式重启升级及数据保留已验证，见[本版发布验收](https://github.com/nan023062/cbim/blob/c3178be11e24259d99ed59db60cc4781afb15782/design/verification/desktop-release-0.1.2-20261109.md)。后续签名以更高版本交付。
 
-2026-11-09：[0.1.3](https://github.com/nan023062/cbim/releases/tag/desktop-v0.1.3) 已公开，PR #23 完整 CI 通过后正常合并；候选全新安装、真实 0.1.2 线上发现／下载／显式重启及数据保留通过，见[本版验收](../verification/desktop-release-0.1.3-20261109.md)。0.1.3 使用以下每分钟检查及主动下载后自动安装流程；尚在 0.1.2 的客户端仍每 30 分钟检查、下载后再点重启。后续必须先适配验收脚本以支持 0.1.3 的自动安装交互，再验证下一版升级。
+2026-11-09：[0.1.3](https://github.com/nan023062/cbim/releases/tag/desktop-v0.1.3) 已公开，PR #23 完整 CI 通过后正常合并；候选全新安装、真实 0.1.2 线上发现／下载／显式重启及数据保留通过，见[本版验收](https://github.com/nan023062/cbim/blob/c3178be11e24259d99ed59db60cc4781afb15782/design/verification/desktop-release-0.1.3-20261109.md)。0.1.3 使用以下每分钟检查及主动下载后自动安装流程；尚在 0.1.2 的客户端仍每 30 分钟检查、下载后再点重启。后续必须先适配验收脚本以支持 0.1.3 的自动安装交互，再验证下一版升级。
 
-2026-11-10：[0.1.4](https://github.com/nan023062/cbim/releases/tag/desktop-v0.1.4) 已公开，PR #25 完整四片 CI 通过后正常合并；真人花名册退役与空项目链路修复随版交付。真实 0.1.3 线上发现、UI 下载、独立普通退出取消及自动安装重启验收通过，工作区/模型/原对话保留，见[本版验收](../verification/desktop-release-0.1.4-20261110.md)。下次发布先适配届时上一公开版 0.1.4 的验收输入，再验证真实升级。
+2026-11-10：[0.1.4](https://github.com/nan023062/cbim/releases/tag/desktop-v0.1.4) 已公开，PR #25 完整四片 CI 通过后正常合并；真人花名册退役与空项目链路修复随版交付。真实 0.1.3 线上发现、UI 下载、独立普通退出取消及自动安装重启验收通过，工作区/模型/原对话保留，见[本版验收](https://github.com/nan023062/cbim/blob/c3178be11e24259d99ed59db60cc4781afb15782/design/verification/desktop-release-0.1.4-20261110.md)。下次发布先适配届时上一公开版 0.1.4 的验收输入，再验证真实升级。
 
-2026-11-10：[0.1.5](https://github.com/nan023062/cbim/releases/tag/desktop-v0.1.5) 已公开，PR #30 经完整四片 CI 正常合并；主 Agent 默认执行及 Pi / Claude Code / Codex 三引擎随版交付。全新安装、真实 0.1.4 UI 发现／下载、独立普通退出取消、自动安装重启及六项数据保留通过，见[本版验收](../verification/desktop-release-0.1.5-20261110.md)。后续发行前需将验收输入适配为届时的实际上一版；当前脚本未接受 0.1.5 作为 previous_version。
+2026-11-10：[0.1.5](https://github.com/nan023062/cbim/releases/tag/desktop-v0.1.5) 已公开，PR #30 经完整四片 CI 正常合并；主 Agent 默认执行及 Pi / Claude Code / Codex 三引擎随版交付。全新安装、真实 0.1.4 UI 发现／下载、独立普通退出取消、自动安装重启及六项数据保留通过，见[本版验收](https://github.com/nan023062/cbim/blob/c3178be11e24259d99ed59db60cc4781afb15782/design/verification/desktop-release-0.1.5-20261110.md)。后续发行前需将验收输入适配为届时的实际上一版；当前脚本未接受 0.1.5 作为 previous_version。
 
 ## 交付与发布通道
 

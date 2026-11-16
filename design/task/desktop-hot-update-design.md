@@ -357,7 +357,7 @@ Cindy 为什么没有采用这套双版本方案：**公开源码不能证明作
 - 启动与数据：[Main](../../src/bridge/server/main.ts)、[Application](../../src/logic/application/application.ts)、[Paths](../../src/logic/workspace/service/paths.ts)。
 - 构建：[Forge](../../forge.config.ts)、[主进程 Vite](../../vite.main.config.ts)、[引擎依赖打包](../../scripts/package-pi-runtime.mjs)、[正式构建](../../scripts/make-desktop.mjs)。
 - 引擎：[Pi 装配](../../src/logic/execution/assembly/loop-engine.ts)、[Pi RPC 子进程](../../src/logic/execution/engines/pi/rpc.ts)、[Claude SDK 加载](../../src/logic/execution/engines/claude/sdk.ts)、[Codex 二进制解析](../../src/logic/execution/engines/codex/binary.ts)、[宿主 Pi 工具库](../../src/logic/execution/engines/native-tools.ts)。
-- 历史流量：[0.1.13 实测报告](../verification/desktop-release-0.1.13-20261112.md)。
+- 历史流量：[0.1.13 实测报告](https://github.com/nan023062/cbim/blob/c3178be11e24259d99ed59db60cc4781afb15782/design/verification/desktop-release-0.1.13-20261112.md)。
 - Electron：[原生模块 ABI](https://www.electronjs.org/docs/latest/tutorial/using-native-node-modules)、[ASAR 完整性与 EXE 摘要绑定](https://www.electronjs.org/docs/latest/tutorial/asar-integrity)。
 - Windows：[ReplaceFileW 及失败语义](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-replacefilew)、[FlushFileBuffers](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-flushfilebuffers)。
 - 更新元数据：[TUF 规范](https://theupdateframework.github.io/specification/latest/)，仅作为设计与选型参考。

@@ -1,3 +1,15 @@
+## 2026-11-16 — #94 主调用登记与回执丢失验证迁移
+
+基线 4368d947。main-tool-contract-pi 的正常回流/停止迁为单个主运行的 cbim_agent_call 和 result_check；不再等待旧 goal_plan/dispatch_task/member-results 二次主轮。旧坏规划/派发回包场景迁为新链路的业务登记已保存后回执丢失、父工具关联已 fsync 后回执丢失。故障只注入真实保存之后，验证唯一原关联/登记、子引擎未启动、unknown 且禁止重试、关闭释放以及重启日志/请求计数不变。正常场景保留真实成员读取和交付证据；停止场景保持原子运行未完成。
+
+原 GoalTools/DispatchTools 的严格坏回包验证继续保留在 main-tool-output-core（15 项）及 main-tool-output-service（2 项，真实事务），未删除旧记录兼容覆盖。新调用失败工具回执 outcome=failed 表示工具报错，独立 ToolOutcome.status=unknown/retryable=false 表示执行影响不能推断；不能混为安全重做。
+
+实际验证：
+- pnpm exec vitest run tests/main-tool-contract-pi.test.ts tests/main-tool-output-core.test.ts tests/main-tool-output-service.test.ts --reporter=default --reporter=json --outputFile=build/recursive-main-receipts.json：旧输出 17 项及停止 1 项通过，三个新断言失败。
+- 修正从实际 steps.evidence 取证、依据原错误对象及独立 ToolOutcome 断言后，-t 'complete|lost-'（build/recursive-main-receipts-faults.json）正常 1 项通过；-t lost-（build/recursive-main-lost-ack.json）两种回执丢失 2 项通过。四个集成场景各有通过证据，选择器排除未修改已通过用例，无永久 skip。
+- pnpm typecheck、pnpm check:test-modules 通过；540 文件归属不变。仅测试/夹具改动，无产品源码或架构变更。
+- 全量 CI、桌面安装/升级与公开发布仍未完成；其余迁移仍归 #94。
+
 ## 2026-11-16 — #94 原调用问答发布快照隔离
 
 基线 50a1f285。Logic/agents 的 AgentCallExchange 原先把自身持有的原题、已校验答案直接传给异步 publish；适配器可在记录后修改同一对象，影响后续校验或唤醒值。现在只向发布端传递 structuredClone 快照；状态仍由同一个 Exchange 持有，调度、循环、持久化归属不变，不增加服务或层级。

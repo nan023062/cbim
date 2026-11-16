@@ -2988,3 +2988,12 @@ pnpm exec vitest run tests/global-admission-pi.test.ts --reporter=default --repo
 
 
 同批 global-runtime-view-pi 也已迁移：同一实际 Application 的两个根及一个递归子运行均进入全局监管，3 个活动运行与真实准入一致；原 scope/任务身份、只读 cursor no-op、停止原树、重启后的历史恢复与日志字节不重写均验证。pnpm exec vitest run tests/global-runtime-view-pi.test.ts --reporter=default --reporter=json --outputFile=build/recursive-runtime-view.json：1/1 通过。全局准入与监管共 4 项通过；不把子调用伪装成旧 dispatch 图任务。本批原 provider 保留仅供尚未迁移的历史夹具，不构成正式新运行入口。
+
+
+## 2026-11-16 · #94 递归业务真实删除/移动端口补齐
+
+基线 d22cfff5。S1–S4：精读 Application→execution→agent-calls→agent-business、既有 artifact-transitions 与 Runtime 证据流程，缺口属于 L 级装配遗漏；稳定的文件工人、权限/冻结范围、阶段日志与验证规则不变。Application 传递已有可信 ControlledFileTransport，业务子调用捕获原工作区实例与准入状态；未提供端口仍拒绝，不恢复旧派工图、不建立第二执行器。S5–S7：同步 application 与 assembly 的注释、CONTRACT 和两份生成类图，真实 Pi+Electron utility 验证 5 项（正常、源再现、人工接受、评审后源变化/目标变化）。原图的 humanContinue 机制改为同工具二阶段问答；不声称旧跨重启人工续轮已实现，保持原日志和文件不自动重放。
+
+验证选择：装配契约、受控删除/移动 Runtime 与证据规则，另跑真实平台集成。pnpm exec vitest run tests/agent-call-assembly.test.ts tests/artifact-transition-runtime.test.ts tests/artifact-transition-evidence.test.ts --reporter=default --reporter=json --outputFile=build/recursive-transition-contracts.json：51/51 通过。artifact-transition-pi 首轮 changed 通过，另两项因夹具误读 result_check 的 state 层级失败；校正后 -t 'automatic|human' 两项通过；追加 -t 'stale acceptance' 两项通过，共 5 个不同集成用例通过。详情分别 build/recursive-transition.json、recursive-transition-review.json、recursive-transition-stale.json，无永久 skip。pnpm typecheck、pnpm check:architecture（0 环/0 违规）、pnpm check:test-modules（537 文件）和 git diff --check 通过；测试归属不变。
+
+核实完整 CI 43743143208（d22cfff5）失败：三片完整报告共 113 个失败，第 3 片取消，不能当作全量统计。尚有受控写入/补偿、隔离执行、旧预算/持久等待等迁移缺口。本步不合并、不公开旧候选、不把单项平台验收当安装升级验收。

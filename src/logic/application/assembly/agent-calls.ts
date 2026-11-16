@@ -30,6 +30,8 @@ export interface AgentCallAssemblyInput {
   members?:WorkspaceMembers;admission?:WorkspaceAdmission;dispatch?:WorkspaceDispatchService;requestBudgets?:ModelRequestBudgetService;
   models?:Pick<LlmProfiles,'withRuntimeConfiguration'>;
   authorizeNative:ExecutionServices['authorizeNative'];
+  /** 可信宿主为每个业务子调用创建端口；普通调用不继承删除/移动能力。 */
+  artifactTransitions?:()=>ExecutionServices['artifactTransitions'];
 }
 /** 新运行专属装配，不读取最新 scope 推断归属；旧模型入口不会调用此函数。 */
 export function createAgentCallAssembly(input:AgentCallAssemblyInput){
@@ -91,7 +93,7 @@ export function createAgentCallAssembly(input:AgentCallAssemblyInput){
     if(permit.kind!=='granted'){const usage=admission.manager.snapshot();throw new AgentConstraintError('AGENT_CONCURRENCY_LIMIT','当前真实运行名额不足，未启动子 Agent；父进程仍计入资源占用',{current:usage.occupied.length,requested:1,limit:usage.policy.maxConcurrentRuns,unit:'process'})}
     try{
       if(request.parent.task.moduleIds.length&&(!request.business||request.business.moduleIds.some(id=>!request.parent.task.moduleIds.includes(id))))fail('AGENT_BUSINESS_SCOPE','业务子调用须保留父调用的冻结模块范围');
-      const business=request.business?await prepareAgentBusiness({workspace,dispatch:dispatch??fail('AGENT_BUSINESS_UNAVAILABLE','缺少业务来源核实服务'),member:detail.member,model:childLlm,taskId:childTaskId,rootSessionId:task.taskId,message:request.message,permission:agent.definition.permission,storage,business:request.business,signal:request.signal}):undefined;
+      const business=request.business?await prepareAgentBusiness({workspace,dispatch:dispatch??fail('AGENT_BUSINESS_UNAVAILABLE','缺少业务来源核实服务'),member:detail.member,model:childLlm,taskId:childTaskId,rootSessionId:task.taskId,message:request.message,permission:agent.definition.permission,storage,business:request.business,signal:request.signal,artifactTransitions:input.artifactTransitions?.()}):undefined;
       const childTask:TaskSpec=business?.task??{...task,taskId:childTaskId,agentId:definition.agentId,goal:request.message,moduleIds:[],acceptance:[],mode:'chat'};
       let childContext:AgentToolContext|undefined,childAlive=true;const childBudgets=new Map<string,Promise<RequestBudgetPort|undefined>>();
       const assertChild=()=>{workspace.assert();if(closed||!childAlive||request.signal.aborted)fail('AGENT_CALL_CANCELLED','原子调用已结束，不能发送新请求')};

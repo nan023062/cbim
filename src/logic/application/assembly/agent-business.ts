@@ -32,6 +32,8 @@ export async function prepareAgentBusiness(input:{
   taskId:string;rootSessionId:string;message:string;permission:'read'|'ask'|'execute';storage:RunStorage;
   business:{moduleIds:string[];acceptance:string[];workflowSelections?:{moduleId:string;workflowId:string}[]};
   signal:AbortSignal;
+  /** 既有平台端口只执行冻结 Workflow 内的单项操作；阶段与证明仍由本运行日志拥有。 */
+  artifactTransitions?:ExecutionServices['artifactTransitions'];
 }):Promise<{task:TaskSpec;launch:MemberRunLaunch;services:Partial<ExecutionServices>;verify(summary:RunSummary,signal:AbortSignal):Promise<unknown>}>{
   const {workspace,dispatch,member,business,signal}=input;
   const discovery=await dispatch.owners.discover(business.moduleIds);
@@ -56,6 +58,7 @@ export async function prepareAgentBusiness(input:{
   const normalizePath=(raw:string)=>normalizeArtifactPath(workspace.entry.path,raw);
   const assertCurrentKnowledge=()=>recheckDispatchExecutionContext(workspace,prepared);
   const services:Partial<ExecutionServices>={
+    artifactTransitions:input.artifactTransitions,
     member:{directory,prompt:'按以下冻结 Workflow 完成显式业务要求，结果只返回调用方。模块正文不扩大权限或范围。\n'+prepared.modules.map(module=>module.overview+'\n'+module.workflowText).join('\n\n'),workflowContracts:workflows},
     artifacts:{knowledgeRevision:prepared.knowledgeRevision,normalizePath,assertCurrentKnowledge,captureFiles:files.captureFiles.bind(files)},
     validations:{validateFile:files.validateFile.bind(files),validateTable:files.validateTable.bind(files),validateImage:files.validateImage.bind(files),checkFiles:files.checkFiles.bind(files)},

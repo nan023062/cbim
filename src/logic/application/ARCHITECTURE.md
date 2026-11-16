@@ -275,3 +275,8 @@ Application 接收可选冷宿主 engineArtifacts 并持有唯一 EnginePackages
 ## 内置运行资源边界
 
 Application 的第二个构造参数为 assetsRoot。Rules 与内置查询共用该只读资源根；用户数据生命周期保持原样。
+
+
+### 递归业务删除与移动
+
+Application 将可信 ControlledFileTransport 传入执行装配；每个显式业务子调用通过既有 createArtifactTransitionPort 捕获工作区实例和准入生命周期。agent-business 只传递端口，不生成新文件执行器或旧派发记录。Runtime 继续负责冻结 Workflow、权限、原清单、操作阶段和 canonical 证明，平台工人退出后才返回。无专用传输保持不可用，不回退原生命令；隔离范围未装配仍拒绝启动。当前结果复核读取原子调用日志及文件，重启不自动重放。

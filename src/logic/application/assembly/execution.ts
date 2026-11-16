@@ -17,6 +17,8 @@
  * 执行工厂把宿主的固定引擎解析端口传给调度装配；公开聊天选项不能替换该端口或传入下载路径。
  */
 import path from 'node:path';
+import type {ControlledFileTransport} from '../../file-operations/platform/files/controlled-file-protocol';
+import {createArtifactTransitionPort} from '../../file-operations/service/artifact-transitions';
 import type {WebToolsPort} from '../../web';
 import {FileRunStorage} from '../../execution/storage/run-storage';
 import {ChatInputs} from '../../materials/service/chat-inputs';
@@ -49,7 +51,7 @@ import {createAgentCallAssembly} from './agent-calls';
  * 独立 CLI/测试未装配 dispatch 时保留旧只按会话执行的边界，不编造已登记的成员身份。
  * repositories 是可选可信服务，不接受运行选项提供地址或授权；每次工厂调用固定自己的连接代际。
  */
-export function createExecutionManager(workspace:Workspace,models:EngineModelProfiles,lease=new WorkspaceExecutionLease(),collaboration?:()=>AutoCollaboration|undefined,dispatch?:WorkspaceDispatchService,admission?:WorkspaceAdmission,repositories?:RepositoryConnections,ownerships?:{service:ModuleOwnerships;members:WorkspaceMembers},requestBudgets?:ModelRequestBudgetService,feedback?:GitHubFeedback,web?:WebToolsPort,engineRuntimes?:EngineRuntimeResolver){
+export function createExecutionManager(workspace:Workspace,models:EngineModelProfiles,lease=new WorkspaceExecutionLease(),collaboration?:()=>AutoCollaboration|undefined,dispatch?:WorkspaceDispatchService,admission?:WorkspaceAdmission,repositories?:RepositoryConnections,ownerships?:{service:ModuleOwnerships;members:WorkspaceMembers},requestBudgets?:ModelRequestBudgetService,feedback?:GitHubFeedback,web?:WebToolsPort,engineRuntimes?:EngineRuntimeResolver,controlledTransport?:ControlledFileTransport){
   const storage=new FileRunStorage();
   return new WorkspaceExecutionManager(workspace,storage,async(options,task,launch)=>{
     const llm=options.profileId?await models.resolve(options.profileId,options.model,options.engine,options.modelRoles):undefined;
@@ -68,7 +70,10 @@ export function createExecutionManager(workspace:Workspace,models:EngineModelPro
     const authorizeNative:import('../../execution/assembly/loop-engine').ExecutionServices['authorizeNative']=async call=>{
       workspace.assert();const mapped=call.name==='find'?'Glob':call.name;const reason=guard({name:mapped,input:call.input},workspace.entry.path);return {allow:!reason,reason};
     };
-    const agentCalls=launch.executionModel==='agent-tools-v1'?createAgentCallAssembly({models,workspace,task,options:{...options,engineRuntimes},llm,storage,members:ownerships?.members,admission,dispatch,requestBudgets,authorizeNative}):undefined;
+    const agentCalls=launch.executionModel==='agent-tools-v1'?createAgentCallAssembly({models,workspace,task,options:{...options,engineRuntimes},llm,storage,members:ownerships?.members,admission,dispatch,requestBudgets,authorizeNative,
+      // 每个业务子调用独立捕获工作区身份；仅复用已有受控工人，不降级到任意文件命令。
+      artifactTransitions:()=>createArtifactTransitionPort(workspace,controlledTransport,()=>admission?.isCurrent()??false),
+    }):undefined;
     return createWorkspaceLoop(workspace.paths,workspace,{...options,llm,images,engineRuntimes},{
     storage,
     ...agentCalls,

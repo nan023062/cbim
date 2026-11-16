@@ -43,3 +43,8 @@ agent-calls 仅把本根对话已捕获的 requestQuestion 注入 requestReview�
 ### 统一主会话归档
 
 根装配单独提供 OfficeHistoryTools，身份固定为当前 workspace/rootSession；执行 Agent 不继承此归档入口。读取历史不恢复旧周期、不产生新授权。
+
+
+### 递归业务删除与移动
+
+Application 将可信 ControlledFileTransport 传入执行装配；每个显式业务子调用通过既有 createArtifactTransitionPort 捕获工作区实例和准入生命周期。agent-business 只传递端口，不生成新文件执行器或旧派发记录。Runtime 继续负责冻结 Workflow、权限、原清单、操作阶段和 canonical 证明，平台工人退出后才返回。无专用传输保持不可用，不回退原生命令；隔离范围未装配仍拒绝启动。当前结果复核读取原子调用日志及文件，重启不自动重放。

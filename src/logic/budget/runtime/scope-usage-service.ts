@@ -1,9 +1,11 @@
 /**
  * 目录归属：logic/budget/runtime；预算准入与统计服务。
- * 作用定位：按指定目标周期的持久主运行清单与成员绑定，读取 canonical 日志并生成只读消耗报告。
+ * 作用定位：按持久主运行清单、旧成员绑定与新递归父工具关系，读取 canonical 日志并生成只读消耗报告。
  * 设计原因：同一主会话可跨多个目标，不能按时间或最近日志猜归属；缺失记录与未知价格保留不完整，不参与执行许可。
  * 职责边界：公开查询只读有界来源并前后核实基线；collect 为预算事务复用相同 canonical 校验但不重入存储，不扫描其它主会话、不修复或启动模型。
  */
+import {z} from 'zod';
+import type {AgentCallReference} from '../../agents/contracts';
 import {fail} from '../../../core/errors';
 import {hash,json} from '../../../core/platform/node/serialization';
 import type {KnowledgeWorkspace} from '../../knowledge/rules/ports';
@@ -16,19 +18,23 @@ import {scopeUsageInputSchema,scopeUsageReportSchema,type ScopeUsageInput,type S
 import type {ScopeGoalPorts} from '../../tasks/runtime/scope-goal-service';
 
 type Owner=Pick<KnowledgeWorkspace,'entry'|'assert'>;
-type Source={kind:'main'|'member';taskId:string;runId:string;task?:TaskNode;run?:DispatchRun;invalid?:boolean};
+/** 查询端口仅读取 canonical 日志；递归身份由本服务沿可信父工具引用逐层核对。 */
+export type ScopeUsageLogs=Pick<ScopeGoalPorts,'inspectMain'|'inspectMember'>&{inspectAgent?(taskId:string,runId:string):Promise<RunSummary>};
+const callReference=z.object({version:z.literal(1),workspaceId:z.string().min(1).max(128),callerTaskId:z.string().regex(/^[a-zA-Z0-9_-]{1,128}$/),callerRunId:z.string().regex(/^[a-zA-Z0-9_-]{1,128}$/),toolCallId:z.string().min(1).max(512),taskId:z.string().regex(/^[a-zA-Z0-9_-]{1,128}$/),runId:z.string().regex(/^[a-zA-Z0-9_-]{1,128}$/)}).strict();
+type Source={kind:'main'|'member';taskId:string;runId:string;task?:TaskNode;run?:DispatchRun;agent?:AgentCallReference;invalid?:boolean};
 function matches(value:unknown,expected:unknown){return json(value)===json(expected)}
 
-/** 共享已有的可信日志端口，但查询独立于目标审阅；不能通过本报告批准目标或触发恢复。 */
+/** 共享可信日志端口，递归来源只从已核实父日志展开；查询独立于目标审阅，不批准目标或触发恢复。 */
 export class ScopeUsageService {
-  constructor(private readonly owner:Owner,private readonly store:Pick<DispatchStore,'read'>,private readonly logs?:ScopeGoalPorts){}
+  constructor(private readonly owner:Owner,private readonly store:Pick<DispatchStore,'read'>,private readonly logs?:ScopeUsageLogs){}
   private facts(state:DispatchState,input:ScopeUsageInput){
     const scope=state.scopes?.find(value=>value.scopeId===input.scopeId&&value.rootSessionId===input.rootSessionId&&value.workspaceId===input.workspaceId);
     const graph=state.graphs.find(value=>value.identity.rootSessionId===input.rootSessionId&&value.identity.workspaceId===input.workspaceId);
     const tasks=graph?.tasks.filter(task=>task.scopeId===input.scopeId)??[],ids=new Set(tasks.map(task=>task.taskId));
     const runs=(state.runs??[]).filter(run=>run.binding.rootSessionId===input.rootSessionId&&ids.has(run.binding.taskId));
     const sessions=state.sessions.filter(session=>session.rootSessionId===input.rootSessionId);
-    return {scope,root:graph?.root,tasks,runs,sessions};
+    const agentRuns=state.agentBusinessRuns?.filter(run=>run.scopeId===input.scopeId&&run.binding.workspaceId===input.workspaceId&&run.binding.rootSessionId===input.rootSessionId)??[];
+    return {scope,root:graph?.root,tasks,runs,sessions,agentRuns};
   }
   private sources(facts:ReturnType<ScopeUsageService['facts']>,input:ScopeUsageInput):Source[]{
     const output:Source[]=(facts.scope?.runTracking?.mainRunIds??[]).map(runId=>({kind:'main',taskId:input.rootSessionId,runId}));
@@ -50,6 +56,11 @@ export class ScopeUsageService {
     if(!Array.isArray(summary.events)||!summary.events.length||summary.events[0].type!=='run.started'||summary.events.some((event,index)=>event.seq!==index+1||event.workspaceId!==input.workspaceId||event.taskId!==source.taskId||event.runId!==source.runId))return false;
     const started=summary.events[0].data;
     if(!matches(started.task,summary.task)||!matches(started.conversationBinding,summary.conversationBinding)||!matches(started.memberBinding,summary.memberBinding))return false;
+    if(source.agent){
+      if(started.executionModel!=='agent-tools-v1'||!matches(started.agentCall,source.agent)||summary.conversationBinding)return false;
+      const business=facts.agentRuns.filter(run=>run.binding.runId===source.runId);
+      return summary.memberBinding?business.length===1&&matches(summary.memberBinding,business[0].binding)&&matches(source.agent,business[0].parent):business.length===0;
+    }
     if(source.kind==='member')return summary.task.agentId===source.task?.assignee.agentId&&!summary.conversationBinding&&matches(summary.memberBinding,source.run?.binding);
     const binding=summary.conversationBinding,root=facts.root?.agent,session=facts.sessions.find(item=>item.agentSessionId===binding?.agentSessionId&&item.purpose==='conversation');
     return summary.task.mode==='chat'&&summary.task.agentId==='cbim:main'&&!summary.memberBinding&&binding?.workspaceId===input.workspaceId&&binding.rootSessionId===input.rootSessionId&&binding.agentId==='cbim:main'&&binding.agentInstanceId===root?.agentInstanceId&&session?.workspaceId===input.workspaceId&&session.rootSessionId===input.rootSessionId&&session.agentId==='cbim:main'&&session.agentInstanceId===root?.agentInstanceId&&session.teamId===binding.teamId;
@@ -66,17 +77,33 @@ export class ScopeUsageService {
       if(source.invalid){result.logState='identity_mismatch';result.usage.issues.push({code:'SCOPE_USAGE_IDENTITY',message:'运行来源与持久任务身份不一致，未计入消耗。'})}
       else if(!this.logs){result.usage.issues.push({code:'SCOPE_USAGE_UNAVAILABLE',message:'当前未装配可信运行日志读取，消耗未知。'})}
       else try{
-        const summary=source.kind==='main'?await this.logs.inspectMain(input.rootSessionId,source.runId):await this.logs.inspectMember(structuredClone(source.run!));
+        const summary=source.agent?await (this.logs.inspectAgent?.(source.taskId,source.runId)??Promise.reject(Error('Agent log reader unavailable'))):source.kind==='main'?await this.logs.inspectMain(input.rootSessionId,source.runId):await this.logs.inspectMember(structuredClone(source.run!));
         if(!this.bound(summary,source,facts,input)){result.logState='identity_mismatch';result.usage.issues.push({code:'SCOPE_USAGE_IDENTITY',message:'日志身份、顺序或会话绑定不一致，未计入消耗。'})}
         else{
           result.status=source.run?.status??summary.status;
+          // FileRunStorage 的未结算摘要可能为 interrupted；只有真实终态事件才证明该运行结束。
+          if(summary.events[0].data.executionModel==='agent-tools-v1'&&!summary.events.some(event=>event.type==='run.settled'||event.type==='run.interrupted'))result.status='running';
           result.logState=summary.logIntegrity?.partialTail===false?'verified':'incomplete';result.usage=measureScopeRunUsage(summary);
           if(!summary.logIntegrity)result.usage.issues.push({code:'SCOPE_USAGE_INTEGRITY_UNKNOWN',message:'日志读取端未报告完整性，当前统计不能视为完整用量。'});
           logStamps.push({runId:source.runId,seq:summary.events.at(-1)?.seq,status:summary.status,integrity:summary.logIntegrity,usage:result.usage});
+          if(summary.events[0].data.executionModel==='agent-tools-v1'){
+            // 只从本周期已核实的祖先发现后代，不扫描目录或以岗位名称猜测归属。
+            const discovered:Source[]=[];
+            for(const event of summary.events.filter(event=>event.type==='tool.updated'&&event.data.agentCall!==undefined&&event.data.limits!==undefined)){
+              const parsed=callReference.safeParse(event.data.agentCall),ref=parsed.success?parsed.data:undefined;
+              if(!ref||ref.workspaceId!==input.workspaceId||ref.callerTaskId!==source.taskId||ref.callerRunId!==source.runId||ref.toolCallId!==event.data.id||event.data.name!=='cbim_agent_call'||!summary.events.some(e=>e.seq<event.seq&&e.type==='tool.allowed'&&e.data.id===ref.toolCallId&&e.data.name==='cbim_agent_call'))fail('SCOPE_USAGE_IDENTITY','递归调用来源不一致');
+              if(summary.events.some(e=>e.type==='tool.updated'&&e.data.id===ref.toolCallId&&e.data.agentCall!==undefined&&!matches(e.data.agentCall,ref)))fail('SCOPE_USAGE_IDENTITY','递归调用关联冲突');
+              if([...sources,...discovered].some(item=>item.runId===ref.runId))fail('SCOPE_USAGE_IDENTITY','递归来源重复或循环');
+              discovered.push({kind:'member',taskId:ref.taskId,runId:ref.runId,agent:ref});
+            }
+            if(sources.length+discovered.length>532)fail('SCOPE_USAGE_LIMIT','递归运行来源超过单次核实上限');
+            sources.push(...discovered);
+          }
         }
       }catch(error){
         const code=(error as {code?:string})?.code;
-        result.logState=code==='ENOENT'?'missing':code==='RUN_LOG_EMPTY'?'incomplete':code==='MEMBER_LOG_IDENTITY'?'identity_mismatch':'invalid';
+        if(code==='SCOPE_USAGE_LIMIT')throw error;
+        result.logState=code==='ENOENT'?'missing':code==='RUN_LOG_EMPTY'?'incomplete':code==='MEMBER_LOG_IDENTITY'||code==='SCOPE_USAGE_IDENTITY'?'identity_mismatch':'invalid';
         result.usage=emptyScopeRunUsage();result.usage.issues.push({code:'SCOPE_USAGE_LOG_UNAVAILABLE',message:'该运行日志缺失、不完整或无法核实；不代表没有执行或没有消耗。'});
       }
       runs.push(result);

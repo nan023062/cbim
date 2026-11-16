@@ -38,6 +38,7 @@ N_src_logic_application ..> N_src_logic_conversation : 导入依赖
 N_src_logic_application ..> N_src_logic_connectors : 导入依赖
 N_src_logic_application ..> N_src_logic_agents : 导入依赖
 N_src_logic_automation ..> N_src_logic_conversation : 导入依赖
+N_src_logic_budget ..> N_src_logic_agents : 导入依赖
 ```
 
 ```mermaid
@@ -184,6 +185,7 @@ class N_src_logic_workspace["workspace/"] {
 - `budget` → `engines`：导入。
 - `budget` → `tasks`：导入。
 - `budget` → `execution`：导入。
+- `budget` → `agents`：导入。
 - `budget` → `knowledge`：导入。
 - `connectors` → `tools`：导入。
 - `connectors` → `knowledge`：导入。

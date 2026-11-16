@@ -58,3 +58,7 @@ Runtime.close 成功后才能关闭登记，关闭提交成功后才释放 Globa
 ## 主 Agent 岗位与责任工具
 
 新 AgentCallAssembly 在 beforeRun 成功后提供 MainToolContext，实际身份来自本轮 scope/run。岗位与模块责任工具复用原服务、命令 ID、审批和独立回执，使用此上下文替代 Auto 批次；只为主调用装配，子 Agent 没有管理入口。根收尾立即撤销新控制面操作，等待已登记提交和输入回执后再关闭周期及释放预算。读取或保存未知不自动重放。旧运行继续由 Auto 的原实现提供同一窄契约。
+
+## 递归用量日志入口
+
+member-dispatch 为 ScopeUsageService 提供独立 inspectAgent：固定 loop-engine/tasks 路径并核对工作区、项目、task/run。父调用关系及业务登记由统计服务核验；主 Agent 的 inspectMain 仍拒绝成员日志，旧成员路径不变。

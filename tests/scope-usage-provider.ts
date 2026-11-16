@@ -1,7 +1,7 @@
 import type {OwnerExecutionSelection} from '../src/logic/team/rules/member-execution-binding';
 import assert from 'node:assert/strict';
 import http from 'node:http';
-import {goalCompleteArguments,goalPlanArguments,type GoalFixtureRequest} from './goal-provider-fixture';
+import {type GoalFixtureRequest} from './goal-provider-fixture';
 
 export const scopeUsageFixture={
   goal:'SCOPE_USAGE_FIRST: 请独立核实业务文件，按读取证据完成本目标',
@@ -19,20 +19,16 @@ export async function scopeUsageProvider(){
   const server=http.createServer(async(req,res)=>{try{
     assert.equal(req.method,'POST');assert.ok(req.url?.endsWith('/chat/completions'));let raw='';for await(const chunk of req)raw+=chunk;
     const body=JSON.parse(raw) as Request;assert.equal(body.model,d.model);
-    const isMain=body.tools?.some(tool=>tool.function.name==='cbim_dispatch_task')===true,requests=isMain?main:member,turn=requests.length;requests.push(body);sequence.push(`${isMain?'main':'member'}:${turn}`);
+    const isMain=body.tools?.some(tool=>tool.function.name==='cbim_agent_result_review')===true,requests=isMain?main:member,turn=requests.length;requests.push(body);sequence.push(`${isMain?'main':'member'}:${turn}`);
     res.writeHead(200,{'Content-Type':'text/event-stream'});
     const emit=(delta:unknown,finish_reason:string|null=null)=>res.write('data: '+JSON.stringify({id:'scope-usage-'+sequence.length,object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason}],...(finish_reason?{usage:{prompt_tokens:isMain?100:200,completion_tokens:isMain?20:40,total_tokens:isMain?120:240}}:{})})+'\n\n');
     const tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]});emit({},'tool_calls')};
     const reply=(text:string)=>{emit({role:'assistant',content:text});emit({},'stop')};
     if(isMain){
-      assert.ok(body.tools?.every(item=>!['write','edit','bash'].includes(item.function.name)));
-      if(turn===0)tool('usage-goal-plan','cbim_goal_plan',goalPlanArguments({objective:d.goal,agentId,ownerSelection,moduleIds:[moduleId],acceptance:d.acceptance}));
-      else if(turn===1)tool('usage-dispatch','cbim_dispatch_task',{agentId,ownerSelection,moduleIds:[moduleId],goal:d.memberGoal,acceptance:d.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
-      else if(turn===2)reply('已登记本目标的独立成员任务，等待真实证据。');
-      else if(turn===3)tool('usage-goal-inspect','cbim_goal_inspect',{});
-      else if(turn===4)tool('usage-goal-review','cbim_goal_review',goalCompleteArguments(body,'usage-goal-inspect'));
-      else if(turn===5)reply('第一目标已经按真实文件证据完成。');
-      else if(turn===6){assert.ok(JSON.stringify(body.messages.at(-1)).includes(d.nextGoal));reply('第二目标的普通对话已完成，未派发成员。')}
+      assert.ok(body.tools?.every(item=>!item.function.name.startsWith('cbim_dispatch_')&&!item.function.name.startsWith('cbim_goal_')));
+      if(turn===0)tool('usage-call','cbim_agent_call',{agentId:ownerSelection!.memberId,message:d.memberGoal,business:{moduleIds:[moduleId],acceptance:d.acceptance}});
+      else if(turn===1)reply('原调用的真实读取候选已返回；仅报告事实，不代替人工验收。');
+      else if(turn===2){assert.ok(JSON.stringify(body.messages.at(-1)).includes(d.nextGoal));reply('第二目标的普通对话已完成，未派发成员。')}
       else throw Error('Unexpected main replay or duplicate aggregation request: '+turn);
     }else{
       assert.ok(body.tools?.every(item=>item.function.name!=='cbim_dispatch_task'));

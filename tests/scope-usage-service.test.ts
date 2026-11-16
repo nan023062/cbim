@@ -23,8 +23,9 @@ function setup(){
   } as unknown as DispatchState;
   const logs=new Map([['main-one',summary('main-one')],['main-two',summary('main-two')],['member-run',summary('member-run',true)]]);
   const read=vi.fn(async()=>structuredClone(state)),inspectMain=vi.fn(async(_root:string,id:string)=>structuredClone(logs.get(id)!)),inspectMember=vi.fn(async(run:DispatchRun)=>structuredClone(logs.get(run.binding.runId)!));
-  const service=new ScopeUsageService({entry:{id:'workspace',path:rootPath},assert:()=>{}} as Pick<KnowledgeWorkspace,'entry'|'assert'>,{read},{inspectMain,inspectMember});
-  return {state,logs,read,inspectMain,inspectMember,service};
+  const inspectAgent=vi.fn(async(_task:string,id:string)=>{const value=logs.get(id);if(!value)throw Object.assign(Error('missing'),{code:'ENOENT'});return structuredClone(value)});
+  const service=new ScopeUsageService({entry:{id:'workspace',path:rootPath},assert:()=>{}} as Pick<KnowledgeWorkspace,'entry'|'assert'>,{read},{inspectMain,inspectMember,inspectAgent});
+  return {state,logs,read,inspectMain,inspectMember,inspectAgent,service};
 }
 
 it('精确读取所选周期2主1成员，不读其它根；重复读取不累计或修改来源',async()=>{
@@ -65,4 +66,61 @@ it('跨周期查询与矛盾来源不泄漏其它日志，重复run不会双计'
   const f=setup();await expect(f.service.read({...identity,rootSessionId:'other'})).rejects.toMatchObject({code:'SCOPE_USAGE_IDENTITY'});await expect(f.service.read({...identity,workspaceId:'other'})).rejects.toMatchObject({code:'SCOPE_USAGE_IDENTITY'});expect(f.inspectMain).not.toHaveBeenCalled();
   f.state.scopes![0].runTracking!.mainRunIds.push('member-run');
   const report=await f.service.read(identity);expect(report.runs).toHaveLength(3);expect(report.runs.find(row=>row.runId==='member-run')?.logState).toBe('identity_mismatch');expect(f.inspectMember).not.toHaveBeenCalled();expect(report.totals.tokens.total).toBe(260);expect(report.totals.tokensComplete).toBe(false);
+});
+
+function recursive(){
+ const f=setup();f.state.scopes![0].runTracking!.mainRunIds=['main-one'];f.state.graphs[0].tasks=[];f.state.runs=[];
+ const root=f.logs.get('main-one')!;root.events[0].data.executionModel='agent-tools-v1';
+ const link=(parent:RunSummary,taskId:string,runId:string)=>{
+  const ref={version:1 as const,workspaceId:'workspace',callerTaskId:parent.task.taskId,callerRunId:parent.runId,toolCallId:'call-'+runId,taskId,runId};
+  const base=parent.events[0];
+  parent.events.splice(1,0,{...base,type:'tool.allowed',data:{id:ref.toolCallId,name:'cbim_agent_call'}},{...base,type:'tool.updated',data:{id:ref.toolCallId,name:'cbim_agent_call',agentCall:ref,limits:{depth:1}}});
+  parent.events.forEach((event,index)=>event.seq=index+1);
+  const child=summary(runId);delete child.conversationBinding;child.task={...child.task,taskId,agentId:'worker'};
+  child.events[0].data={task:child.task,executionModel:'agent-tools-v1',agentCall:structuredClone(ref)};
+  child.events.forEach(event=>event.taskId=taskId);f.logs.set(runId,child);return child;
+ };
+ const child=link(root,'child-task','child-run'),leaf=link(child,'leaf-task','leaf-run');
+ return {...f,root,child,leaf,link};
+}
+it('follows only trusted recursive edges, counts each level once and never scans unrelated logs',async()=>{
+ const f=recursive(),before=structuredClone(f.state),report=await f.service.read(identity);
+ expect(report.totals).toMatchObject({registeredRuns:3,readRuns:3,tokensComplete:true,costComplete:true,tokens:{total:390}});
+ expect(f.inspectMain.mock.calls.map(call=>call[1])).toEqual(['main-one']);
+ expect(f.inspectAgent.mock.calls).toEqual([['child-task','child-run'],['leaf-task','leaf-run']]);expect(f.inspectMember).not.toHaveBeenCalled();expect(f.state).toEqual(before);
+});
+it('rejects foreign or conflicting parent references before reading any child',async()=>{
+ for(const mutate of [
+  (f:ReturnType<typeof recursive>)=>{(f.root.events[2].data.agentCall as any).callerRunId='foreign'},
+  (f:ReturnType<typeof recursive>)=>{f.root.events[1].data.name='read'},
+  (f:ReturnType<typeof recursive>)=>{const event=structuredClone(f.root.events[2]);delete event.data.limits;(event.data.agentCall as any).runId='foreign';f.root.events.splice(3,0,event);f.root.events.forEach((e,i)=>e.seq=i+1)}
+ ]){
+  const f=recursive();mutate(f);const report=await f.service.read(identity);
+  expect(report.runs[0].logState).toBe('identity_mismatch');expect(report.totals.tokensComplete).toBe(false);expect(f.inspectAgent).not.toHaveBeenCalled();
+ }
+});
+it('a child header from another caller is not counted and cannot introduce grandchildren',async()=>{
+ const f=recursive();(f.child.events[0].data.agentCall as any).callerRunId='foreign';
+ const report=await f.service.read(identity);expect(report.runs).toHaveLength(2);expect(report.runs[1].logState).toBe('identity_mismatch');
+ expect(report.totals.tokens.total).toBe(130);expect(report.totals.tokensComplete).toBe(false);expect(f.inspectAgent).toHaveBeenCalledTimes(1);
+});
+it('missing child logs remain unknown while active parent and child are both in flight',async()=>{
+ const f=recursive();f.root.events.pop();f.child.events.pop();f.logs.delete('leaf-run');f.root.status='interrupted';f.child.status='interrupted';
+ const report=await f.service.read(identity);expect(report.totals).toMatchObject({registeredRuns:3,inFlightRuns:2,tokensComplete:false,costComplete:false});
+ expect(report.runs[2]).toMatchObject({logState:'missing',status:'unknown'});expect(report.runs[2].usage.tokensState).toBe('missing');
+});
+it('duplicate or cyclic descendants never double count a run or read it again',async()=>{
+ const f=recursive();const ref=f.child.events[2].data.agentCall as any;ref.taskId=f.root.task.taskId;ref.runId=f.root.runId;
+ const report=await f.service.read(identity);expect(report.runs).toHaveLength(2);expect(report.runs[1].logState).toBe('identity_mismatch');
+ expect(report.totals.tokensComplete).toBe(false);expect(f.inspectAgent).toHaveBeenCalledTimes(1);
+});
+
+it('a business-bound recursive child without its durable registration is not trusted',async()=>{
+ const f=recursive();f.child.memberBinding={...memberBinding,agentId:'worker',taskId:'child-task',runId:'child-run'};
+ f.child.events[0].data.memberBinding=f.child.memberBinding;
+ const report=await f.service.read(identity);expect(report.runs[1].logState).toBe('identity_mismatch');expect(f.inspectAgent).toHaveBeenCalledTimes(1);expect(report.totals.tokensComplete).toBe(false);
+});
+it('too many recursive sources reject the report rather than truncate its totals',async()=>{
+ const f=recursive();for(let i=0;i<532;i++)f.link(f.root,'task-'+i,'run-'+i);
+ await expect(f.service.read(identity)).rejects.toMatchObject({code:'SCOPE_USAGE_LIMIT'});expect(f.inspectAgent).not.toHaveBeenCalled();
 });

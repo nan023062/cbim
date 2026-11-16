@@ -106,7 +106,13 @@ export function createMemberServices(workspace:Workspace,models:EngineModelProfi
   });
   const controlledFiles=new ControlledFiles(workspace,store,lease,controlledTransport,inspectMember,()=>admission?.isCurrent()??true);
   const isolatedExecutions=new IsolatedExecutions(workspace,store,lease,inspectMember,()=>admission?.isCurrent()??true);
-  const dispatch=new WorkspaceDispatchService(workspace,store,{inspectMember,normalizeValidationPath:normalizeArtifact,checkValidationFiles:(files,signal)=>artifactFiles.checkFiles(files,signal),checkManifest:(snapshot,signal)=>manifestFiles.check(snapshot,signal),inspectMain:async(rootSessionId,runId)=>{
+  // 用量读取单独核对递归路径；父子来源归统计服务核实，不放宽主运行证据端口。
+  const dispatch=new WorkspaceDispatchService(workspace,store,{inspectMember,inspectAgent:async(taskId,runId)=>{
+    workspace.assert();
+    const summary=await storage.read(path.join(workspace.paths.project(workspace.entry.id),'loop-engine','tasks',safeId(taskId),safeId(runId)));
+    if(summary.task.workspaceId!==workspace.entry.id||summary.task.root!==workspace.entry.path||summary.task.taskId!==taskId||summary.runId!==runId)fail('MEMBER_LOG_IDENTITY','递归运行日志不属于当前工作区或调用');
+    return summary;
+  },normalizeValidationPath:normalizeArtifact,checkValidationFiles:(files,signal)=>artifactFiles.checkFiles(files,signal),checkManifest:(snapshot,signal)=>manifestFiles.check(snapshot,signal),inspectMain:async(rootSessionId,runId)=>{
     workspace.assert();
     const summary=await storage.read(path.join(workspace.paths.project(workspace.entry.id),'loop-engine','tasks',safeId(rootSessionId),safeId(runId)));
     if(summary.task.workspaceId!==workspace.entry.id||summary.task.root!==workspace.entry.path||summary.task.taskId!==rootSessionId||summary.runId!==runId||summary.task.agentId!=='cbim:main')throw Error('主调度证据不属于当前会话或运行');

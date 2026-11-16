@@ -1,3 +1,15 @@
+## 2026-11-16 — #94 补齐递归运行的周期用量统计
+
+基线 a60a9be3。真实缺口：ScopeUsageService 原只枚举旧图成员，遗漏 agent-tools-v1 的子运行；FileRunStorage 的活动主运行也可暂显示 interrupted，不能据此认为不在途。本切片仍由 Logic/budget 持有只读计量规则，Application 注入固定 loop-engine 日志读取端口，dispatch 只装配；不创建第二个预算账本或修改预算准入。
+
+从 scope.runTracking 的可信主运行出发，逐层核对已授权 cbim_agent_call 首次引用与子 run.started.agentCall，支持普通和显式业务递归；业务子运行还匹配同 scope 的持久 agentBusinessRuns。无终态的主/子都计为在途。跨根、矛盾、循环、重复来源及缺日志不能使报告完整；总来源超过 532 拒绝报告，不截断数字。旧任务/成员计量入口保留。类型 ScopeUsageLogs 的 inspectAgent 独立于主证据端口，未放宽 inspectMain 的主身份校验。
+
+验证与边界：
+- pnpm exec vitest run tests/scope-usage-pi.test.ts tests/scope-usage-service.test.ts --reporter=default --reporter=json --outputFile=build/recursive-scope-usage.json：7/7（真实 Pi 1 项 + 原计量服务 6 项）通过。第一目标新协议为 1 主+1 子，实际供应商 2 主请求+5 子请求，总 input=1200/output=240/total=1440、估价 0.00168 USD；第二目标独立且重启后不变。请求数减少源自退出旧规划/结果审阅轮次，未修改价格或计量算法。
+- 新增递归服务用例 7 项：三层精确归属、父引用未授权/跨根/冲突、子头跨调用、活动/缺日志、重复/环、业务绑定无登记、来源超限。第一次选取新增 5 项有 4 项通过，子头反例因测试夹具共享父子引用失败；修正夹具独立快照后 -t 'child header|business-bound|too many' 的 3 项通过。13 项服务测试各有通过证据，无永久 skip。
+- pnpm typecheck、pnpm check:test-modules、pnpm check:architecture 通过；540 文件测试归属不变，1660 文件/7889 依赖无循环或违规。
+- 源码注释、budget/runtime、dispatch/runtime、application/assembly 契约及其生成类图（含 logic 上层关系）同步；本切片未验证真实在线模型账单、桌面安装/升级、合并或公开发布。其余缺口继续归 Issue #94 / PR #96。
+
 ## 2026-11-16 — #94 主调用登记与回执丢失验证迁移
 
 基线 4368d947。main-tool-contract-pi 的正常回流/停止迁为单个主运行的 cbim_agent_call 和 result_check；不再等待旧 goal_plan/dispatch_task/member-results 二次主轮。旧坏规划/派发回包场景迁为新链路的业务登记已保存后回执丢失、父工具关联已 fsync 后回执丢失。故障只注入真实保存之后，验证唯一原关联/登记、子引擎未启动、unknown 且禁止重试、关闭释放以及重启日志/请求计数不变。正常场景保留真实成员读取和交付证据；停止场景保持原子运行未完成。

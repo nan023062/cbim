@@ -11,19 +11,13 @@ import { publicAddress, publicUrl } from './public-http';
 /** 仅可信宿主/测试装配可替换解析和 TCP 连接；页面、IPC 与模型不能传入此对象。 */
 export interface BrowserProxyTransport
 {
-  lookup(host: string): Promise<Array<
-    {
-      address: string;
-      family: number
-    }>>;
+  lookup(host: string): Promise<Array<{ address: string; family: number }>>;
+
   connect(address: string, port: number): Socket;
 }
+
 /** 一个读取任务一个出口；累计传输上限包括 TLS 密文，不能当作单个解压资源大小。 */
-export async function openBrowserProxy(
-  signal: AbortSignal,
-  onFailure: (error: Error) => void,
-  transport?: BrowserProxyTransport
-)
+export async function openBrowserProxy(signal: AbortSignal, onFailure: (error: Error) => void, transport?: BrowserProxyTransport)
 {
   signal.throwIfAborted();
   const sockets = new Set<Socket>();

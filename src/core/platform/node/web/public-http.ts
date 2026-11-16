@@ -9,12 +9,15 @@ import { lookup } from 'node:dns/promises';
 import { isIP } from 'node:net';
 import { gunzipSync, inflateSync, brotliDecompressSync } from 'node:zlib';
 import ipaddr from 'ipaddr.js';
+
 /** 基础类库自有错误，不依赖业务层；保留 code 供调用者识别拒绝边界。 */
 function fail(code: string, message: string): never
 {
   throw Object.assign(new Error(`${code}: ${message}`), { code });
 }
+
 const limit = 1024 * 1024;
+
 export function publicAddress(address: string): boolean
 {
   try
@@ -26,6 +29,7 @@ export function publicAddress(address: string): boolean
     return false;
   }
 }
+
 /** URL 的规范化先于 DNS；仅常规 Web 端口，禁止凭据、非公网 IP 与本地名称。 */
 export function publicUrl(value: string): URL
 {
@@ -56,47 +60,43 @@ export function publicUrl(value: string): URL
   url.hash = '';
   return url;
 }
+
 export interface PublicHttpResponse
 {
   status: number;
+
   headers: http.IncomingHttpHeaders;
+
   body: string;
 }
+
 /** 原始资源保留二进制；同样受 DNS 固定与体积限制，不预先当作 UTF-8 正文解码。 */
 export interface PublicHttpBytes
 {
   status: number;
+
   headers: http.IncomingHttpHeaders;
+
   body: Buffer;
 }
+
 /** 测试端口只由可信装配提供，不属于 IPC 或模型参数。lookup 返回全部地址，request 必须遵守传入 lookup。 */
 export interface PublicHttpTransport
 {
-  lookup(host: string): Promise<Array<
-    {
-      address: string;
-      family: number
-    }>>;
+  lookup(host: string): Promise<Array<{ address: string; family: number }>>;
+
   request: typeof http.request;
 }
+
 /** 请求独立销毁连接，默认 1 MiB（压缩前后）和 15 秒；二进制可信入口至多 8 MiB，不自动重试。 */
 export class PublicHttp
 {
-  constructor(
-    private readonly transport?: PublicHttpTransport,
-    private readonly userAgent = 'PublicWebReader/1.0'
-  )
+  constructor(private readonly transport?: PublicHttpTransport, private readonly userAgent = 'PublicWebReader/1.0')
   {
   }
+
   /** 静态网页入口保留原 1 MiB 与严格 UTF-8 语义。 */
-  async read(
-    raw: string,
-    signal: AbortSignal,
-    options:
-      {
-        headers?: Record<string, string>
-      } = {}
-  ): Promise<PublicHttpResponse>
+  async read(raw: string, signal: AbortSignal, options: { headers?: Record<string, string> } = {}): Promise<PublicHttpResponse>
   {
     const response = await this.readBytes(raw, signal, options);
     try
@@ -108,16 +108,9 @@ export class PublicHttp
       throw Error('WEB_CONTENT: 响应编码无效或不受支持');
     }
   }
+
   /** 可信调用者可设置请求头与至多 8 MiB 的资源上限；仅 GET，不自动读取宿主 Cookie 或登录态。 */
-  async readBytes(
-    raw: string,
-    signal: AbortSignal,
-    options:
-      {
-        headers?: Record<string, string>;
-        maxBytes?: number
-      } = {}
-  ): Promise<PublicHttpBytes>
+  async readBytes(raw: string, signal: AbortSignal, options: { headers?: Record<string, string>; maxBytes?: number } = {}): Promise<PublicHttpBytes>
   {
     if (options.maxBytes !== undefined && (!Number.isSafeInteger(options.maxBytes) || options.maxBytes < 1))
       throw Error('WEB_SIZE: 资源字节上限必须为正整数');
@@ -129,6 +122,7 @@ export class PublicHttp
     const addresses = await new Promise<Array<
       {
         address: string;
+
         family: number
       }>>((resolve, reject) =>
       {

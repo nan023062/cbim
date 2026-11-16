@@ -4,10 +4,5 @@
  */
 import { safeStorage } from 'electron';
 import type { SecretCipher } from '../../contracts/secrets';
-export const systemSecretCipher: SecretCipher = {
-  available: () =>
-    safeStorage.isEncryptionAvailable() &&
-    (process.platform !== 'linux' || safeStorage.getSelectedStorageBackend() !== 'basic_text'),
-  encrypt: (value) => safeStorage.encryptString(value).toString('base64'),
-  decrypt: (value) => safeStorage.decryptString(Buffer.from(value, 'base64')),
-};
+
+export const systemSecretCipher: SecretCipher = { available: () => safeStorage.isEncryptionAvailable() && (process.platform !== 'linux' || safeStorage.getSelectedStorageBackend() !== 'basic_text'), encrypt: (value) => safeStorage.encryptString(value).toString('base64'), decrypt: (value) => safeStorage.decryptString(Buffer.from(value, 'base64')), };

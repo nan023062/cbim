@@ -57,13 +57,15 @@ import type { ModuleOwnerships } from '../workspace/service/module-ownerships';
 interface ApplicationPlatform
 {
   // #region 契约成员
-
   /** 真实文件工人传输；缺省时不开放受控写入，查询已有记录仍可用。 */
   controlledFiles?: ControlledFileTransport;
+
   /** 源码或其它可信宿主提供的引擎解析器；已安装包管理器存在时优先使用后者。 */
   engineRuntimes?: EngineRuntimeResolver;
+
   /** 正式冷宿主的制品端口，供应用建立唯一受管引擎包服务。 */
   engineArtifacts?: EngineArtifactsPort;
+
   /** 静态网页不足时使用的浏览器适配；Node 宿主可不提供。 */
   webBrowser?: BrowserReader;
 
@@ -80,7 +82,6 @@ export class Application
   // #region 私有成员
 
   // #region 字段
-
   /** 可信宿主注入的平台能力；普通对话选项不能替换文件传输或受管引擎解析。 */
   private readonly platform: ApplicationPlatform;
 
@@ -274,12 +275,7 @@ export class Application
 
   /** 装配应用级服务；仅可信宿主提供资源根、密钥适配和平台端口，持久配置由 init 读取。 */
   // 可信文件传输同时供旧运行恢复与新 Agent 业务装配；公开对话参数不能替换该端口。
-  public constructor(
-    paths: Paths,
-    assetsRoot: string,
-    secretCipher?: SecretCipher,
-    platform: ApplicationPlatform = {}
-  )
+  public constructor(paths: Paths, assetsRoot: string, secretCipher?: SecretCipher, platform: ApplicationPlatform = {})
   {
     this.paths = paths;
     this.platform = platform;
@@ -451,13 +447,7 @@ export class Application
   }
 
   /** 桌面可先初始化基础配置并显示窗口；默认仍恢复全部工作区，CLI/现有消费者行为不变。 */
-  public async init(
-    options:
-      {
-        /** false 仅初始化应用配置；工作区恢复由可信宿主稍后显式调用。 */
-        restore?: boolean;
-      } = {}
-  )
+  public async init(options: { /** false 仅初始化应用配置；工作区恢复由可信宿主稍后显式调用。 */ restore?: boolean; } = {})
   {
     await this.enginePackages?.init();
     await this.webSettings.init();

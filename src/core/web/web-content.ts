@@ -3,7 +3,9 @@
  * 设计原因：保留标题、段落、列表与链接；剔除导航和表单，长单段只按 Unicode 字符截取，不冒充全文。
  */
 import { parse, type DefaultTreeAdapterMap } from 'parse5';
+
 type Node = DefaultTreeAdapterMap['node'];
+
 const skipped = new Set([
   'script',
   'style',
@@ -19,29 +21,24 @@ const skipped = new Set([
   'input',
   'select',
 ]);
+
 function children(node: Node): Node[]
 {
   return 'childNodes' in node ? node.childNodes : [];
 }
+
 function tag(node: Node): string
 {
   return 'tagName' in node ? node.tagName : '';
 }
+
 function attr(node: Node, name: string): string | undefined
 {
   return 'attrs' in node ? node.attrs.find((item) => item.name === name)?.value : undefined;
 }
+
 /** 文档大小由传输限制；迭代扫描有界节点，正文递归深度最多 100，异常深层页面拒绝。 */
-export function htmlMarkdown(
-  html: string,
-  base: string
-):
-  {
-    title: string;
-    markdown: string;
-    login: boolean;
-    challenge: boolean
-  }
+export function htmlMarkdown(html: string, base: string): { title: string; markdown: string; login: boolean; challenge: boolean }
 {
   const root = parse(html),
     nodes: Node[] = [],
@@ -126,14 +123,8 @@ export function htmlMarkdown(
     challenge,
   };
 }
-export function truncateParagraphs(
-  value: string,
-  maxChars: number
-):
-  {
-    markdown: string;
-    truncated: boolean
-  }
+
+export function truncateParagraphs(value: string, maxChars: number): { markdown: string; truncated: boolean }
 {
   const points = Array.from(value);
   if (points.length <= maxChars)

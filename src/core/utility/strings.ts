@@ -10,23 +10,24 @@
 export interface LineFramePolicy
 {
   // #region 属性
-
   /** 验证完整原始帧（不含 LF）；CR、空白、大小单位及异常由消费者解释。 */
   checkLine: (line: string) => void;
+
   /** 每次消费完全部完整帧后验证未终止尾部；不能把尾部当作已完成消息。 */
   checkRemainder: (text: string) => void;
 
   // #endregion
 }
+
 /** 单输入流的增量文本缓冲；按 LF 分帧并保留未终止尾部，不共享状态。 */
 export class LineFramer
 {
   // #region 私有成员
 
   // #region 字段
-
   /** 当前输入流的校验策略，不拥有协议或进程生命周期。 */
   private readonly policy: LineFramePolicy;
+
   /** 尚未遇到 LF 的尾部，以及回调失败后尚未交付的帧。 */
   private remainder = '';
 
@@ -49,9 +50,9 @@ export class LineFramer
   // #region 方法
 
   /**
-   * 同步依次交付完整帧；检查或接收回调抛错即停止，已交付帧不撤回，后续完整帧不提前丢弃。
-   * 不 trim、不解析 JSON、不 flush EOF；不支持回调重入 push，同一实例仅供一个输入流使用。
-   */
+     * 同步依次交付完整帧；检查或接收回调抛错即停止，已交付帧不撤回，后续完整帧不提前丢弃。
+     * 不 trim、不解析 JSON、不 flush EOF；不支持回调重入 push，同一实例仅供一个输入流使用。
+     */
   public push(chunk: string, receive: (line: string) => void): void
   {
     this.remainder += chunk;
@@ -81,7 +82,6 @@ export class StringUtils
   // #region 私有成员
 
   // #region 构造函数
-
   /** 算法只依赖显式输入，不允许创建工具实例。 */
   private constructor()
   {

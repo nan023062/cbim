@@ -4,11 +4,10 @@
  * 职责边界：只比较值，不校验 Schema、不生成持久指纹、不读写状态或发起请求。
  * 算法入口：通过 Core JsonUtils 静态方法复用机制，本文件继续拥有原业务策略。
  */
-
-import {JsonUtils} from '../../../core/utility';
+import { JsonUtils } from '../../../core/utility';
 
 /** 策略属于前端比较契约，不改变后端其他调用方的字典序或字段保留规则。 */
-const orderedJson=(value:unknown)=>JsonUtils.orderJsonValue(value,{compareKeys:(left,right)=>left.localeCompare(right),omitUndefinedProperties:true});
+const orderedJson = (value: unknown) => JsonUtils.orderJsonValue(value, { compareKeys: (left, right) => left.localeCompare(right), omitUndefinedProperties: true });
 
 /**
  * 比较对象键排序后的 JSON 文本，不修改输入；数组次序保留，对象 undefined 属性省略。
@@ -16,6 +15,7 @@ const orderedJson=(value:unknown)=>JsonUtils.orderJsonValue(value,{compareKeys:(
  * 顶层不可序列化值仍可比较为相同，BigInt、循环引用或属性读取失败仍抛错，不伪装成“不相等”。
  * localeCompare 取决于运行环境且可能将不同键视为同序；不承诺跨环境 canonical 或通用深相等。
  */
-export function equalJson(left:unknown,right:unknown):boolean {
-  return JSON.stringify(orderedJson(left))===JSON.stringify(orderedJson(right));
+export function equalJson(left: unknown, right: unknown): boolean
+{
+  return JSON.stringify(orderedJson(left)) === JSON.stringify(orderedJson(right));
 }

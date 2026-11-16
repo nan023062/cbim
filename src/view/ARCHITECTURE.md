@@ -69,9 +69,9 @@ class N_src_view_shell["shell/"] {
   <<directory>>
 }
 N_src_view_resources ..> N_src_view_knowledge : 导入依赖
-N_src_view_shell ..> N_src_view_resources : 导入依赖
 N_src_view_shell ..> N_src_view_settings : 导入依赖
 N_src_view_shell ..> N_src_view_runtime : 导入依赖
+N_src_view_shell ..> N_src_view_resources : 导入依赖
 ```
 
 ```mermaid
@@ -131,12 +131,12 @@ N_src_view_workspace ..> N_src_view_team : 导入依赖
 - `settings` → `tasks`：导入。
 - `settings` → `foundations`：导入。
 - `shell` → `components`：导入。
-- `shell` → `resources`：导入。
 - `shell` → `settings`：导入。
 - `shell` → `updates`：导入。
 - `shell` → `conversation`：导入。
 - `shell` → `execution-view`：导入。
 - `shell` → `runtime`：导入。
+- `shell` → `resources`：导入。
 - `shell` → `team`：导入。
 - `shell` → `workspace`：导入。
 - `shell` → `automation`：导入。

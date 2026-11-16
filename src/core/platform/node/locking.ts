@@ -8,30 +8,43 @@ import path from 'node:path';
 import type Koffi from 'koffi';
 import fs from 'node:fs';
 import { Fault } from '../../errors';
+
 const requireNative = createRequire(typeof __filename === 'string' ? __filename : import.meta.url);
+
 const packagedNative = (process as any).resourcesPath && path.join((process as any).resourcesPath, 'koffi');
-const koffi: typeof Koffi = requireNative(
-  packagedNative && fs.existsSync(packagedNative) ? packagedNative : 'koffi'
-);
+
+const koffi: typeof Koffi = requireNative(packagedNative&&fs.existsSync(packagedNative)?packagedNative:'koffi');
+
 // Windows named mutexes are kernel-owned and become abandoned after a crash.
 // Global namespace prevents other logon sessions silently acquiring another lock.
 const win = process.platform === 'win32' ? koffi.load('kernel32.dll') : null;
+
 const create = win?.func('void * __stdcall CreateMutexW(void *, int, str16)');
+
 const wait = win?.func('uint32 __stdcall WaitForSingleObject(void *, uint32)');
+
 const release = win?.func('int __stdcall ReleaseMutex(void *)');
+
 const close = win?.func('int __stdcall CloseHandle(void *)');
+
 const libc = !win
   ? koffi.load(process.platform === 'darwin' ? '/usr/lib/libSystem.B.dylib' : 'libc.so.6')
   : null;
+
 const flock = libc?.func('int flock(int, int)');
+
 // 仅记录本进程已持有的 scope+id；旧兼容入口共享本模块，避免重复获取原生锁。
 const held = new Set<string>();
+
 /** 同步获取操作系统互斥锁；不等待、不重试，调用方负责在 finally 中释放。 */
 export class KernelLock
 {
   private handle: any;
+
   private fd?: number;
+
   private key: string;
+
   /** root 须已存在；POSIX 锁该目录，Windows 使用原 Global CBIM scope/id 名称。 */
   constructor(root: string, id: string, scope = 'project')
   {
@@ -63,6 +76,7 @@ export class KernelLock
     }
     held.add(this.key);
   }
+
   /** 释放本实例原生句柄并移除进程内占用；业务不得在释放后继续使用原临界区。 */
   close()
   {

@@ -5,6 +5,7 @@
  */
 import { JsonUtils, StrictJsonError } from './utility';
 import { fail } from './errors';
+
 /** 不改变字段及资源限制；只将已知解析失败转换为原 JSON 领域错误，其他异常原样传播。 */
 export function parseJson(text: string)
 {

@@ -5,7 +5,8 @@
  * 职责边界：这是固定 Pi 供应商路径的受管出口；仅放行本轮本机桥的固定调用、计量和工具清单路由，仍由桥核随机令牌。它不是操作系统级网络隔离，也不授予工具新权限。
  */
 /** 凭据仅为当轮本机随机令牌；真实供应商密钥不进入生成文件或子进程。 */
-export function requestBudgetBootstrap(input:{endpoint:string;proxy:string;token:string;bridge:string}):string{
+export function requestBudgetBootstrap(input: { endpoint: string; proxy: string; token: string; bridge: string }): string
+{
   return `// Generated CBIM request transport. Provider credentials stay in parent.\nconst settings=${JSON.stringify(input)};
 const original=globalThis.fetch;
 if(typeof original!=='function')throw Error('CBIM_MODEL_REQUEST_FETCH_UNAVAILABLE');

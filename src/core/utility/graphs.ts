@@ -11,7 +11,6 @@ export class GraphUtils
   // #region 私有成员
 
   // #region 构造函数
-
   /** 算法只依赖显式输入，不允许创建工具实例。 */
   private constructor()
   {
@@ -26,13 +25,10 @@ export class GraphUtils
   // #region 方法
 
   /**
-   * 对唯一节点及完整端点执行拓扑遍历；平行边逐条计数，自环返回 false，空图返回 true。
-   * 不修改输入；重复节点或缺端点抛错。领域入口应先核验身份，不能以无环代替授权。
-   */
-  public static isDirectedAcyclic(
-    nodes: readonly string[],
-    edges: readonly (readonly [string, string])[]
-  ): boolean
+     * 对唯一节点及完整端点执行拓扑遍历；平行边逐条计数，自环返回 false，空图返回 true。
+     * 不修改输入；重复节点或缺端点抛错。领域入口应先核验身份，不能以无环代替授权。
+     */
+  public static isDirectedAcyclic(nodes: readonly string[], edges: readonly (readonly [string, string])[]): boolean
   {
     const incoming = new Map(nodes.map((node) => [node, 0])),
       outgoing = new Map<string, string[]>();

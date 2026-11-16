@@ -5,16 +5,33 @@
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type {RunStorage} from '../rules/storage';
-import type {TaskSpec} from '../../tasks/rules/types';
-import {safeId} from '../ports/identity';
-import {RunJournal} from './run-journal';
+import type { RunStorage } from '../rules/storage';
+import type { TaskSpec } from '../../tasks/rules/types';
+import { safeId } from '../ports/identity';
+import { RunJournal } from './run-journal';
 
 /** 应用装配的文件存储；实例不缓存历史，查询总是核验已落盘日志。 */
-export class FileRunStorage implements RunStorage {
+export class FileRunStorage implements RunStorage
+{
   /** 非递归创建任务目录，已有任务须走显式恢复而不能覆盖。 */
-  async reserveTask(directory:string,taskId:string){await fs.mkdir(directory,{recursive:true});await fs.mkdir(path.join(directory,safeId(taskId)))}
-  createJournal(directory:string,task:TaskSpec,runId:string){return new RunJournal(directory,task,runId)}
-  read(directory:string){return RunJournal.read(directory)}
-  list(directory:string){return fs.readdir(directory)}
+  async reserveTask(directory: string, taskId: string)
+  {
+    await fs.mkdir(directory, { recursive: true });
+    await fs.mkdir(path.join(directory, safeId(taskId)))
+  }
+
+  createJournal(directory: string, task: TaskSpec, runId: string)
+  {
+    return new RunJournal(directory, task, runId)
+  }
+
+  read(directory: string)
+  {
+    return RunJournal.read(directory)
+  }
+
+  list(directory: string)
+  {
+    return fs.readdir(directory)
+  }
 }

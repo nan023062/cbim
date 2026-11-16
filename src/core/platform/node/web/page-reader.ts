@@ -5,17 +5,13 @@
  */
 import robotsParser from 'robots-parser';
 import { setTimeout as delay } from 'node:timers/promises';
-import
-  {
-    pageReadInput,
-    browserRobotsPolicy,
-    type PageReadInput,
-    type BrowserRobotsPolicy,
-  } from '../../../web';
+import { pageReadInput, browserRobotsPolicy, type PageReadInput, type BrowserRobotsPolicy, } from '../../../web';
 import { PublicHttp, publicUrl, type PublicHttpResponse } from './public-http';
 import { htmlMarkdown, truncateParagraphs } from '../../../web';
 import type { BrowserReader } from '../../../web';
+
 const ttl = 5 * 60 * 1000;
+
 function status(response: PublicHttpResponse)
 {
   if (response.status === 401 || response.status === 407)
@@ -29,6 +25,7 @@ function status(response: PublicHttpResponse)
   if (response.status < 200 || response.status >= 300)
     throw Error('WEB_REDIRECT: 来源跳转未获允许');
 }
+
 /** 每个读取器独占有界缓存和域名时间表；时间均为毫秒，缓存过期后重新核实 robots。 */
 export class WebPageReader
 {
@@ -36,42 +33,44 @@ export class WebPageReader
     string,
     {
       expires: number;
+
       url: string;
+
       title: string;
+
       markdown: string;
+
       capturedAt: string;
+
       truncated: boolean
     }
   >();
+
   private readonly robots = new Map<string,
     {
       expires: number;
+
       rules: ReturnType<typeof robotsParser>
     }>();
+
   private readonly domains = new Map<string,
     {
       last: number;
+
       next: number
     }>();
-  constructor(
-    private readonly client: Pick<PublicHttp, 'read'> = new PublicHttp(),
-    private readonly timing:
-      {
-        now(): number;
-        wait(ms: number, signal: AbortSignal): Promise<void>;
-        interval: number;
-      } = { now: () => Date.now(), wait: (ms, signal) => delay(ms, undefined, { signal }), interval: 1000 },
-    private readonly browser?: BrowserReader,
-    private readonly userAgent = 'PublicWebReader/1.0'
-  )
+
+  constructor(private readonly client: Pick<PublicHttp, 'read'> = new PublicHttp(), private readonly timing: { now(): number; wait(ms: number, signal: AbortSignal): Promise<void>; interval: number; } = { now: () => Date.now(), wait: (ms, signal) => delay(ms, undefined, { signal }), interval: 1000 }, private readonly browser?: BrowserReader, private readonly userAgent = 'PublicWebReader/1.0')
   {
   }
+
   private remember<T>(map: Map<string, T>, key: string, value: T)
   {
     if (map.size >= 1000 && !map.has(key))
       map.delete(map.keys().next().value!);
     map.set(key, value);
   }
+
   private async pace(url: URL, signal: AbortSignal, crawlDelay = 0)
   {
     signal.throwIfAborted();
@@ -89,6 +88,7 @@ export class WebPageReader
       await this.timing.wait(wait, signal);
     signal.throwIfAborted();
   }
+
   private async allowed(url: URL, signal: AbortSignal)
   {
     let entry = this.robots.get(url.origin);
@@ -114,15 +114,9 @@ export class WebPageReader
       throw Error('WEB_ROBOTS: 来源 robots 禁止读取该页面');
     return (entry.rules.getCrawlDelay(this.userAgent) ?? 0) * 1000;
   }
+
   /** 每次捕获宿主 robots 策略，默认允许浏览器读取。策略分隔缓存；取消、公网和限流边界不变。 */
-  async fetch(
-    raw: PageReadInput,
-    signal: AbortSignal,
-    options:
-      {
-        browserRobotsPolicy?: BrowserRobotsPolicy
-      } = {}
-  )
+  async fetch(raw: PageReadInput, signal: AbortSignal, options: { browserRobotsPolicy?: BrowserRobotsPolicy } = {})
   {
     const policy = browserRobotsPolicy.parse(options.browserRobotsPolicy ?? 'allow');
     try
@@ -183,6 +177,7 @@ export class WebPageReader
       }
     }
   }
+
   /** 静态读取本身不启动浏览器；只有 fetch 的单一出口决定是否兜底，避免循环重试。 */
   private async fetchStatic(raw: PageReadInput, signal: AbortSignal, policy: BrowserRobotsPolicy)
   {

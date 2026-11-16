@@ -4,44 +4,116 @@
  * 设计原因：设置仅改变配置或未来周期默认值，不向页面暴露运行许可或保存凭据。请求已在总分派中解析。
  * 模型测试将显式引擎交给配置服务，使用与实际运行相同的兼容接口解析。
  */
-import type {ApplicationServices} from './services';
-import type {IpcHandlers} from '../../contracts/ipc-call';
-import type {SettingsIpcResponses} from '../../contracts/ipc-settings';
+import type { ApplicationServices } from './services';
+import type { IpcHandlers } from '../../contracts/ipc-call';
+import type { SettingsIpcResponses } from '../../contracts/ipc-settings';
 
 /** 仅装配本业务组；每项实际实现都受对应请求／响应约束。 */
-export function settingsIpcHandlers(app:ApplicationServices):IpcHandlers<keyof SettingsIpcResponses>{
-  const packages=()=>{if(!app.enginePackages)throw Error('源码开发模式不管理正式引擎包');return app.enginePackages};
+export function settingsIpcHandlers(app: ApplicationServices): IpcHandlers<keyof SettingsIpcResponses>
+{
+  const packages = () =>
+  {
+    if (!app.enginePackages)
+      throw Error('源码开发模式不管理正式引擎包');
+    return app.enginePackages
+  };
   return {
-    'engines.settings':()=>app.enginePackages?.read()??{managed:false,revision:0,items:[]},
-    'engines.check':async()=>{await packages().check();return packages().read()},
-    'engines.install':async args=>{await packages().install(args.kind,{revision:args.revision,identity:args.identity});return packages().read()},
-    'engines.configure':async args=>{await packages().setEnabled(args.kind,args.action==='enable',args.action==='remove',args.revision);return packages().read()},
-    'web.settings':()=>app.webSettings.read(),
-    'web.configure':args=>app.webSettings.configure(args),
-    'agent.mainSettings':args=>app.mainAgentSettings.read(args),
-    'agent.configureMain':args=>app.mainAgentSettings.configure(args),
-    'runtime.snapshot':async args=>{return app.runtime.snapshot();},
-    'runtime.read':async args=>{return app.runtime.read(args?.cursor);},
-    'admission.read':async args=>{return app.admission.read(args?.cursor);},
-    'admission.settings':async args=>{return app.admissionSettings.read();},
-    'admission.configure':async args=>{
-return app.admissionSettings.configure(args);},
-    'budget.settings':async args=>{return app.budgetSettings.read();},
-    'budget.configure':async args=>{
-return app.budgetSettings.configure(args);},
-    'models.list':async args=>{return app.models.list();},
-    'github.feedback.status':async args=>{return app.githubFeedback.auth.status();},
-    'github.feedback.begin':async args=>{
-return app.githubFeedback.auth.begin(args);},
-    'github.feedback.poll':async args=>{return app.githubFeedback.auth.poll(args);},
-    'github.feedback.cancel':async args=>{return app.githubFeedback.auth.cancel();},
-    'github.feedback.disconnect':async args=>{return app.githubFeedback.auth.disconnect();},
-    'models.save':async args=>{return app.models.save(args);},
-    'models.select':async args=>{return app.models.select(args.id);},
-    'models.remove':async args=>{return app.models.remove(args.id);},
-    'models.test':async args=>{return app.engineModels.test(args.id,args.modelId,args.engine);},
-    'models.testConnection':args=>args.kind==='embedding'?app.models.testEmbedding(args.id,args.modelId):app.models.test(args.id,args.modelId,{supportedApis:[args.api],fallbackApi:args.api}),
-    'models.discover':async args=>{return app.models.discover(args);},
-    'models.discoverDetails':async args=>{return app.models.discoverDetails(args);},
+    'engines.settings': () => app.enginePackages?.read() ?? { managed: false, revision: 0, items: [] },
+    'engines.check': async () =>
+    {
+      await packages().check();
+      return packages().read()
+    },
+    'engines.install': async args =>
+    {
+      await packages().install(args.kind, { revision: args.revision, identity: args.identity });
+      return packages().read()
+    },
+    'engines.configure': async args =>
+    {
+      await packages().setEnabled(args.kind, args.action === 'enable', args.action === 'remove', args.revision);
+      return packages().read()
+    },
+    'web.settings': () => app.webSettings.read(),
+    'web.configure': args => app.webSettings.configure(args),
+    'agent.mainSettings': args => app.mainAgentSettings.read(args),
+    'agent.configureMain': args => app.mainAgentSettings.configure(args),
+    'runtime.snapshot': async args =>
+    {
+      return app.runtime.snapshot();
+    },
+    'runtime.read': async args =>
+    {
+      return app.runtime.read(args?.cursor);
+    },
+    'admission.read': async args =>
+    {
+      return app.admission.read(args?.cursor);
+    },
+    'admission.settings': async args =>
+    {
+      return app.admissionSettings.read();
+    },
+    'admission.configure': async args =>
+    {
+      return app.admissionSettings.configure(args);
+    },
+    'budget.settings': async args =>
+    {
+      return app.budgetSettings.read();
+    },
+    'budget.configure': async args =>
+    {
+      return app.budgetSettings.configure(args);
+    },
+    'models.list': async args =>
+    {
+      return app.models.list();
+    },
+    'github.feedback.status': async args =>
+    {
+      return app.githubFeedback.auth.status();
+    },
+    'github.feedback.begin': async args =>
+    {
+      return app.githubFeedback.auth.begin(args);
+    },
+    'github.feedback.poll': async args =>
+    {
+      return app.githubFeedback.auth.poll(args);
+    },
+    'github.feedback.cancel': async args =>
+    {
+      return app.githubFeedback.auth.cancel();
+    },
+    'github.feedback.disconnect': async args =>
+    {
+      return app.githubFeedback.auth.disconnect();
+    },
+    'models.save': async args =>
+    {
+      return app.models.save(args);
+    },
+    'models.select': async args =>
+    {
+      return app.models.select(args.id);
+    },
+    'models.remove': async args =>
+    {
+      return app.models.remove(args.id);
+    },
+    'models.test': async args =>
+    {
+      return app.engineModels.test(args.id, args.modelId, args.engine);
+    },
+    'models.testConnection': args => args.kind === 'embedding' ? app.models.testEmbedding(args.id, args.modelId) : app.models.test(args.id, args.modelId, { supportedApis: [args.api], fallbackApi: args.api }),
+    'models.discover': async args =>
+    {
+      return app.models.discover(args);
+    },
+    'models.discoverDetails': async args =>
+    {
+      return app.models.discoverDetails(args);
+    },
   };
 }

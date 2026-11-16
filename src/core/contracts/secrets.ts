@@ -6,6 +6,8 @@
 export interface SecretCipher
 {
   available(): boolean;
+
   encrypt(value: string): string;
+
   decrypt(value: string): string;
 }

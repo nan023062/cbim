@@ -32,6 +32,7 @@ const snapshotScript = `(() => {
   return {title:document.title.slice(0,500),text,cut,password,ready:document.readyState==='complete',
     challenge:!!document.querySelector('#cf-challenge-running,#challenge-form,.g-recaptcha') || /^(just a moment|access denied|attention required)/i.test(document.title)};
 })()`;
+
 const frameSnapshot = z.object({
   title: z.string().max(500),
   text: z.string().max(40000),
@@ -40,6 +41,7 @@ const frameSnapshot = z.object({
   ready: z.boolean(),
   challenge: z.boolean(),
 });
+
 const policy =
   "default-src http: https: data: blob: 'unsafe-inline' 'unsafe-eval'; connect-src http: https:; object-src 'none'; worker-src 'none'; form-action 'none'";
 
@@ -47,17 +49,15 @@ const policy =
 export class ElectronBrowserReader implements BrowserReader
 {
   private readonly prefix = `public-web-${randomUUID()}`;
+
   private readonly busy = new Set<number>();
+
   constructor(private readonly transport?: BrowserProxyTransport)
   {
   }
 
   /** 独占匿名会话。所有 HTTP 资源逐次 authorize，文档额外节流；只允许 GET，不承诺 canvas 像素识别。 */
-  async read(
-    raw: string,
-    signal: AbortSignal,
-    authorize: (url: string, signal: AbortSignal, document?: boolean) => Promise<void>
-  ): Promise<BrowserPage>
+  async read(raw: string, signal: AbortSignal, authorize: (url: string, signal: AbortSignal, document?: boolean) => Promise<void>): Promise<BrowserPage>
   {
     const url = publicUrl(raw);
     signal.throwIfAborted();

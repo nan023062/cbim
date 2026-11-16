@@ -7,68 +7,151 @@
  * 工具目录及调用端口契约来自上层 engine-tools；此文件只维护 Pi 的 HTTP/扩展适配与一次性许可。
  */
 import http from 'node:http';
-import {toolOutcome,toolReturnedResult,toolFailureResult} from '../../../tools/rules/outcome';
-import {randomBytes,timingSafeEqual} from 'node:crypto';
-import type {ToolCall,ToolDecision} from '../../rules/types';
-import {validateToolResult,type ToolResult} from '../../../tools/rules/results';
-import {Fault,fail} from '../../../../core/errors';
-import {checkedRunInputSource,type RunInputSource} from '../../rules/input-source';
+import { toolOutcome, toolReturnedResult, toolFailureResult } from '../../../tools/rules/outcome';
+import { randomBytes, timingSafeEqual } from 'node:crypto';
+import type { ToolCall, ToolDecision } from '../../rules/types';
+import { validateToolResult, type ToolResult } from '../../../tools/rules/results';
+import { Fault, fail } from '../../../../core/errors';
+import { checkedRunInputSource, type RunInputSource } from '../../rules/input-source';
+import type { EngineToolsPort as KnowledgeBridge } from '../../rules/engine-tools';
 
-import type {EngineToolsPort as KnowledgeBridge} from '../../rules/engine-tools';
-export type {EngineToolSchema as KnowledgeToolSchema,EngineToolsPort as KnowledgeBridge} from '../../rules/engine-tools';
+export type { EngineToolSchema as KnowledgeToolSchema, EngineToolsPort as KnowledgeBridge } from '../../rules/engine-tools';
+
 /** 临时桥只接受本次实例令牌；工具授权绑定调用 ID、名称和原始参数。 */
-export async function openBridge(knowledge:KnowledgeBridge,beforeTool:(call:ToolCall)=>Promise<ToolDecision>,onContext?:(usage:{tokens:number|null;contextWindow:number})=>Promise<void>,onRequestLimit?:(limit:number)=>Promise<void>,onTools?:(catalog:{expected:string[];active:string[];missing:string[]})=>Promise<void>){
-  const tools=await knowledge.list();
-  if(tools.some(t=>!/^cbim_[a-z0-9_]+$/.test(t.name)))throw Error('CBIM 工具名必须使用 cbim_ 前缀');
-  const names=new Set(tools.map(t=>t.name)),token=randomBytes(32).toString('hex');
+export async function openBridge(knowledge: KnowledgeBridge, beforeTool: (call: ToolCall) => Promise<ToolDecision>, onContext?: (usage: { tokens: number | null; contextWindow: number }) => Promise<void>, onRequestLimit?: (limit: number) => Promise<void>, onTools?: (catalog: { expected: string[]; active: string[]; missing: string[] }) => Promise<void>)
+{
+  const tools = await knowledge.list();
+  if (tools.some(t => !/^cbim_[a-z0-9_]+$/.test(t.name)))
+    throw Error('CBIM 工具名必须使用 cbim_ 前缀');
+  const names = new Set(tools.map(t => t.name)),
+    token = randomBytes(32).toString('hex');
   // One authorization per tool call, bound to exact input; never infer trust from its name alone.
-  const grants=new Map<string,{name:string;input:string}>();
-  const server=http.createServer(async(req,res)=>{
-    const auth=Buffer.from(req.headers.authorization||''),expected=Buffer.from('Bearer '+token);
-    if(req.headers.origin||auth.length!==expected.length||!timingSafeEqual(auth,expected)){res.writeHead(403).end();return}
-    const controller=new AbortController();res.on('close',()=>{if(!res.writableEnded)controller.abort()});
-    try{
-      if(req.method==='GET'&&req.url==='/catalog'){res.setHeader('Content-Type','application/json');res.end(JSON.stringify(tools));return}
-      if(req.method!=='POST'||!['/gate','/call','/context','/request-limit','/tools'].includes(req.url||'')){res.writeHead(404).end();return}
-      let body='';for await(const chunk of req){body+=chunk;if(Buffer.byteLength(body)>4*1024*1024)throw Error('工具参数过大')}
-      if(req.url==='/tools'){
-        const value=JSON.parse(body);
-        if(!value||Object.keys(value).length!==1||!Array.isArray(value.active)||value.active.length>2048||value.active.some((name:unknown)=>typeof name!=='string'||!/^[a-z][a-z0-9_-]{0,127}$/.test(name))||new Set(value.active).size!==value.active.length)fail('TOOL_CATALOG_INVALID','活动工具清单无效');
-        const active:string[]=[...value.active].sort(),expected=[...names].sort(),missing=expected.filter(name=>!active.includes(name));
-        await onTools?.({expected,active,missing});
-        if(missing.length)fail('TOOL_CATALOG_MISMATCH','本轮工具装配不完整，请重启 CBIM 并查看运行日志；缺少：'+missing.join(', '));
-        res.setHeader('Content-Type','application/json');res.end('{}');return;
+  const grants = new Map<string,
+    {
+      name: string;
+
+      input: string
+    }>();
+  const server = http.createServer(async (req, res) =>
+  {
+    const auth = Buffer.from(req.headers.authorization || ''),
+      expected = Buffer.from('Bearer ' + token);
+    if (req.headers.origin || auth.length !== expected.length || !timingSafeEqual(auth, expected))
+    {
+      res.writeHead(403).end();
+      return
+    }
+    const controller = new AbortController();
+    res.on('close', () =>
+    {
+      if (!res.writableEnded)
+        controller.abort()
+    });
+    try
+    {
+      if (req.method === 'GET' && req.url === '/catalog')
+      {
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify(tools));
+        return
       }
-      if(req.url==='/request-limit'){
-        const value=JSON.parse(body);if(!Number.isInteger(value.maxTokens)||value.maxTokens<1||value.maxTokens>2000000)throw Error('无效请求额度');
-        await onRequestLimit?.(value.maxTokens);res.setHeader('Content-Type','application/json');res.end('{}');return;
+      if (req.method !== 'POST' || !['/gate', '/call', '/context', '/request-limit', '/tools'].includes(req.url || ''))
+      {
+        res.writeHead(404).end();
+        return
       }
-      if(req.url==='/context'){
-        const value=JSON.parse(body);
-        if(!Number.isFinite(value.contextWindow)||value.contextWindow<=0||!(value.tokens===null||Number.isFinite(value.tokens)&&value.tokens>=0))throw Error('无效上下文计量');
-        await onContext?.({tokens:value.tokens,contextWindow:value.contextWindow});res.setHeader('Content-Type','application/json');res.end('{}');return;
+      let body = '';
+      for await (const chunk of req)
+      {
+        body += chunk;
+        if (Buffer.byteLength(body) > 4 * 1024 * 1024)
+          throw Error('工具参数过大')
       }
-      const call=JSON.parse(body) as ToolCall;
-      if(typeof call.id!=='string'||typeof call.name!=='string'||!call.input||typeof call.input!=='object'||Array.isArray(call.input))throw Error('无效工具调用');
-      let result:unknown;
-      if(req.url==='/gate'){
-        const decision=await beforeTool(call);result=decision;
-        if(decision.allow&&names.has(call.name))grants.set(call.id,{name:call.name,input:JSON.stringify(call.input)});
-      }else{
-        const grant=grants.get(call.id);grants.delete(call.id);
-        if(!names.has(call.name)||!grant||grant.name!==call.name||grant.input!==JSON.stringify(call.input))throw Error('工具调用未获本次执行授权');
-        result=toolReturnedResult(validateToolResult(call.name,await knowledge.call(call.name,call.input,controller.signal,call.id)) as ToolResult);
+      if (req.url === '/tools')
+      {
+        const value = JSON.parse(body);
+        if (!value || Object.keys(value).length !== 1 || !Array.isArray(value.active) || value.active.length > 2048 || value.active.some((name: unknown) => typeof name !== 'string' || !/^[a-z][a-z0-9_-]{0,127}$/.test(name)) || new Set(value.active).size !== value.active.length)
+          fail('TOOL_CATALOG_INVALID', '活动工具清单无效');
+        const active: string[] = [...value.active].sort(),
+          expected = [...names].sort(),
+          missing = expected.filter(name => !active.includes(name));
+        await onTools?.({ expected, active, missing });
+        if (missing.length)
+          fail('TOOL_CATALOG_MISMATCH', '本轮工具装配不完整，请重启 CBIM 并查看运行日志；缺少：' + missing.join(', '));
+        res.setHeader('Content-Type', 'application/json');
+        res.end('{}');
+        return;
       }
-      res.setHeader('Content-Type','application/json');res.end(JSON.stringify(result));
-    }catch(error){res.writeHead(400,{'Content-Type':'application/json'}).end(JSON.stringify({...JSON.parse((toolFailureResult(error).content[0] as {text:string}).text),error:error instanceof Error?error.message:String(error)}))}
+      if (req.url === '/request-limit')
+      {
+        const value = JSON.parse(body);
+        if (!Number.isInteger(value.maxTokens) || value.maxTokens < 1 || value.maxTokens > 2000000)
+          throw Error('无效请求额度');
+        await onRequestLimit?.(value.maxTokens);
+        res.setHeader('Content-Type', 'application/json');
+        res.end('{}');
+        return;
+      }
+      if (req.url === '/context')
+      {
+        const value = JSON.parse(body);
+        if (!Number.isFinite(value.contextWindow) || value.contextWindow <= 0 || !(value.tokens === null || Number.isFinite(value.tokens) && value.tokens >= 0))
+          throw Error('无效上下文计量');
+        await onContext?.({ tokens: value.tokens, contextWindow: value.contextWindow });
+        res.setHeader('Content-Type', 'application/json');
+        res.end('{}');
+        return;
+      }
+      const call = JSON.parse(body) as ToolCall;
+      if (typeof call.id !== 'string' || typeof call.name !== 'string' || !call.input || typeof call.input !== 'object' || Array.isArray(call.input))
+        throw Error('无效工具调用');
+      let result: unknown;
+      if (req.url === '/gate')
+      {
+        const decision = await beforeTool(call);
+        result = decision;
+        if (decision.allow && names.has(call.name))
+          grants.set(call.id, { name: call.name, input: JSON.stringify(call.input) });
+      }
+      else
+      {
+        const grant = grants.get(call.id);
+        grants.delete(call.id);
+        if (!names.has(call.name) || !grant || grant.name !== call.name || grant.input !== JSON.stringify(call.input))
+          throw Error('工具调用未获本次执行授权');
+        result = toolReturnedResult(validateToolResult(call.name, await knowledge.call(call.name, call.input, controller.signal, call.id)) as ToolResult);
+      }
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify(result));
+    }
+    catch (error)
+    {
+      res.writeHead(400, { 'Content-Type': 'application/json' }).end(JSON.stringify({
+        ...JSON.parse((toolFailureResult(error).content[0] as
+          {
+            text: string
+          }).text), error: error instanceof Error ? error.message : String(error)
+      }))
+    }
   });
-  await new Promise<void>((resolve,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',resolve)});
-  const port=(server.address() as import('node:net').AddressInfo).port;
-  return {url:`http://127.0.0.1:${port}`,token,tools,close:async()=>{grants.clear();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
+  await new Promise<void>((resolve, reject) =>
+  {
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', resolve)
+  });
+  const port = (server.address() as import('node:net').AddressInfo).port;
+  return {
+    url: `http://127.0.0.1:${port}`, token, tools, close: async () =>
+    {
+      grants.clear();
+      server.closeAllConnections();
+      await new Promise<void>(resolve => server.close(() => resolve()))
+    }
+  };
 }
 
 /** 受控扩展正文；可信回传元数据由生成器写入，普通运行为空，不从用户文字识别“内部消息”。 */
-const bridgeExtensionBody=`
+const bridgeExtensionBody = `
 export default async function(pi) {
   const url=process.env.CBIM_LOOP_BRIDGE_URL, token=process.env.CBIM_LOOP_BRIDGE_TOKEN;
   delete process.env.CBIM_LOOP_BRIDGE_URL; delete process.env.CBIM_LOOP_BRIDGE_TOKEN;
@@ -127,8 +210,10 @@ export default async function(pi) {
 `;
 
 /** 为单轮生成扩展；来源经过结构校验并仅含标识，不携带凭据或依赖模型传入的可信字段。 */
-export function bridgeExtensionForSource(source?:RunInputSource){
-  return 'const returnedOutcome='+JSON.stringify(toolOutcome('returned'))+';const rejectedOutcome='+JSON.stringify(toolOutcome('rejected'))+';const unknownOutcome='+JSON.stringify(toolOutcome('unknown'))+';\n'+'const trustedInputSource='+JSON.stringify(source?checkedRunInputSource(source):null)+';\n'+bridgeExtensionBody;
+export function bridgeExtensionForSource(source?: RunInputSource)
+{
+  return 'const returnedOutcome=' + JSON.stringify(toolOutcome('returned')) + ';const rejectedOutcome=' + JSON.stringify(toolOutcome('rejected')) + ';const unknownOutcome=' + JSON.stringify(toolOutcome('unknown')) + ';\n' + 'const trustedInputSource=' + JSON.stringify(source ? checkedRunInputSource(source) : null) + ';\n' + bridgeExtensionBody;
 }
+
 /** 普通用户对话保持原有扩展入口，不拦截输入。 */
-export const bridgeExtension=bridgeExtensionForSource();
+export const bridgeExtension = bridgeExtensionForSource();

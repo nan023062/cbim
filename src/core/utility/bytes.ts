@@ -12,7 +12,6 @@ export class ByteLimitError extends RangeError
   // #region 公开成员
 
   // #region 字段
-
   /** 本次读取允许收集的最大字节数。 */
   public readonly maxBytes: number;
 
@@ -43,7 +42,6 @@ export class ByteUtils
   // #region 私有成员
 
   // #region 构造函数
-
   /** 算法只依赖显式输入，不允许创建工具实例。 */
   private constructor()
   {
@@ -58,19 +56,12 @@ export class ByteUtils
   // #region 方法
 
   /**
-   * 消费完整流才返回；超限、取消或流错误均不交付半截正文。null 正文视为空字节。
-   * maxBytes 是非负安全整数，signal 的原 reason 保留；非法上限或预先取消不取得 reader。
-   * 失败请求 cancel 并释放锁/监听；底层 cancel 失败不覆盖原错误，也不代表网络/进程已经退出。
-   * 分块复制后合并，保留字节视图范围；存储 O(maxBytes)，不适用于大文件落盘下载。
-   */
-  public static async readBoundedBytes(
-    body: ReadableStream<Uint8Array> | null,
-    options:
-      {
-        maxBytes: number;
-        signal?: AbortSignal;
-      }
-  ): Promise<Uint8Array>
+     * 消费完整流才返回；超限、取消或流错误均不交付半截正文。null 正文视为空字节。
+     * maxBytes 是非负安全整数，signal 的原 reason 保留；非法上限或预先取消不取得 reader。
+     * 失败请求 cancel 并释放锁/监听；底层 cancel 失败不覆盖原错误，也不代表网络/进程已经退出。
+     * 分块复制后合并，保留字节视图范围；存储 O(maxBytes)，不适用于大文件落盘下载。
+     */
+  public static async readBoundedBytes(body: ReadableStream<Uint8Array> | null, options: { maxBytes: number; signal?: AbortSignal; }): Promise<Uint8Array>
   {
     const { maxBytes, signal } = options;
     if (!Number.isSafeInteger(maxBytes) || maxBytes < 0)

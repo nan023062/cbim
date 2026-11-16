@@ -16,11 +16,12 @@ export class Application extends ApplicationRuntime implements ApplicationServic
   // #region 公开成员
 
   // #region 方法
-
   /** 已知操作返回配对的响应类型；请求仍交由路由进行运行时解析。 */
   public dispatch<A extends IpcAction>(action: A, args?: unknown): Promise<IpcResponse<A>>;
+
   /** 动态操作名只能取得 unknown，不能绕过解析取得未经核实的响应类型。 */
   public dispatch(action: string, args?: unknown): Promise<unknown>;
+
   /** 将当前业务实例交给独立路由；不另建服务状态，不吞掉原解析或业务错误。 */
   public dispatch(action: string, args: unknown = {})
   {

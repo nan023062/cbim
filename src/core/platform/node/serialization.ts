@@ -9,6 +9,7 @@ import { JsonUtils } from '../../utility';
 
 /** 既有业务摘要入口，复用唯一 Node SHA-256 实现。 */
 export { sha256 as hash } from './digest';
+
 /** 既有格式化入口，直接保留静态方法身份和原字节协议。 */
 export const json = JsonUtils.formatJson;
 

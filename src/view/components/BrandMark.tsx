@@ -5,6 +5,7 @@
 import mark from '../../../assets/branding/cbim-mark.svg';
 
 /** 邻近已有产品名称时使用 decorative，避免屏幕阅读器重复读出名称。 */
-export function BrandMark({size=28,decorative=false}:{size?:number;decorative?:boolean}){
-  return <img src={mark} width={size} height={size} alt={decorative?'':'CBIM Assistant'} draggable={false} style={{display:'block',flexShrink:0}}/>;
+export function BrandMark({ size = 28, decorative = false }: { size?: number; decorative?: boolean })
+{
+  return <img src={mark} width={size} height={size} alt={decorative ? '' : 'CBIM Assistant'} draggable={false} style={{ display: 'block', flexShrink: 0 }} />;
 }

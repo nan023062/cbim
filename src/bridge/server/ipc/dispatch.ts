@@ -14,36 +14,52 @@
  * 原命令报告：客户端只选择 workspace/root/run/call；已有服务核原 canonical 与 Store，不隐式打开工作区或补充提交证明。
  * 影响处置：五个桌面入口共用只读观察和不可变附录；只有明确保存注入本机 actor，当前文件事实不清除原 unknown。
  */
-import {parseApplicationRequest} from './request';
-import type {ApplicationServices} from './services';
-import {fail} from '../../../core/errors';
-import {isIpcAction,type IpcHandlers,type ApplicationIpcAction,type IpcAction,type IpcResponse} from '../../contracts/ipc-call';
-import {desktopIpcRequests} from '../../contracts/ipc-desktop';
-import {agentHistoryIpcHandlers} from './agent-history';
-import {peopleIpcHandlers} from './people-handlers';
-import {governanceIpcHandlers} from './governance-handlers';
-import {dispatchIpcHandlers} from './dispatch-handlers';
-import {settingsIpcHandlers} from './settings-handlers';
-import {loopIpcHandlers} from './loop-handlers';
-import {chatIpcHandlers} from './chat-handlers';
-import {resourcesIpcHandlers} from './resources-handlers';
-import {workspaceIpcHandlers} from './workspace-handlers';
-import {automationIpcHandlers} from './automation-actions';
+import { parseApplicationRequest } from './request';
+import type { ApplicationServices } from './services';
+import { fail } from '../../../core/errors';
+import { isIpcAction, type IpcHandlers, type ApplicationIpcAction, type IpcAction, type IpcResponse } from '../../contracts/ipc-call';
+import { desktopIpcRequests } from '../../contracts/ipc-desktop';
+import { agentHistoryIpcHandlers } from './agent-history';
+import { peopleIpcHandlers } from './people-handlers';
+import { governanceIpcHandlers } from './governance-handlers';
+import { dispatchIpcHandlers } from './dispatch-handlers';
+import { settingsIpcHandlers } from './settings-handlers';
+import { loopIpcHandlers } from './loop-handlers';
+import { chatIpcHandlers } from './chat-handlers';
+import { resourcesIpcHandlers } from './resources-handlers';
+import { workspaceIpcHandlers } from './workspace-handlers';
+import { automationIpcHandlers } from './automation-actions';
 
-function handlers(app:ApplicationServices):IpcHandlers<ApplicationIpcAction>{return {
- ...peopleIpcHandlers(app),...governanceIpcHandlers(app),...dispatchIpcHandlers(app),...settingsIpcHandlers(app),...loopIpcHandlers(app),...chatIpcHandlers(app),...resourcesIpcHandlers(app),...workspaceIpcHandlers(app),
- ...agentHistoryIpcHandlers(app),
- ...automationIpcHandlers(app),
-}}
-function isApplicationAction(action:string):action is ApplicationIpcAction{return isIpcAction(action)&&!Object.hasOwn(desktopIpcRequests,action)}
-async function invoke<A extends ApplicationIpcAction>(app:ApplicationServices,action:A,input:unknown):Promise<IpcResponse<A>>{
- const request=parseApplicationRequest(action,input,app.isStopping);return handlers(app)[action](request);
+function handlers(app: ApplicationServices): IpcHandlers<ApplicationIpcAction>
+{
+  return {
+    ...peopleIpcHandlers(app), ...governanceIpcHandlers(app), ...dispatchIpcHandlers(app), ...settingsIpcHandlers(app), ...loopIpcHandlers(app), ...chatIpcHandlers(app), ...resourcesIpcHandlers(app), ...workspaceIpcHandlers(app),
+    ...agentHistoryIpcHandlers(app),
+    ...automationIpcHandlers(app),
+  }
 }
+
+function isApplicationAction(action: string): action is ApplicationIpcAction
+{
+  return isIpcAction(action) && !Object.hasOwn(desktopIpcRequests, action)
+}
+
+async function invoke<A extends ApplicationIpcAction>(app: ApplicationServices, action: A, input: unknown): Promise<IpcResponse<A>>
+{
+  const request = parseApplicationRequest(action, input, app.isStopping);
+  return handlers(app)[action](request);
+}
+
 /** 原始传输入口只接受 unknown；按已登记操作解析，业务校验和权限仍在服务内。 */
-export function dispatchApplication<A extends IpcAction>(app:ApplicationServices,action:A,input?:unknown):Promise<IpcResponse<A>>;
-export function dispatchApplication(app:ApplicationServices,action:string,input?:unknown):Promise<unknown>;
-export async function dispatchApplication(app:ApplicationServices,action:string,input:unknown={}){
- if(!isApplicationAction(action))fail('ACTION','未知操作');
- if(action==='loop.start')fail('OWNER_DISPATCH_REQUIRED','业务执行必须通过当前目标计划和负责岗位派发；旧任务历史仍可读取');
- return invoke(app,action,input);
+export function dispatchApplication<A extends IpcAction>(app: ApplicationServices, action: A, input?: unknown): Promise<IpcResponse<A>>;
+
+export function dispatchApplication(app: ApplicationServices, action: string, input?: unknown): Promise<unknown>;
+
+export async function dispatchApplication(app: ApplicationServices, action: string, input: unknown = {})
+{
+  if (!isApplicationAction(action))
+    fail('ACTION', '未知操作');
+  if (action === 'loop.start')
+    fail('OWNER_DISPATCH_REQUIRED', '业务执行必须通过当前目标计划和负责岗位派发；旧任务历史仍可读取');
+  return invoke(app, action, input);
 }

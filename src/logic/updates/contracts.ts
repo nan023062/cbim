@@ -2,26 +2,70 @@
  * 作用定位：正式桌面版本、后台预下载进度与用户确认重启安装的公开 IPC 数据。
  * 设计原因：页面只展示版本和进度，不接收安装路径、执行命令、更新源配置或 GitHub 凭据。
  */
-export interface DesktopRelease {
-  version:string;tag:string;notes:string;publishedAt:string;
+export interface DesktopRelease
+{
+  version: string;
+
+  tag: string;
+
+  notes: string;
+
+  publishedAt: string;
+
   /** 缺省为旧安装器通道；资源版本必须精确匹配 version 所指冷包。 */
-  delivery?:'installer'|'resources';resourceVersion?:number;
+  delivery?: 'installer' | 'resources';
+
+  resourceVersion?: number;
 }
+
 /** ready 表示包已校验、等待用户确认重启（也包括安装失败后重试）；installing 包含排空，须在新进程核实 currentVersion/currentResourceVersion 才能确认实际装载版本。 */
-export interface DesktopUpdateStatus {
-  currentVersion:string;currentNotes:string;enabled:boolean;
+export interface DesktopUpdateStatus
+{
+  currentVersion: string;
+
+  currentNotes: string;
+
+  enabled: boolean;
+
   /** 当前真实装载的 R；旧安装包不伪造资源版本。 */
-  currentResourceVersion?:number;
+  currentResourceVersion?: number;
+
   /** 旧冷宿主兼容字段，界面忽略此值；引擎准备由 engines.settings 单独展示，不影响 C/R 更新。 */
-  enginePreparations?:{engine:string;version:string;progress?:number;error?:string}[];
-  phase:'disabled'|'idle'|'checking'|'current'|'available'|'downloading'|'ready'|'installing';
-  release?:DesktopRelease;progress?:number;
+  enginePreparations?:
+  {
+    engine: string;
+
+    version: string;
+
+    progress?: number;
+
+    error?: string
+  }[];
+
+  phase: 'disabled' | 'idle' | 'checking' | 'current' | 'available' | 'downloading' | 'ready' | 'installing';
+
+  release?: DesktopRelease;
+
+  progress?: number;
+
   /** 最近一次完成检查的 ISO 时间，包含失败尝试；结果由 phase/error 区分。 */
-  checkedAt?:string;error?:string;
+  checkedAt?: string;
+
+  error?: string;
 }
+
 /** 引擎菜单的公开投影，不包含缓存路径、下载地址或凭据；版本由签名清单固定。 */
-export interface ManagedEngineStatus {
-  engine:'pi'|'claude-code'|'codex'|'memory';
-  state:'install'|'update'|'ready'|'preparing'|'failed'|'unavailable'|'bundled';
-  version?:string;installedVersion?:string;progress?:number;error?:string;
+export interface ManagedEngineStatus
+{
+  engine: 'pi' | 'claude-code' | 'codex' | 'memory';
+
+  state: 'install' | 'update' | 'ready' | 'preparing' | 'failed' | 'unavailable' | 'bundled';
+
+  version?: string;
+
+  installedVersion?: string;
+
+  progress?: number;
+
+  error?: string;
 }

@@ -3,6 +3,9 @@
  * 设计原因：输入校验、浏览器端口和正文算法不加载网络或 Electron；平台实现单向组合本入口。
  */
 export { pageReadInput, browserRobotsPolicy } from './contracts';
+
 export type { PageReadInput, BrowserRobotsPolicy } from './contracts';
+
 export type { BrowserReader, BrowserPage } from './browser-reader';
+
 export { htmlMarkdown, truncateParagraphs } from './web-content';

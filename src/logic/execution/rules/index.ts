@@ -4,8 +4,13 @@
  * 设计原因：公开引擎无关执行入口；具体引擎由装配层直接导入，避免普通领域消费者加载 Pi 依赖。
  */
 export * from './types';
-export type {RunStorage,ExecutionJournal} from './storage';
+
+export type { RunStorage, ExecutionJournal } from './storage';
+
 export * from './runtime/runtime';
+
 export * from './member-run';
+
 export * from './input-source';
+
 export * from './conversation-binding';

@@ -3024,3 +3024,10 @@ S5–S7：同步源码注释、8 个变更目录及父目录的 CONTRACT/生成�
 迁移原 controlled-file-pi 全部 6 项，保留真实 utility 部分写、坏回包、写前停止、备份原字节、原 canonical/native 不改、显式补偿、处置 CAS 与重启零重放。异常后 5 种写入/命令/交付绕过仍被拒绝。发现新问题工具被原只读屏障遗漏，RunControlledFile 允许 cbim_ask_user_question 面向直接调用方；答复不清除屏障，最终仍 interrupted。首次夹具单选不符合原问题 Schema，改为两个有效选项；原 unknown 工具回包按原状态核对而非误断言为普通 error。
 
 验证：pnpm exec vitest run tests/controlled-effect-service.test.ts tests/effect-observation-service.test.ts tests/effect-observation-core.test.ts tests/effect-disposition-store.test.ts --reporter=default --reporter=json --outputFile=build/recursive-effect-contracts.json，61/61 通过；追加 -t 'persists recursive effect' 1/1 通过，覆盖登记缺失/活动/跨周期拒绝。pnpm exec vitest run tests/controlled-file-runtime.test.ts --reporter=default --reporter=json --outputFile=build/recursive-controlled-question.json，14/14 通过。集成首批 build/recursive-controlled-effects.json 正常/停止 2 项通过；修正异常夹具及问题入口后，-t 'partial|bad-wire' 输出 build/recursive-controlled-effects-errors.json，4/4 通过，共 6 个不同场景；没有永久跳过用例。pnpm typecheck、check:test-modules、check:architecture 通过。同步 evidence/runtime、tasks/rules、execution/rules/capabilities 注释、CONTRACT 及生成类图。完整 CI 和发布仍未通过，后续按实际失败继续迁移。
+
+
+## 2026-11-16 · #94 主调用知识契约测试迁移
+
+基线 f532d80a。knowledge-contract、knowledge-effect-object、knowledge-refresh 三个确定性供应商退出旧 cbim_goal_plan/review 和 cbim_dispatch_task 假设，按新主会话直接执行原知识事务。移除的旧目标回合不作为知识提交的授权或验收；仍完整验证原目录/Schema、无效预览、未找到诊断、审批与停止、精确一次提交、坏输出原 failed 回执、事务查询、处置幂等、native/canonical 原字节及重启零重放。新的根 completed 表示主会话正常返回说明，异常提交的工具回执仍 failed；不将其等同于旧 goal_review 接受或业务验收通过。
+
+pnpm exec vitest run tests/knowledge-effect-pi.test.ts tests/knowledge-contract-pi.test.ts --reporter=default --reporter=json --outputFile=build/recursive-knowledge-effects.json：6/6 通过。仅测试供应商和断言迁移，没有修改产品源码。初次 current-main-effects.json 另有责任工具缺失失败，后续单独修复主上下文端口，不把该项记为通过。

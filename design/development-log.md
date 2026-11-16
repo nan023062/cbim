@@ -1,3 +1,11 @@
+## 2026-11-16：清除源码折叠分区标记并修正方法命名规范
+
+- 来源：用户要求所有方法改用大驼峰，并进一步要求现有折叠分区标记全部删除、不再作为格式要求；基线 `a3a90d79`，无关联 Issue。方法命名本片更新规范与示例，源码修改仅清除分区标记及相邻多余空行。
+- 扫描 782 个源码脚本，从 10 个文件删除 142 处标记：core/utility 的六个文件、core/platform/node/serialization.ts、Logic/Bridge 两个 Application 入口及 evidence/runtime/agent-artifact-verification.ts。保留访问级别、成员顺序、方法签名、字段初值、成员说明与业务执行内容。
+- 写入前验证 10 个文件的语法树、字面量及声明类别一致，全部非分区注释文本和顺序一致；检索 src、docs、AGENTS、三个宿主入口、scripts 和 tests 无残留分区标记。一次性清理脚本、快照与报告留在忽略的 build，首次试算因未遍历结束符前注释而停止，修正注释收集后才统一写入源码。
+- 文档 05 与 AGENTS 将方法命名改为 PascalCase，覆盖实例、静态及接口方法；同步 Read、Redact、Increment 等示例，字段和属性沿既有规则。root CONTRACT 改为按成员顺序、访问修饰符、空行及中文说明阅读，格式与命名引用文档 05；重新生成根 ARCHITECTURE。其余目录类图检查无差异，未虚构节点或修改真实依赖。
+- 验证：`node build/remove-source-region-comments.cjs` 完成清理及 AST／其余注释等价检查；`node build/check-format-document.cjs` 的 8 项规则、4 个 TypeScript 示例、3 个引用及围栏检查通过；`node scripts/source-architecture.mjs --check` 为 135 目录／837 代码样式文件、0 漂移；`git -c core.safecrlf=false diff --check` 通过。仅注释、空行及文档变化，未运行产品测试、项目类型检查、依赖检查、构建或桌面验收；未跟踪的 `.idea/` 保持原状。
+
 ## 2026-11-16：补充箭头函数整体单行规则
 
 - 来源：用户明确箭头函数也保持一行，不主动换行；基线 `d0aee7bc`，无关联 Issue。本次继续维护格式规范，未批量修改源码。

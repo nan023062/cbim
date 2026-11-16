@@ -3,26 +3,14 @@
  * 设计原因：多个领域图复用无环判断，边选择与领域错误分别维护；与前端算法独立演进。
  * 实现形式：GraphUtils 无状态静态工具类；图结构只存在于单次调用中。
  */
-// #region 公开工具
 
 /** 有向图结构算法；领域边选择和错误码由消费者决定。 方法不依赖 this，可作为回调传递。 */
 export class GraphUtils
 {
-  // #region 私有成员
-
-  // #region 构造函数
   /** 算法只依赖显式输入，不允许创建工具实例。 */
   private constructor()
   {
   }
-
-  // #endregion
-
-  // #endregion
-
-  // #region 公开成员
-
-  // #region 方法
 
   /**
      * 对唯一节点及完整端点执行拓扑遍历；平行边逐条计数，自环返回 false，空图返回 true。
@@ -54,10 +42,4 @@ export class GraphUtils
     }
     return queue.length === nodes.length;
   }
-
-  // #endregion
-
-  // #endregion
 }
-
-// #endregion

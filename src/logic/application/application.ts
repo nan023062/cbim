@@ -51,12 +51,9 @@ import { RepositoryConnections } from '../connectors/service/repository-connecti
 import type { WorkspaceMembers } from '../team/service/workspace-members';
 import type { ModuleOwnerships } from '../workspace/service/module-ownerships';
 
-// #region 内部类型
-
 /** 宿主可选能力的装配契约；不从页面或模型参数构造。 */
 interface ApplicationPlatform
 {
-  // #region 契约成员
   /** 真实文件工人传输；缺省时不开放受控写入，查询已有记录仍可用。 */
   controlledFiles?: ControlledFileTransport;
 
@@ -68,20 +65,11 @@ interface ApplicationPlatform
 
   /** 静态网页不足时使用的浏览器适配；Node 宿主可不提供。 */
   webBrowser?: BrowserReader;
-
-  // #endregion
 }
-
-// #endregion
-
-// #region 公开类型
 
 /** 业务服务的唯一生命周期所有者；Bridge 子类只补充通信分发，不复制本类状态。 */
 export class Application
 {
-  // #region 私有成员
-
-  // #region 字段
   /** 可信宿主注入的平台能力；普通对话选项不能替换文件传输或受管引擎解析。 */
   private readonly platform: ApplicationPlatform;
 
@@ -142,10 +130,6 @@ export class Application
   /** 复用当前退出过程；仅特定排空未完成错误允许再次尝试原关闭。 */
   private shutdownPromise?: Promise<void>;
 
-  // #endregion
-
-  // #region 方法
-
   /** 退役当前准入代际并移除撤销闭包；真实运行仍通过原释放函数归还名额。 */
   private retireAdmission(id: string)
   {
@@ -200,14 +184,6 @@ export class Application
       fail('WORKSPACE_STOPPING', '工作区正在关闭或重启，请稍后重试');
   }
 
-  // #endregion
-
-  // #endregion
-
-  // #region 公开成员
-
-  // #region 字段
-
   /** 应用数据与工作区目录的可信定位器，保持调用方传入的同一实例。 */
   public readonly paths: Paths;
 
@@ -259,19 +235,11 @@ export class Application
   /** 保存的新默认仅在周期创建事务读取；运行中和安全等待沿用原周期冻结值。 */
   public readonly budgetSettings: BudgetSettings;
 
-  // #endregion
-
-  // #region 属性
-
   /** IPC 新增工作区前检查关停状态；只暴露读取，不允许路由修改生命周期。 */
   public get isStopping()
   {
     return this.stopping;
   }
-
-  // #endregion
-
-  // #region 构造函数
 
   /** 装配应用级服务；仅可信宿主提供资源根、密钥适配和平台端口，持久配置由 init 读取。 */
   // 可信文件传输同时供旧运行恢复与新 Agent 业务装配；公开对话参数不能替换该端口。
@@ -325,10 +293,6 @@ export class Application
       return ws;
     }, this.repositoryConnections);
   }
-
-  // #endregion
-
-  // #region 方法
 
   /** 自动化仅在当前打开实例调度，关闭先停止新触发，再排空主/成员运行。 */
   public automations(id: string)
@@ -835,10 +799,4 @@ export class Application
       throw Error('当前模型未启用图片输入，请在设置中确认视觉能力，或切换支持图片的模型');
     return { ...options, attachmentIds: attachments ?? [] };
   }
-
-  // #endregion
-
-  // #endregion
 }
-
-// #endregion

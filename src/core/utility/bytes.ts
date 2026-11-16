@@ -4,20 +4,12 @@
  * 职责边界：只拥有本次 reader，不拥有底层连接；取消不等待不合作的底层 cancel Promise 完成。
  * 实现形式：ByteUtils 静态工具类及超限错误实例；reader、缓冲和取消状态局限于单次调用。
  */
-// #region 公开类型与实例
 
 /** 流超过调用者给定字节上限；业务错误码、重试及显示文案由消费者决定。 */
 export class ByteLimitError extends RangeError
 {
-  // #region 公开成员
-
-  // #region 字段
   /** 本次读取允许收集的最大字节数。 */
   public readonly maxBytes: number;
-
-  // #endregion
-
-  // #region 构造函数
 
   /** 保存超限事实，不推断连接状态或重试资格。 */
   public constructor(maxBytes: number)
@@ -26,34 +18,15 @@ export class ByteLimitError extends RangeError
     this.maxBytes = maxBytes;
     this.name = 'ByteLimitError';
   }
-
-  // #endregion
-
-  // #endregion
 }
-
-// #endregion
-
-// #region 公开工具
 
 /** 有界字节流消费；每次调用独立拥有 reader、缓冲和取消监听。 方法不依赖 this，可作为回调传递。 */
 export class ByteUtils
 {
-  // #region 私有成员
-
-  // #region 构造函数
   /** 算法只依赖显式输入，不允许创建工具实例。 */
   private constructor()
   {
   }
-
-  // #endregion
-
-  // #endregion
-
-  // #region 公开成员
-
-  // #region 方法
 
   /**
      * 消费完整流才返回；超限、取消或流错误均不交付半截正文。null 正文视为空字节。
@@ -138,10 +111,4 @@ export class ByteUtils
       reader.releaseLock();
     }
   }
-
-  // #endregion
-
-  // #endregion
 }
-
-// #endregion

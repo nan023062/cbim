@@ -9,18 +9,10 @@ import { artifactFileCheckSchema, type ArtifactBaselineStaged, type ArtifactFile
 
 export class AgentArtifactVerification
 {
-  // #region 私有成员
-  // #region 构造函数
   /** 证据复核不持有独立状态，不允许实例化。 */
   private constructor()
   {
   }
-
-  // #endregion
-  // #endregion
-
-  // #region 公开成员
-  // #region 方法
 
   /** 仅复核当前仍有效的采集；历史采集失效且没有替代时拒绝，不使用当前字节补造新基线。 */
   public static async verify(events: readonly ArtifactEvidenceEvent[], binding: ArtifactBaselineStaged['binding'], knowledgeRevision: string, normalizePath: (value: string) => string, checkFiles: (files: readonly ArtifactFileFact[], signal: AbortSignal) => Promise<ArtifactFileCheck[]>, signal: AbortSignal,): Promise<ArtifactFileFact[]>
@@ -71,6 +63,4 @@ export class AgentArtifactVerification
     }
     return expected;
   }
-  // #endregion
-  // #endregion
 }

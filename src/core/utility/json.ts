@@ -6,23 +6,14 @@
  */
 import { parseTree, type Node as JsonNode, type ParseError, getNodeValue } from 'jsonc-parser';
 
-// #region 公开类型与实例
-
 /** 语法错误与重复键分别携带事实；调用者决定对外错误类别与文案。 */
 export class StrictJsonError extends SyntaxError
 {
-  // #region 公开成员
-
-  // #region 字段
   /** 解析失败的类别；重复键与普通语法错误分开报告。 */
   public readonly reason: 'invalid-syntax' | 'duplicate-key';
 
   /** 解码后的重复字段名；普通语法错误时缺省。 */
   public readonly key?: string;
-
-  // #endregion
-
-  // #region 构造函数
 
   /** 保存解析事实，不附带业务错误码或修复行为。 */
   public constructor(reason: 'invalid-syntax' | 'duplicate-key', key?: string)
@@ -32,47 +23,25 @@ export class StrictJsonError extends SyntaxError
     this.key = key;
     this.name = 'StrictJsonError';
   }
-
-  // #endregion
-
-  // #endregion
 }
 
 /** 键排序的显式策略；不同历史序列化协议可保留各自规则。 */
 export interface JsonKeyOrder
 {
-  // #region 属性
   /** 必须显式指定；localeCompare 依赖运行环境，不能作为跨环境唯一 canonical 标准。 */
   compareKeys: (left: string, right: string) => number;
 
   /** 仅省略对象的 undefined 属性；数组顺序、空位及元素保持原义。 */
   omitUndefinedProperties?: boolean;
-
-  // #endregion
 }
-
-// #endregion
-
-// #region 公开工具
 
 /** JSON 格式化、严格解析和键排序；业务字段与错误映射由消费者决定。 方法不依赖 this，可作为回调传递。 */
 export class JsonUtils
 {
-  // #region 私有成员
-
-  // #region 构造函数
   /** 算法只依赖显式输入，不允许创建工具实例。 */
   private constructor()
   {
   }
-
-  // #endregion
-
-  // #endregion
-
-  // #region 公开成员
-
-  // #region 方法
 
   /**
      * 拒绝注释、尾逗号、坏语法和同一对象中的重复键（含转义后同名键）。
@@ -136,10 +105,4 @@ export class JsonUtils
     };
     return visit(value);
   }
-
-  // #endregion
-
-  // #endregion
 }
-
-// #endregion

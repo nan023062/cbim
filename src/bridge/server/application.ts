@@ -8,14 +8,9 @@ import type { ApplicationServices } from './ipc/services';
 import type { IpcAction, IpcResponse } from '../contracts/ipc-call';
 import { dispatchApplication } from './ipc/dispatch';
 
-// #region 公开类型
-
 /** 可替换业务实例的桥接适配，仅将消息委托给独立路由。 */
 export class Application extends ApplicationRuntime implements ApplicationServices
 {
-  // #region 公开成员
-
-  // #region 方法
   /** 已知操作返回配对的响应类型；请求仍交由路由进行运行时解析。 */
   public dispatch<A extends IpcAction>(action: A, args?: unknown): Promise<IpcResponse<A>>;
 
@@ -27,10 +22,4 @@ export class Application extends ApplicationRuntime implements ApplicationServic
   {
     return dispatchApplication(this, action, args);
   }
-
-  // #endregion
-
-  // #endregion
 }
-
-// #endregion

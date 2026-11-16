@@ -3374,3 +3374,8 @@ S1–S3：跨业务持久契约与核证链变化，按 C3 / L3 处理；主要�
 - 同步变更源码文件头、接口说明及 12 个受影响目录的 CONTRACT/ARCHITECTURE（IPC、Application assembly、Conversation、Dispatch、Evidence、Execution rules/runtime、Materials service、Tasks rules/runtime、Team runtime、View tasks）。新增两个集成夹具，无新增未登记测试套件。
 
 本轮没有运行全仓本地测试、桌面脚本或安装升级；完整 CI 由更新 PR 后执行。旧头 96e6a7c9 的 CI 43806206246 已结束：静态检查和第 3/4 分片通过，第 1/2 分片失败；它不包含本次十项修复，不能作为新头结论。旧 0.1.21 草稿制品未重建，本步未合并、未发布、未投放更新通道。
+
+
+## 0.1.21 公开发布收尾
+
+PR #96 在完整四片 CI 3716 通过、0 失败、2 个历史 EXE 前提跳过后正常合并。冻结 source a87be67c 的未签名候选完成精确 EXE 隔离及图标验证、递归对话实际 UI 验收、候选安装 43814256639 和在线升级 43815613945。2026-11-16 公开 Release 446663181；0.1.19 → 0.1.21 真实差分 4215948 字节，9 Range、0 全量，原数据及缓存保留、无重放。旧草稿保留，Python latest 不变。官网与 README 根据真实回执同步，品牌及 14 场景网页检查通过。此收尾只修改官网、README 和发布记录，不重复产品全量；部署及最后回读关联官网 PR。详见 [发布报告](verification/desktop-release-0.1.21-public-20261116.md)。

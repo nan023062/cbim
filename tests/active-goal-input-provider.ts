@@ -1,3 +1,4 @@
+import {mainToolValue} from './main-tool-contract-provider';
 import {serveFixtureCompaction} from './dependency-review-provider-fixture';
 import assert from 'node:assert/strict';
 import http from 'node:http';
@@ -18,7 +19,7 @@ export type ActiveInputMode='stale-complete'|'stale-waiting'|'replan'|'twice'|'w
 type Request=GoalFixtureRequest&{model:string;tools?:{function:{name:string}}[]};
 
 /** Only local model responses are deterministic; every plan, read, candidate, review and steer stays real. */
-export async function activeInputProvider(mode:ActiveInputMode='replan'){
+export async function activeInputProvider(mode:ActiveInputMode='replan',recursive=false){
   const d=activeInputData,main:Request[]=[],member:Request[]=[],errors:string[]=[];
   let agentId='',moduleId='',ownerSelection:OwnerExecutionSelection;const gates=new Map<number,{promise:Promise<void>;release:()=>void}>();
   const gate=(turn:number)=>{let item=gates.get(turn);if(!item){let release!:()=>void;const promise=new Promise<void>(resolve=>release=resolve);item={promise,release};gates.set(turn,item)}return item};
@@ -26,13 +27,30 @@ export async function activeInputProvider(mode:ActiveInputMode='replan'){
   const compactions:GoalFixtureRequest[]=[];
   const server=http.createServer(async(req,res)=>{try{
     assert.equal(req.method,'POST');assert.ok(req.url?.endsWith('/chat/completions'));let raw='';for await(const chunk of req)raw+=chunk;
-    const body=JSON.parse(raw) as Request;assert.equal(body.model,d.model);const isMain=body.tools?.some(tool=>tool.function.name==='cbim_dispatch_task')===true;
+    const body=JSON.parse(raw) as Request;assert.equal(body.model,d.model);const isMain=body.tools?.some(tool=>tool.function.name===(recursive?'cbim_agent_result_review':'cbim_dispatch_task'))===true;
     const requests=isMain?main:member,turn=requests.length;if(serveFixtureCompaction(body,res,compactions))return;requests.push(body);res.writeHead(200,{'Content-Type':'text/event-stream'});
     const emit=(delta:unknown,finish_reason:string|null=null)=>res.write('data: '+JSON.stringify({id:'active-input-'+(main.length+member.length),object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason}]})+'\n\n');
     const tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]});emit({},'tool_calls')};
     const reply=(content:string)=>{emit({role:'assistant',content});emit({},'stop')};
     const plan=(revision=1)=>goalPlanArguments({objective:d.goal,agentId,moduleIds:[moduleId],ownerSelection,acceptance:d.acceptance},revision);
-    if(isMain){
+    if(isMain&&recursive){
+      assert.ok(body.tools?.every(item=>!['cbim_goal_plan','cbim_goal_review','cbim_dispatch_task'].includes(item.function.name)));
+      const next=()=>{
+        if(mode==='waiting'||mode==='twice-waiting')tool('active-question','cbim_ask_user_question',{questions:[{question:d.waitReason,options:[{label:'编号列表'},{label:'连续短句'}]}]});
+        else if(mode.startsWith('stale-'))tool('active-retired-review','cbim_goal_review',{expectedRevision:3,decision:mode==='stale-waiting'?'awaiting_user':'complete'});
+        else tool('active-result-check','cbim_agent_result_check',{callId:'active-call'});
+      };
+      if(turn===0)tool('active-call','cbim_agent_call',{agentId:ownerSelection.memberId,message:d.memberGoal,business:{moduleIds:[moduleId],acceptance:d.acceptance}});
+      else if(turn===1){assert.equal(mainToolValue(body,'active-call').status,'completed');emit({role:'assistant',content:'原文件已经核实，保持实际主模型流等待新输入。'});await gate(5).promise;reply('本轮文件事实已保存。')}
+      else if(turn===2){assert.ok(JSON.stringify(body.messages).includes(d.insert));if(twice){emit({role:'assistant',content:'已收到第一条真实补充。'});await gate(11).promise;reply('第一条补充已进入原模型上下文。')}else next()}
+      else if(twice&&turn===3){assert.ok(JSON.stringify(body.messages).includes(d.second));next()}
+      else if(turn===(twice?4:3)){
+        if(mode.startsWith('stale-'))assert.ok(JSON.stringify(body.messages.find(m=>m.tool_call_id==='active-retired-review')).match(/error|Error|不存在|不可用|unknown|Unknown|not found|not available/i),'旧目标审阅必须不可用');
+        else if(mode==='waiting'||mode==='twice-waiting')assert.equal(mainToolValue(body,'active-question').answers[0].answer,'编号列表');
+        else assert.equal(mainToolValue(body,'active-result-check').state,'verified');
+        reply('已按当前实际补充汇报，未重放文件执行。');
+      }else throw Error('Unexpected recursive active input replay '+turn);
+    }else if(isMain){
       assert.ok(body.tools?.every(item=>!['write','edit','bash'].includes(item.function.name)));
       if(turn===0)tool('active-plan','cbim_goal_plan',plan());
       else if(turn===1)tool('active-dispatch','cbim_dispatch_task',{agentId,moduleIds:[moduleId],ownerSelection,goal:d.memberGoal,acceptance:d.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});

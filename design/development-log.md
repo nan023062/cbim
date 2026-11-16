@@ -3249,3 +3249,10 @@ member-pause-pi 四项改用真实递归 Agent 工具：A 实际写入、读取�
 实际通过：workflow-evidence 24/24；recursive-delivery-consumers.json 中连续暂停4、单次暂停4、问答4、请求预算11共23/23；human-decisions 4/4；分离夹具后 human-decisions + human-continuation 12/12；scope-wait 3/3；execution-collaboration18 + queue-insertion-boundary26 + recovery-start-race4 + replan-start-race5共53/53，另新增关闭等待/失败2/2；业务消费者 JSON/CSV/PNG15、完整集合4、原采集2、执行报告2共23/23，受控文件重跑4/4。pnpm typecheck、pnpm check:architecture（1666 文件/7923 边/0 环）、pnpm check:test-modules（541 文件）通过。同步 application/assembly、conversation/runtime、evidence/rules 注释、契约及类图。
 
 远端旧头065d9697的CI 43794310879已结束：四片报告共3588通过、105失败、2pending，不能作为本地新头结果；四份报告已保留 build/ci-43794310879。仍有旧派工、恢复/重规划、依赖变更、附件等待及桌面脚本待迁移。未宣称全量通过，未合并/发布。
+
+
+## 2026-11-16：运行中补充指令迁移到递归 Agent（Issue #94 / PR #96）
+
+- 将 active-goal-input 的 10 种真实 Pi 场景迁移到同一根运行的 steer / ACK 及原 Agent 结果复核，不再依赖旧 goal plan/review 或成员派工。覆盖两次插入、暂停提问、ACK 未知、保存失败、发送前停止、确认后停止；旧 stale-review 场景改为实际拒绝已退出目录的工具，不能复活旧流程。
+- 保留接受事实、原生会话及重启不重放断言。停止竞态等待 scope 持久关闭后再比较幂等快照，避免把合法生命周期收尾误判为重复插入。共享供应商保持默认旧路径，尚未迁移的桌面夹具不被隐式改写。
+- 验证：首次专项 9/10 通过（build/recursive-active-input.json）；调整终态等待后，pnpm exec vitest run tests/active-goal-input-pi.test.ts -t "ack-stop|before-send-stop" --reporter=json --outputFile=build/recursive-active-input-stop.json 为 2/2 通过。pnpm typecheck、pnpm check:test-modules 通过（541 文件）。本步只改测试，未运行安装/升级验收；30a98c15 的完整 CI 仍在运行，不以本地结果代替其结论。

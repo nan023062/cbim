@@ -6,15 +6,19 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [native-tools.ts](native-tools.ts) | 向宿主托管引擎提供已有文件/命令工具操作，复用 Pi SDK 的独立工具实现而不创建 Pi Loop。 |
-| [run-inactivity.ts](run-inactivity.ts) | 官方引擎共用的无进展计时器；适配器识别真实增量，工具事件复用统一协议。 |
-| [runtime-binding.ts](runtime-binding.ts) | 在具体引擎之外固定原生会话使用的受管 E 包身份，保存在原 agentHome 的私有旁路记录。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [native-tools.ts](native-tools.ts) | 源码模块 | 向宿主托管引擎提供已有文件/命令工具操作，复用 Pi SDK 的独立工具实现而不创建 Pi Loop。 |
+| [run-inactivity.ts](run-inactivity.ts) | 源码模块 | 官方引擎共用的无进展计时器；适配器识别真实增量，工具事件复用统一协议。 |
+| [runtime-binding.ts](runtime-binding.ts) | 源码模块 | 在具体引擎之外固定原生会话使用的受管 E 包身份，保存在原 agentHome 的私有旁路记录。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ```mermaid
 classDiagram

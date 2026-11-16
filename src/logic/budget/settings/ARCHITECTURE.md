@@ -6,13 +6,16 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [budget-settings.ts](budget-settings.ts) | 可靠保存新目标的额度及显式逐请求模式，供调度器创建周期时冻结，缺省模式保留原软限额语义。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [budget-settings.ts](budget-settings.ts) | 源码模块 | 可靠保存新目标的额度及显式逐请求模式，供调度器创建周期时冻结，缺省模式保留原软限额语义。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### budget-settings.ts
 
@@ -28,6 +31,7 @@ class N_src_logic_budget_settings_budget_settings_ts_BudgetSettingsStorage["Budg
 }
 N_src_logic_budget_settings_budget_settings_ts ..> N_src_logic_budget_settings_budget_settings_ts_BudgetSettingsStorage : 声明
 class N_src_logic_budget_settings_budget_settings_ts_BudgetSettings["BudgetSettings"] {
+  +constructor()
   +init()
   +read()
   +configure()

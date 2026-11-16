@@ -6,16 +6,20 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [index.ts](index.ts) | 资源仓库的宿主服务入口，组合本地存储、HTTP 和共享生命周期。 |
-| [resource-http.ts](resource-http.ts) | RemoteRepository 与 serveRepository：HTTP 客户端和本机仓库共享服务。 |
-| [resource-repository.ts](resource-repository.ts) | ResourceRepositories：统一三类资源的仓库选择、账号占位与共享生命周期。 |
-| [resource-store.ts](resource-store.ts) | RepositoryStore 与 LocalRepository：本地资源仓库校验、版本检查及原子更新。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [index.ts](index.ts) | 源码模块 | 资源仓库的宿主服务入口，组合本地存储、HTTP 和共享生命周期。 |
+| [resource-http.ts](resource-http.ts) | 源码模块 | RemoteRepository 与 serveRepository：HTTP 客户端和本机仓库共享服务。 |
+| [resource-repository.ts](resource-repository.ts) | 源码模块 | ResourceRepositories：统一三类资源的仓库选择、账号占位与共享生命周期。 |
+| [resource-store.ts](resource-store.ts) | 源码模块 | RepositoryStore 与 LocalRepository：本地资源仓库校验、版本检查及原子更新。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### index.ts
 
@@ -46,6 +50,7 @@ class N_src_logic_resources_service_resource_http_ts["resource-http.ts"] {
 class N_src_logic_resources_service_resource_http_ts_RemoteRepository["RemoteRepository"] {
   +url
   +expectedId
+  +constructor()
   +read()
   +save()
   +remove()
@@ -91,6 +96,7 @@ class N_src_logic_resources_service_resource_repository_ts_Config["Config"] {
 }
 N_src_logic_resources_service_resource_repository_ts ..> N_src_logic_resources_service_resource_repository_ts_Config : 声明
 class N_src_logic_resources_service_resource_repository_ts_ResourceRepositories["ResourceRepositories"] {
+  +constructor()
   +init()
   +status()
   +sharedIdentity()
@@ -106,7 +112,6 @@ class N_src_logic_resources_service_resource_repository_ts_ResourceRepositories[
   +close()
   -paths
   -session
-  -localConfig
 }
 N_src_logic_resources_service_resource_repository_ts ..> N_src_logic_resources_service_resource_repository_ts_ResourceRepositories : 声明
 ```
@@ -119,6 +124,7 @@ class N_src_logic_resources_service_resource_repository_ts["resource-repository.
   <<module>>
 }
 class N_src_logic_resources_service_resource_repository_ts_ResourceRepositories["ResourceRepositories"] {
+  -localConfig
   -config
   -configError
   -sharing
@@ -153,6 +159,7 @@ class N_src_logic_resources_service_resource_store_ts_RepositoryStore["Repositor
 N_src_logic_resources_service_resource_store_ts ..> N_src_logic_resources_service_resource_store_ts_RepositoryStore : 声明
 class N_src_logic_resources_service_resource_store_ts_LocalRepository["LocalRepository"] {
   +root
+  +constructor()
   +initialize()
   +read()
   +save()

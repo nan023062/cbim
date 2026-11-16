@@ -6,21 +6,25 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [agent-manager.ts](agent-manager.ts) | 根据已核实角色配置注册持久化成员，按主会话分配独立逻辑 Session。 |
-| [checkpoint-abandonment-service.ts](checkpoint-abandonment-service.ts) | 主调度明确放弃本周期尚未消费的检查点及可选恢复预约，保留旧执行与证明。 |
-| [member-checkpoint-verifier.ts](member-checkpoint-verifier.ts) | 核实逐段检查点的完整 canonical、累计文件与最新私有原生历史，分别支持续执行许可与明确放弃旧待办的历史真实性检查。 |
-| [member-execution.ts](member-execution.ts) | 让已派发任务在独立成员执行通道中运行，已登记办公室同角色串行领取，提交启动、结果、中断及一次安全停泊/续执行事实。 |
-| [member-help-state.ts](member-help-state.ts) | 从成员 canonical 运行日志核实一次结构化求助的安全交接候选。 |
-| [member-pause-service.ts](member-pause-service.ts) | 核实持久等待的成员原记录，并在用户明确继续时重新检查岗位、知识、native 与文件。 |
-| [member-resume-service.ts](member-resume-service.ts) | 当前主调度为本周期最新安全检查点预约一次原任务续执行，逐段保留原预约和独立待领取信封。 |
-| [member-state.ts](member-state.ts) | 成员执行事务的图增量、占用和交付候选投影，并提供独立求助验证入口。 |
-| [member-workflow.ts](member-workflow.ts) | 在成员交付结算与主目标审阅时重算冻结 Workflow，并复核被验证文件的当前字节。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [agent-manager.ts](agent-manager.ts) | 源码模块 | 根据已核实角色配置注册持久化成员，按主会话分配独立逻辑 Session。 |
+| [checkpoint-abandonment-service.ts](checkpoint-abandonment-service.ts) | 源码模块 | 主调度明确放弃本周期尚未消费的检查点及可选恢复预约，保留旧执行与证明。 |
+| [member-checkpoint-verifier.ts](member-checkpoint-verifier.ts) | 源码模块 | 核实逐段检查点的完整 canonical、累计文件与最新私有原生历史，分别支持续执行许可与明确放弃旧待办的历史真实性检查。 |
+| [member-execution.ts](member-execution.ts) | 源码模块 | 让已派发任务在独立成员执行通道中运行，已登记办公室同角色串行领取，提交启动、结果、中断及一次安全停泊/续执行事实。 |
+| [member-help-state.ts](member-help-state.ts) | 源码模块 | 从成员 canonical 运行日志核实一次结构化求助的安全交接候选。 |
+| [member-pause-service.ts](member-pause-service.ts) | 源码模块 | 核实持久等待的成员原记录，并在用户明确继续时重新检查岗位、知识、native 与文件。 |
+| [member-resume-service.ts](member-resume-service.ts) | 源码模块 | 当前主调度为本周期最新安全检查点预约一次原任务续执行，逐段保留原预约和独立待领取信封。 |
+| [member-state.ts](member-state.ts) | 源码模块 | 成员执行事务的图增量、占用和交付候选投影，并提供独立求助验证入口。 |
+| [member-workflow.ts](member-workflow.ts) | 源码模块 | 在成员交付结算与主目标审阅时重算冻结 Workflow，并复核被验证文件的当前字节。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### agent-manager.ts
 
@@ -42,6 +46,7 @@ class N_src_logic_team_runtime_checkpoint_abandonment_service_ts["checkpoint-aba
   <<module>>
 }
 class N_src_logic_team_runtime_checkpoint_abandonment_service_ts_CheckpointAbandonmentService["CheckpointAbandonmentService"] {
+  +constructor()
   +receipt()
   +abandon()
   -owner
@@ -131,6 +136,7 @@ class N_src_logic_team_runtime_member_execution_ts_Handle["Handle"] {
 }
 N_src_logic_team_runtime_member_execution_ts ..> N_src_logic_team_runtime_member_execution_ts_Handle : 声明
 class N_src_logic_team_runtime_member_execution_ts_MemberExecutionManager["MemberExecutionManager"] {
+  +constructor()
   +report()
   +artifactReport()
   +manifestReport()
@@ -146,7 +152,6 @@ class N_src_logic_team_runtime_member_execution_ts_MemberExecutionManager["Membe
   +messages()
   +acknowledge()
   +pendingApprovals()
-  +answerApproval()
 }
 N_src_logic_team_runtime_member_execution_ts ..> N_src_logic_team_runtime_member_execution_ts_MemberExecutionManager : 声明
 ```
@@ -159,6 +164,7 @@ class N_src_logic_team_runtime_member_execution_ts["member-execution.ts"] {
   <<module>>
 }
 class N_src_logic_team_runtime_member_execution_ts_MemberExecutionManager["MemberExecutionManager"] {
+  +answerApproval()
   +pendingQuestions()
   +answerQuestion()
   +close()
@@ -174,7 +180,6 @@ class N_src_logic_team_runtime_member_execution_ts_MemberExecutionManager["Membe
   -approvals
   -questions
   -eventStreams
-  -checkpointPorts()
 }
 N_src_logic_team_runtime_member_execution_ts ..> N_src_logic_team_runtime_member_execution_ts_MemberExecutionManager : 声明
 ```
@@ -187,6 +192,7 @@ class N_src_logic_team_runtime_member_execution_ts["member-execution.ts"] {
   <<module>>
 }
 class N_src_logic_team_runtime_member_execution_ts_MemberExecutionManager["MemberExecutionManager"] {
+  -checkpointPorts()
   -check()
   -parse()
   -command()
@@ -235,6 +241,7 @@ class N_src_logic_team_runtime_member_pause_service_ts_external_MemberCheckpoint
 }
 N_src_logic_team_runtime_member_pause_service_ts_external_MemberCheckpointVerificationPorts <|-- N_src_logic_team_runtime_member_pause_service_ts_MemberPausePorts
 class N_src_logic_team_runtime_member_pause_service_ts_MemberPauseService["MemberPauseService"] {
+  +constructor()
   +verifyWaiting()
   +withContext()
   +validateCurrent()
@@ -259,6 +266,7 @@ class N_src_logic_team_runtime_member_resume_service_ts["member-resume-service.t
   <<module>>
 }
 class N_src_logic_team_runtime_member_resume_service_ts_MemberResumeService["MemberResumeService"] {
+  +constructor()
   +request()
   -owner
   -store

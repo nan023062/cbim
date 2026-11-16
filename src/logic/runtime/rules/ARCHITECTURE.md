@@ -6,16 +6,20 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [admission.ts](admission.ts) | 定义应用级执行准入的公开策略、身份、占用、等待票据与独立读取游标。 |
-| [runtime-scope.ts](runtime-scope.ts) | 从已提交 DispatchScope 生成应用级监管的最小周期事实，供运行索引恢复和增量提交共用。 |
-| [runtime-validation.ts](runtime-validation.ts) | 校验全局运行总览的跨进程只读快照，供 Bridge 和界面共享真实字段边界。 |
-| [types.ts](types.ts) | 定义应用级人员、任务与运行消耗的只读监管契约，供调度索引和桌面桥接共同使用。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [admission.ts](admission.ts) | 源码模块 | 定义应用级执行准入的公开策略、身份、占用、等待票据与独立读取游标。 |
+| [runtime-scope.ts](runtime-scope.ts) | 源码模块 | 从已提交 DispatchScope 生成应用级监管的最小周期事实，供运行索引恢复和增量提交共用。 |
+| [runtime-validation.ts](runtime-validation.ts) | 源码模块 | 校验全局运行总览的跨进程只读快照，供 Bridge 和界面共享真实字段边界。 |
+| [types.ts](types.ts) | 源码模块 | 定义应用级人员、任务与运行消耗的只读监管契约，供调度索引和桌面桥接共同使用。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### admission.ts
 

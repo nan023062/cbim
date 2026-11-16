@@ -6,25 +6,29 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [agent-history.ts](agent-history.ts) | 将角色历史 IPC 请求解析后交给已打开工作区的只读查询端口。 |
-| [automation-actions.ts](automation-actions.ts) | 将自动化桌面请求路由到当前工作区唯一调度器。 |
-| [chat-handlers.ts](chat-handlers.ts) | 显式附件导入与快照预览的主进程处理器。 |
-| [dispatch-handlers.ts](dispatch-handlers.ts) | 成员派发、运行核实与人工处置的主进程处理器。 |
-| [dispatch.ts](dispatch.ts) | 将经过主进程接入的 action 路由到明确的工作区和应用服务；主 Agent 两处设置入口共用同一配置服务。 |
-| [governance-handlers.ts](governance-handlers.ts) | 模块治理观察、提案、决定与实施的主进程处理器。 |
-| [loop-handlers.ts](loop-handlers.ts) | 会话、排队、历史与安全续接的主进程处理器。 |
-| [people-handlers.ts](people-handlers.ts) | 岗位登记与模块责任的主进程处理器。 |
-| [request.ts](request.ts) | 主进程 IPC 的运行时请求解析与受理前拒绝；源浏览在退出期间停止接单且畸形参数返回可读提示，保留旧队列插入的失效运行错误码。 |
-| [resources-handlers.ts](resources-handlers.ts) | 资源仓库、共享连接与架构包的主进程处理器。 |
-| [services.ts](services.ts) | 定义 IPC 路由需要的执行审批、静态角色履历、岗位与模块责任、全局监管、配额、桌面资源导入、模块治理和工作区生命周期入口。 |
-| [settings-handlers.ts](settings-handlers.ts) | 模型、准入、预算与反馈账号设置的主进程处理器。 |
-| [workspace-handlers.ts](workspace-handlers.ts) | 工作区生命周期与知识编辑的主进程处理器。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [agent-history.ts](agent-history.ts) | 源码模块 | 将角色历史 IPC 请求解析后交给已打开工作区的只读查询端口。 |
+| [automation-actions.ts](automation-actions.ts) | 源码模块 | 将自动化桌面请求路由到当前工作区唯一调度器。 |
+| [chat-handlers.ts](chat-handlers.ts) | 源码模块 | 显式附件导入与快照预览的主进程处理器。 |
+| [dispatch-handlers.ts](dispatch-handlers.ts) | 源码模块 | 成员派发、运行核实与人工处置的主进程处理器。 |
+| [dispatch.ts](dispatch.ts) | 源码模块 | 将经过主进程接入的 action 路由到明确的工作区和应用服务；主 Agent 两处设置入口共用同一配置服务。 |
+| [governance-handlers.ts](governance-handlers.ts) | 源码模块 | 模块治理观察、提案、决定与实施的主进程处理器。 |
+| [loop-handlers.ts](loop-handlers.ts) | 源码模块 | 会话、排队、历史与安全续接的主进程处理器。 |
+| [people-handlers.ts](people-handlers.ts) | 源码模块 | 岗位登记与模块责任的主进程处理器。 |
+| [request.ts](request.ts) | 源码模块 | 主进程 IPC 的运行时请求解析与受理前拒绝；源浏览在退出期间停止接单且畸形参数返回可读提示，保留旧队列插入的失效运行错误码。 |
+| [resources-handlers.ts](resources-handlers.ts) | 源码模块 | 资源仓库、共享连接与架构包的主进程处理器。 |
+| [services.ts](services.ts) | 源码模块 | 定义 IPC 路由需要的执行审批、静态角色履历、岗位与模块责任、全局监管、配额、桌面资源导入、模块治理和工作区生命周期入口。 |
+| [settings-handlers.ts](settings-handlers.ts) | 源码模块 | 模型、准入、预算与反馈账号设置的主进程处理器。 |
+| [workspace-handlers.ts](workspace-handlers.ts) | 源码模块 | 工作区生命周期与知识编辑的主进程处理器。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### agent-history.ts
 

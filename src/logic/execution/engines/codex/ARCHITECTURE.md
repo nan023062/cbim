@@ -6,19 +6,23 @@ Codex App Server 的受管进程、双向 RPC、真实 thread/turn、Responses �
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [binary.ts](binary.ts) | 解析 CBIM 随包的固定 Codex 原生 App Server，不启动用户 PATH 中的客户端。 |
-| [engine.ts](engine.ts) | 通过 Codex App Server 管理进程、线程、轮次和动态工具；目标返工明确为系统反馈，不携带用户图片或新授权。 |
-| [model-proxy.ts](model-proxy.ts) | 将 Codex 的 Responses 请求约束为本轮冻结模型、输出上限和已注册工具目录。 |
-| [package.ts](package.ts) | Codex 官方包的版本化工厂入口。 |
-| [rpc.ts](rpc.ts) | Codex App Server 的双向 JSONL 通信，分别关联宿主请求、原生请求和通知。 |
-| [session.ts](session.ts) | 核实 Codex 实际 rollout 的路径、原生身份、工作区与持久化动态工具目录。 |
-| [tools.ts](tools.ts) | 把 Codex dynamic tool 请求路由到 CBIM 知识/执行工具及已有宿主文件操作。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [binary.ts](binary.ts) | 源码模块 | 解析 CBIM 随包的固定 Codex 原生 App Server，不启动用户 PATH 中的客户端。 |
+| [engine.ts](engine.ts) | 源码模块 | 通过 Codex App Server 管理进程、线程、轮次和动态工具；目标返工明确为系统反馈，不携带用户图片或新授权。 |
+| [model-proxy.ts](model-proxy.ts) | 源码模块 | 将 Codex 的 Responses 请求约束为本轮冻结模型、输出上限和已注册工具目录。 |
+| [package.ts](package.ts) | 源码模块 | Codex 官方包的版本化工厂入口。 |
+| [rpc.ts](rpc.ts) | 源码模块 | Codex App Server 的双向 JSONL 通信，分别关联宿主请求、原生请求和通知。 |
+| [session.ts](session.ts) | 源码模块 | 核实 Codex 实际 rollout 的路径、原生身份、工作区与持久化动态工具目录。 |
+| [tools.ts](tools.ts) | 源码模块 | 把 Codex dynamic tool 请求路由到 CBIM 知识/执行工具及已有宿主文件操作。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### binary.ts
 
@@ -65,6 +69,7 @@ class N_src_logic_execution_engines_codex_engine_ts_CodexOptions["CodexOptions"]
 N_src_logic_execution_engines_codex_engine_ts ..> N_src_logic_execution_engines_codex_engine_ts_CodexOptions : 声明
 class N_src_logic_execution_engines_codex_engine_ts_CodexEngine["CodexEngine"] {
   +kind
+  +constructor()
   +start()
   +run()
   +stop()
@@ -79,7 +84,6 @@ class N_src_logic_execution_engines_codex_engine_ts_CodexEngine["CodexEngine"] {
   -turnId
   -startingTurn
   -stopped
-  -fatal
 }
 N_src_logic_execution_engines_codex_engine_ts ..> N_src_logic_execution_engines_codex_engine_ts_CodexEngine : 声明
 class N_src_logic_execution_engines_codex_engine_ts_external_AgentEngine["AgentEngine (外部契约)"] {
@@ -96,6 +100,7 @@ class N_src_logic_execution_engines_codex_engine_ts["engine.ts"] {
   <<module>>
 }
 class N_src_logic_execution_engines_codex_engine_ts_CodexEngine["CodexEngine"] {
+  -fatal
   -sessionBound
   -closing
   -inactivity
@@ -147,6 +152,7 @@ class N_src_logic_execution_engines_codex_rpc_ts["rpc.ts"] {
   <<module>>
 }
 class N_src_logic_execution_engines_codex_rpc_ts_CodexRpc["CodexRpc"] {
+  +constructor()
   +start()
   +request()
   +send()
@@ -162,7 +168,6 @@ class N_src_logic_execution_engines_codex_rpc_ts_CodexRpc["CodexRpc"] {
   -frames
   -pending
   -handling
-  -notifications
 }
 N_src_logic_execution_engines_codex_rpc_ts ..> N_src_logic_execution_engines_codex_rpc_ts_CodexRpc : 声明
 ```
@@ -175,6 +180,7 @@ class N_src_logic_execution_engines_codex_rpc_ts["rpc.ts"] {
   <<module>>
 }
 class N_src_logic_execution_engines_codex_rpc_ts_CodexRpc["CodexRpc"] {
+  -notifications
   -receive()
   -fail()
 }

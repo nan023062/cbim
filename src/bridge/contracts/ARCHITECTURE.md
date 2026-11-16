@@ -6,59 +6,63 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [admission.ts](admission.ts) | 向界面公开全局并发策略、当前占用及准入等待的可序列化契约。 |
-| [agent-history-ipc.ts](agent-history-ipc.ts) | 关联角色历史四个只读 IPC 操作的请求、响应与运行时输入解析。 |
-| [agent-history.ts](agent-history.ts) | 向团队静态节点公开只读的角色 Session 历史协议。 |
-| [agent-settings.ts](agent-settings.ts) | 主 Agent 与自定义 Agent 的执行选型公开契约。 |
-| [architecture.ts](architecture.ts) | 团队/业务架构编辑的桌面 IPC 契约，只公开对象操作、预览差异和提交回执。 |
-| [automation.ts](automation.ts) | 自动化桌面的固定请求、运行时校验与公开返回映射。 |
-| [chat.ts](chat.ts) | 对话附件、执行权限和待审批请求的跨进程契约。 |
-| [command-verification.ts](command-verification.ts) | 向桌面视图导出原主命令的只读核实协议和固定支持矩阵。 |
-| [controlled-files.ts](controlled-files.ts) | 向桌面公开受控文件原操作查询和显式补偿的纯协议。 |
-| [desktop-updates.ts](desktop-updates.ts) | 桌面更新的通信类型和版本展示文本。 |
-| [dispatch.ts](dispatch.ts) | 向桌面消费者公开成员派发、执行增量、主会话图以及独立目标周期摘要/详情，并导出无 IO 的投影校验及归并函数。 |
-| [effect-observation.ts](effect-observation.ts) | 向桌面公开原调用影响观察、明确处置与后续周期关系的纯契约。 |
-| [engines.ts](engines.ts) | 界面使用的官方引擎目录和模型兼容预览契约。 |
-| [execution.ts](execution.ts) | 对话、运行和排队在 IPC 中传递的可序列化类型。 |
-| [github-feedback.ts](github-feedback.ts) | 设置界面的 GitHub 公开连接协议与输入 Schema。 |
-| [governance.ts](governance.ts) | 向业务架构界面公开模块知识治理的纯数据与严格校验协议。 |
-| [human-continue.ts](human-continue.ts) | 公开按已保存人工决定继续原目标的严格请求与回执，连接桌面和调度入口。 |
-| [human-decisions.ts](human-decisions.ts) | 向桌面公开人工决定的序列化请求、依据预览与不可变记录。 |
-| [ipc-call.ts](ipc-call.ts) | 关联全部桌面 IPC 操作名、请求与响应，并为主进程提供结构解析入口。 |
-| [ipc-chat.ts](ipc-chat.ts) | 显式附件导入与快照预览的公开 IPC 请求与响应。 |
-| [ipc-desktop.ts](ipc-desktop.ts) | 桌面更新、终端、选择器与链接打开的公开 IPC 请求与响应。 |
-| [ipc-dispatch.ts](ipc-dispatch.ts) | 成员派发、运行核实与人工处置的公开 IPC 请求与响应，保留历史派发命令的回执查询兼容。 |
-| [ipc-governance.ts](ipc-governance.ts) | 模块治理观察、提案、决定与实施的公开 IPC 请求与响应。 |
-| [ipc-loop.ts](ipc-loop.ts) | 会话、排队、历史与安全续接的公开 IPC 请求与响应。 |
-| [ipc-people.ts](ipc-people.ts) | 岗位登记与模块责任的公开 IPC 请求与响应。 |
-| [ipc-resources.ts](ipc-resources.ts) | 资源仓库、共享连接与架构包的公开 IPC 请求与响应。 |
-| [ipc-settings.ts](ipc-settings.ts) | 模型、准入、预算与反馈账号设置的公开 IPC 请求与响应。 |
-| [ipc-shapes.ts](ipc-shapes.ts) | IPC 外层信封的少量公共输入形状；业务字段继续使用各领域公开协议。 |
-| [ipc-workspace.ts](ipc-workspace.ts) | 工作区生命周期、模块源码只读浏览与知识编辑的公开 IPC 请求与响应。 |
-| [isolated-executions.ts](isolated-executions.ts) | 向桌面导出原隔离执行核实与清理的公开 DTO。 |
-| [knowledge-source.ts](knowledge-source.ts) | 向桌面公开知识来源身份、采纳预览和当前核实状态的纯数据协议。 |
-| [knowledge-transactions.ts](knowledge-transactions.ts) | 向只读执行视图公开知识预览和提交的严格返回协议。 |
-| [model-actions.ts](model-actions.ts) | 声明主 Agent 选型和供应商设置的桌面请求、运行时校验及返回值映射。 |
-| [models.ts](models.ts) | 模型配置界面消费的公开模型信息与停止原因格式化。 |
-| [module-ownership.ts](module-ownership.ts) | 公开模块负责人控制面的纯数据协议，供业务架构、项目岗位与 Main IPC 使用。 |
-| [output-manifest.ts](output-manifest.ts) | 桌面完整产物面板使用的纯 DTO 与严格结构校验，不导出后端文件或日志读取实现。 |
-| [owner-execution.ts](owner-execution.ts) | 公开岗位执行的选择、冻结绑定及纯身份校验，供任务和目标视图核对历史归属。 |
-| [repository-connections.ts](repository-connections.ts) | 向桌面公开工作区资源仓库链接器的登记、授权和真实 HTTP 核验协议。 |
-| [resources.ts](resources.ts) | 资源界面的通信类型及静态资源包操作协议。 |
-| [runtime.ts](runtime.ts) | 公开应用级成员、任务、目标周期和已报告用量的只读契约及严格传输校验。 |
-| [scope-budget.ts](scope-budget.ts) | 公开目标周期额度策略及只读逐请求摘要，供设置和目标卡片经 IPC 展示；不公开预留或终态写入端口。 |
-| [scope-usage.ts](scope-usage.ts) | 向桌面任务视图公开周期用量的严格查询与报告契约。 |
-| [usage.ts](usage.ts) | 向界面公开 Logic 执行规则的纯计量函数及单轮用量类型。 |
-| [web.ts](web.ts) | 迁移期网页设置的具名通信契约出口。 |
-| [workspace-members.ts](workspace-members.ts) | 公开项目岗位登记、预览与原命令回执的数据协议，供 Main IPC 和团队页面核对身份。 |
-| [workspace-view.ts](workspace-view.ts) | 转接工作区业务公开数据。 |
-| [workspace.ts](workspace.ts) | 跨进程工作区、知识事务与 IPC 数据契约。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [admission.ts](admission.ts) | 源码模块 | 向界面公开全局并发策略、当前占用及准入等待的可序列化契约。 |
+| [agent-history-ipc.ts](agent-history-ipc.ts) | 源码模块 | 关联角色历史四个只读 IPC 操作的请求、响应与运行时输入解析。 |
+| [agent-history.ts](agent-history.ts) | 源码模块 | 向团队静态节点公开只读的角色 Session 历史协议。 |
+| [agent-settings.ts](agent-settings.ts) | 源码模块 | 主 Agent 与自定义 Agent 的执行选型公开契约。 |
+| [architecture.ts](architecture.ts) | 源码模块 | 团队/业务架构编辑的桌面 IPC 契约，只公开对象操作、预览差异和提交回执。 |
+| [automation.ts](automation.ts) | 源码模块 | 自动化桌面的固定请求、运行时校验与公开返回映射。 |
+| [chat.ts](chat.ts) | 源码模块 | 对话附件、执行权限和待审批请求的跨进程契约。 |
+| [command-verification.ts](command-verification.ts) | 源码模块 | 向桌面视图导出原主命令的只读核实协议和固定支持矩阵。 |
+| [controlled-files.ts](controlled-files.ts) | 源码模块 | 向桌面公开受控文件原操作查询和显式补偿的纯协议。 |
+| [desktop-updates.ts](desktop-updates.ts) | 源码模块 | 桌面更新的通信类型和版本展示文本。 |
+| [dispatch.ts](dispatch.ts) | 源码模块 | 向桌面消费者公开成员派发、执行增量、主会话图以及独立目标周期摘要/详情，并导出无 IO 的投影校验及归并函数。 |
+| [effect-observation.ts](effect-observation.ts) | 源码模块 | 向桌面公开原调用影响观察、明确处置与后续周期关系的纯契约。 |
+| [engines.ts](engines.ts) | 源码模块 | 界面使用的官方引擎目录和模型兼容预览契约。 |
+| [execution.ts](execution.ts) | 源码模块 | 对话、运行和排队在 IPC 中传递的可序列化类型。 |
+| [github-feedback.ts](github-feedback.ts) | 源码模块 | 设置界面的 GitHub 公开连接协议与输入 Schema。 |
+| [governance.ts](governance.ts) | 源码模块 | 向业务架构界面公开模块知识治理的纯数据与严格校验协议。 |
+| [human-continue.ts](human-continue.ts) | 源码模块 | 公开按已保存人工决定继续原目标的严格请求与回执，连接桌面和调度入口。 |
+| [human-decisions.ts](human-decisions.ts) | 源码模块 | 向桌面公开人工决定的序列化请求、依据预览与不可变记录。 |
+| [ipc-call.ts](ipc-call.ts) | 源码模块 | 关联全部桌面 IPC 操作名、请求与响应，并为主进程提供结构解析入口。 |
+| [ipc-chat.ts](ipc-chat.ts) | 源码模块 | 显式附件导入与快照预览的公开 IPC 请求与响应。 |
+| [ipc-desktop.ts](ipc-desktop.ts) | 源码模块 | 桌面更新、终端、选择器与链接打开的公开 IPC 请求与响应。 |
+| [ipc-dispatch.ts](ipc-dispatch.ts) | 源码模块 | 成员派发、运行核实与人工处置的公开 IPC 请求与响应，保留历史派发命令的回执查询兼容。 |
+| [ipc-governance.ts](ipc-governance.ts) | 源码模块 | 模块治理观察、提案、决定与实施的公开 IPC 请求与响应。 |
+| [ipc-loop.ts](ipc-loop.ts) | 源码模块 | 会话、排队、历史与安全续接的公开 IPC 请求与响应。 |
+| [ipc-people.ts](ipc-people.ts) | 源码模块 | 岗位登记与模块责任的公开 IPC 请求与响应。 |
+| [ipc-resources.ts](ipc-resources.ts) | 源码模块 | 资源仓库、共享连接与架构包的公开 IPC 请求与响应。 |
+| [ipc-settings.ts](ipc-settings.ts) | 源码模块 | 模型、准入、预算与反馈账号设置的公开 IPC 请求与响应。 |
+| [ipc-shapes.ts](ipc-shapes.ts) | 源码模块 | IPC 外层信封的少量公共输入形状；业务字段继续使用各领域公开协议。 |
+| [ipc-workspace.ts](ipc-workspace.ts) | 源码模块 | 工作区生命周期、模块源码只读浏览与知识编辑的公开 IPC 请求与响应。 |
+| [isolated-executions.ts](isolated-executions.ts) | 源码模块 | 向桌面导出原隔离执行核实与清理的公开 DTO。 |
+| [knowledge-source.ts](knowledge-source.ts) | 源码模块 | 向桌面公开知识来源身份、采纳预览和当前核实状态的纯数据协议。 |
+| [knowledge-transactions.ts](knowledge-transactions.ts) | 源码模块 | 向只读执行视图公开知识预览和提交的严格返回协议。 |
+| [model-actions.ts](model-actions.ts) | 源码模块 | 声明主 Agent 选型和供应商设置的桌面请求、运行时校验及返回值映射。 |
+| [models.ts](models.ts) | 源码模块 | 模型配置界面消费的公开模型信息与停止原因格式化。 |
+| [module-ownership.ts](module-ownership.ts) | 源码模块 | 公开模块负责人控制面的纯数据协议，供业务架构、项目岗位与 Main IPC 使用。 |
+| [output-manifest.ts](output-manifest.ts) | 源码模块 | 桌面完整产物面板使用的纯 DTO 与严格结构校验，不导出后端文件或日志读取实现。 |
+| [owner-execution.ts](owner-execution.ts) | 源码模块 | 公开岗位执行的选择、冻结绑定及纯身份校验，供任务和目标视图核对历史归属。 |
+| [repository-connections.ts](repository-connections.ts) | 源码模块 | 向桌面公开工作区资源仓库链接器的登记、授权和真实 HTTP 核验协议。 |
+| [resources.ts](resources.ts) | 源码模块 | 资源界面的通信类型及静态资源包操作协议。 |
+| [runtime.ts](runtime.ts) | 源码模块 | 公开应用级成员、任务、目标周期和已报告用量的只读契约及严格传输校验。 |
+| [scope-budget.ts](scope-budget.ts) | 源码模块 | 公开目标周期额度策略及只读逐请求摘要，供设置和目标卡片经 IPC 展示；不公开预留或终态写入端口。 |
+| [scope-usage.ts](scope-usage.ts) | 源码模块 | 向桌面任务视图公开周期用量的严格查询与报告契约。 |
+| [usage.ts](usage.ts) | 源码模块 | 向界面公开 Logic 执行规则的纯计量函数及单轮用量类型。 |
+| [web.ts](web.ts) | 源码模块 | 迁移期网页设置的具名通信契约出口。 |
+| [workspace-members.ts](workspace-members.ts) | 源码模块 | 公开项目岗位登记、预览与原命令回执的数据协议，供 Main IPC 和团队页面核对身份。 |
+| [workspace-view.ts](workspace-view.ts) | 源码模块 | 转接工作区业务公开数据。 |
+| [workspace.ts](workspace.ts) | 源码模块 | 跨进程工作区、知识事务与 IPC 数据契约。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### admission.ts
 

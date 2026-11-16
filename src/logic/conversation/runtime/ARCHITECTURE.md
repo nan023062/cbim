@@ -6,17 +6,21 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [approvals.ts](approvals.ts) | 任务内操作确认及本次运行全部放行的生命周期。 |
-| [execution-manager.ts](execution-manager.ts) | 管理工作区主对话、可信结果与目标返工接续、多轮历史及队列；系统接续共用去重与停止屏障，业务成员经岗位派发领取。 |
-| [main-agent.ts](main-agent.ts) | 定义内置主 Agent 的固定身份、业务调度与团队/业务知识管理指引，区分原始目标、已接收补充及未核实插入。 |
-| [message-queue.ts](message-queue.ts) | 保存工作区各对话的待执行消息与发送时的模型/权限快照。 |
-| [questions.ts](questions.ts) | 管理工作区内等待用户回答的结构化问题，供 Loop 工具与对话界面共享。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [approvals.ts](approvals.ts) | 源码模块 | 任务内操作确认及本次运行全部放行的生命周期。 |
+| [execution-manager.ts](execution-manager.ts) | 源码模块 | 管理工作区主对话、可信结果与目标返工接续、多轮历史及队列；系统接续共用去重与停止屏障，业务成员经岗位派发领取。 |
+| [main-agent.ts](main-agent.ts) | 源码模块 | 定义内置主 Agent 的固定身份、业务调度与团队/业务知识管理指引，区分原始目标、已接收补充及未核实插入。 |
+| [message-queue.ts](message-queue.ts) | 源码模块 | 保存工作区各对话的待执行消息与发送时的模型/权限快照。 |
+| [questions.ts](questions.ts) | 源码模块 | 管理工作区内等待用户回答的结构化问题，供 Loop 工具与对话界面共享。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### approvals.ts
 
@@ -121,6 +125,7 @@ class N_src_logic_conversation_runtime_execution_manager_ts_ExecutionCollaborati
 N_src_logic_conversation_runtime_execution_manager_ts ..> N_src_logic_conversation_runtime_execution_manager_ts_ExecutionCollaboration : 声明
 class N_src_logic_conversation_runtime_execution_manager_ts_WorkspaceExecutionManager["WorkspaceExecutionManager"] {
   +answerApproval()
+  +constructor()
   +subscribe()
   +prepare()
   +choices()
@@ -135,7 +140,6 @@ class N_src_logic_conversation_runtime_execution_manager_ts_WorkspaceExecutionMa
   +continueFromHumanDecisions()
   +resume()
   +continueFromResults()
-  +continueGoalRepair()
 }
 N_src_logic_conversation_runtime_execution_manager_ts ..> N_src_logic_conversation_runtime_execution_manager_ts_WorkspaceExecutionManager : 声明
 ```
@@ -148,6 +152,7 @@ class N_src_logic_conversation_runtime_execution_manager_ts["execution-manager.t
   <<module>>
 }
 class N_src_logic_conversation_runtime_execution_manager_ts_WorkspaceExecutionManager["WorkspaceExecutionManager"] {
+  +continueGoalRepair()
   +collaborationReady()
   +holdCollaboration()
   +pauseCollaboration()
@@ -163,7 +168,6 @@ class N_src_logic_conversation_runtime_execution_manager_ts_WorkspaceExecutionMa
   -resultContinuationStopped
   -queueAdvanceStopped
   -stopVersions
-  -pendingLaunches
 }
 N_src_logic_conversation_runtime_execution_manager_ts ..> N_src_logic_conversation_runtime_execution_manager_ts_WorkspaceExecutionManager : 声明
 ```
@@ -176,6 +180,7 @@ class N_src_logic_conversation_runtime_execution_manager_ts["execution-manager.t
   <<module>>
 }
 class N_src_logic_conversation_runtime_execution_manager_ts_WorkspaceExecutionManager["WorkspaceExecutionManager"] {
+  -pendingLaunches
   -pendingInsertions
   -insertionsClosed
   -cancelInsertions()
@@ -191,7 +196,6 @@ class N_src_logic_conversation_runtime_execution_manager_ts_WorkspaceExecutionMa
   -closing
   -listeners
   -questions
-  -approvalQueue
 }
 N_src_logic_conversation_runtime_execution_manager_ts ..> N_src_logic_conversation_runtime_execution_manager_ts_WorkspaceExecutionManager : 声明
 ```
@@ -204,6 +208,7 @@ class N_src_logic_conversation_runtime_execution_manager_ts["execution-manager.t
   <<module>>
 }
 class N_src_logic_conversation_runtime_execution_manager_ts_WorkspaceExecutionManager["WorkspaceExecutionManager"] {
+  -approvalQueue
   -cancelApprovals()
   -serial()
   -checkedCurrentHistory()
@@ -246,6 +251,7 @@ class N_src_logic_conversation_runtime_message_queue_ts_QueueCounts["QueueCounts
 }
 N_src_logic_conversation_runtime_message_queue_ts ..> N_src_logic_conversation_runtime_message_queue_ts_QueueCounts : 声明
 class N_src_logic_conversation_runtime_message_queue_ts_MessageQueue["MessageQueue"] {
+  +constructor()
   +load()
   +subscribe()
   +counts()
@@ -261,7 +267,6 @@ class N_src_logic_conversation_runtime_message_queue_ts_MessageQueue["MessageQue
   +take()
   +complete()
   -file
-  -items
 }
 N_src_logic_conversation_runtime_message_queue_ts ..> N_src_logic_conversation_runtime_message_queue_ts_MessageQueue : 声明
 ```
@@ -274,6 +279,7 @@ class N_src_logic_conversation_runtime_message_queue_ts["message-queue.ts"] {
   <<module>>
 }
 class N_src_logic_conversation_runtime_message_queue_ts_MessageQueue["MessageQueue"] {
+  -items
   -loaded
   -loading
   -observers

@@ -6,15 +6,19 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [model-request-budget-service.ts](model-request-budget-service.ts) | 通过专用预算端口保存每个真实主/成员请求的预留、发送意图和终态，不读取或改写其它调度领域。 |
-| [scope-budget-service.ts](scope-budget-service.ts) | 在调度事务内核实周期额度，并将许可证明或拒绝事实交给同一事务保存；逐请求模式读取独立请求账本。 |
-| [scope-usage-service.ts](scope-usage-service.ts) | 按持久主运行清单、旧成员绑定与新递归父工具关系，读取 canonical 日志并生成只读消耗报告。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [model-request-budget-service.ts](model-request-budget-service.ts) | 源码模块 | 通过专用预算端口保存每个真实主/成员请求的预留、发送意图和终态，不读取或改写其它调度领域。 |
+| [scope-budget-service.ts](scope-budget-service.ts) | 源码模块 | 在调度事务内核实周期额度，并将许可证明或拒绝事实交给同一事务保存；逐请求模式读取独立请求账本。 |
+| [scope-usage-service.ts](scope-usage-service.ts) | 源码模块 | 按持久主运行清单、旧成员绑定与新递归父工具关系，读取 canonical 日志并生成只读消耗报告。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### model-request-budget-service.ts
 
@@ -31,6 +35,7 @@ class N_src_logic_budget_runtime_model_request_budget_service_ts_Owner["Owner"] 
 }
 N_src_logic_budget_runtime_model_request_budget_service_ts ..> N_src_logic_budget_runtime_model_request_budget_service_ts_Owner : 声明
 class N_src_logic_budget_runtime_model_request_budget_service_ts_ModelRequestBudgetService["ModelRequestBudgetService"] {
+  +constructor()
   +preflight()
   +forRun()
   +report()
@@ -76,6 +81,7 @@ class N_src_logic_budget_runtime_scope_budget_service_ts_ScopeBudgetRejected["Sc
 }
 N_src_logic_budget_runtime_scope_budget_service_ts ..> N_src_logic_budget_runtime_scope_budget_service_ts_ScopeBudgetRejected : 声明
 class N_src_logic_budget_runtime_scope_budget_service_ts_ScopeBudgetService["ScopeBudgetService"] {
+  +constructor()
   +holdMain()
   +isMainLive()
   +initialize()
@@ -121,6 +127,7 @@ class N_src_logic_budget_runtime_scope_usage_service_ts_Source["Source"] {
 }
 N_src_logic_budget_runtime_scope_usage_service_ts ..> N_src_logic_budget_runtime_scope_usage_service_ts_Source : 声明
 class N_src_logic_budget_runtime_scope_usage_service_ts_ScopeUsageService["ScopeUsageService"] {
+  +constructor()
   +collect()
   +read()
   -owner

@@ -6,16 +6,20 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [browser-reader.ts](browser-reader.ts) | 基础网页读取器与浏览器适配之间的小型只读契约。 |
-| [contracts.ts](contracts.ts) | 基础网页读取能力的输入契约，不含 CBIM 工具、工作区或权限身份。 |
-| [index.ts](index.ts) | 环境无关的网页读取契约和 HTML 正文转换入口。 |
-| [web-content.ts](web-content.ts) | 不执行脚本的 HTML 正文提取和按段落截断。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [browser-reader.ts](browser-reader.ts) | 源码模块 | 基础网页读取器与浏览器适配之间的小型只读契约。 |
+| [contracts.ts](contracts.ts) | 源码模块 | 基础网页读取能力的输入契约，不含 CBIM 工具、工作区或权限身份。 |
+| [index.ts](index.ts) | 源码模块 | 环境无关的网页读取契约和 HTML 正文转换入口。 |
+| [web-content.ts](web-content.ts) | 源码模块 | 不执行脚本的 HTML 正文提取和按段落截断。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### browser-reader.ts
 

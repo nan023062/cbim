@@ -6,16 +6,20 @@ Node 网页读取机制：安全 HTTP、静态正文、robots、节流、缓存�
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [browser-proxy.ts](browser-proxy.ts) | 匿名浏览器专用的本机 HTTP/CONNECT 出口，TLS 与页面协议仍由 Chromium 执行。 |
-| [index.ts](index.ts) | 高内聚网页基础类库的 Node 公开入口。 |
-| [page-reader.ts](page-reader.ts) | 静态正文、一次浏览器兜底、robots、域名节流与短缓存。 |
-| [public-http.ts](public-http.ts) | 仅公开 HTTP/HTTPS 的有界传输，供网页工具使用。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [browser-proxy.ts](browser-proxy.ts) | 源码模块 | 匿名浏览器专用的本机 HTTP/CONNECT 出口，TLS 与页面协议仍由 Chromium 执行。 |
+| [index.ts](index.ts) | 源码模块 | 高内聚网页基础类库的 Node 公开入口。 |
+| [page-reader.ts](page-reader.ts) | 源码模块 | 静态正文、一次浏览器兜底、robots、域名节流与短缓存。 |
+| [public-http.ts](public-http.ts) | 源码模块 | 仅公开 HTTP/HTTPS 的有界传输，供网页工具使用。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### browser-proxy.ts
 
@@ -60,6 +64,7 @@ class N_src_core_platform_node_web_page_reader_ts["page-reader.ts"] {
   <<module>>
 }
 class N_src_core_platform_node_web_page_reader_ts_WebPageReader["WebPageReader"] {
+  +constructor()
   +fetch()
   -client
   -timing
@@ -115,6 +120,7 @@ class N_src_core_platform_node_web_public_http_ts_PublicHttpTransport["PublicHtt
 }
 N_src_core_platform_node_web_public_http_ts ..> N_src_core_platform_node_web_public_http_ts_PublicHttpTransport : 声明
 class N_src_core_platform_node_web_public_http_ts_PublicHttp["PublicHttp"] {
+  +constructor()
   +read()
   +readBytes()
   -transport

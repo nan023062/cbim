@@ -6,14 +6,18 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [repository-connection-store.ts](repository-connection-store.ts) | 在应用用户目录保存工作区资源仓库只读授权及原命令回执。 |
-| [repository-connections.ts](repository-connections.ts) | 桌面资源仓库连接的知识预览/登记、独立本机授权和显式 HTTP 只读核验。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [repository-connection-store.ts](repository-connection-store.ts) | 源码模块 | 在应用用户目录保存工作区资源仓库只读授权及原命令回执。 |
+| [repository-connections.ts](repository-connections.ts) | 源码模块 | 桌面资源仓库连接的知识预览/登记、独立本机授权和显式 HTTP 只读核验。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### repository-connection-store.ts
 
@@ -28,6 +32,7 @@ class N_src_logic_connectors_service_repository_connection_store_ts_State["State
 }
 N_src_logic_connectors_service_repository_connection_store_ts ..> N_src_logic_connectors_service_repository_connection_store_ts_State : 声明
 class N_src_logic_connectors_service_repository_connection_store_ts_RepositoryConnectionStore["RepositoryConnectionStore"] {
+  +constructor()
   +init()
   +grants()
   +grant()
@@ -77,6 +82,7 @@ class N_src_logic_connectors_service_repository_connections_ts_CapturedRepositor
 }
 N_src_logic_connectors_service_repository_connections_ts ..> N_src_logic_connectors_service_repository_connections_ts_CapturedRepositoryTarget : 声明
 class N_src_logic_connectors_service_repository_connections_ts_RepositoryConnections["RepositoryConnections"] {
+  +constructor()
   +init()
   +list()
   +preview()
@@ -92,7 +98,6 @@ class N_src_logic_connectors_service_repository_connections_ts_RepositoryConnect
   +retireWorkspace()
   +close()
   -resources
-  -workspace
 }
 N_src_logic_connectors_service_repository_connections_ts ..> N_src_logic_connectors_service_repository_connections_ts_RepositoryConnections : 声明
 ```
@@ -105,6 +110,7 @@ class N_src_logic_connectors_service_repository_connections_ts["repository-conne
   <<module>>
 }
 class N_src_logic_connectors_service_repository_connections_ts_RepositoryConnections["RepositoryConnections"] {
+  -workspace
   -queue
   -closed
   -checks
@@ -120,7 +126,6 @@ class N_src_logic_connectors_service_repository_connections_ts_RepositoryConnect
   -savePlan()
   -readPlan()
   -commitResult()
-  -abortChecks()
 }
 N_src_logic_connectors_service_repository_connections_ts ..> N_src_logic_connectors_service_repository_connections_ts_RepositoryConnections : 声明
 ```
@@ -133,6 +138,7 @@ class N_src_logic_connectors_service_repository_connections_ts["repository-conne
   <<module>>
 }
 class N_src_logic_connectors_service_repository_connections_ts_RepositoryConnections["RepositoryConnections"] {
+  -abortChecks()
   -captureTargets()
   -tools()
   -checkOnce()

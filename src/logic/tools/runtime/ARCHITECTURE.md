@@ -6,30 +6,34 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [candidate-review-tools.ts](candidate-review-tools.ts) | 仅向主运行提供精确成员候选审阅入口。 |
-| [command-report-contract.ts](command-report-contract.ts) | 声明主调度原命令核实工具的只读元数据及唯一 wire 归属校验。 |
-| [coordination-contracts.ts](coordination-contracts.ts) | 校验只读闭包预览的原运行归属和提交依据。 |
-| [coordination-tools.ts](coordination-tools.ts) | 主运行的统一状态与原回执读取入口，保留各领域实际校验和恢复语义。 |
-| [dispatch-tools.ts](dispatch-tools.ts) | 把主调度的派发、查询、未启动撤销、依赖修订及检查点预约/明确放弃转换为内部工具，并组合目标工具。 |
-| [feedback-status-tool.ts](feedback-status-tool.ts) | 主会话的反馈可用性只读诊断，区分本轮装配事实与当前本机连接事实。 |
-| [feedback-tools.ts](feedback-tools.ts) | 主会话的 GitHub 反馈提交与原提交核实工具，承接两项内置 Skill 的格式字段。 |
-| [goal-tools.ts](goal-tools.ts) | 将主 Agent 当前用户目标、真实补充历史的读取及规划审阅端口注册为内部 Loop 工具。 |
-| [governance-tools.ts](governance-tools.ts) | 将每个真实主运行的治理窄端口装配成发现、分类与调用一致的四项工具。 |
-| [knowledge-contracts.ts](knowledge-contracts.ts) | 将实际知识工具与 Core 业务输出 Schema、取消及恢复说明绑定，供工具注册使用。 |
-| [knowledge-tools.ts](knowledge-tools.ts) | 向 CBIM 内部大脑提供知识查询、对象事务和内置 Skill 工具。 |
-| [main-tool-contracts.ts](main-tool-contracts.ts) | 绑定主调度工具的公开回包、取消恢复说明及可信命令键，前置多边修订使用独立命令域。 |
-| [module-ownership-tools.ts](module-ownership-tools.ts) | 把本轮真实主运行的模块责任端口转换为发现、分类和执行一致的四工具。 |
-| [office-history-tools.ts](office-history-tools.ts) | 只向主运行提供当前办公室的话题归档读取工具。 |
-| [question-tools.ts](question-tools.ts) | 为已装配用户交互端口的主/成员运行提供结构化提问工具及严格答案回包。 |
-| [repository-tools.ts](repository-tools.ts) | 把主进程捕获的资源仓库只读端口装配为主调度可调用的两个工具。 |
-| [web-tools.ts](web-tools.ts) | 将主进程公开网页读取端口注册为两个只读主 Agent 工具。 |
-| [workspace-member-tools.ts](workspace-member-tools.ts) | 将主运行岗位端口注册为查询、预览、提交与原回执四项工具。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [candidate-review-tools.ts](candidate-review-tools.ts) | 源码模块 | 仅向主运行提供精确成员候选审阅入口。 |
+| [command-report-contract.ts](command-report-contract.ts) | 源码模块 | 声明主调度原命令核实工具的只读元数据及唯一 wire 归属校验。 |
+| [coordination-contracts.ts](coordination-contracts.ts) | 源码模块 | 校验只读闭包预览的原运行归属和提交依据。 |
+| [coordination-tools.ts](coordination-tools.ts) | 源码模块 | 主运行的统一状态与原回执读取入口，保留各领域实际校验和恢复语义。 |
+| [dispatch-tools.ts](dispatch-tools.ts) | 源码模块 | 把主调度的派发、查询、未启动撤销、依赖修订及检查点预约/明确放弃转换为内部工具，并组合目标工具。 |
+| [feedback-status-tool.ts](feedback-status-tool.ts) | 源码模块 | 主会话的反馈可用性只读诊断，区分本轮装配事实与当前本机连接事实。 |
+| [feedback-tools.ts](feedback-tools.ts) | 源码模块 | 主会话的 GitHub 反馈提交与原提交核实工具，承接两项内置 Skill 的格式字段。 |
+| [goal-tools.ts](goal-tools.ts) | 源码模块 | 将主 Agent 当前用户目标、真实补充历史的读取及规划审阅端口注册为内部 Loop 工具。 |
+| [governance-tools.ts](governance-tools.ts) | 源码模块 | 将每个真实主运行的治理窄端口装配成发现、分类与调用一致的四项工具。 |
+| [knowledge-contracts.ts](knowledge-contracts.ts) | 源码模块 | 将实际知识工具与 Core 业务输出 Schema、取消及恢复说明绑定，供工具注册使用。 |
+| [knowledge-tools.ts](knowledge-tools.ts) | 源码模块 | 向 CBIM 内部大脑提供知识查询、对象事务和内置 Skill 工具。 |
+| [main-tool-contracts.ts](main-tool-contracts.ts) | 源码模块 | 绑定主调度工具的公开回包、取消恢复说明及可信命令键，前置多边修订使用独立命令域。 |
+| [module-ownership-tools.ts](module-ownership-tools.ts) | 源码模块 | 把本轮真实主运行的模块责任端口转换为发现、分类和执行一致的四工具。 |
+| [office-history-tools.ts](office-history-tools.ts) | 源码模块 | 只向主运行提供当前办公室的话题归档读取工具。 |
+| [question-tools.ts](question-tools.ts) | 源码模块 | 为已装配用户交互端口的主/成员运行提供结构化提问工具及严格答案回包。 |
+| [repository-tools.ts](repository-tools.ts) | 源码模块 | 把主进程捕获的资源仓库只读端口装配为主调度可调用的两个工具。 |
+| [web-tools.ts](web-tools.ts) | 源码模块 | 将主进程公开网页读取端口注册为两个只读主 Agent 工具。 |
+| [workspace-member-tools.ts](workspace-member-tools.ts) | 源码模块 | 将主运行岗位端口注册为查询、预览、提交与原回执四项工具。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### candidate-review-tools.ts
 
@@ -39,6 +43,7 @@ class N_src_logic_tools_runtime_candidate_review_tools_ts["candidate-review-tool
   <<module>>
 }
 class N_src_logic_tools_runtime_candidate_review_tools_ts_CandidateReviewTools["CandidateReviewTools"] {
+  +constructor()
   +has()
   +list()
   +describe()
@@ -99,6 +104,7 @@ class N_src_logic_tools_runtime_coordination_tools_ts_ReadPort["ReadPort"] {
 }
 N_src_logic_tools_runtime_coordination_tools_ts ..> N_src_logic_tools_runtime_coordination_tools_ts_ReadPort : 声明
 class N_src_logic_tools_runtime_coordination_tools_ts_CoordinationTools["CoordinationTools"] {
+  +constructor()
   +has()
   +list()
   +describe()
@@ -146,6 +152,7 @@ class N_src_logic_tools_runtime_dispatch_tools_ts_DispatchToolsPort["DispatchToo
 }
 N_src_logic_tools_runtime_dispatch_tools_ts ..> N_src_logic_tools_runtime_dispatch_tools_ts_DispatchToolsPort : 声明
 class N_src_logic_tools_runtime_dispatch_tools_ts_DispatchTools["DispatchTools"] {
+  +constructor()
   +collaborationMode
   +list()
   +has()
@@ -173,6 +180,7 @@ class N_src_logic_tools_runtime_feedback_status_tool_ts["feedback-status-tool.ts
   <<module>>
 }
 class N_src_logic_tools_runtime_feedback_status_tool_ts_FeedbackStatusTool["FeedbackStatusTool"] {
+  +constructor()
   +has()
   +list()
   +describe()
@@ -197,6 +205,7 @@ class N_src_logic_tools_runtime_feedback_tools_ts["feedback-tools.ts"] {
 }
 class N_src_logic_tools_runtime_feedback_tools_ts_FeedbackTools["FeedbackTools"] {
   +scope
+  +constructor()
   +has()
   +list()
   +describe()
@@ -238,6 +247,7 @@ class N_src_logic_tools_runtime_goal_tools_ts_GoalToolsPort["GoalToolsPort"] {
 }
 N_src_logic_tools_runtime_goal_tools_ts ..> N_src_logic_tools_runtime_goal_tools_ts_GoalToolsPort : 声明
 class N_src_logic_tools_runtime_goal_tools_ts_GoalTools["GoalTools"] {
+  +constructor()
   +list()
   +has()
   +describe()
@@ -269,6 +279,7 @@ class N_src_logic_tools_runtime_governance_tools_ts_GovernanceRunBinding["Govern
 }
 N_src_logic_tools_runtime_governance_tools_ts ..> N_src_logic_tools_runtime_governance_tools_ts_GovernanceRunBinding : 声明
 class N_src_logic_tools_runtime_governance_tools_ts_GovernanceTools["GovernanceTools"] {
+  +constructor()
   +has()
   +list()
   +describe()
@@ -313,6 +324,7 @@ class N_src_logic_tools_runtime_knowledge_tools_ts["knowledge-tools.ts"] {
 class N_src_logic_tools_runtime_knowledge_tools_ts_KnowledgeTools["KnowledgeTools"] {
   +workspace
   +queries
+  +constructor()
   +list()
   +has()
   +normalizeInput()
@@ -348,6 +360,7 @@ class N_src_logic_tools_runtime_module_ownership_tools_ts["module-ownership-tool
   <<module>>
 }
 class N_src_logic_tools_runtime_module_ownership_tools_ts_ModuleOwnershipTools["ModuleOwnershipTools"] {
+  +constructor()
   +has()
   +list()
   +describe()
@@ -369,6 +382,7 @@ class N_src_logic_tools_runtime_office_history_tools_ts["office-history-tools.ts
   <<module>>
 }
 class N_src_logic_tools_runtime_office_history_tools_ts_OfficeHistoryTools["OfficeHistoryTools"] {
+  +constructor()
   +has()
   +list()
   +describe()
@@ -389,6 +403,7 @@ class N_src_logic_tools_runtime_question_tools_ts["question-tools.ts"] {
   <<module>>
 }
 class N_src_logic_tools_runtime_question_tools_ts_QuestionTools["QuestionTools"] {
+  +constructor()
   +has()
   +list()
   +describe()
@@ -409,6 +424,7 @@ class N_src_logic_tools_runtime_repository_tools_ts["repository-tools.ts"] {
   <<module>>
 }
 class N_src_logic_tools_runtime_repository_tools_ts_RepositoryTools["RepositoryTools"] {
+  +constructor()
   +has()
   +list()
   +describe()
@@ -432,6 +448,7 @@ class N_src_logic_tools_runtime_web_tools_ts["web-tools.ts"] {
   <<module>>
 }
 class N_src_logic_tools_runtime_web_tools_ts_WebTools["WebTools"] {
+  +constructor()
   +has()
   +list()
   +describe()
@@ -452,6 +469,7 @@ class N_src_logic_tools_runtime_workspace_member_tools_ts["workspace-member-tool
   <<module>>
 }
 class N_src_logic_tools_runtime_workspace_member_tools_ts_WorkspaceMemberTools["WorkspaceMemberTools"] {
+  +constructor()
   +has()
   +list()
   +describe()

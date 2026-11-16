@@ -6,97 +6,101 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [automatic-execution-rules.ts](automatic-execution-rules.ts) | 在同一派发存储前缀核实自动兜底与可信周期的关联。 |
-| [automatic-return.ts](automatic-return.ts) | 定义已结算主轮等待成员结果的不可变批次，供调度存储与重启接收共用。 |
-| [candidate-review.ts](candidate-review.ts) | 成员候选的主调度审阅协议与依赖放行谓词。 |
-| [checkpoint-handoff-invariants.ts](checkpoint-handoff-invariants.ts) | 核实检查点放弃的不可变历史和精确联合事务，返回仅供检查点状态机使用的任务许可。 |
-| [checkpoint-handoff-rules.ts](checkpoint-handoff-rules.ts) | 从同一派发快照选择可明确终止的检查点，或核实已放弃来源供后继换边。 |
-| [checkpoint-handoff.ts](checkpoint-handoff.ts) | 定义主调度明确放弃未消费检查点的严格请求、不可变处置审计和回执。 |
-| [command-verification-output.ts](command-verification-output.ts) | 后端原命令报告的回执归属校验与紧凑公共投影，复用现有主工具输出契约。 |
-| [command-verification.ts](command-verification.ts) | 声明原主命令只读核实的严格请求、有界报告及写工具支持矩阵，含多边前置修订摘要。 |
-| [continuation-source-snapshot.ts](continuation-source-snapshot.ts) | 安全等待资料导入的严格来源摘要与私有文本快照协议，供 Main 保存及 Core 清单校验共用。 |
-| [coordination-preview.ts](coordination-preview.ts) | 从一次派发存储读取投影目标版本、可引用候选和撤销/等待清单。 |
-| [dispatch-commands.ts](dispatch-commands.ts) | 第一阶段成员注册与主会话派发的命令及回执契约。 |
-| [dispatch-execution.ts](dispatch-execution.ts) | 声明成员任务执行的后端持久化记录，连接已派发任务与同一大脑内核的运行身份。 |
-| [dispatch-invariants.ts](dispatch-invariants.ts) | 在派发事务提交和日志恢复时校验成员执行、任务图和邮箱的联合约束。 |
-| [dispatch-receipt.ts](dispatch-receipt.ts) | 主调度与桌面内联任务共用的纯派发回执结构，不包含 IO、哈希或原命令核实。 |
-| [dispatch-scope-invariants.ts](dispatch-scope-invariants.ts) | 校验调度周期、不可变回传批次、等待检查点、运行中补充和显式接续的持久状态及原子变更，供派发存储提交与重放共用。 |
-| [dispatch-scope.ts](dispatch-scope.ts) | 定义一次用户任务的调度周期及不可变待回传批次，与长期主会话和单次模型运行区分。 |
-| [effect-observation-invariants.ts](effect-observation-invariants.ts) | 在唯一派发 Store 的实时提交与原日志重放中核实影响处置附录及新周期引用。 |
-| [effect-observation-rules.ts](effect-observation-rules.ts) | 计算影响观察的事实依据与处置命令，并构造原不可变回执/摘要。 |
-| [effect-observation.ts](effect-observation.ts) | 定义原成员/主调用的影响观察、本机处置附录及后续周期关系的公开叶子契约。 |
-| [execution-context.ts](execution-context.ts) | 成员业务执行所需的可持久化知识快照，以及存储与调度共用的完整性校验。 |
-| [execution-report.ts](execution-report.ts) | 旧成员与递归业务执行异常核实的只读报告协议，供调度服务与界面共享。 |
-| [fresh-context.ts](fresh-context.ts) | 定义显式新周期共用的原生上下文隔离边界。 |
-| [graph-reducer.ts](graph-reducer.ts) | 把已提交的图事件原子转换为内存投影，并按游标输出增量读取结果。 |
-| [graph-rules.ts](graph-rules.ts) | 任务图的纯领域校验，完整图与单项公开查询共用节点状态规则，并检查身份、派发父关系及依赖/等待无环。 |
-| [graph-types.ts](graph-types.ts) | 任务派发图的可序列化领域契约，供调度、持久化和 Bridge 共同引用。 |
-| [human-continuation-invariants.ts](human-continuation-invariants.ts) | 保护人工意见的一次消费、主体冻结及返工引用；独立业务拒绝仅绑定精确旧候选，不能替代人工接受。 |
-| [human-continuation-rules.ts](human-continuation-rules.ts) | 提供人工接续的最新记录选择、当前输入版本定位和业务主体比较。 |
-| [human-continue.ts](human-continue.ts) | 定义按本机已保存人工决定显式继续原目标的严格协议与业务主体快照。 |
-| [human-decision-invariants.ts](human-decision-invariants.ts) | 保护人工决定在周期联合事务及重放中的追加历史、当前依据和无执行副作用边界。 |
-| [human-decision-proof.ts](human-decision-proof.ts) | 将人工决定预览收敛为有界的真实依据，并生成与读取时间、并发序列无关的内容指纹。 |
-| [human-decisions.ts](human-decisions.ts) | 定义本机显式人工决定的请求、精确依据和只读历史，供调度与桌面共同校验。 |
-| [human-reconsideration.ts](human-reconsideration.ts) | 比较原人工意见与当前等待的真实预览，给出逐项差异和明确重新决定资格。 |
-| [knowledge-source-invariants.ts](knowledge-source-invariants.ts) | 来源事件与岗位/责任采纳的同事务许可，连接纯来源日志和 DispatchStore。 |
-| [main-tool-output.ts](main-tool-output.ts) | 主调度工具的公开业务输出契约与可信调用归属校验，前置修订严格对应原增删请求；派发的纯回执结构由 dispatch-receipt 共用，业务核实仍留在此处。 |
-| [main-tool-scope.ts](main-tool-scope.ts) | 主调度工具读取周期的公开白名单投影，保留规划、审阅和显式接续实际需要的事实。 |
-| [member-checkpoint-chain.ts](member-checkpoint-chain.ts) | 读取同任务的有序检查点和预约历史，供图、调度及公开视图选择当前段。 |
-| [member-checkpoint-evidence.ts](member-checkpoint-evidence.ts) | 运行时和结算端共用成员检查点的纯证据门禁，核实文件来源全集、暂存/结束回执和正常终态。 |
-| [member-checkpoint-invariants.ts](member-checkpoint-invariants.ts) | 检查成员逐段检查点、不可变预约历史和每段唯一消费在图/运行/邮箱联合事务中的一致性。 |
-| [member-checkpoint-ledger.ts](member-checkpoint-ledger.ts) | 从同一派发快照核实已完成且最新段未消费的检查点链，供等待、预约与交接共用。 |
-| [member-checkpoint-tools.ts](member-checkpoint-tools.ts) | 包装正式执行成员的检查点工具，限制模型输入并将真实调用 ID 交给运行时。 |
-| [member-checkpoint.ts](member-checkpoint.ts) | 定义成员有界文件任务的合作式检查点请求、可信交接记录和后端原生历史证明。 |
-| [member-commands.ts](member-commands.ts) | 可信桌面入口启动、观察和停止成员任务，以及读取和确认结果信封的序列化契约。 |
-| [member-events.ts](member-events.ts) | 成员运行的公开事件分页协议，供主对话和任务节点详情复用现有消息渲染。 |
-| [member-help-tools.ts](member-help-tools.ts) | 为正式执行成员提供一次性求助工具，并在求助授权至本轮结束期间封住后续工具调用。 |
-| [member-help.ts](member-help.ts) | 定义执行成员向主调度单向提交的结构化求助，以及安全结算后的不可变交接记录。 |
-| [member-pause-rules.ts](member-pause-rules.ts) | 在同一派发快照中选择可持久等待的原检查点与未领取后继，供服务和 Store 重放独立裁决。 |
-| [member-pause.ts](member-pause.ts) | 定义可靠成员检查点及未领取后继的显式持久等待清单，供目标审阅与等待归档共用。 |
-| [member-tool-output.ts](member-tool-output.ts) | 执行进度四工具及正式成员三工具的严格输出、真实归属和公开恢复说明。 |
-| [member-topic-context-rules.ts](member-topic-context-rules.ts) | 按原办公室、角色和输入版本冻结并解析当前话题的成员上下文引用。 |
-| [member-topic-context.ts](member-topic-context.ts) | 声明子 Agent 当前话题上下文的不可变引用契约。 |
-| [module-ownership-invariants.ts](module-ownership-invariants.ts) | 将负责人控制面接到同一派发事务，重算关联任务影响并核实真实主运行来源。 |
-| [office-history.ts](office-history.ts) | 主 Session 按话题检索归档的只读协议，供历史服务与主 Agent 工具共用。 |
-| [owner-execution-invariants.ts](owner-execution-invariants.ts) | 校验负责人协议下的新计划、任务、前置增删闭包、预约和领取，以及历史冻结身份。 |
-| [persistent-write-input.ts](persistent-write-input.ts) | 后端从可信主 canonical 与唯一周期重建三项持久写命令的原查询引用。 |
-| [persistent-write-observation.ts](persistent-write-observation.ts) | 原治理观察、提案及责任变更的有界保存摘要，供影响报告与桌面共同读取。 |
-| [queue.ts](queue.ts) | 待执行用户消息的校验结构与增量同步契约。 |
-| [queued-dependency-addition-invariants.ts](queued-dependency-addition-invariants.ts) | 核实追加依赖的不可变审计与精确原子变更，并向统一边门禁返回本批已验证的新边许可。 |
-| [queued-dependency-addition-rules.ts](queued-dependency-addition-rules.ts) | 从同一派发快照选取可追加前置的两端及其完整未领取后继，供提交与重放共用。 |
-| [queued-dependency-addition.ts](queued-dependency-addition.ts) | 声明主调度为未领取任务追加单条结果前置的严格输入、不可变审计和提交回执。 |
-| [queued-dependency-replacement-invariants.ts](queued-dependency-replacement-invariants.ts) | 校验前置替换的原子审计，以及所有依赖边变更的持久化边界。 |
-| [queued-dependency-replacement-rules.ts](queued-dependency-replacement-rules.ts) | 纯选取单条前置替换的目标、可靠候选及完整未启动后继集合，供提交服务和重放校验共用。 |
-| [queued-dependency-replacement.ts](queued-dependency-replacement.ts) | 定义主调度替换未启动任务单条前置的严格输入、不可变审计和可靠提交回执。 |
-| [queued-dependency-revision-invariants.ts](queued-dependency-revision-invariants.ts) | 验证多边前置修订的原审计、精确节点/成员/边变更，返回本批新增与退役许可。 |
-| [queued-dependency-revision-rules.ts](queued-dependency-revision-rules.ts) | 计算同一未领取目标的前置原子修订及完整受影响后继，供真实提交与重放校验。 |
-| [queued-dependency-revision.ts](queued-dependency-revision.ts) | 声明未领取目标多条前置增删的输入、不可变审计和原命令回执，供图与工具共享。 |
-| [queued-member-resume-rules.ts](queued-member-resume-rules.ts) | 在已提交状态中选择唯一可预约的成员检查点与尚未启动的依赖后继。 |
-| [queued-member-resume.ts](queued-member-resume.ts) | 主调度为同一活动任务预约一次检查点续执行的纯协议。 |
-| [queued-task-cancel-rules.ts](queued-task-cancel-rules.ts) | 在存储屏障内检查未启动任务及启用依赖的完整撤销集合。 |
-| [queued-task-cancel.ts](queued-task-cancel.ts) | 定义主调度显式撤销未启动任务的输入、冻结记录及原子提交回执。 |
-| [scope-active-input-rules.ts](scope-active-input-rules.ts) | 校验运行中补充的可靠尝试、唯一结算和目标增版，供事务提交与重放共用。 |
-| [scope-active-input.ts](scope-active-input.ts) | 运行中用户补充的持久尝试、可信发送令牌及公开输入版本关系。 |
-| [scope-continuation-attachments.ts](scope-continuation-attachments.ts) | 安全等待补充的附件 ID、紧凑快照清单及可信受理参数，供 Main、调度事务和公开回执共用。 |
-| [scope-continuation-record.ts](scope-continuation-record.ts) | 组合真实文本补充与人工决定接续的共同有序持久历史。 |
-| [scope-continuation.ts](scope-continuation.ts) | 定义安全等待检查点、用户显式补充原目标的请求和一次性启动意图。 |
-| [scope-goal.ts](scope-goal.ts) | 定义目标输入、版本化计划、审阅证据及转换规则；业务拒绝精确绑定旧候选，新候选仍须独立验收。 |
-| [scope-public.ts](scope-public.ts) | 提供周期详情与主工具共用的纯公开 Schema、类型和白名单投影。 |
-| [scope-recovery.ts](scope-recovery.ts) | 定义用户显式新建只读核实周期的请求、冻结启动意图及公开回执。 |
-| [scope-replan.ts](scope-replan.ts) | 定义完成只读核实后显式创建业务新周期的预览、启动意图和公开回执。 |
-| [scope-run-invariants.ts](scope-run-invariants.ts) | 在派发事务提交和重放时核验周期主运行清单的完整归属及追加边界。 |
-| [scope-run-tracking.ts](scope-run-tracking.ts) | 定义新调度周期从创建起登记的主运行清单及纯追加规则。 |
-| [scope-view.ts](scope-view.ts) | 定义主会话调度周期的公开摘要、选中详情和独立增量投影，供存储与界面共享。 |
-| [topic-interruption.ts](topic-interruption.ts) | 定义用户向指定话题提交补充的持久意图，供调度、记录和界面共用。 |
-| [types.ts](types.ts) | 业务目标和冻结上下文的任务定义。 |
-| [workflow-selection.ts](workflow-selection.ts) | 目标分配、派发和任务历史共用的 Workflow 选择叶子协议，不依赖知识或调度实现。 |
-| [workspace-member-invariants.ts](workspace-member-invariants.ts) | 将岗位登记的单条审计规则接到工作区 DispatchStore 的提交与重放边界。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [automatic-execution-rules.ts](automatic-execution-rules.ts) | 源码模块 | 在同一派发存储前缀核实自动兜底与可信周期的关联。 |
+| [automatic-return.ts](automatic-return.ts) | 源码模块 | 定义已结算主轮等待成员结果的不可变批次，供调度存储与重启接收共用。 |
+| [candidate-review.ts](candidate-review.ts) | 源码模块 | 成员候选的主调度审阅协议与依赖放行谓词。 |
+| [checkpoint-handoff-invariants.ts](checkpoint-handoff-invariants.ts) | 源码模块 | 核实检查点放弃的不可变历史和精确联合事务，返回仅供检查点状态机使用的任务许可。 |
+| [checkpoint-handoff-rules.ts](checkpoint-handoff-rules.ts) | 源码模块 | 从同一派发快照选择可明确终止的检查点，或核实已放弃来源供后继换边。 |
+| [checkpoint-handoff.ts](checkpoint-handoff.ts) | 源码模块 | 定义主调度明确放弃未消费检查点的严格请求、不可变处置审计和回执。 |
+| [command-verification-output.ts](command-verification-output.ts) | 源码模块 | 后端原命令报告的回执归属校验与紧凑公共投影，复用现有主工具输出契约。 |
+| [command-verification.ts](command-verification.ts) | 源码模块 | 声明原主命令只读核实的严格请求、有界报告及写工具支持矩阵，含多边前置修订摘要。 |
+| [continuation-source-snapshot.ts](continuation-source-snapshot.ts) | 源码模块 | 安全等待资料导入的严格来源摘要与私有文本快照协议，供 Main 保存及 Core 清单校验共用。 |
+| [coordination-preview.ts](coordination-preview.ts) | 源码模块 | 从一次派发存储读取投影目标版本、可引用候选和撤销/等待清单。 |
+| [dispatch-commands.ts](dispatch-commands.ts) | 源码模块 | 第一阶段成员注册与主会话派发的命令及回执契约。 |
+| [dispatch-execution.ts](dispatch-execution.ts) | 源码模块 | 声明成员任务执行的后端持久化记录，连接已派发任务与同一大脑内核的运行身份。 |
+| [dispatch-invariants.ts](dispatch-invariants.ts) | 源码模块 | 在派发事务提交和日志恢复时校验成员执行、任务图和邮箱的联合约束。 |
+| [dispatch-receipt.ts](dispatch-receipt.ts) | 源码模块 | 主调度与桌面内联任务共用的纯派发回执结构，不包含 IO、哈希或原命令核实。 |
+| [dispatch-scope-invariants.ts](dispatch-scope-invariants.ts) | 源码模块 | 校验调度周期、不可变回传批次、等待检查点、运行中补充和显式接续的持久状态及原子变更，供派发存储提交与重放共用。 |
+| [dispatch-scope.ts](dispatch-scope.ts) | 源码模块 | 定义一次用户任务的调度周期及不可变待回传批次，与长期主会话和单次模型运行区分。 |
+| [effect-observation-invariants.ts](effect-observation-invariants.ts) | 源码模块 | 在唯一派发 Store 的实时提交与原日志重放中核实影响处置附录及新周期引用。 |
+| [effect-observation-rules.ts](effect-observation-rules.ts) | 源码模块 | 计算影响观察的事实依据与处置命令，并构造原不可变回执/摘要。 |
+| [effect-observation.ts](effect-observation.ts) | 源码模块 | 定义原成员/主调用的影响观察、本机处置附录及后续周期关系的公开叶子契约。 |
+| [execution-context.ts](execution-context.ts) | 源码模块 | 成员业务执行所需的可持久化知识快照，以及存储与调度共用的完整性校验。 |
+| [execution-report.ts](execution-report.ts) | 源码模块 | 旧成员与递归业务执行异常核实的只读报告协议，供调度服务与界面共享。 |
+| [fresh-context.ts](fresh-context.ts) | 源码模块 | 定义显式新周期共用的原生上下文隔离边界。 |
+| [graph-reducer.ts](graph-reducer.ts) | 源码模块 | 把已提交的图事件原子转换为内存投影，并按游标输出增量读取结果。 |
+| [graph-rules.ts](graph-rules.ts) | 源码模块 | 任务图的纯领域校验，完整图与单项公开查询共用节点状态规则，并检查身份、派发父关系及依赖/等待无环。 |
+| [graph-types.ts](graph-types.ts) | 源码模块 | 任务派发图的可序列化领域契约，供调度、持久化和 Bridge 共同引用。 |
+| [human-continuation-invariants.ts](human-continuation-invariants.ts) | 源码模块 | 保护人工意见的一次消费、主体冻结及返工引用；独立业务拒绝仅绑定精确旧候选，不能替代人工接受。 |
+| [human-continuation-rules.ts](human-continuation-rules.ts) | 源码模块 | 提供人工接续的最新记录选择、当前输入版本定位和业务主体比较。 |
+| [human-continue.ts](human-continue.ts) | 源码模块 | 定义按本机已保存人工决定显式继续原目标的严格协议与业务主体快照。 |
+| [human-decision-invariants.ts](human-decision-invariants.ts) | 源码模块 | 保护人工决定在周期联合事务及重放中的追加历史、当前依据和无执行副作用边界。 |
+| [human-decision-proof.ts](human-decision-proof.ts) | 源码模块 | 将人工决定预览收敛为有界的真实依据，并生成与读取时间、并发序列无关的内容指纹。 |
+| [human-decisions.ts](human-decisions.ts) | 源码模块 | 定义本机显式人工决定的请求、精确依据和只读历史，供调度与桌面共同校验。 |
+| [human-reconsideration.ts](human-reconsideration.ts) | 源码模块 | 比较原人工意见与当前等待的真实预览，给出逐项差异和明确重新决定资格。 |
+| [knowledge-source-invariants.ts](knowledge-source-invariants.ts) | 源码模块 | 来源事件与岗位/责任采纳的同事务许可，连接纯来源日志和 DispatchStore。 |
+| [main-tool-output.ts](main-tool-output.ts) | 源码模块 | 主调度工具的公开业务输出契约与可信调用归属校验，前置修订严格对应原增删请求；派发的纯回执结构由 dispatch-receipt 共用，业务核实仍留在此处。 |
+| [main-tool-scope.ts](main-tool-scope.ts) | 源码模块 | 主调度工具读取周期的公开白名单投影，保留规划、审阅和显式接续实际需要的事实。 |
+| [member-checkpoint-chain.ts](member-checkpoint-chain.ts) | 源码模块 | 读取同任务的有序检查点和预约历史，供图、调度及公开视图选择当前段。 |
+| [member-checkpoint-evidence.ts](member-checkpoint-evidence.ts) | 源码模块 | 运行时和结算端共用成员检查点的纯证据门禁，核实文件来源全集、暂存/结束回执和正常终态。 |
+| [member-checkpoint-invariants.ts](member-checkpoint-invariants.ts) | 源码模块 | 检查成员逐段检查点、不可变预约历史和每段唯一消费在图/运行/邮箱联合事务中的一致性。 |
+| [member-checkpoint-ledger.ts](member-checkpoint-ledger.ts) | 源码模块 | 从同一派发快照核实已完成且最新段未消费的检查点链，供等待、预约与交接共用。 |
+| [member-checkpoint-tools.ts](member-checkpoint-tools.ts) | 源码模块 | 包装正式执行成员的检查点工具，限制模型输入并将真实调用 ID 交给运行时。 |
+| [member-checkpoint.ts](member-checkpoint.ts) | 源码模块 | 定义成员有界文件任务的合作式检查点请求、可信交接记录和后端原生历史证明。 |
+| [member-commands.ts](member-commands.ts) | 源码模块 | 可信桌面入口启动、观察和停止成员任务，以及读取和确认结果信封的序列化契约。 |
+| [member-events.ts](member-events.ts) | 源码模块 | 成员运行的公开事件分页协议，供主对话和任务节点详情复用现有消息渲染。 |
+| [member-help-tools.ts](member-help-tools.ts) | 源码模块 | 为正式执行成员提供一次性求助工具，并在求助授权至本轮结束期间封住后续工具调用。 |
+| [member-help.ts](member-help.ts) | 源码模块 | 定义执行成员向主调度单向提交的结构化求助，以及安全结算后的不可变交接记录。 |
+| [member-pause-rules.ts](member-pause-rules.ts) | 源码模块 | 在同一派发快照中选择可持久等待的原检查点与未领取后继，供服务和 Store 重放独立裁决。 |
+| [member-pause.ts](member-pause.ts) | 源码模块 | 定义可靠成员检查点及未领取后继的显式持久等待清单，供目标审阅与等待归档共用。 |
+| [member-tool-output.ts](member-tool-output.ts) | 源码模块 | 执行进度四工具及正式成员三工具的严格输出、真实归属和公开恢复说明。 |
+| [member-topic-context-rules.ts](member-topic-context-rules.ts) | 源码模块 | 按原办公室、角色和输入版本冻结并解析当前话题的成员上下文引用。 |
+| [member-topic-context.ts](member-topic-context.ts) | 源码模块 | 声明子 Agent 当前话题上下文的不可变引用契约。 |
+| [module-ownership-invariants.ts](module-ownership-invariants.ts) | 源码模块 | 将负责人控制面接到同一派发事务，重算关联任务影响并核实真实主运行来源。 |
+| [office-history.ts](office-history.ts) | 源码模块 | 主 Session 按话题检索归档的只读协议，供历史服务与主 Agent 工具共用。 |
+| [owner-execution-invariants.ts](owner-execution-invariants.ts) | 源码模块 | 校验负责人协议下的新计划、任务、前置增删闭包、预约和领取，以及历史冻结身份。 |
+| [persistent-write-input.ts](persistent-write-input.ts) | 源码模块 | 后端从可信主 canonical 与唯一周期重建三项持久写命令的原查询引用。 |
+| [persistent-write-observation.ts](persistent-write-observation.ts) | 源码模块 | 原治理观察、提案及责任变更的有界保存摘要，供影响报告与桌面共同读取。 |
+| [queue.ts](queue.ts) | 源码模块 | 待执行用户消息的校验结构与增量同步契约。 |
+| [queued-dependency-addition-invariants.ts](queued-dependency-addition-invariants.ts) | 源码模块 | 核实追加依赖的不可变审计与精确原子变更，并向统一边门禁返回本批已验证的新边许可。 |
+| [queued-dependency-addition-rules.ts](queued-dependency-addition-rules.ts) | 源码模块 | 从同一派发快照选取可追加前置的两端及其完整未领取后继，供提交与重放共用。 |
+| [queued-dependency-addition.ts](queued-dependency-addition.ts) | 源码模块 | 声明主调度为未领取任务追加单条结果前置的严格输入、不可变审计和提交回执。 |
+| [queued-dependency-replacement-invariants.ts](queued-dependency-replacement-invariants.ts) | 源码模块 | 校验前置替换的原子审计，以及所有依赖边变更的持久化边界。 |
+| [queued-dependency-replacement-rules.ts](queued-dependency-replacement-rules.ts) | 源码模块 | 纯选取单条前置替换的目标、可靠候选及完整未启动后继集合，供提交服务和重放校验共用。 |
+| [queued-dependency-replacement.ts](queued-dependency-replacement.ts) | 源码模块 | 定义主调度替换未启动任务单条前置的严格输入、不可变审计和可靠提交回执。 |
+| [queued-dependency-revision-invariants.ts](queued-dependency-revision-invariants.ts) | 源码模块 | 验证多边前置修订的原审计、精确节点/成员/边变更，返回本批新增与退役许可。 |
+| [queued-dependency-revision-rules.ts](queued-dependency-revision-rules.ts) | 源码模块 | 计算同一未领取目标的前置原子修订及完整受影响后继，供真实提交与重放校验。 |
+| [queued-dependency-revision.ts](queued-dependency-revision.ts) | 源码模块 | 声明未领取目标多条前置增删的输入、不可变审计和原命令回执，供图与工具共享。 |
+| [queued-member-resume-rules.ts](queued-member-resume-rules.ts) | 源码模块 | 在已提交状态中选择唯一可预约的成员检查点与尚未启动的依赖后继。 |
+| [queued-member-resume.ts](queued-member-resume.ts) | 源码模块 | 主调度为同一活动任务预约一次检查点续执行的纯协议。 |
+| [queued-task-cancel-rules.ts](queued-task-cancel-rules.ts) | 源码模块 | 在存储屏障内检查未启动任务及启用依赖的完整撤销集合。 |
+| [queued-task-cancel.ts](queued-task-cancel.ts) | 源码模块 | 定义主调度显式撤销未启动任务的输入、冻结记录及原子提交回执。 |
+| [scope-active-input-rules.ts](scope-active-input-rules.ts) | 源码模块 | 校验运行中补充的可靠尝试、唯一结算和目标增版，供事务提交与重放共用。 |
+| [scope-active-input.ts](scope-active-input.ts) | 源码模块 | 运行中用户补充的持久尝试、可信发送令牌及公开输入版本关系。 |
+| [scope-continuation-attachments.ts](scope-continuation-attachments.ts) | 源码模块 | 安全等待补充的附件 ID、紧凑快照清单及可信受理参数，供 Main、调度事务和公开回执共用。 |
+| [scope-continuation-record.ts](scope-continuation-record.ts) | 源码模块 | 组合真实文本补充与人工决定接续的共同有序持久历史。 |
+| [scope-continuation.ts](scope-continuation.ts) | 源码模块 | 定义安全等待检查点、用户显式补充原目标的请求和一次性启动意图。 |
+| [scope-goal.ts](scope-goal.ts) | 源码模块 | 定义目标输入、版本化计划、审阅证据及转换规则；业务拒绝精确绑定旧候选，新候选仍须独立验收。 |
+| [scope-public.ts](scope-public.ts) | 源码模块 | 提供周期详情与主工具共用的纯公开 Schema、类型和白名单投影。 |
+| [scope-recovery.ts](scope-recovery.ts) | 源码模块 | 定义用户显式新建只读核实周期的请求、冻结启动意图及公开回执。 |
+| [scope-replan.ts](scope-replan.ts) | 源码模块 | 定义完成只读核实后显式创建业务新周期的预览、启动意图和公开回执。 |
+| [scope-run-invariants.ts](scope-run-invariants.ts) | 源码模块 | 在派发事务提交和重放时核验周期主运行清单的完整归属及追加边界。 |
+| [scope-run-tracking.ts](scope-run-tracking.ts) | 源码模块 | 定义新调度周期从创建起登记的主运行清单及纯追加规则。 |
+| [scope-view.ts](scope-view.ts) | 源码模块 | 定义主会话调度周期的公开摘要、选中详情和独立增量投影，供存储与界面共享。 |
+| [topic-interruption.ts](topic-interruption.ts) | 源码模块 | 定义用户向指定话题提交补充的持久意图，供调度、记录和界面共用。 |
+| [types.ts](types.ts) | 源码模块 | 业务目标和冻结上下文的任务定义。 |
+| [workflow-selection.ts](workflow-selection.ts) | 源码模块 | 目标分配、派发和任务历史共用的 Workflow 选择叶子协议，不依赖知识或调度实现。 |
+| [workspace-member-invariants.ts](workspace-member-invariants.ts) | 源码模块 | 将岗位登记的单条审计规则接到工作区 DispatchStore 的提交与重放边界。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### automatic-execution-rules.ts
 
@@ -1436,6 +1440,7 @@ class N_src_logic_tasks_rules_member_checkpoint_tools_ts["member-checkpoint-tool
   <<module>>
 }
 class N_src_logic_tasks_rules_member_checkpoint_tools_ts_MemberCheckpointTools["MemberCheckpointTools"] {
+  +constructor()
   +list()
   +call()
   -binding
@@ -1579,6 +1584,7 @@ class N_src_logic_tasks_rules_member_help_tools_ts["member-help-tools.ts"] {
   <<module>>
 }
 class N_src_logic_tasks_rules_member_help_tools_ts_MemberHelpTools["MemberHelpTools"] {
+  +constructor()
   +list()
   +guard()
   +denied()

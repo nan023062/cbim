@@ -6,15 +6,19 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [artifact-transitions.ts](artifact-transitions.ts) | 把已打开工作区的真实文件 utility 能力装配为成员删除/移动端口，不暴露平台句柄到 Core。 |
-| [controlled-files.ts](controlled-files.ts) | 已打开工作区的受控写入与桌面补偿服务，连接运行许可、私有备份、独占子进程和唯一 DispatchStore。 |
-| [isolated-executions.ts](isolated-executions.ts) | 正式成员隔离记录的可信装配，以及原运行的桌面核实／显式清理服务。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [artifact-transitions.ts](artifact-transitions.ts) | 源码模块 | 把已打开工作区的真实文件 utility 能力装配为成员删除/移动端口，不暴露平台句柄到 Core。 |
+| [controlled-files.ts](controlled-files.ts) | 源码模块 | 已打开工作区的受控写入与桌面补偿服务，连接运行许可、私有备份、独占子进程和唯一 DispatchStore。 |
+| [isolated-executions.ts](isolated-executions.ts) | 源码模块 | 正式成员隔离记录的可信装配，以及原运行的桌面核实／显式清理服务。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### artifact-transitions.ts
 
@@ -38,6 +42,7 @@ class N_src_logic_file_operations_service_controlled_files_ts["controlled-files.
   <<module>>
 }
 class N_src_logic_file_operations_service_controlled_files_ts_ControlledFiles["ControlledFiles"] {
+  +constructor()
   +forRun()
   +write()
   +report()
@@ -53,7 +58,6 @@ class N_src_logic_file_operations_service_controlled_files_ts_ControlledFiles["C
   -isCurrent
   -blobs
   -closed
-  -operations
 }
 N_src_logic_file_operations_service_controlled_files_ts ..> N_src_logic_file_operations_service_controlled_files_ts_ControlledFiles : 声明
 ```
@@ -66,6 +70,7 @@ class N_src_logic_file_operations_service_controlled_files_ts["controlled-files.
   <<module>>
 }
 class N_src_logic_file_operations_service_controlled_files_ts_ControlledFiles["ControlledFiles"] {
+  -operations
   -controllers
   -heldReleases
   -assert()
@@ -95,6 +100,7 @@ class N_src_logic_file_operations_service_isolated_executions_ts["isolated-execu
 }
 class N_src_logic_file_operations_service_isolated_executions_ts_IsolatedExecutions["IsolatedExecutions"] {
   +records
+  +constructor()
   +forRun()
   +report()
   +cleanup()
@@ -109,7 +115,6 @@ class N_src_logic_file_operations_service_isolated_executions_ts_IsolatedExecuti
   -assert()
   -platform()
   -run()
-  -source()
 }
 N_src_logic_file_operations_service_isolated_executions_ts ..> N_src_logic_file_operations_service_isolated_executions_ts_IsolatedExecutions : 声明
 ```
@@ -122,6 +127,7 @@ class N_src_logic_file_operations_service_isolated_executions_ts["isolated-execu
   <<module>>
 }
 class N_src_logic_file_operations_service_isolated_executions_ts_IsolatedExecutions["IsolatedExecutions"] {
+  -source()
   -item()
 }
 N_src_logic_file_operations_service_isolated_executions_ts ..> N_src_logic_file_operations_service_isolated_executions_ts_IsolatedExecutions : 声明

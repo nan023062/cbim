@@ -6,14 +6,17 @@ EngineModelProfiles 将引擎选型映射为模型协议需求，复用模型服
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [index.ts](index.ts) | 应用装配可用的引擎选型服务入口，与便携清单分离。 |
-| [model-profiles.ts](model-profiles.ts) | 把 Agent 引擎选型映射为通用模型连接需求，并在返回快照中冻结显式引擎身份。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [index.ts](index.ts) | 源码模块 | 应用装配可用的引擎选型服务入口，与便携清单分离。 |
+| [model-profiles.ts](model-profiles.ts) | 源码模块 | 把 Agent 引擎选型映射为通用模型连接需求，并在返回快照中冻结显式引擎身份。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### index.ts
 
@@ -47,6 +50,7 @@ class N_src_logic_engines_service_model_profiles_ts_LockedEngineModelConfigurati
 }
 N_src_logic_engines_service_model_profiles_ts ..> N_src_logic_engines_service_model_profiles_ts_LockedEngineModelConfiguration : 声明
 class N_src_logic_engines_service_model_profiles_ts_EngineModelProfiles["EngineModelProfiles"] {
+  +constructor()
   +list()
   +resolve()
   +configuration()

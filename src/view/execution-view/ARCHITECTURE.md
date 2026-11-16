@@ -6,29 +6,33 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [agent-call-details.css](agent-call-details.css) | 对应界面的布局与视觉样式。 |
-| [AgentCallDetails.tsx](AgentCallDetails.tsx) | 按真实 Agent 工具调用引用读取执行对话，并在同一种工具轨道中逐次展开子调用。 |
-| [ComposerAttachments.tsx](ComposerAttachments.tsx) | 按 Cindy ThumbnailStrip 的 56px 卡片、类型标识和角落移除按钮展示草稿附件。 |
-| [knowledge-tool-view.css](knowledge-tool-view.css) | 对应界面的布局与视觉样式。 |
-| [knowledge-tool-view.ts](knowledge-tool-view.ts) | 从已结束的原知识调用中提取预览诊断或已提交回执，供工具轨道和工作摘要展示。 |
-| [MarkdownMessage.tsx](MarkdownMessage.tsx) | 将 Agent 消息渲染成排版后的正文、列表、表格与可复制代码块。 |
-| [message-queue.css](message-queue.css) | 与输入框一体的紧凑队列，匹配参考图的单行消息、拖柄及悬停圆形操作。 |
-| [MessageQueue.tsx](MessageQueue.tsx) | 展示主进程持久化的待执行消息，提供插队、排序、移除及继续操作。 |
-| [QuestionCard.tsx](QuestionCard.tsx) | 展示 Agent 的结构化问题，以选项卡及最后一项其它输入收集答案。 |
-| [questions.css](questions.css) | 结构化问题卡片的主题、选中态和输入排版。 |
-| [repairStreamingMarkdown.ts](repairStreamingMarkdown.ts) | 显示正在流入的 Markdown 时临时补齐未闭合语法。 |
-| [team-conversations.ts](team-conversations.ts) | 将办公室长期子 Session 投影为共享的角色、状态与任务引用，供侧栏、成员对话和办公室使用。 |
-| [tool-failure-view.ts](tool-failure-view.ts) | 从已确认执行前拒绝的工具回包提取可读原因，兼容旧校验 JSON。 |
-| [tool-labels.ts](tool-labels.ts) | 工具轨道和实时活动预览共用的公开动作名称。 |
-| [ToolTimeline.tsx](ToolTimeline.tsx) | 把工具申请、授权、运行、输出及完成记录合并成可展开的执行时间线。 |
-| [transcript.ts](transcript.ts) | 将持久化执行事件投影为对话消息、工具证据与运行错误，目标返工反馈明确显示为系统消息。 |
-| [WorkStatus.tsx](WorkStatus.tsx) | 移植 Cindy WorkGroupBlock 的用时和结果；主对话只显示行尾状态，成员详情仍可折叠查看执行轨道。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [AgentCallDetails.tsx](AgentCallDetails.tsx) | 组件模块 | 按真实 Agent 工具调用引用读取执行对话，并在同一种工具轨道中逐次展开子调用。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [ComposerAttachments.tsx](ComposerAttachments.tsx) | 组件模块 | 按 Cindy ThumbnailStrip 的 56px 卡片、类型标识和角落移除按钮展示草稿附件。 |
+| [MarkdownMessage.tsx](MarkdownMessage.tsx) | 组件模块 | 将 Agent 消息渲染成排版后的正文、列表、表格与可复制代码块。 |
+| [MessageQueue.tsx](MessageQueue.tsx) | 组件模块 | 展示主进程持久化的待执行消息，提供插队、排序、移除及继续操作。 |
+| [QuestionCard.tsx](QuestionCard.tsx) | 组件模块 | 展示 Agent 的结构化问题，以选项卡及最后一项其它输入收集答案。 |
+| [ToolTimeline.tsx](ToolTimeline.tsx) | 组件模块 | 把工具申请、授权、运行、输出及完成记录合并成可展开的执行时间线。 |
+| [WorkStatus.tsx](WorkStatus.tsx) | 组件模块 | 移植 Cindy WorkGroupBlock 的用时和结果；主对话只显示行尾状态，成员详情仍可折叠查看执行轨道。 |
+| [agent-call-details.css](agent-call-details.css) | 样式 | 对应界面的布局与视觉样式。 |
+| [knowledge-tool-view.css](knowledge-tool-view.css) | 样式 | 对应界面的布局与视觉样式。 |
+| [knowledge-tool-view.ts](knowledge-tool-view.ts) | 源码模块 | 从已结束的原知识调用中提取预览诊断或已提交回执，供工具轨道和工作摘要展示。 |
+| [message-queue.css](message-queue.css) | 样式 | 与输入框一体的紧凑队列，匹配参考图的单行消息、拖柄及悬停圆形操作。 |
+| [questions.css](questions.css) | 样式 | 结构化问题卡片的主题、选中态和输入排版。 |
+| [repairStreamingMarkdown.ts](repairStreamingMarkdown.ts) | 源码模块 | 显示正在流入的 Markdown 时临时补齐未闭合语法。 |
+| [team-conversations.ts](team-conversations.ts) | 源码模块 | 将办公室长期子 Session 投影为共享的角色、状态与任务引用，供侧栏、成员对话和办公室使用。 |
+| [tool-failure-view.ts](tool-failure-view.ts) | 源码模块 | 从已确认执行前拒绝的工具回包提取可读原因，兼容旧校验 JSON。 |
+| [tool-labels.ts](tool-labels.ts) | 源码模块 | 工具轨道和实时活动预览共用的公开动作名称。 |
+| [transcript.ts](transcript.ts) | 源码模块 | 将持久化执行事件投影为对话消息、工具证据与运行错误，目标返工反馈明确显示为系统消息。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### agent-call-details.css
 

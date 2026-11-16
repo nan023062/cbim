@@ -6,18 +6,22 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [agent-business.ts](agent-business.ts) | 把递归 Agent 的显式业务范围接入既有冻结知识、文件验证及 canonical 交付核验。 |
-| [agent-calls.ts](agent-calls.ts) | 把 Agent 对象与 execution 的调用协调器、LoopRuntime 装配到工作区真实引擎、准入和请求账本。 |
-| [execution-admission.ts](execution-admission.ts) | 把应用级并发准入与本工作区文件/实例租约组合为主轮和成员轮共用的同步领取入口。 |
-| [execution.ts](execution.ts) | 主进程执行装配，将工作区、已解析模型、原生锁与平台访问策略注入调度引擎。 |
-| [member-dispatch.ts](member-dispatch.ts) | 为已运行工作区装配成员派发、大脑执行、目标审阅、岗位及模块负责人服务；复用工作区恢复前创建的唯一 DispatchStore，来源、责任、岗位与执行保持独立审计投影。 |
-| [runtime-monitor.ts](runtime-monitor.ts) | 把工作区派发/周期事务、两套运行日志和对话队列接入全局监管，同时维护静态 Agent 的持久化历史归档。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [agent-business.ts](agent-business.ts) | 源码模块 | 把递归 Agent 的显式业务范围接入既有冻结知识、文件验证及 canonical 交付核验。 |
+| [agent-calls.ts](agent-calls.ts) | 源码模块 | 把 Agent 对象与 execution 的调用协调器、LoopRuntime 装配到工作区真实引擎、准入和请求账本。 |
+| [execution-admission.ts](execution-admission.ts) | 源码模块 | 把应用级并发准入与本工作区文件/实例租约组合为主轮和成员轮共用的同步领取入口。 |
+| [execution.ts](execution.ts) | 源码模块 | 主进程执行装配，将工作区、已解析模型、原生锁与平台访问策略注入调度引擎。 |
+| [member-dispatch.ts](member-dispatch.ts) | 源码模块 | 为已运行工作区装配成员派发、大脑执行、目标审阅、岗位及模块负责人服务；复用工作区恢复前创建的唯一 DispatchStore，来源、责任、岗位与执行保持独立审计投影。 |
+| [runtime-monitor.ts](runtime-monitor.ts) | 源码模块 | 把工作区派发/周期事务、两套运行日志和对话队列接入全局监管，同时维护静态 Agent 的持久化历史归档。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### agent-business.ts
 
@@ -144,6 +148,7 @@ class N_src_logic_application_assembly_runtime_monitor_ts["runtime-monitor.ts"] 
 class N_src_logic_application_assembly_runtime_monitor_ts_WorkspaceRuntimeMonitor["WorkspaceRuntimeMonitor"] {
   +epoch
   +dispatchObserver
+  +constructor()
   +unavailable()
   +historyIssue()
   +collaborationIssue()

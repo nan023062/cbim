@@ -6,22 +6,26 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [architecture-editor.css](architecture-editor.css) | 架构语义表单与导入/提交预览的共用布局。设计原因：在窄扩展区仍以独立对话框展示明确的变更边界，沿用应用主题与键盘表单。 */ |
-| [ArchitectureEditor.tsx](ArchitectureEditor.tsx) | 团队与业务架构共用的语义对象编辑器，负责表单、删除影响预览和显式事务提交。 |
-| [GovernanceLaunch.tsx](GovernanceLaunch.tsx) | 业务/团队架构的显式治理启动控制器及结果提示。 |
-| [knowledge-file-tree.ts](knowledge-file-tree.ts) | 把快照中真实知识文件投影为相对目录树，供业务与团队界面共用。 |
-| [knowledge-files.css](knowledge-files.css) | 对应界面的布局与视觉样式。 |
-| [knowledge-source.css](knowledge-source.css) | 对应界面的布局与视觉样式。 |
-| [KnowledgeFilePreview.tsx](KnowledgeFilePreview.tsx) | 在业务和团队架构中预览实际知识文件，并通过原知识事务编辑。 |
-| [KnowledgeFileTree.tsx](KnowledgeFileTree.tsx) | 业务/团队共用的可展开知识目录与文件导航。 |
-| [KnowledgeSourceDetails.tsx](KnowledgeSourceDetails.tsx) | 为项目岗位和模块责任共用展示来源身份、未决状态与明确采纳预览。 |
-| [static-owners.ts](static-owners.ts) | 为静态架构编辑和资源导入提供可选的 Team/小组归属。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [ArchitectureEditor.tsx](ArchitectureEditor.tsx) | 组件模块 | 团队与业务架构共用的语义对象编辑器，负责表单、删除影响预览和显式事务提交。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [GovernanceLaunch.tsx](GovernanceLaunch.tsx) | 组件模块 | 业务/团队架构的显式治理启动控制器及结果提示。 |
+| [KnowledgeFilePreview.tsx](KnowledgeFilePreview.tsx) | 组件模块 | 在业务和团队架构中预览实际知识文件，并通过原知识事务编辑。 |
+| [KnowledgeFileTree.tsx](KnowledgeFileTree.tsx) | 组件模块 | 业务/团队共用的可展开知识目录与文件导航。 |
+| [KnowledgeSourceDetails.tsx](KnowledgeSourceDetails.tsx) | 组件模块 | 为项目岗位和模块责任共用展示来源身份、未决状态与明确采纳预览。 |
+| [architecture-editor.css](architecture-editor.css) | 样式 | 架构语义表单与导入/提交预览的共用布局。设计原因：在窄扩展区仍以独立对话框展示明确的变更边界，沿用应用主题与键盘表单。 */ |
+| [knowledge-file-tree.ts](knowledge-file-tree.ts) | 源码模块 | 把快照中真实知识文件投影为相对目录树，供业务与团队界面共用。 |
+| [knowledge-files.css](knowledge-files.css) | 样式 | 对应界面的布局与视觉样式。 |
+| [knowledge-source.css](knowledge-source.css) | 样式 | 对应界面的布局与视觉样式。 |
+| [static-owners.ts](static-owners.ts) | 源码模块 | 为静态架构编辑和资源导入提供可选的 Team/小组归属。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### architecture-editor.css
 

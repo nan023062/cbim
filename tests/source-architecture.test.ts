@@ -77,6 +77,48 @@ test('非叶子目录保持子目录边界，并列出本层模块公开入口',
   expect(document).toContain('[runtime/](runtime/ARCHITECTURE.md)');
 });
 
+test('文件清单覆盖契约、说明、样式和资源，首次生成后即可通过漂移检查',()=>{
+  const project=fixture({
+    'src/view/foundations/utility/sample.ts':'export class Sample {}',
+    'src/view/foundations/utility/CONTRACT.md':'# 本模块契约\n\n状态独立。\n',
+    'src/view/foundations/utility/NOTES.md':'# 实际用途说明\n',
+    'src/view/foundations/utility/style.css':'.sample {}',
+    'src/view/foundations/utility/defaults.json':'{"limit":12}',
+  });
+  expect(project.run().status).toBe(0);
+  expect(project.run(true).status).toBe(0);
+  const document=project.read('src/view/foundations/utility/ARCHITECTURE.md');
+  for(const name of ['sample.ts','CONTRACT.md','NOTES.md','style.css','defaults.json','ARCHITECTURE.md']){
+    expect(document).toContain(`| [${name}](${name}) |`);
+  }
+  expect(document).toContain('实际用途说明');
+  expect(document).not.toContain('["defaults.json"]');
+  expect(document).not.toContain('["CONTRACT.md"]');
+});
+
+test('类图区分静态与实例成员，保留私有构造及运行时私有字段',()=>{
+  const project=fixture({'src/core/utility/sample.ts':`
+    export class TextUtils {
+      private static readonly replacement='hidden';
+      private constructor(){}
+      public static redact(){return TextUtils.replacement}
+    }
+    export class Counter {
+      #count=0;
+      constructor(public readonly label:string){}
+      protected get count(){return this.#count}
+      public increment(){return ++this.#count}
+    }
+  `});
+  expect(project.run().status).toBe(0);
+  const document=project.read('src/core/utility/ARCHITECTURE.md');
+  for(const entry of ['-replacement$','-constructor()','+redact()$','-count','+constructor()','+label','#count','+increment()']){
+    expect(document).toContain(`  ${entry}\n`);
+  }
+  expect(document).not.toContain('+increment()$');
+  expect(document).not.toContain('+#count');
+});
+
 test('--check 检测源码及契约漂移但不写文档，再生成时保留独立契约',()=>{
   const source='src/logic/tasks/rules/sample.ts',contract='src/logic/tasks/rules/CONTRACT.md',architecture='src/logic/tasks/rules/ARCHITECTURE.md';
   const project=fixture({[source]:'export function inspect(){}',[contract]:'# 执行边界\n\n完成不表示验收。\n'});

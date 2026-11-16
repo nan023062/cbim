@@ -6,15 +6,19 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [chat-inputs.ts](chat-inputs.ts) | 将用户明确添加的文件、文件夹、链接、网页与链接器定义保存为本机对话输入快照。 |
-| [chat-material-imports.ts](chat-material-imports.ts) | 应用内显式资料导入的取消、工作区归属及真实资源仓库读取入口。 |
-| [chat-source-readers.ts](chat-source-readers.ts) | 桌面明确导入目录、URL 指针和网页时，生成有界文本及真实来源事实。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [chat-inputs.ts](chat-inputs.ts) | 源码模块 | 将用户明确添加的文件、文件夹、链接、网页与链接器定义保存为本机对话输入快照。 |
+| [chat-material-imports.ts](chat-material-imports.ts) | 源码模块 | 应用内显式资料导入的取消、工作区归属及真实资源仓库读取入口。 |
+| [chat-source-readers.ts](chat-source-readers.ts) | 源码模块 | 桌面明确导入目录、URL 指针和网页时，生成有界文本及真实来源事实。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### chat-inputs.ts
 
@@ -31,6 +35,7 @@ class N_src_logic_materials_service_chat_inputs_ts_PreparedContinuationInput["Pr
 }
 N_src_logic_materials_service_chat_inputs_ts ..> N_src_logic_materials_service_chat_inputs_ts_PreparedContinuationInput : 声明
 class N_src_logic_materials_service_chat_inputs_ts_ChatInputs["ChatInputs"] {
+  +constructor()
   +saveSource()
   +path()
   +pastedPaths()
@@ -70,6 +75,7 @@ class N_src_logic_materials_service_chat_material_imports_ts_ImportOperation["Im
 }
 N_src_logic_materials_service_chat_material_imports_ts ..> N_src_logic_materials_service_chat_material_imports_ts_ImportOperation : 声明
 class N_src_logic_materials_service_chat_material_imports_ts_ChatMaterialImports["ChatMaterialImports"] {
+  +constructor()
   +cancel()
   +targets()
   +list()
@@ -85,7 +91,6 @@ class N_src_logic_materials_service_chat_material_imports_ts_ChatMaterialImports
   -key()
   -assert()
   -operation()
-  -run()
 }
 N_src_logic_materials_service_chat_material_imports_ts ..> N_src_logic_materials_service_chat_material_imports_ts_ChatMaterialImports : 声明
 ```
@@ -98,6 +103,7 @@ class N_src_logic_materials_service_chat_material_imports_ts["chat-material-impo
   <<module>>
 }
 class N_src_logic_materials_service_chat_material_imports_ts_ChatMaterialImports["ChatMaterialImports"] {
+  -run()
   -port()
   -selection()
 }

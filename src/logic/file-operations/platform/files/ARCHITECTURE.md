@@ -6,20 +6,23 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [artifact-files.ts](artifact-files.ts) | 在固定工作区根内安全读取业务文件，供指纹采集、复核、无基线观察及冻结 JSON/CSV/PNG 验证共用。 |
-| [code-check-runner.ts](code-check-runner.ts) | 在已打开的本地工作区执行冻结代码检查，复用完整目录枚举核实前后源码集合。 |
-| [controlled-file-blobs.ts](controlled-file-blobs.ts) | 保存受控写入的私有 before/intended-after 字节，公开回执只引用 UUID 与哈希。 |
-| [controlled-file-protocol.ts](controlled-file-protocol.ts) | Main 与专用文件 utility 子进程之间的严格私有消息及不透明会话端口。 |
-| [controlled-file-win32.ts](controlled-file-win32.ts) | 专用 utility 子进程的同步 Win32 单文件实现；全程拥有文件及目录句柄。 |
-| [output-manifest-files.ts](output-manifest-files.ts) | 在固定工作区内枚举声明范围的全部目录和普通文件，生成完整产物观察并按原集合复核。 |
-| [png-validator.ts](png-validator.ts) | 安全文件端口后的有界静态 PNG 解码器，核全部块及压缩数据并还原实际像素。 |
-| [scoped-execution-files.ts](scoped-execution-files.ts) | 正式成员冻结范围的实际 Win32 文件读取与 LPAC 执行端口。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [artifact-files.ts](artifact-files.ts) | 源码模块 | 在固定工作区根内安全读取业务文件，供指纹采集、复核、无基线观察及冻结 JSON/CSV/PNG 验证共用。 |
+| [code-check-runner.ts](code-check-runner.ts) | 源码模块 | 在已打开的本地工作区执行冻结代码检查，复用完整目录枚举核实前后源码集合。 |
+| [controlled-file-blobs.ts](controlled-file-blobs.ts) | 源码模块 | 保存受控写入的私有 before/intended-after 字节，公开回执只引用 UUID 与哈希。 |
+| [controlled-file-protocol.ts](controlled-file-protocol.ts) | 源码模块 | Main 与专用文件 utility 子进程之间的严格私有消息及不透明会话端口。 |
+| [controlled-file-win32.ts](controlled-file-win32.ts) | 源码模块 | 专用 utility 子进程的同步 Win32 单文件实现；全程拥有文件及目录句柄。 |
+| [output-manifest-files.ts](output-manifest-files.ts) | 源码模块 | 在固定工作区内枚举声明范围的全部目录和普通文件，生成完整产物观察并按原集合复核。 |
+| [png-validator.ts](png-validator.ts) | 源码模块 | 安全文件端口后的有界静态 PNG 解码器，核全部块及压缩数据并还原实际像素。 |
+| [scoped-execution-files.ts](scoped-execution-files.ts) | 源码模块 | 正式成员冻结范围的实际 Win32 文件读取与 LPAC 执行端口。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### artifact-files.ts
 
@@ -37,6 +40,7 @@ class N_src_logic_file_operations_platform_files_artifact_files_ts["artifact-fil
   <<module>>
 }
 class N_src_logic_file_operations_platform_files_artifact_files_ts_ArtifactFiles["ArtifactFiles"] {
+  +constructor()
   +captureFiles()
   +observeFiles()
   +validateFile()
@@ -63,6 +67,7 @@ class N_src_logic_file_operations_platform_files_code_check_runner_ts["code-chec
   <<module>>
 }
 class N_src_logic_file_operations_platform_files_code_check_runner_ts_CodeCheckRunner["CodeCheckRunner"] {
+  +constructor()
   +run()
   -root
   -assertCurrent
@@ -87,6 +92,7 @@ class N_src_logic_file_operations_platform_files_controlled_file_blobs_ts["contr
   <<module>>
 }
 class N_src_logic_file_operations_platform_files_controlled_file_blobs_ts_ControlledFileBlobs["ControlledFileBlobs"] {
+  +constructor()
   +savePair()
   +read()
   -directory
@@ -176,6 +182,7 @@ class N_src_logic_file_operations_platform_files_controlled_file_win32_ts["contr
 }
 class N_src_logic_file_operations_platform_files_controlled_file_win32_ts_Win32ControlledFile["Win32ControlledFile"] {
   +writeIssued
+  +constructor()
   +read()
   +replace()
   +transition()
@@ -190,7 +197,6 @@ class N_src_logic_file_operations_platform_files_controlled_file_win32_ts_Win32C
   -handles
   -file
   -applied
-  -original
 }
 N_src_logic_file_operations_platform_files_controlled_file_win32_ts ..> N_src_logic_file_operations_platform_files_controlled_file_win32_ts_Win32ControlledFile : 声明
 ```
@@ -203,6 +209,7 @@ class N_src_logic_file_operations_platform_files_controlled_file_win32_ts["contr
   <<module>>
 }
 class N_src_logic_file_operations_platform_files_controlled_file_win32_ts_Win32ControlledFile["Win32ControlledFile"] {
+  -original
   -bool()
   -openHandle()
   -final()
@@ -227,6 +234,7 @@ class N_src_logic_file_operations_platform_files_output_manifest_files_ts["outpu
   <<module>>
 }
 class N_src_logic_file_operations_platform_files_output_manifest_files_ts_OutputManifestFiles["OutputManifestFiles"] {
+  +constructor()
   +capture()
   +check()
   -root
@@ -281,6 +289,7 @@ class N_src_logic_file_operations_platform_files_scoped_execution_files_ts["scop
 }
 class N_src_logic_file_operations_platform_files_scoped_execution_files_ts_ScopedExecutionFiles["ScopedExecutionFiles"] {
   +scope
+  +constructor()
   +snapshot()
   +lockDirectory()
   +read()

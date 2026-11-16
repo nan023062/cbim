@@ -6,15 +6,19 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [model-choices.ts](model-choices.ts) | 将开发者声明的各模型角色投影为已配置、启用且兼容的选择列表。 |
-| [model-roles.ts](model-roles.ts) | 把官方模型角色声明与用户 V2 选型投影为有序操作引用。 |
-| [model-selection.ts](model-selection.ts) | 官方引擎身份校验及引擎到模型连接需求的纯投影。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [model-choices.ts](model-choices.ts) | 源码模块 | 将开发者声明的各模型角色投影为已配置、启用且兼容的选择列表。 |
+| [model-roles.ts](model-roles.ts) | 源码模块 | 把官方模型角色声明与用户 V2 选型投影为有序操作引用。 |
+| [model-selection.ts](model-selection.ts) | 源码模块 | 官方引擎身份校验及引擎到模型连接需求的纯投影。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### model-choices.ts
 

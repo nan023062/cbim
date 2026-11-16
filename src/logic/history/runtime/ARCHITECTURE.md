@@ -6,13 +6,17 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [agent-history.ts](agent-history.ts) | 按工作区静态角色归档 Session 与运行摘要，向团队节点提供分页历史和受限事件详情。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [agent-history.ts](agent-history.ts) | 源码模块 | 按工作区静态角色归档 Session 与运行摘要，向团队节点提供分页历史和受限事件详情。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### agent-history.ts
 
@@ -48,6 +52,7 @@ class N_src_logic_history_runtime_agent_history_ts_AgentHistoryPorts["AgentHisto
 N_src_logic_history_runtime_agent_history_ts ..> N_src_logic_history_runtime_agent_history_ts_AgentHistoryPorts : 声明
 class N_src_logic_history_runtime_agent_history_ts_AgentHistoryService["AgentHistoryService"] {
   +workspaceId
+  +constructor()
   +initialize()
   +issue()
   +restoreRun()
@@ -62,7 +67,6 @@ class N_src_logic_history_runtime_agent_history_ts_AgentHistoryService["AgentHis
   +flush()
   -root
   -ports
-  -records
 }
 N_src_logic_history_runtime_agent_history_ts ..> N_src_logic_history_runtime_agent_history_ts_AgentHistoryService : 声明
 ```
@@ -75,6 +79,7 @@ class N_src_logic_history_runtime_agent_history_ts["agent-history.ts"] {
   <<module>>
 }
 class N_src_logic_history_runtime_agent_history_ts_AgentHistoryService["AgentHistoryService"] {
+  -records
   -tasks
   -streams
   -brokenStreams
@@ -90,7 +95,6 @@ class N_src_logic_history_runtime_agent_history_ts_AgentHistoryService["AgentHis
   -fromStart()
   -recordIntent()
   -page()
-  -accept()
 }
 N_src_logic_history_runtime_agent_history_ts ..> N_src_logic_history_runtime_agent_history_ts_AgentHistoryService : 声明
 ```
@@ -103,6 +107,7 @@ class N_src_logic_history_runtime_agent_history_ts["agent-history.ts"] {
   <<module>>
 }
 class N_src_logic_history_runtime_agent_history_ts_AgentHistoryService["AgentHistoryService"] {
+  -accept()
   -loadStream()
 }
 N_src_logic_history_runtime_agent_history_ts ..> N_src_logic_history_runtime_agent_history_ts_AgentHistoryService : 声明

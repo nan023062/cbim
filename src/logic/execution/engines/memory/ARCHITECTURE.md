@@ -6,16 +6,20 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [engine.ts](engine.ts) | 官方记忆领域 Agent Loop，使用生成和 embedding 双模型管理受控知识，不依赖厂商 Agent SDK。 |
-| [package.ts](package.ts) | CBIM 自定义记忆引擎的独立官方包入口，运行库与适配器同版，无外部 Agent SDK。 |
-| [protocol.ts](protocol.ts) | 记忆 Loop 的模型结果与私有对话消息协议，隔离供应商 JSON 与可执行工具决定。 |
-| [storage.ts](storage.ts) | 记忆包的私有会话及派生向量缓存；正式知识只能经注入工具访问。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [engine.ts](engine.ts) | 源码模块 | 官方记忆领域 Agent Loop，使用生成和 embedding 双模型管理受控知识，不依赖厂商 Agent SDK。 |
+| [package.ts](package.ts) | 源码模块 | CBIM 自定义记忆引擎的独立官方包入口，运行库与适配器同版，无外部 Agent SDK。 |
+| [protocol.ts](protocol.ts) | 源码模块 | 记忆 Loop 的模型结果与私有对话消息协议，隔离供应商 JSON 与可执行工具决定。 |
+| [storage.ts](storage.ts) | 源码模块 | 记忆包的私有会话及派生向量缓存；正式知识只能经注入工具访问。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### engine.ts
 
@@ -28,6 +32,7 @@ class N_src_logic_execution_engines_memory_engine_ts["engine.ts"] {
 }
 class N_src_logic_execution_engines_memory_engine_ts_MemoryEngine["MemoryEngine"] {
   +kind
+  +constructor()
   +start()
   +run()
   +stop()
@@ -42,7 +47,6 @@ class N_src_logic_execution_engines_memory_engine_ts_MemoryEngine["MemoryEngine"
   -timer
   -fatal
   -requests
-  -cache
 }
 N_src_logic_execution_engines_memory_engine_ts ..> N_src_logic_execution_engines_memory_engine_ts_MemoryEngine : 声明
 class N_src_logic_execution_engines_memory_engine_ts_external_AgentEngine["AgentEngine (外部契约)"] {
@@ -59,6 +63,7 @@ class N_src_logic_execution_engines_memory_engine_ts["engine.ts"] {
   <<module>>
 }
 class N_src_logic_execution_engines_memory_engine_ts_MemoryEngine["MemoryEngine"] {
+  -cache
   -execute()
   -invoke()
   -refreshIndex()
@@ -119,13 +124,15 @@ class N_src_logic_execution_engines_memory_storage_ts_MemorySession["MemorySessi
   +id
   +file
   +messages
-  +open()
+  +open()$
   +append()
   -root
   -bytes
+  -constructor()
 }
 N_src_logic_execution_engines_memory_storage_ts ..> N_src_logic_execution_engines_memory_storage_ts_MemorySession : 声明
 class N_src_logic_execution_engines_memory_storage_ts_MemoryIndexCache["MemoryIndexCache"] {
+  +constructor()
   +load()
   +save()
   -home

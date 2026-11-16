@@ -6,16 +6,19 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [index.ts](index.ts) | 固定知识快照的公开读取入口，向查询编排、成员上下文和测试提供 Team、BusinessWorkspace 及正文读取。 |
-| [snapshot.ts](snapshot.ts) | 已校验知识快照的版本信息、定义读取和受限正文引用解析。 |
-| [team.ts](team.ts) | 团队：Team/小组/Agent 与 Agent 自身和祖先 Skill的核心封装。 |
-| [workspace.ts](workspace.ts) | 业务工作区：领域工程与模块注册表、模块知识和仅本模块 Workflow的核心封装。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [index.ts](index.ts) | 源码模块 | 固定知识快照的公开读取入口，向查询编排、成员上下文和测试提供 Team、BusinessWorkspace 及正文读取。 |
+| [snapshot.ts](snapshot.ts) | 源码模块 | 已校验知识快照的版本信息、定义读取和受限正文引用解析。 |
+| [team.ts](team.ts) | 源码模块 | 团队：Team/小组/Agent 与 Agent 自身和祖先 Skill的核心封装。 |
+| [workspace.ts](workspace.ts) | 源码模块 | 业务工作区：领域工程与模块注册表、模块知识和仅本模块 Workflow的核心封装。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### index.ts
 
@@ -49,6 +52,7 @@ class N_src_logic_knowledge_rules_read_models_team_ts["team.ts"] {
   <<module>>
 }
 class N_src_logic_knowledge_rules_read_models_team_ts_Team["Team"] {
+  +constructor()
   +agents()
   +agent()
   -snapshot
@@ -66,6 +70,7 @@ class N_src_logic_knowledge_rules_read_models_workspace_ts["workspace.ts"] {
   <<module>>
 }
 class N_src_logic_knowledge_rules_read_models_workspace_ts_BusinessWorkspace["BusinessWorkspace"] {
+  +constructor()
   +modules()
   +module()
   -snapshot

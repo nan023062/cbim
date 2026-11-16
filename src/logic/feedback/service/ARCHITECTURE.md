@@ -6,16 +6,20 @@ GitHub 设备授权、加密连接和提交账本；有界 HTTP、先落盘后�
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [github-api.ts](github-api.ts) | 主进程直连 GitHub 的有界 JSON 传输，供设备授权和反馈提交共用。 |
-| [github-feedback-auth.ts](github-feedback-auth.ts) | 桌面 GitHub Device Flow、账号／仓库绑定和本机加密凭据管理。 |
-| [github-feedback.ts](github-feedback.ts) | 将本机会话的结构化反馈直接写入已连接 GitHub 仓库，保存私有原提交凭证。 |
-| [index.ts](index.ts) | 反馈服务的宿主入口，公开授权管理与有持久屏障的提交服务。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [github-api.ts](github-api.ts) | 源码模块 | 主进程直连 GitHub 的有界 JSON 传输，供设备授权和反馈提交共用。 |
+| [github-feedback-auth.ts](github-feedback-auth.ts) | 源码模块 | 桌面 GitHub Device Flow、账号／仓库绑定和本机加密凭据管理。 |
+| [github-feedback.ts](github-feedback.ts) | 源码模块 | 将本机会话的结构化反馈直接写入已连接 GitHub 仓库，保存私有原提交凭证。 |
+| [index.ts](index.ts) | 源码模块 | 反馈服务的宿主入口，公开授权管理与有持久屏障的提交服务。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### github-api.ts
 
@@ -92,6 +96,7 @@ class N_src_logic_feedback_service_github_feedback_auth_ts["github-feedback-auth
   <<module>>
 }
 class N_src_logic_feedback_service_github_feedback_auth_ts_GitHubFeedbackAuth["GitHubFeedbackAuth"] {
+  +constructor()
   +status()
   +checkConnection()
   +begin()
@@ -107,7 +112,6 @@ class N_src_logic_feedback_service_github_feedback_auth_ts_GitHubFeedbackAuth["G
   -request
   -now
   -queue
-  -flow
 }
 N_src_logic_feedback_service_github_feedback_auth_ts ..> N_src_logic_feedback_service_github_feedback_auth_ts_GitHubFeedbackAuth : 声明
 ```
@@ -120,6 +124,7 @@ class N_src_logic_feedback_service_github_feedback_auth_ts["github-feedback-auth
   <<module>>
 }
 class N_src_logic_feedback_service_github_feedback_auth_ts_GitHubFeedbackAuth["GitHubFeedbackAuth"] {
+  -flow
   -closed
   -lifetime
   -generation
@@ -159,6 +164,7 @@ class N_src_logic_feedback_service_github_feedback_ts_Ledger["Ledger"] {
 N_src_logic_feedback_service_github_feedback_ts ..> N_src_logic_feedback_service_github_feedback_ts_Ledger : 声明
 class N_src_logic_feedback_service_github_feedback_ts_GitHubFeedback["GitHubFeedback"] {
   +auth
+  +constructor()
   +prepare()
   +close()
   -directory

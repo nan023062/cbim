@@ -6,18 +6,21 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [isolated-node-protocol.ts](isolated-node-protocol.ts) | 声明平台隔离执行器的有界输入与返回事实，供可信装配和独立平台验收使用。 |
-| [isolated-node-win32.ts](isolated-node-win32.ts) | 以 Win32 LPAC Token、显式 ACL 和 Job Object 启动并收束真实程序，属于 Main 平台边界。 |
-| [isolated-node.ts](isolated-node.ts) | 复制可信字节快照与本机执行器到私有目录，用宿主预置标准流执行有界 LPAC 程序并返回真实平台事实。 |
-| [isolation-record.ts](isolation-record.ts) | Main 私有的隔离资源身份和生命周期协议，连接执行器、可靠记录与核实平台。 |
-| [isolation-records.ts](isolation-records.ts) | 原隔离执行的私有追加记录，保存启动前来源与资源清理阶段。 |
-| [isolation-recovery-win32.ts](isolation-recovery-win32.ts) | 核实原宿主创建身份、命名 Job 和自有目录，并以固定 Win32 句柄回收残留。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [isolated-node-protocol.ts](isolated-node-protocol.ts) | 源码模块 | 声明平台隔离执行器的有界输入与返回事实，供可信装配和独立平台验收使用。 |
+| [isolated-node-win32.ts](isolated-node-win32.ts) | 源码模块 | 以 Win32 LPAC Token、显式 ACL 和 Job Object 启动并收束真实程序，属于 Main 平台边界。 |
+| [isolated-node.ts](isolated-node.ts) | 源码模块 | 复制可信字节快照与本机执行器到私有目录，用宿主预置标准流执行有界 LPAC 程序并返回真实平台事实。 |
+| [isolation-record.ts](isolation-record.ts) | 源码模块 | Main 私有的隔离资源身份和生命周期协议，连接执行器、可靠记录与核实平台。 |
+| [isolation-records.ts](isolation-records.ts) | 源码模块 | 原隔离执行的私有追加记录，保存启动前来源与资源清理阶段。 |
+| [isolation-recovery-win32.ts](isolation-recovery-win32.ts) | 源码模块 | 核实原宿主创建身份、命名 Job 和自有目录，并以固定 Win32 句柄回收残留。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### isolated-node-protocol.ts
 
@@ -73,6 +76,7 @@ class N_src_logic_file_operations_platform_isolation_isolated_node_win32_ts_Win3
   +capabilityName
   +ownerSid
   +packageSid
+  +constructor()
   +grant()
   +start()
   +resume()
@@ -83,7 +87,6 @@ class N_src_logic_file_operations_platform_isolation_isolated_node_win32_ts_Win3
   -k
   -api
   -sid
-  -capability
 }
 N_src_logic_file_operations_platform_isolation_isolated_node_win32_ts ..> N_src_logic_file_operations_platform_isolation_isolated_node_win32_ts_Win32IsolatedNode : 声明
 ```
@@ -96,6 +99,7 @@ class N_src_logic_file_operations_platform_isolation_isolated_node_win32_ts["iso
   <<module>>
 }
 class N_src_logic_file_operations_platform_isolation_isolated_node_win32_ts_Win32IsolatedNode["Win32IsolatedNode"] {
+  -capability
   -allocated
   -handles
   -attributes
@@ -111,7 +115,6 @@ class N_src_logic_file_operations_platform_isolation_isolated_node_win32_ts_Win3
   -check()
   -keep()
   -release()
-  -stringSid()
 }
 N_src_logic_file_operations_platform_isolation_isolated_node_win32_ts ..> N_src_logic_file_operations_platform_isolation_isolated_node_win32_ts_Win32IsolatedNode : 声明
 ```
@@ -124,6 +127,7 @@ class N_src_logic_file_operations_platform_isolation_isolated_node_win32_ts["iso
   <<module>>
 }
 class N_src_logic_file_operations_platform_isolation_isolated_node_win32_ts_Win32IsolatedNode["Win32IsolatedNode"] {
+  -stringSid()
   -token()
   -attribute()
 }
@@ -242,6 +246,7 @@ class N_src_logic_file_operations_platform_isolation_isolation_records_ts_Isolat
 N_src_logic_file_operations_platform_isolation_isolation_records_ts ..> N_src_logic_file_operations_platform_isolation_isolation_records_ts_IsolationHead : 声明
 class N_src_logic_file_operations_platform_isolation_isolation_records_ts_FileIsolationRecords["FileIsolationRecords"] {
   +directory
+  +constructor()
   +read()
   +list()
   +append()
@@ -273,6 +278,7 @@ class N_src_logic_file_operations_platform_isolation_isolation_recovery_win32_ts
   <<module>>
 }
 class N_src_logic_file_operations_platform_isolation_isolation_recovery_win32_ts_Win32IsolationRecovery["Win32IsolationRecovery"] {
+  +constructor()
   +processIdentity()
   +host()
   +job()
@@ -288,7 +294,6 @@ class N_src_logic_file_operations_platform_isolation_isolation_recovery_win32_ts
   -final()
   -information()
   -open()
-  -parents()
 }
 N_src_logic_file_operations_platform_isolation_isolation_recovery_win32_ts ..> N_src_logic_file_operations_platform_isolation_isolation_recovery_win32_ts_Win32IsolationRecovery : 声明
 ```
@@ -301,6 +306,7 @@ class N_src_logic_file_operations_platform_isolation_isolation_recovery_win32_ts
   <<module>>
 }
 class N_src_logic_file_operations_platform_isolation_isolation_recovery_win32_ts_Win32IsolationRecovery["Win32IsolationRecovery"] {
+  -parents()
   -rootPath()
 }
 N_src_logic_file_operations_platform_isolation_isolation_recovery_win32_ts ..> N_src_logic_file_operations_platform_isolation_isolation_recovery_win32_ts_Win32IsolationRecovery : 声明

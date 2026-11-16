@@ -6,14 +6,18 @@ LlmProfiles 配置持久化、生成/向量操作公开快照、受控锁内原�
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [index.ts](index.ts) | 模型配置服务的宿主公共入口，供应用装配及主 Agent 设置使用。 |
-| [llm-profiles.ts](llm-profiles.ts) | 本机供应商配置持久化、生成模型选择、跨模型操作原子捕获和连接检测。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [index.ts](index.ts) | 源码模块 | 模型配置服务的宿主公共入口，供应用装配及主 Agent 设置使用。 |
+| [llm-profiles.ts](llm-profiles.ts) | 源码模块 | 本机供应商配置持久化、生成模型选择、跨模型操作原子捕获和连接检测。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### index.ts
 
@@ -83,6 +87,7 @@ class N_src_logic_models_service_llm_profiles_ts_LockedModelOperations["LockedMo
 }
 N_src_logic_models_service_llm_profiles_ts ..> N_src_logic_models_service_llm_profiles_ts_LockedModelOperations : 声明
 class N_src_logic_models_service_llm_profiles_ts_LlmProfiles["LlmProfiles"] {
+  +constructor()
   +list()
   +save()
   +select()
@@ -98,7 +103,6 @@ class N_src_logic_models_service_llm_profiles_ts_LlmProfiles["LlmProfiles"] {
   +testEmbedding()
   -filename
   -cipher
-  -queue
 }
 N_src_logic_models_service_llm_profiles_ts ..> N_src_logic_models_service_llm_profiles_ts_LlmProfiles : 声明
 ```
@@ -111,6 +115,7 @@ class N_src_logic_models_service_llm_profiles_ts["llm-profiles.ts"] {
   <<module>>
 }
 class N_src_logic_models_service_llm_profiles_ts_LlmProfiles["LlmProfiles"] {
+  -queue
   -read()
   -view()
   -change()

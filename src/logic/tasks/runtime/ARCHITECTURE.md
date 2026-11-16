@@ -6,27 +6,31 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [main-command-request.ts](main-command-request.ts) | 共享主调度原命令的指纹构造，从已核实 canonical 参数复原历史请求，包含原子前置增删。 |
-| [office-history-service.ts](office-history-service.ts) | 按主 Session → 原话题 → 内容引用读取现有调度及公开对话日志。 |
-| [queued-dependency-addition-service.ts](queued-dependency-addition-service.ts) | 在同一派发事务核实未领取任务及两端后继，为原目标追加一条结果前置。 |
-| [queued-dependency-replacement-service.ts](queued-dependency-replacement-service.ts) | 主调度在同一事务核实旧前置、安全替代候选与未启动后继，并原子提交单条依赖替换。 |
-| [queued-dependency-revision-service.ts](queued-dependency-revision-service.ts) | 在同一可靠事务中退役和新增未领取目标的多条前置，保存原请求与完整闭包审计。 |
-| [queued-task-cancel-service.ts](queued-task-cancel-service.ts) | 主调度在单个派发事务中撤销明确的一组尚未启动任务。 |
-| [scope-active-input-evidence.ts](scope-active-input-evidence.ts) | 把目标补充的持久接收记录与原主运行的可信插入日志逐项核对。 |
-| [scope-active-input-service.ts](scope-active-input-service.ts) | 在派发事务中登记运行中插入的准备、真实接收和不确定事实。 |
-| [scope-continuation-service.ts](scope-continuation-service.ts) | 原子消费安全等待，保存用户原始补充、可选附件快照清单和一次性主运行意图。 |
-| [scope-goal-service.ts](scope-goal-service.ts) | 保存目标计划与审阅，核验返工前的原始日志及精确拒绝候选；替代仍须真实新成果，人工项不因业务拒绝而降级。 |
-| [scope-human-continuation-service.ts](scope-human-continuation-service.ts) | 将当前等待中的最新人工决定全集转换成一次可信主运行接续意图。 |
-| [scope-human-decision-service.ts](scope-human-decision-service.ts) | 核实安全等待中的人工验收项和明确选定文件，保存本机显式决定及不可变依据。 |
-| [scope-recovery-service.ts](scope-recovery-service.ts) | 为已关闭周期的异常执行创建独立只读核实周期，持久化用户观察和一次性全新上下文意图。 |
-| [scope-replan-service.ts](scope-replan-service.ts) | 在完成的只读核实基础上创建独立业务周期，冻结真实证据、原人工约束和用户明确的新目标。 |
-| [topic-interruption-service.ts](topic-interruption-service.ts) | 保存整话题补充意图，并在可信协调器排空全部参与者后建立等待检查点。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [main-command-request.ts](main-command-request.ts) | 源码模块 | 共享主调度原命令的指纹构造，从已核实 canonical 参数复原历史请求，包含原子前置增删。 |
+| [office-history-service.ts](office-history-service.ts) | 源码模块 | 按主 Session → 原话题 → 内容引用读取现有调度及公开对话日志。 |
+| [queued-dependency-addition-service.ts](queued-dependency-addition-service.ts) | 源码模块 | 在同一派发事务核实未领取任务及两端后继，为原目标追加一条结果前置。 |
+| [queued-dependency-replacement-service.ts](queued-dependency-replacement-service.ts) | 源码模块 | 主调度在同一事务核实旧前置、安全替代候选与未启动后继，并原子提交单条依赖替换。 |
+| [queued-dependency-revision-service.ts](queued-dependency-revision-service.ts) | 源码模块 | 在同一可靠事务中退役和新增未领取目标的多条前置，保存原请求与完整闭包审计。 |
+| [queued-task-cancel-service.ts](queued-task-cancel-service.ts) | 源码模块 | 主调度在单个派发事务中撤销明确的一组尚未启动任务。 |
+| [scope-active-input-evidence.ts](scope-active-input-evidence.ts) | 源码模块 | 把目标补充的持久接收记录与原主运行的可信插入日志逐项核对。 |
+| [scope-active-input-service.ts](scope-active-input-service.ts) | 源码模块 | 在派发事务中登记运行中插入的准备、真实接收和不确定事实。 |
+| [scope-continuation-service.ts](scope-continuation-service.ts) | 源码模块 | 原子消费安全等待，保存用户原始补充、可选附件快照清单和一次性主运行意图。 |
+| [scope-goal-service.ts](scope-goal-service.ts) | 源码模块 | 保存目标计划与审阅，核验返工前的原始日志及精确拒绝候选；替代仍须真实新成果，人工项不因业务拒绝而降级。 |
+| [scope-human-continuation-service.ts](scope-human-continuation-service.ts) | 源码模块 | 将当前等待中的最新人工决定全集转换成一次可信主运行接续意图。 |
+| [scope-human-decision-service.ts](scope-human-decision-service.ts) | 源码模块 | 核实安全等待中的人工验收项和明确选定文件，保存本机显式决定及不可变依据。 |
+| [scope-recovery-service.ts](scope-recovery-service.ts) | 源码模块 | 为已关闭周期的异常执行创建独立只读核实周期，持久化用户观察和一次性全新上下文意图。 |
+| [scope-replan-service.ts](scope-replan-service.ts) | 源码模块 | 在完成的只读核实基础上创建独立业务周期，冻结真实证据、原人工约束和用户明确的新目标。 |
+| [topic-interruption-service.ts](topic-interruption-service.ts) | 源码模块 | 保存整话题补充意图，并在可信协调器排空全部参与者后建立等待检查点。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### main-command-request.ts
 
@@ -78,6 +82,7 @@ class N_src_logic_tasks_runtime_office_history_service_ts_Entry["Entry"] {
 }
 N_src_logic_tasks_runtime_office_history_service_ts ..> N_src_logic_tasks_runtime_office_history_service_ts_Entry : 声明
 class N_src_logic_tasks_runtime_office_history_service_ts_OfficeHistoryService["OfficeHistoryService"] {
+  +constructor()
   +read()
   -workspaceId
   -store
@@ -98,6 +103,7 @@ class N_src_logic_tasks_runtime_queued_dependency_addition_service_ts["queued-de
   <<module>>
 }
 class N_src_logic_tasks_runtime_queued_dependency_addition_service_ts_QueuedDependencyAdditionService["QueuedDependencyAdditionService"] {
+  +constructor()
   +add()
   -owner
   -store
@@ -117,6 +123,7 @@ class N_src_logic_tasks_runtime_queued_dependency_replacement_service_ts["queued
   <<module>>
 }
 class N_src_logic_tasks_runtime_queued_dependency_replacement_service_ts_QueuedDependencyReplacementService["QueuedDependencyReplacementService"] {
+  +constructor()
   +replace()
   -owner
   -store
@@ -136,6 +143,7 @@ class N_src_logic_tasks_runtime_queued_dependency_revision_service_ts["queued-de
   <<module>>
 }
 class N_src_logic_tasks_runtime_queued_dependency_revision_service_ts_QueuedDependencyRevisionService["QueuedDependencyRevisionService"] {
+  +constructor()
   +revise()
   -owner
   -store
@@ -155,6 +163,7 @@ class N_src_logic_tasks_runtime_queued_task_cancel_service_ts["queued-task-cance
   <<module>>
 }
 class N_src_logic_tasks_runtime_queued_task_cancel_service_ts_QueuedTaskCancelService["QueuedTaskCancelService"] {
+  +constructor()
   +cancel()
   -owner
   -store
@@ -197,6 +206,7 @@ class N_src_logic_tasks_runtime_scope_active_input_service_ts_PreparedActiveInpu
 N_src_logic_tasks_runtime_scope_active_input_service_ts ..> N_src_logic_tasks_runtime_scope_active_input_service_ts_PreparedActiveInput : 声明
 class N_src_logic_tasks_runtime_scope_active_input_service_ts_ScopeActiveInputService["ScopeActiveInputService"] {
   +send()
+  +constructor()
   +inspect()
   +prepare()
   +resolve()
@@ -229,6 +239,7 @@ class N_src_logic_tasks_runtime_scope_continuation_service_ts_AcceptedScopeConti
 }
 N_src_logic_tasks_runtime_scope_continuation_service_ts ..> N_src_logic_tasks_runtime_scope_continuation_service_ts_AcceptedScopeContinuation : 声明
 class N_src_logic_tasks_runtime_scope_continuation_service_ts_ScopeContinuationService["ScopeContinuationService"] {
+  +constructor()
   +inspect()
   +accept()
   -owner
@@ -268,6 +279,7 @@ class N_src_logic_tasks_runtime_scope_goal_service_ts_Owner["Owner"] {
 }
 N_src_logic_tasks_runtime_scope_goal_service_ts ..> N_src_logic_tasks_runtime_scope_goal_service_ts_Owner : 声明
 class N_src_logic_tasks_runtime_scope_goal_service_ts_ScopeGoalService["ScopeGoalService"] {
+  +constructor()
   +reviewCandidate()
   +inspect()
   +inspectWithGraph()
@@ -283,7 +295,6 @@ class N_src_logic_tasks_runtime_scope_goal_service_ts_ScopeGoalService["ScopeGoa
   +review()
   +validateCompletion()
   +validateCompletedInspection()
-  +validateWaiting()
 }
 N_src_logic_tasks_runtime_scope_goal_service_ts ..> N_src_logic_tasks_runtime_scope_goal_service_ts_ScopeGoalService : 声明
 ```
@@ -296,6 +307,7 @@ class N_src_logic_tasks_runtime_scope_goal_service_ts["scope-goal-service.ts"] {
   <<module>>
 }
 class N_src_logic_tasks_runtime_scope_goal_service_ts_ScopeGoalService["ScopeGoalService"] {
+  +validateWaiting()
   +block()
   -owner
   -store
@@ -311,7 +323,6 @@ class N_src_logic_tasks_runtime_scope_goal_service_ts_ScopeGoalService["ScopeGoa
   -logs()
   -main()
   -receipt()
-  -member()
 }
 N_src_logic_tasks_runtime_scope_goal_service_ts ..> N_src_logic_tasks_runtime_scope_goal_service_ts_ScopeGoalService : 声明
 ```
@@ -324,6 +335,7 @@ class N_src_logic_tasks_runtime_scope_goal_service_ts["scope-goal-service.ts"] {
   <<module>>
 }
 class N_src_logic_tasks_runtime_scope_goal_service_ts_ScopeGoalService["ScopeGoalService"] {
+  -member()
   -memberTerminal()
   -evidence()
   -supersessions()
@@ -348,6 +360,7 @@ class N_src_logic_tasks_runtime_scope_human_continuation_service_ts_AcceptedHuma
 }
 N_src_logic_tasks_runtime_scope_human_continuation_service_ts ..> N_src_logic_tasks_runtime_scope_human_continuation_service_ts_AcceptedHumanContinuation : 声明
 class N_src_logic_tasks_runtime_scope_human_continuation_service_ts_ScopeHumanContinuationService["ScopeHumanContinuationService"] {
+  +constructor()
   +inspect()
   +preflight()
   +accept()
@@ -382,6 +395,7 @@ class N_src_logic_tasks_runtime_scope_human_decision_service_ts_Owner["Owner"] {
 }
 N_src_logic_tasks_runtime_scope_human_decision_service_ts ..> N_src_logic_tasks_runtime_scope_human_decision_service_ts_Owner : 声明
 class N_src_logic_tasks_runtime_scope_human_decision_service_ts_ScopeHumanDecisionService["ScopeHumanDecisionService"] {
+  +constructor()
   +inspect()
   +history()
   +preview()
@@ -397,7 +411,6 @@ class N_src_logic_tasks_runtime_scope_human_decision_service_ts_ScopeHumanDecisi
   -scope()
   -receipt()
   -stateStamp()
-  -originalVerified()
 }
 N_src_logic_tasks_runtime_scope_human_decision_service_ts ..> N_src_logic_tasks_runtime_scope_human_decision_service_ts_ScopeHumanDecisionService : 声明
 ```
@@ -410,6 +423,7 @@ class N_src_logic_tasks_runtime_scope_human_decision_service_ts["scope-human-dec
   <<module>>
 }
 class N_src_logic_tasks_runtime_scope_human_decision_service_ts_ScopeHumanDecisionService["ScopeHumanDecisionService"] {
+  -originalVerified()
   -reconsider()
   -collect()
   -reading()
@@ -450,6 +464,7 @@ class N_src_logic_tasks_runtime_scope_recovery_service_ts_AcceptedRecovery["Acce
 }
 N_src_logic_tasks_runtime_scope_recovery_service_ts ..> N_src_logic_tasks_runtime_scope_recovery_service_ts_AcceptedRecovery : 声明
 class N_src_logic_tasks_runtime_scope_recovery_service_ts_ScopeRecoveryService["ScopeRecoveryService"] {
+  +constructor()
   +inspect()
   +latestContext()
   +priorRunIds()
@@ -465,7 +480,6 @@ class N_src_logic_tasks_runtime_scope_recovery_service_ts_ScopeRecoveryService["
   -found()
   -receipt()
   -sameRequest()
-  -workspace()
 }
 N_src_logic_tasks_runtime_scope_recovery_service_ts ..> N_src_logic_tasks_runtime_scope_recovery_service_ts_ScopeRecoveryService : 声明
 ```
@@ -478,6 +492,7 @@ class N_src_logic_tasks_runtime_scope_recovery_service_ts["scope-recovery-servic
   <<module>>
 }
 class N_src_logic_tasks_runtime_scope_recovery_service_ts_ScopeRecoveryService["ScopeRecoveryService"] {
+  -workspace()
   -report()
 }
 N_src_logic_tasks_runtime_scope_recovery_service_ts ..> N_src_logic_tasks_runtime_scope_recovery_service_ts_ScopeRecoveryService : 声明
@@ -486,6 +501,8 @@ N_src_logic_tasks_runtime_scope_recovery_service_ts ..> N_src_logic_tasks_runtim
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../rules/dispatch-scope.ts](../rules/dispatch-scope.ts)、[../rules/graph-types.ts](../rules/graph-types.ts)、[../rules/dispatch-commands.ts](../rules/dispatch-commands.ts)、[../rules/scope-recovery.ts](../rules/scope-recovery.ts)、[../rules/scope-goal.ts](../rules/scope-goal.ts)、[../rules/fresh-context.ts](../rules/fresh-context.ts)、[../../evidence/runtime/execution-report-service.ts](../../evidence/runtime/execution-report-service.ts)、[scope-goal-service.ts](scope-goal-service.ts)、[../rules/scope-run-tracking.ts](../rules/scope-run-tracking.ts)、[../../evidence/runtime/effect-observation-service.ts](../../evidence/runtime/effect-observation-service.ts)、[../../evidence/runtime/effect-source.ts](../../evidence/runtime/effect-source.ts)、[../rules/effect-observation.ts](../rules/effect-observation.ts)、[../../budget/runtime/scope-budget-service.ts](../../budget/runtime/scope-budget-service.ts)。
 
 ### scope-replan-service.ts
+
+成员 1/2（同名节点为同一声明，跨图合并阅读）。
 
 ```mermaid
 classDiagram
@@ -513,6 +530,7 @@ class N_src_logic_tasks_runtime_scope_replan_service_ts_AcceptedReplan["Accepted
 }
 N_src_logic_tasks_runtime_scope_replan_service_ts ..> N_src_logic_tasks_runtime_scope_replan_service_ts_AcceptedReplan : 声明
 class N_src_logic_tasks_runtime_scope_replan_service_ts_ScopeReplanService["ScopeReplanService"] {
+  +constructor()
   +inspect()
   +preview()
   +preflight()
@@ -528,6 +546,18 @@ class N_src_logic_tasks_runtime_scope_replan_service_ts_ScopeReplanService["Scop
   -found()
   -receipt()
   -sameRequest()
+}
+N_src_logic_tasks_runtime_scope_replan_service_ts ..> N_src_logic_tasks_runtime_scope_replan_service_ts_ScopeReplanService : 声明
+```
+
+成员 2/2（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_logic_tasks_runtime_scope_replan_service_ts["scope-replan-service.ts"] {
+  <<module>>
+}
+class N_src_logic_tasks_runtime_scope_replan_service_ts_ScopeReplanService["ScopeReplanService"] {
   -proof()
 }
 N_src_logic_tasks_runtime_scope_replan_service_ts ..> N_src_logic_tasks_runtime_scope_replan_service_ts_ScopeReplanService : 声明
@@ -543,6 +573,7 @@ class N_src_logic_tasks_runtime_topic_interruption_service_ts["topic-interruptio
   <<module>>
 }
 class N_src_logic_tasks_runtime_topic_interruption_service_ts_TopicInterruptionService["TopicInterruptionService"] {
+  +constructor()
   +prepare()
   +park()
   -owner

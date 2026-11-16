@@ -6,13 +6,16 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [knowledge-sources.ts](knowledge-sources.ts) | 将原知识事务的来源屏障与岗位/责任的明确来源采纳接到唯一 DispatchStore。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [knowledge-sources.ts](knowledge-sources.ts) | 源码模块 | 将原知识事务的来源屏障与岗位/责任的明确来源采纳接到唯一 DispatchStore。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### knowledge-sources.ts
 
@@ -41,6 +44,7 @@ class N_src_logic_knowledge_service_knowledge_sources_ts_external_KnowledgeWorks
 N_src_logic_knowledge_service_knowledge_sources_ts_external_KnowledgeWorkspace <|-- N_src_logic_knowledge_service_knowledge_sources_ts_KnowledgeSourceWorkspace
 class N_src_logic_knowledge_service_knowledge_sources_ts_KnowledgeSources["KnowledgeSources"] {
   +workspaceId
+  +constructor()
   +build()
   +prepare()
   +settle()

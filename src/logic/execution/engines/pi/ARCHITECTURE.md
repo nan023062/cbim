@@ -6,18 +6,22 @@ Pi 协议、临时桥与运行参数；插入在原生状态查询后复核取�
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [bridge.ts](bridge.ts) | 内部工具的本机临时桥及 Pi 扩展，授权先落盘；目标返工使用独立 custom 消息，不冒充用户输入。 |
-| [engine.ts](engine.ts) | Pi 引擎适配器，负责隔离配置、原生会话校验及事件转换；成员回传、人工决定和目标返工均走可信系统输入。 |
-| [package.ts](package.ts) | Pi 官方包的统一工厂入口，拥有 SDK 版本和进程准备策略。 |
-| [request-budget-bootstrap.ts](request-budget-bootstrap.ts) | 生成早于 Pi 及其 undici 初始化执行的请求转发入口。 |
-| [rpc.ts](rpc.ts) | 大脑 执行层：PiRpc：JSONL 拆包、命令关联、超时与进程结束处理。 |
-| [runtime-config.ts](runtime-config.ts) | 将模型容量和工作预算转换为 Pi 原生运行设置，供每轮隔离进程使用。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [bridge.ts](bridge.ts) | 源码模块 | 内部工具的本机临时桥及 Pi 扩展，授权先落盘；目标返工使用独立 custom 消息，不冒充用户输入。 |
+| [engine.ts](engine.ts) | 源码模块 | Pi 引擎适配器，负责隔离配置、原生会话校验及事件转换；成员回传、人工决定和目标返工均走可信系统输入。 |
+| [package.ts](package.ts) | 源码模块 | Pi 官方包的统一工厂入口，拥有 SDK 版本和进程准备策略。 |
+| [request-budget-bootstrap.ts](request-budget-bootstrap.ts) | 源码模块 | 生成早于 Pi 及其 undici 初始化执行的请求转发入口。 |
+| [rpc.ts](rpc.ts) | 源码模块 | 大脑 执行层：PiRpc：JSONL 拆包、命令关联、超时与进程结束处理。 |
+| [runtime-config.ts](runtime-config.ts) | 源码模块 | 将模型容量和工作预算转换为 Pi 原生运行设置，供每轮隔离进程使用。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### bridge.ts
 
@@ -60,6 +64,7 @@ class N_src_logic_execution_engines_pi_engine_ts_PiOptions["PiOptions"] {
 N_src_logic_execution_engines_pi_engine_ts ..> N_src_logic_execution_engines_pi_engine_ts_PiOptions : 声明
 class N_src_logic_execution_engines_pi_engine_ts_PiEngine["PiEngine"] {
   +kind
+  +constructor()
   +start()
   +run()
   +steer()
@@ -74,7 +79,6 @@ class N_src_logic_execution_engines_pi_engine_ts_PiEngine["PiEngine"] {
   -settlement
   -inactivity
   -assistantError
-  -generationStarted
 }
 N_src_logic_execution_engines_pi_engine_ts ..> N_src_logic_execution_engines_pi_engine_ts_PiEngine : 声明
 class N_src_logic_execution_engines_pi_engine_ts_external_AgentEngine["AgentEngine (外部契约)"] {
@@ -91,6 +95,7 @@ class N_src_logic_execution_engines_pi_engine_ts["engine.ts"] {
   <<module>>
 }
 class N_src_logic_execution_engines_pi_engine_ts_PiEngine["PiEngine"] {
+  -generationStarted
   -activity
   -requestLimit
   -usageBaseline
@@ -138,6 +143,7 @@ class N_src_logic_execution_engines_pi_rpc_ts["rpc.ts"] {
   <<module>>
 }
 class N_src_logic_execution_engines_pi_rpc_ts_PiRpc["PiRpc"] {
+  +constructor()
   +start()
   +request()
   +send()

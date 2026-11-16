@@ -6,30 +6,34 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [business-run-invariants.ts](business-run-invariants.ts) | 在唯一工作区日志提交及重放时核实递归业务身份登记。 |
-| [business-run.ts](business-run.ts) | 递归业务运行的持久身份与冻结知识，供文件审计和隔离恢复定位原 canonical。 |
-| [conversation-binding.ts](conversation-binding.ts) | 定义主对话与已登记 Agent 实例、逻辑会话之间的可信绑定，供运行时和日志恢复共用。 |
-| [engine-adapter.ts](engine-adapter.ts) | 官方领域 Agent Loop 包与执行宿主之间的版本化工厂契约，创建前核对包身份与模型/历史声明。 |
-| [engine-instructions.ts](engine-instructions.ts) | 为主 Agent 和成员生成共用的运行职责、历史资料、冻结身份与工具边界说明。 |
-| [engine-runtime.ts](engine-runtime.ts) | 执行装配向引擎适配器传递的已解析运行包契约，不包含下载、签名或安装实现；adapter 与 SDK 入口、版本分别保存。 |
-| [engine-session.ts](engine-session.ts) | 主对话续聊或更换引擎时选择可靠原生历史，对无交互启动失败只转交已记录的公开输入。 |
-| [engine-tools.ts](engine-tools.ts) | 将可信装配注入的能力组装成 SDK 与自定义 Loop 共用的目录与调用端口。 |
-| [index.ts](index.ts) | 大脑执行层：对外重导出 Loop 契约、主对话实例绑定、成员执行绑定、可信回注来源、存储端口与运行时。 |
-| [input-source.ts](input-source.ts) | 定义可信入口提交的成员结果、目标返工反馈、真实用户补充与人工决定系统转交来源。 |
-| [member-run.ts](member-run.ts) | 定义独立成员执行的可信身份与原生会话启动参数，供调度、大脑和运行日志共用。 |
-| [model-errors.ts](model-errors.ts) | 把模型结束原因转换为用户可理解的执行错误，供实时引擎和历史回放共用。 |
-| [repeated-tool-failures.ts](repeated-tool-failures.ts) | 按本轮真实调用顺序识别同工具同参数的连续三次失败。 |
-| [run-failure.ts](run-failure.ts) | 将运行终态错误投影为任务卡、执行详情共用的公开诊断。 |
-| [scope-usage.ts](scope-usage.ts) | 从单轮 canonical 摘要提取保守的已报告消耗，并汇总指定周期的主/成员计量。 |
-| [storage.ts](storage.ts) | 执行循环使用的日志和任务目录存储端口。 |
-| [types.ts](types.ts) | 大脑 执行层：与具体引擎无关的任务、事件、工具策略和执行摘要契约。 |
-| [usage.ts](usage.ts) | 从大脑持久化事件计算单轮用量、任务累计消耗、生成速度和当前上下文，供全局监管与界面共用。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [business-run-invariants.ts](business-run-invariants.ts) | 源码模块 | 在唯一工作区日志提交及重放时核实递归业务身份登记。 |
+| [business-run.ts](business-run.ts) | 源码模块 | 递归业务运行的持久身份与冻结知识，供文件审计和隔离恢复定位原 canonical。 |
+| [conversation-binding.ts](conversation-binding.ts) | 源码模块 | 定义主对话与已登记 Agent 实例、逻辑会话之间的可信绑定，供运行时和日志恢复共用。 |
+| [engine-adapter.ts](engine-adapter.ts) | 源码模块 | 官方领域 Agent Loop 包与执行宿主之间的版本化工厂契约，创建前核对包身份与模型/历史声明。 |
+| [engine-instructions.ts](engine-instructions.ts) | 源码模块 | 为主 Agent 和成员生成共用的运行职责、历史资料、冻结身份与工具边界说明。 |
+| [engine-runtime.ts](engine-runtime.ts) | 源码模块 | 执行装配向引擎适配器传递的已解析运行包契约，不包含下载、签名或安装实现；adapter 与 SDK 入口、版本分别保存。 |
+| [engine-session.ts](engine-session.ts) | 源码模块 | 主对话续聊或更换引擎时选择可靠原生历史，对无交互启动失败只转交已记录的公开输入。 |
+| [engine-tools.ts](engine-tools.ts) | 源码模块 | 将可信装配注入的能力组装成 SDK 与自定义 Loop 共用的目录与调用端口。 |
+| [index.ts](index.ts) | 源码模块 | 大脑执行层：对外重导出 Loop 契约、主对话实例绑定、成员执行绑定、可信回注来源、存储端口与运行时。 |
+| [input-source.ts](input-source.ts) | 源码模块 | 定义可信入口提交的成员结果、目标返工反馈、真实用户补充与人工决定系统转交来源。 |
+| [member-run.ts](member-run.ts) | 源码模块 | 定义独立成员执行的可信身份与原生会话启动参数，供调度、大脑和运行日志共用。 |
+| [model-errors.ts](model-errors.ts) | 源码模块 | 把模型结束原因转换为用户可理解的执行错误，供实时引擎和历史回放共用。 |
+| [repeated-tool-failures.ts](repeated-tool-failures.ts) | 源码模块 | 按本轮真实调用顺序识别同工具同参数的连续三次失败。 |
+| [run-failure.ts](run-failure.ts) | 源码模块 | 将运行终态错误投影为任务卡、执行详情共用的公开诊断。 |
+| [scope-usage.ts](scope-usage.ts) | 源码模块 | 从单轮 canonical 摘要提取保守的已报告消耗，并汇总指定周期的主/成员计量。 |
+| [storage.ts](storage.ts) | 源码模块 | 执行循环使用的日志和任务目录存储端口。 |
+| [types.ts](types.ts) | 源码模块 | 大脑 执行层：与具体引擎无关的任务、事件、工具策略和执行摘要契约。 |
+| [usage.ts](usage.ts) | 源码模块 | 从大脑持久化事件计算单轮用量、任务累计消耗、生成速度和当前上下文，供全局监管与界面共用。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ```mermaid
 classDiagram

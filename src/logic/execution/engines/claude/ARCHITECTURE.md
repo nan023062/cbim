@@ -6,16 +6,20 @@ Claude Agent SDK 适配、内部工具门禁与真实原生会话生命周期；
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [engine.ts](engine.ts) | Claude Code 的 AgentEngine 适配器，管理 SDK 与原生会话；目标返工沿合成系统资料输入，不带入新授权。 |
-| [package.ts](package.ts) | Claude Code 官方包的版本化工厂入口。 |
-| [sdk.ts](sdk.ts) | 从 CBIM 自带资源或开发依赖加载固定版本的 Claude Agent SDK。 |
-| [tools.ts](tools.ts) | Claude 原生工具和内部 SDK 工具适配为 CBIM 授权与回执协议。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [engine.ts](engine.ts) | 源码模块 | Claude Code 的 AgentEngine 适配器，管理 SDK 与原生会话；目标返工沿合成系统资料输入，不带入新授权。 |
+| [package.ts](package.ts) | 源码模块 | Claude Code 官方包的版本化工厂入口。 |
+| [sdk.ts](sdk.ts) | 源码模块 | 从 CBIM 自带资源或开发依赖加载固定版本的 Claude Agent SDK。 |
+| [tools.ts](tools.ts) | 源码模块 | Claude 原生工具和内部 SDK 工具适配为 CBIM 授权与回执协议。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### engine.ts
 
@@ -51,6 +55,7 @@ class N_src_logic_execution_engines_claude_engine_ts_ClaudeOptions["ClaudeOption
 N_src_logic_execution_engines_claude_engine_ts ..> N_src_logic_execution_engines_claude_engine_ts_ClaudeOptions : 声明
 class N_src_logic_execution_engines_claude_engine_ts_ClaudeCodeEngine["ClaudeCodeEngine"] {
   +kind
+  +constructor()
   +start()
   +run()
   +stop()
@@ -65,7 +70,6 @@ class N_src_logic_execution_engines_claude_engine_ts_ClaudeCodeEngine["ClaudeCod
   -stopped
   -bound
   -nativeId
-  -fatal
 }
 N_src_logic_execution_engines_claude_engine_ts ..> N_src_logic_execution_engines_claude_engine_ts_ClaudeCodeEngine : 声明
 class N_src_logic_execution_engines_claude_engine_ts_external_AgentEngine["AgentEngine (外部契约)"] {
@@ -82,6 +86,7 @@ class N_src_logic_execution_engines_claude_engine_ts["engine.ts"] {
   <<module>>
 }
 class N_src_logic_execution_engines_claude_engine_ts_ClaudeCodeEngine["ClaudeCodeEngine"] {
+  -fatal
   -inactivity
   -findSession()
   -bindSession()

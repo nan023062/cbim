@@ -6,15 +6,19 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [model-json-requests.ts](model-json-requests.ts) | 自定义领域 Loop 的非流式生成/向量请求，复用逐请求预算与冻结模型快照。 |
-| [request-budget-transport.ts](request-budget-transport.ts) | 每运行创建只接受随机令牌的本机供应商代理，逐 HTTP 尝试预留并结算预算。 |
-| [request-budget-usage.ts](request-budget-usage.ts) | 严格读取三种受支持 SSE 协议的请求用量，并暂存终态帧供可靠结算后交付。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [model-json-requests.ts](model-json-requests.ts) | 源码模块 | 自定义领域 Loop 的非流式生成/向量请求，复用逐请求预算与冻结模型快照。 |
+| [request-budget-transport.ts](request-budget-transport.ts) | 源码模块 | 每运行创建只接受随机令牌的本机供应商代理，逐 HTTP 尝试预留并结算预算。 |
+| [request-budget-usage.ts](request-budget-usage.ts) | 源码模块 | 严格读取三种受支持 SSE 协议的请求用量，并暂存终态帧供可靠结算后交付。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### model-json-requests.ts
 
@@ -24,6 +28,7 @@ class N_src_logic_execution_engines_transport_model_json_requests_ts["model-json
   <<module>>
 }
 class N_src_logic_execution_engines_transport_model_json_requests_ts_ModelJsonRequests["ModelJsonRequests"] {
+  +constructor()
   +chat()
   +embed()
   -budget
@@ -67,8 +72,9 @@ class N_src_logic_execution_engines_transport_request_budget_usage_ts["request-b
   <<module>>
 }
 class N_src_logic_execution_engines_transport_request_budget_usage_ts_RequestBudgetUsageStream["RequestBudgetUsageStream"] {
-  +responseBytes
-  +frameBytes
+  +responseBytes$
+  +frameBytes$
+  +constructor()
   +push()
   +finish()
   -api

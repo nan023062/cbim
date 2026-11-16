@@ -6,21 +6,25 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [artifact-capture.ts](artifact-capture.ts) | 成员运行的短时文件采集门闩，绑定真实授权、进度、知识基线与 canonical 事件。 |
-| [member-checkpoint.ts](member-checkpoint.ts) | 成员单次合作式停泊的运行时门闩，沿真实工具授权保存非终结检查点请求。 |
-| [member-tool-capabilities.ts](member-tool-capabilities.ts) | 把本轮真实任务、产物、验证及受控执行能力适配为引擎统一端口。 |
-| [output-manifest-capture.ts](output-manifest-capture.ts) | 成员本轮完整产物采集的短期门闩，冻结 Workflow 范围并将真实观察可靠写入 canonical。 |
-| [run-artifact-transition.ts](run-artifact-transition.ts) | 正式成员删除/移动工具的唯一授权、写前核实和可靠阶段记录，平台副作用只通过此运行端口。 |
-| [run-code-check.ts](run-code-check.ts) | 单轮成员的代码检查门闩，连接冻结命令、权限完成后的真实平台与可信日志。 |
-| [run-controlled-file.ts](run-controlled-file.ts) | 正式成员受控文件工具的单次授权与短门闩，平台写入只经过此可信运行端口。 |
-| [run-scoped-execution.ts](run-scoped-execution.ts) | 冻结范围工具的 Runtime 一次授权、短门闩和实际退出屏障。 |
-| [run-validation.ts](run-validation.ts) | 正式成员的 JSON/CSV/PNG 验证短门闩，连接冻结要求、原文件或完整集合身份及平台同字节读取。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [artifact-capture.ts](artifact-capture.ts) | 源码模块 | 成员运行的短时文件采集门闩，绑定真实授权、进度、知识基线与 canonical 事件。 |
+| [member-checkpoint.ts](member-checkpoint.ts) | 源码模块 | 成员单次合作式停泊的运行时门闩，沿真实工具授权保存非终结检查点请求。 |
+| [member-tool-capabilities.ts](member-tool-capabilities.ts) | 源码模块 | 把本轮真实任务、产物、验证及受控执行能力适配为引擎统一端口。 |
+| [output-manifest-capture.ts](output-manifest-capture.ts) | 源码模块 | 成员本轮完整产物采集的短期门闩，冻结 Workflow 范围并将真实观察可靠写入 canonical。 |
+| [run-artifact-transition.ts](run-artifact-transition.ts) | 源码模块 | 正式成员删除/移动工具的唯一授权、写前核实和可靠阶段记录，平台副作用只通过此运行端口。 |
+| [run-code-check.ts](run-code-check.ts) | 源码模块 | 单轮成员的代码检查门闩，连接冻结命令、权限完成后的真实平台与可信日志。 |
+| [run-controlled-file.ts](run-controlled-file.ts) | 源码模块 | 正式成员受控文件工具的单次授权与短门闩，平台写入只经过此可信运行端口。 |
+| [run-scoped-execution.ts](run-scoped-execution.ts) | 源码模块 | 冻结范围工具的 Runtime 一次授权、短门闩和实际退出屏障。 |
+| [run-validation.ts](run-validation.ts) | 源码模块 | 正式成员的 JSON/CSV/PNG 验证短门闩，连接冻结要求、原文件或完整集合身份及平台同字节读取。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### artifact-capture.ts
 
@@ -39,6 +43,7 @@ class N_src_logic_execution_rules_capabilities_artifact_capture_ts_ArtifactCaptu
 N_src_logic_execution_rules_capabilities_artifact_capture_ts ..> N_src_logic_execution_rules_capabilities_artifact_capture_ts_ArtifactCapturePort : 声明
 class N_src_logic_execution_rules_capabilities_artifact_capture_ts_RunArtifactCapture["RunArtifactCapture"] {
   +tools
+  +constructor()
   +guard()
   +observed()
   +stop()
@@ -65,6 +70,7 @@ class N_src_logic_execution_rules_capabilities_member_checkpoint_ts["member-chec
 }
 class N_src_logic_execution_rules_capabilities_member_checkpoint_ts_RunMemberCheckpoint["RunMemberCheckpoint"] {
   +tools
+  +constructor()
   +guard()
   +observed()
   +stop()
@@ -133,6 +139,7 @@ class N_src_logic_execution_rules_capabilities_output_manifest_capture_ts_Output
 N_src_logic_execution_rules_capabilities_output_manifest_capture_ts ..> N_src_logic_execution_rules_capabilities_output_manifest_capture_ts_OutputManifestCapturePort : 声明
 class N_src_logic_execution_rules_capabilities_output_manifest_capture_ts_RunOutputManifestCapture["RunOutputManifestCapture"] {
   +tools
+  +constructor()
   +guard()
   +observed()
   +stop()
@@ -147,7 +154,6 @@ class N_src_logic_execution_rules_capabilities_output_manifest_capture_ts_RunOut
   -reserved
   -deliveryOwner
   -reading
-  -bindings
 }
 N_src_logic_execution_rules_capabilities_output_manifest_capture_ts ..> N_src_logic_execution_rules_capabilities_output_manifest_capture_ts_RunOutputManifestCapture : 声明
 ```
@@ -160,6 +166,7 @@ class N_src_logic_execution_rules_capabilities_output_manifest_capture_ts["outpu
   <<module>>
 }
 class N_src_logic_execution_rules_capabilities_output_manifest_capture_ts_RunOutputManifestCapture["RunOutputManifestCapture"] {
+  -bindings
   -inspect()
   -capture()
 }
@@ -190,6 +197,7 @@ class N_src_logic_execution_rules_capabilities_run_artifact_transition_ts_Artifa
 }
 N_src_logic_execution_rules_capabilities_run_artifact_transition_ts ..> N_src_logic_execution_rules_capabilities_run_artifact_transition_ts_ArtifactTransitionRunPort : 声明
 class N_src_logic_execution_rules_capabilities_run_artifact_transition_ts_RunArtifactTransition["RunArtifactTransition"] {
+  +constructor()
   +guard()
   +authorize()
   +observed()
@@ -205,7 +213,6 @@ class N_src_logic_execution_rules_capabilities_run_artifact_transition_ts_RunArt
   -port
   -context
   -events
-  -controller
 }
 N_src_logic_execution_rules_capabilities_run_artifact_transition_ts ..> N_src_logic_execution_rules_capabilities_run_artifact_transition_ts_RunArtifactTransition : 声明
 class N_src_logic_execution_rules_capabilities_run_artifact_transition_ts_external_ArtifactTransitionToolPort["ArtifactTransitionToolPort (外部契约)"] {
@@ -222,6 +229,7 @@ class N_src_logic_execution_rules_capabilities_run_artifact_transition_ts["run-a
   <<module>>
 }
 class N_src_logic_execution_rules_capabilities_run_artifact_transition_ts_RunArtifactTransition["RunArtifactTransition"] {
+  -controller
   -pending
   -unverified
   -reserved
@@ -261,6 +269,7 @@ class N_src_logic_execution_rules_capabilities_run_code_check_ts_CodeCheckContex
 }
 N_src_logic_execution_rules_capabilities_run_code_check_ts ..> N_src_logic_execution_rules_capabilities_run_code_check_ts_CodeCheckContext : 声明
 class N_src_logic_execution_rules_capabilities_run_code_check_ts_RunCodeCheck["RunCodeCheck"] {
+  +constructor()
   +list()
   +guard()
   +observed()
@@ -300,6 +309,7 @@ class N_src_logic_execution_rules_capabilities_run_controlled_file_ts_Controlled
 }
 N_src_logic_execution_rules_capabilities_run_controlled_file_ts ..> N_src_logic_execution_rules_capabilities_run_controlled_file_ts_ControlledFileRunPort : 声明
 class N_src_logic_execution_rules_capabilities_run_controlled_file_ts_RunControlledFile["RunControlledFile"] {
+  +constructor()
   +guard()
   +authorize()
   +observed()
@@ -315,7 +325,6 @@ class N_src_logic_execution_rules_capabilities_run_controlled_file_ts_RunControl
   -reserved
   -unverified
   -controller
-  -pending
 }
 N_src_logic_execution_rules_capabilities_run_controlled_file_ts ..> N_src_logic_execution_rules_capabilities_run_controlled_file_ts_RunControlledFile : 声明
 ```
@@ -328,6 +337,7 @@ class N_src_logic_execution_rules_capabilities_run_controlled_file_ts["run-contr
   <<module>>
 }
 class N_src_logic_execution_rules_capabilities_run_controlled_file_ts_RunControlledFile["RunControlledFile"] {
+  -pending
   -scopeId
   -release()
 }
@@ -352,6 +362,7 @@ class N_src_logic_execution_rules_capabilities_run_scoped_execution_ts_ScopedExe
 }
 N_src_logic_execution_rules_capabilities_run_scoped_execution_ts ..> N_src_logic_execution_rules_capabilities_run_scoped_execution_ts_ScopedExecutionPort : 声明
 class N_src_logic_execution_rules_capabilities_run_scoped_execution_ts_RunScopedExecution["RunScopedExecution"] {
+  +constructor()
   +guard()
   +authorize()
   +observed()
@@ -410,6 +421,7 @@ class N_src_logic_execution_rules_capabilities_run_validation_ts_RunValidationCo
 N_src_logic_execution_rules_capabilities_run_validation_ts ..> N_src_logic_execution_rules_capabilities_run_validation_ts_RunValidationContext : 声明
 class N_src_logic_execution_rules_capabilities_run_validation_ts_RunValidation["RunValidation"] {
   +tools
+  +constructor()
   +guard()
   +observed()
   +stop()
@@ -424,7 +436,6 @@ class N_src_logic_execution_rules_capabilities_run_validation_ts_RunValidation["
   -reserved
   -deliveryReading
   -generations
-  -controller
 }
 N_src_logic_execution_rules_capabilities_run_validation_ts ..> N_src_logic_execution_rules_capabilities_run_validation_ts_RunValidation : 声明
 ```
@@ -437,6 +448,7 @@ class N_src_logic_execution_rules_capabilities_run_validation_ts["run-validation
   <<module>>
 }
 class N_src_logic_execution_rules_capabilities_run_validation_ts_RunValidation["RunValidation"] {
+  -controller
   -lastEffectSeq()
   -selected()
   -run()

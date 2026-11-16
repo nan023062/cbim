@@ -6,19 +6,23 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [architecture-service.ts](architecture-service.ts) | 将团队/业务架构表单接到受控知识事务，作为可信桌面的预览与手动提交入口。 |
-| [catalog.ts](catalog.ts) | Catalog：维护本机工作区清单、显示名称、路径身份、并发更新和重新定位。 |
-| [main-module-ownership-tools.ts](main-module-ownership-tools.ts) | 把工作区责任服务绑定真实主运行及当前协作周期，提供四项模型窄端口。 |
-| [module-ownerships.ts](module-ownerships.ts) | 桌面与真实主工具共用的模块负责人服务，关系和岗位在唯一 DispatchStore 内裁决。 |
-| [paths.ts](paths.ts) | 本机应用目录、工程身份和知识路径的实际解析。 |
-| [source-browser.ts](source-browser.ts) | 按正式模块的 sources 绑定提供只读目录枚举与文本预览，供可信桌面桥接调用。 |
-| [workspace.ts](workspace.ts) | 管理本机工作区的身份、独占锁、知识监听和维护任务。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [architecture-service.ts](architecture-service.ts) | 源码模块 | 将团队/业务架构表单接到受控知识事务，作为可信桌面的预览与手动提交入口。 |
+| [catalog.ts](catalog.ts) | 源码模块 | Catalog：维护本机工作区清单、显示名称、路径身份、并发更新和重新定位。 |
+| [main-module-ownership-tools.ts](main-module-ownership-tools.ts) | 源码模块 | 把工作区责任服务绑定真实主运行及当前协作周期，提供四项模型窄端口。 |
+| [module-ownerships.ts](module-ownerships.ts) | 源码模块 | 桌面与真实主工具共用的模块负责人服务，关系和岗位在唯一 DispatchStore 内裁决。 |
+| [paths.ts](paths.ts) | 源码模块 | 本机应用目录、工程身份和知识路径的实际解析。 |
+| [source-browser.ts](source-browser.ts) | 源码模块 | 按正式模块的 sources 绑定提供只读目录枚举与文本预览，供可信桌面桥接调用。 |
+| [workspace.ts](workspace.ts) | 源码模块 | 管理本机工作区的身份、独占锁、知识监听和维护任务。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### architecture-service.ts
 
@@ -28,6 +32,7 @@ class N_src_logic_workspace_service_architecture_service_ts["architecture-servic
   <<module>>
 }
 class N_src_logic_workspace_service_architecture_service_ts_ArchitectureService["ArchitectureService"] {
+  +constructor()
   +preview()
   +commit()
   -workspace
@@ -48,6 +53,7 @@ class N_src_logic_workspace_service_catalog_ts["catalog.ts"] {
 class N_src_logic_workspace_service_catalog_ts_Catalog["Catalog"] {
   +paths
   +warning
+  +constructor()
   +init()
   +read()
   +update()
@@ -90,6 +96,7 @@ class N_src_logic_workspace_service_module_ownerships_ts_Knowledge["Knowledge"] 
 }
 N_src_logic_workspace_service_module_ownerships_ts ..> N_src_logic_workspace_service_module_ownerships_ts_Knowledge : 声明
 class N_src_logic_workspace_service_module_ownerships_ts_ModuleOwnerships["ModuleOwnerships"] {
+  +constructor()
   +list()
   +byMember()
   +inspectModules()
@@ -105,7 +112,6 @@ class N_src_logic_workspace_service_module_ownerships_ts_ModuleOwnerships["Modul
   -workspace()
   -cursor()
   -basis()
-  -knowledge()
 }
 N_src_logic_workspace_service_module_ownerships_ts ..> N_src_logic_workspace_service_module_ownerships_ts_ModuleOwnerships : 声明
 ```
@@ -118,6 +124,7 @@ class N_src_logic_workspace_service_module_ownerships_ts["module-ownerships.ts"]
   <<module>>
 }
 class N_src_logic_workspace_service_module_ownerships_ts_ModuleOwnerships["ModuleOwnerships"] {
+  -knowledge()
   -observed()
   -view()
   -page()
@@ -142,6 +149,7 @@ class N_src_logic_workspace_service_paths_ts_Paths["Paths"] {
   +userRoot
   +installRoot
   +protectedRoots
+  +constructor()
   +identity()
   +project()
   +local()
@@ -171,6 +179,7 @@ class N_src_logic_workspace_service_source_browser_ts_SourceBrowserWorkspace["So
 }
 N_src_logic_workspace_service_source_browser_ts ..> N_src_logic_workspace_service_source_browser_ts_SourceBrowserWorkspace : 声明
 class N_src_logic_workspace_service_source_browser_ts_ModuleSourceBrowser["ModuleSourceBrowser"] {
+  +constructor()
   +list()
   +read()
   -workspace
@@ -208,8 +217,8 @@ class N_src_logic_workspace_service_workspace_ts_Workspace["Workspace"] {
   +lastRevision
   +tasks
   +sources
+  +constructor()
   +view()
-  +assert()
 }
 N_src_logic_workspace_service_workspace_ts ..> N_src_logic_workspace_service_workspace_ts_Workspace : 声明
 class N_src_logic_workspace_service_workspace_ts_external_KnowledgeWorkspace["KnowledgeWorkspace (外部契约)"] {
@@ -226,6 +235,7 @@ class N_src_logic_workspace_service_workspace_ts["workspace.ts"] {
   <<module>>
 }
 class N_src_logic_workspace_service_workspace_ts_Workspace["Workspace"] {
+  +assert()
   +attachDispatchStore()
   +dispatchStore
   +open()
@@ -241,7 +251,6 @@ class N_src_logic_workspace_service_workspace_ts_Workspace["Workspace"] {
   +planMove()
   +startTask()
   +cancelTask()
-  +localData()
 }
 N_src_logic_workspace_service_workspace_ts ..> N_src_logic_workspace_service_workspace_ts_Workspace : 声明
 class N_src_logic_workspace_service_workspace_ts_external_KnowledgeWorkspace["KnowledgeWorkspace (外部契约)"] {
@@ -258,6 +267,7 @@ class N_src_logic_workspace_service_workspace_ts["workspace.ts"] {
   <<module>>
 }
 class N_src_logic_workspace_service_workspace_ts_Workspace["Workspace"] {
+  +localData()
   +prepareClose()
   +close()
   -controllers

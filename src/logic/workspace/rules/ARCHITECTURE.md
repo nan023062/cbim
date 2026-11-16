@@ -6,28 +6,32 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [artifact-scope.ts](artifact-scope.ts) | Workflow 可选完整产物观察范围的叶子契约，供知识冻结、运行采集和公开报告共用。 |
-| [code-check.ts](code-check.ts) | 代码 Workflow 的冻结命令与成功判据，供知识校验、执行和证据重算共用。 |
-| [csv-validation-schema.ts](csv-validation-schema.ts) | 定义冻结 CSV 表格要求并直接检查有界 UTF-8 字节，供知识声明与可信文件端口共用。 |
-| [execution-scope.ts](execution-scope.ts) | 模块 Workflow 的可冻结执行范围及任务合并规则，供知识准备、运行门禁与平台装配共用。 |
-| [json-validation-schema.ts](json-validation-schema.ts) | JSON 产物验证的有界声明和纯结构校验，供冻结 Workflow、运行时及知识入口共用。 |
-| [knowledge-source-rules.ts](knowledge-source-rules.ts) | 来源代次日志的纯投影、游标、依据和幂等命令规则，供知识协调器与 DispatchStore 共同使用。 |
-| [knowledge-source.ts](knowledge-source.ts) | 受控知识来源代次、读取状态和原日志握手的纯协议，供岗位、责任、Store 与桌面共用。 |
-| [module-outline.ts](module-outline.ts) | 模块正文的固定章节和可复制模板，供知识校验与桌面编辑共同使用。 |
-| [module-ownership-rules.ts](module-ownership-rules.ts) | 负责人登记的规范依据、命令指纹、不可变审计与关系头投影，供 Main 与 Store 重放共同调用。 |
-| [module-ownership-tool-policy.ts](module-ownership-tool-policy.ts) | 模块责任控制面四项工具的纯名称、效果及业务工作分类，供授权与周期收口共用。 |
-| [module-ownership-tools.ts](module-ownership-tools.ts) | 主运行负责人四工具的严格输入、业务输出和可信端口协议。 |
-| [module-ownership.ts](module-ownership.ts) | 单模块负责人控制面的严格公开协议，供岗位、责任服务、持久化及桌面共用。 |
-| [png-validation-schema.ts](png-validation-schema.ts) | 冻结静态 PNG 的精确尺寸、通道要求和资源上限，供知识声明、运行端口与公开结果共用。 |
-| [project-root.ts](project-root.ts) | 提供所有项目共有的内置根模块身份和只读说明，供知识查询与视图共用。 |
-| [source-browser.ts](source-browser.ts) | 模块绑定源码浏览的纯数据与请求契约，由工作区业务拥有。 |
-| [workflow-contract.ts](workflow-contract.ts) | 定义模块 Workflow 正文中可选执行条件的严格协议，供知识治理、资源包与执行准备共同解析。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [artifact-scope.ts](artifact-scope.ts) | 源码模块 | Workflow 可选完整产物观察范围的叶子契约，供知识冻结、运行采集和公开报告共用。 |
+| [code-check.ts](code-check.ts) | 源码模块 | 代码 Workflow 的冻结命令与成功判据，供知识校验、执行和证据重算共用。 |
+| [csv-validation-schema.ts](csv-validation-schema.ts) | 源码模块 | 定义冻结 CSV 表格要求并直接检查有界 UTF-8 字节，供知识声明与可信文件端口共用。 |
+| [execution-scope.ts](execution-scope.ts) | 源码模块 | 模块 Workflow 的可冻结执行范围及任务合并规则，供知识准备、运行门禁与平台装配共用。 |
+| [json-validation-schema.ts](json-validation-schema.ts) | 源码模块 | JSON 产物验证的有界声明和纯结构校验，供冻结 Workflow、运行时及知识入口共用。 |
+| [knowledge-source-rules.ts](knowledge-source-rules.ts) | 源码模块 | 来源代次日志的纯投影、游标、依据和幂等命令规则，供知识协调器与 DispatchStore 共同使用。 |
+| [knowledge-source.ts](knowledge-source.ts) | 源码模块 | 受控知识来源代次、读取状态和原日志握手的纯协议，供岗位、责任、Store 与桌面共用。 |
+| [module-outline.ts](module-outline.ts) | 源码模块 | 模块正文的固定章节和可复制模板，供知识校验与桌面编辑共同使用。 |
+| [module-ownership-rules.ts](module-ownership-rules.ts) | 源码模块 | 负责人登记的规范依据、命令指纹、不可变审计与关系头投影，供 Main 与 Store 重放共同调用。 |
+| [module-ownership-tool-policy.ts](module-ownership-tool-policy.ts) | 源码模块 | 模块责任控制面四项工具的纯名称、效果及业务工作分类，供授权与周期收口共用。 |
+| [module-ownership-tools.ts](module-ownership-tools.ts) | 源码模块 | 主运行负责人四工具的严格输入、业务输出和可信端口协议。 |
+| [module-ownership.ts](module-ownership.ts) | 源码模块 | 单模块负责人控制面的严格公开协议，供岗位、责任服务、持久化及桌面共用。 |
+| [png-validation-schema.ts](png-validation-schema.ts) | 源码模块 | 冻结静态 PNG 的精确尺寸、通道要求和资源上限，供知识声明、运行端口与公开结果共用。 |
+| [project-root.ts](project-root.ts) | 源码模块 | 提供所有项目共有的内置根模块身份和只读说明，供知识查询与视图共用。 |
+| [source-browser.ts](source-browser.ts) | 源码模块 | 模块绑定源码浏览的纯数据与请求契约，由工作区业务拥有。 |
+| [workflow-contract.ts](workflow-contract.ts) | 源码模块 | 定义模块 Workflow 正文中可选执行条件的严格协议，供知识治理、资源包与执行准备共同解析。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### artifact-scope.ts
 

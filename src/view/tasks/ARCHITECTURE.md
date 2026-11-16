@@ -6,108 +6,112 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [admission-state.ts](admission-state.ts) | 维护当前窗口共享的全局准入快照，供设置与会话提示订阅。 |
-| [admission.css](admission.css) | 对应界面的布局与视觉样式。 |
-| [AdmissionNotice.tsx](AdmissionNotice.tsx) | 显示当前主会话已经受理、尚待执行名额的调度请求。 |
-| [artifact-report-state.ts](artifact-report-state.ts) | 成员文件基线列表和显式复核的只读界面状态，校验报告身份及单次观察结果。 |
-| [artifact-report.css](artifact-report.css) | 任务详情的文件基线列表与逐文件观察排版。 |
-| [ArtifactTransitionProofs.tsx](ArtifactTransitionProofs.tsx) | 成员清单与人工验收共用的删除/移动历史证明视图，展示源、目标及原写前字节依据。 |
-| [command-verification-state.ts](command-verification-state.ts) | 保存一次原主工具调用的显式核实状态，校验报告身份并隔离迟到的异步响应。 |
-| [command-verification.css](command-verification.css) | 原命令核实卡的主题排版与独立状态颜色。 |
-| [CommandVerificationPanel.tsx](CommandVerificationPanel.tsx) | 在主对话的原工具记录中展示显式核实入口，分别呈现原工具结果、事务保存事实与验收边界。 |
-| [continuation-attachments.ts](continuation-attachments.ts) | 校验安全等待补充的公开附件展示数据，按稳定身份合并文件、目录、链接、网页及仓库资料选择。 |
-| [continuation-source-io.ts](continuation-source-io.ts) | 把等待资料控制器的单次读取映射为桌面 IPC，传递本轮导入身份与取消。 |
-| [continuation-source-state.ts](continuation-source-state.ts) | 核对安全等待资料选择器的公开授权目标与真实仓库分页身份。 |
-| [continuation-state.ts](continuation-state.ts) | 管理显式目标补充的本地草稿、冻结请求与回执，不直接依赖 React 或桌面全局对象。 |
-| [ContinuationAttachmentHistory.tsx](ContinuationAttachmentHistory.tsx) | 在目标接续历史中展示 Main 已受理的 v1/v2 附件清单和有界来源摘要。 |
-| [ContinuationSourceMenu.tsx](ContinuationSourceMenu.tsx) | 为原目标安全等待提供目录、URL、网页及授权仓库资料的显式选择表单。 |
-| [controlled-file-state.ts](controlled-file-state.ts) | 维护同主会话的受控文件报告、补偿预览和本机原命令索引，供成员详情共享。 |
-| [controlled-file.css](controlled-file.css) | 对应界面的布局与视觉样式。 |
-| [ControlledFilePanel.tsx](ControlledFilePanel.tsx) | 在成员原调用下分别显示工具结果、受控文件操作和独立补偿状态。 |
-| [effect-observation-state.ts](effect-observation-state.ts) | 为同一主会话的主/成员调用保存显式影响观察、处置草稿、稳定命令及后续关联。 |
-| [effect-observation.css](effect-observation.css) | 对应界面的布局与视觉样式。 |
-| [effect-recovery-state.ts](effect-recovery-state.ts) | 将显式影响观察与已保存的本机处置转换为新只读核实的界面候选。 |
-| [EffectObservationPanel.tsx](EffectObservationPanel.tsx) | 展示原调用状态、当前文件、原控制面/知识事务、原治理/责任记录、受控写/补偿阶段、本机处置和后续独立周期关系。 |
-| [execution-report-state.ts](execution-report-state.ts) | 验证成员执行核实报告的身份和分页基线，并保存一次显式读取的前端状态。 |
-| [execution-report.css](execution-report.css) | 选中成员任务的只读执行核实报告排版。 |
-| [ExecutionRecoveryForm.tsx](ExecutionRecoveryForm.tsx) | 异常执行报告后的显式新周期入口，将用户观察与新的只读核实目标分开呈现。 |
-| [graph-state.ts](graph-state.ts) | 主会话派发图的前端增量投影，核对身份和游标后原子合并完整提交。 |
-| [human-continuation-state.ts](human-continuation-state.ts) | 管理按真实人工决定继续的独立持久请求，供主会话两处目标卡共享。 |
-| [human-continuation.css](human-continuation.css) | 独立人工决定接续入口的目标卡布局。 |
-| [human-decision-state.ts](human-decision-state.ts) | 维护当前主会话人工决定的草稿、手动预览、冻结命令及回执，供两处目标卡共享。 |
-| [human-decisions.css](human-decisions.css) | 人工决定预览、选择与历史的目标卡排版。 |
-| [HumanContinuationForm.tsx](HumanContinuationForm.tsx) | 显示本等待最新人工决定及独立继续按钮，不把保存意见变成隐式执行。 |
-| [HumanDecisionPanel.tsx](HumanDecisionPanel.tsx) | 呈现人工验收项的候选、文件观察和三种明确决定，并展示不可变本机记录。 |
-| [IsolatedExecutionPanel.tsx](IsolatedExecutionPanel.tsx) | 原成员运行的隔离资源显式核实与清理入口。 |
-| [member-activity.css](member-activity.css) | 主对话中的成员活动卡片与任务节点详情排版。 |
-| [member-cancellation-state.ts](member-cancellation-state.ts) | 为成员卡、任务节点和详情提供未启动撤销的统一只读投影。 |
-| [member-checkpoint-state.ts](member-checkpoint-state.ts) | 将同任务的检查点交接和后续运行投影为成员卡片、节点与详情共用的只读状态。 |
-| [member-checkpoint.css](member-checkpoint.css) | 成员检查点的只读交接、预约、放弃审计和轮次引用排版。 |
-| [member-dependency-state.ts](member-dependency-state.ts) | 将任务节点的前置追加、替换和原子增删转换为主对话与详情共用的只读历史投影。 |
-| [member-dependency.css](member-dependency.css) | 排版成员前置追加和替换的只读历史，供主对话摘要与任务详情共用。 |
-| [member-event-state.ts](member-event-state.ts) | 把成员公开事件分页归并为稳定的运行视图，供卡片与任务详情共用。 |
-| [member-help-state.ts](member-help-state.ts) | 为成员动态、任务节点和详情提供同一份求助交接投影与中文分类。 |
-| [member-review-state.ts](member-review-state.ts) | 展示成员候选从交付、主调度审阅到最终验收的阶段说明。 |
-| [member-validation-state.ts](member-validation-state.ts) | 从当前成员公开事件推导结构验证展示状态，保留当时不符合与后续通过的各次事实。 |
-| [member-validation.css](member-validation.css) | 对应界面的布局与视觉样式。 |
-| [MemberActivity.tsx](MemberActivity.tsx) | 展示成员任务与公开执行动态，并提供派发工具旁的紧凑内联形式及原任务详情入口。 |
-| [MemberArtifactReport.tsx](MemberArtifactReport.tsx) | 成员节点详情中的独立文件基线面板，手动列出记录并复核明确选择的一份。 |
-| [MemberCancellationNotice.tsx](MemberCancellationNotice.tsx) | 在主对话成员卡和任务详情中显示主调度已经提交的未启动撤销事实。 |
-| [MemberCheckpointNotice.tsx](MemberCheckpointNotice.tsx) | 在主对话和任务详情展示检查点、续执行预约、显式放弃与新旧轮次关系。 |
-| [MemberDependencyNotice.tsx](MemberDependencyNotice.tsx) | 在成员动态和详情中展示前置追加/替换/原子增删原因，保留原边和来源身份。 |
-| [MemberExecutionReport.tsx](MemberExecutionReport.tsx) | 在任务节点详情中展示一次显式核实的原调用登记、日志与工具回执报告，独立于成员流式正文。 |
-| [MemberHelpNotice.tsx](MemberHelpNotice.tsx) | 在主对话成员卡和任务详情中只读呈现已经结算的求助交接记录。 |
-| [MemberOutputManifest.tsx](MemberOutputManifest.tsx) | 成员指定轮次的声明范围完整清单面板，明确显示根、缺失、集合变化及原删除/移动证明。 |
-| [MemberProgressSummary.tsx](MemberProgressSummary.tsx) | 在成员公开对话卡中直接展示结构化步骤、证据数量及交付限制。 |
-| [MemberRunTranscript.tsx](MemberRunTranscript.tsx) | 以执行 Agent 身份连续显示调用方输入、公开输出与工具过程，兼容旧成员卡片及任务详情。 |
-| [MemberTaskDetail.tsx](MemberTaskDetail.tsx) | 展示任务图选中成员的公开正文、工具、计划与候选；独立报告核实执行事实，独立表单显式创建新的只读核实周期。 |
-| [MemberValidationPanel.tsx](MemberValidationPanel.tsx) | 成员任务详情中的只读 JSON/CSV/PNG 验证记录，列出验证器、明确条件、文件与当时结论。 |
-| [office-scene.css](office-scene.css) | 主题自适应办公室家具、人物与往返动作；小屏工位逐列重排；当前任务正文按需进入详情，不另设列表占位。 |
-| [office-state.ts](office-state.ts) | 把当前办公室已提交任务投影为唯一人物、模块工位及派发/汇报动态。 |
-| [OfficeScene.tsx](OfficeScene.tsx) | 当前主 Session 的办公室舞台、人物往返和对话导航，工位由真实模块投影；当前任务只在人物卡提供摘要和详情入口，不再重复铺开正文列表。 |
-| [output-manifest-state.ts](output-manifest-state.ts) | 完整产物清单的显式列表、选择和复核状态；仅消费 Bridge 公开 DTO。 |
-| [owner-execution-state.ts](owner-execution-state.ts) | 将任务内冻结的负责人绑定投影为只读展示状态，供对话卡片、任务节点与详情共用。 |
-| [owner-execution.css](owner-execution.css) | 任务与目标计划中原岗位绑定的紧凑排版。 |
-| [OwnerExecutionDetails.tsx](OwnerExecutionDetails.tsx) | 在目标责任分配和成员任务中呈现冻结的岗位、模型、来源与责任版本。 |
-| [OwnerExecutionInspection.tsx](OwnerExecutionInspection.tsx) | 在选中任务详情中显式核实当前负责人、能力和模型与原派发是否一致。 |
-| [recovery-state.ts](recovery-state.ts) | 保存用户从异常报告新建只读核实周期的草稿、冻结命令和受理回执。 |
-| [replan-state.ts](replan-state.ts) | 保存从已完成核实周期创建正式业务周期的独立草稿、条件预览和稳定提交命令。 |
-| [request-budget-state.ts](request-budget-state.ts) | 管理单一目标的只读请求账本摘要，显式刷新且核对完整身份与冻结策略版本。 |
-| [RequestBudgetPanel.tsx](RequestBudgetPanel.tsx) | 展示冻结目标的请求结算、预留和拒绝原因，与供应商账单及业务验收明确区分。 |
-| [scope-goal.css](scope-goal.css) | 对话摘要与任务根详情共用的目标计划卡片、历史选择、证据及任务替代引用排版。 |
-| [scope-replan.css](scope-replan.css) | 正式业务重规划表单与条件核验摘要排版，嵌入既有目标卡。 |
-| [scope-state.ts](scope-state.ts) | 主会话目标周期的增量投影和展示状态，供对话摘要与任务根详情共用。 |
-| [scope-usage-state.ts](scope-usage-state.ts) | 管理任务周期用量的一次显式读取，并验证返回身份、计量来源与汇总一致性。 |
-| [scope-usage.css](scope-usage.css) | 对应界面的布局与视觉样式。 |
-| [ScopeActiveInputs.tsx](ScopeActiveInputs.tsx) | 在主对话和任务根的目标详情中展示运行内补充的真实接收历史。 |
-| [ScopeBudgetPanel.tsx](ScopeBudgetPanel.tsx) | 在主对话和任务根的目标卡片展示本周期冻结额度与真实预算拒绝原因。 |
-| [ScopeContinuationForm.tsx](ScopeContinuationForm.tsx) | 目标卡片中的显式正文与多来源补充入口，展示共享附件、冻结请求、查询及同命令重试。 |
-| [ScopeGoalPanel.tsx](ScopeGoalPanel.tsx) | 复用展示本轮真实目标、冻结岗位分配、逐项审阅及历史周期，供主对话摘要和任务根详情使用。 |
-| [ScopeReplanForm.tsx](ScopeReplanForm.tsx) | 已完成只读核实周期之后的正式业务新目标表单，复用于对话目标卡和任务根。 |
-| [ScopeUsagePanel.tsx](ScopeUsagePanel.tsx) | 在会话任务视图按需展示所选目标周期的主/成员已报告消耗与逐运行来源。 |
-| [session-task-state.ts](session-task-state.ts) | 按原工作区和主会话过滤轮次，并投影主 Agent 的公开状态与目标。 |
-| [SessionTaskReview.tsx](SessionTaskReview.tsx) | 在显式运行核实中展示原主会话或成员任务的完整记录、恢复与人工操作。 |
-| [SessionTaskView.tsx](SessionTaskView.tsx) | 展示当前主会话的办公室及用量，人物详情和历史任务只导航对应对话。 |
-| [task-graph.css](task-graph.css) | 主会话办公室与显式运行核实对话框的自适应布局。 |
-| [task-history-state.ts](task-history-state.ts) | 为任务流程图划分默认折叠的历史任务，并统计被折叠的真实关联。 |
-| [ToolActivity.tsx](ToolActivity.tsx) | 在共享工具轨道上组合原命令核实、影响处置和按调用 ID 延迟挂载的详情，供主对话及任务页使用。 |
-| [useAdmission.ts](useAdmission.ts) | 将当前窗口唯一的准入快照订阅接入 React，供多个会话与设置共用。 |
-| [useControlledFiles.ts](useControlledFiles.ts) | 将共享原文件操作/补偿控制器连接桌面 IPC，供成员原调用卡使用。 |
-| [useEffectObservation.ts](useEffectObservation.ts) | 将共享影响处置控制器接到桌面 IPC，供主工具记录、成员详情与业务重规划使用。 |
-| [useExecutionRecovery.ts](useExecutionRecovery.ts) | 把所选任务的核实报告、当前会话状态与独立的新周期草稿连接起来。 |
-| [useExecutionReport.ts](useExecutionReport.ts) | 为选中成员任务装配只读核实控制器，将图/周期变化投影为报告过期提示。 |
-| [useHumanContinuation.ts](useHumanContinuation.ts) | 在主会话装配按人工决定继续的唯一控制器，向两个目标卡提供固定选择和提交状态。 |
-| [useHumanDecisions.ts](useHumanDecisions.ts) | 为当前主会话装配唯一人工决定控制器，将同一草稿和冻结请求传给对话及任务根。 |
-| [useMemberRun.ts](useMemberRun.ts) | 按成员运行身份轮询公开流式事件，支持卡片预览与任务详情的增量读取。 |
-| [useScopeContinuation.ts](useScopeContinuation.ts) | 在主会话层装配唯一补充控制器，向对话卡和任务根提供同一份草稿、提交锁及回执状态。 |
-| [useScopeReplan.ts](useScopeReplan.ts) | 在主会话装配独立业务重规划控制器，把同一草稿与核验结果交给对话目标卡和任务根。 |
-| [useSessionGraph.ts](useSessionGraph.ts) | 按主对话 taskId 同步派发图、目标摘要和选中详情，为主对话和任务图提供同一投影与历史选择。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [AdmissionNotice.tsx](AdmissionNotice.tsx) | 组件模块 | 显示当前主会话已经受理、尚待执行名额的调度请求。 |
+| [ArtifactTransitionProofs.tsx](ArtifactTransitionProofs.tsx) | 组件模块 | 成员清单与人工验收共用的删除/移动历史证明视图，展示源、目标及原写前字节依据。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [CommandVerificationPanel.tsx](CommandVerificationPanel.tsx) | 组件模块 | 在主对话的原工具记录中展示显式核实入口，分别呈现原工具结果、事务保存事实与验收边界。 |
+| [ContinuationAttachmentHistory.tsx](ContinuationAttachmentHistory.tsx) | 组件模块 | 在目标接续历史中展示 Main 已受理的 v1/v2 附件清单和有界来源摘要。 |
+| [ContinuationSourceMenu.tsx](ContinuationSourceMenu.tsx) | 组件模块 | 为原目标安全等待提供目录、URL、网页及授权仓库资料的显式选择表单。 |
+| [ControlledFilePanel.tsx](ControlledFilePanel.tsx) | 组件模块 | 在成员原调用下分别显示工具结果、受控文件操作和独立补偿状态。 |
+| [EffectObservationPanel.tsx](EffectObservationPanel.tsx) | 组件模块 | 展示原调用状态、当前文件、原控制面/知识事务、原治理/责任记录、受控写/补偿阶段、本机处置和后续独立周期关系。 |
+| [ExecutionRecoveryForm.tsx](ExecutionRecoveryForm.tsx) | 组件模块 | 异常执行报告后的显式新周期入口，将用户观察与新的只读核实目标分开呈现。 |
+| [HumanContinuationForm.tsx](HumanContinuationForm.tsx) | 组件模块 | 显示本等待最新人工决定及独立继续按钮，不把保存意见变成隐式执行。 |
+| [HumanDecisionPanel.tsx](HumanDecisionPanel.tsx) | 组件模块 | 呈现人工验收项的候选、文件观察和三种明确决定，并展示不可变本机记录。 |
+| [IsolatedExecutionPanel.tsx](IsolatedExecutionPanel.tsx) | 组件模块 | 原成员运行的隔离资源显式核实与清理入口。 |
+| [MemberActivity.tsx](MemberActivity.tsx) | 组件模块 | 展示成员任务与公开执行动态，并提供派发工具旁的紧凑内联形式及原任务详情入口。 |
+| [MemberArtifactReport.tsx](MemberArtifactReport.tsx) | 组件模块 | 成员节点详情中的独立文件基线面板，手动列出记录并复核明确选择的一份。 |
+| [MemberCancellationNotice.tsx](MemberCancellationNotice.tsx) | 组件模块 | 在主对话成员卡和任务详情中显示主调度已经提交的未启动撤销事实。 |
+| [MemberCheckpointNotice.tsx](MemberCheckpointNotice.tsx) | 组件模块 | 在主对话和任务详情展示检查点、续执行预约、显式放弃与新旧轮次关系。 |
+| [MemberDependencyNotice.tsx](MemberDependencyNotice.tsx) | 组件模块 | 在成员动态和详情中展示前置追加/替换/原子增删原因，保留原边和来源身份。 |
+| [MemberExecutionReport.tsx](MemberExecutionReport.tsx) | 组件模块 | 在任务节点详情中展示一次显式核实的原调用登记、日志与工具回执报告，独立于成员流式正文。 |
+| [MemberHelpNotice.tsx](MemberHelpNotice.tsx) | 组件模块 | 在主对话成员卡和任务详情中只读呈现已经结算的求助交接记录。 |
+| [MemberOutputManifest.tsx](MemberOutputManifest.tsx) | 组件模块 | 成员指定轮次的声明范围完整清单面板，明确显示根、缺失、集合变化及原删除/移动证明。 |
+| [MemberProgressSummary.tsx](MemberProgressSummary.tsx) | 组件模块 | 在成员公开对话卡中直接展示结构化步骤、证据数量及交付限制。 |
+| [MemberRunTranscript.tsx](MemberRunTranscript.tsx) | 组件模块 | 以执行 Agent 身份连续显示调用方输入、公开输出与工具过程，兼容旧成员卡片及任务详情。 |
+| [MemberTaskDetail.tsx](MemberTaskDetail.tsx) | 组件模块 | 展示任务图选中成员的公开正文、工具、计划与候选；独立报告核实执行事实，独立表单显式创建新的只读核实周期。 |
+| [MemberValidationPanel.tsx](MemberValidationPanel.tsx) | 组件模块 | 成员任务详情中的只读 JSON/CSV/PNG 验证记录，列出验证器、明确条件、文件与当时结论。 |
+| [OfficeScene.tsx](OfficeScene.tsx) | 组件模块 | 当前主 Session 的办公室舞台、人物往返和对话导航，工位由真实模块投影；当前任务只在人物卡提供摘要和详情入口，不再重复铺开正文列表。 |
+| [OwnerExecutionDetails.tsx](OwnerExecutionDetails.tsx) | 组件模块 | 在目标责任分配和成员任务中呈现冻结的岗位、模型、来源与责任版本。 |
+| [OwnerExecutionInspection.tsx](OwnerExecutionInspection.tsx) | 组件模块 | 在选中任务详情中显式核实当前负责人、能力和模型与原派发是否一致。 |
+| [RequestBudgetPanel.tsx](RequestBudgetPanel.tsx) | 组件模块 | 展示冻结目标的请求结算、预留和拒绝原因，与供应商账单及业务验收明确区分。 |
+| [ScopeActiveInputs.tsx](ScopeActiveInputs.tsx) | 组件模块 | 在主对话和任务根的目标详情中展示运行内补充的真实接收历史。 |
+| [ScopeBudgetPanel.tsx](ScopeBudgetPanel.tsx) | 组件模块 | 在主对话和任务根的目标卡片展示本周期冻结额度与真实预算拒绝原因。 |
+| [ScopeContinuationForm.tsx](ScopeContinuationForm.tsx) | 组件模块 | 目标卡片中的显式正文与多来源补充入口，展示共享附件、冻结请求、查询及同命令重试。 |
+| [ScopeGoalPanel.tsx](ScopeGoalPanel.tsx) | 组件模块 | 复用展示本轮真实目标、冻结岗位分配、逐项审阅及历史周期，供主对话摘要和任务根详情使用。 |
+| [ScopeReplanForm.tsx](ScopeReplanForm.tsx) | 组件模块 | 已完成只读核实周期之后的正式业务新目标表单，复用于对话目标卡和任务根。 |
+| [ScopeUsagePanel.tsx](ScopeUsagePanel.tsx) | 组件模块 | 在会话任务视图按需展示所选目标周期的主/成员已报告消耗与逐运行来源。 |
+| [SessionTaskReview.tsx](SessionTaskReview.tsx) | 组件模块 | 在显式运行核实中展示原主会话或成员任务的完整记录、恢复与人工操作。 |
+| [SessionTaskView.tsx](SessionTaskView.tsx) | 组件模块 | 展示当前主会话的办公室及用量，人物详情和历史任务只导航对应对话。 |
+| [ToolActivity.tsx](ToolActivity.tsx) | 组件模块 | 在共享工具轨道上组合原命令核实、影响处置和按调用 ID 延迟挂载的详情，供主对话及任务页使用。 |
+| [admission-state.ts](admission-state.ts) | 源码模块 | 维护当前窗口共享的全局准入快照，供设置与会话提示订阅。 |
+| [admission.css](admission.css) | 样式 | 对应界面的布局与视觉样式。 |
+| [artifact-report-state.ts](artifact-report-state.ts) | 源码模块 | 成员文件基线列表和显式复核的只读界面状态，校验报告身份及单次观察结果。 |
+| [artifact-report.css](artifact-report.css) | 样式 | 任务详情的文件基线列表与逐文件观察排版。 |
+| [command-verification-state.ts](command-verification-state.ts) | 源码模块 | 保存一次原主工具调用的显式核实状态，校验报告身份并隔离迟到的异步响应。 |
+| [command-verification.css](command-verification.css) | 样式 | 原命令核实卡的主题排版与独立状态颜色。 |
+| [continuation-attachments.ts](continuation-attachments.ts) | 源码模块 | 校验安全等待补充的公开附件展示数据，按稳定身份合并文件、目录、链接、网页及仓库资料选择。 |
+| [continuation-source-io.ts](continuation-source-io.ts) | 源码模块 | 把等待资料控制器的单次读取映射为桌面 IPC，传递本轮导入身份与取消。 |
+| [continuation-source-state.ts](continuation-source-state.ts) | 源码模块 | 核对安全等待资料选择器的公开授权目标与真实仓库分页身份。 |
+| [continuation-state.ts](continuation-state.ts) | 源码模块 | 管理显式目标补充的本地草稿、冻结请求与回执，不直接依赖 React 或桌面全局对象。 |
+| [controlled-file-state.ts](controlled-file-state.ts) | 源码模块 | 维护同主会话的受控文件报告、补偿预览和本机原命令索引，供成员详情共享。 |
+| [controlled-file.css](controlled-file.css) | 样式 | 对应界面的布局与视觉样式。 |
+| [effect-observation-state.ts](effect-observation-state.ts) | 源码模块 | 为同一主会话的主/成员调用保存显式影响观察、处置草稿、稳定命令及后续关联。 |
+| [effect-observation.css](effect-observation.css) | 样式 | 对应界面的布局与视觉样式。 |
+| [effect-recovery-state.ts](effect-recovery-state.ts) | 源码模块 | 将显式影响观察与已保存的本机处置转换为新只读核实的界面候选。 |
+| [execution-report-state.ts](execution-report-state.ts) | 源码模块 | 验证成员执行核实报告的身份和分页基线，并保存一次显式读取的前端状态。 |
+| [execution-report.css](execution-report.css) | 样式 | 选中成员任务的只读执行核实报告排版。 |
+| [graph-state.ts](graph-state.ts) | 源码模块 | 主会话派发图的前端增量投影，核对身份和游标后原子合并完整提交。 |
+| [human-continuation-state.ts](human-continuation-state.ts) | 源码模块 | 管理按真实人工决定继续的独立持久请求，供主会话两处目标卡共享。 |
+| [human-continuation.css](human-continuation.css) | 样式 | 独立人工决定接续入口的目标卡布局。 |
+| [human-decision-state.ts](human-decision-state.ts) | 源码模块 | 维护当前主会话人工决定的草稿、手动预览、冻结命令及回执，供两处目标卡共享。 |
+| [human-decisions.css](human-decisions.css) | 样式 | 人工决定预览、选择与历史的目标卡排版。 |
+| [member-activity.css](member-activity.css) | 样式 | 主对话中的成员活动卡片与任务节点详情排版。 |
+| [member-cancellation-state.ts](member-cancellation-state.ts) | 源码模块 | 为成员卡、任务节点和详情提供未启动撤销的统一只读投影。 |
+| [member-checkpoint-state.ts](member-checkpoint-state.ts) | 源码模块 | 将同任务的检查点交接和后续运行投影为成员卡片、节点与详情共用的只读状态。 |
+| [member-checkpoint.css](member-checkpoint.css) | 样式 | 成员检查点的只读交接、预约、放弃审计和轮次引用排版。 |
+| [member-dependency-state.ts](member-dependency-state.ts) | 源码模块 | 将任务节点的前置追加、替换和原子增删转换为主对话与详情共用的只读历史投影。 |
+| [member-dependency.css](member-dependency.css) | 样式 | 排版成员前置追加和替换的只读历史，供主对话摘要与任务详情共用。 |
+| [member-event-state.ts](member-event-state.ts) | 源码模块 | 把成员公开事件分页归并为稳定的运行视图，供卡片与任务详情共用。 |
+| [member-help-state.ts](member-help-state.ts) | 源码模块 | 为成员动态、任务节点和详情提供同一份求助交接投影与中文分类。 |
+| [member-review-state.ts](member-review-state.ts) | 源码模块 | 展示成员候选从交付、主调度审阅到最终验收的阶段说明。 |
+| [member-validation-state.ts](member-validation-state.ts) | 源码模块 | 从当前成员公开事件推导结构验证展示状态，保留当时不符合与后续通过的各次事实。 |
+| [member-validation.css](member-validation.css) | 样式 | 对应界面的布局与视觉样式。 |
+| [office-scene.css](office-scene.css) | 样式 | 主题自适应办公室家具、人物与往返动作；小屏工位逐列重排；当前任务正文按需进入详情，不另设列表占位。 |
+| [office-state.ts](office-state.ts) | 源码模块 | 把当前办公室已提交任务投影为唯一人物、模块工位及派发/汇报动态。 |
+| [output-manifest-state.ts](output-manifest-state.ts) | 源码模块 | 完整产物清单的显式列表、选择和复核状态；仅消费 Bridge 公开 DTO。 |
+| [owner-execution-state.ts](owner-execution-state.ts) | 源码模块 | 将任务内冻结的负责人绑定投影为只读展示状态，供对话卡片、任务节点与详情共用。 |
+| [owner-execution.css](owner-execution.css) | 样式 | 任务与目标计划中原岗位绑定的紧凑排版。 |
+| [recovery-state.ts](recovery-state.ts) | 源码模块 | 保存用户从异常报告新建只读核实周期的草稿、冻结命令和受理回执。 |
+| [replan-state.ts](replan-state.ts) | 源码模块 | 保存从已完成核实周期创建正式业务周期的独立草稿、条件预览和稳定提交命令。 |
+| [request-budget-state.ts](request-budget-state.ts) | 源码模块 | 管理单一目标的只读请求账本摘要，显式刷新且核对完整身份与冻结策略版本。 |
+| [scope-goal.css](scope-goal.css) | 样式 | 对话摘要与任务根详情共用的目标计划卡片、历史选择、证据及任务替代引用排版。 |
+| [scope-replan.css](scope-replan.css) | 样式 | 正式业务重规划表单与条件核验摘要排版，嵌入既有目标卡。 |
+| [scope-state.ts](scope-state.ts) | 源码模块 | 主会话目标周期的增量投影和展示状态，供对话摘要与任务根详情共用。 |
+| [scope-usage-state.ts](scope-usage-state.ts) | 源码模块 | 管理任务周期用量的一次显式读取，并验证返回身份、计量来源与汇总一致性。 |
+| [scope-usage.css](scope-usage.css) | 样式 | 对应界面的布局与视觉样式。 |
+| [session-task-state.ts](session-task-state.ts) | 源码模块 | 按原工作区和主会话过滤轮次，并投影主 Agent 的公开状态与目标。 |
+| [task-graph.css](task-graph.css) | 样式 | 主会话办公室与显式运行核实对话框的自适应布局。 |
+| [task-history-state.ts](task-history-state.ts) | 源码模块 | 为任务流程图划分默认折叠的历史任务，并统计被折叠的真实关联。 |
+| [useAdmission.ts](useAdmission.ts) | 源码模块 | 将当前窗口唯一的准入快照订阅接入 React，供多个会话与设置共用。 |
+| [useControlledFiles.ts](useControlledFiles.ts) | 源码模块 | 将共享原文件操作/补偿控制器连接桌面 IPC，供成员原调用卡使用。 |
+| [useEffectObservation.ts](useEffectObservation.ts) | 源码模块 | 将共享影响处置控制器接到桌面 IPC，供主工具记录、成员详情与业务重规划使用。 |
+| [useExecutionRecovery.ts](useExecutionRecovery.ts) | 源码模块 | 把所选任务的核实报告、当前会话状态与独立的新周期草稿连接起来。 |
+| [useExecutionReport.ts](useExecutionReport.ts) | 源码模块 | 为选中成员任务装配只读核实控制器，将图/周期变化投影为报告过期提示。 |
+| [useHumanContinuation.ts](useHumanContinuation.ts) | 源码模块 | 在主会话装配按人工决定继续的唯一控制器，向两个目标卡提供固定选择和提交状态。 |
+| [useHumanDecisions.ts](useHumanDecisions.ts) | 源码模块 | 为当前主会话装配唯一人工决定控制器，将同一草稿和冻结请求传给对话及任务根。 |
+| [useMemberRun.ts](useMemberRun.ts) | 源码模块 | 按成员运行身份轮询公开流式事件，支持卡片预览与任务详情的增量读取。 |
+| [useScopeContinuation.ts](useScopeContinuation.ts) | 源码模块 | 在主会话层装配唯一补充控制器，向对话卡和任务根提供同一份草稿、提交锁及回执状态。 |
+| [useScopeReplan.ts](useScopeReplan.ts) | 源码模块 | 在主会话装配独立业务重规划控制器，把同一草稿与核验结果交给对话目标卡和任务根。 |
+| [useSessionGraph.ts](useSessionGraph.ts) | 源码模块 | 按主对话 taskId 同步派发图、目标摘要和选中详情，为主对话和任务图提供同一投影与历史选择。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### admission-state.ts
 
@@ -131,6 +135,7 @@ class N_src_view_tasks_admission_state_ts_AdmissionFeedState["AdmissionFeedState
 }
 N_src_view_tasks_admission_state_ts ..> N_src_view_tasks_admission_state_ts_AdmissionFeedState : 声明
 class N_src_view_tasks_admission_state_ts_AdmissionFeed["AdmissionFeed"] {
+  +constructor()
   +snapshot
   +subscribe()
   +refresh()
@@ -201,6 +206,7 @@ class N_src_view_tasks_artifact_report_state_ts_ArtifactReportState["ArtifactRep
 N_src_view_tasks_artifact_report_state_ts ..> N_src_view_tasks_artifact_report_state_ts_ArtifactReportState : 声明
 class N_src_view_tasks_artifact_report_state_ts_ArtifactReportController["ArtifactReportController"] {
   +identity
+  +constructor()
   +snapshot
   +subscribe
   +cancel()
@@ -273,6 +279,7 @@ class N_src_view_tasks_command_verification_state_ts_CommandVerificationState["C
 N_src_view_tasks_command_verification_state_ts ..> N_src_view_tasks_command_verification_state_ts_CommandVerificationState : 声明
 class N_src_view_tasks_command_verification_state_ts_CommandVerificationController["CommandVerificationController"] {
   +selection
+  +constructor()
   +snapshot
   +subscribe
   +cancel()
@@ -473,6 +480,7 @@ class N_src_view_tasks_continuation_state_ts_ScopeContinuationController["ScopeC
   +workspaceId
   +rootSessionId
   +storageKey
+  +constructor()
   +snapshot
   +available
   +canRelease
@@ -485,10 +493,10 @@ class N_src_view_tasks_continuation_state_ts_ScopeContinuationController["ScopeC
   +cancelImport()
   +importSource()
   +materialTargets()
-  +materialList()
 }
 N_src_view_tasks_continuation_state_ts ..> N_src_view_tasks_continuation_state_ts_ScopeContinuationController : 声明
 class N_src_view_tasks_continuation_state_ts_ScopeContinuationPool["ScopeContinuationPool"] {
+  +constructor()
   +get()
   -idleLimit
   -controllers
@@ -504,6 +512,7 @@ class N_src_view_tasks_continuation_state_ts["continuation-state.ts"] {
   <<module>>
 }
 class N_src_view_tasks_continuation_state_ts_ScopeContinuationController["ScopeContinuationController"] {
+  +materialList()
   +removeFile()
   +submitInput()
   +submit()
@@ -519,7 +528,6 @@ class N_src_view_tasks_continuation_state_ts_ScopeContinuationController["ScopeC
   -sourceOperation
   -emit()
   -store()
-  -update()
 }
 N_src_view_tasks_continuation_state_ts ..> N_src_view_tasks_continuation_state_ts_ScopeContinuationController : 声明
 ```
@@ -532,6 +540,7 @@ class N_src_view_tasks_continuation_state_ts["continuation-state.ts"] {
   <<module>>
 }
 class N_src_view_tasks_continuation_state_ts_ScopeContinuationController["ScopeContinuationController"] {
+  -update()
   -canEdit()
   -source()
   -send()
@@ -639,6 +648,7 @@ class N_src_view_tasks_controlled_file_state_ts_ControlledFileController["Contro
   +workspaceId
   +rootSessionId
   +storageKey
+  +constructor()
   +snapshot
   +available
   +canRelease
@@ -651,10 +661,10 @@ class N_src_view_tasks_controlled_file_state_ts_ControlledFileController["Contro
   +fresh()
   +edit()
   +prepare()
-  +inspect()
 }
 N_src_view_tasks_controlled_file_state_ts ..> N_src_view_tasks_controlled_file_state_ts_ControlledFileController : 声明
 class N_src_view_tasks_controlled_file_state_ts_ControlledFilePool["ControlledFilePool"] {
+  +constructor()
   +get()
   -idleLimit
   -values
@@ -670,6 +680,7 @@ class N_src_view_tasks_controlled_file_state_ts["controlled-file-state.ts"] {
   <<module>>
 }
 class N_src_view_tasks_controlled_file_state_ts_ControlledFileController["ControlledFileController"] {
+  +inspect()
   +preview()
   +submit()
   +query()
@@ -794,6 +805,7 @@ class N_src_view_tasks_effect_observation_state_ts_EffectObservationController["
   +workspaceId
   +rootSessionId
   +storageKey
+  +constructor()
   +snapshot
   +available
   +canRelease
@@ -806,10 +818,10 @@ class N_src_view_tasks_effect_observation_state_ts_EffectObservationController["
   +observeAnchor()
   +fresh()
   +edit()
-  +prepare()
 }
 N_src_view_tasks_effect_observation_state_ts ..> N_src_view_tasks_effect_observation_state_ts_EffectObservationController : 声明
 class N_src_view_tasks_effect_observation_state_ts_EffectObservationPool["EffectObservationPool"] {
+  +constructor()
   +get()
   -idleLimit
   -values
@@ -825,6 +837,7 @@ class N_src_view_tasks_effect_observation_state_ts["effect-observation-state.ts"
   <<module>>
 }
 class N_src_view_tasks_effect_observation_state_ts_EffectObservationController["EffectObservationController"] {
+  +prepare()
   +observe()
   +submit()
   +query()
@@ -840,7 +853,6 @@ class N_src_view_tasks_effect_observation_state_ts_EffectObservationController["
   -unavailable
   -owns()
   -publish()
-  -setRead()
 }
 N_src_view_tasks_effect_observation_state_ts ..> N_src_view_tasks_effect_observation_state_ts_EffectObservationController : 声明
 ```
@@ -853,6 +865,7 @@ class N_src_view_tasks_effect_observation_state_ts["effect-observation-state.ts"
   <<module>>
 }
 class N_src_view_tasks_effect_observation_state_ts_EffectObservationController["EffectObservationController"] {
+  -setRead()
   -persist()
   -saveAttempt()
 }
@@ -928,6 +941,7 @@ class N_src_view_tasks_execution_report_state_ts_ExecutionReportState["Execution
 N_src_view_tasks_execution_report_state_ts ..> N_src_view_tasks_execution_report_state_ts_ExecutionReportState : 声明
 class N_src_view_tasks_execution_report_state_ts_ExecutionReportController["ExecutionReportController"] {
   +selection
+  +constructor()
   +snapshot
   +subscribe
   +cancel()
@@ -977,6 +991,7 @@ class N_src_view_tasks_graph_state_ts["graph-state.ts"] {
 }
 class N_src_view_tasks_graph_state_ts_SessionGraphProjection["SessionGraphProjection"] {
   +identity
+  +constructor()
   +snapshot
   +cursor
   +fork()
@@ -1052,6 +1067,7 @@ class N_src_view_tasks_human_continuation_state_ts_HumanContinuationController["
   +workspaceId
   +rootSessionId
   +storageKey
+  +constructor()
   +snapshot
   +available
   +canRelease
@@ -1064,7 +1080,6 @@ class N_src_view_tasks_human_continuation_state_ts_HumanContinuationController["
   +restore()
   -ports
   -value
-  -unavailable
 }
 N_src_view_tasks_human_continuation_state_ts ..> N_src_view_tasks_human_continuation_state_ts_HumanContinuationController : 声明
 class N_src_view_tasks_human_continuation_state_ts_HumanContinuationPool["HumanContinuationPool"] {
@@ -1082,6 +1097,7 @@ class N_src_view_tasks_human_continuation_state_ts["human-continuation-state.ts"
   <<module>>
 }
 class N_src_view_tasks_human_continuation_state_ts_HumanContinuationController["HumanContinuationController"] {
+  -unavailable
   -listeners
   -pending
   -emit()
@@ -1186,6 +1202,7 @@ class N_src_view_tasks_human_decision_state_ts_HumanDecisionController["HumanDec
   +workspaceId
   +rootSessionId
   +storageKey
+  +constructor()
   +snapshot
   +available
   +canRelease
@@ -1198,7 +1215,6 @@ class N_src_view_tasks_human_decision_state_ts_HumanDecisionController["HumanDec
   +resetBaselines()
   +reconsider()
   +currentPreview()
-  +preview()
 }
 N_src_view_tasks_human_decision_state_ts ..> N_src_view_tasks_human_decision_state_ts_HumanDecisionController : 声明
 class N_src_view_tasks_human_decision_state_ts_HumanDecisionPool["HumanDecisionPool"] {
@@ -1216,6 +1232,7 @@ class N_src_view_tasks_human_decision_state_ts["human-decision-state.ts"] {
   <<module>>
 }
 class N_src_view_tasks_human_decision_state_ts_HumanDecisionController["HumanDecisionController"] {
+  +preview()
   +submit()
   +retry()
   +query()
@@ -1862,6 +1879,7 @@ class N_src_view_tasks_output_manifest_state_ts_ManifestReportState["ManifestRep
 N_src_view_tasks_output_manifest_state_ts ..> N_src_view_tasks_output_manifest_state_ts_ManifestReportState : 声明
 class N_src_view_tasks_output_manifest_state_ts_ManifestReportController["ManifestReportController"] {
   +identity
+  +constructor()
   +snapshot
   +subscribe
   +cancel()
@@ -1919,6 +1937,7 @@ class N_src_view_tasks_owner_execution_state_ts_OwnerInspectionState["OwnerInspe
 }
 N_src_view_tasks_owner_execution_state_ts ..> N_src_view_tasks_owner_execution_state_ts_OwnerInspectionState : 声明
 class N_src_view_tasks_owner_execution_state_ts_OwnerInspectionController["OwnerInspectionController"] {
+  +constructor()
   +snapshot
   +subscribe()
   +observe()
@@ -2050,6 +2069,7 @@ class N_src_view_tasks_recovery_state_ts_ExecutionRecoveryController["ExecutionR
   +rootSessionId
   +storageKey
   +legacyStorageKey
+  +constructor()
   +snapshot
   +available
   +canRelease
@@ -2061,7 +2081,6 @@ class N_src_view_tasks_recovery_state_ts_ExecutionRecoveryController["ExecutionR
   +submit()
   +prepareAgain()
   +retry()
-  +query()
 }
 N_src_view_tasks_recovery_state_ts ..> N_src_view_tasks_recovery_state_ts_ExecutionRecoveryController : 声明
 ```
@@ -2074,6 +2093,7 @@ class N_src_view_tasks_recovery_state_ts["recovery-state.ts"] {
   <<module>>
 }
 class N_src_view_tasks_recovery_state_ts_ExecutionRecoveryController["ExecutionRecoveryController"] {
+  +query()
   +restore()
   -ports
   -value
@@ -2093,6 +2113,7 @@ class N_src_view_tasks_recovery_state_ts["recovery-state.ts"] {
   <<module>>
 }
 class N_src_view_tasks_recovery_state_ts_ExecutionRecoveryPool["ExecutionRecoveryPool"] {
+  +constructor()
   +get()
   -idleLimit
   -controllers
@@ -2187,6 +2208,7 @@ class N_src_view_tasks_replan_state_ts_ScopeReplanController["ScopeReplanControl
   +workspaceId
   +rootSessionId
   +storageKey
+  +constructor()
   +snapshot
   +available
   +canRelease
@@ -2199,10 +2221,10 @@ class N_src_view_tasks_replan_state_ts_ScopeReplanController["ScopeReplanControl
   +ready()
   +submit()
   +query()
-  +retry()
 }
 N_src_view_tasks_replan_state_ts ..> N_src_view_tasks_replan_state_ts_ScopeReplanController : 声明
 class N_src_view_tasks_replan_state_ts_ScopeReplanPool["ScopeReplanPool"] {
+  +constructor()
   +get()
   -idleLimit
   -controllers
@@ -2218,6 +2240,7 @@ class N_src_view_tasks_replan_state_ts["replan-state.ts"] {
   <<module>>
 }
 class N_src_view_tasks_replan_state_ts_ScopeReplanController["ScopeReplanController"] {
+  +retry()
   +restore()
   -ports
   -value
@@ -2257,6 +2280,7 @@ class N_src_view_tasks_request_budget_state_ts_RequestBudgetState["RequestBudget
 }
 N_src_view_tasks_request_budget_state_ts ..> N_src_view_tasks_request_budget_state_ts_RequestBudgetState : 声明
 class N_src_view_tasks_request_budget_state_ts_RequestBudgetController["RequestBudgetController"] {
+  +constructor()
   +snapshot
   +subscribe
   +dispose()
@@ -2324,6 +2348,7 @@ class N_src_view_tasks_scope_state_ts["scope-state.ts"] {
 }
 class N_src_view_tasks_scope_state_ts_SessionScopeProjection["SessionScopeProjection"] {
   +identity
+  +constructor()
   +snapshot
   +cursor
   +fork()
@@ -2340,6 +2365,7 @@ class N_src_view_tasks_scope_state_ts_GoalView["GoalView"] {
 N_src_view_tasks_scope_state_ts ..> N_src_view_tasks_scope_state_ts_GoalView : 声明
 class N_src_view_tasks_scope_state_ts_SessionReadProjection["SessionReadProjection"] {
   +identity
+  +constructor()
   +graph
   +scopes
   +teamSessions
@@ -2404,6 +2430,7 @@ class N_src_view_tasks_scope_usage_state_ts_ScopeUsageState["ScopeUsageState"] {
 N_src_view_tasks_scope_usage_state_ts ..> N_src_view_tasks_scope_usage_state_ts_ScopeUsageState : 声明
 class N_src_view_tasks_scope_usage_state_ts_ScopeUsageController["ScopeUsageController"] {
   +identity
+  +constructor()
   +snapshot
   +subscribe
   +cancel()

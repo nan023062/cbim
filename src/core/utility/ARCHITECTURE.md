@@ -6,18 +6,22 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [async.ts](async.ts) | 异步执行工具，提供实例内串行队列、在途 Promise 集合与有时限的请求关联表。 |
-| [bytes.ts](bytes.ts) | 字节处理工具，当前提供传入 Web ReadableStream 的有界收集。 |
-| [graphs.ts](graphs.ts) | 后端有向图的纯结构算法，不认识任务、权限、等待状态或前端布局。 |
-| [index.ts](index.ts) | 通用数据处理算法与实例内数据结构的公开入口，无 Node 或业务依赖。 |
-| [json.ts](json.ts) | JSON 数据处理工具，集中提供格式化、严格解析和递归键排序。 |
-| [strings.ts](strings.ts) | 字符串处理工具，提供精确文本脱敏与已解码文本的 LF 增量分帧。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [async.ts](async.ts) | 源码模块 | 异步执行工具，提供实例内串行队列、在途 Promise 集合与有时限的请求关联表。 |
+| [bytes.ts](bytes.ts) | 源码模块 | 字节处理工具，当前提供传入 Web ReadableStream 的有界收集。 |
+| [graphs.ts](graphs.ts) | 源码模块 | 后端有向图的纯结构算法，不认识任务、权限、等待状态或前端布局。 |
+| [index.ts](index.ts) | 源码模块 | 通用数据处理算法与实例内数据结构的公开入口，无 Node 或业务依赖。 |
+| [json.ts](json.ts) | 源码模块 | JSON 数据处理工具，集中提供格式化、严格解析和递归键排序。 |
+| [strings.ts](strings.ts) | 源码模块 | 字符串处理工具，提供精确文本脱敏与已解码文本的 LF 增量分帧。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### async.ts
 
@@ -64,6 +68,7 @@ class N_src_core_utility_bytes_ts["bytes.ts"] {
 }
 class N_src_core_utility_bytes_ts_ByteLimitError["ByteLimitError"] {
   +maxBytes
+  +constructor()
 }
 N_src_core_utility_bytes_ts ..> N_src_core_utility_bytes_ts_ByteLimitError : 声明
 class N_src_core_utility_bytes_ts_external_RangeError["RangeError (外部契约)"] {
@@ -71,7 +76,8 @@ class N_src_core_utility_bytes_ts_external_RangeError["RangeError (外部契约)
 }
 N_src_core_utility_bytes_ts_external_RangeError <|-- N_src_core_utility_bytes_ts_ByteLimitError
 class N_src_core_utility_bytes_ts_ByteUtils["ByteUtils"] {
-  +readBoundedBytes()
+  +readBoundedBytes()$
+  -constructor()
 }
 N_src_core_utility_bytes_ts ..> N_src_core_utility_bytes_ts_ByteUtils : 声明
 ```
@@ -85,7 +91,8 @@ class N_src_core_utility_graphs_ts["graphs.ts"] {
   <<module>>
 }
 class N_src_core_utility_graphs_ts_GraphUtils["GraphUtils"] {
-  +isDirectedAcyclic()
+  +isDirectedAcyclic()$
+  -constructor()
 }
 N_src_core_utility_graphs_ts ..> N_src_core_utility_graphs_ts_GraphUtils : 声明
 ```
@@ -111,6 +118,7 @@ class N_src_core_utility_json_ts["json.ts"] {
 class N_src_core_utility_json_ts_StrictJsonError["StrictJsonError"] {
   +reason
   +key
+  +constructor()
 }
 N_src_core_utility_json_ts ..> N_src_core_utility_json_ts_StrictJsonError : 声明
 class N_src_core_utility_json_ts_external_SyntaxError["SyntaxError (外部契约)"] {
@@ -124,9 +132,10 @@ class N_src_core_utility_json_ts_JsonKeyOrder["JsonKeyOrder"] {
 }
 N_src_core_utility_json_ts ..> N_src_core_utility_json_ts_JsonKeyOrder : 声明
 class N_src_core_utility_json_ts_JsonUtils["JsonUtils"] {
-  +parseStrictJson()
-  +formatJson()
-  +orderJsonValue()
+  +parseStrictJson()$
+  +formatJson()$
+  +orderJsonValue()$
+  -constructor()
 }
 N_src_core_utility_json_ts ..> N_src_core_utility_json_ts_JsonUtils : 声明
 ```
@@ -146,13 +155,15 @@ class N_src_core_utility_strings_ts_LineFramePolicy["LineFramePolicy"] {
 }
 N_src_core_utility_strings_ts ..> N_src_core_utility_strings_ts_LineFramePolicy : 声明
 class N_src_core_utility_strings_ts_LineFramer["LineFramer"] {
+  +constructor()
   +push()
   -policy
   -remainder
 }
 N_src_core_utility_strings_ts ..> N_src_core_utility_strings_ts_LineFramer : 声明
 class N_src_core_utility_strings_ts_StringUtils["StringUtils"] {
-  +redactLiteral()
+  +redactLiteral()$
+  -constructor()
 }
 N_src_core_utility_strings_ts ..> N_src_core_utility_strings_ts_StringUtils : 声明
 ```

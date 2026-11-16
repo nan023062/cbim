@@ -6,21 +6,25 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [catalog.ts](catalog.ts) | 解析供应商模型目录的能力资料，供新增模型和显式同步容量使用。 |
-| [config.ts](config.ts) | 定义自定义供应商的生成与向量模型目录，保持旧生成配置字节与字段缺省。 |
-| [embedding.ts](embedding.ts) | 向量模型的独立配置、公开快照与凭据类型，不复用生成输出预算字段。 |
-| [endpoint.ts](endpoint.ts) | 模型供应商端点的纯校验，供生成与向量连接共用。 |
-| [index.ts](index.ts) | 模型目录和供应商连接的便携公共入口。 |
-| [ports.ts](ports.ts) | 模型运行快照与凭据加解密端口。 |
-| [provider-connections.ts](provider-connections.ts) | 供应商到协议需求的纯接口选择规则，供界面筛选、岗位采纳和实际启动共同使用。 |
-| [provider-presets.ts](provider-presets.ts) | 模型设置与接口解析共用的官方供应商地址预设，属于模型配置的纯数据策略。 |
-| [snapshot.ts](snapshot.ts) | 生成模型公开运行快照的纯校验，供引擎角色绑定与岗位历史共同使用。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [catalog.ts](catalog.ts) | 源码模块 | 解析供应商模型目录的能力资料，供新增模型和显式同步容量使用。 |
+| [config.ts](config.ts) | 源码模块 | 定义自定义供应商的生成与向量模型目录，保持旧生成配置字节与字段缺省。 |
+| [embedding.ts](embedding.ts) | 源码模块 | 向量模型的独立配置、公开快照与凭据类型，不复用生成输出预算字段。 |
+| [endpoint.ts](endpoint.ts) | 源码模块 | 模型供应商端点的纯校验，供生成与向量连接共用。 |
+| [index.ts](index.ts) | 源码模块 | 模型目录和供应商连接的便携公共入口。 |
+| [ports.ts](ports.ts) | 源码模块 | 模型运行快照与凭据加解密端口。 |
+| [provider-connections.ts](provider-connections.ts) | 源码模块 | 供应商到协议需求的纯接口选择规则，供界面筛选、岗位采纳和实际启动共同使用。 |
+| [provider-presets.ts](provider-presets.ts) | 源码模块 | 模型设置与接口解析共用的官方供应商地址预设，属于模型配置的纯数据策略。 |
+| [snapshot.ts](snapshot.ts) | 源码模块 | 生成模型公开运行快照的纯校验，供引擎角色绑定与岗位历史共同使用。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ```mermaid
 classDiagram

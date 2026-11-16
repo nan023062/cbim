@@ -6,30 +6,34 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [builtins.ts](builtins.ts) | Builtins：从 assets 白名单发布内置 Skill、规范和 Schema，包括团队/业务架构治理及只需简述、补充自愿的反馈流程。 |
-| [knowledge-queries.ts](knowledge-queries.ts) | 只读知识查询门面，取得快照并组合团队与业务模块读取模型。 |
-| [knowledge-refresh.ts](knowledge-refresh.ts) | 按原身份、版本与请求 ID 刷新派生知识索引，独立于只读领域查询。 |
-| [knowledge-write-input.ts](knowledge-write-input.ts) | 知识提交工具与后端原事务核实共用的输入解析和原引用构造。 |
-| [knowledge-write-observation.ts](knowledge-write-observation.ts) | 原知识事务的有界公开观察协议，供后端与界面共同校验，只有纯 Schema 依赖。 |
-| [knowledge.ts](knowledge.ts) | Logic 知识规则（Schema 来自显式 assetsRoot）：校验领域结构、专业正文和引用，并派生注册索引。 |
-| [memory-index.ts](memory-index.ts) | 正式知识的派生向量索引规则，固定来源版本、向量模型和分块策略，提供可重建的代际与检索。 |
-| [object-contract.ts](object-contract.ts) | 对象编辑的纯数据契约，定义静态知识操作、预览和提交回执；Agent 执行选型复用 Team 契约。 |
-| [object-crud.ts](object-crud.ts) | Core 对象治理：规划 Agent/Module/Skill/Workflow 变更，按计划提交受控事务。 |
-| [object-storage.ts](object-storage.ts) | 对象 CRUD 所需的目录检查、预览计划存储和空目录清理端口。 |
-| [planned-commit.ts](planned-commit.ts) | 对象与资源包私有提交计划的不可变协议，供领域规划和本机固定目录加载共用。 |
-| [portable-package.ts](portable-package.ts) | 把工作区静态团队能力或完整业务架构转为可复用资源包，并纯计算目标知识变更。 |
-| [ports.ts](ports.ts) | 核心知识领域需要的工作区存取与事务接口。 |
-| [tool-output-base.ts](tool-output-base.ts) | 知识工具的身份、文件、校验与快照输出协议，供注册边界及具体查询协议复用。 |
-| [tool-output-builtins.ts](tool-output-builtins.ts) | 内置资料目录、正文以及 Skill 别名工具共享的业务输出协议。 |
-| [tool-output-queries.ts](tool-output-queries.ts) | 团队、模块注册表与详情的纯业务输出协议。 |
-| [tool-output-transactions.ts](tool-output-transactions.ts) | 知识预览、提交、刷新及实例内维护任务的业务输出协议。 |
-| [types.ts](types.ts) | 知识快照、校验与事务的数据契约，维护任务与业务任务分开。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [builtins.ts](builtins.ts) | 源码模块 | Builtins：从 assets 白名单发布内置 Skill、规范和 Schema，包括团队/业务架构治理及只需简述、补充自愿的反馈流程。 |
+| [knowledge-queries.ts](knowledge-queries.ts) | 源码模块 | 只读知识查询门面，取得快照并组合团队与业务模块读取模型。 |
+| [knowledge-refresh.ts](knowledge-refresh.ts) | 源码模块 | 按原身份、版本与请求 ID 刷新派生知识索引，独立于只读领域查询。 |
+| [knowledge-write-input.ts](knowledge-write-input.ts) | 源码模块 | 知识提交工具与后端原事务核实共用的输入解析和原引用构造。 |
+| [knowledge-write-observation.ts](knowledge-write-observation.ts) | 源码模块 | 原知识事务的有界公开观察协议，供后端与界面共同校验，只有纯 Schema 依赖。 |
+| [knowledge.ts](knowledge.ts) | 源码模块 | Logic 知识规则（Schema 来自显式 assetsRoot）：校验领域结构、专业正文和引用，并派生注册索引。 |
+| [memory-index.ts](memory-index.ts) | 源码模块 | 正式知识的派生向量索引规则，固定来源版本、向量模型和分块策略，提供可重建的代际与检索。 |
+| [object-contract.ts](object-contract.ts) | 源码模块 | 对象编辑的纯数据契约，定义静态知识操作、预览和提交回执；Agent 执行选型复用 Team 契约。 |
+| [object-crud.ts](object-crud.ts) | 源码模块 | Core 对象治理：规划 Agent/Module/Skill/Workflow 变更，按计划提交受控事务。 |
+| [object-storage.ts](object-storage.ts) | 源码模块 | 对象 CRUD 所需的目录检查、预览计划存储和空目录清理端口。 |
+| [planned-commit.ts](planned-commit.ts) | 源码模块 | 对象与资源包私有提交计划的不可变协议，供领域规划和本机固定目录加载共用。 |
+| [portable-package.ts](portable-package.ts) | 源码模块 | 把工作区静态团队能力或完整业务架构转为可复用资源包，并纯计算目标知识变更。 |
+| [ports.ts](ports.ts) | 源码模块 | 核心知识领域需要的工作区存取与事务接口。 |
+| [tool-output-base.ts](tool-output-base.ts) | 源码模块 | 知识工具的身份、文件、校验与快照输出协议，供注册边界及具体查询协议复用。 |
+| [tool-output-builtins.ts](tool-output-builtins.ts) | 源码模块 | 内置资料目录、正文以及 Skill 别名工具共享的业务输出协议。 |
+| [tool-output-queries.ts](tool-output-queries.ts) | 源码模块 | 团队、模块注册表与详情的纯业务输出协议。 |
+| [tool-output-transactions.ts](tool-output-transactions.ts) | 源码模块 | 知识预览、提交、刷新及实例内维护任务的业务输出协议。 |
+| [types.ts](types.ts) | 源码模块 | 知识快照、校验与事务的数据契约，维护任务与业务任务分开。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ```mermaid
 classDiagram

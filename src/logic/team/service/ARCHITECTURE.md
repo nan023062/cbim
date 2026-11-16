@@ -6,14 +6,18 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [main-workspace-member-tools.ts](main-workspace-member-tools.ts) | 把岗位服务装配到真实主运行；工作区、actor 和命令身份由闭包持有。 |
-| [workspace-members.ts](workspace-members.ts) | 将桌面岗位登记、采纳与当前差异查询接到工作区唯一 DispatchStore，公开模型配置由 Main 注入。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [main-workspace-member-tools.ts](main-workspace-member-tools.ts) | 源码模块 | 把岗位服务装配到真实主运行；工作区、actor 和命令身份由闭包持有。 |
+| [workspace-members.ts](workspace-members.ts) | 源码模块 | 将桌面岗位登记、采纳与当前差异查询接到工作区唯一 DispatchStore，公开模型配置由 Main 注入。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### main-workspace-member-tools.ts
 
@@ -49,6 +53,7 @@ class N_src_logic_team_service_workspace_members_ts_PreparedMember["PreparedMemb
 }
 N_src_logic_team_service_workspace_members_ts ..> N_src_logic_team_service_workspace_members_ts_PreparedMember : 声明
 class N_src_logic_team_service_workspace_members_ts_WorkspaceMembers["WorkspaceMembers"] {
+  +constructor()
   +list()
   +get()
   +preview()
@@ -64,7 +69,6 @@ class N_src_logic_team_service_workspace_members_ts_WorkspaceMembers["WorkspaceM
   -sameWorkspace()
   -cursor()
   -member()
-  -checkedReceipt()
 }
 N_src_logic_team_service_workspace_members_ts ..> N_src_logic_team_service_workspace_members_ts_WorkspaceMembers : 声明
 ```
@@ -77,6 +81,7 @@ class N_src_logic_team_service_workspace_members_ts["workspace-members.ts"] {
   <<module>>
 }
 class N_src_logic_team_service_workspace_members_ts_WorkspaceMembers["WorkspaceMembers"] {
+  -checkedReceipt()
   -capability()
   -policy()
   -prepare()

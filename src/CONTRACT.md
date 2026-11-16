@@ -2,6 +2,8 @@
 
 四层源码迁移已完成。旧 backend/frontend/foundations 源码目录已经退出，当前实现按以下职责维护。
 
+首次阅读从 [源码阅读路线](READING.md) 开始：先建立四层地图，再沿发送消息、运行与持久化路径进入具体封装。
+
 | 层 | 职责与修改入口 |
 | --- | --- |
 | [Core](core/ARCHITECTURE.md) | utility、错误与 JSON、文件/网页/锁/加密等技术机制；便携与 Node/Electron 入口分开，不依赖业务 |

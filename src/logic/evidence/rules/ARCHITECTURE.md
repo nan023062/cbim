@@ -6,28 +6,32 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [artifact-baseline.ts](artifact-baseline.ts) | 显式文件基线、工具输入及独立只读核实报告的序列化契约。 |
-| [artifact-evidence.ts](artifact-evidence.ts) | 从本轮已提交事件核实文件采集来源与不可变基线，供运行时和只读报告共用。 |
-| [artifact-tools.ts](artifact-tools.ts) | 正式成员的显式文件基线工具包装，校验模型输入并委托本轮可信采集端口。 |
-| [code-check.ts](code-check.ts) | 代码检查的可信事实、摘要和交付证明，连接冻结 Workflow 与原始运行日志。 |
-| [complete-output-evidence.ts](complete-output-evidence.ts) | 完整产物出口共用的清单选择、身份投影和当前集合比较，供运行、交付及人工核实复用。 |
-| [output-manifest-evidence.ts](output-manifest-evidence.ts) | 计算完整产物清单身份，并从原 canonical 核实采集、授权和真实成功回执的对应关系。 |
-| [output-manifest-identity.ts](output-manifest-identity.ts) | 完整清单的确定性范围/内容指纹及引用投影，作为清单和原操作证明共用的单向基础。 |
-| [output-manifest-tools.ts](output-manifest-tools.ts) | 正式成员的完整清单采集与原记录查询工具；输入没有路径、哈希、模块或运行身份。 |
-| [output-manifest.ts](output-manifest.ts) | 声明范围完整清单、可信采集事件和独立复核的公开序列化契约。 |
-| [progress-schema.ts](progress-schema.ts) | 执行计划、Workflow 命中证明与进度查询的严格公开结构。 |
-| [progress-tools.ts](progress-tools.ts) | 内部 Loop 的任务计划、步骤证据和交付工具，状态通过注入的持久化回调保存。 |
-| [progress.ts](progress.ts) | 单 Agent 执行计划及交付候选的领域状态，独立于 Pi、磁盘和界面。 |
-| [validation-evidence.ts](validation-evidence.ts) | 从可信冻结 Workflow 与本轮日志核实 JSON/CSV/PNG 验证事实，供 Runtime、交付和主目标复核共同使用。 |
-| [validation-tools.ts](validation-tools.ts) | 为已装配 JSON/CSV/PNG 验证要求的正式成员提供严格输入、唯一 wire 输出及真实能力说明。 |
-| [validation.ts](validation.ts) | JSON/CSV/PNG 产物验证工具、不可变检查事实及 Workflow 精确出口的叶子契约。 |
-| [workflow-evidence.ts](workflow-evidence.ts) | 核实可选 Workflow 的计划前置、工具回执及精确 必验文件结构出口，供运行时与调度结算共用。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [artifact-baseline.ts](artifact-baseline.ts) | 源码模块 | 显式文件基线、工具输入及独立只读核实报告的序列化契约。 |
+| [artifact-evidence.ts](artifact-evidence.ts) | 源码模块 | 从本轮已提交事件核实文件采集来源与不可变基线，供运行时和只读报告共用。 |
+| [artifact-tools.ts](artifact-tools.ts) | 源码模块 | 正式成员的显式文件基线工具包装，校验模型输入并委托本轮可信采集端口。 |
+| [code-check.ts](code-check.ts) | 源码模块 | 代码检查的可信事实、摘要和交付证明，连接冻结 Workflow 与原始运行日志。 |
+| [complete-output-evidence.ts](complete-output-evidence.ts) | 源码模块 | 完整产物出口共用的清单选择、身份投影和当前集合比较，供运行、交付及人工核实复用。 |
+| [output-manifest-evidence.ts](output-manifest-evidence.ts) | 源码模块 | 计算完整产物清单身份，并从原 canonical 核实采集、授权和真实成功回执的对应关系。 |
+| [output-manifest-identity.ts](output-manifest-identity.ts) | 源码模块 | 完整清单的确定性范围/内容指纹及引用投影，作为清单和原操作证明共用的单向基础。 |
+| [output-manifest-tools.ts](output-manifest-tools.ts) | 源码模块 | 正式成员的完整清单采集与原记录查询工具；输入没有路径、哈希、模块或运行身份。 |
+| [output-manifest.ts](output-manifest.ts) | 源码模块 | 声明范围完整清单、可信采集事件和独立复核的公开序列化契约。 |
+| [progress-schema.ts](progress-schema.ts) | 源码模块 | 执行计划、Workflow 命中证明与进度查询的严格公开结构。 |
+| [progress-tools.ts](progress-tools.ts) | 源码模块 | 内部 Loop 的任务计划、步骤证据和交付工具，状态通过注入的持久化回调保存。 |
+| [progress.ts](progress.ts) | 源码模块 | 单 Agent 执行计划及交付候选的领域状态，独立于 Pi、磁盘和界面。 |
+| [validation-evidence.ts](validation-evidence.ts) | 源码模块 | 从可信冻结 Workflow 与本轮日志核实 JSON/CSV/PNG 验证事实，供 Runtime、交付和主目标复核共同使用。 |
+| [validation-tools.ts](validation-tools.ts) | 源码模块 | 为已装配 JSON/CSV/PNG 验证要求的正式成员提供严格输入、唯一 wire 输出及真实能力说明。 |
+| [validation.ts](validation.ts) | 源码模块 | JSON/CSV/PNG 产物验证工具、不可变检查事实及 Workflow 精确出口的叶子契约。 |
+| [workflow-evidence.ts](workflow-evidence.ts) | 源码模块 | 核实可选 Workflow 的计划前置、工具回执及精确 必验文件结构出口，供运行时与调度结算共用。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### artifact-baseline.ts
 
@@ -162,6 +166,7 @@ class N_src_logic_evidence_rules_artifact_tools_ts["artifact-tools.ts"] {
   <<module>>
 }
 class N_src_logic_evidence_rules_artifact_tools_ts_ArtifactTools["ArtifactTools"] {
+  +constructor()
   +list()
   +call()
   -binding
@@ -342,6 +347,7 @@ class N_src_logic_evidence_rules_output_manifest_tools_ts_Binding["Binding"] {
 }
 N_src_logic_evidence_rules_output_manifest_tools_ts ..> N_src_logic_evidence_rules_output_manifest_tools_ts_Binding : 声明
 class N_src_logic_evidence_rules_output_manifest_tools_ts_OutputManifestTools["OutputManifestTools"] {
+  +constructor()
   +list()
   +call()
   -binding
@@ -491,6 +497,7 @@ class N_src_logic_evidence_rules_progress_tools_ts["progress-tools.ts"] {
 class N_src_logic_evidence_rules_progress_tools_ts_TaskProgressTools["TaskProgressTools"] {
   +list()
   +generation
+  +constructor()
   +current()
   +beforeEffects()
   +invalidate()
@@ -504,7 +511,6 @@ class N_src_logic_evidence_rules_progress_tools_ts_TaskProgressTools["TaskProgre
   -planEstablished
   -workflow
   -identity
-  -serial()
 }
 N_src_logic_evidence_rules_progress_tools_ts ..> N_src_logic_evidence_rules_progress_tools_ts_TaskProgressTools : 声明
 ```
@@ -517,6 +523,7 @@ class N_src_logic_evidence_rules_progress_tools_ts["progress-tools.ts"] {
   <<module>>
 }
 class N_src_logic_evidence_rules_progress_tools_ts_TaskProgressTools["TaskProgressTools"] {
+  -serial()
   -persist()
 }
 N_src_logic_evidence_rules_progress_tools_ts ..> N_src_logic_evidence_rules_progress_tools_ts_TaskProgressTools : 声明
@@ -609,6 +616,7 @@ class N_src_logic_evidence_rules_validation_tools_ts["validation-tools.ts"] {
   <<module>>
 }
 class N_src_logic_evidence_rules_validation_tools_ts_ValidationTools["ValidationTools"] {
+  +constructor()
   +list()
   +call()
   -binding

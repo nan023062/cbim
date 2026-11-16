@@ -6,19 +6,23 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [repository-connection-state.ts](repository-connection-state.ts) | 资源仓库连接写请求的本地待确认记录与严格回执匹配，供链接器界面跨卸载、重开核对原请求。 |
-| [repository-connections.css](repository-connections.css) | 对应界面的布局与视觉样式。 |
-| [RepositoryConnections.tsx](RepositoryConnections.tsx) | 在链接器页按明确工作区登记仓库身份、独立授予主 Agent 只读连接并查看真实 HTTP 核验摘要。 |
-| [resource-application.ts](resource-application.ts) | 资源列表的静态包识别与可创建种类策略，供列表和测试复用。 |
-| [ResourceRepositoryView.tsx](ResourceRepositoryView.tsx) | 三类资源共用的定义列表与编辑器；链接器页附带独立工作区仓库连接，人才包/完整业务架构有明确应用入口。 |
-| [workspace-transfer.css](workspace-transfer.css) | 静态资源发布/导入的选择列表与回执。设计原因：共享库来源、应用目标和整包替换在窄屏上仍可明确辨认。 */ |
-| [WorkspaceResourceTransfer.tsx](WorkspaceResourceTransfer.tsx) | 静态团队能力与完整业务架构在当前工作区和共用仓库之间的发布、下载及应用界面。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [RepositoryConnections.tsx](RepositoryConnections.tsx) | 组件模块 | 在链接器页按明确工作区登记仓库身份、独立授予主 Agent 只读连接并查看真实 HTTP 核验摘要。 |
+| [ResourceRepositoryView.tsx](ResourceRepositoryView.tsx) | 组件模块 | 三类资源共用的定义列表与编辑器；链接器页附带独立工作区仓库连接，人才包/完整业务架构有明确应用入口。 |
+| [WorkspaceResourceTransfer.tsx](WorkspaceResourceTransfer.tsx) | 组件模块 | 静态团队能力与完整业务架构在当前工作区和共用仓库之间的发布、下载及应用界面。 |
+| [repository-connection-state.ts](repository-connection-state.ts) | 源码模块 | 资源仓库连接写请求的本地待确认记录与严格回执匹配，供链接器界面跨卸载、重开核对原请求。 |
+| [repository-connections.css](repository-connections.css) | 样式 | 对应界面的布局与视觉样式。 |
+| [resource-application.ts](resource-application.ts) | 源码模块 | 资源列表的静态包识别与可创建种类策略，供列表和测试复用。 |
+| [workspace-transfer.css](workspace-transfer.css) | 样式 | 静态资源发布/导入的选择列表与回执。设计原因：共享库来源、应用目标和整包替换在窄屏上仍可明确辨认。 */ |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### repository-connection-state.ts
 

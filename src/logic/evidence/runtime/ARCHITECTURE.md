@@ -6,25 +6,29 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [agent-artifact-verification.ts](agent-artifact-verification.ts) | Logic 证据层复核递归交付中已采集的普通文件基线，补足非结构化产物的字节验证。 |
-| [artifact-report-service.ts](artifact-report-service.ts) | 按指定旧成员或已登记递归运行列出可信文件基线，并在明确选定后对实际文件作独立只读复核。 |
-| [command-verification-service.ts](command-verification-service.ts) | 把原主运行的 canonical 调用与同一 Store 已提交命令只读关联，供桌面和主工具共用。 |
-| [effect-controlled-file.ts](effect-controlled-file.ts) | 在影响观察中核对已有受控文件报告与原成员完整绑定、参数和字节摘要。 |
-| [effect-observation-service.ts](effect-observation-service.ts) | 组合原调用授权、已提交控制面、原知识事务、原治理/责任记录、受控文件阶段与当前选定文件，保存本机明确处置并派生新周期关联。 |
-| [effect-source.ts](effect-source.ts) | 从唯一任务存储与 canonical 日志核实原成员/主运行，供影响观察和新核实来源共用。 |
-| [execution-report-facts.ts](execution-report-facts.ts) | 从已核对身份的成员运行日志提取工具授权与回执事实。 |
-| [execution-report-service.ts](execution-report-service.ts) | 以旧派发或新递归登记和指定运行日志生成异常核实报告。 |
-| [human-decision-evidence.ts](human-decision-evidence.ts) | 复核已消费人工接受的精确候选和选定文件，供显式接续、目标审阅及最终完成共用。 |
-| [human-evidence-state.ts](human-evidence-state.ts) | 为人工验收和按意见继续提供同一主周期的证据状态指纹。 |
-| [output-manifest-report-service.ts](output-manifest-report-service.ts) | 对指定旧成员或已登记递归运行列出原完整清单，并在用户明确选定后重新观察全部冻结范围。 |
-| [recursive-evidence-source.ts](recursive-evidence-source.ts) | 证据报告读取递归业务运行时，核对持久登记、原调用和固定 canonical 身份。 |
-| [recursive-inspection-evidence.ts](recursive-inspection-evidence.ts) | 重读只读递归核实的根与业务子调用，形成正式修复前的证据摘要。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [agent-artifact-verification.ts](agent-artifact-verification.ts) | 源码模块 | Logic 证据层复核递归交付中已采集的普通文件基线，补足非结构化产物的字节验证。 |
+| [artifact-report-service.ts](artifact-report-service.ts) | 源码模块 | 按指定旧成员或已登记递归运行列出可信文件基线，并在明确选定后对实际文件作独立只读复核。 |
+| [command-verification-service.ts](command-verification-service.ts) | 源码模块 | 把原主运行的 canonical 调用与同一 Store 已提交命令只读关联，供桌面和主工具共用。 |
+| [effect-controlled-file.ts](effect-controlled-file.ts) | 源码模块 | 在影响观察中核对已有受控文件报告与原成员完整绑定、参数和字节摘要。 |
+| [effect-observation-service.ts](effect-observation-service.ts) | 源码模块 | 组合原调用授权、已提交控制面、原知识事务、原治理/责任记录、受控文件阶段与当前选定文件，保存本机明确处置并派生新周期关联。 |
+| [effect-source.ts](effect-source.ts) | 源码模块 | 从唯一任务存储与 canonical 日志核实原成员/主运行，供影响观察和新核实来源共用。 |
+| [execution-report-facts.ts](execution-report-facts.ts) | 源码模块 | 从已核对身份的成员运行日志提取工具授权与回执事实。 |
+| [execution-report-service.ts](execution-report-service.ts) | 源码模块 | 以旧派发或新递归登记和指定运行日志生成异常核实报告。 |
+| [human-decision-evidence.ts](human-decision-evidence.ts) | 源码模块 | 复核已消费人工接受的精确候选和选定文件，供显式接续、目标审阅及最终完成共用。 |
+| [human-evidence-state.ts](human-evidence-state.ts) | 源码模块 | 为人工验收和按意见继续提供同一主周期的证据状态指纹。 |
+| [output-manifest-report-service.ts](output-manifest-report-service.ts) | 源码模块 | 对指定旧成员或已登记递归运行列出原完整清单，并在用户明确选定后重新观察全部冻结范围。 |
+| [recursive-evidence-source.ts](recursive-evidence-source.ts) | 源码模块 | 证据报告读取递归业务运行时，核对持久登记、原调用和固定 canonical 身份。 |
+| [recursive-inspection-evidence.ts](recursive-inspection-evidence.ts) | 源码模块 | 重读只读递归核实的根与业务子调用，形成正式修复前的证据摘要。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### agent-artifact-verification.ts
 
@@ -34,7 +38,8 @@ class N_src_logic_evidence_runtime_agent_artifact_verification_ts["agent-artifac
   <<module>>
 }
 class N_src_logic_evidence_runtime_agent_artifact_verification_ts_AgentArtifactVerification["AgentArtifactVerification"] {
-  +verify()
+  +verify()$
+  -constructor()
 }
 N_src_logic_evidence_runtime_agent_artifact_verification_ts ..> N_src_logic_evidence_runtime_agent_artifact_verification_ts_AgentArtifactVerification : 声明
 ```
@@ -58,6 +63,7 @@ class N_src_logic_evidence_runtime_artifact_report_service_ts_ArtifactReportPort
 }
 N_src_logic_evidence_runtime_artifact_report_service_ts ..> N_src_logic_evidence_runtime_artifact_report_service_ts_ArtifactReportPorts : 声明
 class N_src_logic_evidence_runtime_artifact_report_service_ts_ArtifactReportService["ArtifactReportService"] {
+  +constructor()
   +read()
   -owner
   -store
@@ -111,6 +117,7 @@ class N_src_logic_evidence_runtime_command_verification_service_ts["command-veri
   <<module>>
 }
 class N_src_logic_evidence_runtime_command_verification_service_ts_CommandVerificationService["CommandVerificationService"] {
+  +constructor()
   +inspectSource()
   +read()
   -owner
@@ -184,6 +191,7 @@ class N_src_logic_evidence_runtime_effect_observation_service_ts_Owner["Owner"] 
 }
 N_src_logic_evidence_runtime_effect_observation_service_ts ..> N_src_logic_evidence_runtime_effect_observation_service_ts_Owner : 声明
 class N_src_logic_evidence_runtime_effect_observation_service_ts_EffectObservationService["EffectObservationService"] {
+  +constructor()
   +observe()
   +observeFromMain()
   +list()
@@ -199,7 +207,6 @@ class N_src_logic_evidence_runtime_effect_observation_service_ts_EffectObservati
   -alive()
   -prepare()
   -knowledge()
-  -persistent()
 }
 N_src_logic_evidence_runtime_effect_observation_service_ts ..> N_src_logic_evidence_runtime_effect_observation_service_ts_EffectObservationService : 声明
 ```
@@ -212,6 +219,7 @@ class N_src_logic_evidence_runtime_effect_observation_service_ts["effect-observa
   <<module>>
 }
 class N_src_logic_evidence_runtime_effect_observation_service_ts_EffectObservationService["EffectObservationService"] {
+  -persistent()
   -baselines()
   -recordReady()
 }
@@ -286,6 +294,7 @@ class N_src_logic_evidence_runtime_execution_report_service_ts["execution-report
   <<module>>
 }
 class N_src_logic_evidence_runtime_execution_report_service_ts_ExecutionReportService["ExecutionReportService"] {
+  +constructor()
   +read()
   -owner
   -store
@@ -374,6 +383,7 @@ class N_src_logic_evidence_runtime_output_manifest_report_service_ts_OutputManif
 }
 N_src_logic_evidence_runtime_output_manifest_report_service_ts ..> N_src_logic_evidence_runtime_output_manifest_report_service_ts_OutputManifestReportPorts : 声明
 class N_src_logic_evidence_runtime_output_manifest_report_service_ts_OutputManifestReportService["OutputManifestReportService"] {
+  +constructor()
   +read()
   -owner
   -store
@@ -418,7 +428,8 @@ class N_src_logic_evidence_runtime_recursive_inspection_evidence_ts_Ports["Ports
 }
 N_src_logic_evidence_runtime_recursive_inspection_evidence_ts ..> N_src_logic_evidence_runtime_recursive_inspection_evidence_ts_Ports : 声明
 class N_src_logic_evidence_runtime_recursive_inspection_evidence_ts_RecursiveInspectionEvidence["RecursiveInspectionEvidence"] {
-  +verify()
+  +verify()$
+  -constructor()
 }
 N_src_logic_evidence_runtime_recursive_inspection_evidence_ts ..> N_src_logic_evidence_runtime_recursive_inspection_evidence_ts_RecursiveInspectionEvidence : 声明
 ```

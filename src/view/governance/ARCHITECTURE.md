@@ -6,18 +6,22 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [governance-feedback.ts](governance-feedback.ts) | 将本机治理决定草稿转换为明确提交的反馈与回应评价，并绑定实际审阅的提案和来源版本。 |
-| [governance-pending.ts](governance-pending.ts) | 模块知识治理写操作的有界本地待确认元数据，供面板卸载或应用重开后查询原命令。 |
-| [GovernanceFeedback.tsx](GovernanceFeedback.tsx) | 展示治理意见与修订方案的精确关系，提供本机显式补证、异议和回应评价表单。 |
-| [GovernanceOrigin.tsx](GovernanceOrigin.tsx) | 治理历史中呈现观察和提案的可信来源，区分本机明确提交、主 Agent 运行与未记录来源的旧数据。 |
-| [module-governance.css](module-governance.css) | 对应界面的布局与视觉样式。 |
-| [ModuleGovernancePanel.tsx](ModuleGovernancePanel.tsx) | 业务架构节点的模块知识治理面板，展示真实观察、精确提案与反馈来源、独立人工决定及实施结果。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [GovernanceFeedback.tsx](GovernanceFeedback.tsx) | 组件模块 | 展示治理意见与修订方案的精确关系，提供本机显式补证、异议和回应评价表单。 |
+| [GovernanceOrigin.tsx](GovernanceOrigin.tsx) | 组件模块 | 治理历史中呈现观察和提案的可信来源，区分本机明确提交、主 Agent 运行与未记录来源的旧数据。 |
+| [ModuleGovernancePanel.tsx](ModuleGovernancePanel.tsx) | 组件模块 | 业务架构节点的模块知识治理面板，展示真实观察、精确提案与反馈来源、独立人工决定及实施结果。 |
+| [governance-feedback.ts](governance-feedback.ts) | 源码模块 | 将本机治理决定草稿转换为明确提交的反馈与回应评价，并绑定实际审阅的提案和来源版本。 |
+| [governance-pending.ts](governance-pending.ts) | 源码模块 | 模块知识治理写操作的有界本地待确认元数据，供面板卸载或应用重开后查询原命令。 |
+| [module-governance.css](module-governance.css) | 样式 | 对应界面的布局与视觉样式。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### governance-feedback.ts
 

@@ -6,15 +6,19 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [global-runtime.ts](global-runtime.ts) | 维护整个应用的成员、派发任务、目标周期与实际 Loop 消耗索引，接收 main 的可靠提交；周期结算独立于模型轮次，成员运行不重复生成任务。 |
-| [member-events.ts](member-events.ts) | 将成员运行日志投影为可公开的连续事件流，并按 run 缓存首次恢复及后续已落盘增量。 |
-| [public-run-events.ts](public-run-events.ts) | 将主/成员事件投影为公开消息和证据摘要；成员结果、人工决定与验收返工明确保留系统来源。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [global-runtime.ts](global-runtime.ts) | 源码模块 | 维护整个应用的成员、派发任务、目标周期与实际 Loop 消耗索引，接收 main 的可靠提交；周期结算独立于模型轮次，成员运行不重复生成任务。 |
+| [member-events.ts](member-events.ts) | 源码模块 | 将成员运行日志投影为可公开的连续事件流，并按 run 缓存首次恢复及后续已落盘增量。 |
+| [public-run-events.ts](public-run-events.ts) | 源码模块 | 将主/成员事件投影为公开消息和证据摘要；成员结果、人工决定与验收返工明确保留系统来源。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### global-runtime.ts
 
@@ -120,6 +124,7 @@ class N_src_logic_runtime_monitoring_member_events_ts_Stream["Stream"] {
 }
 N_src_logic_runtime_monitoring_member_events_ts ..> N_src_logic_runtime_monitoring_member_events_ts_Stream : 声明
 class N_src_logic_runtime_monitoring_member_events_ts_MemberEventStreams["MemberEventStreams"] {
+  +constructor()
   +begin()
   +append()
   +read()

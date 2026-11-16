@@ -6,54 +6,58 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [AttachmentMenu.tsx](AttachmentMenu.tsx) | 对话加号菜单，提供附件入口以及 BUG 反馈、需求许愿内置 Skill 入口。 |
-| [brain-status.ts](brain-status.ts) | 将公开运行事件投影为输入框左上角的大脑状态。 |
-| [channel-draft.ts](channel-draft.ts) | 按工作区/主会话/频道持有未提交的文本和附件草稿，独立于主聊天及执行命令账本。 |
-| [ChannelComposer.tsx](ChannelComposer.tsx) | 根据原频道状态呈现补充、续接或关联后续任务；草稿归频道，执行仍归主 Agent。 |
-| [ChannelDraftInput.tsx](ChannelDraftInput.tsx) | 频道专属文本/附件输入；只有外层状态允许时可编辑，不拥有发送或停止权限。 |
-| [ChannelPane.tsx](ChannelPane.tsx) | 中央交互区内的频道子窗，独立滚动与草稿，主会话仍只装配一个执行控制器。 |
-| [ChatMessages.tsx](ChatMessages.tsx) | 交互区的用户/主 Agent 聊天正文；只投影公开消息和发送失败，不挂载执行审阅控件。 |
-| [ComposerCard.tsx](ComposerCard.tsx) | 从 Cindy ComposerCard 移植的统一输入卡片与内容间距。 |
-| [ComposerPicker.tsx](ComposerPicker.tsx) | Cindy 风格的权限和模型 chip，向上展开可搜索、键盘可操作的选择面板。 |
-| [conversation-activity.ts](conversation-activity.ts) | 将应用级当前运行快照投影为各工作区的活跃主会话 ID。 |
-| [conversation-entries.css](conversation-entries.css) | 历史和侧栏对话、可直接选择的 Agent 条目的共享布局与运行提示。 |
-| [conversation-state.ts](conversation-state.ts) | 把主模型运行、开放调度周期和普通消息队列转换为输入区操作状态。 |
-| [conversation-stop.ts](conversation-stop.ts) | 为会话停止操作提供独立于发送/插入锁的在途去重标记。 |
-| [conversation-topics.css](conversation-topics.css) | 话题摘要、成员审阅标题与阅读区域的响应式排版。 |
-| [conversation-topics.ts](conversation-topics.ts) | 将主会话公开运行和派发任务投影为话题内容，供群聊导航使用。 |
-| [conversation.css](conversation.css) | 对齐 Cindy 的消息列、工作记录折叠行及一体式底部输入框。 |
-| [Conversation.tsx](Conversation.tsx) | 会话固定页签入口（对话/本会话任务/当前工作区自动化），默认主 Agent 普通对话、启动与继续大脑、展示流式 Markdown 正文和按生命周期合并的工具证据，移植 Cindy 输入组件并适配上下文附件、权限审批及本次运行全部通过、结构化选项提问、持久化消息队列及任务用时、生成速度、价值和上下文计量。 |
-| [ConversationEntries.tsx](ConversationEntries.tsx) | 侧栏与历史菜单共用的对话条目、重命名和移除入口。 |
-| [ConversationToolCall.tsx](ConversationToolCall.tsx) | 在普通工具条目内组合 Agent 调用详情及旧派发记录的兼容读取。 |
-| [ConversationTopics.tsx](ConversationTopics.tsx) | 主 Session 的纯聊天与频道入口列表，以及独立的频道正文投影。 |
-| [ConversationTurn.tsx](ConversationTurn.tsx) | 按真实事件顺序组合一轮主对话的来源、流式文字与内联工具，系统交接不冒充用户或模型调用。 |
-| [engine-picker.css](engine-picker.css) | 对应界面的布局与视觉样式。 |
-| [EnginePicker.tsx](EnginePicker.tsx) | 对话中的唯一引擎选择与安装菜单，消费桌面受管引擎状态。 |
-| [inline-conversation.css](inline-conversation.css) | 对应界面的布局与视觉样式。 |
-| [inline-task-state.ts](inline-task-state.ts) | 用原主运行的成功派发回执，将内联工具条目关联到同会话的真实任务节点。 |
-| [InteractionModeToggle.tsx](InteractionModeToggle.tsx) | 嵌入当前对话、办公室或成员审阅标题行右侧的单一视图切换按钮；图标表达当前视图，文字提示目标视图。 |
-| [MemberConversation.tsx](MemberConversation.tsx) | 只读兼容旧长期子 Session 的任务、公开输出及工具记录。 |
-| [MessageCard.tsx](MessageCard.tsx) | 复用 Cindy ChatBubble 的用户气泡/助手裸正文布局，承载消息时间和复制操作。 |
-| [pasted-images.ts](pasted-images.ts) | 将当前粘贴事件中的图片 File 转为有界上传字节，不读取全局剪贴板。 |
-| [queue-insertion.ts](queue-insertion.ts) | 冻结会话插入动作的主运行身份，共用新草稿入队后插入与已有队列项插入。 |
-| [queue-sync.ts](queue-sync.ts) | 把主进程队列增量合并为稳定的消息数组，供轮询与操作后刷新共同使用。 |
-| [ReadingPane.tsx](ReadingPane.tsx) | 每个聊天/成员审阅窗独立持有滚动位置与跟随末尾状态。 |
-| [SendButton.tsx](SendButton.tsx) | 从 Cindy SendButton 移植发送/停止的固定 28px 按钮和按下动作身份保护。 |
-| [session-tabs.css](session-tabs.css) | 对话/审阅标题行内的单按钮两态图标切换与任务记录排版。 |
-| [ThreadHistoryNotice.tsx](ThreadHistoryNotice.tsx) | 显示主会话中无法读取的历史轮次，并只按后端确认的运行头提供续接记录。 |
-| [topic-interruption-state.ts](topic-interruption-state.ts) | 管理指定话题补充的冻结请求、持久恢复和只读回执查询，独立于聊天草稿及 React。 |
-| [TopicInterruptionForm.tsx](TopicInterruptionForm.tsx) | 当前话题内的显式补充入口，展示冻结原文、全员暂停含义和原请求查询。 |
-| [usage.css](usage.css) | 输入框旁计量条、上下文环与明细弹层的排版。 |
-| [usage.ts](usage.ts) | 保留对话界面的用量统计入口，经桥接契约使用 Logic 执行规则的纯计量函数。 |
-| [UsageStatus.tsx](UsageStatus.tsx) | Cindy 风格的输入框上方时间/速度与底部任务价值、上下文占用显示。 |
-| [useChannelDraft.ts](useChannelDraft.ts) | 装配一个频道草稿与文件选择器，提供独立输入和在途导入状态。 |
-| [useMessageQueue.ts](useMessageQueue.ts) | 会话队列的独立增量刷新入口，覆盖轮询和用户操作后的即时同步。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [AttachmentMenu.tsx](AttachmentMenu.tsx) | 组件模块 | 对话加号菜单，提供附件入口以及 BUG 反馈、需求许愿内置 Skill 入口。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [ChannelComposer.tsx](ChannelComposer.tsx) | 组件模块 | 根据原频道状态呈现补充、续接或关联后续任务；草稿归频道，执行仍归主 Agent。 |
+| [ChannelDraftInput.tsx](ChannelDraftInput.tsx) | 组件模块 | 频道专属文本/附件输入；只有外层状态允许时可编辑，不拥有发送或停止权限。 |
+| [ChannelPane.tsx](ChannelPane.tsx) | 组件模块 | 中央交互区内的频道子窗，独立滚动与草稿，主会话仍只装配一个执行控制器。 |
+| [ChatMessages.tsx](ChatMessages.tsx) | 组件模块 | 交互区的用户/主 Agent 聊天正文；只投影公开消息和发送失败，不挂载执行审阅控件。 |
+| [ComposerCard.tsx](ComposerCard.tsx) | 组件模块 | 从 Cindy ComposerCard 移植的统一输入卡片与内容间距。 |
+| [ComposerPicker.tsx](ComposerPicker.tsx) | 组件模块 | Cindy 风格的权限和模型 chip，向上展开可搜索、键盘可操作的选择面板。 |
+| [Conversation.tsx](Conversation.tsx) | 组件模块 | 会话固定页签入口（对话/本会话任务/当前工作区自动化），默认主 Agent 普通对话、启动与继续大脑、展示流式 Markdown 正文和按生命周期合并的工具证据，移植 Cindy 输入组件并适配上下文附件、权限审批及本次运行全部通过、结构化选项提问、持久化消息队列及任务用时、生成速度、价值和上下文计量。 |
+| [ConversationEntries.tsx](ConversationEntries.tsx) | 组件模块 | 侧栏与历史菜单共用的对话条目、重命名和移除入口。 |
+| [ConversationToolCall.tsx](ConversationToolCall.tsx) | 组件模块 | 在普通工具条目内组合 Agent 调用详情及旧派发记录的兼容读取。 |
+| [ConversationTopics.tsx](ConversationTopics.tsx) | 组件模块 | 主 Session 的纯聊天与频道入口列表，以及独立的频道正文投影。 |
+| [ConversationTurn.tsx](ConversationTurn.tsx) | 组件模块 | 按真实事件顺序组合一轮主对话的来源、流式文字与内联工具，系统交接不冒充用户或模型调用。 |
+| [EnginePicker.tsx](EnginePicker.tsx) | 组件模块 | 对话中的唯一引擎选择与安装菜单，消费桌面受管引擎状态。 |
+| [InteractionModeToggle.tsx](InteractionModeToggle.tsx) | 组件模块 | 嵌入当前对话、办公室或成员审阅标题行右侧的单一视图切换按钮；图标表达当前视图，文字提示目标视图。 |
+| [MemberConversation.tsx](MemberConversation.tsx) | 组件模块 | 只读兼容旧长期子 Session 的任务、公开输出及工具记录。 |
+| [MessageCard.tsx](MessageCard.tsx) | 组件模块 | 复用 Cindy ChatBubble 的用户气泡/助手裸正文布局，承载消息时间和复制操作。 |
+| [ReadingPane.tsx](ReadingPane.tsx) | 组件模块 | 每个聊天/成员审阅窗独立持有滚动位置与跟随末尾状态。 |
+| [SendButton.tsx](SendButton.tsx) | 组件模块 | 从 Cindy SendButton 移植发送/停止的固定 28px 按钮和按下动作身份保护。 |
+| [ThreadHistoryNotice.tsx](ThreadHistoryNotice.tsx) | 组件模块 | 显示主会话中无法读取的历史轮次，并只按后端确认的运行头提供续接记录。 |
+| [TopicInterruptionForm.tsx](TopicInterruptionForm.tsx) | 组件模块 | 当前话题内的显式补充入口，展示冻结原文、全员暂停含义和原请求查询。 |
+| [UsageStatus.tsx](UsageStatus.tsx) | 组件模块 | Cindy 风格的输入框上方时间/速度与底部任务价值、上下文占用显示。 |
+| [brain-status.ts](brain-status.ts) | 源码模块 | 将公开运行事件投影为输入框左上角的大脑状态。 |
+| [channel-draft.ts](channel-draft.ts) | 源码模块 | 按工作区/主会话/频道持有未提交的文本和附件草稿，独立于主聊天及执行命令账本。 |
+| [conversation-activity.ts](conversation-activity.ts) | 源码模块 | 将应用级当前运行快照投影为各工作区的活跃主会话 ID。 |
+| [conversation-entries.css](conversation-entries.css) | 样式 | 历史和侧栏对话、可直接选择的 Agent 条目的共享布局与运行提示。 |
+| [conversation-state.ts](conversation-state.ts) | 源码模块 | 把主模型运行、开放调度周期和普通消息队列转换为输入区操作状态。 |
+| [conversation-stop.ts](conversation-stop.ts) | 源码模块 | 为会话停止操作提供独立于发送/插入锁的在途去重标记。 |
+| [conversation-topics.css](conversation-topics.css) | 样式 | 话题摘要、成员审阅标题与阅读区域的响应式排版。 |
+| [conversation-topics.ts](conversation-topics.ts) | 源码模块 | 将主会话公开运行和派发任务投影为话题内容，供群聊导航使用。 |
+| [conversation.css](conversation.css) | 样式 | 对齐 Cindy 的消息列、工作记录折叠行及一体式底部输入框。 |
+| [engine-picker.css](engine-picker.css) | 样式 | 对应界面的布局与视觉样式。 |
+| [inline-conversation.css](inline-conversation.css) | 样式 | 对应界面的布局与视觉样式。 |
+| [inline-task-state.ts](inline-task-state.ts) | 源码模块 | 用原主运行的成功派发回执，将内联工具条目关联到同会话的真实任务节点。 |
+| [pasted-images.ts](pasted-images.ts) | 源码模块 | 将当前粘贴事件中的图片 File 转为有界上传字节，不读取全局剪贴板。 |
+| [queue-insertion.ts](queue-insertion.ts) | 源码模块 | 冻结会话插入动作的主运行身份，共用新草稿入队后插入与已有队列项插入。 |
+| [queue-sync.ts](queue-sync.ts) | 源码模块 | 把主进程队列增量合并为稳定的消息数组，供轮询与操作后刷新共同使用。 |
+| [session-tabs.css](session-tabs.css) | 样式 | 对话/审阅标题行内的单按钮两态图标切换与任务记录排版。 |
+| [topic-interruption-state.ts](topic-interruption-state.ts) | 源码模块 | 管理指定话题补充的冻结请求、持久恢复和只读回执查询，独立于聊天草稿及 React。 |
+| [usage.css](usage.css) | 样式 | 输入框旁计量条、上下文环与明细弹层的排版。 |
+| [usage.ts](usage.ts) | 源码模块 | 保留对话界面的用量统计入口，经桥接契约使用 Logic 执行规则的纯计量函数。 |
+| [useChannelDraft.ts](useChannelDraft.ts) | 源码模块 | 装配一个频道草稿与文件选择器，提供独立输入和在途导入状态。 |
+| [useMessageQueue.ts](useMessageQueue.ts) | 源码模块 | 会话队列的独立增量刷新入口，覆盖轮询和用户操作后的即时同步。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### AttachmentMenu.tsx
 
@@ -93,6 +97,8 @@ class N_src_view_conversation_brain_status_ts["brain-status.ts"] {
 
 ### channel-draft.ts
 
+成员 1/2（同名节点为同一声明，跨图合并阅读）。
+
 ```mermaid
 classDiagram
 class N_src_view_conversation_channel_draft_ts["channel-draft.ts"] {
@@ -116,6 +122,7 @@ class N_src_view_conversation_channel_draft_ts_ChannelDraftStore["ChannelDraftSt
   +identity
   +error
   +key
+  +constructor()
   +writable
   +snapshot
   +subscribe()
@@ -128,6 +135,18 @@ class N_src_view_conversation_channel_draft_ts_ChannelDraftStore["ChannelDraftSt
   -value
   -listeners
   -generation
+}
+N_src_view_conversation_channel_draft_ts ..> N_src_view_conversation_channel_draft_ts_ChannelDraftStore : 声明
+```
+
+成员 2/2（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_view_conversation_channel_draft_ts["channel-draft.ts"] {
+  <<module>>
+}
+class N_src_view_conversation_channel_draft_ts_ChannelDraftStore["ChannelDraftStore"] {
   -blocked
 }
 N_src_view_conversation_channel_draft_ts ..> N_src_view_conversation_channel_draft_ts_ChannelDraftStore : 声明
@@ -656,6 +675,7 @@ class N_src_view_conversation_topic_interruption_state_ts_TopicInterruptionState
 N_src_view_conversation_topic_interruption_state_ts ..> N_src_view_conversation_topic_interruption_state_ts_TopicInterruptionState : 声明
 class N_src_view_conversation_topic_interruption_state_ts_TopicInterruptionController["TopicInterruptionController"] {
   +target
+  +constructor()
   +snapshot
   +subscribe()
   +restore()
@@ -670,7 +690,6 @@ class N_src_view_conversation_topic_interruption_state_ts_TopicInterruptionContr
   -blocked
   -publish()
   -validate()
-  -run()
 }
 N_src_view_conversation_topic_interruption_state_ts ..> N_src_view_conversation_topic_interruption_state_ts_TopicInterruptionController : 声明
 ```
@@ -683,6 +702,7 @@ class N_src_view_conversation_topic_interruption_state_ts["topic-interruption-st
   <<module>>
 }
 class N_src_view_conversation_topic_interruption_state_ts_TopicInterruptionController["TopicInterruptionController"] {
+  -run()
   -accept()
   -lookup()
 }

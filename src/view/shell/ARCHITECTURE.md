@@ -6,22 +6,26 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [App.tsx](App.tsx) | 桌面外壳：工作区下展示对话，中间固定主 Agent 会话（对话/任务视图），右侧独立扩展区承载架构/流程等视图；可调整宽度的侧边栏、工作区选择、页签、轮询、全局页面和未提交修改提示。 |
-| [ExtensionArea.tsx](ExtensionArea.tsx) | 工作区右侧扩展页签，独立于中央对话管理浏览器、命令终端、架构与内部运行诊断视图。 |
-| [extensions.css](extensions.css) | 中央对话与右侧扩展区的分栏、空页签及各扩展面板布局。 |
-| [runtime-navigation.ts](runtime-navigation.ts) | 把全局运行页的定位目标核对为现有主会话，并只更新本机页签与任务图选择。 |
-| [shell.css](shell.css) | 工作区外壳、侧栏、页签、菜单和主题布局样式。 |
-| [tabs.ts](tabs.ts) | 页签种类、默认布局、排序与本机布局恢复。 |
-| [UserMenu.tsx](UserMenu.tsx) | 本地账号、主题与设置菜单；用户栏右侧装配独立的版本更新图标。 |
-| [useSidebarWidth.ts](useSidebarWidth.ts) | 管理侧边栏宽度、拖动与键盘调整，并在本地保留布局。 |
-| [workspace-list.css](workspace-list.css) | 工作区树、名称旁的折叠按钮及点击位置浮动菜单。 |
-| [WorkspaceList.tsx](WorkspaceList.tsx) | 工作区树、主/子会话导航、主条目管理与工作区浮动操作菜单；子成员只提供观察入口。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [App.tsx](App.tsx) | 组件模块 | 桌面外壳：工作区下展示对话，中间固定主 Agent 会话（对话/任务视图），右侧独立扩展区承载架构/流程等视图；可调整宽度的侧边栏、工作区选择、页签、轮询、全局页面和未提交修改提示。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [ExtensionArea.tsx](ExtensionArea.tsx) | 组件模块 | 工作区右侧扩展页签，独立于中央对话管理浏览器、命令终端、架构与内部运行诊断视图。 |
+| [UserMenu.tsx](UserMenu.tsx) | 组件模块 | 本地账号、主题与设置菜单；用户栏右侧装配独立的版本更新图标。 |
+| [WorkspaceList.tsx](WorkspaceList.tsx) | 组件模块 | 工作区树、主/子会话导航、主条目管理与工作区浮动操作菜单；子成员只提供观察入口。 |
+| [extensions.css](extensions.css) | 样式 | 中央对话与右侧扩展区的分栏、空页签及各扩展面板布局。 |
+| [runtime-navigation.ts](runtime-navigation.ts) | 源码模块 | 把全局运行页的定位目标核对为现有主会话，并只更新本机页签与任务图选择。 |
+| [shell.css](shell.css) | 样式 | 工作区外壳、侧栏、页签、菜单和主题布局样式。 |
+| [tabs.ts](tabs.ts) | 源码模块 | 页签种类、默认布局、排序与本机布局恢复。 |
+| [useSidebarWidth.ts](useSidebarWidth.ts) | 源码模块 | 管理侧边栏宽度、拖动与键盘调整，并在本地保留布局。 |
+| [workspace-list.css](workspace-list.css) | 样式 | 工作区树、名称旁的折叠按钮及点击位置浮动菜单。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### App.tsx
 
@@ -127,6 +131,7 @@ class N_src_view_shell_runtime_navigation_ts["runtime-navigation.ts"] {
   <<module>>
 }
 class N_src_view_shell_runtime_navigation_ts_RuntimeNavigationResolver["RuntimeNavigationResolver"] {
+  +constructor()
   +cancel()
   +resolve()
   -read

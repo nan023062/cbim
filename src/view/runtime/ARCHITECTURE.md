@@ -6,18 +6,22 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [runtime-feed.ts](runtime-feed.ts) | 维护窗口内只读监管游标、最近确认快照和增量发布，供运行管理页面订阅。 |
-| [runtime-overview.css](runtime-overview.css) | 只读全局监管的自适应列表与统计。设计原因：沿用主题变量并在窄屏换行，身份长串不挤压原会话操作。 */ |
-| [runtime-view-state.ts](runtime-view-state.ts) | 全局运行页面的纯筛选、状态说明与原会话定位契约。 |
-| [RuntimeOverview.tsx](RuntimeOverview.tsx) | 全局只读运行总览，集中显示周期、Agent 实例、任务、准入等待及已报告消耗。 |
-| [RuntimeRows.tsx](RuntimeRows.tsx) | 全局监管中的独立只读行，分别呈现周期、任务、成员和运行，不混淆各自终态。 |
-| [useRuntime.ts](useRuntime.ts) | 把窗口共享的监管快照接入 React，并跟随文档可见性暂停后台读取。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [RuntimeOverview.tsx](RuntimeOverview.tsx) | 组件模块 | 全局只读运行总览，集中显示周期、Agent 实例、任务、准入等待及已报告消耗。 |
+| [RuntimeRows.tsx](RuntimeRows.tsx) | 组件模块 | 全局监管中的独立只读行，分别呈现周期、任务、成员和运行，不混淆各自终态。 |
+| [runtime-feed.ts](runtime-feed.ts) | 源码模块 | 维护窗口内只读监管游标、最近确认快照和增量发布，供运行管理页面订阅。 |
+| [runtime-overview.css](runtime-overview.css) | 样式 | 只读全局监管的自适应列表与统计。设计原因：沿用主题变量并在窄屏换行，身份长串不挤压原会话操作。 */ |
+| [runtime-view-state.ts](runtime-view-state.ts) | 源码模块 | 全局运行页面的纯筛选、状态说明与原会话定位契约。 |
+| [useRuntime.ts](useRuntime.ts) | 源码模块 | 把窗口共享的监管快照接入 React，并跟随文档可见性暂停后台读取。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### runtime-feed.ts
 
@@ -41,6 +45,7 @@ class N_src_view_runtime_runtime_feed_ts_RuntimeFeedState["RuntimeFeedState"] {
 }
 N_src_view_runtime_runtime_feed_ts ..> N_src_view_runtime_runtime_feed_ts_RuntimeFeedState : 声明
 class N_src_view_runtime_runtime_feed_ts_RuntimeFeed["RuntimeFeed"] {
+  +constructor()
   +snapshot
   +subscribe()
   +refresh()

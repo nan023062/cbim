@@ -6,28 +6,32 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [agent-model-form.css](agent-model-form.css) | 主对话多角色模型表单的独立布局，随组件加载，不依赖设置页先打开。 |
-| [AgentModelForm.tsx](AgentModelForm.tsx) | 主对话中完整引擎与模型角色配置草稿，复用 Agent 页面选择器并支持窄屏纵向填写。 |
-| [BrandMark.tsx](BrandMark.tsx) | 引用 assets/branding 的无业务状态 CBIM 产品标识，供外壳与欢迎页复用。 |
-| [DeferredView.tsx](DeferredView.tsx) | 页面入口的延迟模块装配，提供局部加载与失败重试，不负责业务导航。 |
-| [Empty.tsx](Empty.tsx) | 各页面复用的空状态布局。 |
-| [EngineModelPicker.tsx](EngineModelPicker.tsx) | Agent 编辑和岗位登记共用的引擎/模型级联下拉菜单。 |
-| [Icon.tsx](Icon.tsx) | 全界面共用的 24px 线性图标，覆盖操作、状态、导航和角色。 |
-| [interface.css](interface.css) | 所有产品页面共用的主题、控件、排版和反馈动效。 |
-| [InterfaceHelp.tsx](InterfaceHelp.tsx) | 窗口级操作说明、可聚焦和可悬停的 Tooltip；只读取已渲染控件的说明。 |
-| [ModalFrame.tsx](ModalFrame.tsx) | View 层模态容器，为编辑与预览提供原生焦点约束和关闭后焦点返回。 |
-| [repository-scope.css](repository-scope.css) | 对应界面的布局与视觉样式。 |
-| [RepositoryScopeDetails.tsx](RepositoryScopeDetails.tsx) | 在主对话工具详情与执行核实报告中展示可信回执的资源仓库范围。 |
-| [sidebar.css](sidebar.css) | 首页与设置中心共用的侧栏几何、标题、搜索、菜单和调整边缘样式。 |
-| [state-labels.ts](state-labels.ts) | 界面工作区与工具任务状态的中文标签。 |
-| [TreeActions.tsx](TreeActions.tsx) | 树节点行尾的显式操作菜单；由宿主绑定真实对象和可用状态。 |
-| [ViewTabs.tsx](ViewTabs.tsx) | 同一页面内的可访问视图切换，统一图标、选中语义与键盘导航。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [AgentModelForm.tsx](AgentModelForm.tsx) | 组件模块 | 主对话中完整引擎与模型角色配置草稿，复用 Agent 页面选择器并支持窄屏纵向填写。 |
+| [BrandMark.tsx](BrandMark.tsx) | 组件模块 | 引用 assets/branding 的无业务状态 CBIM 产品标识，供外壳与欢迎页复用。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [DeferredView.tsx](DeferredView.tsx) | 组件模块 | 页面入口的延迟模块装配，提供局部加载与失败重试，不负责业务导航。 |
+| [Empty.tsx](Empty.tsx) | 组件模块 | 各页面复用的空状态布局。 |
+| [EngineModelPicker.tsx](EngineModelPicker.tsx) | 组件模块 | Agent 编辑和岗位登记共用的引擎/模型级联下拉菜单。 |
+| [Icon.tsx](Icon.tsx) | 组件模块 | 全界面共用的 24px 线性图标，覆盖操作、状态、导航和角色。 |
+| [InterfaceHelp.tsx](InterfaceHelp.tsx) | 组件模块 | 窗口级操作说明、可聚焦和可悬停的 Tooltip；只读取已渲染控件的说明。 |
+| [ModalFrame.tsx](ModalFrame.tsx) | 组件模块 | View 层模态容器，为编辑与预览提供原生焦点约束和关闭后焦点返回。 |
+| [RepositoryScopeDetails.tsx](RepositoryScopeDetails.tsx) | 组件模块 | 在主对话工具详情与执行核实报告中展示可信回执的资源仓库范围。 |
+| [TreeActions.tsx](TreeActions.tsx) | 组件模块 | 树节点行尾的显式操作菜单；由宿主绑定真实对象和可用状态。 |
+| [ViewTabs.tsx](ViewTabs.tsx) | 组件模块 | 同一页面内的可访问视图切换，统一图标、选中语义与键盘导航。 |
+| [agent-model-form.css](agent-model-form.css) | 样式 | 主对话多角色模型表单的独立布局，随组件加载，不依赖设置页先打开。 |
+| [interface.css](interface.css) | 样式 | 所有产品页面共用的主题、控件、排版和反馈动效。 |
+| [repository-scope.css](repository-scope.css) | 样式 | 对应界面的布局与视觉样式。 |
+| [sidebar.css](sidebar.css) | 样式 | 首页与设置中心共用的侧栏几何、标题、搜索、菜单和调整边缘样式。 |
+| [state-labels.ts](state-labels.ts) | 源码模块 | 界面工作区与工具任务状态的中文标签。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### agent-model-form.css
 
@@ -78,7 +82,7 @@ class N_src_view_components_DeferredView_tsx["DeferredView.tsx"] {
 }
 class N_src_view_components_DeferredView_tsx_ViewLoadBoundary["ViewLoadBoundary"] {
   +state
-  +getDerivedStateFromError()
+  +getDerivedStateFromError()$
   +render()
 }
 N_src_view_components_DeferredView_tsx ..> N_src_view_components_DeferredView_tsx_ViewLoadBoundary : 声明

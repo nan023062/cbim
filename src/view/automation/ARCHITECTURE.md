@@ -6,15 +6,19 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [automation.css](automation.css) | 对应界面的布局与视觉样式。 |
-| [AutomationEditor.tsx](AutomationEditor.tsx) | 编辑当前工作区自动化，Agent/模块/Workflow/Skill 来自后端有效目录。 |
-| [AutomationView.tsx](AutomationView.tsx) | 右侧扩展区的工作区自动化页签，展示任务列表、配置和真实运行历史。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [AutomationEditor.tsx](AutomationEditor.tsx) | 组件模块 | 编辑当前工作区自动化，Agent/模块/Workflow/Skill 来自后端有效目录。 |
+| [AutomationView.tsx](AutomationView.tsx) | 组件模块 | 右侧扩展区的工作区自动化页签，展示任务列表、配置和真实运行历史。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [automation.css](automation.css) | 样式 | 对应界面的布局与视觉样式。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### automation.css
 

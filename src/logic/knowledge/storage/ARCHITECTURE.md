@@ -6,18 +6,22 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [files.ts](files.ts) | 从本机项目读取受控的正式知识文件。 |
-| [governance-port.ts](governance-port.ts) | 知识物理事务与私有治理账本之间的窄端口；仅供 Main 的可信工作区装配。 |
-| [knowledge-store.ts](knowledge-store.ts) | 本机知识存储，承担初始化、快照、预览、串行事务、索引写入和崩溃恢复。 |
-| [object-storage.ts](object-storage.ts) | 对象预览缓存、目录存在性检查和提交后空目录清理的本机实现。 |
-| [planned-commit.ts](planned-commit.ts) | 从固定私有缓存读取对象及资源包计划，向知识事务提供原请求与经过核实的不可变语义。 |
-| [source-journal.ts](source-journal.ts) | 知识 journal 的来源绑定与完整性核实，独立于两个存储队列。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [files.ts](files.ts) | 源码模块 | 从本机项目读取受控的正式知识文件。 |
+| [governance-port.ts](governance-port.ts) | 源码模块 | 知识物理事务与私有治理账本之间的窄端口；仅供 Main 的可信工作区装配。 |
+| [knowledge-store.ts](knowledge-store.ts) | 源码模块 | 本机知识存储，承担初始化、快照、预览、串行事务、索引写入和崩溃恢复。 |
+| [object-storage.ts](object-storage.ts) | 源码模块 | 对象预览缓存、目录存在性检查和提交后空目录清理的本机实现。 |
+| [planned-commit.ts](planned-commit.ts) | 源码模块 | 从固定私有缓存读取对象及资源包计划，向知识事务提供原请求与经过核实的不可变语义。 |
+| [source-journal.ts](source-journal.ts) | 源码模块 | 知识 journal 的来源绑定与完整性核实，独立于两个存储队列。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### files.ts
 
@@ -125,6 +129,7 @@ class N_src_logic_knowledge_storage_knowledge_store_ts_Journal["Journal"] {
 N_src_logic_knowledge_storage_knowledge_store_ts ..> N_src_logic_knowledge_storage_knowledge_store_ts_Journal : 声明
 class N_src_logic_knowledge_storage_knowledge_store_ts_KnowledgeStore["KnowledgeStore"] {
   +activeOperations
+  +constructor()
   +attachSources()
   +withSourceSnapshot()
   +drain()
@@ -139,7 +144,6 @@ class N_src_logic_knowledge_storage_knowledge_store_ts_KnowledgeStore["Knowledge
   +commitPlanned()
   +recover()
   +planMove()
-  -owner
 }
 N_src_logic_knowledge_storage_knowledge_store_ts ..> N_src_logic_knowledge_storage_knowledge_store_ts_KnowledgeStore : 声明
 ```
@@ -152,6 +156,7 @@ class N_src_logic_knowledge_storage_knowledge_store_ts["knowledge-store.ts"] {
   <<module>>
 }
 class N_src_logic_knowledge_storage_knowledge_store_ts_KnowledgeStore["KnowledgeStore"] {
+  -owner
   -log
   -governance
   -sources
@@ -176,6 +181,7 @@ class N_src_logic_knowledge_storage_object_storage_ts["object-storage.ts"] {
   <<module>>
 }
 class N_src_logic_knowledge_storage_object_storage_ts_FileObjectStorage["FileObjectStorage"] {
+  +constructor()
   +assertAbsent()
   +assertKnowledgeOnly()
   +savePlan()

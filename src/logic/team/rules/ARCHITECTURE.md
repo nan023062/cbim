@@ -6,25 +6,29 @@ Team、小组、Agent 和父链 Skill 视图、实例及静态角色 Session 履
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [agent-runtime.ts](agent-runtime.ts) | 主 Agent 执行配置的公开读写契约，供对话栏与团队配置入口共用。 |
-| [agent-types.ts](agent-types.ts) | 虚拟成员的角色配置、持久化实例及独立会话身份，供调度和存储共同使用。 |
-| [automatic-execution.ts](automatic-execution.ts) | 定义用户选择的协作模式和自动兜底的冻结身份，供计划、任务与运行共用。 |
-| [implicit-module-owner.ts](implicit-module-owner.ts) | 从模块责任登记解析显式或最近祖先负责人，供发现、派发和 Store 不变量共同核对。 |
-| [member-execution-binding.ts](member-execution-binding.ts) | 岗位负责人派发的纯选择与冻结身份契约，供目标、任务、运行和公开视图共用。 |
-| [member-execution-rules.ts](member-execution-rules.ts) | 从同一岗位、责任与来源登记快照核实执行选择，供调度和存储共用。 |
-| [owner-execution-discovery.ts](owner-execution-discovery.ts) | 岗位执行选择的有界只读发现协议，供主工具和任务详情共用。 |
-| [session-history-storage.ts](session-history-storage.ts) | 静态 Agent 会话历史的持久化索引契约，连接调度查询服务与本机磁盘适配。 |
-| [session-history.ts](session-history.ts) | 定义按静态 Agent 归档的独立 Session、任务轮次及公开事件查询协议。 |
-| [team-session.ts](team-session.ts) | 定义办公室内长期存在的 Agent 逻辑对话身份，供调度登记、持久化和对话导航共用。 |
-| [workspace-member-rules.ts](workspace-member-rules.ts) | 岗位登记的规范指纹、预览依据、不可变审计与单条事件投影；由可信服务与 Store 重放共同调用。 |
-| [workspace-member-tools.ts](workspace-member-tools.ts) | 主 Agent 岗位治理的窄输入、回执和装配端口，独立于 UI 与存储。 |
-| [workspace-member.ts](workspace-member.ts) | 定义工作区长期岗位、采纳快照、版本化登记命令与公开查询协议，供 Main、Store 和桌面共用。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [agent-runtime.ts](agent-runtime.ts) | 源码模块 | 主 Agent 执行配置的公开读写契约，供对话栏与团队配置入口共用。 |
+| [agent-types.ts](agent-types.ts) | 源码模块 | 虚拟成员的角色配置、持久化实例及独立会话身份，供调度和存储共同使用。 |
+| [automatic-execution.ts](automatic-execution.ts) | 源码模块 | 定义用户选择的协作模式和自动兜底的冻结身份，供计划、任务与运行共用。 |
+| [implicit-module-owner.ts](implicit-module-owner.ts) | 源码模块 | 从模块责任登记解析显式或最近祖先负责人，供发现、派发和 Store 不变量共同核对。 |
+| [member-execution-binding.ts](member-execution-binding.ts) | 源码模块 | 岗位负责人派发的纯选择与冻结身份契约，供目标、任务、运行和公开视图共用。 |
+| [member-execution-rules.ts](member-execution-rules.ts) | 源码模块 | 从同一岗位、责任与来源登记快照核实执行选择，供调度和存储共用。 |
+| [owner-execution-discovery.ts](owner-execution-discovery.ts) | 源码模块 | 岗位执行选择的有界只读发现协议，供主工具和任务详情共用。 |
+| [session-history-storage.ts](session-history-storage.ts) | 源码模块 | 静态 Agent 会话历史的持久化索引契约，连接调度查询服务与本机磁盘适配。 |
+| [session-history.ts](session-history.ts) | 源码模块 | 定义按静态 Agent 归档的独立 Session、任务轮次及公开事件查询协议。 |
+| [team-session.ts](team-session.ts) | 源码模块 | 定义办公室内长期存在的 Agent 逻辑对话身份，供调度登记、持久化和对话导航共用。 |
+| [workspace-member-rules.ts](workspace-member-rules.ts) | 源码模块 | 岗位登记的规范指纹、预览依据、不可变审计与单条事件投影；由可信服务与 Store 重放共同调用。 |
+| [workspace-member-tools.ts](workspace-member-tools.ts) | 源码模块 | 主 Agent 岗位治理的窄输入、回执和装配端口，独立于 UI 与存储。 |
+| [workspace-member.ts](workspace-member.ts) | 源码模块 | 定义工作区长期岗位、采纳快照、版本化登记命令与公开查询协议，供 Main、Store 和桌面共用。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### agent-runtime.ts
 

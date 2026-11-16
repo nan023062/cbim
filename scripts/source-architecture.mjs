@@ -146,7 +146,8 @@ const scope={
 };
 const norm=p=>p.replaceAll('\\','/');
 const walk=p=>fs.readdirSync(p,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(p+'/'+e.name):[p+'/'+e.name]);
-const files=walk('src').filter(f=>/\.(tsx?|jsx?|mjs|cjs|css)$/.test(f));
+const allFiles=walk('src');
+const files=allFiles.filter(f=>/\.(tsx?|jsx?|mjs|cjs|css)$/.test(f));
 const directories=[...new Set(files.flatMap(f=>{const a=[];let d=path.posix.dirname(f);while(d==='src'||d.startsWith('src/')){a.push(d);if(d==='src')break;d=path.posix.dirname(d)}return a}))].sort();
 const text=new Map(files.map(f=>[f,fs.readFileSync(f,'utf8')]));
 const ast=new Map(files.filter(f=>!f.endsWith('.css')).map(f=>[f,ts.createSourceFile(f,text.get(f),ts.ScriptTarget.Latest,true)]));
@@ -156,6 +157,25 @@ const id=s=>'N_'+s.replace(/[^a-zA-Z0-9_]/g,'_');
 const link=(from,to)=>norm(path.relative(from,to));
 const clean=s=>s.replace(/[<>"{}|\r\n]/g,' ').slice(0,95);
 function role(f){return text.get(f).match(/作用定位：([^\r\n]+)/)?.[1]?.trim()||(f.endsWith('.css')?'对应界面的布局与视觉样式。':'源码入口，见文件正文。')}
+/** 文件清单包含说明与资源；这些文件不参与代码依赖或伪装成类图节点。 */
+function fileRole(f){
+ if(text.has(f))return role(f);
+ const name=path.posix.basename(f);
+ const documents={
+  'ARCHITECTURE.md':'本目录的文件清单、真实声明、依赖与子封装导航。',
+  'CONTRACT.md':'人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。',
+  'READING.md':'从运行入口和真实场景进入源码的阅读顺序与修改导航。',
+ };
+ if(documents[name])return documents[name];
+ if(f.endsWith('.md'))return fs.readFileSync(f,'utf8').match(/^#\s+(.+)$/m)?.[1]?.trim()||'配套说明；具体用途见正文。';
+ return '本目录配套资源或配置；具体用途见文件及其调用方。';
+}
+function fileForm(f){
+ if(f.endsWith('.md'))return '说明文档';
+ if(f.endsWith('.css'))return '样式';
+ if(f.endsWith('.tsx')||f.endsWith('.jsx'))return '组件模块';
+ return ast.has(f)?'源码模块':'资源／配置';
+}
 function node(f,label=path.posix.basename(f),directory=false,entries=[]){return `class ${id(f)}["${clean(label)}"] {\n  <<${directory?'directory':f.endsWith('.tsx')?'component':f.endsWith('.css')?'stylesheet':'module'}>>\n${entries.length?entries.join('\n')+'\n':''}}`}
 function declarations(f){const a=ast.get(f);return a?a.statements.filter(n=>(ts.isClassDeclaration(n)||ts.isInterfaceDeclaration(n)||ts.isTypeAliasDeclaration(n))&&n.name):[]}
 const chunks=(values,size)=>Array.from({length:Math.ceil(values.length/size)},(_,i)=>values.slice(i*size,(i+1)*size));
@@ -168,11 +188,16 @@ function objectMembers(type){
 function members(n,a){
  const declared=ts.isTypeAliasDeclaration(n)?objectMembers(n.type):[...(n.members||[])];
  const properties=declared.filter(ts.isConstructorDeclaration).flatMap(c=>c.parameters.filter(p=>p.modifiers?.some(m=>[ts.SyntaxKind.PublicKeyword,ts.SyntaxKind.PrivateKeyword,ts.SyntaxKind.ProtectedKeyword,ts.SyntaxKind.ReadonlyKeyword].includes(m.kind))));
- const visibility=m=>m.modifiers?.some(x=>x.kind===ts.SyntaxKind.PrivateKeyword)?'-':m.modifiers?.some(x=>x.kind===ts.SyntaxKind.ProtectedKeyword)?'#':'+';
+ const visibility=m=>(m.name&&ts.isPrivateIdentifier(m.name))||m.modifiers?.some(x=>x.kind===ts.SyntaxKind.PrivateKeyword)?'-':m.modifiers?.some(x=>x.kind===ts.SyntaxKind.ProtectedKeyword)?'#':'+';
  // 公开入口先展示，后续分段保留其余成员；不能用私有字段占满固定名额后截掉生命周期接口。
- return [...new Set([...properties,...declared.filter(m=>m.name&&!ts.isPrivateIdentifier(m.name))]
+ return [...new Set([...properties,...declared.filter(m=>m.name||ts.isConstructorDeclaration(m))]
   .sort((a,b)=>Number(visibility(a)!=='+')-Number(visibility(b)!=='+'))
-  .map(m=>`  ${visibility(m)}${clean(m.name.getText(a))}${ts.isMethodDeclaration(m)||ts.isMethodSignature(m)?'()':''}`))];
+  .map(m=>{
+   const name=ts.isConstructorDeclaration(m)?'constructor':ts.isPrivateIdentifier(m.name)?m.name.text.slice(1):m.name.getText(a);
+   const callable=ts.isConstructorDeclaration(m)||ts.isMethodDeclaration(m)||ts.isMethodSignature(m);
+   const isStatic=m.modifiers?.some(x=>x.kind===ts.SyntaxKind.StaticKeyword);
+   return `  ${visibility(m)}${clean(name)}${callable?'()':''}${isStatic?'$':''}`;
+  }))];
 }
 /** 模块公开函数单独成图，文件同时声明接口或类型时也不丢失入口。 */
 function exportedFunctions(f){
@@ -206,10 +231,13 @@ function diagram(lines){return '```mermaid\nclassDiagram\n'+lines.join('\n')+'\n
 let changed=[];
 for(const d of directories){
  const own=files.filter(f=>path.posix.dirname(f)===d),children=directories.filter(c=>path.posix.dirname(c)===d);
+ // 首次生成也列出自身，保证下一次 --check 不因新建说明文件产生漂移。
+ const directFiles=[...new Set([...allFiles.filter(f=>path.posix.dirname(f)===d),d+'/ARCHITECTURE.md'])].sort();
  if(!scope[d])throw Error('需要先审视新目录职责：'+d);
- let out=`# ${d} 架构\n\n## 目录定位\n\n${scope[d]}\n\n本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](${link(d,'scripts/source-architecture.mjs')}) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。\n\n## 代码清单\n\n`;
- out+=own.length?'| 文件 | 当前职责 |\n| --- | --- |\n'+own.map(f=>`| [${path.posix.basename(f)}](${path.posix.basename(f)}) | ${role(f).replaceAll('|','／')} |`).join('\n')+'\n':'本层无直接代码文件。\n';
- out+='\n## 架构类图\n\n';
+  let out=`# ${d} 架构\n\n## 目录定位\n\n${scope[d]}\n\n本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](${link(d,'scripts/source-architecture.mjs')}) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。\n\n## 文件清单\n\n`;
+ out+='| 文件 | 形式 | 当前职责 |\n| --- | --- | --- |\n'+directFiles.map(f=>`| [${path.posix.basename(f)}](${path.posix.basename(f)}) | ${fileForm(f)} | ${fileRole(f).replaceAll('|','／')} |`).join('\n')+'\n';
+ if(!own.length)out+='\n本层无直接代码文件。\n';
+ out+='\n## 架构类图\n\n成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。\n\n';
  if(children.length){
   const boundaries=[...children,...own];
   const owner=f=>own.includes(f)?f:children.find(c=>f.startsWith(c+'/'));

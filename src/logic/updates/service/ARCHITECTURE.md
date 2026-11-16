@@ -6,27 +6,31 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [desktop-releases.ts](desktop-releases.ts) | 读取固定 GitHub 仓库中独立 desktop-v 通道的公开稳定发布。 |
-| [desktop-updates.ts](desktop-updates.ts) | 桌面更新的单实例状态机，后台检查并预下载，用户确认后才排空业务和重启安装。 |
-| [engine-artifacts.ts](engine-artifacts.ts) | 冷壳持有的通用 E 制品服务，保存独立签名索引历史并准备准确摘要的包。 |
-| [engine-index.ts](engine-index.ts) | 独立 E 发布索引的签名、版本和准确依赖闭包验证。 |
-| [managed-engines.ts](managed-engines.ts) | 受管引擎目录、准备进度及固定版本解析；由冷壳注入已验签的清单和缓存。 |
-| [nsis-updater.ts](nsis-updater.ts) | electron-updater 的 Windows NSIS 适配，固定发布源并优先差分下载、校验安装包。 |
-| [release-http.ts](release-http.ts) | 更新子系统读取公开 Release 列表的独立 HTTP 边界。 |
-| [restart-profile.ts](restart-profile.ts) | 恢复安装器显式传回的本机用户目录，供 Main 在初始化任何业务数据之前调用。 |
-| [runtime-archive.ts](runtime-archive.ts) | 把已校验 ZIP 展开到新建候选目录，并核对签名清单定义的完整文件集合。 |
-| [runtime-download.ts](runtime-download.ts) | 公开资源 / 引擎附件的有界下载；下载只写独立候选，不改变活动版本。 |
-| [runtime-host.ts](runtime-host.ts) | 稳定桌面冷壳向业务入口提供的私有启动契约；不经过渲染 IPC。 |
-| [runtime-journal.ts](runtime-journal.ts) | 冷壳拥有的资源激活日志；区分准备缓存、用户授权、原数据访问和已确认启动。 |
-| [runtime-manifest.ts](runtime-manifest.ts) | 冷壳与资源更新器共用的签名清单、制品身份和路径约束。 |
-| [runtime-store.ts](runtime-store.ts) | 管理资源 / 引擎不可变版本目录及其签名清单；后台准备不修改活动选择。 |
-| [runtime-updates.ts](runtime-updates.ts) | 连接 C 安装通道与同 C 的 R 资源通道，准备候选并在业务排空后记录显式切换。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [desktop-releases.ts](desktop-releases.ts) | 源码模块 | 读取固定 GitHub 仓库中独立 desktop-v 通道的公开稳定发布。 |
+| [desktop-updates.ts](desktop-updates.ts) | 源码模块 | 桌面更新的单实例状态机，后台检查并预下载，用户确认后才排空业务和重启安装。 |
+| [engine-artifacts.ts](engine-artifacts.ts) | 源码模块 | 冷壳持有的通用 E 制品服务，保存独立签名索引历史并准备准确摘要的包。 |
+| [engine-index.ts](engine-index.ts) | 源码模块 | 独立 E 发布索引的签名、版本和准确依赖闭包验证。 |
+| [managed-engines.ts](managed-engines.ts) | 源码模块 | 受管引擎目录、准备进度及固定版本解析；由冷壳注入已验签的清单和缓存。 |
+| [nsis-updater.ts](nsis-updater.ts) | 源码模块 | electron-updater 的 Windows NSIS 适配，固定发布源并优先差分下载、校验安装包。 |
+| [release-http.ts](release-http.ts) | 源码模块 | 更新子系统读取公开 Release 列表的独立 HTTP 边界。 |
+| [restart-profile.ts](restart-profile.ts) | 源码模块 | 恢复安装器显式传回的本机用户目录，供 Main 在初始化任何业务数据之前调用。 |
+| [runtime-archive.ts](runtime-archive.ts) | 源码模块 | 把已校验 ZIP 展开到新建候选目录，并核对签名清单定义的完整文件集合。 |
+| [runtime-download.ts](runtime-download.ts) | 源码模块 | 公开资源 / 引擎附件的有界下载；下载只写独立候选，不改变活动版本。 |
+| [runtime-host.ts](runtime-host.ts) | 源码模块 | 稳定桌面冷壳向业务入口提供的私有启动契约；不经过渲染 IPC。 |
+| [runtime-journal.ts](runtime-journal.ts) | 源码模块 | 冷壳拥有的资源激活日志；区分准备缓存、用户授权、原数据访问和已确认启动。 |
+| [runtime-manifest.ts](runtime-manifest.ts) | 源码模块 | 冷壳与资源更新器共用的签名清单、制品身份和路径约束。 |
+| [runtime-store.ts](runtime-store.ts) | 源码模块 | 管理资源 / 引擎不可变版本目录及其签名清单；后台准备不修改活动选择。 |
+| [runtime-updates.ts](runtime-updates.ts) | 源码模块 | 连接 C 安装通道与同 C 的 R 资源通道，准备候选并在业务排空后记录显式切换。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### desktop-releases.ts
 
@@ -62,6 +66,7 @@ class N_src_logic_updates_service_desktop_updates_ts_DesktopUpdateInstaller["Des
 }
 N_src_logic_updates_service_desktop_updates_ts ..> N_src_logic_updates_service_desktop_updates_ts_DesktopUpdateInstaller : 声明
 class N_src_logic_updates_service_desktop_updates_ts_DesktopUpdates["DesktopUpdates"] {
+  +constructor()
   +status()
   +start()
   +check()
@@ -77,7 +82,6 @@ class N_src_logic_updates_service_desktop_updates_ts_DesktopUpdates["DesktopUpda
   -retryDownloadAfter
   -controller
   -timer
-  -initial
 }
 N_src_logic_updates_service_desktop_updates_ts ..> N_src_logic_updates_service_desktop_updates_ts_DesktopUpdates : 声明
 ```
@@ -90,6 +94,7 @@ class N_src_logic_updates_service_desktop_updates_ts["desktop-updates.ts"] {
   <<module>>
 }
 class N_src_logic_updates_service_desktop_updates_ts_DesktopUpdates["DesktopUpdates"] {
+  -initial
   -run()
   -downloadCandidate()
   -installReady()
@@ -109,6 +114,7 @@ class N_src_logic_updates_service_engine_artifacts_ts["engine-artifacts.ts"] {
   <<module>>
 }
 class N_src_logic_updates_service_engine_artifacts_ts_EngineArtifacts["EngineArtifacts"] {
+  +constructor()
   +list()
   +check()
   +prepare()
@@ -124,7 +130,6 @@ class N_src_logic_updates_service_engine_artifacts_ts_EngineArtifacts["EngineArt
   -envelopes
   -seeds
   -available
-  -current
 }
 N_src_logic_updates_service_engine_artifacts_ts ..> N_src_logic_updates_service_engine_artifacts_ts_EngineArtifacts : 声明
 class N_src_logic_updates_service_engine_artifacts_ts_external_EngineArtifactsPort["EngineArtifactsPort (外部契约)"] {
@@ -141,6 +146,7 @@ class N_src_logic_updates_service_engine_artifacts_ts["engine-artifacts.ts"] {
   <<module>>
 }
 class N_src_logic_updates_service_engine_artifacts_ts_EngineArtifacts["EngineArtifacts"] {
+  -current
   -head
   -digest
   -verifyHistory()
@@ -190,6 +196,7 @@ class N_src_logic_updates_service_managed_engines_ts["managed-engines.ts"] {
   <<module>>
 }
 class N_src_logic_updates_service_managed_engines_ts_ManagedEngines["ManagedEngines"] {
+  +constructor()
   +status()
   +preparations()
   +used()
@@ -333,6 +340,7 @@ class N_src_logic_updates_service_runtime_journal_ts_RuntimeState["RuntimeState"
 }
 N_src_logic_updates_service_runtime_journal_ts ..> N_src_logic_updates_service_runtime_journal_ts_RuntimeState : 声明
 class N_src_logic_updates_service_runtime_journal_ts_RuntimeJournal["RuntimeJournal"] {
+  +constructor()
   +read()
   +authorize()
   +accessData()
@@ -427,6 +435,7 @@ N_src_logic_updates_service_runtime_store_ts ..> N_src_logic_updates_service_run
 class N_src_logic_updates_service_runtime_store_ts_RuntimeStore["RuntimeStore"] {
   +root
   +cold
+  +constructor()
   +packageRoot()
   +manifestPath()
   +saveManifest()
@@ -465,6 +474,7 @@ class N_src_logic_updates_service_runtime_updates_ts_RuntimeUpdateSources["Runti
 }
 N_src_logic_updates_service_runtime_updates_ts ..> N_src_logic_updates_service_runtime_updates_ts_RuntimeUpdateSources : 声明
 class N_src_logic_updates_service_runtime_updates_ts_RuntimeUpdates["RuntimeUpdates"] {
+  +constructor()
   +latest()
   +prepare()
   +download()
@@ -480,7 +490,6 @@ class N_src_logic_updates_service_runtime_updates_ts_RuntimeUpdates["RuntimeUpda
   -candidate
   -selected
   -prepared
-  -ready
 }
 N_src_logic_updates_service_runtime_updates_ts ..> N_src_logic_updates_service_runtime_updates_ts_RuntimeUpdates : 声明
 class N_src_logic_updates_service_runtime_updates_ts_external_DesktopUpdateInstaller["DesktopUpdateInstaller (外部契约)"] {
@@ -497,6 +506,7 @@ class N_src_logic_updates_service_runtime_updates_ts["runtime-updates.ts"] {
   <<module>>
 }
 class N_src_logic_updates_service_runtime_updates_ts_RuntimeUpdates["RuntimeUpdates"] {
+  -ready
   -controller
 }
 N_src_logic_updates_service_runtime_updates_ts ..> N_src_logic_updates_service_runtime_updates_ts_RuntimeUpdates : 声明

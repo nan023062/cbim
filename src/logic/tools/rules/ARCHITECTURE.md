@@ -6,23 +6,27 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [contracts.ts](contracts.ts) | 工具取消、恢复说明及按需契约发现的纯协议，不导入具体领域或执行服务。 |
-| [input-validation.ts](input-validation.ts) | 将工具输入校验转换为不含原参数值的字段说明，供执行前拒绝与历史展示共用。 |
-| [native-tools.ts](native-tools.ts) | 定义当前引擎真实装配的原生工具及可信副作用分类；引擎身份来自官方静态目录。 |
-| [outcome.ts](outcome.ts) | 引擎工具回包的统一结果与下一步说明；独立于具体业务账本。 |
-| [questions.ts](questions.ts) | 结构化提问的严格输入、桌面答案、排他结果与待答快照，供队列、工具包装和证据边界共用。 |
-| [receipt-schema.ts](receipt-schema.ts) | 执行报告与任务工具共用的真实工具回执字段协议。 |
-| [receipts.ts](receipts.ts) | 把已核实的工具调用、授权和终态整理为可追溯回执。 |
-| [registry.ts](registry.ts) | 实际内部工具的输入/业务输出协议、版本、副作用及取消/恢复说明，支持摘要与按需完整描述。 |
-| [results.ts](results.ts) | 校验内部工具传给大脑的结果，并将领域返回值封装为合法文本块。 |
-| [scope-schema.ts](scope-schema.ts) | 工具回执与可信授权描述共用的纯范围协议，区分项目文件、知识、未知影响和外部仓库读取。 |
-| [types.ts](types.ts) | 引擎无关的工具调用、副作用、策略决策及运行回执契约。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [contracts.ts](contracts.ts) | 源码模块 | 工具取消、恢复说明及按需契约发现的纯协议，不导入具体领域或执行服务。 |
+| [input-validation.ts](input-validation.ts) | 源码模块 | 将工具输入校验转换为不含原参数值的字段说明，供执行前拒绝与历史展示共用。 |
+| [native-tools.ts](native-tools.ts) | 源码模块 | 定义当前引擎真实装配的原生工具及可信副作用分类；引擎身份来自官方静态目录。 |
+| [outcome.ts](outcome.ts) | 源码模块 | 引擎工具回包的统一结果与下一步说明；独立于具体业务账本。 |
+| [questions.ts](questions.ts) | 源码模块 | 结构化提问的严格输入、桌面答案、排他结果与待答快照，供队列、工具包装和证据边界共用。 |
+| [receipt-schema.ts](receipt-schema.ts) | 源码模块 | 执行报告与任务工具共用的真实工具回执字段协议。 |
+| [receipts.ts](receipts.ts) | 源码模块 | 把已核实的工具调用、授权和终态整理为可追溯回执。 |
+| [registry.ts](registry.ts) | 源码模块 | 实际内部工具的输入/业务输出协议、版本、副作用及取消/恢复说明，支持摘要与按需完整描述。 |
+| [results.ts](results.ts) | 源码模块 | 校验内部工具传给大脑的结果，并将领域返回值封装为合法文本块。 |
+| [scope-schema.ts](scope-schema.ts) | 源码模块 | 工具回执与可信授权描述共用的纯范围协议，区分项目文件、知识、未知影响和外部仓库读取。 |
+| [types.ts](types.ts) | 源码模块 | 引擎无关的工具调用、副作用、策略决策及运行回执契约。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ```mermaid
 classDiagram

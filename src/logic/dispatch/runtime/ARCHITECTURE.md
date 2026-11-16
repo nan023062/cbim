@@ -6,22 +6,26 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [auto-collaboration.ts](auto-collaboration.ts) | 管理用户任务周期，串接主调度、成员回传、重启后可靠成果接收及最多三轮验收返工；同角色等待不阻断其它角色，未知事实或额度耗尽停止，可靠关闭后释放执行实例。 |
-| [automatic-return-service.ts](automatic-return-service.ts) | 持久保存主轮待回传批次，重启时核实可自动接收的已完成成员结果。 |
-| [dispatch-service.ts](dispatch-service.ts) | 工作区的成员注册、主对话实例绑定、主会话派发及任务图查询；主/子逻辑对话随登记可靠保存且跨周期保留，重启仅保留通过完整核实的待回传周期，其余中断封存。 |
-| [goal-repair.ts](goal-repair.ts) | 调度层最终验收返工的分类、限次与系统反馈，复用原目标及主运行入口。 |
-| [member-failure-limit.ts](member-failure-limit.ts) | 从同一目标的持久任务终态判断是否停止自动接续，供实时协调和重启核实共用。 |
-| [owner-execution-service.ts](owner-execution-service.ts) | 在既有知识、模型和派发存储之间核实岗位执行绑定，为计划、派发、领取和依赖维护提供同一入口。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [auto-collaboration.ts](auto-collaboration.ts) | 源码模块 | 管理用户任务周期，串接主调度、成员回传、重启后可靠成果接收及最多三轮验收返工；同角色等待不阻断其它角色，未知事实或额度耗尽停止，可靠关闭后释放执行实例。 |
+| [automatic-return-service.ts](automatic-return-service.ts) | 源码模块 | 持久保存主轮待回传批次，重启时核实可自动接收的已完成成员结果。 |
+| [dispatch-service.ts](dispatch-service.ts) | 源码模块 | 工作区的成员注册、主对话实例绑定、主会话派发及任务图查询；主/子逻辑对话随登记可靠保存且跨周期保留，重启仅保留通过完整核实的待回传周期，其余中断封存。 |
+| [goal-repair.ts](goal-repair.ts) | 源码模块 | 调度层最终验收返工的分类、限次与系统反馈，复用原目标及主运行入口。 |
+| [member-failure-limit.ts](member-failure-limit.ts) | 源码模块 | 从同一目标的持久任务终态判断是否停止自动接续，供实时协调和重启核实共用。 |
+| [owner-execution-service.ts](owner-execution-service.ts) | 源码模块 | 在既有知识、模型和派发存储之间核实岗位执行绑定，为计划、派发、领取和依赖维护提供同一入口。 |
 
 ## 架构类图
 
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
+
 ### auto-collaboration.ts
 
-成员 1/3（同名节点为同一声明，跨图合并阅读）。
+成员 1/4（同名节点为同一声明，跨图合并阅读）。
 
 ```mermaid
 classDiagram
@@ -80,6 +84,7 @@ class N_src_logic_dispatch_runtime_auto_collaboration_ts_Batch["Batch"] {
 }
 N_src_logic_dispatch_runtime_auto_collaboration_ts ..> N_src_logic_dispatch_runtime_auto_collaboration_ts_Batch : 声明
 class N_src_logic_dispatch_runtime_auto_collaboration_ts_AutoCollaboration["AutoCollaboration"] {
+  +constructor()
   +initialize()
   +mainToolContext()
   +prepareAssignment()
@@ -95,12 +100,11 @@ class N_src_logic_dispatch_runtime_auto_collaboration_ts_AutoCollaboration["Auto
   -batches
   -preparedTasks
   -cycles
-  -waitingSlots
 }
 N_src_logic_dispatch_runtime_auto_collaboration_ts ..> N_src_logic_dispatch_runtime_auto_collaboration_ts_AutoCollaboration : 声明
 ```
 
-成员 2/3（同名节点为同一声明，跨图合并阅读）。
+成员 2/4（同名节点为同一声明，跨图合并阅读）。
 
 ```mermaid
 classDiagram
@@ -108,6 +112,7 @@ class N_src_logic_dispatch_runtime_auto_collaboration_ts["auto-collaboration.ts"
   <<module>>
 }
 class N_src_logic_dispatch_runtime_auto_collaboration_ts_AutoCollaboration["AutoCollaboration"] {
+  -waitingSlots
   -resuming
   -closed
   -pending
@@ -123,12 +128,11 @@ class N_src_logic_dispatch_runtime_auto_collaboration_ts_AutoCollaboration["Auto
   -interruptTopic()
   -continuationCheckpoint()
   -acceptContinuation()
-  -starting()
 }
 N_src_logic_dispatch_runtime_auto_collaboration_ts ..> N_src_logic_dispatch_runtime_auto_collaboration_ts_AutoCollaboration : 声明
 ```
 
-成员 3/3（同名节点为同一声明，跨图合并阅读）。
+成员 3/4（同名节点为同一声明，跨图合并阅读）。
 
 ```mermaid
 classDiagram
@@ -136,6 +140,7 @@ class N_src_logic_dispatch_runtime_auto_collaboration_ts["auto-collaboration.ts"
   <<module>>
 }
 class N_src_logic_dispatch_runtime_auto_collaboration_ts_AutoCollaboration["AutoCollaboration"] {
+  -starting()
   -startFailed()
   -track()
   -identity()
@@ -151,6 +156,18 @@ class N_src_logic_dispatch_runtime_auto_collaboration_ts_AutoCollaboration["Auto
   -budgetBlocked()
   -memberFailuresBlocked()
   -advance()
+}
+N_src_logic_dispatch_runtime_auto_collaboration_ts ..> N_src_logic_dispatch_runtime_auto_collaboration_ts_AutoCollaboration : 声明
+```
+
+成员 4/4（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_logic_dispatch_runtime_auto_collaboration_ts["auto-collaboration.ts"] {
+  <<module>>
+}
+class N_src_logic_dispatch_runtime_auto_collaboration_ts_AutoCollaboration["AutoCollaboration"] {
   -finishCycle()
 }
 N_src_logic_dispatch_runtime_auto_collaboration_ts ..> N_src_logic_dispatch_runtime_auto_collaboration_ts_AutoCollaboration : 声明
@@ -166,6 +183,7 @@ class N_src_logic_dispatch_runtime_automatic_return_service_ts["automatic-return
   <<module>>
 }
 class N_src_logic_dispatch_runtime_automatic_return_service_ts_AutomaticReturnService["AutomaticReturnService"] {
+  +constructor()
   +record()
   +inspect()
   +scopes()
@@ -211,7 +229,7 @@ class N_src_logic_dispatch_runtime_dispatch_service_ts_WorkspaceDispatchService[
   +usage
   +budgets
   +memberPauses
-  +ownerInspect()
+  +constructor()
 }
 N_src_logic_dispatch_runtime_dispatch_service_ts ..> N_src_logic_dispatch_runtime_dispatch_service_ts_WorkspaceDispatchService : 声明
 ```
@@ -224,6 +242,7 @@ class N_src_logic_dispatch_runtime_dispatch_service_ts["dispatch-service.ts"] {
   <<module>>
 }
 class N_src_logic_dispatch_runtime_dispatch_service_ts_WorkspaceDispatchService["WorkspaceDispatchService"] {
+  +ownerInspect()
   +commandReport()
   +cancelQueued()
   +replaceQueuedDependency()
@@ -239,7 +258,6 @@ class N_src_logic_dispatch_runtime_dispatch_service_ts_WorkspaceDispatchService[
   +waitingScopes()
   +recoverScopes()
   +openGraph()
-  +conversationBinding()
 }
 N_src_logic_dispatch_runtime_dispatch_service_ts ..> N_src_logic_dispatch_runtime_dispatch_service_ts_WorkspaceDispatchService : 声明
 ```
@@ -252,6 +270,7 @@ class N_src_logic_dispatch_runtime_dispatch_service_ts["dispatch-service.ts"] {
   <<module>>
 }
 class N_src_logic_dispatch_runtime_dispatch_service_ts_WorkspaceDispatchService["WorkspaceDispatchService"] {
+  +conversationBinding()
   +createMember()
   +dispatchTask()
   +snapshot()
@@ -267,7 +286,6 @@ class N_src_logic_dispatch_runtime_dispatch_service_ts_WorkspaceDispatchService[
   -queuedDependencyRevision
   -checkpointAbandonment
   -commandVerification
-  -check()
 }
 N_src_logic_dispatch_runtime_dispatch_service_ts ..> N_src_logic_dispatch_runtime_dispatch_service_ts_WorkspaceDispatchService : 声明
 ```
@@ -280,6 +298,7 @@ class N_src_logic_dispatch_runtime_dispatch_service_ts["dispatch-service.ts"] {
   <<module>>
 }
 class N_src_logic_dispatch_runtime_dispatch_service_ts_WorkspaceDispatchService["WorkspaceDispatchService"] {
+  -check()
   -parse()
   -graph()
   -command()
@@ -353,6 +372,7 @@ class N_src_logic_dispatch_runtime_owner_execution_service_ts["owner-execution-s
   <<module>>
 }
 class N_src_logic_dispatch_runtime_owner_execution_service_ts_OwnerExecutionService["OwnerExecutionService"] {
+  +constructor()
   +replay()
   +withSnapshot()
   +withContext()

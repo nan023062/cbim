@@ -6,16 +6,20 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [agent.ts](agent.ts) | Logic 中独立 Agent 对象，冻结能力、运行选型和权限，并引用真实对话身份。 |
-| [contracts.ts](contracts.ts) | Agent 调用的便携身份、工具绑定和生命周期契约，供 Runtime 与 Bridge 使用。 |
-| [exchange.ts](exchange.ts) | 单次 Agent 调用内的问答暂停和结果交接，不创建新 Agent 或执行循环。 |
-| [index.ts](index.ts) | 向业务装配公开 Agent 对象与调用契约，不导出 Application 或具体引擎。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [agent.ts](agent.ts) | 源码模块 | Logic 中独立 Agent 对象，冻结能力、运行选型和权限，并引用真实对话身份。 |
+| [contracts.ts](contracts.ts) | 源码模块 | Agent 调用的便携身份、工具绑定和生命周期契约，供 Runtime 与 Bridge 使用。 |
+| [exchange.ts](exchange.ts) | 源码模块 | 单次 Agent 调用内的问答暂停和结果交接，不创建新 Agent 或执行循环。 |
+| [index.ts](index.ts) | 源码模块 | 向业务装配公开 Agent 对象与调用契约，不导出 Application 或具体引擎。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### agent.ts
 
@@ -42,6 +46,7 @@ N_src_logic_agents_agent_ts ..> N_src_logic_agents_agent_ts_AgentConversation : 
 class N_src_logic_agents_agent_ts_Agent["Agent"] {
   +definition
   +conversation
+  +constructor()
 }
 N_src_logic_agents_agent_ts ..> N_src_logic_agents_agent_ts_Agent : 声明
 ```
@@ -122,6 +127,7 @@ N_src_logic_agents_contracts_ts ..> N_src_logic_agents_contracts_ts_AgentLifecyc
 class N_src_logic_agents_contracts_ts_AgentConstraintError["AgentConstraintError"] {
   +code
   +constraint
+  +constructor()
 }
 N_src_logic_agents_contracts_ts ..> N_src_logic_agents_contracts_ts_AgentConstraintError : 声明
 class N_src_logic_agents_contracts_ts_external_Error["Error (外部契约)"] {
@@ -141,6 +147,7 @@ class N_src_logic_agents_exchange_ts["exchange.ts"] {
 }
 class N_src_logic_agents_exchange_ts_AgentCallExchange["AgentCallExchange"] {
   +yielded
+  +constructor()
   +waiting()
   +wait()
   +ask()

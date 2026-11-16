@@ -6,27 +6,31 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [agent-history-state.ts](agent-history-state.ts) | 校验并合并角色执行历史的会话/轮次分页，生成完整身份观察键。 |
-| [agent-history.css](agent-history.css) | 对应界面的布局与视觉样式。 |
-| [AgentSessionHistory.tsx](AgentSessionHistory.tsx) | 在静态 Agent 下浏览长期 Session 履历，按独立会话和运行展示公开消息、工具过程与计划证据。 |
-| [MainAgentEditor.tsx](MainAgentEditor.tsx) | 团队页面的主 Agent 引擎/模型配置入口。 |
-| [team-model.ts](team-model.ts) | 从工作区知识快照构建静态 Team、分组、Agent 与 Skill 视图模型。 |
-| [team-view.css](team-view.css) | 对应界面的布局与视觉样式。 |
-| [TeamTree.tsx](TeamTree.tsx) | 从静态团队模型显示团队、小组和自定义 Agent，配置文件只在详情查看。 |
-| [TeamView.tsx](TeamView.tsx) | 静态团队架构、知识编辑与人才市场入口；独立打开角色 Session 履历和项目岗位登记。 |
-| [useAgentHistory.ts](useAgentHistory.ts) | 为只读角色历史面板提供按需分页与单轮公开事件读取。 |
-| [useMainAgentSettings.ts](useMainAgentSettings.ts) | 对话栏与主 Agent 配置页共用的配置读取、保存和同步 Hook。 |
-| [workspace-member-state.ts](workspace-member-state.ts) | 项目岗位页面的严格回包核对与持久提交控制器；跨同工作区页面共享未决命令。 |
-| [workspace-members.css](workspace-members.css) | 对应界面的布局与视觉样式。 |
-| [WorkspaceMemberDetail.tsx](WorkspaceMemberDetail.tsx) | 只读展示项目岗位的稳定身份、采纳内容与本次核实的外部差异。 |
-| [WorkspaceMemberForm.tsx](WorkspaceMemberForm.tsx) | 项目岗位登记、元信息编辑、明确采纳及状态变更的表单。 |
-| [WorkspaceMembers.tsx](WorkspaceMembers.tsx) | 团队与业务架构共用的项目岗位登记面板，浏览采纳差异、显式变更，并反查负责的模块。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [AgentSessionHistory.tsx](AgentSessionHistory.tsx) | 组件模块 | 在静态 Agent 下浏览长期 Session 履历，按独立会话和运行展示公开消息、工具过程与计划证据。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [MainAgentEditor.tsx](MainAgentEditor.tsx) | 组件模块 | 团队页面的主 Agent 引擎/模型配置入口。 |
+| [TeamTree.tsx](TeamTree.tsx) | 组件模块 | 从静态团队模型显示团队、小组和自定义 Agent，配置文件只在详情查看。 |
+| [TeamView.tsx](TeamView.tsx) | 组件模块 | 静态团队架构、知识编辑与人才市场入口；独立打开角色 Session 履历和项目岗位登记。 |
+| [WorkspaceMemberDetail.tsx](WorkspaceMemberDetail.tsx) | 组件模块 | 只读展示项目岗位的稳定身份、采纳内容与本次核实的外部差异。 |
+| [WorkspaceMemberForm.tsx](WorkspaceMemberForm.tsx) | 组件模块 | 项目岗位登记、元信息编辑、明确采纳及状态变更的表单。 |
+| [WorkspaceMembers.tsx](WorkspaceMembers.tsx) | 组件模块 | 团队与业务架构共用的项目岗位登记面板，浏览采纳差异、显式变更，并反查负责的模块。 |
+| [agent-history-state.ts](agent-history-state.ts) | 源码模块 | 校验并合并角色执行历史的会话/轮次分页，生成完整身份观察键。 |
+| [agent-history.css](agent-history.css) | 样式 | 对应界面的布局与视觉样式。 |
+| [team-model.ts](team-model.ts) | 源码模块 | 从工作区知识快照构建静态 Team、分组、Agent 与 Skill 视图模型。 |
+| [team-view.css](team-view.css) | 样式 | 对应界面的布局与视觉样式。 |
+| [useAgentHistory.ts](useAgentHistory.ts) | 源码模块 | 为只读角色历史面板提供按需分页与单轮公开事件读取。 |
+| [useMainAgentSettings.ts](useMainAgentSettings.ts) | 源码模块 | 对话栏与主 Agent 配置页共用的配置读取、保存和同步 Hook。 |
+| [workspace-member-state.ts](workspace-member-state.ts) | 源码模块 | 项目岗位页面的严格回包核对与持久提交控制器；跨同工作区页面共享未决命令。 |
+| [workspace-members.css](workspace-members.css) | 样式 | 对应界面的布局与视觉样式。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### agent-history-state.ts
 
@@ -305,6 +309,7 @@ N_src_view_team_workspace_member_state_ts ..> N_src_view_team_workspace_member_s
 class N_src_view_team_workspace_member_state_ts_WorkspaceMemberCommands["WorkspaceMemberCommands"] {
   +workspaceId
   +storageKey
+  +constructor()
   +snapshot
   +blocked
   +canRelease
@@ -318,7 +323,6 @@ class N_src_view_team_workspace_member_state_ts_WorkspaceMemberCommands["Workspa
   -records
   -value
   -listeners
-  -pending
 }
 N_src_view_team_workspace_member_state_ts ..> N_src_view_team_workspace_member_state_ts_WorkspaceMemberCommands : 声明
 ```
@@ -331,6 +335,7 @@ class N_src_view_team_workspace_member_state_ts["workspace-member-state.ts"] {
   <<module>>
 }
 class N_src_view_team_workspace_member_state_ts_WorkspaceMemberCommands["WorkspaceMemberCommands"] {
+  -pending
   -unavailable
   -corrupt
   -emit()

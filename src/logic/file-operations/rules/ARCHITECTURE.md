@@ -6,20 +6,24 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [artifact-transition-evidence.ts](artifact-transition-evidence.ts) | 从原完整清单、实际操作阶段与成功工具回执重建文件删除/移动证明，供采集及验收共用。 |
-| [artifact-transition.ts](artifact-transition.ts) | 受控产物删除/移动的严格输入、原操作阶段和可公开证明协议，供运行、清单及界面共用。 |
-| [controlled-file-event.ts](controlled-file-event.ts) | 保存受控文件操作的私有来源、备份引用及不可变阶段事件。 |
-| [controlled-file-invariants.ts](controlled-file-invariants.ts) | 唯一派发 Store 在提交及重放时校验受控文件附录的身份、阶段、回执和容量。 |
-| [controlled-file-operation.ts](controlled-file-operation.ts) | 受控单文件写入、原操作报告和本机补偿的公共纯协议，供运行时与 Bridge 共用。 |
-| [controlled-file-rules.ts](controlled-file-rules.ts) | 统一受控写与补偿的稳定身份、指纹、阶段回执及公共摘要投影。 |
-| [isolated-execution-recovery.ts](isolated-execution-recovery.ts) | 隔离执行的可信调用授权与桌面核实、清理公开协议。 |
-| [scoped-execution.ts](scoped-execution.ts) | 冻结范围成员的受控读取与固定 Node 执行协议，供 Runtime 和平台共享。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [artifact-transition-evidence.ts](artifact-transition-evidence.ts) | 源码模块 | 从原完整清单、实际操作阶段与成功工具回执重建文件删除/移动证明，供采集及验收共用。 |
+| [artifact-transition.ts](artifact-transition.ts) | 源码模块 | 受控产物删除/移动的严格输入、原操作阶段和可公开证明协议，供运行、清单及界面共用。 |
+| [controlled-file-event.ts](controlled-file-event.ts) | 源码模块 | 保存受控文件操作的私有来源、备份引用及不可变阶段事件。 |
+| [controlled-file-invariants.ts](controlled-file-invariants.ts) | 源码模块 | 唯一派发 Store 在提交及重放时校验受控文件附录的身份、阶段、回执和容量。 |
+| [controlled-file-operation.ts](controlled-file-operation.ts) | 源码模块 | 受控单文件写入、原操作报告和本机补偿的公共纯协议，供运行时与 Bridge 共用。 |
+| [controlled-file-rules.ts](controlled-file-rules.ts) | 源码模块 | 统一受控写与补偿的稳定身份、指纹、阶段回执及公共摘要投影。 |
+| [isolated-execution-recovery.ts](isolated-execution-recovery.ts) | 源码模块 | 隔离执行的可信调用授权与桌面核实、清理公开协议。 |
+| [scoped-execution.ts](scoped-execution.ts) | 源码模块 | 冻结范围成员的受控读取与固定 Node 执行协议，供 Runtime 和平台共享。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### artifact-transition-evidence.ts
 

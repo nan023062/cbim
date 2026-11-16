@@ -6,18 +6,22 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [async.ts](async.ts) | 提供前端异步协作的实例级代次标记，供控制器判断迟到结果是否仍可使用。 |
-| [events.ts](events.ts) | 前端事件订阅工具，提供实例级、无参数的同步通知集合。 |
-| [graphs.ts](graphs.ts) | 前端有向图的纯拓扑算法，不引用任务、画布或通信契约。 |
-| [index.ts](index.ts) | 前端域通用工具函数与数据结构的公开入口，提供按类别组织的纯算法与实例数据结构。 |
-| [json.ts](json.ts) | 前端域的 JSON 比较工具，供页面控制器核对请求、预览和回执中的值。 |
-| [storage.ts](storage.ts) | 前端本地 JSON 记录的有界同步读写机制，通过注入端口使用存储。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [async.ts](async.ts) | 源码模块 | 提供前端异步协作的实例级代次标记，供控制器判断迟到结果是否仍可使用。 |
+| [events.ts](events.ts) | 源码模块 | 前端事件订阅工具，提供实例级、无参数的同步通知集合。 |
+| [graphs.ts](graphs.ts) | 源码模块 | 前端有向图的纯拓扑算法，不引用任务、画布或通信契约。 |
+| [index.ts](index.ts) | 源码模块 | 前端域通用工具函数与数据结构的公开入口，提供按类别组织的纯算法与实例数据结构。 |
+| [json.ts](json.ts) | 源码模块 | 前端域的 JSON 比较工具，供页面控制器核对请求、预览和回执中的值。 |
+| [storage.ts](storage.ts) | 源码模块 | 前端本地 JSON 记录的有界同步读写机制，通过注入端口使用存储。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### async.ts
 
@@ -71,6 +75,7 @@ class N_src_view_foundations_utility_graphs_ts["graphs.ts"] {
 }
 class N_src_view_foundations_utility_graphs_ts_GraphTopologyError["GraphTopologyError"] {
   +code
+  +constructor()
 }
 N_src_view_foundations_utility_graphs_ts ..> N_src_view_foundations_utility_graphs_ts_GraphTopologyError : 声明
 class N_src_view_foundations_utility_graphs_ts_external_Error["Error (外部契约)"] {
@@ -116,6 +121,7 @@ class N_src_view_foundations_utility_storage_ts_TextStorage["TextStorage"] {
 }
 N_src_view_foundations_utility_storage_ts ..> N_src_view_foundations_utility_storage_ts_TextStorage : 声明
 class N_src_view_foundations_utility_storage_ts_JsonRecordStorage["JsonRecordStorage"] {
+  +constructor()
   +read()
   +write()
   -storage

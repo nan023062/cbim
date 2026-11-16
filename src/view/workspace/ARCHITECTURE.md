@@ -6,22 +6,26 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [inline-module-ownership.ts](inline-module-ownership.ts) | 模块卡片一级 Agent 选择的操作编排，复用岗位与责任的严格预览、提交和持久原命令。 |
-| [InlineModuleOwner.tsx](InlineModuleOwner.tsx) | 业务架构共享一次岗位/责任读取，每张模块卡片只呈现一级选择器。 |
-| [module-ownership-state.ts](module-ownership-state.ts) | 模块负责人面板的回包核对和持久原命令状态，跨业务架构与项目岗位视图共享。 |
-| [module-ownership.css](module-ownership.css) | 对应界面的布局与视觉样式。 |
-| [ModuleOwnershipDetail.tsx](ModuleOwnershipDetail.tsx) | 显示模块当前负责人、来源观察与有界审计，供责任面板单独审阅。 |
-| [ModuleOwnershipPanel.tsx](ModuleOwnershipPanel.tsx) | 业务架构和项目岗位共用的模块责任控制面，提供岗位选择、登记入口、预览、明确提交和原命令核实。 |
-| [ModuleSourceTree.tsx](ModuleSourceTree.tsx) | 业务模块语义树及其绑定源码目录的按需浏览。 |
-| [SourceFilePreview.tsx](SourceFilePreview.tsx) | 模块源码的只读文本预览，服务端决定范围与字节上限。 |
-| [workspace-view.css](workspace-view.css) | 对应界面的布局与视觉样式。 |
-| [WorkspaceView.tsx](WorkspaceView.tsx) | 业务模块与绑定源码的目录树、只读源码预览及配置治理入口。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [InlineModuleOwner.tsx](InlineModuleOwner.tsx) | 组件模块 | 业务架构共享一次岗位/责任读取，每张模块卡片只呈现一级选择器。 |
+| [ModuleOwnershipDetail.tsx](ModuleOwnershipDetail.tsx) | 组件模块 | 显示模块当前负责人、来源观察与有界审计，供责任面板单独审阅。 |
+| [ModuleOwnershipPanel.tsx](ModuleOwnershipPanel.tsx) | 组件模块 | 业务架构和项目岗位共用的模块责任控制面，提供岗位选择、登记入口、预览、明确提交和原命令核实。 |
+| [ModuleSourceTree.tsx](ModuleSourceTree.tsx) | 组件模块 | 业务模块语义树及其绑定源码目录的按需浏览。 |
+| [SourceFilePreview.tsx](SourceFilePreview.tsx) | 组件模块 | 模块源码的只读文本预览，服务端决定范围与字节上限。 |
+| [WorkspaceView.tsx](WorkspaceView.tsx) | 组件模块 | 业务模块与绑定源码的目录树、只读源码预览及配置治理入口。 |
+| [inline-module-ownership.ts](inline-module-ownership.ts) | 源码模块 | 模块卡片一级 Agent 选择的操作编排，复用岗位与责任的严格预览、提交和持久原命令。 |
+| [module-ownership-state.ts](module-ownership-state.ts) | 源码模块 | 模块负责人面板的回包核对和持久原命令状态，跨业务架构与项目岗位视图共享。 |
+| [module-ownership.css](module-ownership.css) | 样式 | 对应界面的布局与视觉样式。 |
+| [workspace-view.css](workspace-view.css) | 样式 | 对应界面的布局与视觉样式。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### inline-module-ownership.ts
 
@@ -157,6 +161,7 @@ N_src_view_workspace_module_ownership_state_ts ..> N_src_view_workspace_module_o
 class N_src_view_workspace_module_ownership_state_ts_ModuleOwnershipCommands["ModuleOwnershipCommands"] {
   +workspaceId
   +storageKey
+  +constructor()
   +snapshot
   +blocked
   +canRelease
@@ -170,7 +175,6 @@ class N_src_view_workspace_module_ownership_state_ts_ModuleOwnershipCommands["Mo
   -records
   -value
   -listeners
-  -pending
 }
 N_src_view_workspace_module_ownership_state_ts ..> N_src_view_workspace_module_ownership_state_ts_ModuleOwnershipCommands : 声明
 ```
@@ -183,6 +187,7 @@ class N_src_view_workspace_module_ownership_state_ts["module-ownership-state.ts"
   <<module>>
 }
 class N_src_view_workspace_module_ownership_state_ts_ModuleOwnershipCommands["ModuleOwnershipCommands"] {
+  -pending
   -unavailable
   -corrupt
   -emit()

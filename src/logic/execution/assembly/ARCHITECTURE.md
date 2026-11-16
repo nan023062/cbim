@@ -6,17 +6,21 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [agent-call-scheduler.ts](agent-call-scheduler.ts) | execution 内的递归调用协调，拥有父子关联、深度限制、业务结果核验、用户意见的两阶段保存、反馈与后代取消。 |
-| [engine-adapters.ts](engine-adapters.ts) | 当前源码/旧包的官方适配器装配表，所有实现均通过同一版本协议取得工厂。 |
-| [engine-package-loader.ts](engine-package-loader.ts) | 从冷宿主已验证的不可变包路径加载统一引擎工厂。 |
-| [loop-engine.ts](loop-engine.ts) | 将工作区知识、权限和工具注入 LoopRuntime；业务 Agent 同时取得冻结 Workflow 指引及产物验证能力，主 Agent 的人工评审沿原工具门禁。 |
-| [packaged-engine-adapters.ts](packaged-engine-adapters.ts) | 正式 R 构建替换源码兼容表，禁止回退到内嵌具体引擎。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [agent-call-scheduler.ts](agent-call-scheduler.ts) | 源码模块 | execution 内的递归调用协调，拥有父子关联、深度限制、业务结果核验、用户意见的两阶段保存、反馈与后代取消。 |
+| [engine-adapters.ts](engine-adapters.ts) | 源码模块 | 当前源码/旧包的官方适配器装配表，所有实现均通过同一版本协议取得工厂。 |
+| [engine-package-loader.ts](engine-package-loader.ts) | 源码模块 | 从冷宿主已验证的不可变包路径加载统一引擎工厂。 |
+| [loop-engine.ts](loop-engine.ts) | 源码模块 | 将工作区知识、权限和工具注入 LoopRuntime；业务 Agent 同时取得冻结 Workflow 指引及产物验证能力，主 Agent 的人工评审沿原工具门禁。 |
+| [packaged-engine-adapters.ts](packaged-engine-adapters.ts) | 源码模块 | 正式 R 构建替换源码兼容表，禁止回退到内嵌具体引擎。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### agent-call-scheduler.ts
 
@@ -36,6 +40,7 @@ class N_src_logic_execution_assembly_agent_call_scheduler_ts_AgentSchedulerPorts
 }
 N_src_logic_execution_assembly_agent_call_scheduler_ts ..> N_src_logic_execution_assembly_agent_call_scheduler_ts_AgentSchedulerPorts : 声明
 class N_src_logic_execution_assembly_agent_call_scheduler_ts_AgentCallScheduler["AgentCallScheduler"] {
+  +constructor()
   +bind()
   +close()
   -limits
@@ -51,7 +56,6 @@ class N_src_logic_execution_assembly_agent_call_scheduler_ts_AgentCallScheduler[
   -humanBlocked
   -closed
   -execute()
-  -review()
 }
 N_src_logic_execution_assembly_agent_call_scheduler_ts ..> N_src_logic_execution_assembly_agent_call_scheduler_ts_AgentCallScheduler : 声明
 ```
@@ -64,6 +68,7 @@ class N_src_logic_execution_assembly_agent_call_scheduler_ts["agent-call-schedul
   <<module>>
 }
 class N_src_logic_execution_assembly_agent_call_scheduler_ts_AgentCallScheduler["AgentCallScheduler"] {
+  -review()
   -capacity()
   -message()
   -drain()

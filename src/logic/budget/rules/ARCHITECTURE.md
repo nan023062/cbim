@@ -6,21 +6,25 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [model-request-budget-invariants.ts](model-request-budget-invariants.ts) | 在唯一工作区 Store 提交与重放时核实请求身份、预算预留和不可改写的阶段链。 |
-| [model-request-budget-rules.ts](model-request-budget-rules.ts) | 从不可变请求阶段计算预留、真实用量和后续请求的准入，供服务及 Store 独立核对。 |
-| [model-request-budget-storage.ts](model-request-budget-storage.ts) | 模型请求账本独有的读视图、提交单元与准入端口。 |
-| [model-request-budget.ts](model-request-budget.ts) | 定义逐模型请求预留、发送意图和结算的不可变事实，以及只读预算摘要。 |
-| [model-request-configuration.ts](model-request-configuration.ts) | 从已冻结的执行快照派生单角色的请求计量参数，供预算服务与审计共同核对。 |
-| [request-budget.ts](request-budget.ts) | 定义各引擎共用传输与工作区请求账本之间的可信窄端口。 |
-| [scope-budget-invariants.ts](scope-budget-invariants.ts) | 在派发事务提交与重放时保护冻结额度、真实运行准入证明和不可改写的预算拒绝事实。 |
-| [scope-budget.ts](scope-budget.ts) | 定义周期冻结额度、可信计量观察和启动证明；显式 request 模式另由请求账本控制每次发送。 |
-| [scope-usage.ts](scope-usage.ts) | 定义指定调度周期的只读运行计量报告，供调度服务、Bridge 和任务视图共用。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [model-request-budget-invariants.ts](model-request-budget-invariants.ts) | 源码模块 | 在唯一工作区 Store 提交与重放时核实请求身份、预算预留和不可改写的阶段链。 |
+| [model-request-budget-rules.ts](model-request-budget-rules.ts) | 源码模块 | 从不可变请求阶段计算预留、真实用量和后续请求的准入，供服务及 Store 独立核对。 |
+| [model-request-budget-storage.ts](model-request-budget-storage.ts) | 源码模块 | 模型请求账本独有的读视图、提交单元与准入端口。 |
+| [model-request-budget.ts](model-request-budget.ts) | 源码模块 | 定义逐模型请求预留、发送意图和结算的不可变事实，以及只读预算摘要。 |
+| [model-request-configuration.ts](model-request-configuration.ts) | 源码模块 | 从已冻结的执行快照派生单角色的请求计量参数，供预算服务与审计共同核对。 |
+| [request-budget.ts](request-budget.ts) | 源码模块 | 定义各引擎共用传输与工作区请求账本之间的可信窄端口。 |
+| [scope-budget-invariants.ts](scope-budget-invariants.ts) | 源码模块 | 在派发事务提交与重放时保护冻结额度、真实运行准入证明和不可改写的预算拒绝事实。 |
+| [scope-budget.ts](scope-budget.ts) | 源码模块 | 定义周期冻结额度、可信计量观察和启动证明；显式 request 模式另由请求账本控制每次发送。 |
+| [scope-usage.ts](scope-usage.ts) | 源码模块 | 定义指定调度周期的只读运行计量报告，供调度服务、Bridge 和任务视图共用。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### model-request-budget-invariants.ts
 

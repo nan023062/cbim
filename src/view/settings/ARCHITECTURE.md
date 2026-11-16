@@ -6,34 +6,38 @@
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
-## 代码清单
+## 文件清单
 
-| 文件 | 当前职责 |
-| --- | --- |
-| [AboutSettings.tsx](AboutSettings.tsx) | 设置中心的产品版本和更新入口，读取 App 已有更新控制器。 |
-| [AccountSettings.tsx](AccountSettings.tsx) | 展示本地使用模式与已有 GitHub 反馈连接，区分产品账号与外部服务账号。 |
-| [AdmissionSettings.tsx](AdmissionSettings.tsx) | 配置应用级 Agent 并发上限，展示真实准入占用与等待数量。 |
-| [appearance-state.ts](appearance-state.ts) | View 层的本机外观偏好、旧主题迁移与存储边界，不含账号或模型配置。 |
-| [appearance.css](appearance.css) | 对应界面的布局与视觉样式。 |
-| [AppearanceSettings.tsx](AppearanceSettings.tsx) | 设置中心的主题、阅读字号与动效偏好，消费外壳唯一的外观控制器。 |
-| [budget-settings-state.ts](budget-settings-state.ts) | 管理额度及显式逐请求模式草稿、版本化保存，隔离页面卸载后的异步响应；缺省仍是运行间软限额。 |
-| [budget-settings.css](budget-settings.css) | 对应界面的布局与视觉样式。 |
-| [BudgetSettings.tsx](BudgetSettings.tsx) | 设置中心的用量与预算子页，展示用户显式配置的新目标 Token/费用软限额，与全局并发独立保存。 |
-| [EmbeddingModels.tsx](EmbeddingModels.tsx) | 供应商草稿中的向量接口及模型编辑，独立输入容量、向量维度和输入计价。 |
-| [EngineOverview.tsx](EngineOverview.tsx) | 设置页的已安装引擎总览，按官方清单展示当前版本、启停和实时运行占用。 |
-| [EngineSettings.tsx](EngineSettings.tsx) | 默认总览全部已安装引擎，选择具体引擎后集中展示能力、模型、版本、实时状态及包管理操作。 |
-| [GitHubFeedbackSettings.tsx](GitHubFeedbackSettings.tsx) | 设置页的 GitHub 反馈连接入口，展示设备授权码及固定目标仓库。 |
-| [models.css](models.css) | 供应商列表和模型表单布局。 |
-| [ModelSettings.tsx](ModelSettings.tsx) | 设置页的自定义供应商、连接表单与模型目录编辑器。 |
-| [ProviderConnections.tsx](ProviderConnections.tsx) | 供应商表单的接口预设、自动识别和高级兼容地址编辑，以及已保存配置的按操作/接口连接测试。 |
-| [ResourceSettings.tsx](ResourceSettings.tsx) | 设置中心的本地资源目录与仓库共享，验证及保存由原资源服务负责。 |
-| [settings-sections.ts](settings-sections.ts) | 设置中心的静态导航、分组与搜索词；仅描述已有设置入口。 |
-| [settings.css](settings.css) | 设置内容表单与窄屏导航布局；侧栏视觉复用 components/sidebar.css。设计原因：只保留设置内容的独立排版，桌面导航宽度继承首页同一布局状态，窄屏仍保证表单可读。 */ |
-| [SettingsView.tsx](SettingsView.tsx) | 设置中心的分类导航、搜索与独立子页面；业务表单仍通过原 IPC 保存。 |
-| [useAppearance.ts](useAppearance.ts) | 由 App 唯一持有的外观控制器，将本机偏好应用到窗口，并响应系统配色变化。 |
-| [WebSettings.tsx](WebSettings.tsx) | 桌面网页配置，保存浏览器 robots 策略、Brave 开关与密钥。 |
+| 文件 | 形式 | 当前职责 |
+| --- | --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
+| [AboutSettings.tsx](AboutSettings.tsx) | 组件模块 | 设置中心的产品版本和更新入口，读取 App 已有更新控制器。 |
+| [AccountSettings.tsx](AccountSettings.tsx) | 组件模块 | 展示本地使用模式与已有 GitHub 反馈连接，区分产品账号与外部服务账号。 |
+| [AdmissionSettings.tsx](AdmissionSettings.tsx) | 组件模块 | 配置应用级 Agent 并发上限，展示真实准入占用与等待数量。 |
+| [AppearanceSettings.tsx](AppearanceSettings.tsx) | 组件模块 | 设置中心的主题、阅读字号与动效偏好，消费外壳唯一的外观控制器。 |
+| [BudgetSettings.tsx](BudgetSettings.tsx) | 组件模块 | 设置中心的用量与预算子页，展示用户显式配置的新目标 Token/费用软限额，与全局并发独立保存。 |
+| [CONTRACT.md](CONTRACT.md) | 说明文档 | 人工维护的职责、接口契约、状态所有权与扩展边界；在本文末尾同步附加。 |
+| [EmbeddingModels.tsx](EmbeddingModels.tsx) | 组件模块 | 供应商草稿中的向量接口及模型编辑，独立输入容量、向量维度和输入计价。 |
+| [EngineOverview.tsx](EngineOverview.tsx) | 组件模块 | 设置页的已安装引擎总览，按官方清单展示当前版本、启停和实时运行占用。 |
+| [EngineSettings.tsx](EngineSettings.tsx) | 组件模块 | 默认总览全部已安装引擎，选择具体引擎后集中展示能力、模型、版本、实时状态及包管理操作。 |
+| [GitHubFeedbackSettings.tsx](GitHubFeedbackSettings.tsx) | 组件模块 | 设置页的 GitHub 反馈连接入口，展示设备授权码及固定目标仓库。 |
+| [ModelSettings.tsx](ModelSettings.tsx) | 组件模块 | 设置页的自定义供应商、连接表单与模型目录编辑器。 |
+| [ProviderConnections.tsx](ProviderConnections.tsx) | 组件模块 | 供应商表单的接口预设、自动识别和高级兼容地址编辑，以及已保存配置的按操作/接口连接测试。 |
+| [ResourceSettings.tsx](ResourceSettings.tsx) | 组件模块 | 设置中心的本地资源目录与仓库共享，验证及保存由原资源服务负责。 |
+| [SettingsView.tsx](SettingsView.tsx) | 组件模块 | 设置中心的分类导航、搜索与独立子页面；业务表单仍通过原 IPC 保存。 |
+| [WebSettings.tsx](WebSettings.tsx) | 组件模块 | 桌面网页配置，保存浏览器 robots 策略、Brave 开关与密钥。 |
+| [appearance-state.ts](appearance-state.ts) | 源码模块 | View 层的本机外观偏好、旧主题迁移与存储边界，不含账号或模型配置。 |
+| [appearance.css](appearance.css) | 样式 | 对应界面的布局与视觉样式。 |
+| [budget-settings-state.ts](budget-settings-state.ts) | 源码模块 | 管理额度及显式逐请求模式草稿、版本化保存，隔离页面卸载后的异步响应；缺省仍是运行间软限额。 |
+| [budget-settings.css](budget-settings.css) | 样式 | 对应界面的布局与视觉样式。 |
+| [models.css](models.css) | 样式 | 供应商列表和模型表单布局。 |
+| [settings-sections.ts](settings-sections.ts) | 源码模块 | 设置中心的静态导航、分组与搜索词；仅描述已有设置入口。 |
+| [settings.css](settings.css) | 样式 | 设置内容表单与窄屏导航布局；侧栏视觉复用 components/sidebar.css。设计原因：只保留设置内容的独立排版，桌面导航宽度继承首页同一布局状态，窄屏仍保证表单可读。 */ |
+| [useAppearance.ts](useAppearance.ts) | 源码模块 | 由 App 唯一持有的外观控制器，将本机偏好应用到窗口，并响应系统配色变化。 |
 
 ## 架构类图
+
+成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；构造函数单独列出。文档和资源仅在文件清单中导航，不作为代码节点。
 
 ### AboutSettings.tsx
 
@@ -169,6 +173,7 @@ class N_src_view_settings_budget_settings_state_ts_Call["Call"] {
 }
 N_src_view_settings_budget_settings_state_ts ..> N_src_view_settings_budget_settings_state_ts_Call : 声明
 class N_src_view_settings_budget_settings_state_ts_BudgetSettingsController["BudgetSettingsController"] {
+  +constructor()
   +snapshot
   +subscribe
   +edit()

@@ -61,13 +61,16 @@ export async function effectPersistedRunBytes(user:string,workspaceId:string,roo
   const main=await Promise.all(mainIds.map(runId=>storage.read(path.join(user,workspaceId,'loop-engine','tasks',rootSessionId,runId))));
   const runs:Array<{kind:'main'|'member';summary:RunSummary}>=main.map(summary=>({kind:'main',summary}));
   for(const run of records.runs.filter(run=>run.binding.rootSessionId===rootSessionId))runs.push({kind:'member',summary:await storage.read(path.join(user,workspaceId,'dispatch','runs','tasks',run.binding.taskId,run.binding.runId))});
+  const journal=await fs.readFile(path.join(user,workspaceId,'dispatch/dispatch.jsonl'),'utf8'),business=new Map<string,{binding:{rootSessionId:string;taskId:string;runId:string}}>();
+  for(const line of journal.trim().split('\n'))for(const run of JSON.parse(line).body.mutation.agentBusinessRuns??[])business.set(run.binding.runId,run);
+  for(const run of business.values())if(run.binding.rootSessionId===rootSessionId)runs.push({kind:'member',summary:await storage.read(path.join(user,workspaceId,'loop-engine/tasks',run.binding.taskId,run.binding.runId))});
   assert.ok(main.length>0);
   return Promise.all(runs.map(async({kind,summary})=>{
     assert.equal(summary.task.workspaceId,workspaceId);assert.equal(summary.logIntegrity?.partialTail,false);const nativePath=summary.sessionFile;assert.ok(nativePath?.trim());assert.ok(nativePath);
     const bounds=summary.events.filter(event=>event.type==='session.bound');assert.ok(bounds.length>0);
     for(const event of bounds){assert.equal(event.data.sessionFile,summary.sessionFile);assert.equal(typeof event.data.sessionId,'string');assert.ok(String(event.data.sessionId).trim())}
     if(kind==='main')assert.equal(summary.conversationBinding?.rootSessionId,rootSessionId);else assert.equal(summary.memberBinding?.rootSessionId,rootSessionId);
-    const canonicalPath=path.join(user,workspaceId,...(kind==='main'?['loop-engine','tasks']:['dispatch','runs','tasks']),summary.task.taskId,summary.runId,'events.jsonl');
+    const canonicalPath=path.join(user,workspaceId,...(kind==='main'||summary.events[0]?.data.executionModel==='agent-tools-v1'?['loop-engine','tasks']:['dispatch','runs','tasks']),summary.task.taskId,summary.runId,'events.jsonl');
     return {kind,taskId:summary.task.taskId,runId:summary.runId,nativeSessionId:String(bounds.at(-1)!.data.sessionId),canonicalPath,nativePath,canonical:await fs.readFile(canonicalPath),native:await fs.readFile(nativePath)};
   }));
 }

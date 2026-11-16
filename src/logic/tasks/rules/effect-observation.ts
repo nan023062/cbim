@@ -57,6 +57,8 @@ export const effectObservationReportSchema=z.object({
   version:z.literal(1),identity:effectObservationInputSchema,checkedAt:time,basis:digest,dispositionRevision:seq,consistency:z.enum(['stable','changed_during_read']),
   source:z.object({state:z.enum(['verified','unverifiable']),scopeId:id.optional(),scopeStatus:z.enum(['active','waiting','closed']).optional(),scopeOutcome:z.enum(['completed','failed','cancelled','interrupted']).optional(),
     execution:z.enum(['in_flight','settled','unknown']),logState,logPrefixHash:digest.optional(),throughSeq:seq.optional(),unknownToolCount:seq,
+    // 仅可信登记器来源可以声明递归协议，不伪造旧派工任务版本。
+    executionModel:z.literal('agent-tools-v1').optional(),
     taskRevision:positive.optional(),planRevision:positive.optional(),goalRevision:positive.optional(),inputRevision:positive.optional(),goalPlanRevision:positive.optional(),
   }).strict(),calls:z.array(effectCallObservationSchema).max(effectObservationLimits.calls),limitations:z.array(z.string().min(1).max(512)).max(effectObservationLimits.limitations),
   readOnly:z.literal(true),acceptance:z.literal('not_evaluated'),
@@ -71,7 +73,8 @@ export const effectObservationReportSchema=z.object({
   if(v.identity.subject.kind!=='main_run'&&v.calls.some(call=>call.knowledge))issue('知识提交观察只接受可信主运行');
   if(v.calls.some(call=>call.persistent&&(v.identity.subject.kind!=='main_run'||call.persistent.identity.workspaceId!==v.identity.workspaceId||call.persistent.identity.rootSessionId!==v.identity.rootSessionId||call.persistent.identity.runId!==v.identity.subject.runId)))issue('原保存记录不属于选定的主运行');
   for(const call of v.calls){if(!call.controlled)continue;if(v.identity.subject.kind!=='member_run'){issue('受控文件观察仅支持原成员调用');continue}if(call.controlled.state==='recorded'){const {operation,compensationRevision,compensations}=call.controlled,b=operation.binding;if(b.workspaceId!==v.identity.workspaceId||b.rootSessionId!==v.identity.rootSessionId||b.taskId!==v.identity.subject.taskId||b.runId!==v.identity.subject.runId||operation.toolCallId!==call.toolCallId||operation.scopeId!==s.scopeId||compensationRevision!==compensations.length||new Set(compensations.map(x=>x.compensationId)).size!==compensations.length)issue('受控阶段或补偿不属于原成员及周期')}}
-  if(s.state==='verified'&&v.identity.subject.kind==='member_run'&&(!s.taskRevision||!s.planRevision))issue('成员来源缺少任务版本');
+  if(s.executionModel&&(v.identity.subject.kind!=='member_run'||s.taskRevision!==undefined||s.planRevision!==undefined))issue('递归来源不能携带旧任务版本或伪装主运行');
+  if(s.state==='verified'&&v.identity.subject.kind==='member_run'&&!s.executionModel&&(!s.taskRevision||!s.planRevision))issue('成员来源缺少任务版本');
   if(v.calls.some(x=>x.scope&&x.scope.workspaceId!==v.identity.workspaceId))issue('调用范围属于其它工作区');
   if(s.state!=='verified'&&v.calls.some(x=>x.coverage!=='unsupported'))issue('不可核实来源不能给出结构化影响证明');
   if(s.throughSeq!==undefined&&v.calls.some(x=>[x.proposedSeq,x.allowedSeq,x.finishedSeq].some(n=>n!==undefined&&n>s.throughSeq!)))issue('调用超出核实日志前缀');

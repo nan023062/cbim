@@ -39,7 +39,8 @@ export async function controlledFileProvider(mode:ControlledFileMode='complete',
     if(auxiliary){assert.equal(turn,0);reply('独立主会话没有读取、恢复或重放原文件操作。')}
     else if(isMain&&recursive){
       if(turn===0)tool('controlled-call','cbim_agent_call',{agentId:ownerSelection!.memberId,message:d.memberGoal,business:{moduleIds:[moduleId],acceptance:d.acceptance}});
-      else if(turn===1){state.call=mainToolValue(body,'controlled-call');if(mode==='complete'){assert.equal(state.call.status,'completed');assert.equal(state.call.verification?.state,'verified')}else assert.ok(state.call.error||state.call.status!=='completed');reply('原调用已返回，仅报告实际结果，不重新执行。')}
+      else if(turn===1&&adversarial){const waiting=mainToolValue(body,'controlled-call');assert.equal(waiting.status,'waiting');tool('controlled-reply','cbim_agent_reply',{callId:'controlled-call',questionId:waiting.questionId,result:{answers:[{question:waiting.questions.questions[0].question,answer:'只保留事实，停止执行'}]}})}
+      else if(turn===(adversarial?2:1)){state.call=mainToolValue(body,adversarial?'controlled-reply':'controlled-call');if(mode==='complete'){assert.equal(state.call.status,'completed');assert.equal(state.call.verification?.state,'verified')}else assert.ok(state.call.error||state.call.status!=='completed');reply('原调用已返回，仅报告实际结果，不重新执行。')}
       else throw Error('Unexpected recursive controlled replay '+turn);
     }
     else if(isMain){
@@ -88,6 +89,8 @@ export async function controlledFileProvider(mode:ControlledFileMode='complete',
         else if(turn===8){denied('controlled-bypass-write');tool('controlled-bypass-edit','edit',{path:d.file,edits:[{oldText:'"state":"new"',newText:'"state":"FORBIDDEN_EDIT"'}]})}
         else if(turn===9){denied('controlled-bypass-edit');tool('controlled-bypass-bash','bash',{command:'printf FORBIDDEN_COMMAND > '+d.file})}
         else if(turn===10){denied('controlled-bypass-bash');tool('controlled-bypass-delivery','cbim_delivery_prepare',{expectedVersion:state.progress.plan.version,summary:'试图绕过原受控写待核实屏障',limitations:[]})}
+        else if(turn===11&&recursive){denied('controlled-bypass-delivery');tool('controlled-unsafe-help','cbim_ask_user_question',{questions:[{question:'原写没有可靠回执，如何处理？',options:[{label:'只保留事实，停止执行'},{label:'说明需要核实的证据'}]}]})}
+        else if(turn===12&&recursive){assert.ok(mainToolValue(body,'controlled-unsafe-help'));reply('仅收到直接调用方答复；原写仍待核实，不声明交付成功。')}
         else if(turn===11){denied('controlled-bypass-delivery');tool('controlled-unsafe-help','cbim_task_help',{kind:'capability',reason:'原写没有可靠工具成功回执，需要独立核实',question:'请保留原任务和文件事实，安排只读核实',attemptedToolCallIds:['controlled-write']})}
         else if(turn===12){assert.equal(mainToolValue(body,'controlled-unsafe-help').state,'staged');reply('已记录求助，但原写待核实，不能将本轮当作安全交接。')}
         else throw Error('Unexpected adversarial member replay '+turn);

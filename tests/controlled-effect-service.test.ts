@@ -9,10 +9,11 @@ import {EffectObservationService} from '../src/logic/evidence/runtime/effect-obs
 import {CommandVerificationService} from '../src/logic/evidence/runtime/command-verification-service';
 import {memberPublicTask} from '../src/logic/runtime/monitoring/member-events';
 import {effectObservationReportSchema} from '../src/logic/tasks/rules/effect-observation';
-import {effectObservationBasis} from '../src/logic/tasks/rules/effect-observation-rules';
+import {projectEffectDispositionMutation} from '../src/logic/tasks/rules/effect-observation-invariants';
+import {effectDispositionReceipt,effectDispositionCommand,effectObservationBasis} from '../src/logic/tasks/rules/effect-observation-rules';
 import {effectReport} from './effect-core-fixture';
 
-function fixture(phase:ControlledFilePhase='applied'){
+function fixture(phase:ControlledFilePhase='applied',recursive=false){
  const state=closedState(baseState()),run=state.runs![0],b=run.binding,scope=state.scopes![0],intent=writeIntent(state),owner={entry:{id:b.workspaceId,path:'/workspace'},assert:vi.fn()},task=memberPublicTask(state.graphs[0].tasks[0],owner.entry.path);
  const original={path:'output.json',expectedBefore:{byteLength:intent.before.byteLength,sha256:intent.before.sha256},content:'new\r\n'};
  const query={workspaceId:b.workspaceId,rootSessionId:b.rootSessionId,taskId:b.taskId,runId:b.runId,toolCallId:intent.origin.toolCallId},selection={workspaceId:b.workspaceId,rootSessionId:b.rootSessionId,subject:{kind:'member_run' as const,taskId:b.taskId,runId:b.runId,toolCallIds:[query.toolCallId]}};
@@ -21,6 +22,12 @@ function fixture(phase:ControlledFilePhase='applied'){
  const op=summarizeControlledFileOperation(controlledFileOperation({controlledFileChanges:phases(intent)},intent.operationId)!);op.phase=phase;op.revision=phase==='prepared'?1:phase==='executing'?2:3;
  const report:ControlledFileReport={version:1,identity:query,checkedAt:new Date().toISOString(),ledger:{state:'recorded',operation:op,originalExecution:'settled',compensationRevision:0,compensations:[]},readOnly:true,acceptance:'not_evaluated'};
  const observeControlled=vi.fn(async(_input:typeof query,_signal?:AbortSignal)=>({...structuredClone(report),checkedAt:new Date().toISOString()})),observeFiles=vi.fn(),acquireRead=vi.fn(),transact=vi.fn(),store={read:async()=>structuredClone(state),commandReceipt:vi.fn(),transact} as unknown as DispatchStore;
+ if(recursive){
+  const parent={version:1 as const,workspaceId:b.workspaceId,callerTaskId:b.rootSessionId,callerRunId:'root-run',toolCallId:'parent-call',taskId:b.taskId,runId:b.runId};
+  state.agentBusinessRuns=[{protocol:'agent-tools-v1',binding:b,scopeId:scope.scopeId,parent,lineage:[parent],prepared:run.prepared,permission:run.permission,status:'closed',createdAt:run.createdAt,closedAt:scope.closedAt}];
+  state.runs=[];state.graphs[0].tasks=[];
+  Object.assign(summary.events[0].data,{executionModel:'agent-tools-v1',agentCall:parent,nativeSessionId:run.session.nativeSessionId});
+ }
  const inspectMember=vi.fn(async()=>structuredClone(summary)),service=new EffectObservationService(owner,store,{} as CommandVerificationService,{inspectMember,normalizePath:v=>v,observeFiles,acquireRead,observeControlled});
  return {state,summary,query,selection,report,service,observeControlled,observeFiles,acquireRead,transact,inspectMember};
 }
@@ -48,4 +55,36 @@ it('原缺记录不当作未执行，新增补偿使旧处置依据失效；停�
  const stopped=new AbortController();stopped.abort(Error('explicit stop'));const count=f.observeControlled.mock.calls.length;await expect(f.service.observe(f.selection,stopped.signal)).rejects.toThrow('explicit stop');expect(f.observeControlled).toHaveBeenCalledTimes(count);
  const old=effectReport();expect(effectObservationReportSchema.parse(old)).toEqual(old);expect(effectObservationBasis(old)).toBe(old.basis);expect(old.calls[0]).not.toHaveProperty('controlled');expect(controlledFileReportSchema.parse(f.report)).toEqual(f.report);
  const wrong=structuredClone(next);wrong.identity.subject={kind:'main_run',runId:f.query.runId,toolCallIds:[f.query.toolCallId]};expect(effectObservationReportSchema.safeParse(wrong).success).toBe(false);
+});
+
+it('observes a registered recursive call without old dispatch tasks or sessions and preserves old schemas',async()=>{
+ const f=fixture('applied',true);f.state.members=[];f.state.sessions=[];
+ const result=await f.service.observe(f.selection);expect(result.source).toMatchObject({state:'verified',execution:'settled',executionModel:'agent-tools-v1'});expect(result.source.taskRevision).toBeUndefined();expect(result.calls[0]).toMatchObject({coverage:'controlled_file',outcome:'unknown'});expect(f.transact).not.toHaveBeenCalled();
+ const forged=structuredClone(result);forged.source.taskRevision=1;expect(effectObservationReportSchema.safeParse(forged).success).toBe(false);
+});
+it.each(['registry','parent','root','owner','tail'] as const)('rejects a changed recursive source without reading controlled effects (%s)',async kind=>{
+ const f=fixture('applied',true);
+ if(kind==='registry')f.state.agentBusinessRuns=[];
+ if(kind==='parent')f.summary.events[0].data.agentCall={...f.state.agentBusinessRuns![0].parent,callerRunId:'other'};
+ if(kind==='root')f.summary.task.root='/foreign';
+ if(kind==='owner')f.summary.task.ownerBinding=undefined;
+ if(kind==='tail')f.summary.logIntegrity!.partialTail=true;
+ expect((await f.service.observe(f.selection)).source.state).toBe('unverifiable');expect(f.observeControlled).not.toHaveBeenCalled();
+});
+it('detects recursive closure during observation instead of publishing a stable basis',async()=>{
+ const f=fixture('applied',true);f.state.agentBusinessRuns![0].status='active';
+ f.observeControlled.mockImplementation(async()=>{f.state.agentBusinessRuns![0].status='closed';return structuredClone(f.report)});
+ const result=await f.service.observe(f.selection);expect(result.source.execution).toBe('in_flight');expect(result.consistency).toBe('changed_during_read');
+});
+
+it('persists recursive effect disposition only against the same closed registry identity',async()=>{
+ const f=fixture('applied',true),observation=await f.service.observe(f.selection),commandId=randomUUID();
+ const request={...f.selection,commandId,expectedBasis:observation.basis,expectedRevision:observation.dispositionRevision,decision:'inspect_more' as const,reason:'Inspect without replay'};
+ const record={version:1 as const,dispositionId:commandId,request,revision:request.expectedRevision+1,recordedAt:new Date().toISOString(),actor:{kind:'local_desktop' as const,interaction:'explicit_submit' as const},observation};
+ const mutation={effectDispositions:[record],receipt:effectDispositionReceipt(record)},command=effectDispositionCommand(request);
+ expect(projectEffectDispositionMutation(f.state,mutation,command).effectDispositions).toEqual([record]);
+ for(const mode of ['active','scope','missing'] as const){
+  const state=structuredClone(f.state);if(mode==='active')state.agentBusinessRuns![0].status='active';if(mode==='scope')state.agentBusinessRuns![0].scopeId='foreign';if(mode==='missing')state.agentBusinessRuns=[];
+  expect(()=>projectEffectDispositionMutation(state,mutation,command)).toThrow();
+ }
 });

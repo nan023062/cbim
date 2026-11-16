@@ -20,9 +20,16 @@ function validateSource(state:DispatchState,record:EffectDispositionRecord){
   check(scope&&scope.status===source.scopeStatus&&scope.outcome===source.scopeOutcome,'处置来源周期或状态不一致');
   check(scope!.status==='closed'&&source.execution!=='in_flight','处置必须在原周期关闭且运行已结算或明确未知后追加');
   if(subject.kind==='member_run'){
+    const recursive=state.agentBusinessRuns?.find(r=>r.binding.workspaceId===request.workspaceId&&r.binding.rootSessionId===request.rootSessionId&&r.binding.taskId===subject.taskId&&r.binding.runId===subject.runId);
+    if(recursive){
+      check(source.executionModel==='agent-tools-v1'&&recursive.scopeId===scope!.scopeId&&recursive.status==='closed','递归业务运行尚未关闭或来源周期不一致');
+      check(source.taskRevision===undefined&&source.planRevision===undefined,'递归业务来源不得伪造旧任务版本');
+    }else{
+    check(source.executionModel===undefined,'旧派工来源不能声明递归协议');
     const task=graph!.tasks.find(t=>t.taskId===subject.taskId),run=state.runs?.find(r=>r.binding.runId===subject.runId&&r.binding.rootSessionId===request.rootSessionId&&r.binding.workspaceId===request.workspaceId&&r.binding.taskId===subject.taskId);
     check(task&&task.scopeId===scope!.scopeId&&task.runIds.includes(subject.runId)&&run,'处置缺少原成员任务及运行归属');
     check(source.taskRevision===task!.revision&&source.planRevision===task!.planRevision,'处置成员版本已变化');
+    }
   }else{
     const scopes=state.scopes?.filter(s=>s.workspaceId===request.workspaceId&&s.rootSessionId===request.rootSessionId&&s.runTracking?.mainRunIds.includes(subject.runId))??[];
     check(scopes.length===1&&scopes[0].scopeId===scope!.scopeId,'处置主运行没有唯一原周期');

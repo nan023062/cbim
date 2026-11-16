@@ -31,7 +31,8 @@ export class RunControlledFile {
   /** 在审批 await 之前预占；执行与工具终态都完成后才释放，伪早到 finished 不能解除实际 IO 占位。 */
   guard(name:string,id:string,input:unknown,active:readonly string[]):string|undefined{
     if(this.reserved)return '受控文件操作尚未结束，请先等待原操作核实';
-    if(this.unverified.size&&!['read','grep','find','ls','cbim_scoped_read','cbim_task_inspect','cbim_task_help'].includes(name))return 'CONTROLLED_FILE_REVIEW_REQUIRED: 原受控写结果待核实，本轮仅可读取、查看计划或记录求助，不能再次写入、交付或停泊';
+    // 问题只续接当前调用的直接调用方；答复不清除待核实写入屏障。
+    if(this.unverified.size&&!['read','grep','find','ls','cbim_scoped_read','cbim_task_inspect','cbim_task_help','cbim_ask_user_question'].includes(name))return 'CONTROLLED_FILE_REVIEW_REQUIRED: 原受控写结果待核实，本轮仅可读取、查看计划或记录求助，不能再次写入、交付或停泊';
     if(name!==controlledFileWriteToolName)return;
     if(this.controller.signal.aborted)return '运行已停止，不能开始受控写入';
     const parsed=controlledFileWriteInputSchema.safeParse(input);if(!parsed.success)return '受控文件参数不符合严格单文件协议';

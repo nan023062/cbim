@@ -47,6 +47,7 @@ export const servicePublicEntries=new Set([
   "src/logic/evidence/service/persistent-effect-reader.ts",
   "src/logic/execution/platform/native-session-files.ts",
   "src/logic/execution/platform/tool-guard.ts",
+  "src/logic/execution/storage/business-runs.ts",
   "src/logic/execution/storage/run-storage.ts",
   "src/logic/file-operations/platform/files/artifact-files.ts",
   "src/logic/file-operations/platform/files/code-check-runner.ts",

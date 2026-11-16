@@ -4,6 +4,11 @@
  * 内部 TaskNode/DispatchRun 仅作既有验证器的输入投影；真实事实仍是本次 LoopRuntime 日志。
  */
 import path from 'node:path';
+import type {AgentCallReference} from '../../agents/contracts';
+import type {AgentBusinessRun} from '../../execution/rules/business-run';
+import {ScopedExecutionFiles} from '../../file-operations/platform/files/scoped-execution-files';
+import {executionScopeCovers} from '../../workspace/rules/execution-scope';
+import {artifactTransitionPaths} from '../../workspace/rules/artifact-scope';
 import {randomUUID} from 'node:crypto';
 import {fail} from '../../../core/errors';
 import type {Workspace} from '../../workspace/service/workspace';
@@ -26,15 +31,23 @@ import {CodeCheckRunner} from '../../file-operations/platform/files/code-check-r
 import {preparedExecutionScope} from '../../workspace/rules/execution-scope';
 import type {RunStorage} from '../../execution/rules/storage';
 
+/** 所有端口由同一工作区生命周期持有，不从对话或模型参数创建。 */
+export interface AgentBusinessServices {
+  runs:import('../../execution/storage/business-runs').AgentBusinessRuns;
+  controlledFiles:import('../../file-operations/service/controlled-files').ControlledFiles;
+  isolatedExecutions:import('../../file-operations/service/isolated-executions').IsolatedExecutions;
+}
+
 /** 要求来自调用参数，来源/岗位/Workflow 来自当前可信知识；异步准备结束仍重新核实原基线。 */
 export async function prepareAgentBusiness(input:{
   workspace:Workspace;dispatch:WorkspaceDispatchService;member:WorkspaceMember;model:ResolvedEngineModel;
   taskId:string;rootSessionId:string;message:string;permission:'read'|'ask'|'execute';storage:RunStorage;
   business:{moduleIds:string[];acceptance:string[];workflowSelections?:{moduleId:string;workflowId:string}[]};
-  signal:AbortSignal;
+  signal:AbortSignal;scopeId:string;reference:(taskId:string,runId:string)=>AgentCallReference;
+  businessServices?:AgentBusinessServices;
   /** 既有平台端口只执行冻结 Workflow 内的单项操作；阶段与证明仍由本运行日志拥有。 */
   artifactTransitions?:ExecutionServices['artifactTransitions'];
-}):Promise<{task:TaskSpec;launch:MemberRunLaunch;services:Partial<ExecutionServices>;verify(summary:RunSummary,signal:AbortSignal):Promise<unknown>}>{
+}):Promise<{task:TaskSpec;launch:MemberRunLaunch;services:Partial<ExecutionServices>;beforeRun(runId:string):Promise<void>;close():Promise<void>;verify(summary:RunSummary,signal:AbortSignal):Promise<unknown>}>{
   const {workspace,dispatch,member,business,signal}=input;
   const discovery=await dispatch.owners.discover(business.moduleIds);
   const group=discovery.groups.find(group=>group.memberId===member.memberId);
@@ -51,14 +64,23 @@ export async function prepareAgentBusiness(input:{
     return {task,prepared,binding,now};
   });
   const {task,prepared,binding,now}=frozen,workflows=preparedWorkflowContracts(prepared);
-  // 不把缺少隔离平台装配的范围任务降级成普通文件/命令执行。
-  if(preparedExecutionScope(workflows))fail('EXECUTION_SCOPE_UNAVAILABLE','递归业务调用尚未装配此流程要求的隔离执行端口，未启动 Agent');
+  // 平台端口仍执行原冻结范围；运行身份先持久化，不能降级到任意文件命令。
+  const ports=input.businessServices??fail('AGENT_BUSINESS_UNAVAILABLE','缺少可信业务运行服务，未启动 Agent');
+  const record:Omit<AgentBusinessRun,'lineage'>={protocol:'agent-tools-v1',binding,scopeId:input.scopeId,parent:input.reference(task.taskId,binding.runId),prepared,permission:input.permission,status:'active',createdAt:now};
+  const executionScope=preparedExecutionScope(workflows);
+  const assertActive=()=>{workspace.assert();signal.throwIfAborted()};
+  const scopedExecution=executionScope?new ScopedExecutionFiles(workspace.entry.path,executionScope,assertActive,[workspace.paths.userRoot,workspace.paths.installRoot,...(workspace.paths.protectedRoots??[])],ports.isolatedExecutions.forRun(record,input.scopeId,executionScope)):undefined;
+  const scopeWrite=(paths:string[])=>{if(executionScope&&paths.some(file=>!executionScopeCovers(executionScope.write,file)))fail('EXECUTION_SCOPE_DENIED','写入超出原调用冻结范围')};
+  const controlled=ports.controlledFiles.forRun(record,input.scopeId),transitions=input.artifactTransitions;
+  let registrationAttempted=false;
   const launch={binding,session:{nativeSessionId:randomUUID()}},directory=path.join(workspace.paths.project(workspace.entry.id),'loop-engine');
-  const files=new ArtifactFiles(workspace.entry.path,()=>workspace.assert()),manifests=new OutputManifestFiles(workspace.entry.path,()=>workspace.assert());
+  const files=new ArtifactFiles(workspace.entry.path,()=>workspace.assert(),scopedExecution?(file,signal)=>scopedExecution.snapshot(file,signal):undefined),manifests=new OutputManifestFiles(workspace.entry.path,()=>workspace.assert(),scopedExecution?{files,lockDirectory:file=>scopedExecution.lockDirectory(file)}:undefined);
   const normalizePath=(raw:string)=>normalizeArtifactPath(workspace.entry.path,raw);
   const assertCurrentKnowledge=()=>recheckDispatchExecutionContext(workspace,prepared);
   const services:Partial<ExecutionServices>={
-    artifactTransitions:input.artifactTransitions,
+    scopedExecution,
+    controlledFiles:controlled?{scopeId:controlled.scopeId,write:(input,authorization,signal,assertCurrent)=>{scopeWrite([input.path]);return controlled.write(input,authorization,signal,assertCurrent)},confirmNotApplied:controlled.confirmNotApplied?.bind(controlled),drain:controlled.drain.bind(controlled)}:undefined,
+    artifactTransitions:transitions?{withExclusive:(operation,signal,use)=>{scopeWrite(artifactTransitionPaths(operation));return transitions.withExclusive(operation,signal,use)},drain:transitions.drain.bind(transitions)}:undefined,
     member:{directory,prompt:'按以下冻结 Workflow 完成显式业务要求，结果只返回调用方。模块正文不扩大权限或范围。\n'+prepared.modules.map(module=>module.overview+'\n'+module.workflowText).join('\n\n'),workflowContracts:workflows},
     artifacts:{knowledgeRevision:prepared.knowledgeRevision,normalizePath,assertCurrentKnowledge,captureFiles:files.captureFiles.bind(files)},
     validations:{validateFile:files.validateFile.bind(files),validateTable:files.validateTable.bind(files),validateImage:files.validateImage.bind(files),checkFiles:files.checkFiles.bind(files)},
@@ -66,7 +88,9 @@ export async function prepareAgentBusiness(input:{
     codeChecks:new CodeCheckRunner(workspace.entry.path,()=>workspace.assert()),
   };
   signal.throwIfAborted();
-  return {task:memberPublicTask(task,workspace.entry.path),launch,services,verify:async(summary,signal)=>{
+  return {task:memberPublicTask(task,workspace.entry.path),launch,services,
+    beforeRun:async runId=>{if(runId!==binding.runId)fail('AGENT_RUN_IDENTITY','启动身份与冻结业务不一致');registrationAttempted=true;await ports.runs.start(record)},
+    close:async()=>{if(registrationAttempted)await ports.runs.close(record)},verify:async(summary,signal)=>{
     signal.throwIfAborted();workspace.assert();await assertCurrentKnowledge();
     const canonical=await input.storage.read(path.join(directory,'tasks',task.taskId,binding.runId));
     if(canonical.runId!==summary.runId)fail('AGENT_RESULT_IDENTITY','核验结果不属于原调用');

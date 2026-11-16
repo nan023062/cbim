@@ -73,6 +73,8 @@ export const domainPublicEntries=new Set([
   "src/logic/execution/rules/engine-tools.ts",
   "src/logic/execution/rules/index.ts",
   "src/logic/execution/rules/input-source.ts",
+  "src/logic/execution/rules/business-run.ts",
+  "src/logic/execution/rules/business-run-invariants.ts",
   "src/logic/execution/rules/member-run.ts",
   "src/logic/execution/rules/model-errors.ts",
   "src/logic/execution/rules/run-failure.ts",

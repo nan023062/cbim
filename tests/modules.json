@@ -212,7 +212,8 @@
           "tests/workspace-navigation.test.ts",
           "tests/workspace-packages.test.ts",
           "tests/workspace.test.ts",
-          "tests/memory-engine-application.test.ts"
+          "tests/memory-engine-application.test.ts",
+          "tests/agent-controlled-file-pi.test.ts"
         ]
       }
     },
@@ -284,7 +285,8 @@
           "tests/member-run.test.ts",
           "tests/run-failure.test.ts",
           "tests/tool-failure-control.test.ts",
-          "tests/tool-result-pi.test.ts"
+          "tests/tool-result-pi.test.ts",
+          "tests/business-run-registry.test.ts"
         ],
         "integration": [
           "tests/isolation-recovery-win32.test.ts"
@@ -669,7 +671,8 @@
         "unit": [],
         "contract": [
           "tests/loop-engine.test.ts",
-          "tests/run-journal-integrity.test.ts"
+          "tests/run-journal-integrity.test.ts",
+          "tests/business-run-storage.test.ts"
         ],
         "integration": []
       }

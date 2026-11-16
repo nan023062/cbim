@@ -4,7 +4,7 @@
  * 支持边界：子调用捕获岗位自己的冻结模型和价格，计入同一根账本；子求助交给直接调用方，人工评审只使用根对话原用户队列。
  */
 import {OfficeHistoryTools} from '../../tools/runtime/office-history-tools';
-import {prepareAgentBusiness} from './agent-business';
+import {prepareAgentBusiness,type AgentBusinessServices} from './agent-business';
 import {randomUUID} from 'node:crypto';
 import {Agent,type AgentToolContext} from '../../agents';
 import {AgentCallScheduler} from '../../execution/assembly/agent-call-scheduler';
@@ -26,6 +26,7 @@ import type {ModelRequestBudgetService} from '../../budget/runtime/model-request
 import type {RequestBudgetPort} from '../../budget/rules/request-budget';
 
 export interface AgentCallAssemblyInput {
+  businessServices?:AgentBusinessServices;
   workspace:Workspace;task:TaskSpec;options:WorkspaceLoopOptions;llm?:ResolvedLlm;storage:RunStorage;
   members?:WorkspaceMembers;admission?:WorkspaceAdmission;dispatch?:WorkspaceDispatchService;requestBudgets?:ModelRequestBudgetService;
   models?:Pick<LlmProfiles,'withRuntimeConfiguration'>;
@@ -93,7 +94,7 @@ export function createAgentCallAssembly(input:AgentCallAssemblyInput){
     if(permit.kind!=='granted'){const usage=admission.manager.snapshot();throw new AgentConstraintError('AGENT_CONCURRENCY_LIMIT','当前真实运行名额不足，未启动子 Agent；父进程仍计入资源占用',{current:usage.occupied.length,requested:1,limit:usage.policy.maxConcurrentRuns,unit:'process'})}
     try{
       if(request.parent.task.moduleIds.length&&(!request.business||request.business.moduleIds.some(id=>!request.parent.task.moduleIds.includes(id))))fail('AGENT_BUSINESS_SCOPE','业务子调用须保留父调用的冻结模块范围');
-      const business=request.business?await prepareAgentBusiness({workspace,dispatch:dispatch??fail('AGENT_BUSINESS_UNAVAILABLE','缺少业务来源核实服务'),member:detail.member,model:childLlm,taskId:childTaskId,rootSessionId:task.taskId,message:request.message,permission:agent.definition.permission,storage,business:request.business,signal:request.signal,artifactTransitions:input.artifactTransitions?.()}):undefined;
+      const business=request.business?await prepareAgentBusiness({workspace,dispatch:dispatch??fail('AGENT_BUSINESS_UNAVAILABLE','缺少业务来源核实服务'),member:detail.member,model:childLlm,taskId:childTaskId,rootSessionId:task.taskId,message:request.message,permission:agent.definition.permission,storage,business:request.business,signal:request.signal,artifactTransitions:input.artifactTransitions?.(),scopeId,reference:request.reference,businessServices:input.businessServices}):undefined;
       const childTask:TaskSpec=business?.task??{...task,taskId:childTaskId,agentId:definition.agentId,goal:request.message,moduleIds:[],acceptance:[],mode:'chat'};
       let childContext:AgentToolContext|undefined,childAlive=true;const childBudgets=new Map<string,Promise<RequestBudgetPort|undefined>>();
       const assertChild=()=>{workspace.assert();if(closed||!childAlive||request.signal.aborted)fail('AGENT_CALL_CANCELLED','原子调用已结束，不能发送新请求')};
@@ -107,7 +108,7 @@ export function createAgentCallAssembly(input:AgentCallAssemblyInput){
         acquireLease:async()=>{workspace.assert();if(closed||request.signal.aborted)fail('AGENT_CALL_CANCELLED','调用已停止');return ()=>{}},
         authorizeNative:input.authorizeNative,
       });
-      return {agent,task:childTask,runtime:child.runtime,...(business?{launch:business.launch,verify:business.verify}:{}),release:()=>{childAlive=false;permit.release()}};
+      return {agent,task:childTask,runtime:child.runtime,...(business?{launch:business.launch,verify:business.verify,beforeRun:business.beforeRun}:{}),release:async()=>{childAlive=false;await business?.close();permit.release()}};
     }catch(error){permit.release();throw error}
   }});
   const finish=async(summary?:RunSummary)=>{

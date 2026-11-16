@@ -3006,3 +3006,12 @@ pnpm exec vitest run tests/global-admission-pi.test.ts --reporter=default --repo
 迁移 complete-output-pi 的 3 项到新 Agent 业务工具，保留真实 Pi 文件写、完整目录集合/JSON 同清单证明、额外文件导致拒绝、人工两阶段、重启文件/原日志字节及请求计数不变；新增第四项在已接受但未继续时增加文件，验证意见不改写且继续拒绝。旧 humanContinue 跨重启补充机制没有冒充为新能力，原历史服务覆盖仍保留。
 
 pnpm exec vitest run tests/agent-call-scheduler.test.ts --reporter=default --reporter=json --outputFile=build/review-continuation-contract.json：18/18 通过，包含新增过期接受拒绝、原工具幂等、禁止自动返工断言。pnpm exec vitest run tests/complete-output-pi.test.ts --reporter=default --reporter=json --outputFile=build/complete-output-recursive.json：4/4 通过。选取原因是实际修改人工评审释放边界及其完整清单消费者；未重复其它已通过测试。两片累计 78 个不同用例通过，非全仓测试结论。完整发布仍被其它旧业务迁移与全量 CI 阻塞。
+
+
+## 2026-11-16 · #94 递归业务受控写入与隔离身份
+
+基线 c37f4a22。S1–S4：沿 Application→agent-business→LoopRuntime→ControlledFiles/IsolatedExecutions 精读生命周期；缺口是新业务调用没有可供原文件阶段及报告核实的持久身份。复用唯一 DispatchStore 增加 agentBusinessRuns 独立登记事务，保留原文件工人、阶段、fsync/未知结果和隔离清理。登记不创建旧图任务、消息队列或第二个执行循环；active 只表示启动意图，closed 只在原 Runtime.close 后保存。新最小 BusinessRunSource 隔离协议路径差异，旧运行读路径不变。父工具原引用及逐层 canonical 授权在启动前核实，重复等待引用允许，换绑拒绝；普通中间 Agent 可继续递归。所有业务后代关闭后才能封存祖先，异步保存失败保留占用且不重放。
+
+S5–S7：同步源码注释、8 个变更目录及父目录的 CONTRACT/生成架构说明，登记 3 个新细粒度公开入口，没有放宽边界规则。新测试按规则、存储契约及真实平台集成分别登记。受影响验证：business-run-registry、controlled-file-core/store/service、agent-call-scheduler 首批 57/57；追加来源链、等待/换绑、间接后代及异步关闭失败后，business-run-registry/storage/agent-call-scheduler 37/37。新增 agent-controlled-file-pi 4/4 验证真实写入、回包损坏、部分写入 unknown、写前停止及显式补偿/重启不重放。迁移 scoped-execution-pi 1/1 验证真实 LPAC、越界拒绝、原生工具伪装拒绝、受控写、清理及重启。首次隔离断言误将宿主实时观察值当作持久事实，校正为保留资源身份和阶段，另显式验证旧宿主退出。首次运行来源校验错误使用聚合 summary.status，已改成检查 canonical 终态事件，进行中的未完工具不再误判为已停止。
+
+实际命令与报告：pnpm exec vitest run tests/business-run-registry.test.ts tests/controlled-file-core.test.ts tests/controlled-file-store.test.ts tests/controlled-file-service.test.ts tests/agent-call-scheduler.test.ts --reporter=default --reporter=json --outputFile=build/business-run-contracts.json；pnpm exec vitest run tests/business-run-registry.test.ts tests/business-run-storage.test.ts tests/agent-call-scheduler.test.ts --reporter=default --reporter=json --outputFile=build/business-run-lifecycle.json。pnpm typecheck、pnpm check:test-modules（540 文件）、pnpm check:architecture 通过；补充 CONTRACT 后 node scripts/source-architecture.mjs --check 无差异。旧 controlled-file-pi 的影响处置及异常后写屏障 6 项尚待迁移，保留原测试而非删除；其它旧预算/等待测试和完整 CI、安装升级验收均不能据此宣告通过。

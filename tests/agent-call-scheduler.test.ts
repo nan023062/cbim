@@ -216,3 +216,19 @@ it('rechecks saved acceptance before continuation without rewriting the decision
  expect(await f.tools.call('cbim_agent_result_review',{callId:'original'},signal,'review')).toEqual(receipt);
  expect(f.events.filter(e=>e.data.humanDecision)).toEqual(decisions);expect(request).toHaveBeenCalledTimes(2);expect(f.prepare).toHaveBeenCalledTimes(1);
 });
+
+it('awaits durable release after runtime close and retries only settlement when persistence is unknown',async()=>{
+ const body=vi.fn(async()=>summary('B'));const owned=prepared('B',body);
+ const release=vi.fn(async():Promise<void>=>{throw Error('fsync unknown')});
+ const prepare=vi.fn(async()=>({...owned,release})),scheduler=new AgentCallScheduler({maxDepth:2},{prepare}),binding=scheduler.bind(context());
+ await expect(binding.capability.tools.call('cbim_agent_call',{agentId:'B',message:'work'},new AbortController().signal,'call')).rejects.toThrow('fsync unknown');
+ expect(owned.close).toHaveBeenCalledTimes(1);expect(binding.active()).toBe(true);expect(body).toHaveBeenCalledTimes(1);
+ release.mockImplementation(async()=>{});await scheduler.close();expect(release).toHaveBeenCalledTimes(2);expect(body).toHaveBeenCalledTimes(1);expect(prepare).toHaveBeenCalledTimes(1);
+});
+it('does not start the child body when durable registration fails after publishing its reference',async()=>{
+ const body=vi.fn(async()=>summary('B')),child=prepared('B',body),events:EngineEvent[]=[];
+ const beforeRun=vi.fn(async()=>{throw Object.assign(Error('registration failed'),{code:'AGENT_RUN_AUDIT'})});
+ const scheduler=new AgentCallScheduler({maxDepth:2},{prepare:async()=>({...child,beforeRun})});
+ const value=await scheduler.bind(context('root',events)).capability.tools.call('cbim_agent_call',{agentId:'B',message:'work'},new AbortController().signal,'call');
+ expect(result(value).error).toMatchObject({code:'AGENT_RUN_AUDIT',started:true});expect(body).not.toHaveBeenCalled();expect(events[0].data.agentCall).toMatchObject({runId:'B-run'});expect(child.close).toHaveBeenCalledTimes(1);expect(child.release).toHaveBeenCalledTimes(1);
+});

@@ -11,7 +11,7 @@ import {isDeepStrictEqual as equal} from 'node:util';
 import {hash} from '../../../core/platform/node/serialization';
 import {fail} from '../../../core/errors';
 import type {DispatchStore} from '../../dispatch/rules/dispatch-storage';
-import type {DispatchRun} from '../../tasks/rules/dispatch-execution';
+import type {BusinessRunSource} from '../../execution/rules/business-run';
 import type {RunSummary} from '../../execution/rules/types';
 import {preparedExecutionScope,type ExecutionScope} from '../../workspace/rules/execution-scope';
 import {scopedNodeToolName} from '../rules/scoped-execution';
@@ -26,23 +26,23 @@ const issue=(error:unknown)=>{const code=(error as {code?:unknown})?.code;return
 /** 每个已打开工作区唯一实例；由工作区锁保护跨进程写入，显式清理在本实例串行。 */
 export class IsolatedExecutions {
   readonly records:FileIsolationRecords;private tail:Promise<void>=Promise.resolve();private closed=false;
-  constructor(private readonly owner:Workspace,private readonly store:DispatchStore,private readonly lease:WorkspaceExecutionLease,private readonly inspect:(run:DispatchRun)=>Promise<RunSummary>,private readonly isCurrent:()=>boolean){this.records=new FileIsolationRecords(path.join(owner.paths.project(owner.entry.id),'isolated-executions'))}
+  constructor(private readonly owner:Workspace,private readonly store:DispatchStore,private readonly lease:WorkspaceExecutionLease,private readonly inspect:(run:BusinessRunSource)=>Promise<RunSummary>,private readonly isCurrent:()=>boolean){this.records=new FileIsolationRecords(path.join(owner.paths.project(owner.entry.id),'isolated-executions'))}
   private assert(){this.owner.assert();if(this.closed||!this.isCurrent())fail('ISOLATION_UNAVAILABLE','工作区正在关闭，不能开始核实或清理')}
   private platform(){const host=process as NodeJS.Process&{resourcesPath?:string;defaultApp?:boolean};return new Win32IsolationRecovery(host.resourcesPath&&!host.defaultApp?path.join(host.resourcesPath,'koffi'):requireRuntime.resolve('koffi'))}
-  private async run(identity:IsolatedExecutionRun){this.assert();if(identity.workspaceId!==this.owner.entry.id)fail('ISOLATION_IDENTITY','工作区身份不一致');const state=await this.store.read(),run=state.runs?.find(r=>r.binding.runId===identity.runId);if(!run||Object.entries(identity).some(([key,value])=>run.binding[key as keyof typeof run.binding]!==value))fail('ISOLATION_IDENTITY','没有所选原成员运行');const task=state.graphs.find(g=>g.identity.rootSessionId===identity.rootSessionId)?.tasks.find(t=>t.taskId===identity.taskId);if(!task)fail('ISOLATION_IDENTITY','原任务不存在');return {run,task}}
-  private async source(run:DispatchRun,origin:IsolationOrigin,scopeId:string|undefined){
+  private async run(identity:IsolatedExecutionRun){this.assert();if(identity.workspaceId!==this.owner.entry.id)fail('ISOLATION_IDENTITY','工作区身份不一致');const state=await this.store.read(),run=[...(state.runs??[]),...(state.agentBusinessRuns??[])].find(r=>r.binding.runId===identity.runId);if(!run||Object.entries(identity).some(([key,value])=>run.binding[key as keyof typeof run.binding]!==value))fail('ISOLATION_IDENTITY','没有所选原成员运行');const task='protocol' in run?{scopeId:run.scopeId}:state.graphs.find(g=>g.identity.rootSessionId===identity.rootSessionId)?.tasks.find(t=>t.taskId===identity.taskId);if(!task)fail('ISOLATION_IDENTITY','原任务不存在');return {run,task}}
+  private async source(run:BusinessRunSource,origin:IsolationOrigin,scopeId:string|undefined){
     if(!equal(run.binding,origin.binding)||origin.permission!==run.permission||origin.scopeId!==scopeId||hash(JSON.stringify(preparedExecutionScope(run.prepared.modules.map(m=>({contract:m.workflowContract})))))!==origin.scopeHash)fail('ISOLATION_ORIGIN','隔离来源与原冻结任务不一致');
     const summary=await this.inspect(run),allowed=summary.events.filter(e=>e.type==='tool.allowed'&&e.data.id===origin.toolCallId),proposed=summary.events.filter(e=>e.type==='tool.proposed'&&e.data.id===origin.toolCallId);
     if(!equal(summary.memberBinding,run.binding)||allowed.length!==1||proposed.length!==1||allowed[0].seq!==origin.allowedSeq||allowed[0].data.allow!==true||allowed[0].data.name!==scopedNodeToolName||proposed[0].data.name!==scopedNodeToolName||proposed[0].seq>=allowed[0].seq||hash(JSON.stringify(allowed[0].data.input))!==origin.inputHash||!equal(allowed[0].data.input,proposed[0].data.input)||summary.events.some(e=>e.type==='tool.denied'&&e.data.id===origin.toolCallId))fail('ISOLATION_ORIGIN','原隔离调用缺少唯一可靠授权');
   }
   /** 工厂冻结完整运行来源；每个工具调用各持一个生命周期对象，不能凭参数重用旧执行。 */
-  forRun(run:DispatchRun,scopeId:string,scope:ExecutionScope){const saved=structuredClone(run),scopeHash=hash(JSON.stringify(scope));return async(raw:ScopedExecutionAuthorization):Promise<IsolationLifecycle>=>{
+  forRun(run:BusinessRunSource,scopeId:string,scope:ExecutionScope){const saved=structuredClone(run),scopeHash=hash(JSON.stringify(scope));return async(raw:ScopedExecutionAuthorization):Promise<IsolationLifecycle>=>{
     this.assert();const authorization=scopedExecutionAuthorizationSchema.parse(raw),origin=isolationOriginSchema.parse({...authorization,workspaceInstanceId:this.owner.instanceId,scopeId,binding:saved.binding,scopeHash,permission:saved.permission}),operationId=isolationOperationId(saved.binding.runId,authorization.toolCallId);
     await this.source(saved,origin,scopeId);if(await this.records.read(saved.binding.runId,operationId))fail('ISOLATION_ALREADY_RECORDED','原调用已有隔离记录，不能重新执行');let head:IsolationHead|undefined;
     const append=async(change:IsolationChange)=>{head=await this.records.append(saved.binding.runId,operationId,change,head?.revision??0)};
     return {prepared:async(resource,requestHash)=>{this.assert();await append({kind:'prepared',record:{version:1,origin,resource,requestHash,createdAt:new Date().toISOString()}})},started:async process=>{this.assert();await append({kind:'started',process})},settled:()=>append({kind:'settled'}),cleaned:()=>append({kind:'cleaned'})};
   }}
-  private async item(head:IsolationHead,run:DispatchRun,scopeId:string|undefined):Promise<IsolatedExecutionItem>{
+  private async item(head:IsolationHead,run:BusinessRunSource,scopeId:string|undefined):Promise<IsolatedExecutionItem>{
     const {record,revision,phase}=head,resource=record.resource,issues:string[]=[];let host:IsolatedExecutionItem['host']='unknown',job:IsolatedExecutionItem['job']='not_observed',files:IsolatedExecutionItem['files']='unknown',verified=false;
     try{await this.source(run,record.origin,scopeId);verified=true}catch(error){issues.push(issue(error))}
     try{const platform=this.platform();host=platform.host(resource.host);if(['exited','reused'].includes(host))job=platform.job(resource);

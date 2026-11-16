@@ -21,15 +21,15 @@ type Request=GoalFixtureRequest&{model:string;tools?:{function:{name:string}}[]}
 export const controlledFact=(text:string)=>({byteLength:Buffer.byteLength(text,'utf8'),sha256:createHash('sha256').update(text,'utf8').digest('hex')});
 
 /** 本机供应商只返回计划和工具参数；before 条件取实际 capture 回执，绝不自行补造操作记录。 */
-export async function controlledFileProvider(mode:ControlledFileMode='complete',adversarial=false){
+export async function controlledFileProvider(mode:ControlledFileMode='complete',adversarial=false,recursive=false){
   if(adversarial)assert.ok(mode==='partial'||mode==='bad-wire');
   const d=controlledFileFixture,main:Request[]=[],member:Request[]=[],other:Request[]=[],errors:string[]=[];
   let agentId='',moduleId='',ownerSelection:OwnerExecutionSelection|undefined;
-  const state:{beforeCapture?:any;writeResult?:any;progress?:any;afterCapture?:any;validation?:any;step?:any;delivery?:any;observedText?:string}={};
+  const state:{beforeCapture?:any;writeResult?:any;progress?:any;afterCapture?:any;validation?:any;step?:any;delivery?:any;observedText?:string;call?:any}={};
   const server=http.createServer(async(req,res)=>{try{
     assert.equal(req.method,'POST');assert.ok(req.url?.endsWith('/chat/completions'));let raw='';for await(const chunk of req)raw+=chunk;
     const body=JSON.parse(raw)as Request;assert.equal(body.model,d.model);
-    const auxiliary=JSON.stringify(body.messages).includes(d.otherGoal),isMain=body.tools?.some(item=>item.function.name==='cbim_dispatch_task')===true;
+    const auxiliary=JSON.stringify(body.messages).includes(d.otherGoal),isMain=body.tools?.some(item=>item.function.name===(recursive?'cbim_agent_result_review':'cbim_dispatch_task'))===true;
     const list=auxiliary?other:isMain?main:member,turn=list.length;list.push(body);
     res.writeHead(200,{'Content-Type':'text/event-stream'});
     const emit=(delta:unknown,finish_reason:string|null=null)=>res.write('data: '+JSON.stringify({id:'controlled-'+(main.length+member.length+other.length),object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason}]})+'\n\n');
@@ -37,6 +37,11 @@ export async function controlledFileProvider(mode:ControlledFileMode='complete',
     const reply=(content:string,finish='stop')=>{emit({role:'assistant',content});emit({},finish)};
     const denied=(id:string)=>assert.match(JSON.stringify(mainToolValue(body,id)),/CONTROLLED_FILE_REVIEW_REQUIRED/);
     if(auxiliary){assert.equal(turn,0);reply('独立主会话没有读取、恢复或重放原文件操作。')}
+    else if(isMain&&recursive){
+      if(turn===0)tool('controlled-call','cbim_agent_call',{agentId:ownerSelection!.memberId,message:d.memberGoal,business:{moduleIds:[moduleId],acceptance:d.acceptance}});
+      else if(turn===1){state.call=mainToolValue(body,'controlled-call');if(mode==='complete'){assert.equal(state.call.status,'completed');assert.equal(state.call.verification?.state,'verified')}else assert.ok(state.call.error||state.call.status!=='completed');reply('原调用已返回，仅报告实际结果，不重新执行。')}
+      else throw Error('Unexpected recursive controlled replay '+turn);
+    }
     else if(isMain){
       assert.ok(body.tools?.every(item=>!['cbim_file_write_controlled'].includes(item.function.name)));
       assert.ok(ownerSelection);

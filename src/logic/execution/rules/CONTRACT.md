@@ -424,3 +424,9 @@ engine-adapter.ts 定义版本 1 的 EngineAdapter 工厂、可信 EngineAdapter
 EngineRuntimeResolver 接受通用引擎 ID；EngineRuntimePackage 保留 SDK 的 entry/version，并可携带独立 adapter 的绝对入口、适配器版本及协议。选型范围仍由官方静态清单拥有，通用地址协议不提供任意路径注入。
 
 EngineRuntimePackage 可携带准确依赖映射和 retain 引用端口，仅在宿主内存使用；不序列化函数或加载路径到模型。
+
+## 递归业务登记事务
+
+business-run 定义受控文件消费者共用的最小运行来源与 AgentBusinessRun。business-run-invariants 在原 DispatchStore 提交和回放时投影 agentBusinessRuns；没有该字段的旧状态保持原形。每次登记独立单条事务，固定根作用域、父工具、来源链、岗位、知识和权限，不混写副作用阶段。
+
+启动必须属于当前活动根运行，同一父工具不能复用新运行身份；直接业务父级的模块和权限不可扩大。关闭仅允许 active→closed，所有直接及间接业务后代必须先关闭。容量满时拒绝新增，不淘汰审计历史。该登记不是派发队列、调度器或第二份执行事实。

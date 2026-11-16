@@ -237,3 +237,6 @@ Application 的第二个构造参数为 assetsRoot。Rules 与内置查询共用
 ### 递归业务删除与移动
 
 Application 将可信 ControlledFileTransport 传入执行装配；每个显式业务子调用通过既有 createArtifactTransitionPort 捕获工作区实例和准入生命周期。agent-business 只传递端口，不生成新文件执行器或旧派发记录。Runtime 继续负责冻结 Workflow、权限、原清单、操作阶段和 canonical 证明，平台工人退出后才返回。无专用传输保持不可用，不回退原生命令；隔离范围未装配仍拒绝启动。当前结果复核读取原子调用日志及文件，重启不自动重放。
+
+
+Application 将同一工作区的 businessRuns、controlledFiles 和 isolatedExecutions 接入递归执行装配；没有独立的副作用服务生命周期或新的调度系统。

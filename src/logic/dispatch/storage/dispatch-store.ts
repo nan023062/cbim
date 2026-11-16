@@ -6,6 +6,7 @@
  * 请求预算复用同一 fsync 屏障，阶段单独追加且重放复核；旧缺省保留，未知或未决请求不因加载而释放。
  */
 import fs from 'node:fs/promises';
+import {projectAgentBusinessRuns} from '../../execution/rules/business-run-invariants';
 import path from 'node:path';
 import {fail} from '../../../core/errors';
 import {hash} from '../../../core/platform/node/serialization';
@@ -198,6 +199,7 @@ export class FileDispatchStore implements DispatchStore {
   /** 验证整次 mutation 后才返回候选投影；图、成员会话与信封引用在同一个候选状态内核对。 */
   private project(mutation:DispatchMutation,command:DispatchCommand,protocol:DispatchExecutionProtocol):DispatchState{
     valid(mutation&&typeof mutation==='object','无效调度事务');
+    const agentRuns=projectAgentBusinessRuns(this.state,mutation,command);
     const source=projectKnowledgeSourceMutation(this.state,mutation,command);
     const registry=projectWorkspaceMemberMutation(this.state,mutation,command,source.permit);
     const ownership=projectModuleOwnershipMutation(this.state,mutation,command,source.permit);
@@ -208,7 +210,7 @@ export class FileDispatchStore implements DispatchStore {
     valid(Array.isArray(members)&&Array.isArray(sessions)&&Array.isArray(messages)&&Array.isArray(runs)&&Array.isArray(scopes),'事务集合必须是数组');
     unique(members,m=>m.agentInstanceId,'成员');unique(sessions,s=>s.agentSessionId,'会话');unique(messages,m=>m.messageId,'消息');unique(runs,r=>r.binding?.runId,'运行');unique(scopes,s=>s.scopeId,'周期');
     // 旧 v1 日志没有 runs；按空集合投影且保留原校验和，不通过迁移重写历史。
-    const next:DispatchState={workspaceId:this.workspaceId,members:upsert(this.state.members,members,m=>m.agentInstanceId),sessions:upsert(this.state.sessions,sessions,s=>s.agentSessionId),graphs:[...this.state.graphs],outbox:upsert(this.state.outbox,messages,m=>m.messageId),runs:upsert(this.state.runs??[],runs,r=>r.binding.runId),scopes:upsert(this.state.scopes??[],scopes,s=>s.scopeId),...registry,...ownership,...source.projection,...disposition,...controlledFiles,...modelRequests};
+    const next:DispatchState={workspaceId:this.workspaceId,members:upsert(this.state.members,members,m=>m.agentInstanceId),sessions:upsert(this.state.sessions,sessions,s=>s.agentSessionId),graphs:[...this.state.graphs],outbox:upsert(this.state.outbox,messages,m=>m.messageId),runs:upsert(this.state.runs??[],runs,r=>r.binding.runId),scopes:upsert(this.state.scopes??[],scopes,s=>s.scopeId),...registry,...ownership,...source.projection,...disposition,...controlledFiles,...modelRequests,...agentRuns};
     unique(next.members,m=>JSON.stringify(m.agentId==='cbim:main'?['main',m.mainRootSessionId??null]:m.executionScopeId?['execution',m.executionScopeId,m.executionTaskId]:['legacy',m.agentId]),'主会话、周期任务或旧角色实例');unique(next.sessions,s=>s.agentSessionId,'会话');unique(next.outbox,m=>m.messageId,'消息');
     for(const member of members){
       valid(member.workspaceId===this.workspaceId&&text(member.teamId)&&text(member.agentId),'成员必须属于当前工作区的明确团队角色');

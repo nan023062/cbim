@@ -18,7 +18,14 @@ const root=(i:ControlledFileIntent)=>i.kind==='member_write'?i.origin.binding.ro
 /** 新内容写准入只针对真实在途正式成员；不靠公开 taskId 或模型自报授权补出执行身份。 */
 function liveMember(state:DispatchState,intent:ControlledWritePrepared):void{
   const {origin}=intent,b=origin.binding,scope=state.scopes?.find(s=>s.scopeId===origin.scopeId&&s.workspaceId===b.workspaceId&&s.rootSessionId===b.rootSessionId);
-  const graph=state.graphs.find(g=>g.identity.workspaceId===b.workspaceId&&g.identity.rootSessionId===b.rootSessionId),task=graph?.tasks.find(t=>t.taskId===b.taskId),run=state.runs?.find(r=>r.binding.runId===b.runId);
+  const recursive=state.agentBusinessRuns?.find(run=>run.binding.runId===b.runId);
+  if(recursive){
+    check(scope?.status==='active'&&!scope.recovery&&recursive.status==='active'&&recursive.scopeId===origin.scopeId&&equal(recursive.binding,b),'递归业务写缺少活动原运行');
+    check(origin.permission===recursive.permission&&origin.knowledgeRevision===recursive.prepared.knowledgeRevision&&!!recursive.prepared.memberContext&&origin.ownerBindingHash===controlledFileOwnerBindingHash(recursive.prepared.memberContext!.binding),'递归业务写冻结权限、知识或岗位不符');
+    check(scope.runTracking?.mainRunIds.at(-1)===recursive.lineage.at(-1)?.callerRunId,'递归业务写原根运行失效');
+    return;
+  }
+  const graph=state.graphs.find(g=>g.identity.workspaceId===b.workspaceId&&g.identity.rootSessionId===b.rootSessionId),task=graph?.tasks.find(t=>t.taskId===b.taskId),run=state.runs?.find(r=>r.binding.runId===b.runId)??state.agentBusinessRuns?.find(r=>r.binding.runId===b.runId);
   const member=state.members.find(m=>m.agentInstanceId===b.agentInstanceId),session=state.sessions.find(s=>s.agentSessionId===b.agentSessionId);
   check(scope?.status==='active'&&!scope.recovery,'业务写必须属于当前非只读周期');
   check(task&&task.scopeId===scope.scopeId&&(task.ownerBinding||task.fallbackBinding)&&task.activeRunId===b.runId&&task.planRevision===b.planRevision&&task.runIds.includes(b.runId)&&task.assignee.agentId===b.agentId&&task.assignee.agentInstanceId===b.agentInstanceId&&task.assignee.agentSessionId===b.agentSessionId,'业务写缺少原任务及岗位绑定');
@@ -38,11 +45,11 @@ function validateWrite(state:DispatchState,i:ControlledWritePrepared):void{
 function validateCompensation(state:DispatchState,i:FileCompensationPrepared):void{
   const original=controlledFileOperation(state,i.original.operationId);
   check(original?.intent.kind==='member_write'&&original.change.phase==='applied','补偿必须引用原可靠 applied 成员写入');
-  const old=original.intent,b=old.origin.binding,scope=state.scopes?.find(s=>s.scopeId===old.origin.scopeId&&s.workspaceId===b.workspaceId&&s.rootSessionId===b.rootSessionId),run=state.runs?.find(r=>r.binding.runId===b.runId);
+  const old=original.intent,b=old.origin.binding,scope=state.scopes?.find(s=>s.scopeId===old.origin.scopeId&&s.workspaceId===b.workspaceId&&s.rootSessionId===b.rootSessionId),run=state.runs?.find(r=>r.binding.runId===b.runId)??state.agentBusinessRuns?.find(r=>r.binding.runId===b.runId);
   check(i.operationId===fileCompensationId(i.request)&&i.requestFingerprint===fileCompensationRequestFingerprint(i.request,i.actor)&&i.actor.instanceId===i.request.instanceId,'补偿命令、指纹或本机身份不一致');
   check(i.request.workspaceId===b.workspaceId&&i.request.rootSessionId===b.rootSessionId&&i.request.operationId===old.operationId&&i.original.intentHash===controlledFileIntentHash(old)&&i.original.appliedEventHash===controlledFileChangeHash(original.change)&&i.original.appliedRevision===original.revision&&i.request.expectedOperationRevision===original.revision,'补偿与原来源及 applied 依据不一致');
   check(i.preparedAt>=original.updatedAt,'补偿意图不能早于原 applied 事实');
-  check(scope?.status==='closed'&&run&&equal(run.binding,b)&&!['starting','running'].includes(run.status)&&!state.members.some(m=>m.activeRunId===b.runId),'原周期或运行仍在途，不得补偿');
+  check(scope?.status==='closed'&&run&&equal(run.binding,b)&&!['starting','running','active'].includes(run.status)&&!state.members.some(m=>m.activeRunId===b.runId),'原周期或运行仍在途，不得补偿');
   check(i.request.expectedCompensationRevision===fileCompensationRevision(state,old.operationId)&&i.compensationRevision===i.request.expectedCompensationRevision+1,'补偿版本已变化');
   const prior=(state.controlledFileChanges??[]).filter(c=>c.phase==='prepared'&&c.intent.kind==='desktop_compensation'&&c.intent.original.operationId===old.operationId);
   check(prior.every(c=>controlledFileOperation(state,c.operationId)?.phase==='not_applied'),'已有成功或未决补偿，不得创建第二次恢复');

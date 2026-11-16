@@ -18,6 +18,8 @@
  * 成员与主会话共用受管引擎解析；成员启动前按冻结引用解析当前话题资料，三引擎均不注入其他话题历史。受控文件能力保护安装、用户与更新目录。
  */
 import path from 'node:path';
+import type {BusinessRunSource} from '../../execution/rules/business-run';
+import {AgentBusinessRuns} from '../../execution/storage/business-runs';
 import type {Workspace} from '../../workspace/service/workspace';
 import {WorkspaceDispatchService} from '../../dispatch/runtime/dispatch-service';
 import type {DispatchObserver} from '../../dispatch/rules/dispatch-storage';
@@ -87,14 +89,21 @@ export function createMemberServices(workspace:Workspace,models:EngineModelProfi
   };
   const normalizeArtifact=(raw:string)=>normalizeArtifactPath(workspace.entry.path,raw);
   /** 主/成员的权威运行日志只在后端读取；不能以公开摘要或模型传来的“成功”替代。 */
-  const inspectMember=async(run:import('../../tasks/rules/dispatch-execution').DispatchRun)=>{
+  const inspectMember=async(run:BusinessRunSource)=>{
     workspace.assert();
-    const summary=await storage.read(path.join(runsDirectory,'tasks',safeId(run.binding.taskId),safeId(run.binding.runId)));
+    const summary=await storage.read(path.join(run.protocol==='agent-tools-v1'?path.join(workspace.paths.project(workspace.entry.id),'loop-engine'):runsDirectory,'tasks',safeId(run.binding.taskId),safeId(run.binding.runId)));
     if(summary.task.workspaceId!==workspace.entry.id||summary.task.root!==workspace.entry.path)fail('MEMBER_LOG_IDENTITY','成员运行记录属于其他工作区');
     if(JSON.stringify(summary.memberBinding)!==JSON.stringify(run.binding))fail('MEMBER_LOG_IDENTITY','成员运行日志与已保存的执行绑定不一致');
     return summary;
   };
   const checkpointPorts={inspect:inspectMember,normalizePath:normalizeArtifact,checkFiles:artifactFiles.checkFiles.bind(artifactFiles),nativeFingerprint};
+  // 递归身份只登记真实父调用，不加入旧派工图；源日志位置由协议固定。
+  const businessRuns=new AgentBusinessRuns(store,()=>{workspace.assert();if(admission&&!admission.isCurrent())fail('AGENT_RUN_STOPPED','工作区正在停止')},async(taskId,runId)=>{
+    workspace.assert();
+    const summary=await storage.read(path.join(workspace.paths.project(workspace.entry.id),'loop-engine','tasks',safeId(taskId),safeId(runId)));
+    if(summary.task.workspaceId!==workspace.entry.id||summary.task.root!==workspace.entry.path)fail('AGENT_RUN_IDENTITY','父调用日志属于其他工作区');
+    return summary;
+  });
   const controlledFiles=new ControlledFiles(workspace,store,lease,controlledTransport,inspectMember,()=>admission?.isCurrent()??true);
   const isolatedExecutions=new IsolatedExecutions(workspace,store,lease,inspectMember,()=>admission?.isCurrent()??true);
   const dispatch=new WorkspaceDispatchService(workspace,store,{inspectMember,normalizeValidationPath:normalizeArtifact,checkValidationFiles:(files,signal)=>artifactFiles.checkFiles(files,signal),checkManifest:(snapshot,signal)=>manifestFiles.check(snapshot,signal),inspectMain:async(rootSessionId,runId)=>{
@@ -167,5 +176,5 @@ export function createMemberServices(workspace:Workspace,models:EngineModelProfi
   });
   const workspaceMembers=new WorkspaceMembers(workspace,store,models,()=>admission?.isCurrent()??true);
   const moduleOwnerships=new ModuleOwnerships(workspace,store,()=>admission?.isCurrent()??true);
-  return {dispatch,members,workspaceMembers,moduleOwnerships,controlledFiles,isolatedExecutions,requestBudgets};
+  return {dispatch,members,workspaceMembers,moduleOwnerships,controlledFiles,isolatedExecutions,requestBudgets,businessRuns};
 }

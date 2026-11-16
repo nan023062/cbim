@@ -300,3 +300,7 @@ officeHistory 是可信主装配可选的只读归档工具，与统一 Agent �
 
 
 接受意见保存后的继续仍须按原 callId 重新核验当前交付。复核失败保留原 humanDecision，仅追加 decision_released（continued=false、verification_failed）并返回原核验错误，同时禁止本轮自动创建子调用；不能把此前接受当作当前文件的证明，不恢复旧运行。
+
+## 业务登记与异步释放
+
+准备结果的 beforeRun 在真实父工具引用保存后执行；登记失败禁止进入子模型主体。release 可异步执行，必须等待原 Runtime.close 与业务登记封存；任何一步失败都保留 stranded 句柄和占用。close 只重试原关闭链，不重新 prepare 或执行模型。

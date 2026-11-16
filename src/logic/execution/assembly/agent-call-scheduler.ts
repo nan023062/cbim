@@ -25,7 +25,7 @@ export interface AgentSchedulerPorts {
   /** 仅根调用装配真实用户问题队列；子 Agent 不得直接使用人工评审入口。 */
   requestReview?(input:QuestionInput,signal:AbortSignal):Promise<unknown>;
   /** 必须取得真实子执行名额，冻结目标定义/权限/模型，失败不得开始运行。 */
-  prepare(input:{agentId:string;message:string;business?:{moduleIds:string[];acceptance:string[];workflowSelections?:{moduleId:string;workflowId:string}[]};parent:AgentCallContext;signal:AbortSignal;reference:(taskId:string,runId:string)=>AgentCallReference;requestQuestion(input:unknown,signal:AbortSignal):Promise<unknown>}):Promise<{agent:Agent;task:TaskSpec;runtime:Pick<LoopRuntime,'start'|'close'>&Partial<Pick<LoopRuntime,'startMember'>>;launch?:MemberRunLaunch;verify?(summary:RunSummary,signal:AbortSignal):Promise<unknown>;release():void}>;
+  prepare(input:{agentId:string;message:string;business?:{moduleIds:string[];acceptance:string[];workflowSelections?:{moduleId:string;workflowId:string}[]};parent:AgentCallContext;signal:AbortSignal;reference:(taskId:string,runId:string)=>AgentCallReference;requestQuestion(input:unknown,signal:AbortSignal):Promise<unknown>}):Promise<{agent:Agent;task:TaskSpec;runtime:Pick<LoopRuntime,'start'|'close'>&Partial<Pick<LoopRuntime,'startMember'>>;launch?:MemberRunLaunch;verify?(summary:RunSummary,signal:AbortSignal):Promise<unknown>;beforeRun?(runId:string):Promise<void>;release():void|Promise<void>}>;
 }
 const callInput=z.object({agentId:z.string().min(1).max(512),message:z.string().trim().min(1).max(100000),business:z.object({moduleIds:z.array(z.string().min(1)).min(1).max(50),acceptance:z.array(z.string().min(1)).max(100),workflowSelections:z.array(z.object({moduleId:z.string().min(1),workflowId:z.string().min(1)}).strict()).max(50).optional()}).strict().optional()}).strict();
 const replyInput=z.object({callId:z.string().min(1),questionId:z.string().min(1),result:questionResultSchema}).strict();
@@ -116,7 +116,7 @@ export class AgentCallScheduler {
     const ref=(taskId:string,runId:string):AgentCallReference=>({version:1,workspaceId:context.task.workspaceId,callerTaskId:context.task.taskId,callerRunId:context.runId,toolCallId:id,taskId,runId});
     try{
       signal.throwIfAborted();prepared=await this.ports.prepare({...input,parent:{task:context.task,runId:context.runId,depth},signal,reference:ref,requestQuestion:(input,questionSignal)=>exchange.ask(input,AbortSignal.any([signal,questionSignal]))});signal.throwIfAborted();
-      const control={signal,beforeRun:async({runId}:{runId:string})=>{reference=ref(prepared!.agent.conversation.taskId,runId);onReference(reference);await context.emit({type:'tool.updated',data:{id,name:agentCallToolName,agentCall:reference,limits:{depth:depth+1,maxDepth:this.limits.maxDepth,...this.capacity()}}})}};
+      const control={signal,beforeRun:async({runId}:{runId:string})=>{reference=ref(prepared!.agent.conversation.taskId,runId);onReference(reference);await context.emit({type:'tool.updated',data:{id,name:agentCallToolName,agentCall:reference,limits:{depth:depth+1,maxDepth:this.limits.maxDepth,...this.capacity()}}});await prepared!.beforeRun?.(runId)}};
       const run=prepared.launch?await prepared.runtime.startMember!(prepared.task,input.message,prepared.launch,control):await prepared.runtime.start(prepared.task,input.message,undefined,undefined,control);
       const summary=await run.done;
       let verification:unknown;
@@ -124,7 +124,7 @@ export class AgentCallScheduler {
       const output={agentCall:reference,status:summary.status,summary:this.message(summary),...(verification?{verification}:{}),unresolvedTools:summary.unresolvedTools};
       return {...jsonToolResult(agentCallToolName,output),...(summary.status!=='completed'||summary.unresolvedTools.length?{isError:true}:{})};
     }catch(error){const failure=error as {code?:string;message?:string};return errorResult(failure.code??(signal.aborted?'AGENT_CALL_CANCELLED':'AGENT_CALL_FAILED'),failure.message??String(error),{started:!!reference,...(error instanceof AgentConstraintError?error.constraint:{}),...(reference?{agentCall:reference}: {})})}
-    finally{if(prepared){try{await prepared.runtime.close();prepared.release()}catch(error){this.stranded.set(context.runId+':'+id,prepared);throw error}}}
+    finally{if(prepared){try{await prepared.runtime.close();await prepared.release()}catch(error){this.stranded.set(context.runId+':'+id,prepared);throw error}}}
   }
 
   /** 人工评价是原工具的两阶段等待：意见先可靠记入日志，用户明确继续才返回模型；不派发子任务。 */
@@ -172,6 +172,6 @@ export class AgentCallScheduler {
     const messages=run.events.filter(event=>event.type==='message').map(event=>typeof event.data.text==='string'?event.data.text:typeof event.data.content==='string'?event.data.content:'').filter(Boolean);
     return messages.join('\n\n').slice(-100000)||'执行已结束，详细过程见调用记录；没有可提取的公开文字回复。';
   }
-  private async drain(prefix=''){for(const [key,value] of this.stranded){if(!key.startsWith(prefix))continue;await value.runtime.close();value.release();this.stranded.delete(key)}}
+  private async drain(prefix=''){for(const [key,value] of this.stranded){if(!key.startsWith(prefix))continue;await value.runtime.close();await value.release();this.stranded.delete(key)}}
   async close(){this.closed=true;for(const controller of this.reviewControllers.values())controller.abort();await Promise.allSettled([...this.reviews.values()].map(review=>review.result));const active=[...this.activeCalls.values()];for(const item of active)item.controller.abort();await Promise.allSettled(active.map(item=>item.done));await this.drain()}
 }

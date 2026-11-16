@@ -60,8 +60,8 @@ class N_src_logic_feedback["feedback/"] {
 class N_src_logic_file_operations["file-operations/"] {
   <<directory>>
 }
-N_src_logic_dispatch ..> N_src_logic_file_operations : 导入依赖
 N_src_logic_dispatch ..> N_src_logic_execution : 导入依赖
+N_src_logic_dispatch ..> N_src_logic_file_operations : 导入依赖
 N_src_logic_dispatch ..> N_src_logic_engines : 导入依赖
 N_src_logic_dispatch ..> N_src_logic_evidence : 导入依赖
 N_src_logic_engines ..> N_src_logic_execution : 导入依赖
@@ -72,6 +72,7 @@ N_src_logic_execution ..> N_src_logic_engines : 导入依赖
 N_src_logic_execution ..> N_src_logic_evidence : 导入依赖
 N_src_logic_execution ..> N_src_logic_file_operations : 导入依赖
 N_src_logic_execution ..> N_src_logic_feedback : 导入依赖
+N_src_logic_execution ..> N_src_logic_dispatch : 导入依赖
 N_src_logic_file_operations ..> N_src_logic_evidence : 导入依赖
 N_src_logic_file_operations ..> N_src_logic_execution : 导入依赖
 N_src_logic_file_operations ..> N_src_logic_dispatch : 导入依赖
@@ -168,9 +169,9 @@ class N_src_logic_workspace["workspace/"] {
 - `application` → `knowledge`：导入。
 - `application` → `resources`：导入。
 - `application` → `connectors`：导入。
+- `application` → `agents`：导入。
 - `application` → `tasks`：导入。
 - `application` → `tools`：导入。
-- `application` → `agents`：导入。
 - `application` → `governance`：导入。
 - `application` → `evidence`：导入。
 - `automation` → `workspace`：导入。
@@ -192,12 +193,12 @@ class N_src_logic_workspace["workspace/"] {
 - `conversation` → `knowledge`：导入。
 - `conversation` → `execution`：导入。
 - `conversation` → `tasks`：导入。
+- `dispatch` → `execution`：导入。
 - `dispatch` → `team`：导入。
 - `dispatch` → `tasks`：导入。
 - `dispatch` → `workspace`：导入。
 - `dispatch` → `file-operations`：导入。
 - `dispatch` → `budget`：导入。
-- `dispatch` → `execution`：导入。
 - `dispatch` → `knowledge`：导入。
 - `dispatch` → `tools`：导入。
 - `dispatch` → `conversation`：导入。
@@ -233,6 +234,7 @@ class N_src_logic_workspace["workspace/"] {
 - `execution` → `team`：导入。
 - `execution` → `budget`：导入。
 - `execution` → `models`：导入。
+- `execution` → `dispatch`：导入。
 - `file-operations` → `evidence`：导入。
 - `file-operations` → `workspace`：导入。
 - `file-operations` → `tasks`：导入。

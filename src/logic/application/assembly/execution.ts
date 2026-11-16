@@ -44,6 +44,7 @@ import type {ModuleOwnerships} from '../../workspace/service/module-ownerships';
 import type {WorkspaceMembers} from '../../team/service/workspace-members';
 import type {ModelRequestBudgetService} from '../../budget/runtime/model-request-budget-service';
 import {createAgentCallAssembly} from './agent-calls';
+import type {AgentBusinessServices} from './agent-business';
 
 /**
  * 每个工作区实例装配独立管理器；锁键和访问策略固定绑定本实例身份。
@@ -51,7 +52,7 @@ import {createAgentCallAssembly} from './agent-calls';
  * 独立 CLI/测试未装配 dispatch 时保留旧只按会话执行的边界，不编造已登记的成员身份。
  * repositories 是可选可信服务，不接受运行选项提供地址或授权；每次工厂调用固定自己的连接代际。
  */
-export function createExecutionManager(workspace:Workspace,models:EngineModelProfiles,lease=new WorkspaceExecutionLease(),collaboration?:()=>AutoCollaboration|undefined,dispatch?:WorkspaceDispatchService,admission?:WorkspaceAdmission,repositories?:RepositoryConnections,ownerships?:{service:ModuleOwnerships;members:WorkspaceMembers},requestBudgets?:ModelRequestBudgetService,feedback?:GitHubFeedback,web?:WebToolsPort,engineRuntimes?:EngineRuntimeResolver,controlledTransport?:ControlledFileTransport){
+export function createExecutionManager(workspace:Workspace,models:EngineModelProfiles,lease=new WorkspaceExecutionLease(),collaboration?:()=>AutoCollaboration|undefined,dispatch?:WorkspaceDispatchService,admission?:WorkspaceAdmission,repositories?:RepositoryConnections,ownerships?:{service:ModuleOwnerships;members:WorkspaceMembers},requestBudgets?:ModelRequestBudgetService,feedback?:GitHubFeedback,web?:WebToolsPort,engineRuntimes?:EngineRuntimeResolver,controlledTransport?:ControlledFileTransport,businessServices?:AgentBusinessServices){
   const storage=new FileRunStorage();
   return new WorkspaceExecutionManager(workspace,storage,async(options,task,launch)=>{
     const llm=options.profileId?await models.resolve(options.profileId,options.model,options.engine,options.modelRoles):undefined;
@@ -70,7 +71,7 @@ export function createExecutionManager(workspace:Workspace,models:EngineModelPro
     const authorizeNative:import('../../execution/assembly/loop-engine').ExecutionServices['authorizeNative']=async call=>{
       workspace.assert();const mapped=call.name==='find'?'Glob':call.name;const reason=guard({name:mapped,input:call.input},workspace.entry.path);return {allow:!reason,reason};
     };
-    const agentCalls=launch.executionModel==='agent-tools-v1'?createAgentCallAssembly({models,workspace,task,options:{...options,engineRuntimes},llm,storage,members:ownerships?.members,admission,dispatch,requestBudgets,authorizeNative,
+    const agentCalls=launch.executionModel==='agent-tools-v1'?createAgentCallAssembly({models,workspace,task,options:{...options,engineRuntimes},llm,storage,members:ownerships?.members,admission,dispatch,requestBudgets,authorizeNative,businessServices,
       // 每个业务子调用独立捕获工作区身份；仅复用已有受控工人，不降级到任意文件命令。
       artifactTransitions:()=>createArtifactTransitionPort(workspace,controlledTransport,()=>admission?.isCurrent()??false),
     }):undefined;

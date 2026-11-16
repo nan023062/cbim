@@ -3218,3 +3218,11 @@ pnpm typecheck、check:architecture、check:test-modules、git diff --check 通�
 修复：原 humanBlocked 只限制子调用，主运行原生 write 可绕过否定或仅保存意见。AgentToolsBinding.guardEffects 只收紧权限，Runtime 放行前应用同一 runId 的副作用屏障；read/preview 可用，未知/写入/命令拒绝。同步 agents、execution/assembly、rules/runtime 的契约、注释和生成类图。
 
 验证选择：调度器拥有屏障，人工继续集成覆盖真实原生工具与持久状态，人工决定消费者覆盖共享夹具提取。初次 12 项中 11 通过；唯一失败为模型替身把真实 read 文本误作 JSON，已修正解析而保留实际读回内容断言。human-continuation-pi 重跑 8/8；human-decisions-pi 初次 4/4；agent-call-scheduler 20/20。pnpm typecheck、pnpm check:architecture（1663 文件/7911 边/0 环）、pnpm check:test-modules（541 文件）通过。未跑全量与桌面安装验收，未发布。
+
+## 2026-11-16 · #94 原调用再审与等待预算迁移
+
+human-reconsideration-pi 原旧目标等待入口改为同一原调用的第二次 result_review；分成原完整集合不变、目录新增文件、canonical 尾行损坏三项。保留真实集合和来源日志破坏验证、独立意见身份、旧意见不覆盖、重开不自动恢复问题或重发模型。旧跨 waitId/reconsidersDecisionId 接口仍由 human-reconsideration-service 兼容测试覆盖；新链路不伪造旧等待。
+
+model-request-budget-pi 的旧 goalContinue 等待用例改为原工具内暂停后的继续。将未来默认额度调大仍不能改变本轮冻结账本；被拒绝后保存的意见、原调用、1920 tokens 和拒绝记录经重开保持不变。共享夹具 app 改为读取当前已重开实例。
+
+验证：human-reconsideration-pi 3/3；complete-output-pi 4/4（同模型替身消费者）；model-request-budget-pi -t "recursive human wait" 1/1（其余10项未选择，不记通过）。pnpm typecheck、pnpm check:test-modules 通过。完整 CI、桌面/升级未运行，未发布。

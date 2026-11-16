@@ -1,34 +1,58 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import {randomUUID} from 'node:crypto';
 import {expect,it,vi} from 'vitest';
 import {fixture} from './helpers';
 import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
-import {humanDecisionPreviewSchema,humanDecisionReceiptSchema} from '../src/logic/tasks/rules/human-decisions';
+import {FileRunStorage} from '../src/logic/execution/storage/run-storage';
+import type {PendingQuestion} from '../src/logic/tools/rules/questions';
 import {completeOutputProvider,completeOutputData as d} from './complete-output-provider';
-import {seedCompleteOutput,completeOutputRecords,completeOutputSourceBytes} from './complete-output-pi-fixture';
+import {seedCompleteOutput,completeOutputRecords} from './complete-output-pi-fixture';
 
-it('真实 Pi 两次等待：旧接受不可继承，集合/原日志变化明确阻断，重开后新决定独立继续',async()=>{
-  const f=await fixture(),provider=await completeOutputProvider('human',false,true);let reopened:Application|undefined,app=f.app;
-  try{
-    const {entry,profileId}=await seedCompleteOutput(app,f.a,provider),start=await app.dispatch('loop.chat',{id:entry.id,message:d.goal,options:{permission:'execute',turnTimeoutMs:60000}})as{taskId:string},identity={workspaceId:entry.id,rootSessionId:start.taskId},records=()=>completeOutputRecords(f.user,entry.id);
-    const wait=async(count:number)=>vi.waitFor(async()=>{expect(provider.errors).toEqual([]);expect(provider.main).toHaveLength(count);expect((await records()).scopes[0].status).toBe('waiting')},{timeout:60000,interval:40});
-    provider.releaseReview();await wait(6);const firstScope=(await records()).scopes[0],base={...identity,scopeId:firstScope.scopeId,criterionId:d.humanId,baselines:[]};
-    const menu=humanDecisionPreviewSchema.parse(await app.dispatch('dispatch.humanPreview',base)),candidate=menu.candidates[0],selected={...base,manifests:[{taskId:candidate.taskId,runId:candidate.runId,manifestId:candidate.manifest!.manifestId}]};
-    const save=async(input:typeof selected&{reconsidersDecisionId?:string})=>{const p=humanDecisionPreviewSchema.parse(await app.dispatch('dispatch.humanPreview',input));return humanDecisionReceiptSchema.parse(await app.dispatch('dispatch.humanDecide',{...input,commandId:randomUUID(),expectedDecisionRevision:p.decisionRevision,expectedBasis:p.basis,decision:'accept',comment:'按当前明确选择重新核实'}))};
-    const request=async(id:string)=>{const scope=(await records()).scopes[0];return {...identity,scopeId:scope.scopeId,waitId:scope.wait!.waitId,expectedGoalRevision:scope.goal!.revision,expectedInputRevision:scope.goal!.inputRevision??1,expectedDecisionRevision:scope.humanDecisions!.revision,commandId:randomUUID(),decisionIds:[id],options:{provider:'cbim-'+profileId,profileId,model:d.model,permission:'execute',turnTimeoutMs:60000}}};
-    const prior=await save(selected),originalBytes=await completeOutputSourceBytes(f.user,entry.id);provider.releaseContinuation();await app.dispatch('loop.humanContinue',await request(prior.record.decisionId));await wait(11);
-    const second=await records(),source=await completeOutputSourceBytes(f.user,entry.id),sequence=[...provider.sequence];expect(second.scopes[0].wait?.waitId).not.toBe(firstScope.wait?.waitId);expect(second.scopes[0].humanDecisions?.records).toEqual([prior.record]);expect(source).toMatchObject(originalBytes);
-    await expect(app.dispatch('loop.humanContinue',await request(prior.record.decisionId))).rejects.toMatchObject({code:'HUMAN_CONTINUATION_STALE'});
-    const input={...selected,reconsidersDecisionId:prior.record.decisionId},initial=humanDecisionPreviewSchema.parse(await app.dispatch('dispatch.humanPreview',{...input,manifests:[]}));expect(initial.reconsideration).toMatchObject({status:'unverifiable',canReconsider:true});expect(initial.candidates[0].selectedManifest).toBeUndefined();
-    const matches=humanDecisionPreviewSchema.parse(await app.dispatch('dispatch.humanPreview',input));expect(matches.reconsideration).toMatchObject({status:'evidence_matches',canReconsider:true});
-    const extra=path.join(f.a,d.root,'extra.txt');await fs.writeFile(extra,'new external file');const changed=humanDecisionPreviewSchema.parse(await app.dispatch('dispatch.humanPreview',input));expect(changed.reconsideration?.status).toBe('changed');expect(changed.allowedDecisions).not.toContain('accept');await fs.unlink(extra);
-    const [relative,bytes]=Object.entries(source).find(([file,bytes])=>file.endsWith('events.jsonl')&&JSON.parse(bytes.split('\n')[0]).runId===prior.record.proof.source.reviewRunId)!;const canonical=path.join(f.user,entry.id,relative);await fs.appendFile(canonical,'{"partial":');const broken=humanDecisionPreviewSchema.parse(await app.dispatch('dispatch.humanPreview',input));expect(broken.reconsideration).toMatchObject({status:'unverifiable',canReconsider:false});expect(broken.allowedDecisions).toEqual([]);await fs.writeFile(canonical,bytes);
-    expect(await records()).toEqual(second);expect(provider.sequence).toEqual(sequence);expect(await completeOutputSourceBytes(f.user,entry.id)).toEqual(source);
-    await app.shutdown();reopened=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await reopened.init();app=reopened;expect(await records()).toEqual(second);expect(provider.sequence).toEqual(sequence);
-    const current=await save(input);expect(current.record.reconsidersDecisionId).toBe(prior.record.decisionId);expect(current.record.proof.source.waitId).toBe(second.scopes[0].wait?.waitId);expect(current.record.decisionId).not.toBe(prior.record.decisionId);expect(provider.sequence).toEqual(sequence);
-    await app.dispatch('loop.humanContinue',await request(current.record.decisionId));await vi.waitFor(async()=>{expect(provider.errors).toEqual([]);expect((await records()).scopes[0].outcome).toBe('completed')},{timeout:60000,interval:40});
-    expect(provider.main).toHaveLength(16);expect(provider.member).toHaveLength(8);expect((await records()).scopes[0].humanDecisions?.records).toEqual([prior.record,current.record]);expect(await completeOutputSourceBytes(f.user,entry.id)).toMatchObject(source);expect(await fs.readFile(path.join(f.a,d.file),'utf8')).toBe(d.content);
-  }finally{provider.releaseAll();await reopened?.shutdown();await f.cleanup();await provider.close()}
-},180000);
+// 再审沿原调用重新核实完整集合与 canonical；旧接受不能自动成为新意见。
+it.each(['same','changed-set','broken-source'] as const)('recursive reconsideration preserves independent decisions and original proof (%s)',async mode=>{
+ const f=await fixture(),provider=await completeOutputProvider('human',false,true,true);let app=f.app;
+ try{
+  const {entry}=await seedCompleteOutput(app,f.a,provider);
+  const start=await app.dispatch('loop.chat',{id:entry.id,message:d.goal,options:{permission:'execute',turnTimeoutMs:60000}});
+  const rootDir=path.join(f.user,entry.id,'loop-engine/tasks',start.taskId,start.runId);
+  const read=()=>new FileRunStorage().read(rootDir);
+  const records=async()=>(await read()).events.filter(e=>e.data.humanDecision).map(e=>e.data.humanDecision as any);
+  const until=async(check:()=>Promise<void>|void)=>{await vi.waitFor(async()=>{if(provider.errors.length)return;await check()},{timeout:30000,interval:30});expect(provider.errors).toEqual([])};
+  const questions=()=>app.dispatch('loop.questions',{id:entry.id,taskId:start.taskId}) as Promise<PendingQuestion[]>;
+  const question=async(previous?:string)=>{await until(async()=>{const q=await questions();expect(q).toHaveLength(1);if(previous)expect(q[0].id).not.toBe(previous)});return (await questions())[0]};
+  const answer=async(q:PendingQuestion,label:string)=>{const option=q.questions[0].options.findIndex(o=>o.label===label);expect(option).toBeGreaterThanOrEqual(0);await app.dispatch('loop.answerQuestion',{id:entry.id,taskId:start.taskId,questionId:q.id,answers:[{option,other:'按当前实际证据独立判断'}]})};
+  provider.releaseReview();
+  const first=await question();await answer(first,'接受此成果');
+  const firstContinuation=await question(first.id),[prior]=await records();
+  await answer(firstContinuation,'继续处理意见');
+  await until(()=>expect(provider.state.secondReviewReady).toBe(true));
+  const ref=provider.state.call.agentCall,childFile=path.join(f.user,entry.id,'loop-engine/tasks',ref.taskId,ref.runId,'events.jsonl'),original=await fs.readFile(childFile,'utf8');
+  expect(prior.decision).toBe('accept');expect(provider.member).toHaveLength(8);
+  const extra=path.join(f.a,d.root,'extra.txt');
+  if(mode==='changed-set')await fs.writeFile(extra,'new file outside accepted complete set');
+  if(mode==='broken-source')await fs.appendFile(childFile,'{"partial":');
+  provider.releaseContinuation();
+  const second=await question();
+  expect(second.id).not.toBe(first.id);expect(await records()).toEqual([prior]);
+  expect(second.questions[0].options.map(o=>o.label)).toEqual(mode==='same'?['接受此成果','不接受此成果','要求补充证据']:['不接受此成果','要求补充证据']);
+  const decision=mode==='same'?'accept':'request_evidence';
+  await answer(second,decision==='accept'?'接受此成果':'要求补充证据');
+  const next=await question(second.id),saved=await records();
+  expect(saved).toHaveLength(2);expect(saved[0]).toEqual(prior);
+  expect(saved[1]).toMatchObject({decision,callId:'full-call',original:prior.original});
+  expect(saved[1].reviewToolCallId).not.toBe(prior.reviewToolCallId);
+  expect(saved[1].current.state).toBe(mode==='same'?'verified':'unverified');
+  await answer(next,'只保存意见');
+  await until(()=>{expect(provider.state.secondHumanReview).toBeDefined();expect(app.runtime.snapshot().pressure.activeRuns).toBe(0)});
+  expect(provider.state.secondHumanReview).toMatchObject({record:saved[1],continued:false,executionAuthorized:false});
+  expect(provider.member).toHaveLength(8);expect(provider.main).toHaveLength(5);
+  expect(await fs.readFile(childFile,'utf8')).toBe(original+(mode==='broken-source'?'{"partial":':''));
+  const sequence=[...provider.sequence],state=await completeOutputRecords(f.user,entry.id),rootBytes=await fs.readFile(path.join(rootDir,'events.jsonl'),'utf8');
+  await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.init();
+  expect(await completeOutputRecords(f.user,entry.id)).toEqual(state);expect(await records()).toEqual(saved);expect(await questions()).toEqual([]);
+  expect(await fs.readFile(path.join(rootDir,'events.jsonl'),'utf8')).toBe(rootBytes);expect(provider.sequence).toEqual(sequence);
+  expect(await fs.readFile(path.join(f.a,d.file),'utf8')).toBe(d.content);
+  if(mode==='changed-set')expect(await fs.readFile(extra,'utf8')).toBe('new file outside accepted complete set');
+ }finally{provider.releaseAll();await app.shutdown();await provider.close();await f.cleanup()}
+},90000);

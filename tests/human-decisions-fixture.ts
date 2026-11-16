@@ -85,7 +85,6 @@ export async function prepareRecursiveHumanReview(reconsider=false,afterReview?:
       expect(provider.sequence).toEqual(sequence);expect(provider.errors).toEqual([]);
       return records;
     };
-    return {f,provider,app,entry,start,first,read,question,answer,decisions,saved,stopAndReopen,until,cleanup:async()=>{await app.shutdown();await provider.close();await f.cleanup()}};
+    return {f,provider,get app(){return app},entry,start,first,read,question,answer,decisions,saved,stopAndReopen,until,cleanup:async()=>{await app.shutdown();await provider.close();await f.cleanup()}};
   }catch(error){await app.shutdown();await provider.close();await f.cleanup();throw error}
 }
-

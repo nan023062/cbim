@@ -1,51 +1,53 @@
 import {expect,it,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import {randomUUID} from 'node:crypto';
 import {fixture} from './helpers';
 import {scopeBudgetProvider,scopeBudgetFixture as data,type BudgetFixtureMode} from './scope-budget-provider';
-import {seedScopeBudget,budgetScopes,budgetLimits,budgetDenies,budgetUnpriced} from './scope-budget-fixture';
+import {seedScopeBudget,budgetScopes,budgetUnpriced} from './scope-budget-fixture';
 import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
-import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
-import type {GoalContinuationRequest} from '../src/logic/tasks/rules/scope-continuation';
-import {scopeUsageReportSchema} from '../src/logic/budget/rules/scope-usage';
 
-it.each(['main-limit','member-limit','cost-limit','unknown-price','tokens-unpriced','complete','waiting'] as BudgetFixtureMode[])('enforces frozen soft budget only between actual Pi runs and never replays after restart (%s)',async mode=>{
-  const f=await fixture(),provider=await scopeBudgetProvider(mode);let app=f.app,failed=false;
-  try{
-    const {entry,profileId}=await seedScopeBudget(app,f.a,provider,mode),options={profileId,model:data.model,permission:'read',turnTimeoutMs:60000};
-    const defaults=await app.dispatch('budget.settings');expect(defaults).toMatchObject({revision:1,enabled:false,limits:{}});
-    const policy=await app.dispatch('budget.configure',{revision:defaults.revision,enabled:true,limits:budgetLimits(mode)});
-    const started=await app.dispatch('loop.chat',{id:entry.id,message:data.goal,options}) as {taskId:string;runId:string},identity={workspaceId:entry.id,rootSessionId:started.taskId},scopes=()=>budgetScopes(f.user,entry.id),graph=()=>app.dispatch('dispatch.graphSnapshot',{identity}) as Promise<GraphSnapshot>,queue=()=>app.dispatch('loop.queue',{id:entry.id,taskId:started.taskId});
-    await vi.waitFor(()=>expect(provider.main).toHaveLength(3),{timeout:20000});const original=(await scopes())[0];expect(original.budget?.policy).toEqual(policy);expect(original.runTracking?.mainRunIds).toEqual([started.runId]);expect(provider.member).toHaveLength(0);
-    // A later global edit is deliberately made while the actual main engine is still active.
-    const raised=await app.dispatch('budget.configure',{revision:policy.revision,enabled:true,limits:{tokens:100000,estimatedCostUsd:100}});expect((await scopes())[0].budget?.policy).toEqual(policy);
-    if(budgetDenies(mode)||mode==='waiting')await app.dispatch('loop.enqueue',{id:entry.id,taskId:started.taskId,message:data.queued,options});
-    provider.releaseMain();provider.releaseMember();
-    await vi.waitFor(async()=>{expect((await scopes())[0].status).toBe(mode==='waiting'?'waiting':'closed');expect(app.runtime.snapshot().pressure.activeRuns).toBe(0)},{timeout:35000,interval:40});
-    const settled=(await scopes())[0],task=(await graph()).tasks[0],usage=scopeUsageReportSchema.parse(await app.dispatch('dispatch.scopeUsage',{...identity,scopeId:settled.scopeId}));expect(settled.budget?.policy).toEqual(policy);expect(provider.errors).toEqual([]);
-    if(budgetDenies(mode)){
-      expect(settled.outcome).toBe('failed');expect(settled.budget?.blocked?.reason).toBe(mode==='unknown-price'?'usage_unverifiable':mode==='cost-limit'?'cost_limit':'token_limit');expect(settled.budget?.blocked?.policyRevision).toBe(policy.revision);expect(provider.main).toHaveLength(3);expect(provider.member).toHaveLength(mode==='member-limit'?5:0);expect(settled.runTracking?.mainRunIds).toEqual([started.runId]);expect(usage.totals.tokens.total).toBe(mode==='member-limit'?1560:360);
-      // The actual Pi sum is 0.00041999999999999996; floating tail error must not grant another run.
-      if(mode==='cost-limit'){expect(usage.totals.estimatedCostUsd).toBeLessThan(policy.limits.estimatedCostUsd!);expect(usage.totals.estimatedCostUsd).toBeCloseTo(policy.limits.estimatedCostUsd!,14)}
-      if(mode==='member-limit'){expect(task.runIds).toHaveLength(1);expect(task.result).toBeDefined()}else{expect(task.runIds).toEqual([]);expect(task.result).toBeUndefined()}
-      expect((await queue())[0]).toMatchObject({message:data.queued,status:'paused'});
-    }else{
-      expect(provider.main).toHaveLength(6);expect(provider.member).toHaveLength(5);expect(usage.totals.tokens.total).toBe(1920);expect(usage.totals.registeredRuns).toBe(3);expect(usage.totals.tokensComplete).toBe(true);expect(settled.budget?.blocked).toBeUndefined();expect(settled.runTracking?.mainRunIds).toHaveLength(2);
-      if(mode!=='waiting')expect(settled).toMatchObject({status:'closed',outcome:'completed'});
-    }
-    expect(usage.totals.costComplete).toBe(!budgetUnpriced(mode));
-    const sequence=[...provider.sequence],beforeRestart=await scopes(),beforeGraph=await graph();await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.init();
-    expect(await app.dispatch('budget.settings')).toEqual(raised);expect(await scopes()).toEqual(beforeRestart);expect(await graph()).toEqual(beforeGraph);expect(provider.sequence).toEqual(sequence);
-    if(mode==='waiting'){
-      const before=(await scopes())[0],wait=before.wait!,req:GoalContinuationRequest={...identity,scopeId:before.scopeId,waitId:wait.waitId,expectedGoalRevision:before.goal!.revision,expectedInputRevision:before.goal!.inputRevision??1,commandId:randomUUID(),input:{message:data.supplement},options:{provider:'cbim-'+profileId,model:data.model,profileId,permission:'read',turnTimeoutMs:30000}};
-      const lookup={...identity,scopeId:req.scopeId,commandId:req.commandId};expect(await app.dispatch('loop.goalContinuation',lookup)).toBeUndefined();
-      await expect(app.dispatch('loop.goalContinue',req)).rejects.toMatchObject({code:'SCOPE_BUDGET_EXCEEDED'});
-      const denied=(await scopes())[0];expect(denied.status).toBe('waiting');expect(denied.wait).toEqual(before.wait);expect(denied.goal).toEqual(before.goal);expect(denied.continuations).toEqual(before.continuations);expect(denied.runTracking).toEqual(before.runTracking);expect(denied.budget?.blocked?.reason).toBe('token_limit');expect(await app.dispatch('loop.goalContinuation',lookup)).toBeUndefined();expect((await queue())[0]).toMatchObject({message:data.queued,status:'paused'});expect(provider.sequence).toEqual(sequence);
-      await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.init();expect((await scopes())[0]).toEqual(denied);expect(provider.sequence).toEqual(sequence);await app.dispatch('loop.stop',{id:entry.id,taskId:started.taskId});expect((await scopes())[0]).toMatchObject({status:'closed',outcome:'cancelled'});expect(provider.sequence).toEqual(sequence);
-    }
-    expect(await fs.readFile(path.join(f.a,data.file),'utf8')).toBe(data.fact);expect(provider.errors).toEqual([]);
-  }catch(error){failed=true;console.error(JSON.stringify({mode,temp:f.temp,sequence:provider.sequence,transportErrors:provider.errors}));throw error}
-  finally{provider.releaseAll();const errors:unknown[]=[];for(const clean of [()=>app.shutdown(),()=>f.cleanup(),()=>provider.close()])try{await clean()}catch(error){errors.push(error)}if(!failed&&errors.length)throw errors[0]}
+it.each(['main-limit','member-limit','cost-limit','unknown-price','tokens-unpriced','complete','waiting'] as BudgetFixtureMode[])('recursive requests share the frozen root budget and retain settled facts after restart (%s)',async mode=>{
+ const f=await fixture(),provider=await scopeBudgetProvider(mode==='waiting'?'waiting':'complete',true);let app=f.app;
+ try{
+  const {entry,profileId}=await seedScopeBudget(app,f.a,provider,mode),options={profileId,model:data.model,permission:'read',turnTimeoutMs:60000};
+  const limits=mode==='cost-limit'?{estimatedCostUsd:0.0739}:mode==='unknown-price'?{estimatedCostUsd:1}:{tokens:mode==='main-limit'?69800:mode==='member-limit'?70000:mode==='waiting'?71191:80000};
+  const policy=await app.dispatch('budget.configure',{revision:1,enabled:true,enforcement:'request',limits});
+  const started=await app.dispatch('loop.chat',{id:entry.id,message:data.goal,options}),identity={workspaceId:entry.id,rootSessionId:started.taskId};
+  const scopes=()=>budgetScopes(f.user,entry.id),until=(check:()=>void|Promise<void>)=>vi.waitFor(async()=>{expect(provider.errors).toEqual([]);await check()},{timeout:45000,interval:30});
+  if(mode!=='unknown-price')await until(()=>expect(provider.main).toHaveLength(2));
+  else await until(async()=>expect((await scopes())[0]?.status).toBe('closed'));
+  const original=(await scopes())[0];expect(original.budget?.policy).toEqual(policy);
+  const raised=await app.dispatch('budget.configure',{revision:policy.revision,enabled:true,enforcement:'request',limits:{tokens:300000,estimatedCostUsd:100}});
+  expect((await scopes())[0].budget?.policy).toEqual(policy);
+  if(!['unknown-price','complete','tokens-unpriced'].includes(mode))await app.dispatch('loop.enqueue',{id:entry.id,taskId:started.taskId,message:data.queued,options});
+  provider.releaseAll();
+  if(mode==='waiting'){
+   await until(async()=>expect((await app.dispatch('loop.questions',{id:entry.id,taskId:started.taskId}))).toHaveLength(1));
+   const question=(await app.dispatch('loop.questions',{id:entry.id,taskId:started.taskId}))[0];
+   const before=await app.dispatch('dispatch.requestBudget',{...identity,scopeId:original.scopeId});
+   expect(before).toMatchObject({reported:8,tokens:1560,denied:0});
+   await app.dispatch('loop.answerQuestion',{id:entry.id,taskId:started.taskId,questionId:question.id,answers:[{option:0,other:''}]});
+  }
+  await until(async()=>{expect((await scopes())[0].status).toBe('closed');expect(app.runtime.snapshot().pressure.activeRuns).toBe(0)});
+  const scope=(await scopes())[0],query={...identity,scopeId:scope.scopeId},report=await app.dispatch('dispatch.requestBudget',query);
+  const complete=mode==='complete'||mode==='tokens-unpriced';
+  expect(scope.outcome).toBe(complete?'completed':'failed');expect(scope.budget?.policy).toEqual(policy);
+  expect(scope.runTracking?.mainRunIds).toEqual([started.runId]);expect(scope.goal?.plan).toBeUndefined();
+  expect(report.reported).toBe(provider.main.length+provider.member.length);expect(report.reservedTokens).toBe(0);expect(report.unknown).toBe(0);
+  if(complete){expect(provider.main).toHaveLength(4);expect(provider.member).toHaveLength(5);expect(report).toMatchObject({tokens:1680,denied:0})}
+  else if(mode==='unknown-price'){expect(provider.main).toEqual([]);expect(provider.member).toEqual([]);expect(report.denied).toBe(1)}
+  else if(mode==='waiting'){expect(provider.main).toHaveLength(3);expect(provider.member).toHaveLength(5);expect(report).toMatchObject({tokens:1560,denied:1,lastDenial:'token_reserve'})}
+  else if(mode==='member-limit'){expect(provider.main).toHaveLength(2);expect(provider.member).toHaveLength(1);expect(report).toMatchObject({tokens:480,denied:2,lastDenial:'token_reserve'})}
+  else{expect(provider.main).toHaveLength(2);expect(provider.member).toHaveLength(0);expect(report.denied).toBeGreaterThan(0)}
+  const usage=await app.dispatch('dispatch.scopeUsage',query);expect(usage.totals.costComplete).toBe(!budgetUnpriced(mode));
+  const saved=await app.workspace(entry.id).dispatchStore.read();expect(saved.graphs[0].tasks).toEqual([]);
+  const queue=await app.dispatch('loop.queue',{id:entry.id,taskId:started.taskId});
+  if(!complete&&mode!=='unknown-price')expect(queue[0]).toMatchObject({message:data.queued,status:'paused'});
+  const journal=path.join(f.user,entry.id,'dispatch/dispatch.jsonl'),bytes=await fs.readFile(journal),sequence=[...provider.sequence];
+  await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.init();
+  expect(await app.dispatch('budget.settings')).toEqual(raised);expect(await app.workspace(entry.id).dispatchStore.read()).toEqual(saved);
+  expect(await app.dispatch('dispatch.requestBudget',query)).toEqual(report);expect(await fs.readFile(journal)).toEqual(bytes);expect(provider.sequence).toEqual(sequence);
+  expect(await fs.readFile(path.join(f.a,data.file),'utf8')).toBe(data.fact);
+ }finally{provider.releaseAll();await app.shutdown();await provider.close();await f.cleanup()}
 },90000);

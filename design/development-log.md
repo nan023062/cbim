@@ -3264,3 +3264,11 @@ member-pause-pi 四项改用真实递归 Agent 工具：A 实际写入、读取�
 - 原旧队列 ABA/领取语义不冒充新调用生命周期；兼容服务测试仍保留。bad-wire 改为真实子执行完成后丢失返回确认，未声称新 Agent 工具已有旧 dispatch 输出 Schema。所有根/子 canonical 和 native 在重启后逐字节保持，任务图为空。
 - pnpm exec vitest run tests/owner-execution-pi.test.ts tests/module-ownership-pi.test.ts --reporter=json --outputFile=build/recursive-owner-verified.json：13/13 通过。首次 6 项运行均在测试读取日志路径时误用 TaskSpec.id 失败，修正为实际 taskId 后通过；pnpm typecheck 通过。未跑完整桌面/安装升级。
 - 当前 30a98c15 CI 分片 2：868 通过、13 失败；发现源文件头使用“设计意图”而非强制“设计原因”，同步修正；架构生成器核查 135 目录、836 源码，结构与行为未变，无文档差异；其余属于待迁移业务/附件测试。
+
+
+## 2026-11-16：预算集成迁移到根请求账本（Issue #94 / PR #96）
+
+- scope-budget 七项改用 enforcement=request。真实 Pi 的根与子请求共用冻结策略；费用/价格缺失不放行，单纯 token 限额允许未定价模型；未来全局配置提升不改变当前调用额度。同调用提问后的下一次请求仍检查原额度，失败后排队指令保持暂停。
+- 旧 run 间软限额不是递归调用的支持模式，未恢复旧成员领取或持久 wait 协议。共享供应商只增加显式 recursive 分支，历史默认未改。
+- 初次 build/recursive-scope-budget.json 为 4/7 通过：未知价格费用完整性断言应为 false；正常完成不应附带一个供应商未实现的额外任务；提问选项须使用真实 label Schema。修正后 pnpm exec vitest run tests/scope-budget-pi.test.ts -t "unknown-price|tokens-unpriced|complete|waiting" --reporter=json --outputFile=build/recursive-scope-budget-followup.json 为 4/4 通过；首轮其余三项无需重复。pnpm typecheck、pnpm check:test-modules 通过。
+- 仅为本批受影响集成验证，完整 CI 和桌面安装验收尚未通过。

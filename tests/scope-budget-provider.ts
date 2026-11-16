@@ -28,10 +28,10 @@ export async function scopeBudgetProvider(mode:BudgetFixtureMode,recursive=false
     const emit=(delta:unknown,finish_reason:string|null=null)=>res.write('data: '+JSON.stringify({id:'budget-'+sequence.length,object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason}],...(finish_reason?{usage:{prompt_tokens:isMain?100:200,completion_tokens:isMain?20:40,total_tokens:isMain?120:240}}:{})})+'\n\n');
     const tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]});emit({},'tool_calls')},reply=(text:string)=>{emit({role:'assistant',content:text});emit({},'stop')};
     if(isMain&&recursive){
-      assert.equal(mode,'complete','递归预算场景单独验证请求门禁，不冒充旧持久等待');
+      assert.ok(mode==='complete'||mode==='waiting','递归预算使用请求门禁和同调用提问');
       if(turn===0)tool('budget-identity','cbim_workspace_identity',{});
       else if(turn===1){assert.ok(ownerSelection);await mainGate.promise;tool('budget-call','cbim_agent_call',{agentId:ownerSelection.memberId,message:d.memberGoal,business:{moduleIds:[moduleId],acceptance:d.acceptance}})}
-      else if(turn===2){const call=mainToolValue(body,'budget-call');assert.equal(call.status,'completed');assert.equal(call.verification.state,'verified');tool('budget-check','cbim_agent_result_check',{callId:'budget-call'})}
+      else if(turn===2){const call=mainToolValue(body,'budget-call');assert.equal(call.status,'completed');assert.equal(call.verification.state,'verified');if(mode==='waiting')tool('budget-question','cbim_ask_user_question',{questions:[{question:d.waitReason,options:[{label:'编号列表'},{label:'连续短句'}]}]});else tool('budget-check','cbim_agent_result_check',{callId:'budget-call'})}
       else if(turn===3){assert.equal(mainToolValue(body,'budget-check').state,'verified');reply('本轮业务读取已复核；不等于人工验收。')}
       else throw Error('Unexpected recursive budget root request '+turn);
     }else if(isMain){

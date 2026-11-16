@@ -2,7 +2,7 @@ import {expect,it} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {humanDecisionFixture as data} from './human-decisions-provider';
-import {prepareRecursiveHumanReview as ready,humanReviewLabels as labels} from './human-decisions-fixture';
+import {prepareRecursiveHumanReview as ready,humanReviewLabels as labels} from './recursive-human-review-fixture';
 
 it.each(['accept','reject','request_evidence'] as const)('persists explicit %s on the original Agent call; continuation and restart cannot replay work',async decision=>{
   const c=await ready(decision==='accept');

@@ -32,7 +32,7 @@ it.each(['complete-restart','stop-wait','changed-files','submitted-stop'] as con
    await app.dispatch('loop.answerQuestion',{id:entry.id,taskId:start.taskId,questionId:question.id,answers:[{option:0,other:'继续同一次调用，不重放写入'}]});
    if(mode==='submitted-stop'){await until(()=>expect(provider.state.continued).toBe(true));await app.dispatch('loop.stop',{id:entry.id,taskId:start.taskId});provider.releaseContinuation()}
   }
-  await until(()=>expect(app.runtime.snapshot().pressure.activeRuns).toBe(0));
+  await until(async()=>{expect(app.runtime.snapshot().pressure.activeRuns).toBe(0);expect((await app.workspace(entry.id).dispatchStore.read()).scopes![0].status).toBe('closed')});
   const state=await app.workspace(entry.id).dispatchStore.read(),child=await storage.read(childDir),runs=state.agentBusinessRuns!;
   expect(child.runId).toBe(before.runId);expect(child.sessionFile).toBe(before.sessionFile);
   expect(child.events.filter(e=>e.type==='tool.proposed'&&e.data.id==='pause-write')).toHaveLength(1);

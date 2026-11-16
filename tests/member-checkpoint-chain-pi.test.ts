@@ -1,42 +1,49 @@
-import {expect,it,vi} from 'vitest';
+import {expect,it} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import {randomUUID} from 'node:crypto';
-import {fixture} from './helpers';
-import {memberCheckpointChainProvider,memberChainData as data} from './member-checkpoint-chain-provider';
-import {seedMemberCheckpoint,checkpointRecords,checkpointRuns,checkpointLogBytes} from './member-checkpoint-fixture';
-import {Application} from '../src/bridge/server/application';
-import {Paths} from '../src/logic/workspace/service/paths';
-import type {GoalContinuationRequest} from '../src/logic/tasks/rules/scope-continuation';
-import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
-import {memberCheckpointView} from '../src/view/tasks/member-checkpoint-state';
+import {QuestionQueue} from '../src/logic/conversation/runtime/questions';
+import {prepareRecursivePause} from './recursive-pause-fixture';
+import {memberCheckpointFixture as data} from './member-checkpoint-provider';
 
-it.each(['complete','stop','abandon'] as const)('two durable checkpoints retain their chain through real Pi and restart (%s)',async mode=>{
-  const f=await fixture(),provider=await memberCheckpointChainProvider(mode==='abandon');let app=f.app;
-  try{
-    const {entry}=await seedMemberCheckpoint(app,f.a,provider),profileId=(await app.models.list()).selectedId!;
-    const start=await app.dispatch('loop.chat',{id:entry.id,message:data.goal,options:{permission:'execute',turnTimeoutMs:60000}}),identity={workspaceId:entry.id,rootSessionId:start.taskId},records=()=>checkpointRecords(f.user,entry.id),graph=():Promise<GraphSnapshot>=>app.dispatch('dispatch.graphSnapshot',{identity});
-    const receipts:GoalContinuationRequest[]=[],waits:unknown[]=[],frozenLogs:Record<string,string>[]=[];
-    for(let round=1;round<=2;round++){
-      await vi.waitFor(async()=>{expect(provider.errors).toEqual([]);expect((await records()).scopes[0].status).toBe('waiting');expect(provider.main).toHaveLength(round===1?8:16);expect(app.runtime.snapshot().pressure.activeRuns).toBe(0)},{timeout:60000,interval:40});
-      const before=await records(),waiting=before.scopes[0],parked=await graph(),runs=await checkpointRuns(f.user,entry.id),logs=await checkpointLogBytes(f.user,entry.id,runs),native=await fs.readFile(runs.at(-1)!.session.sessionFile!);waits.push(waiting.wait);frozenLogs.push(logs);
-      expect(parked.tasks[0].checkpoints).toHaveLength(round);expect(parked.tasks[0].runIds).toHaveLength(round);expect(parked.tasks[1].runIds).toEqual([]);expect(memberCheckpointView(parked.tasks[0])).toMatchObject({phase:'parked',segment:round,total:round});expect(provider.member).toHaveLength(round===1?7:12);
-      if(round===2){expect(parked.tasks[0].resumeRequest).toBeDefined();expect(parked.tasks[0].resumeHistory).toBeUndefined();expect(memberCheckpointView(parked.tasks[0],parked.tasks[0].runIds[0]).phase).toBe('resumed')}
-      const sequence=[...provider.sequence];await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.init();expect(await records()).toEqual(before);expect(await graph()).toEqual(parked);expect(await fs.readFile(runs.at(-1)!.session.sessionFile!)).toEqual(native);expect(provider.sequence).toEqual(sequence);
-      const input:GoalContinuationRequest={...identity,scopeId:waiting.scopeId,waitId:waiting.wait!.waitId,expectedGoalRevision:waiting.goal!.revision,expectedInputRevision:waiting.goal!.inputRevision??1,commandId:randomUUID(),input:{message:data.supplement},options:{provider:'cbim-'+profileId,model:data.model,profileId,permission:'execute',turnTimeoutMs:60000}};
-      if(round===2&&mode==='stop'){await app.dispatch('loop.stop',{id:entry.id,taskId:start.taskId});await expect(app.dispatch('loop.goalContinue',input)).rejects.toThrow();break}
-      if(round===2&&mode==='complete'){
-        await fs.writeFile(path.join(f.a,data.files[0]),'outside change to first-segment-only file');await expect(app.dispatch('loop.goalContinue',input)).rejects.toMatchObject({code:'MEMBER_CHECKPOINT_ARTIFACT_CHANGED'});expect(await records()).toEqual(before);expect(provider.sequence).toEqual(sequence);await fs.writeFile(path.join(f.a,data.files[0]),data.facts[0]);
-      }
-      const accepted=await Promise.all([app.dispatch('loop.goalContinue',input),app.dispatch('loop.goalContinue',input)]);expect(accepted[0].continuation).toEqual(accepted[1].continuation);expect(accepted[0].continuation.wait).toEqual(waiting.wait);receipts.push(input);
-    }
-    await vi.waitFor(async()=>{expect(provider.errors).toEqual([]);expect((await records()).scopes[0].status).toBe('closed');expect(app.runtime.snapshot().pressure.activeRuns).toBe(0)},{timeout:60000,interval:40});
-    const saved=await records(),finalGraph=await graph(),runs=await checkpointRuns(f.user,entry.id),task=finalGraph.tasks[0],complete=mode==='complete';expect(task.checkpoints).toHaveLength(2);expect(task.runIds).toHaveLength(complete?3:2);expect(saved.scopes[0].continuations!.map(c=>c.wait)).toEqual(complete||mode==='abandon'?waits:waits.slice(0,1));expect(await checkpointLogBytes(f.user,entry.id,runs.filter(r=>task.runIds.slice(0,2).includes(r.binding.runId)))).toEqual(frozenLogs[1]);
-    if(complete){expect(saved.scopes[0].outcome).toBe('completed');expect(task.status).toBe('result_ready');expect(task.resumeHistory).toHaveLength(1);expect(task.result!.runId).toBe(task.runIds[2]);expect(finalGraph.tasks.every(t=>t.status==='result_ready')).toBe(true)}
-    else{expect(task.status).toBe('cancelled');expect(finalGraph.tasks.slice(1).every(t=>!t.runIds.length)).toBe(true);expect(task.checkpointAbandonment?.checkpointId).toBe(mode==='abandon'?task.checkpoints![1].checkpointId:undefined);expect(memberCheckpointView(task).phase).toBe(mode==='abandon'?'abandoned':'sealed')}
-    expect(provider.main).toHaveLength(complete?30:mode==='stop'?16:23);expect(provider.member).toHaveLength(complete?27:12);expect(await fs.readFile(path.join(f.a,data.files[0]),'utf8')).toBe(data.facts[0]);
-    const sequence=[...provider.sequence];await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.init();expect(await records()).toEqual(saved);expect(await graph()).toEqual(finalGraph);
-    for(const input of receipts){const read=await app.dispatch('loop.goalContinuation',{...identity,scopeId:input.scopeId,commandId:input.commandId});expect((await app.dispatch('loop.goalContinue',input)).continuation).toEqual(read!.continuation)}expect(provider.sequence).toEqual(sequence);
-  }catch(error){await fs.mkdir('test-results',{recursive:true});await fs.writeFile('test-results/member-chain-pi-'+mode+'-diagnostic.json',JSON.stringify({error:String(error),state:provider.state,main:provider.main.length,member:provider.member.length,errors:provider.errors,sequence:provider.sequence},null,2));throw error}
-  finally{await app.shutdown();await f.cleanup();await provider.close()}
-},180000);
+// 两次暂停是同一普通工具的连续状态，不产生新执行层级或复制业务运行。
+it.each(['complete','stop','abandon','changed-original'] as const)('two recursive pauses preserve the entire original proof and reject stale answers (%s)',async mode=>{
+ const c=await prepareRecursivePause(true);
+ try{
+  const before=await c.child(),file=path.join(c.f.a,data.files[0]),stat=await fs.stat(file);
+  await c.answer(c.first);
+  const second=await c.question(c.first.id);
+  expect(c.provider.state.waitingAgain.agentCall).toEqual(c.provider.state.waiting.agentCall);
+  expect(c.provider.state.waitingAgain.questionId).not.toBe(c.provider.state.waiting.questionId);
+  expect((await c.child()).runId).toBe(before.runId);expect((await c.child()).sessionFile).toBe(before.sessionFile);
+  expect(c.provider.byChild.map(a=>a.length)).toEqual([7,0,0]);
+  const waitingState=await c.state(),sequence=[...c.provider.sequence];
+  await expect(c.answer(c.first)).rejects.toThrow();
+  expect(await c.state()).toEqual(waitingState);expect(c.provider.sequence).toEqual(sequence);
+  expect(await c.questions()).toEqual([second]);
+  if(mode==='stop')await c.stop();
+  else if(mode==='abandon')(c.app.execution(c.entry.id) as unknown as {questions:QuestionQueue}).questions.cancel(c.start.taskId);
+  else{
+   if(mode==='changed-original')await fs.writeFile(file,'changed file captured before first pause');
+   await c.answer(second);
+  }
+  await c.until(async()=>{expect(c.app.runtime.snapshot().pressure.activeRuns).toBe(0);expect((await c.state()).scopes![0].status).toBe('closed')});
+  const final=await c.state(),child=await c.child();
+  expect(child.events.filter(e=>e.type==='tool.proposed'&&e.data.name==='write')).toHaveLength(1);
+  expect(child.events.filter(e=>e.type==='tool.proposed'&&['pause-ask','pause-ask-again'].includes(String(e.data.id)))).toHaveLength(2);
+  if(mode==='complete'){
+   expect(c.provider.byChild.map(a=>a.length)).toEqual([11,6,6]);expect(final.agentBusinessRuns).toHaveLength(3);
+   expect(c.provider.state.results.map(r=>r.status)).toEqual(['completed','completed','completed']);
+   expect((await fs.stat(file)).mtimeMs).toBe(stat.mtimeMs);
+  }else{
+   expect(final.agentBusinessRuns).toHaveLength(1);expect(c.provider.byChild.slice(1)).toEqual([[],[]]);
+   if(mode==='changed-original')expect(c.provider.state.result.error.code).toBe('ARTIFACT_BASELINE_STALE');
+   else if(mode==='abandon'){expect(c.provider.state.result.error).toBeTruthy();expect(child.taskProgress?.delivery).toBeUndefined()}
+   else expect(child.status).toBe('cancelled');
+  }
+  const bytes=await fs.readFile(path.join(c.directory,'events.jsonl'),'utf8'),native=await fs.readFile(child.sessionFile!),requests=[...c.provider.sequence];
+  await c.reopen();expect(await c.state()).toEqual(final);expect(await c.questions()).toEqual([]);
+  expect(await fs.readFile(path.join(c.directory,'events.jsonl'),'utf8')).toBe(bytes);expect(await fs.readFile(child.sessionFile!)).toEqual(native);
+  await expect(c.answer(second)).rejects.toThrow();expect(c.provider.sequence).toEqual(requests);
+  expect(await fs.readFile(file,'utf8')).toBe(mode==='changed-original'?'changed file captured before first pause':data.facts[0]);
+ }finally{await c.cleanup()}
+},90000);

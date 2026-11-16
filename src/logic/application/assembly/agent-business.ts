@@ -5,6 +5,7 @@
  * 实现形式：工作区执行装配入口；普通文件采集和结构验证分别复核，未配置验证器不等于字节仍有效。
  */
 import path from 'node:path';
+import {validateWorkflowEvidence} from '../../evidence/rules/workflow-evidence';
 import {AgentArtifactVerification} from '../../evidence/runtime/agent-artifact-verification';
 import type {AgentCallReference} from '../../agents/contracts';
 import type {AgentBusinessRun} from '../../execution/rules/business-run';
@@ -96,6 +97,9 @@ export async function prepareAgentBusiness(input:{
     signal.throwIfAborted();workspace.assert();await assertCurrentKnowledge();
     const canonical=await input.storage.read(path.join(directory,'tasks',task.taskId,binding.runId));
     if(canonical.runId!==summary.runId)fail('AGENT_RESULT_IDENTITY','核验结果不属于原调用');
+    if(canonical.logIntegrity?.partialTail!==false||canonical.unresolvedTools.length)fail('WORKFLOW_EVIDENCE_INVALID','原业务调用日志不完整，不能验证交付');
+    // 无附加约定不是免交付：显式业务调用仍核原计划、真实步骤证据和成功交付回执。
+    if(!workflows.length)validateWorkflowEvidence(canonical.events,memberPublicTask(task,workspace.entry.path),[],[],undefined,{requireDelivery:true});
     const run:DispatchRun={binding,assignmentMessageId:task.taskId,status:canonical.status==='completed'?'completed':'failed',prepared,model:input.model.profile,permission:input.permission,session:{...launch.session,sessionFile:canonical.sessionFile},createdAt:now};
     await validateMemberWorkflow(task,run,canonical,workspace.entry.path,{normalizePath,checkFiles:files.checkFiles.bind(files),checkManifest:manifests.check.bind(manifests),signal});
     // 结构验证器不覆盖普通文本采集；交付及人工接受均须复核原采集字节。

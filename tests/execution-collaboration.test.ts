@@ -346,3 +346,21 @@ test('活动原运行的未决工具只允许补充排队，不启动新模型�
     expect(f.factory).toHaveBeenCalledTimes(1);
   }finally{await f.cleanup()}
 });
+
+test.each([false,true])('closing waits for unified Agent durable settlement and reports its failure (%s)',async reject=>{
+ const f=await fixture();let release!:()=>void;const gate=new Promise<void>(resolve=>release=resolve);
+ const lifecycle={beforeRun:vi.fn(async()=>{}),settled:vi.fn(async()=>{await gate;if(reject)throw Error('durable settlement failed')}),failed:vi.fn(async()=>{})};
+ const original=f.factory.getMockImplementation()!;
+ f.factory.mockImplementation(async(...args)=>({...await original(...args),agent:new Agent({id:'cbim:main',name:'main',instructions:'',permission:'ask'},{workspaceId:args[1].workspaceId,taskId:args[1].taskId}),unifiedAgentTools:true,agentLifecycle:lifecycle}));
+ try{
+  const run=await f.manager.chat('关闭仍需保存原运行事实',options);
+  await f.manager.enqueue(run.taskId,'关闭后不得自动执行',options);
+  let done=false;const closing=f.manager.close();const observed=closing.then(()=>{done=true;return undefined},error=>{done=true;return error});
+  await vi.waitFor(()=>expect(lifecycle.settled).toHaveBeenCalledTimes(1));
+  expect(done).toBe(false);expect(f.runs).toHaveLength(1);
+  expect(lifecycle.settled).toHaveBeenCalledWith(expect.objectContaining({runId:run.runId,status:'cancelled'}));
+  release();const failure=await observed;
+  if(reject)expect(failure?.message).toBe('durable settlement failed');else expect(failure).toBeUndefined();
+  expect(f.settled).not.toHaveBeenCalled();expect(f.runs).toHaveLength(1);
+ }finally{release();await f.cleanup()}
+});

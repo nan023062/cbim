@@ -3234,3 +3234,18 @@ member-pause-pi 四项改用真实递归 Agent 工具：A 实际写入、读取�
 边界：新协议不再以停泊图创建新运行恢复检查点；原旧检查点/暂停持久服务兼容测试保留，不能将新同调用等待声称为跨进程继续能力。旧桌面 member-pause-ui-smoke 仍使用旧模型替身，尚待迁移，不记已验收。
 
 受影响验证：pnpm exec vitest run tests/member-pause-pi.test.ts 4/4（build/recursive-member-pause.json）；pnpm typecheck、pnpm check:test-modules 通过。该批仅测试迁移，无 src 改动。全量 CI、桌面发布未通过。
+
+## 2026-11-16 · #94 连续暂停、基础交付与关闭结算
+
+连续暂停迁移到同一 agent_call 的两次 question/reply，覆盖完成、停止、放弃和修改最早采集文件；错误/迟到答案不唤醒旧问题，后继只在实际交付后执行。scope-wait 三项验证根租约保持至真实排空、普通排队文字不消费问题、关闭保存原终态、未答复子调用直接结束导致 interrupted 且不制造 repair 运行。旧跨进程停泊恢复、检查点展示仍是旧协议兼容语义，不将本次新工具进程内等待冒称为持久续跑。
+
+实际缺陷与修复：
+- 无附加 Workflow 的业务 Agent 原先可能缺少 delivery 仍被标为 verified。复用 validateWorkflowEvidence 新增可信 requireDelivery 选项，核原目标、计划、步骤、交付回执、日志顺序与真实证据；不补造 Workflow。agent-business 在显式业务入口启用并拒绝截断/未决日志。
+- ExecutionManager.close 原先跳过统一 Agent lifecycle.settled，关闭后 scope 仍 active。现在关闭仍保存原终态并等待 settled；禁止排队新工作，持久结算失败向关闭方报告。旧协议协调归属不变。
+- 人工审阅集成夹具引入 Vitest 后被共享种子链传入 Electron，导致宿主启动超时。将完整集成/断言移入 recursive-human-review-fixture，原 human-decisions-fixture 保留可在 Electron 使用的纯种子/日志读取。
+
+验证与实际失败：首次 abandon 用例暴露缺交付仍放行，已修复；一次重开比较暴露测试只等 activeRuns=0、未等 scope 持久闭合，改为同时等待两者，不删除持久状态断言。关闭用例先暴露 active scope，已修复。Electron 初次 4 项均启动失败，保留错误记录，分离夹具后 4/4 通过真实 utility 写入/未知/停止/补偿。
+
+实际通过：workflow-evidence 24/24；recursive-delivery-consumers.json 中连续暂停4、单次暂停4、问答4、请求预算11共23/23；human-decisions 4/4；分离夹具后 human-decisions + human-continuation 12/12；scope-wait 3/3；execution-collaboration18 + queue-insertion-boundary26 + recovery-start-race4 + replan-start-race5共53/53，另新增关闭等待/失败2/2；业务消费者 JSON/CSV/PNG15、完整集合4、原采集2、执行报告2共23/23，受控文件重跑4/4。pnpm typecheck、pnpm check:architecture（1666 文件/7923 边/0 环）、pnpm check:test-modules（541 文件）通过。同步 application/assembly、conversation/runtime、evidence/rules 注释、契约及类图。
+
+远端旧头065d9697的CI 43794310879已结束：四片报告共3588通过、105失败、2pending，不能作为本地新头结果；四份报告已保留 build/ci-43794310879。仍有旧派工、恢复/重规划、依赖变更、附件等待及桌面脚本待迁移。未宣称全量通过，未合并/发布。

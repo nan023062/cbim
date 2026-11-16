@@ -487,3 +487,6 @@ resume 只对本进程 active Map 中 taskId/runId 完全匹配的活动主运�
 ## 根运行插入回执
 
 新 Agent 运行的队列插入通过 AgentLifecycle.insertInput 进入原持久回执机制；历史运行仍走既有协调器。beforeRun 传本轮正文、附件与队列话题身份，不能拿首次 TaskSpec.goal 替代续聊内容。
+
+## 关闭时的统一 Agent 结算
+ExecutionManager.close 禁止新工作后排空原循环，并等待每个捕获运行的 settled。统一 Agent 的生命周期结算在 closing 时仍执行，把真实终态封存到原 scope；关闭不再跳过它。关闭期间不 pump 队列、不继续模型；结算失败向关闭调用方报告，不冒充成功释放。旧协作协议的关闭协调保持原所有者。

@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import {prepareRecursiveHumanReview as ready,humanReviewLabels} from './human-decisions-fixture';
+import {prepareRecursiveHumanReview as ready,humanReviewLabels} from './recursive-human-review-fixture';
 import {humanDecisionFixture as data} from './human-decisions-provider';
 
 /** 继续是原工具内的明确选择；不恢复旧目标服务，不把意见当成执行授权。 */

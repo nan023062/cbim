@@ -11,3 +11,6 @@ Workflow 的 `delivery.requiredCodeChecks` 冻结检查 ID、目的、program、
 范围必须显式包含相关源码、测试、构建配置和锁文件；未声明的依赖、环境和外部服务不在证明范围。沿用完整清单上限：16 个根、512 条目、单文件 8 MiB、总计 32 MiB。构建输出应放在输入范围之外。每组最多 8 项，每项最长 5 分钟，输出最多 256 KiB。平台执行是宿主进程，不提供沙箱隔离。
 
 阅读顺序：logic/workspace/rules/code-check.ts 定义要求，logic/evidence/rules/code-check.ts 核验事实，logic/execution/rules/capabilities/run-code-check.ts 管理生命周期，logic/file-operations/platform/files/code-check-runner.ts 执行真实进程。新增项目检查优先修改 Workflow 和项目适配脚本；新增成功判据才修改契约与平台解析，并补充失败回归。
+
+## 显式业务调用的基本交付
+validateWorkflowEvidence 的可信 requireDelivery 选项用于没有附加 Workflow 的业务 Agent。仍核原目标、连续 canonical、成功计划/交付回执、实际步骤证据及副作用结束顺序；不构造虚假 Workflow 或证明。历史无约定调用不传此选项，保留原兼容规则。返回 undefined 仅表示没有额外 Workflow 证明，不表示跳过基本交付校验。

@@ -378,14 +378,18 @@ export class WorkspaceExecutionManager {
         try{await runningLoop.runtime.close()}catch{summary=undefined}
         releaseBudget?.();releaseBudget=undefined;
         if(this.active.get(task.taskId)?.runId===run.runId)this.active.delete(task.taskId);
-        if(!this.closing)await this.serial(async()=>{
+        // 关闭只禁止新工作，不能跳过原 Agent 已发生事实的持久结算。
+        if(this.closing&&runningLoop.unifiedAgentTools)await runningLoop.agentLifecycle!.settled(summary);
+        else if(!this.closing)await this.serial(async()=>{
           try{
             if(runningLoop.unifiedAgentTools)await runningLoop.agentLifecycle!.settled(summary);
             else this.collaboration?.settled(structuredClone(task),structuredClone(options),summary);
           }catch{await (await this.queue()).pause(task.taskId,'执行结算未能确认，请核实后继续');return}
           if(summary?.status==='completed')await this.pump(task.taskId);else if(!this.topicInterruptions.has(task.taskId))await (await this.queue()).pause(task.taskId,'上一轮已停止或失败，请确认后继续队列');
         });
-      }).catch(()=>{});
+      }).catch(error=>{if(this.closing)throw error});
+      // 后台观察不能产生未处理拒绝；close 仍持有原 settled 并报告结算失败。
+      void active.settled.catch(()=>{});
       return {workspaceId:task.workspaceId,taskId:task.taskId,runId:run.runId};
     }catch(error){
       try{await loop?.runtime.close()}finally{releaseBudget?.();releaseBudget=undefined}
@@ -615,12 +619,14 @@ export class WorkspaceExecutionManager {
     }
     return records;
   }
-  /** 禁止新任务，等待启动登记完成，然后停止并排空所有运行。 */
+  /** 禁止新任务，等待启动登记、原运行排空与 Agent 持久结算；失败不冒充正常关闭。 */
   async close(){
     this.closing=true;this.cancelPendingLaunches();this.cancelApprovals();
     const active=[...this.active.values()],closing=Promise.allSettled(active.map(x=>x.loop.runtime.close()));
     await this.pending;
-    const results=[...await closing,...await Promise.allSettled([...this.active.values()].filter(x=>!active.includes(x)).map(x=>x.loop.runtime.close()))];
+    const late=[...this.active.values()].filter(x=>!active.includes(x));
+    const results=[...await closing,...await Promise.allSettled(late.map(x=>x.loop.runtime.close()))];
+    results.push(...await Promise.allSettled([...active,...late].map(x=>x.settled)));
     this.active.clear();this.listeners.clear();for(const release of this.queueSubscriptions)release();this.queueSubscriptions.clear();
     const failure=results.find((result):result is PromiseRejectedResult=>result.status==='rejected');if(failure)throw failure.reason;
   }

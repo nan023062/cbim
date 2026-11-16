@@ -32,3 +32,8 @@ MemberExecutionManager 在持有准入、冻结知识之后且领取/运行登�
 ## 递归执行记录核实
 
 MemberExecutionManager.report 将独立 inspectAgent 传给 ExecutionReportService；登记决定日志来源，旧 inspect 与递归端口不可按最近记录互相回退。报告核实不领取、不准备引擎、不修改执行状态。
+
+
+### 递归工具迁移收口
+
+validateBusinessWorkflow 以原 TaskSpec 及冻结 binding/prepared/session 核验同一套 Workflow、验证记录和完整出口；原 validateMemberWorkflow 仅适配旧 TaskNode。递归只读核实与旧候选验证共用稳定算法，权限/来源/生命周期由各自调用方核对。

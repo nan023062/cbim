@@ -39,7 +39,11 @@ export async function effectObservationProvider(options:{unsupported?:boolean;ed
       assert.ok(selection);
       if(turn===0)tool('effect-old-call','cbim_agent_call',{agentId:selection.memberId,message:d.oldMemberGoal,business:{moduleIds:[moduleId],acceptance:d.acceptance}});
       else if(turn===1){const failed=mainToolValue(body,'effect-old-call');assert.equal(failed.status,'unknown');assert.equal(JSON.parse(failed.message).status,options.unsupported||options.edit?'failed':'interrupted');reply('Original operation has no verified delivery. Inspect its actual effects before deciding what to do next.')}
-      else if(body.messages.every(m=>m.role==='system'||m.role==='user')){
+      else if(body.messages.every(m=>m.role==='system'||m.role==='user')&&JSON.stringify(body.messages).includes(d.repairGoal)){
+        tool('effect-repair-call','cbim_agent_call',{agentId:selection.memberId,message:d.repairMemberGoal,business:{moduleIds:[moduleId],acceptance:d.acceptance}});
+      }else if(body.messages.some(m=>m.tool_call_id==='effect-repair-call')){
+        assert.equal(mainToolValue(body,'effect-repair-call').verification?.state,'verified',JSON.stringify(mainToolValue(body,'effect-repair-call')));reply('New repair verified; original unknown remains unchanged.');
+      }else if(body.messages.every(m=>m.role==='system'||m.role==='user')){
         assert.ok(JSON.stringify(body.messages).includes(d.inspectGoal));emit({role:'assistant',content:'Fresh read-only inspection is ready.'});await inspectionGate;
         tool('effect-inspect-call','cbim_agent_call',{agentId:selection.memberId,message:d.inspectMemberGoal,business:{moduleIds:[moduleId],acceptance:d.acceptance}});
       }else{assert.equal(mainToolValue(body,'effect-inspect-call').verification?.state,'verified',JSON.stringify(mainToolValue(body,'effect-inspect-call')));reply('Fresh inspection completed without replaying the original effect.')}

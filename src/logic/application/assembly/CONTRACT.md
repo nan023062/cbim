@@ -81,3 +81,8 @@ member-dispatch 同时为执行记录报告装配 inspectAgent，复用已有 Bu
 [agent-business](agent-business.ts) 的 verify 在既有 Workflow 核验后调用 AgentArtifactVerification，复核普通采集文件。原 JSON/CSV/PNG 或完整集合验证保持原规则；两类已核实文件按路径合并，避免同一文件重复出现在人工意见对象中。首次交付、result_check、人工接受与接受后继续均使用同一原日志核验闭包，当前字节变化返回 ARTIFACT_BASELINE_STALE，不能把旧读取回执当作当前文件相同的证明。
 
 显式业务 Agent 的 verify 即使没有附加 Workflow，也要求完整无未决工具的 canonical，并调用既有证据规则核实原目标计划、步骤与成功交付。纯模型完成、放弃交付或返回说明文字不能变为 verified；普通非业务 Agent 调用语义不受影响。
+
+
+### 递归工具迁移收口
+
+Agent 业务装配将原 message/acceptance 冻结到实际登记。新修复调用继续通过既有岗位、冻结知识、权限、文件和 Workflow 装配；不恢复旧 Team 派工状态。

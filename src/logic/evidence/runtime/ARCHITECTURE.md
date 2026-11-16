@@ -22,6 +22,7 @@
 | [human-evidence-state.ts](human-evidence-state.ts) | 为人工验收和按意见继续提供同一主周期的证据状态指纹。 |
 | [output-manifest-report-service.ts](output-manifest-report-service.ts) | 对指定旧成员或已登记递归运行列出原完整清单，并在用户明确选定后重新观察全部冻结范围。 |
 | [recursive-evidence-source.ts](recursive-evidence-source.ts) | 证据报告读取递归业务运行时，核对持久登记、原调用和固定 canonical 身份。 |
+| [recursive-inspection-evidence.ts](recursive-inspection-evidence.ts) | 重读只读递归核实的根与业务子调用，形成正式修复前的证据摘要。 |
 
 ## 架构类图
 
@@ -399,6 +400,31 @@ class N_src_logic_evidence_runtime_recursive_evidence_source_ts["recursive-evide
 
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../agents/contracts.ts](../../agents/contracts.ts)、[../../execution/rules/business-run.ts](../../execution/rules/business-run.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../tasks/rules/execution-context.ts](../../tasks/rules/execution-context.ts)。
 
+### recursive-inspection-evidence.ts
+
+```mermaid
+classDiagram
+class N_src_logic_evidence_runtime_recursive_inspection_evidence_ts["recursive-inspection-evidence.ts"] {
+  <<module>>
+}
+class N_src_logic_evidence_runtime_recursive_inspection_evidence_ts_Ports["Ports"] {
+  <<interface>>
+  +validateActiveInputs()
+  +inspectMain()
+  +inspectAgent()
+  +normalizeValidationPath
+  +checkValidationFiles
+  +checkManifest
+}
+N_src_logic_evidence_runtime_recursive_inspection_evidence_ts ..> N_src_logic_evidence_runtime_recursive_inspection_evidence_ts_Ports : 声明
+class N_src_logic_evidence_runtime_recursive_inspection_evidence_ts_RecursiveInspectionEvidence["RecursiveInspectionEvidence"] {
+  +verify()
+}
+N_src_logic_evidence_runtime_recursive_inspection_evidence_ts ..> N_src_logic_evidence_runtime_recursive_inspection_evidence_ts_RecursiveInspectionEvidence : 声明
+```
+
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../../tasks/rules/dispatch-scope.ts](../../tasks/rules/dispatch-scope.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../tasks/rules/execution-context.ts](../../tasks/rules/execution-context.ts)、[recursive-evidence-source.ts](recursive-evidence-source.ts)、[execution-report-facts.ts](execution-report-facts.ts)、[../../team/runtime/member-workflow.ts](../../team/runtime/member-workflow.ts)、[../rules/workflow-evidence.ts](../rules/workflow-evidence.ts)、[agent-artifact-verification.ts](agent-artifact-verification.ts)。
+
 ### 本目录调用边界
 
 ```mermaid
@@ -470,8 +496,24 @@ class N_src_logic_evidence_runtime_output_manifest_report_service_ts["output-man
 class N_src_logic_evidence_runtime_recursive_evidence_source_ts["recursive-evidence-source.ts"] {
   <<module>>
 }
+class N_src_logic_evidence_runtime_recursive_inspection_evidence_ts["recursive-inspection-evidence.ts"] {
+  <<module>>
+}
 N_src_logic_evidence_runtime_execution_report_service_ts ..> N_src_logic_evidence_runtime_execution_report_facts_ts : 导入依赖
 N_src_logic_evidence_runtime_output_manifest_report_service_ts ..> N_src_logic_evidence_runtime_recursive_evidence_source_ts : 导入依赖
+N_src_logic_evidence_runtime_recursive_inspection_evidence_ts ..> N_src_logic_evidence_runtime_recursive_evidence_source_ts : 导入依赖
+N_src_logic_evidence_runtime_recursive_inspection_evidence_ts ..> N_src_logic_evidence_runtime_execution_report_facts_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_logic_evidence_runtime_recursive_inspection_evidence_ts["recursive-inspection-evidence.ts"] {
+  <<module>>
+}
+class N_src_logic_evidence_runtime_agent_artifact_verification_ts["agent-artifact-verification.ts"] {
+  <<module>>
+}
+N_src_logic_evidence_runtime_recursive_inspection_evidence_ts ..> N_src_logic_evidence_runtime_agent_artifact_verification_ts : 导入依赖
 ```
 
 
@@ -503,3 +545,8 @@ ArtifactReportService 与 OutputManifestReportService 读取同一 DispatchStore
 
 ## 普通交付文件的再次核实
 [AgentArtifactVerification](agent-artifact-verification.ts) 是无状态静态封装。它只组合既有 verifyArtifactBaselines 与注入的受限 checkFiles，读取原采集绑定、知识版本及成功授权链，拒绝损坏或全部已失效的采集。只复核当前有效基线列出的文件，逐项核对返回的路径、expected、observed 和 matches，不把文件集合称为完整影响范围。没有采集时返回空文件集合，不补采或伪造基线。调用方负责 canonical 完整身份与工作区生命周期；后续增加采集来源仍修改原 artifact-evidence 规则，不另建验证协议。
+
+
+### 递归工具迁移收口
+
+RecursiveInspectionEvidence 只读核证完整递归核实周期。精确 root freshMain/native 绑定、连续事件、已封存只读业务登记、原 TaskSpec、冻结 Workflow 与当前文件共同构成修复依据；失败、未知、权限扩大、知识变化均拒绝。Tasks 通过端口核对根补充输入，Evidence 不依赖 Tasks 运行实现。重用 validateBusinessWorkflow 和 AgentArtifactVerification；不创建旧 TaskNode。EffectObservationService 的处置关联包括真实递归业务 taskId。

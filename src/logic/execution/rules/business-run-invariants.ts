@@ -1,4 +1,5 @@
 /**
+ * 递归重规划登记核对原验收文本与已核实模块；封存不能改写冻结 request。
  * 作用定位：在唯一工作区日志提交及重放时核实递归业务身份登记。
  * 设计原因：保存与文件阶段共用事务屏障，但不允许混写；固定父调用、范围和知识不可换绑。
  */
@@ -21,7 +22,8 @@ export function projectAgentBusinessRuns(previous:DispatchState,mutation:Dispatc
   }
   check(Array.isArray(mutation.agentBusinessRuns)&&mutation.agentBusinessRuns.length===1&&Object.keys(mutation).every(key=>key==='agentBusinessRuns'||key==='receipt'),'运行登记必须独立单条提交');
   const value=mutation.agentBusinessRuns[0],b=value.binding,p=value.parent;
-  check(value.protocol==='agent-tools-v1'&&['active','closed'].includes(value.status)&&Object.keys(value).every(key=>['protocol','binding','scopeId','parent','lineage','prepared','permission','status','createdAt','closedAt'].includes(key)),'运行协议或字段无效');
+  check(value.protocol==='agent-tools-v1'&&['active','closed'].includes(value.status)&&Object.keys(value).every(key=>['protocol','binding','scopeId','parent','lineage','prepared','permission','request','status','createdAt','closedAt'].includes(key)),'运行协议或字段无效');
+  if(value.request)check(typeof value.request.message==='string'&&!!value.request.message.trim()&&value.request.message.length<=64000&&Array.isArray(value.request.acceptance)&&value.request.acceptance.length<=50&&value.request.acceptance.every(text=>typeof text==='string'&&!!text.trim()&&text.length<=16000)&&Object.keys(value.request).every(key=>['message','acceptance'].includes(key)),'原业务要求无效');
   validatePreparedDispatchKnowledge(value.prepared);
   checkedMemberRunBinding(b,{taskId:b.taskId,workspaceId:previous.workspaceId,root:'',goal:'',moduleIds:value.prepared.modules.map(m=>m.binding.moduleId),acceptance:[],agentId:value.prepared.agent.agentId,ownerBinding:value.prepared.memberContext?.binding},b.runId);
   check(b.workspaceId===previous.workspaceId&&value.prepared.workspaceId===b.workspaceId&&['read','ask','execute'].includes(value.permission)&&!!value.prepared.memberContext&&!value.prepared.fallbackBinding,'运行缺少原岗位或工作区身份');
@@ -41,6 +43,10 @@ export function projectAgentBusinessRuns(previous:DispatchState,mutation:Dispatc
     check(value.status==='active'&&value.closedAt===undefined&&scope?.status==='active'&&!scope.budget?.blocked,'新业务运行必须属于活动周期');
     // 新核实允许普通递归读取，但持久事务也必须拒绝写权限和旧协议混入。
     if(scope?.recovery)check('executionModel' in scope.recovery.source&&scope.recovery.source.executionModel==='agent-tools-v1'&&value.permission==='read','只读递归核实不得扩大权限或借用旧恢复周期');
+    if(scope?.replan&&'executionModel' in scope.replan.source.proof){
+      const proof=scope.replan.source.proof;
+      check(value.request&&value.prepared.modules.every(module=>proof.requiredModules.some(required=>required.moduleId===module.binding.moduleId))&&proof.sourceAcceptance.every(text=>value.request!.acceptance.includes(text)),'新业务必须保留原验收要求且不能扩大已核实模块');
+    }
     check(!previous.runs?.some(run=>run.binding.runId===b.runId||run.binding.taskId===b.taskId)&&!old.some(run=>run.binding.taskId===b.taskId||(run.parent.callerRunId===p.callerRunId&&run.parent.toolCallId===p.toolCallId)),'运行身份不得复用');
     const parent=old.find(run=>run.binding.taskId===p.callerTaskId&&run.binding.runId===p.callerRunId&&run.scopeId===value.scopeId);
     const root=value.lineage.at(-1)!;

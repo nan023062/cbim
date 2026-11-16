@@ -1,4 +1,5 @@
 /**
+ * 可信插入指纹包含附件清单；原生 ACK 与持久输入绑定同一材料，不把回包丢失转换为重新发送。
  * 执行前 Schema 异常转换为可读字段说明并保留错误码；此转换不用于已经执行后的失败。
  * 目录归属：logic/execution/rules/execution/runtime；运行生命周期内核。
 
@@ -62,7 +63,7 @@ import {workflowHasEffects} from '../../../evidence/rules/workflow-evidence';
 import {fail} from '../../../../core/errors';
 import type {AgentCallReference,AgentToolContext,AgentToolsBinding} from '../../../agents/contracts';
 import {toolInputError} from '../../../tools/rules/input-validation';
-import {scopeActiveInputTokenSchema,type ScopeActiveInputToken,type ScopeActiveInputSendReceipt} from '../../../tasks/rules/scope-active-input';
+import {scopeActiveInputTokenSchema,type ScopeActiveInputToken,type ScopeActiveInputSendReceipt,type ScopeActiveInputPayload} from '../../../tasks/rules/scope-active-input';
 import {scopedActiveInputHash} from '../../../tasks/rules/scope-active-input-rules';
 
 /** 运行装配端口；可靠启动确认与只读事件观察分开，业务状态不能靠观察回调提交。 */
@@ -123,7 +124,7 @@ export interface RunStartControl {
   beforeRun?(input:{task:TaskSpec;runId:string}):Promise<void>;
 }
 /** 插入绑定用户选定的原主运行；停止信号只阻止发送前准备，不撤销已确认接收。 */
-export interface RunSteerControl {expectedRunId:string;signal:AbortSignal;activeInput?:{token:ScopeActiveInputToken;attachmentIds?:string[]}}
+export interface RunSteerControl {expectedRunId:string;signal:AbortSignal;activeInput?:{token:ScopeActiveInputToken;attachmentIds?:string[];attachmentManifest?:ScopeActiveInputPayload['attachmentManifest']}}
 /** 可信调度器专用的新主上下文入口；运行/原生身份及旧运行集合由大脑在租约内生成，公开请求不能提供。 */
 export interface FreshMainStartControl {
   signal:AbortSignal;
@@ -384,7 +385,7 @@ export class LoopRuntime {
         };
         assertReady();
         const token=activeInput?scopeActiveInputTokenSchema.parse(structuredClone(activeInput.token)):undefined;
-        if(token&&(token.runId!==runId||token.inputHash!==scopedActiveInputHash({message,...(activeInput?.attachmentIds?{attachmentIds:activeInput.attachmentIds}:{})})))fail('QUEUE_INSERT_STALE','原插入快照与准备记录不一致，原消息仍保留在队列');
+        if(token&&(token.runId!==runId||token.inputHash!==scopedActiveInputHash({message,...(activeInput?.attachmentIds?{attachmentIds:activeInput.attachmentIds}:{}),...(activeInput?.attachmentManifest?{attachmentManifest:activeInput.attachmentManifest}:{})})))fail('QUEUE_INSERT_STALE','原插入快照与准备记录不一致，原消息仍保留在队列');
         const requested=await emit({type:'engine.status',data:{metric:'insertion',state:'requested',message,...(token?{activeInput:token}:{}),label:'正在插入用户补充'}},true);
         let nativeAccepted=false;
         try{

@@ -1,4 +1,5 @@
 /**
+ * 有附件清单的新输入指纹覆盖其内容；无清单历史保持原哈希，准备后不可换绑清单。
  * 作用定位：校验运行中补充的可靠尝试、唯一结算和目标增版，供事务提交与重放共用。
  * 设计原因：UI/Runtime 不能凭回包跳过持久 pending；接受后才增加输入版本，未知结果不能被普通聊天例外或新计划洗掉。
  * 职责边界：这里只核已保存结构及正文指纹，真实 queued/日志证据由调度服务核实；不启动模型，不重写旧运行。
@@ -12,9 +13,9 @@ import {isHumanContinuation} from './scope-continuation-record';
 import {scopeActiveInputSchema,scopeActiveInputLimits,scopeHasUnresolvedActiveInput,type ScopeActiveInput,type ScopeActiveInputPayload} from './scope-active-input';
 
 /** 只供后端计算实际待发送正文指纹；缺省附件与空数组同义，不包含路径、密钥或模型选项。 */
-export function scopedActiveInputHash(input:ScopeActiveInputPayload):string{return hash(json({message:input.message,attachmentIds:input.attachmentIds??[]}))}
+export function scopedActiveInputHash(input:ScopeActiveInputPayload):string{return hash(json({message:input.message,attachmentIds:input.attachmentIds??[],...(input.attachmentManifest?{attachmentManifest:input.attachmentManifest}:{})}))}
 function valid(value:unknown,message:string):asserts value{if(!value)fail('GRAPH_INPUT_INVALID',message)}
-function fixed(value:ScopeActiveInput){const {insertionId,queueId,runId,preparedAt,baseGoalRevision,baseInputRevision,inputHash,messageBytes,messageCharacters,attachmentIds}=value;return {insertionId,queueId,runId,preparedAt,baseGoalRevision,baseInputRevision,inputHash,messageBytes,messageCharacters,...(attachmentIds===undefined?{}:{attachmentIds})}}
+function fixed(value:ScopeActiveInput){const {insertionId,queueId,runId,preparedAt,baseGoalRevision,baseInputRevision,inputHash,messageBytes,messageCharacters,attachmentIds,attachmentManifest}=value;return {insertionId,queueId,runId,preparedAt,baseGoalRevision,baseInputRevision,inputHash,messageBytes,messageCharacters,...(attachmentIds===undefined?{}:{attachmentIds}),...(attachmentManifest?{attachmentManifest}:{})}}
 
 /** 返回本次真实接受的周期；调用者据此启用精确 active 增版转换，不能当成通用 supplement 豁免。 */
 export function validateScopeActiveInputs(previous:DispatchState,next:DispatchState,mutation:DispatchMutation):Set<string>{

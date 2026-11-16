@@ -3344,3 +3344,33 @@ member-pause-pi 四项改用真实递归 Agent 工具：A 实际写入、读取�
 尚未完成：材料其他 6 场景（含运行中插入附件清单持久化与回包丢失）、业务重新规划 3 场景、完整观察后修复 1 场景，以及桌面脚本/安装升级。现有校验不等于这些流程全部通过。
 
 上一提交 b06f3f9e 的完整 CI 43804317093 已结束：3692 通过、16 失败、2 pending；第三分片成功。该 CI 不含 53959156 及本切片，不能用本地新增通过项推算新 head 的全量结果。
+
+
+## Issue #94：剩余十项递归工具链迁移收口
+
+以 96e6a7c9352fd4047a05c48001636d13b7cacdb9 为基线，按用户“剩下的 10 项迁移全部补完”授权完成材料 6 项、正式业务重新规划 3 项、完整副作用观察后修复 1 项。范围来自 Issue #94 及上一提交记录，未将桌面验收和发布混作本地测试完成。
+
+### 实现与维护者阅读顺序
+
+1. loop.enqueue → WorkspaceExecutionManager.enqueue → MessageQueue：原始输入和附件在同次受管读取中冻结清单；运行中插入先查原接收回执，再核快照、文本字节和哈希。ScopeActiveInputService、输入指纹及 Runtime ACK 绑定相同清单；重复已接收输入不再读取已删除快照，不重发。队列编辑保留附件身份，仅更新正文指纹；自动续发把本次已核图像直接交给 factory。
+2. agent-business → AgentBusinessRun.request → ScopeReplanService：冻结原业务目标及验收文本；新修复必须引用实际封存只读核实、覆盖原模块、保留原验收要求。可信预检把模块和验收文本传给新根模型；旧日志损坏不作为上下文，不生成旧计划/审阅或持久 TaskNode。
+3. ScopeGoalService → RecursiveInspectionEvidence → validateBusinessWorkflow/AgentArtifactVerification：复用既有 Workflow、文件及日志证明。根输入校验由 Tasks 注入，Evidence 不反向引用 Tasks 的运行实现；公开核证入口精确登记，零新增调度器或持久注册表。旧派工包装继续保留原规则。EffectObservationService 的关联加入实际递归 taskId；未知原结果即使后续修复也保持未知。
+4. 执行、逐次写入审批和停止共享现有启动屏障；全新上下文、重复命令、失效依据、原记录和文件字节、重启不重放都由实际集成断言覆盖。View 的重新规划回执识别新 inspectionRunId，同时兼容旧 reviewRunId。
+
+S1–S3：跨业务持久契约与核证链变化，按 C3 / L3 处理；主要风险为旧记录兼容、附件 ACK 身份、未知写入重放及核实被误当成新业务完成。S4–S5：材料与正式修复两个切片，共用原 LoopRuntime、输入接收、Store、证据及启动机制，不复制旧业务计划。S6：完成以下定向验证与源码资料同步；S7：本提交与 PR #96 为完整 review 入口，全量 CI/桌面仍为后续门禁。
+四问与候选：Q1 保护原调度/权限/幂等/Workflow 机制；Q2 变化分别封装在 Conversation 的快照输入、Tasks 的修复证明及 Evidence 的只读核证；Q3 既有旧来源分支不放宽，新来源缺少原要求时保守拒绝；Q4 下一种材料仍扩展原 prepareContinuation，下一种证据仍扩展既有验证器，不改中央循环；Q5 本轮无新增强制规则候选。新持久字段是可选兼容扩展，旧记录不补造新能力。
+
+### 实际验证
+
+选择依据：材料插入改变 queue/active-input/Runtime 的输入身份；正式修复改变登记、核证、重规划、恢复和 View 回执分支；Workflow 提取另核真实消费者。测试均使用真实 Pi 进程、工具、文件和日志以及确定性本地响应，不代表在线模型或真实桌面验收。
+
+- `pnpm exec vitest run tests/waiting-attachments-pi.test.ts tests/waiting-mixed-sources-pi.test.ts --reporter=json --outputFile=build/recursive-all-materials.json`：7 通过、1 失败。预算停止夹具仍配置不支持递归子调用的旧预算模式，调整为真实 request enforcement 后，用 `tests/waiting-attachments-pi.test.ts -t budget-stop` 精确复验 1/1 通过（recursive-material-budget.json）。合计两个套件 8 项最终均通过，其中本轮迁移 6 项，先前 2 项保留。
+- `pnpm exec vitest run tests/business-replan-pi.test.ts --reporter=json --outputFile=build/recursive-business-replan-retry.json`：3/3 通过。首次夹具误传旧 source.scopeId 且在旧目标已闭合时入队导致正常自动续发；改为新请求 Schema、先明确停止队列再入队，不修改产品队列语义绕过。随后补充可信原要求进入模型及根输入验证端口，运行 `tests/business-replan-pi.test.ts tests/replan-start-race.test.ts`：8/8 通过（recursive-replan-final.json）。
+- `pnpm exec vitest run tests/effect-observation-pi.test.ts -t 'observes an actual lost write result' --reporter=json --outputFile=build/recursive-effect-complete.json`：1/1 通过，另 4 项未选中。覆盖真实写入回包丢失→用户处置→独立只读核实→新修复，原调用不重放。
+- `pnpm exec vitest run tests/business-run-registry.test.ts tests/message-queue.test.ts tests/scope-active-input-core.test.ts tests/active-goal-input-service.test.ts tests/active-goal-input-runtime.test.ts tests/queue-insert.test.ts tests/queue-insertion-boundary.test.ts tests/scope-replan.test.ts tests/replan-start-race.test.ts tests/scope-replan-view.test.ts tests/scope-recovery.test.ts --reporter=json --outputFile=build/recursive-migration-boundaries.json`：109/109 通过。
+- `pnpm exec vitest run tests/json-validation-pi.test.ts tests/workflow-condition-pi.test.ts --reporter=json --outputFile=build/recursive-migration-workflow-consumers.json`：19/19 通过。
+- `pnpm exec vitest run tests/active-goal-input-pi.test.ts tests/queue-insertion-pi.test.ts --reporter=json --outputFile=build/recursive-migration-input-consumers.json`：14 通过、1 失败。旧 images-stop 测试拦截已不使用的二次图片读取而超时；改到真实 queuedImages 核证完成/发送之前暂停，保持停止后不得发送断言；用 `tests/queue-insertion-pi.test.ts -t images-stop` 复验 1/1 通过（recursive-migration-input-stop.json）。
+- `pnpm typecheck` 通过；`pnpm check:architecture` 通过，135 目录、837 代码/样式文件、1674 依赖文件、7938 边、零循环/违规；`pnpm check:test-modules` 通过，541 套件（174 unit / 166 contract / 201 integration）。初次边界检查发现两处未登记/反向运行引用，通过注入 Tasks 校验与登记单一 Evidence 入口修复。
+- 同步变更源码文件头、接口说明及 12 个受影响目录的 CONTRACT/ARCHITECTURE（IPC、Application assembly、Conversation、Dispatch、Evidence、Execution rules/runtime、Materials service、Tasks rules/runtime、Team runtime、View tasks）。新增两个集成夹具，无新增未登记测试套件。
+
+本轮没有运行全仓本地测试、桌面脚本或安装升级；完整 CI 由更新 PR 后执行。旧头 96e6a7c9 的 CI 43806206246 已结束：静态检查和第 3/4 分片通过，第 1/2 分片失败；它不包含本次十项修复，不能作为新头结论。旧 0.1.21 草稿制品未重建，本步未合并、未发布、未投放更新通道。

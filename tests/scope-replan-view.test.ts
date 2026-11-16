@@ -68,7 +68,7 @@ it('回执严格绑定目标/权限/已核验约束，受理后的可信事实�
   const f=fixture();await ready(f);await f.controller.submit(target,model);const request=f.send.mock.calls[0][0],prior=f.controller.record(scopeId)!.attempt!.receipt!,proof=preview();
   expect(()=>checkedReplanReceipt({...prior,scopeId:'other'},request,proof)).toThrow('不一致');
   expect(()=>checkedReplanReceipt({...prior,replan:{...prior.replan,source:{...prior.replan.source,proof:{...prior.replan.source.proof,inheritedHuman:[]}}}},request,proof)).toThrow('前置依据');
-  expect(()=>checkedReplanReceipt({...prior,replan:{...prior.replan,runId:prior.replan.source.proof.reviewRunId}},request,proof)).toThrow('前置依据');
+  expect(()=>checkedReplanReceipt({...prior,replan:{...prior.replan,runId:('inspectionRunId' in prior.replan.source.proof?prior.replan.source.proof.inspectionRunId:prior.replan.source.proof.reviewRunId)}},request,proof)).toThrow('前置依据');
   for(const change of [{runId:'different'},{acceptedAt:'2026-11-08T00:00:00.000Z'}]){f.query.mockResolvedValueOnce({...prior,replan:{...prior.replan,...change}});await f.controller.query(scopeId);expect(f.controller.record(scopeId)?.attempt?.receipt).toBe(prior);expect(f.controller.record(scopeId)?.attempt?.error).toContain('冲突')}
   f.query.mockResolvedValueOnce({...prior,scopeStatus:'closed'});await f.controller.query(scopeId);f.query.mockResolvedValueOnce(prior);await f.controller.query(scopeId);expect(f.controller.record(scopeId)?.attempt?.receipt?.scopeStatus).toBe('closed');
 });

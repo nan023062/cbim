@@ -62,3 +62,15 @@ it.each(['read','ask','execute','legacy'] as const)('enforces the recursive insp
  if(mode==='read')expect(apply(state,value).agentBusinessRuns).toEqual([value]);
  else expect(()=>apply(state,value)).toThrow(/只读递归核实/);
 });
+
+it.each(['valid','missing-request','dropped-acceptance','outside-module'] as const)('preserves recursive replan constraints at registration (%s)',mode=>{
+ const {state,run,apply}=fixture();run.request={message:'new work',acceptance:['keep original requirement']};
+ state.scopes![0].replan={replanId:'00000000-0000-4000-8000-000000000001',acceptedAt:run.createdAt,operation:'business_replan',input:{message:'new work'},options:{provider:'fixture',profileId:'00000000-0000-4000-8000-000000000002',model:'fixture',permission:'execute'},context:{initialRunId:'root-run',nativeSessionId:'new-native',excludedRunIds:['inspection-run']},source:{inspectionScopeId:'inspection',expectedBasis:'a'.repeat(64),proof:{executionModel:'agent-tools-v1',kind:'member_run',inspectionRunId:'inspection-run',inspectionGoalRevision:1,knowledgeRevision:run.prepared.knowledgeRevision,sourceScopeId:'source',sourceTaskId:'source-task',sourceRunId:'source-run',sourceToolCallIds:['write'],sourceReportBasis:'b'.repeat(64),evidenceDigest:'c'.repeat(64),requiredModules:run.prepared.modules.map(module=>({moduleId:module.binding.moduleId,name:'module'})),inheritedHuman:[],sourceAcceptance:['keep original requirement']}}};
+ if(mode==='missing-request')delete run.request;
+ if(mode==='dropped-acceptance')run.request!.acceptance=[];
+ if(mode==='outside-module')state.scopes![0].replan!.source.proof.requiredModules=[{moduleId:'outside',name:'outside'}];
+ if(mode==='valid'){
+  const next=apply(state,run);expect(next.agentBusinessRuns![0].request).toEqual(run.request);
+  expect(()=>apply(next,{...run,status:'closed',closedAt:run.createdAt,request:{message:'rewritten',acceptance:[]}})).toThrow();
+ }else expect(()=>apply(state,run)).toThrow();
+});

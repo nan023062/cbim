@@ -1,4 +1,5 @@
 /**
+ * 递归重规划只登记显式意图，交由统一根生命周期，不创建旧自动派工 cycle。
  * 批次完整捕获额外模型角色，不从后续主 Agent 设置回填。
  * 审阅关口使候选先回主轮；下一批继承未启动待办，批准后沿原任务身份继续，不重复派发。
  * 同一目标累计三次成员异常即停止自动接续；终态图是额度依据，换任务编号、结果回注或验收返工均不能清零。
@@ -120,7 +121,8 @@ export class AutoCollaboration {
   private async replanPreflight(request:ReplanRequest){
     if(this.closed)fail('COLLABORATION_STOPPED','协作调度正在关闭');
     if(this.busy(request.rootSessionId)||this.resuming.has(request.rootSessionId))fail('REPLAN_BUSY','当前主会话还有未结束目标');
-    await this.dispatch.replans.preflight(request);
+    const value=await this.dispatch.replans.preflight(request);
+    return {executionModel:'executionModel' in value.proof?value.proof.executionModel:'legacy' as const,requiredModules:value.proof.requiredModules.map(module=>module.moduleId),acceptance:'sourceAcceptance' in value.proof?[...value.proof.sourceAcceptance]:[]};
   }
   /** 新业务周期使用新的执行实例，既有只读周期和旧失败任务保持封存；停止共享受理屏障。 */
   private acceptReplan(request:ReplanRequest,task:TaskSpec,context:{runId:string;nativeSessionId:string;excludedRunIds:string[];signal?:AbortSignal}):Promise<void>{
@@ -130,7 +132,7 @@ export class AutoCollaboration {
       if(this.busy(task.taskId))fail('REPLAN_BUSY','当前主会话还有未结束目标');
       const accepted=await this.dispatch.replans.accept(request,context);
       if(!accepted.fresh)fail('REPLAN_REPLAY','业务目标意图已受理，请查询原回执，不重复启动');
-      this.cycles.set(task.taskId,{task:structuredClone(task),scopeId:accepted.scope.scopeId,collaborationMode:accepted.scope.executionPolicy?.mode??'team',tasks:new Set(),operations:new Set(),mainRuns:new Set([context.runId]),workRequested:true,stopped:false});
+      if(!('executionModel' in accepted.replan.source.proof))this.cycles.set(task.taskId,{task:structuredClone(task),scopeId:accepted.scope.scopeId,collaborationMode:accepted.scope.executionPolicy?.mode??'team',tasks:new Set(),operations:new Set(),mainRuns:new Set([context.runId]),workRequested:true,stopped:false});
     })().catch(async error=>{
       // 仅收束这次运行的已落盘意图。旧命令的幂等回执不能被一次迟到请求关闭或重新执行。
       try{

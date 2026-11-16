@@ -146,3 +146,8 @@ ExecutionManager.close 禁止新工作后排空原循环，并等待每个捕获
 ## 递归来源的全新只读核实
 
 WorkspaceExecutionManager 从可信 recoveryPreflight 返回值选择新核实运行的执行协议。递归来源在 startFreshMain 接受原核实意图后绑定同一 scopeId 的 AgentLifecycle，继续使用普通 Agent 工具、请求预算及停止收尾；旧来源或旧宿主无协议返回时保持 legacy。协议不能由公开请求指定，恢复不读取损坏历史作为模型上下文。
+
+
+### 递归工具迁移收口
+
+排队材料由 enqueue 对原始文本调用已有 prepareContinuationInput 一次冻结，MessageQueue 保存完整清单。queueInsert 先查原回执，再以同快照核图像；ACK 绑定含清单的输入指纹，成功后快照丢失不重读、不重发。编辑正文只更新展开摘要；自动发送同样校验原快照且把同次读取的图片交给 factory。正式修复预检返回可信执行协议、原模块及验收文本，并将要求作为业务数据传入全新根上下文；新递归来源不进入旧主循环。

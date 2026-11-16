@@ -437,3 +437,8 @@ MainToolContext 随 ConversationAgentBinding 归属 execution/rules，供新递�
 
 
 递归只读核实：business-run-invariants 仅允许 agent-tools-v1 来源的新 recovery 周期登记 permission=read 子调用。ask/execute 和旧恢复周期即使直接写 Store 也拒绝；仍核原父调用、根运行、模块范围和已冻结身份。
+
+
+### 递归工具迁移收口
+
+AgentBusinessRun.request 可选保存新业务原目标与验收要求；旧记录仍可读取。新增登记核对 request 形状，重规划子调用必须保留原要求且模块不超出已核实范围；关闭不能改写原 request。

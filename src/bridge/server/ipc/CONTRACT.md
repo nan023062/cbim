@@ -148,3 +148,8 @@ loop.enqueue 转交明确的 followupOf；IPC 不恢复原话题，执行管理�
 settings-handlers 将引擎设置动作交给 Application 的唯一 EnginePackages；开发模式只显示 managed:false，安装动作明确拒绝，不伪造成功。
 
 模型设置的 testConnection 调用模型服务独立接口测试，向量与生成分别派发；旧按引擎诊断继续兼容，设置界面不再依赖它。
+
+
+### 递归工具迁移收口
+
+loop.enqueue 只解析原始文本和模型/附件选择，由 Logic 会话服务冻结展开正文和清单；没有新增客户端可提交清单的入口。

@@ -183,6 +183,7 @@ class N_src_logic_conversation_runtime_execution_manager_ts_WorkspaceExecutionMa
   -queueSubscriptions
   -queueSource()
   -queue()
+  -queuedImages()
   -pump()
   -topicInterruptions
   -active
@@ -191,7 +192,6 @@ class N_src_logic_conversation_runtime_execution_manager_ts_WorkspaceExecutionMa
   -listeners
   -questions
   -approvalQueue
-  -cancelApprovals()
 }
 N_src_logic_conversation_runtime_execution_manager_ts ..> N_src_logic_conversation_runtime_execution_manager_ts_WorkspaceExecutionManager : 声明
 ```
@@ -204,6 +204,7 @@ class N_src_logic_conversation_runtime_execution_manager_ts["execution-manager.t
   <<module>>
 }
 class N_src_logic_conversation_runtime_execution_manager_ts_WorkspaceExecutionManager["WorkspaceExecutionManager"] {
+  -cancelApprovals()
   -serial()
   -checkedCurrentHistory()
   -launch()
@@ -213,7 +214,7 @@ class N_src_logic_conversation_runtime_execution_manager_ts_WorkspaceExecutionMa
 N_src_logic_conversation_runtime_execution_manager_ts ..> N_src_logic_conversation_runtime_execution_manager_ts_WorkspaceExecutionManager : 声明
 ```
 
-直接依赖：[message-queue.ts](message-queue.ts)、[approvals.ts](approvals.ts)、[questions.ts](questions.ts)、[main-agent.ts](main-agent.ts)、[../../engines/index.ts](../../engines/index.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../execution/ports/identity.ts](../../execution/ports/identity.ts)、[../../execution/rules/storage.ts](../../execution/rules/storage.ts)、[../../execution/rules/index.ts](../../execution/rules/index.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../execution/rules/input-source.ts](../../execution/rules/input-source.ts)、[../../execution/assembly/loop-engine.ts](../../execution/assembly/loop-engine.ts)、[../../execution/context/team-workflow.ts](../../execution/context/team-workflow.ts)、[../../knowledge/rules/read-models/index.ts](../../knowledge/rules/read-models/index.ts)、[../../tasks/rules/topic-interruption.ts](../../tasks/rules/topic-interruption.ts)、[../../tasks/rules/dispatch-scope.ts](../../tasks/rules/dispatch-scope.ts)、[../../tasks/rules/scope-continuation.ts](../../tasks/rules/scope-continuation.ts)、[../../tasks/rules/scope-active-input.ts](../../tasks/rules/scope-active-input.ts)、[../../tasks/rules/scope-active-input-rules.ts](../../tasks/rules/scope-active-input-rules.ts)、[../../tasks/rules/scope-goal.ts](../../tasks/rules/scope-goal.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../tasks/rules/scope-continuation-attachments.ts](../../tasks/rules/scope-continuation-attachments.ts)、[../../tasks/rules/scope-recovery.ts](../../tasks/rules/scope-recovery.ts)、[../../tasks/rules/fresh-context.ts](../../tasks/rules/fresh-context.ts)、[../../execution/admission/admission-wait.ts](../../execution/admission/admission-wait.ts)、[../../tasks/rules/scope-replan.ts](../../tasks/rules/scope-replan.ts)、[../../tasks/rules/human-continue.ts](../../tasks/rules/human-continue.ts)。
+直接依赖：[message-queue.ts](message-queue.ts)、[approvals.ts](approvals.ts)、[questions.ts](questions.ts)、[main-agent.ts](main-agent.ts)、[../../engines/index.ts](../../engines/index.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../execution/ports/identity.ts](../../execution/ports/identity.ts)、[../../execution/rules/storage.ts](../../execution/rules/storage.ts)、[../../execution/rules/index.ts](../../execution/rules/index.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../execution/rules/input-source.ts](../../execution/rules/input-source.ts)、[../../execution/assembly/loop-engine.ts](../../execution/assembly/loop-engine.ts)、[../../execution/context/team-workflow.ts](../../execution/context/team-workflow.ts)、[../../knowledge/rules/read-models/index.ts](../../knowledge/rules/read-models/index.ts)、[../../tasks/rules/topic-interruption.ts](../../tasks/rules/topic-interruption.ts)、[../../tasks/rules/dispatch-scope.ts](../../tasks/rules/dispatch-scope.ts)、[../../tasks/rules/scope-continuation.ts](../../tasks/rules/scope-continuation.ts)、[../../tasks/rules/scope-active-input.ts](../../tasks/rules/scope-active-input.ts)、[../../tasks/rules/scope-active-input-rules.ts](../../tasks/rules/scope-active-input-rules.ts)、[../../tasks/rules/scope-goal.ts](../../tasks/rules/scope-goal.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../tasks/rules/scope-continuation-attachments.ts](../../tasks/rules/scope-continuation-attachments.ts)、[../../tasks/rules/scope-recovery.ts](../../tasks/rules/scope-recovery.ts)、[../../tasks/rules/fresh-context.ts](../../tasks/rules/fresh-context.ts)、[../../execution/admission/admission-wait.ts](../../execution/admission/admission-wait.ts)、[../../tasks/rules/scope-replan.ts](../../tasks/rules/scope-replan.ts)、[../../tasks/rules/human-continue.ts](../../tasks/rules/human-continue.ts)、[../../tasks/rules/queue.ts](../../tasks/rules/queue.ts)。
 
 ### main-agent.ts
 
@@ -288,7 +289,7 @@ class N_src_logic_conversation_runtime_message_queue_ts_MessageQueue["MessageQue
 N_src_logic_conversation_runtime_message_queue_ts ..> N_src_logic_conversation_runtime_message_queue_ts_MessageQueue : 声明
 ```
 
-直接依赖：[../../tasks/rules/queue.ts](../../tasks/rules/queue.ts)。
+直接依赖：[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../tasks/rules/queue.ts](../../tasks/rules/queue.ts)。
 
 ### questions.ts
 
@@ -495,3 +496,8 @@ ExecutionManager.close 禁止新工作后排空原循环，并等待每个捕获
 ## 递归来源的全新只读核实
 
 WorkspaceExecutionManager 从可信 recoveryPreflight 返回值选择新核实运行的执行协议。递归来源在 startFreshMain 接受原核实意图后绑定同一 scopeId 的 AgentLifecycle，继续使用普通 Agent 工具、请求预算及停止收尾；旧来源或旧宿主无协议返回时保持 legacy。协议不能由公开请求指定，恢复不读取损坏历史作为模型上下文。
+
+
+### 递归工具迁移收口
+
+排队材料由 enqueue 对原始文本调用已有 prepareContinuationInput 一次冻结，MessageQueue 保存完整清单。queueInsert 先查原回执，再以同快照核图像；ACK 绑定含清单的输入指纹，成功后快照丢失不重读、不重发。编辑正文只更新展开摘要；自动发送同样校验原快照且把同次读取的图片交给 factory。正式修复预检返回可信执行协议、原模块及验收文本，并将要求作为业务数据传入全新根上下文；新递归来源不进入旧主循环。

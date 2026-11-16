@@ -35,3 +35,8 @@ startMember 接受 RunStartControl.beforeRun，供可信调用装配记录原父
 
 ## 原运行人工意见的副作用门禁
 Runtime 在通常工具授权之后、实际放行和证据失效之前应用 agentTools.guardEffects。该门禁只能收紧已有决定，不能授权原来被拒绝的调用。拒绝进入普通工具回执，未知副作用默认拒绝；没有绑定该端口的历史运行保留原行为。
+
+
+### 递归工具迁移收口
+
+RunSteerControl 的可信 activeInput 附件清单参与原输入哈希；原生 requested/accepted 日志按同 token 记录。清单由宿主会话服务冻结，不允许模型提供或替换，不重复未知发送。

@@ -21,3 +21,8 @@ ScopeActiveInputService.send 是新根生命周期与旧协调器共用的输入
 ## 递归执行记录核实
 
 ScopeRecoveryService 的旧任务执行报告来源明确拒绝递归 executionModel 或缺少旧任务版本的报告。递归来源必须使用 member_run 影响观察及精确 taskId/runId/toolCallIds；冻结 executionModel=agent-tools-v1、原周期、日志前缀和观察依据，由 Store 核验原业务调用已关闭且归属一致，不伪造 TaskNode 修订号。只读核实建立独立原生上下文，原调用与副作用事实不被改写。
+
+
+### 递归工具迁移收口
+
+ScopeReplanService 对递归来源要求原 AgentBusinessRun.request，缺少原验收要求时拒绝自动推断。ScopeGoalService 委托 RecursiveInspectionEvidence 重读完整根与子调用、冻结 Workflow、当前文件及来源身份，并二次读取检测变化。原业务影响仍按原主体观察，旧记录不改写；事务再次核依据，只有显式新意图可进入 ask/execute。

@@ -1,4 +1,5 @@
 /**
+ * 每个新业务登记冻结原目标与验收文本，供独立核实后修复继承；旧记录不据损坏日志补造要求。
  * 作用定位：把递归 Agent 的显式业务范围接入既有冻结知识、文件验证及 canonical 交付核验。
  * 设计原因：普通指令不隐式授予业务范围；复用现有执行契约，不创建旧派发图、队列或 Team 会话。
  * 内部 TaskNode/DispatchRun 仅作既有验证器的输入投影；真实事实仍是本次 LoopRuntime 日志。
@@ -69,7 +70,7 @@ export async function prepareAgentBusiness(input:{
   const {task,prepared,binding,now}=frozen,workflows=preparedWorkflowContracts(prepared);
   // 平台端口仍执行原冻结范围；运行身份先持久化，不能降级到任意文件命令。
   const ports=input.businessServices??fail('AGENT_BUSINESS_UNAVAILABLE','缺少可信业务运行服务，未启动 Agent');
-  const record:Omit<AgentBusinessRun,'lineage'>={protocol:'agent-tools-v1',binding,scopeId:input.scopeId,parent:input.reference(task.taskId,binding.runId),prepared,permission:input.permission,status:'active',createdAt:now};
+  const record:Omit<AgentBusinessRun,'lineage'>={protocol:'agent-tools-v1',binding,scopeId:input.scopeId,parent:input.reference(task.taskId,binding.runId),prepared,permission:input.permission,request:{message:input.message,acceptance:[...business.acceptance]},status:'active',createdAt:now};
   const executionScope=preparedExecutionScope(workflows);
   const assertActive=()=>{workspace.assert();signal.throwIfAborted()};
   const scopedExecution=executionScope?new ScopedExecutionFiles(workspace.entry.path,executionScope,assertActive,[workspace.paths.userRoot,workspace.paths.installRoot,...(workspace.paths.protectedRoots??[])],ports.isolatedExecutions.forRun(record,input.scopeId,executionScope)):undefined;

@@ -491,3 +491,8 @@ WorkspaceDispatchService 的 goalPorts 可同时提供 ScopeUsageLogs.inspectAge
 ## 递归核实意图的所有权
 
 AutoCollaboration.recoveryPreflight 返回已核实来源的协议。acceptRecovery 仍提交真实新核实意图，但对 agent-tools-v1 来源不创建旧 cycles；预算、子调用和终态由新根 AgentLifecycle 负责。旧来源继续保留旧协调器的恢复语义，不将旧任务冒充新调用。
+
+
+### 递归工具迁移收口
+
+重规划预检只返回已核实来源的执行协议。递归来源交由 Agent 根生命周期，acceptReplan 不注册旧 cycles；旧来源保持旧协调器路径。

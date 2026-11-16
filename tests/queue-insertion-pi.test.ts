@@ -19,8 +19,9 @@ it.each(['complete','images-stop','state-stop','ack-unknown','ack-stop'] as cons
     const queued=await app.dispatch('loop.enqueue',{id:seed.entry.id,taskId:started.taskId,message:data.insert,attachments:[seed.image.id],options:seed.queuedOptions}),queue=()=>app.dispatch('loop.queue',{id:seed.entry.id,taskId:started.taskId});
     expect((await queue())[0].options).toMatchObject({model:data.otherModel,permission:'execute',attachmentIds:[seed.image.id]});
     if(mode==='images-stop'){
-      const manager=app.execution(seed.entry.id) as unknown as {inputImages:(ids?:string[])=>Promise<InputImage[]>},original=manager.inputImages;
-      manager.inputImages=async ids=>{const result=await original(ids);expect(result[0].data).toBe(seed.png.toString('base64'));held=true;entered();await gate;return result};restore=()=>{manager.inputImages=original};
+      const manager=app.execution(seed.entry.id) as unknown as {queuedImages:(entry:QueuedMessage,signal:AbortSignal)=>Promise<InputImage[]>},original=manager.queuedImages;
+      // 在清单校验及图片读取完成、原生发送之前暂停；新链路不再二次读取 inputImages。
+      manager.queuedImages=async (entry,signal)=>{const result=await original.call(manager,entry,signal);expect(result[0].data).toBe(seed.png.toString('base64'));held=true;entered();await gate;return result};restore=()=>{manager.queuedImages=original};
     }else{
       const original=PiRpc.prototype.request,spy=vi.spyOn(PiRpc.prototype,'request').mockImplementation(async function(this:PiRpc,type,payload,timeout){
         const result=await original.call(this,type,payload,timeout);

@@ -886,3 +886,8 @@ graph-rules 的 acyclic 委托后端 isDirectedAcyclic。validateGraph 仍先校
 ## 递归业务来源的只读核实
 
 `scope-recovery.ts` 的 member_run 记录增加严格的 agent-tools-v1 变体：固定真实 taskId/runId/toolCallIds、原周期与日志观察，禁止携带旧 taskRevision/planRevision。`dispatch-scope-invariants.ts` 以 agentBusinessRuns 的工作区、根会话、原周期和 closed 状态核实该变体；旧来源继续按旧任务版本验证，不能混用身份。公开投影继承此来源契约，但仍不公开隔离上下文。
+
+
+### 递归工具迁移收口
+
+新输入可携带 attachmentManifest，prepare/accept 必须保持清单一致；旧无清单哈希和重放不变。Agent 重规划证明新增严格 agent-tools-v1 分支，使用 inspectionRunId、sourceAcceptance，不补造旧计划或 review。Store 核对精确源运行、已完成核实及模块范围。

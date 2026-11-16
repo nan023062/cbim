@@ -1,4 +1,5 @@
 /**
+ * 处置关联同时列出同周期真实递归业务身份，不以旧任务图为空隐藏新核实与修复调用。
  * 目录归属：logic/evidence/runtime；目标状态与核证恢复服务。
  * 作用定位：组合原调用授权、已提交控制面、原知识事务、原治理/责任记录、受控文件阶段与当前选定文件，保存本机明确处置并派生新周期关联。
  * 设计原因：原 unknown、今天的字节和后来修复完成各自保留；取证在任务事务外，提交只做原身份/版本 CAS，不执行工具或反向等知识/模型队列。
@@ -200,7 +201,7 @@ export class EffectObservationService {
   }
   /** 只从已保存意图派生后续关系；新修复完成不改写原调用状态或原处置。 */
   async relations(raw:EffectRelationsInput){const input=this.parse(effectRelationsInputSchema,raw);this.alive(input.workspaceId);const state=await this.store.read(),record=state.effectDispositions?.find(r=>r.dispositionId===input.dispositionId&&r.request.workspaceId===input.workspaceId&&r.request.rootSessionId===input.rootSessionId);check(record,'EFFECT_NOT_FOUND','未找到本会话的处置记录');
-    const graph=state.graphs.find(g=>g.identity.rootSessionId===input.rootSessionId),links=(state.scopes??[]).filter(s=>s.rootSessionId===input.rootSessionId&&s.workspaceId===input.workspaceId&&(s.recovery?.dispositionId===input.dispositionId||s.replan?.dispositionId===input.dispositionId)).map(s=>({kind:s.recovery?'inspection' as const:'repair' as const,scopeId:s.scopeId,status:s.status,...(s.outcome?{outcome:s.outcome}:{}),runId:(s.recovery??s.replan)!.context.initialRunId,taskIds:graph?.tasks.filter(t=>t.scopeId===s.scopeId).map(t=>t.taskId)??[],...(s.goal?{goalRevision:s.goal.revision}:{}),...(s.goal?.review?{reviewDecision:s.goal.review.decision}:{})}));
+    const graph=state.graphs.find(g=>g.identity.rootSessionId===input.rootSessionId),links=(state.scopes??[]).filter(s=>s.rootSessionId===input.rootSessionId&&s.workspaceId===input.workspaceId&&(s.recovery?.dispositionId===input.dispositionId||s.replan?.dispositionId===input.dispositionId)).map(s=>({kind:s.recovery?'inspection' as const:'repair' as const,scopeId:s.scopeId,status:s.status,...(s.outcome?{outcome:s.outcome}:{}),runId:(s.recovery??s.replan)!.context.initialRunId,taskIds:[...(graph?.tasks.filter(t=>t.scopeId===s.scopeId).map(t=>t.taskId)??[]),...(state.agentBusinessRuns??[]).filter(run=>run.scopeId===s.scopeId).map(run=>run.binding.taskId)],...(s.goal?{goalRevision:s.goal.revision}:{}),...(s.goal?.review?{reviewDecision:s.goal.review.decision}:{})}));
     return this.output(effectRelationsSchema.parse({identity:input,record,links,readOnly:true}));
   }
 }

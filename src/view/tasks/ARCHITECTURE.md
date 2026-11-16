@@ -4552,3 +4552,8 @@ SessionTaskView 将侧栏选中的逻辑 Session 传给 OfficeScene；选中人�
 ## 递归执行记录核实
 
 ExecutionReportPanel 根据 basis.executionModel 显示原调用登记及冻结计划版本，active/closed 使用登记含义的标签，不显示虚构旧任务版本；旧报告仍保留历史状态。读取、分页、错误和过期控制不新增执行操作。
+
+
+### 递归工具迁移收口
+
+修复回执校验兼容新的 inspectionRunId 与旧 reviewRunId，二者均不得作为新业务 runId；前端不推断旧任务图或补造核实计划。

@@ -1,4 +1,5 @@
 /**
+ * request 是新增可信冻结事实；旧登记缺省保持兼容，但不能据此推断正式修复的原要求。
  * 作用定位：递归业务运行的持久身份与冻结知识，供文件审计和隔离恢复定位原 canonical。
  * 设计原因：新调用没有旧任务图/信封；只登记真实运行，不伪造旧成员领取或另一份执行状态机。
  */
@@ -16,6 +17,8 @@ export interface AgentBusinessRun {
   lineage:AgentCallReference[];
   prepared:PreparedDispatchKnowledge;
   permission:'read'|'ask'|'execute';
+  /** 新调用冻结原目标与验收要求；旧登记缺省时不能据损坏日志推断要求。 */
+  request?:{message:string;acceptance:string[]};
   /** active 只表示启动意图已保存；真实授权和执行事实必须再核 canonical。 */
   status:'active'|'closed';
   createdAt:string;

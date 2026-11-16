@@ -195,3 +195,18 @@ it('封存unknown或旧过期目标不阻断同主根新周期的真实派发与
     expect(scope(next)).toEqual(scope(before));
   }
 });
+
+it('binds attachment content and ordered manifest into the original input hash',()=>{
+ const attachmentId=randomUUID(),manifest={version:1 as const,items:[{attachmentId,kind:'file' as const,name:'note',snapshotHash:'a'.repeat(64),contentHash:'b'.repeat(64),byteLength:1,contentKind:'text' as const}],expandedMessageHash:hash('x'),expandedMessageBytes:1};
+ const input={message:'x',attachmentIds:[attachmentId],attachmentManifest:manifest};
+ expect(scopedActiveInputHash(input)).not.toBe(scopedActiveInputHash({message:'x',attachmentIds:[attachmentId]}));
+ expect(scopedActiveInputHash({...input,attachmentManifest:{...manifest,items:[{...manifest.items[0],snapshotHash:'c'.repeat(64)}]}})).not.toBe(scopedActiveInputHash(input));
+ const initial=fixture(),pending=prepare(initial,'x'),record=scope(pending).activeInputs![0];
+ Object.assign(record,{attachmentIds:[attachmentId],attachmentManifest:manifest,inputHash:scopedActiveInputHash(input)});
+ check(initial,pending);
+ const accepted=accept(pending,'x'),value=scope(accepted).activeInputs![0] as AcceptedScopeActiveInput;
+ value.input=input;check(pending,accepted);
+ const changed=structuredClone(accepted),bad=scope(changed).activeInputs![0] as AcceptedScopeActiveInput;
+ bad.input.attachmentManifest!.items[0].snapshotHash='d'.repeat(64);
+ expect(()=>check(pending,changed)).toThrow();
+});

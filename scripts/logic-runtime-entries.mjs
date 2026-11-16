@@ -34,6 +34,7 @@ export const runtimePublicEntries=new Set([
   "src/logic/dispatch/runtime/dispatch-service.ts",
   "src/logic/dispatch/runtime/owner-execution-service.ts",
   "src/logic/evidence/runtime/agent-artifact-verification.ts",
+  "src/logic/evidence/runtime/recursive-inspection-evidence.ts",
   "src/logic/evidence/runtime/artifact-report-service.ts",
   "src/logic/evidence/runtime/command-verification-service.ts",
   "src/logic/evidence/runtime/effect-observation-service.ts",

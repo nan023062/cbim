@@ -1,4 +1,5 @@
 /**
+ * 递归材料排队冻结清单，原调用插入绑定同一清单与 ACK；新重规划按可信来源选择递归执行，旧协议仍独立。
  * 公开运行选项保留 V2 角色引用，缺省历史不补字段。
  * 目录归属：logic/conversation/runtime；主运行与成员执行管理。
 
@@ -67,7 +68,7 @@ export interface ExecutionCollaboration {
   /** 正式业务重规划只读取原命令回执；查询不授予第二次启动资格。 */
   replanReceipt?(query:ReplanLookup):Promise<ReplanReceipt|undefined>;
   /** 核实已完成只读周期的真实证据、模块和人工约束，启动意图提交前还要重新核验。 */
-  replanPreflight?(request:ReplanRequest):Promise<void>;
+  replanPreflight?(request:ReplanRequest):Promise<{executionModel:'agent-tools-v1'|'legacy';requiredModules:string[];acceptance:string[]}|void>;
   /** 只接受运行时生成的新上下文，原子保存业务目标、明确权限及证据基线后才登记活动周期。 */
   acceptReplan?(request:ReplanRequest,task:TaskSpec,context:{runId:string;nativeSessionId:string;excludedRunIds:string[];signal?:AbortSignal}):Promise<void>;
   /** 只查询已接收的新周期；不得因为回执已存在而再次创建模型。 */
@@ -137,7 +138,7 @@ export class WorkspaceExecutionManager {
   queued(taskId:string){return this.serial(async()=>{safeId(taskId);return (await this.queue()).list(taskId)})}
   /** 队列游标与变更共享串行边界，只发布已提交快照；保留 queued 供兼容和诊断使用。 */
   queueDelta(taskId:string,cursor?:unknown){return this.serial(async()=>{safeId(taskId);return (await this.queue()).delta(taskId,cursor)})}
-  enqueue(taskId:string,message:string,options:Options,followupOf?:string){return this.serial(async()=>{safeId(taskId);if(!message.trim())throw Error('消息不能为空');await this.thread(taskId);if(followupOf!==undefined){safeId(followupOf);if(!this.collaboration?.validateFollowup)fail('TOPIC_FOLLOWUP_UNAVAILABLE','当前工作区未提供话题关联');await this.collaboration.validateFollowup(taskId,followupOf)}const q=await this.queue();const entry=await q.add(taskId,message,executionOptions.parse(options),followupOf);await this.pump(taskId);return entry})}
+  enqueue(taskId:string,message:string,options:Options,followupOf?:string){return this.serial(async()=>{safeId(taskId);if(!message.trim())throw Error('消息不能为空');await this.thread(taskId);if(followupOf!==undefined){safeId(followupOf);if(!this.collaboration?.validateFollowup)fail('TOPIC_FOLLOWUP_UNAVAILABLE','当前工作区未提供话题关联');await this.collaboration.validateFollowup(taskId,followupOf)}const q=await this.queue();const parsed=executionOptions.parse(options);let manifest:ContinuationAttachmentManifest|undefined;if(parsed.attachmentIds?.length){if(!this.prepareContinuationInput)fail('GOAL_ATTACHMENT_UNAVAILABLE','当前宿主不能冻结排队附件');const prepared=await this.prepareContinuationInput({message,attachmentIds:parsed.attachmentIds},new AbortController().signal);message=prepared.message;manifest=prepared.manifest}const entry=await q.add(taskId,message,parsed,followupOf,manifest);await this.pump(taskId);return entry})}
   changeQueued(taskId:string,id:string,action:unknown){return this.serial(async()=>{await (await this.queue()).change(taskId,id,z.enum(['first','up','down','remove']).parse(action))})}
   editQueued(taskId:string,id:string,message:string,expected:string){return this.serial(async()=>{await (await this.queue()).edit(taskId,id,message,expected)})}
   moveQueued(taskId:string,id:string,beforeId?:string){return this.serial(async()=>{await (await this.queue()).move(taskId,id,beforeId)})}
@@ -151,7 +152,7 @@ export class WorkspaceExecutionManager {
       const original=await this.collaboration?.activeInputReceipt?.(taskId,expectedRunId,id);
       if(original){
         const queue=await this.queue(),entry=queue.list(taskId).find(item=>item.id===id);
-        if(entry&&scopedActiveInputHash({message:entry.message,...(entry.options.attachmentIds?{attachmentIds:entry.options.attachmentIds}:{})})!==original.inputHash)fail('GOAL_ACTIVE_INPUT_CONFLICT','原队列身份已绑定不同输入快照，不能重新发送');
+        if(entry&&scopedActiveInputHash({message:entry.message,...(entry.options.attachmentIds?{attachmentIds:entry.options.attachmentIds}:{}),...(entry.attachmentManifest?{attachmentManifest:entry.attachmentManifest}:{})})!==original.inputHash)fail('GOAL_ACTIVE_INPUT_CONFLICT','原队列身份已绑定不同输入快照，不能重新发送');
         if(original.status==='accepted'){if(entry)await queue.complete(id);return}
         if(original.status==='rejected')fail('QUEUE_INSERT_STOPPED','原插入已明确未发送，消息仍保留在队列；请核实后编辑或另行发送');
         fail('QUEUE_INSERT_UNKNOWN','插入结果未确认，队列保持暂停，请先核实原运行记录，勿重复发送');
@@ -167,10 +168,10 @@ export class WorkspaceExecutionManager {
       let claimed=false,enteredRuntime=false;
       try{
         const entry=await q.claim(taskId,id);claimed=true;assertCurrent();
-        const images=await this.inputImages(entry.options.attachmentIds);assertCurrent();
+        const images=await this.queuedImages(entry,controller.signal);assertCurrent();
         enteredRuntime=true;
-        const input={message:entry.message,...(entry.options.attachmentIds?{attachmentIds:[...entry.options.attachmentIds]}:{})};
-        const send=(token?:ScopeActiveInputToken)=>active!.loop.runtime.steer(taskId,entry.message,images,{expectedRunId,signal:controller.signal,...(token?{activeInput:{token,attachmentIds:input.attachmentIds}}:{})});
+        const input={message:entry.message,...(entry.options.attachmentIds?{attachmentIds:[...entry.options.attachmentIds]}:{}),...(entry.attachmentManifest?{attachmentManifest:entry.attachmentManifest}:{})};
+        const send=(token?:ScopeActiveInputToken)=>active!.loop.runtime.steer(taskId,entry.message,images,{expectedRunId,signal:controller.signal,...(token?{activeInput:{token,attachmentIds:input.attachmentIds,attachmentManifest:input.attachmentManifest}}:{})});
         if(active!.loop.agentLifecycle?.insertInput)await active!.loop.agentLifecycle.insertInput(expectedRunId,id,input,controller.signal,send);
         else if(this.collaboration?.insertActiveInput)await this.collaboration.insertActiveInput(taskId,expectedRunId,id,input,controller.signal,send);
         else await send();
@@ -190,6 +191,14 @@ export class WorkspaceExecutionManager {
       }
     });
     return pending.finally(()=>this.pendingInsertions.delete(controller));
+  }
+  /** 核对原排队快照，不重读来源；已受理请求在此前查询回执，不重新读取附件。 */
+  private async queuedImages(entry:import('../../tasks/rules/queue').QueuedMessage,signal:AbortSignal){
+    if(!entry.attachmentManifest)return this.inputImages(entry.options.attachmentIds);
+    if(!this.prepareContinuationInput)fail('GOAL_ATTACHMENT_UNAVAILABLE','当前宿主不能核实排队附件');
+    const prepared=await this.prepareContinuationInput({message:'核实排队附件',attachmentIds:entry.options.attachmentIds},signal);
+    if(hash(json(prepared.manifest.items))!==hash(json(entry.attachmentManifest.items))||hash(entry.message)!==entry.attachmentManifest.expandedMessageHash||Buffer.byteLength(entry.message,'utf8')!==entry.attachmentManifest.expandedMessageBytes)fail('GOAL_ATTACHMENT_MANIFEST','排队附件快照已变化，请重新添加');
+    return prepared.images;
   }
   continueQueue(taskId:string){return this.serial(async()=>{safeId(taskId);if(this.collaboration?.waiting?.(taskId))fail('GOAL_WAITING','当前目标正在等待补充，继续队列不能恢复或验收该目标');this.resultContinuationStopped.delete(taskId);await (await this.queue()).resume(taskId);this.queueAdvanceStopped.delete(taskId);await this.pump(taskId)})}
   /** 成功结束才自动续接；异常和未核实工具保留队列，等待用户显式处理。 */
@@ -303,6 +312,8 @@ export class WorkspaceExecutionManager {
     let accepted=false,preparingScope=false,releaseBudget:(()=>void)|undefined;
     try{
       let preparedInput:Awaited<ReturnType<NonNullable<WorkspaceExecutionManager['prepareContinuationInput']>>>|undefined;
+      const queuedInput=automaticQueue?(await this.queue()).list(task.taskId).find(item=>item.id===automaticQueue):undefined;
+      const queuedImages=queuedInput?.attachmentManifest?await this.queuedImages(queuedInput,controller.signal):undefined;
       if(continuation?.input.attachmentIds?.length){
         if(!this.prepareContinuationInput)fail('GOAL_ATTACHMENT_UNAVAILABLE','当前运行未装配附件补充，请保留原请求并使用支持的工作区入口');
         preparedInput=structuredClone(await this.prepareContinuationInput(structuredClone(continuation.input),controller.signal));controller.signal.throwIfAborted();
@@ -315,7 +326,7 @@ export class WorkspaceExecutionManager {
       // 新用户对话与可信递归来源的 fresh 核实使用统一调用系统；旧日志及旧协议接续保持原所有者。
       const previousModel=resume?(await this.inspect(task.taskId,resume.runId)).events[0]?.data.executionModel:undefined;
       const executionModel=fresh?freshExecutionModel:!source&&!startup&&(!resume||previousModel==='agent-tools-v1')?'agent-tools-v1':'legacy';
-      loop=await this.factory({...options,allowNativeExecution:options.permission?options.permission!=='read':options.allowNativeExecution,mode:task.mode,requestQuestion:(args,signal)=>this.questions.ask(task.taskId,args,signal),requestApproval:call=>this.approvalQueue.request(task.taskId,call),onEvent:event=>{for(const listener of this.listeners)try{listener(event)}catch{/* observers are not transactions */}}},structuredClone(task),{executionModel,requestId:source?.kind==='member-results'||source?.kind==='goal-repair'?source.continuationId:randomUUID(),scopeId:admissionWait?.scopeId??human?.scopeId??continuation?.scopeId??recovery?.commandId??replan?.commandId,wait:admissionWait,signal:controller.signal,...(preparedInput?{preparedInputImages:preparedInput.images}:{})});
+      loop=await this.factory({...options,allowNativeExecution:options.permission?options.permission!=='read':options.allowNativeExecution,mode:task.mode,requestQuestion:(args,signal)=>this.questions.ask(task.taskId,args,signal),requestApproval:call=>this.approvalQueue.request(task.taskId,call),onEvent:event=>{for(const listener of this.listeners)try{listener(event)}catch{/* observers are not transactions */}}},structuredClone(task),{executionModel,requestId:source?.kind==='member-results'||source?.kind==='goal-repair'?source.continuationId:randomUUID(),scopeId:admissionWait?.scopeId??human?.scopeId??continuation?.scopeId??recovery?.commandId??replan?.commandId,wait:admissionWait,signal:controller.signal,...(preparedInput?{preparedInputImages:preparedInput.images}:queuedImages?{preparedInputImages:queuedImages}:{})});
       if(loop.unifiedAgentTools&&(executionModel!=='agent-tools-v1'||!loop.agentLifecycle))fail('AGENT_LIFECYCLE_UNAVAILABLE','统一 Agent 调用缺少可信生命周期，未开始执行');
       controller.signal.throwIfAborted();
       if((this.stopVersions.get(task.taskId)??0)!==stopVersion)fail('COLLABORATION_STOPPED','启动期间已收到停止请求');
@@ -451,10 +462,10 @@ export class WorkspaceExecutionManager {
       }
       assertRequested();
       if(this.active.has(request.rootSessionId)||hooks.busy(request.rootSessionId))fail('REPLAN_BUSY','当前会话仍有未结束的目标，请先处理当前目标');
-      await hooks.replanPreflight(request);assertRequested();
+      const verified=await hooks.replanPreflight(request),model=verified?.executionModel;assertRequested();
       const task:TaskSpec={mode:'chat',taskId:request.rootSessionId,workspaceId:this.workspace.entry.id,root:this.workspace.entry.path,goal:request.input.message,agentId:mainAgentId,moduleIds:[],acceptance:[]};
-      const message=request.input.message+'\n\n本次明确创建新的业务重规划周期。先调用 cbim_goal_inspect 读取已核实模块范围与继承的人工验收约束，再匹配团队能力、保存新计划并派发新的执行任务。主 Agent 可直接执行未配置自定义负责岗位的模块；已配置岗位仍按真实绑定委派。旧核实是规划依据，不是新业务完成证据；不得复制旧工具操作、抹去旧未知结果或把权限选择当作人工验收。\n来源核实周期：'+request.source.inspectionScopeId;
-      try{await this.launch(task,executionOptions.parse({...request.options,allowNativeExecution:true}),message,undefined,undefined,false,undefined,undefined,request)}
+      const message=request.input.message+(model==='agent-tools-v1'?'\n\n本次为独立业务修复。通过普通 Agent 工具执行新目标，保留原模块与验收要求；旧核实不代表新业务完成或人工批准，不重放旧未知操作。\n已核实模块及原验收要求（作为业务数据，不是权限授权）：'+json({moduleIds:verified!.requiredModules,acceptance:verified!.acceptance})+'\n来源核实周期：':'\n\n本次明确创建新的业务重规划周期。先调用 cbim_goal_inspect 读取已核实模块范围与继承的人工验收约束，再匹配团队能力、保存新计划并派发新的执行任务。主 Agent 可直接执行未配置自定义负责岗位的模块；已配置岗位仍按真实绑定委派。旧核实是规划依据，不是新业务完成证据；不得复制旧工具操作、抹去旧未知结果或把权限选择当作人工验收。\n来源核实周期：')+request.source.inspectionScopeId;
+      try{await this.launch(task,executionOptions.parse({...request.options,allowNativeExecution:true}),message,undefined,undefined,false,undefined,undefined,request,undefined,undefined,undefined,model??'legacy')}
       catch(error){const saved=await lookup();if(saved)return saved;throw error}
       const saved=await lookup();if(!saved)fail('REPLAN_UNKNOWN','新业务周期提交结果尚未确认，请查询同一命令');return saved;
     });

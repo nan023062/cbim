@@ -1,4 +1,5 @@
 /**
+ * 排队入口传递原始文本；材料冻结由会话服务负责，避免重复展开或由客户端提供清单。
  * 作用定位：会话、排队、历史与安全续接的主进程处理器。
  * 设计原因：插入绑定原 expectedRunId，查询原回执不重放；退役的业务启动入口继续拒绝。请求已在总分派中解析。
  */
@@ -18,7 +19,7 @@ export function loopIpcHandlers(app:ApplicationServices):IpcHandlers<keyof LoopI
     'loop.start':async args=>{fail('OWNER_DISPATCH_REQUIRED','业务执行必须通过当前目标计划和负责岗位派发；旧任务历史仍可读取');},
     'loop.queue':async args=>{return app.execution(args.id).queued(args.taskId);},
     'loop.queueDelta':async args=>{return app.execution(args.id).queueDelta(args.taskId,args.cursor);},
-    'loop.enqueue':async args=>{return app.execution(args.id).enqueue(args.taskId,await new ChatInputs(app.workspace(args.id)).message(args.message,args.attachments),await app.chatOptions(args.id,args.options,args.attachments),args.followupOf);},
+    'loop.enqueue':async args=>{return app.execution(args.id).enqueue(args.taskId,args.message,await app.chatOptions(args.id,args.options,args.attachments),args.followupOf);},
     'loop.queueChange':async args=>{return app.execution(args.id).changeQueued(args.taskId,args.queueId,args.action);},
     'loop.queueEdit':async args=>{return app.execution(args.id).editQueued(args.taskId,args.queueId,args.message,args.expected);},
     'loop.queueMove':async args=>{return app.execution(args.id).moveQueued(args.taskId,args.queueId,args.beforeId);},

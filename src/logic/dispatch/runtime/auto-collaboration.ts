@@ -56,12 +56,7 @@ import type {GoalRepairSource} from '../../execution/rules/input-source';
 import {goalRepairFeedback} from './goal-repair';
 import {memberFailureStopReason} from './member-failure-limit';
 
-/** 本轮控制面工具的窄生命周期端口；只捕获已登记批次，不创建周期或授予写权。 */
-export interface MainToolContext {
-  readonly binding:Readonly<{workspaceId:string;rootSessionId:string;scopeId:string;runId:string}>;
-  assertCurrent(signal:AbortSignal):void;
-  track<T>(operation:()=>Promise<T>):Promise<T>;
-}
+import type {MainToolContext} from '../../execution/rules/conversation-binding';
 
 /** 只保存主轮选择的公开运行选项；不保存密钥、附件字节或本轮 allowAll。 */
 type Options={engine?:import('../../engines').LoopEngine;modelRoles?:import('../../engines').ModelRolesSelection;collaborationMode?:'auto'|'team';provider:string;model:string;profileId:string;permission:'read'|'ask'|'execute';allowNativeExecution:boolean;turnTimeoutMs?:number};

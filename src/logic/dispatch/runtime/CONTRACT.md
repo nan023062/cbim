@@ -46,3 +46,5 @@ AutomaticReturnService 在恢复取证中使用同一策略，覆盖第三次异
 ## 根运行插入回执
 
 旧协调器的 insertActiveInput 复用 ScopeActiveInputService.send 完成 prepare/原生发送/resolve，仍由当前 cycle 核实运行与停止状态；新根生命周期不创建旧 cycle。
+
+MainToolContext 的公共定义移至 execution/rules/conversation-binding；AutoCollaboration 仍按旧批次实现相同语义，没有新增执行队列或改变旧恢复行为。

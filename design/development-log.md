@@ -3031,3 +3031,12 @@ S5–S7：同步源码注释、8 个变更目录及父目录的 CONTRACT/生成�
 基线 f532d80a。knowledge-contract、knowledge-effect-object、knowledge-refresh 三个确定性供应商退出旧 cbim_goal_plan/review 和 cbim_dispatch_task 假设，按新主会话直接执行原知识事务。移除的旧目标回合不作为知识提交的授权或验收；仍完整验证原目录/Schema、无效预览、未找到诊断、审批与停止、精确一次提交、坏输出原 failed 回执、事务查询、处置幂等、native/canonical 原字节及重启零重放。新的根 completed 表示主会话正常返回说明，异常提交的工具回执仍 failed；不将其等同于旧 goal_review 接受或业务验收通过。
 
 pnpm exec vitest run tests/knowledge-effect-pi.test.ts tests/knowledge-contract-pi.test.ts --reporter=default --reporter=json --outputFile=build/recursive-knowledge-effects.json：6/6 通过。仅测试供应商和断言迁移，没有修改产品源码。初次 current-main-effects.json 另有责任工具缺失失败，后续单独修复主上下文端口，不把该项记为通过。
+
+
+## 2026-11-16 · #94 主岗位及责任工具复用当前 Agent 根生命周期
+
+基线 7b02f719。S1–S4：主工具工厂此前仅从 Auto 批次取得上下文，新协议不启动该批次，导致岗位/模块责任工具消失。把现有 MainToolContext 定义迁入 execution/rules/conversation-binding，由原 Auto 和 AgentCallAssembly 共用；不是新增调度器。新根只在 beforeRun 已受理后提供固定 workspace/root/scope/run；关闭立即拒绝新控制面操作，复用根在途集合等待原提交，再关闭 scope/预算。服务命令 ID、审批、权限、来源与回执逻辑不变，子运行不暴露主管理能力。S5–S7 同步五个受影响目录的注释、CONTRACT 及生成类图。
+
+验证选择：根装配的身份与排空、岗位/责任原工具直接消费者，以及真实 Pi 控制面。agent-call-assembly、module-ownership-tools、workspace-member-tools 共 26/26 通过，新增关闭等待原提交、跨根/未受理禁止访问。module-ownership-pi 6 个主场景（read/ask拒绝/ask批准/execute/坏回包/stop）通过；其执行 Agent 隔离场景迁至 cbim_agent_call，两个真实岗位模型分别执行且均无责任管理工具，-t 'actual executor' 1/1 通过。persistent-effect-pi -t ownership 1/1 通过；原保存损坏回包可查询且重启不重放。
+
+coordination-pi 迁移至新主责任工具：统一只读目录 Schema 实际发送可编译、真实责任预览后过期依据提交拒绝、原回执查询不授权重试、连续三次失败熔断、没有责任写入或派发图任务，1/1 通过。相应报告为 build/recursive-root-context.json、recursive-root-tools.json（6 项通过及旧流程 4 项失败的原始报告）、recursive-owner-executor.json、recursive-ownership-effect.json、recursive-coordination.json。member-tool-contract-pi 两个旧 help/checkpoint 场景仍待迁移，不计为通过。pnpm typecheck、check:architecture（0 环/0 违规）、check:test-modules（540 文件）、git diff --check 通过。未运行全套桌面安装/升级，未公开旧候选。

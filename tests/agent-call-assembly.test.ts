@@ -92,7 +92,7 @@ async function fixture(mode:'implicit-engine'|'chain'|'different-model'|'changed
   const root=await createWorkspaceLoop(input.workspace.paths,input.workspace,options,{storage,rootAgent:assembly.rootAgent,agentTools:assembly.agentTools,requestBudget:assembly.requestBudget,acquireLease:async()=>()=>{},authorizeNative:input.authorizeNative});
   cleanups.push(async()=>{await root.runtime.close();await assembly.agentLifecycle.failed(Error('test cleanup'));rootPermit.release();const target=path.resolve(directory);if(path.dirname(target)!==path.resolve(os.tmpdir())||!path.basename(target).startsWith('cbim-agent-assembly-'))throw Error('Unexpected cleanup directory');await fs.rm(target,{recursive:true,force:true})});
   const run=async()=>{const result=await root.runtime.start(rootTask,'root',undefined,undefined,{signal:new AbortController().signal,beforeRun:({runId})=>assembly.agentLifecycle.beforeRun(runId)});const summary=await result.done;await assembly.agentLifecycle.settled(summary);return summary};
-  return {run,assembly,events,results,decisions,budgets,budgetPort,forRun,holdMain,holdRelease,openScope,closeScope,memberGet,admission,storage,directory};
+  return {rootTask,run,assembly,events,results,decisions,budgets,budgetPort,forRun,holdMain,holdRelease,openScope,closeScope,memberGet,admission,storage,directory};
 }
 
 it('routes root to child to grandchild through real loops, exact identities and one root budget',async()=>{
@@ -151,4 +151,15 @@ it('an unanswered child cannot be silently completed; original subtree is cancel
 it('preserves an implicit Pi engine in adopted model hashes during recursive capture',async()=>{
  const f=await fixture('implicit-engine');expect((await f.run()).status).toBe('completed');expect(f.events).toHaveLength(3);
  expect(f.results.map((r:any)=>JSON.parse(r.content[0].text).status)).toEqual(['completed','completed']);
+});
+
+it('binds root control tools only after admission and waits for the original commit before closure',async()=>{
+ const f=await fixture();expect(f.assembly.mainToolContext(f.rootTask,'root-run')).toBeUndefined();
+ await f.assembly.agentLifecycle.beforeRun('root-run');
+ const context=f.assembly.mainToolContext(f.rootTask,'root-run')!;expect(context.binding).toMatchObject({workspaceId:'workspace',rootSessionId:f.rootTask.taskId,runId:'root-run'});
+ expect(f.assembly.mainToolContext({...f.rootTask,taskId:'foreign'},'root-run')).toBeUndefined();expect(f.assembly.mainToolContext(f.rootTask,'foreign-run')).toBeUndefined();
+ let entered=false,resolve!:(value:string)=>void;const original=context.track(async()=>{entered=true;return new Promise<string>(r=>{resolve=r})});
+ await vi.waitFor(()=>expect(entered).toBe(true));const stopping=f.assembly.agentLifecycle.failed(Error('stop'));await Promise.resolve();
+ expect(f.closeScope).not.toHaveBeenCalled();expect(f.holdRelease).not.toHaveBeenCalled();expect(()=>context.assertCurrent(new AbortController().signal)).toThrow();expect(()=>context.track(async()=> 'new')).toThrow();
+ resolve('original receipt');expect(await original).toBe('original receipt');await stopping;expect(f.closeScope).toHaveBeenCalledTimes(1);expect(f.holdRelease).toHaveBeenCalledTimes(1);expect(f.assembly.mainToolContext(f.rootTask,'root-run')).toBeUndefined();
 });

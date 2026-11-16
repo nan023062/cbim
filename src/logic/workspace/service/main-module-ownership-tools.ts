@@ -10,7 +10,7 @@ import type {TaskSpec} from '../../tasks/rules/types';
 import {moduleOwnershipMainActorSchema} from '../rules/module-ownership';
 import {moduleOwnershipMainCommandId} from '../rules/module-ownership-rules';
 import {moduleOwnerInspectInputSchema,moduleOwnerPreviewInputSchema,moduleOwnerCommitInputSchema,moduleOwnerReceiptInputSchema,type ModuleOwnershipToolsPort} from '../rules/module-ownership-tools';
-import type {MainToolContext} from '../../dispatch/runtime/auto-collaboration';
+import type {MainToolContext} from '../../execution/rules/conversation-binding';
 import type {KnowledgeWorkspace} from '../../knowledge/rules/ports';
 import type {ModuleOwnerships} from './module-ownerships';
 import type {WorkspaceMembers} from '../../team/service/workspace-members';

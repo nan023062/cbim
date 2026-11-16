@@ -21,18 +21,13 @@
 
 ### auto-collaboration.ts
 
+成员 1/3（同名节点为同一声明，跨图合并阅读）。
+
 ```mermaid
 classDiagram
 class N_src_logic_dispatch_runtime_auto_collaboration_ts["auto-collaboration.ts"] {
   <<module>>
 }
-class N_src_logic_dispatch_runtime_auto_collaboration_ts_MainToolContext["MainToolContext"] {
-  <<interface>>
-  +binding
-  +assertCurrent()
-  +track()
-}
-N_src_logic_dispatch_runtime_auto_collaboration_ts ..> N_src_logic_dispatch_runtime_auto_collaboration_ts_MainToolContext : 声明
 class N_src_logic_dispatch_runtime_auto_collaboration_ts_Options["Options"] {
   <<type>>
   +engine
@@ -84,15 +79,6 @@ class N_src_logic_dispatch_runtime_auto_collaboration_ts_Batch["Batch"] {
   +repair
 }
 N_src_logic_dispatch_runtime_auto_collaboration_ts ..> N_src_logic_dispatch_runtime_auto_collaboration_ts_Batch : 声明
-```
-
-成员 1/3（同名节点为同一声明，跨图合并阅读）。
-
-```mermaid
-classDiagram
-class N_src_logic_dispatch_runtime_auto_collaboration_ts["auto-collaboration.ts"] {
-  <<module>>
-}
 class N_src_logic_dispatch_runtime_auto_collaboration_ts_AutoCollaboration["AutoCollaboration"] {
   +initialize()
   +mainToolContext()
@@ -170,7 +156,7 @@ class N_src_logic_dispatch_runtime_auto_collaboration_ts_AutoCollaboration["Auto
 N_src_logic_dispatch_runtime_auto_collaboration_ts ..> N_src_logic_dispatch_runtime_auto_collaboration_ts_AutoCollaboration : 声明
 ```
 
-直接依赖：[../../tasks/rules/scope-goal.ts](../../tasks/rules/scope-goal.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../tasks/rules/member-checkpoint-chain.ts](../../tasks/rules/member-checkpoint-chain.ts)、[../../tasks/rules/member-checkpoint.ts](../../tasks/rules/member-checkpoint.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../tasks/rules/dispatch-scope.ts](../../tasks/rules/dispatch-scope.ts)、[../../tasks/rules/scope-continuation.ts](../../tasks/rules/scope-continuation.ts)、[../../tasks/rules/topic-interruption.ts](../../tasks/rules/topic-interruption.ts)、[../../tasks/rules/scope-continuation-attachments.ts](../../tasks/rules/scope-continuation-attachments.ts)、[../../tasks/rules/scope-active-input.ts](../../tasks/rules/scope-active-input.ts)、[../../tasks/rules/human-continue.ts](../../tasks/rules/human-continue.ts)、[../../tasks/rules/scope-recovery.ts](../../tasks/rules/scope-recovery.ts)、[../../tasks/rules/scope-replan.ts](../../tasks/rules/scope-replan.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../tasks/rules/dispatch-commands.ts](../../tasks/rules/dispatch-commands.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../tools/runtime/dispatch-tools.ts](../../tools/runtime/dispatch-tools.ts)、[../../tools/runtime/office-history-tools.ts](../../tools/runtime/office-history-tools.ts)、[../../tools/runtime/goal-tools.ts](../../tools/runtime/goal-tools.ts)、[../../tools/runtime/candidate-review-tools.ts](../../tools/runtime/candidate-review-tools.ts)、[../../team/runtime/member-state.ts](../../team/runtime/member-state.ts)、[../../tools/runtime/main-tool-contracts.ts](../../tools/runtime/main-tool-contracts.ts)、[../../tasks/rules/main-tool-output.ts](../../tasks/rules/main-tool-output.ts)、[dispatch-service.ts](dispatch-service.ts)、[../../team/runtime/member-execution.ts](../../team/runtime/member-execution.ts)、[../../conversation/runtime/execution-manager.ts](../../conversation/runtime/execution-manager.ts)、[../../execution/assembly/loop-engine.ts](../../execution/assembly/loop-engine.ts)、[../../execution/admission/workspace-lease.ts](../../execution/admission/workspace-lease.ts)、[../../execution/admission/admission-wait.ts](../../execution/admission/admission-wait.ts)、[../../tasks/rules/checkpoint-handoff.ts](../../tasks/rules/checkpoint-handoff.ts)、[../../execution/rules/input-source.ts](../../execution/rules/input-source.ts)、[goal-repair.ts](goal-repair.ts)、[member-failure-limit.ts](member-failure-limit.ts)、[../../engines/index.ts](../../engines/index.ts)。
+直接依赖：[../../tasks/rules/scope-goal.ts](../../tasks/rules/scope-goal.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../tasks/rules/member-checkpoint-chain.ts](../../tasks/rules/member-checkpoint-chain.ts)、[../../tasks/rules/member-checkpoint.ts](../../tasks/rules/member-checkpoint.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../tasks/rules/dispatch-scope.ts](../../tasks/rules/dispatch-scope.ts)、[../../tasks/rules/scope-continuation.ts](../../tasks/rules/scope-continuation.ts)、[../../tasks/rules/topic-interruption.ts](../../tasks/rules/topic-interruption.ts)、[../../tasks/rules/scope-continuation-attachments.ts](../../tasks/rules/scope-continuation-attachments.ts)、[../../tasks/rules/scope-active-input.ts](../../tasks/rules/scope-active-input.ts)、[../../tasks/rules/human-continue.ts](../../tasks/rules/human-continue.ts)、[../../tasks/rules/scope-recovery.ts](../../tasks/rules/scope-recovery.ts)、[../../tasks/rules/scope-replan.ts](../../tasks/rules/scope-replan.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../tasks/rules/dispatch-commands.ts](../../tasks/rules/dispatch-commands.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../tools/runtime/dispatch-tools.ts](../../tools/runtime/dispatch-tools.ts)、[../../tools/runtime/office-history-tools.ts](../../tools/runtime/office-history-tools.ts)、[../../tools/runtime/goal-tools.ts](../../tools/runtime/goal-tools.ts)、[../../tools/runtime/candidate-review-tools.ts](../../tools/runtime/candidate-review-tools.ts)、[../../team/runtime/member-state.ts](../../team/runtime/member-state.ts)、[../../tools/runtime/main-tool-contracts.ts](../../tools/runtime/main-tool-contracts.ts)、[../../tasks/rules/main-tool-output.ts](../../tasks/rules/main-tool-output.ts)、[dispatch-service.ts](dispatch-service.ts)、[../../team/runtime/member-execution.ts](../../team/runtime/member-execution.ts)、[../../conversation/runtime/execution-manager.ts](../../conversation/runtime/execution-manager.ts)、[../../execution/assembly/loop-engine.ts](../../execution/assembly/loop-engine.ts)、[../../execution/admission/workspace-lease.ts](../../execution/admission/workspace-lease.ts)、[../../execution/admission/admission-wait.ts](../../execution/admission/admission-wait.ts)、[../../tasks/rules/checkpoint-handoff.ts](../../tasks/rules/checkpoint-handoff.ts)、[../../execution/rules/input-source.ts](../../execution/rules/input-source.ts)、[goal-repair.ts](goal-repair.ts)、[member-failure-limit.ts](member-failure-limit.ts)、[../../execution/rules/conversation-binding.ts](../../execution/rules/conversation-binding.ts)、[../../engines/index.ts](../../engines/index.ts)。
 
 ### automatic-return-service.ts
 
@@ -494,3 +480,5 @@ AutomaticReturnService 在恢复取证中使用同一策略，覆盖第三次异
 ## 根运行插入回执
 
 旧协调器的 insertActiveInput 复用 ScopeActiveInputService.send 完成 prepare/原生发送/resolve，仍由当前 cycle 核实运行与停止状态；新根生命周期不创建旧 cycle。
+
+MainToolContext 的公共定义移至 execution/rules/conversation-binding；AutoCollaboration 仍按旧批次实现相同语义，没有新增执行队列或改变旧恢复行为。

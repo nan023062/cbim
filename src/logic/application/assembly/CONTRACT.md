@@ -54,3 +54,7 @@ Application 将可信 ControlledFileTransport 传入执行装配；每个显式�
 Application 只装配一份 AgentBusinessRuns、ControlledFiles 和 IsolatedExecutions。agent-business 在父工具发布实际子运行引用后、LoopRuntime 开始前将冻结身份登记进原 DispatchStore；不创建旧派工图任务。最小 BusinessRunSource 让原文件服务读到同一权限、知识和绑定，protocol 决定 canonical 位于 loop-engine/tasks，旧记录仍读取 dispatch/runs/tasks。
 
 Runtime.close 成功后才能关闭登记，关闭提交成功后才释放 GlobalRunAdmission 许可。保存未知时保留占用、错误和原句柄，后续只重试排空／关闭，不重发模型或文件操作。隔离范围同时约束读取、受控写入和产物迁移；复用平台隔离记录及显式清理，不引入第二个执行循环。
+
+## 主 Agent 岗位与责任工具
+
+新 AgentCallAssembly 在 beforeRun 成功后提供 MainToolContext，实际身份来自本轮 scope/run。岗位与模块责任工具复用原服务、命令 ID、审批和独立回执，使用此上下文替代 Auto 批次；只为主调用装配，子 Agent 没有管理入口。根收尾立即撤销新控制面操作，等待已登记提交和输入回执后再关闭周期及释放预算。读取或保存未知不自动重放。旧运行继续由 Auto 的原实现提供同一窄契约。

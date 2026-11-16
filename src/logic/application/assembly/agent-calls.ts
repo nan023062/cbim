@@ -3,6 +3,7 @@
  * 设计原因：复用 execution 的运行生命周期和全局准入，避免重复循环和本根并发账本；根运行持工作区租约，后代只在独占工具交接中执行。
  * 支持边界：子调用捕获岗位自己的冻结模型和价格，计入同一根账本；子求助交给直接调用方，人工评审只使用根对话原用户队列。
  */
+import type {MainToolContext} from '../../execution/rules/conversation-binding';
 import {OfficeHistoryTools} from '../../tools/runtime/office-history-tools';
 import {prepareAgentBusiness,type AgentBusinessServices} from './agent-business';
 import {randomUUID} from 'node:crypto';
@@ -39,12 +40,12 @@ export function createAgentCallAssembly(input:AgentCallAssemblyInput){
   const {workspace,task,options,llm,storage,members,admission,dispatch,requestBudgets}=input;
   const rootAgent=new Agent({id:task.agentId??'cbim:main',name:'主 Agent',instructions:'',permission:options.permission??(options.allowNativeExecution?'execute':'read'),...(llm?{model:{engine:options.engine??llm.profile.engine??'pi',profileId:llm.profile.id,modelId:llm.profile.model}}:{})},{workspaceId:workspace.entry.id,taskId:task.taskId});
   let scopeId:string=randomUUID();const identity={workspaceId:rootAgent.conversation.workspaceId,rootSessionId:rootAgent.conversation.taskId};
-  let rootRunId:string|undefined,releaseBudget:(()=>void)|undefined,opened=false,closed=false;
+  let rootRunId:string|undefined,releaseBudget:(()=>void)|undefined,opened=false,closed=false,closing=false;
   let unsupportedBudget=false;
-  // 收尾先等待原生插入回执完成；不能在 prepared 与 resolve 之间封存同一周期。
-  const inputs=new Set<Promise<void>>();
+  // 根运行共享输入回执与控制面提交的在途屏障；封存前须确认原操作均已返回。
+  const inputs=new Set<Promise<unknown>>();
   const insertInput:NonNullable<AgentLifecycle['insertInput']>=(runId,queueId,input,signal,send)=>{
-    if(closed||runId!==rootRunId||!dispatch)fail('QUEUE_INSERT_STALE','原 Agent 运行已结束或缺少持久输入服务');
+    if(closed||closing||runId!==rootRunId||!dispatch)fail('QUEUE_INSERT_STALE','原 Agent 运行已结束或缺少持久输入服务');
     const operation=dispatch.activeInputs.send(identity,scopeId,runId,queueId,input,signal,send);
     inputs.add(operation);return operation.finally(()=>inputs.delete(operation));
   };
@@ -112,7 +113,7 @@ export function createAgentCallAssembly(input:AgentCallAssemblyInput){
     }catch(error){permit.release();throw error}
   }});
   const finish=async(summary?:RunSummary)=>{
-    if(closed)return;await scheduler.close();await Promise.allSettled([...inputs]);
+    if(closed)return;closing=true;await scheduler.close();await Promise.allSettled([...inputs]);
     try{
       if(opened&&dispatch){
         const outcome=summary?.status==='completed'&&!summary.unresolvedTools.length?'completed':summary?.status==='cancelled'?'cancelled':summary?.status==='interrupted'||summary?.unresolvedTools.length?'interrupted':'failed';
@@ -131,6 +132,14 @@ export function createAgentCallAssembly(input:AgentCallAssemblyInput){
   };
   return {
     rootAgent,
+    // 与旧协议共用窄契约，但身份来自本次真实主调用，不读取 Auto 的最新批次。
+    mainToolContext(currentTask:TaskSpec,runId:string):MainToolContext|undefined{
+      if(!opened||closed||closing||runId!==rootRunId||currentTask.taskId!==task.taskId||currentTask.workspaceId!==workspace.entry.id||currentTask.root!==workspace.entry.path)return undefined;
+      const current=(signal?:AbortSignal)=>{signal?.throwIfAborted();workspace.assert();if(closed||closing||runId!==rootRunId||admission&&!admission.isCurrent())fail('AGENT_ROOT_CLOSED','原主运行已停止，不能提交控制面操作')};
+      return {binding:Object.freeze({...identity,scopeId,runId}),assertCurrent:current,track:<T>(operation:()=>Promise<T>)=>{
+        current();const pending=Promise.resolve().then(()=>{current();return operation()});inputs.add(pending);return pending.finally(()=>inputs.delete(pending));
+      }};
+    },
     officeHistory:dispatch?new OfficeHistoryTools(identity,(query,signal)=>{workspace.assert();if(closed||!rootRunId)fail('AGENT_ROOT_CLOSED','原主运行已经结束');return dispatch.history.read(identity,query,signal)}):undefined,
     agentTools:(context:AgentToolContext)=>scheduler.bind(context),requestBudget:budget,
     agentLifecycle:{

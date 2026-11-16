@@ -5,6 +5,7 @@
  * 生命周期：工作区核实路径并持锁后先恢复历史索引，再允许 Store 的基线与恢复提交进入观察器；随后订阅运行、结算中断成员并关闭不安全的活动周期。已提交的无活动执行等待检查点保留，最后回补运行日志，不自动运行模型。回调绑定本次打开的 epoch，关闭先排空业务服务再撤销订阅。
  */
 import fs from 'node:fs/promises';
+import {checkedAgentCallReference} from '../../agents/contracts';
 import path from 'node:path';
 import type {Workspace} from '../../workspace/service/workspace';
 import {FileRunStorage} from '../../execution/storage/run-storage';
@@ -86,7 +87,7 @@ export class WorkspaceRuntimeMonitor {
     ]);
   }
 
-  /** 两套日志分别核对路径与成员绑定，避免把拷错目录的记录重复计入消费。 */
+  /** 旧成员日志固定成员目录；新递归业务日志核对原父引用后保留 loop 路径，拒绝跨目录复制造成重复计量。 */
   private async restoreRunDirectory(workspace:Workspace,root:string,source:'run'|'member-run'){
     const storage=new FileRunStorage();
     // 使用 Dirent 只跟随应用自己的目录，不跟随符号链接或任意名字构造路径。
@@ -101,7 +102,9 @@ export class WorkspaceRuntimeMonitor {
             if(!run.isDirectory())throw Error('invalid directory');
             const runId=safeId(run.name),summary=await storage.read(path.join(root,taskId,runId));
             if(summary.task.workspaceId!==this.workspaceId||summary.task.root!==workspace.entry.path||summary.task.taskId!==taskId||summary.runId!==runId)throw Error('identity mismatch');
-            if((source==='member-run')!==!!summary.memberBinding)throw Error('run source mismatch');
+            const started=summary.events[0]?.data,recursive=started?.executionModel==='agent-tools-v1'&&started.agentCall!==undefined;
+            if(recursive){if(source!=='run')throw Error('recursive run source mismatch');checkedAgentCallReference(started.agentCall,summary.task,summary.runId)}
+            if((source==='member-run')!==(!!summary.memberBinding&&!recursive))throw Error('run source mismatch');
             this.history?.restoreRun(summary,source==='member-run'?'member':'loop');
             this.global.restoreRun(this.workspaceId,this.epoch,summary);
           }catch(error){this.history?.issue(`${source}:${taskId}/${run.name}`,'部分运行记录不可读取或身份不匹配，Agent 历史可能不完整');this.issue(`${source}:${taskId}/${/^[\w-]+$/.test(run.name)?run.name:'unknown'}`,'运行记录不可读取或身份不匹配，用量统计可能不完整',error)}

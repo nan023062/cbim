@@ -2,6 +2,7 @@
  * 作用定位：Agent 调用的便携身份、工具绑定和生命周期契约，供 Runtime 与 Bridge 使用。
  * 设计原因：记录读取及运行门禁不加载调度器实现，不通过聚合出口隐藏反向类型依赖。
  */
+import {z} from 'zod';
 import type {ScopeActiveInputPayload,ScopeActiveInputToken,ScopeActiveInputSendReceipt} from '../tasks/rules/scope-active-input';
 import type {EngineEvent,RunSummary,TaskSpec} from '../execution/rules/types';
 import type {EngineCapability} from '../execution/rules/engine-tools';
@@ -9,6 +10,14 @@ export const agentCallToolName='cbim_agent_call';
 export const agentListToolName='cbim_agent_list';
 export const agentReplyToolName='cbim_agent_reply';
 export interface AgentCallReference {version:1;workspaceId:string;callerTaskId:string;callerRunId:string;toolCallId:string;taskId:string;runId:string}
+/** 父子日志共用严格引用格式；不接受任意路径、额外身份或自己调用自己的引用。 */
+export const agentCallReferenceSchema=z.object({version:z.literal(1),workspaceId:z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/),callerTaskId:z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/),callerRunId:z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/),toolCallId:z.string().min(1).max(512),taskId:z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/),runId:z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/)}).strict();
+/** 仅核验引用本身与当前子运行身份；父日志授权和周期归属仍由读取者校验。 */
+export function checkedAgentCallReference(value:unknown,task:{workspaceId:string;taskId:string},runId:string):AgentCallReference{
+  const ref=agentCallReferenceSchema.parse(value);
+  if(ref.workspaceId!==task.workspaceId||ref.taskId!==task.taskId||ref.runId!==runId||ref.callerTaskId===ref.taskId||ref.callerRunId===ref.runId)throw Error('Agent 调用引用与子运行身份不一致');
+  return ref;
+}
 export interface AgentCallContext {task:TaskSpec;runId:string;depth:number}
 /** 调用协议只限定深度；真实并发和预算由 execution 准入与根账本持有。 */
 export interface AgentCallLimits {maxDepth:number}

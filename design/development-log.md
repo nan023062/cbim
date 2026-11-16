@@ -1,3 +1,17 @@
+## 2026-11-16 — #94 修复递归业务 Agent 历史归档与重开
+
+基线 ac264383，CI 43786781920 的 main-session-instance-pi 仍等待旧二次主轮。迁移该真实 Pi 场景后暴露产品缺口：AgentHistoryService、索引契约和 WorkspaceRuntimeMonitor 都把 memberBinding 等同于旧 dispatch/runs 路径，导致新 loop-engine 业务子运行归档失败、全局 complete=false。
+
+新实现保留 journal 原路径，通过严格原 agentCall 引用区分新递归业务：业务子记录仍是 task/member/registered，但 journal=loop；索引增加可选引用，旧记录形状不补写。增量、重开和正文读取都核对同一引用，不允许更换父身份或把旧目录伪装成新日志。agents/contracts 统一格式与当前子身份校验，budget 的引用格式复用它；父授权和周期归属仍由用量服务核对。没有引入新的历史服务或扫描机制。
+
+真实场景保留独立主/子实例与原生文件、私有主上下文不传给子、实际文件读取/候选证据、准确回原主工具、旧执行入口不可复活、用量只计一次、重开原履历与正文不变。新流程 2 主请求+5 子请求、2 个运行，共 770 tokens；原 3 运行/11 请求退出，计量算法不变。重开后的工作区对象重新取得，未使用已关闭旧 store。
+
+验证：
+- pnpm exec vitest run tests/main-session-instance-pi.test.ts -t 'explicitly registered' --reporter=default --reporter=json --outputFile=build/recursive-main-instance-fixed.json：1/1 通过，含真实 AgentHistory.runs/events 查询及重开一致性。初次验证的归档错误保留在诊断输出，未放宽 complete 断言。
+- pnpm exec vitest run tests/agent-history-store.test.ts tests/agent-history-assembly.test.ts tests/scope-usage-service.test.ts --reporter=default --reporter=json --outputFile=build/recursive-history-contracts.json：30 通过，新增两个正向夹具因遗漏业务 moduleIds 失败；补齐实际模块身份后 -t 'recursive|changed parent'（build/recursive-history-new.json）6/6 通过。四个反例也一起重跑，保证不因夹具身份先失败形成假阳性。
+- pnpm typecheck、pnpm check:test-modules、pnpm check:dependencies 通过；1660 文件/7890 依赖无循环违规。node scripts/source-architecture.mjs --check 通过；不重复相同依赖检查。
+- agents、history/runtime、team/rules、application/assembly、budget/runtime 契约、相关代码注释和生成类图同步。完整 CI /桌面安装升级/合并发布未通过，不以此部分通过替代。
+
 ## 2026-11-16 — #94 补齐递归运行的周期用量统计
 
 基线 a60a9be3。真实缺口：ScopeUsageService 原只枚举旧图成员，遗漏 agent-tools-v1 的子运行；FileRunStorage 的活动主运行也可暂显示 interrupted，不能据此认为不在途。本切片仍由 Logic/budget 持有只读计量规则，Application 注入固定 loop-engine 日志读取端口，dispatch 只装配；不创建第二个预算账本或修改预算准入。

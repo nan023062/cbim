@@ -17,3 +17,5 @@ ModelRequestBudgetService.forRun 的可选 role 默认 primary；装配方只能
 ScopeUsageService 从已登记主 run 出发，沿 canonical 日志中有前置授权的首次 cbim_agent_call 关联读取子 run；各层身份与原父引用须精确一致。普通递归 Agent 不要求虚构旧任务；带业务绑定的子运行还须匹配本 scope 的 agentBusinessRuns。旧任务归属路径保留。日志端口 inspectAgent 只读指定 task/run，统计不扫描目录、不触发执行或恢复。
 
 最多核实 532 个来源，超限拒绝整份报告；重复、环、跨根引用及缺日志不重复累计或报告完整。没有真实终态事件的递归主/子运行计入在途，即使磁盘摘要暂为 interrupted。价格、Token 和结算完整性仍复用 execution 的原计量规则。两次读取核对持久来源；未结算日志的计量仍为部分值。
+
+递归引用格式统一消费 agents/contracts 的 agentCallReferenceSchema；预算服务仍自行核对父授权、当前周期、唯一来源及在途状态，不把结构校验当作归属证明。

@@ -4,6 +4,7 @@
  * 设计原因：实例释放不删除履历，索引与正文分离；只接收已落盘日志/派发意图，列表不回读日志，详情按需恢复后消费增量。
  * 生命周期：装配方先 initialize，再接入观察；关闭前排空执行并撤销订阅，close 等待索引写完。索引错误可见但不改变已发生的执行。
  */
+import {checkedAgentCallReference} from '../../agents/contracts';
 import {fail} from '../../../core/errors';
 import type {RunSummary,StoredEvent,TaskSpec} from '../../execution/rules/types';
 import {checkedConversationAgentBinding} from '../../execution/rules/conversation-binding';
@@ -78,7 +79,7 @@ export class AgentHistoryService {
   }
   private put(record:AgentHistoryRecord,persist=true){
     const checked=checkedAgentHistoryRecord(record,this.workspaceId,this.root),key=runKey(checked.view.taskId,checked.view.runId),old=this.records.get(key);
-    if(old&&(old.journal!==checked.journal||old.view.agentId!==checked.view.agentId||old.view.sessionId!==checked.view.sessionId||old.view.agentInstanceId!==checked.view.agentInstanceId))throw Error('运行历史归属发生冲突');
+    if(old&&(old.journal!==checked.journal||old.view.agentId!==checked.view.agentId||old.view.sessionId!==checked.view.sessionId||old.view.agentInstanceId!==checked.view.agentInstanceId||JSON.stringify(old.agentCall)!==JSON.stringify(checked.agentCall)))throw Error('运行历史归属发生冲突');
     this.records.set(key,checked);
     if(persist&&JSON.stringify(old)!==JSON.stringify(checked))this.persist(checked);
   }
@@ -88,10 +89,11 @@ export class AgentHistoryService {
     if(typeof task.agentId!=='string'||!task.agentId.trim()){this.issue('unassigned:'+runKey(event.taskId,event.runId),'部分旧运行未记录静态 Agent 身份，未猜测归属；原运行日志仍保留');return}
     const member=event.data.memberBinding===undefined?undefined:checkedMemberRunBinding(event.data.memberBinding,task,event.runId);
     const main=event.data.conversationBinding===undefined?undefined:checkedConversationAgentBinding(event.data.conversationBinding,task);
-    if(member&&main||(source==='member')!==!!member)throw Error('运行绑定与日志来源不一致');
+    const agentCall=event.data.agentCall===undefined?undefined:checkedAgentCallReference(event.data.agentCall,task,event.runId);
+    if(agentCall&&(source!=='loop'||event.data.executionModel!=='agent-tools-v1'||main)||member&&main||(source==='member')!==(!!member&&!agentCall))throw Error('运行绑定与日志来源不一致');
     const binding=member??main,stamp=date(event.time),legacy=task.workflowContext?.agent as {definition?:{name?:unknown};name?:unknown}|undefined;
     const fallback=task.agentId==='cbim:main'?'主 Agent':task.agentId==='cbim:executor'?'默认执行 Agent':task.agentId;
-    return {version:1,kind:main?'conversation':member?'task':'legacy',journal:source,task:publicTask(task),lastSeq:1,journalSeen:true,view:{workspaceId:this.workspaceId,agentId:task.agentId,sessionId:binding?.agentSessionId??`legacy:${task.taskId}`,taskId:task.taskId,runId:event.runId,source:main?'main':member?'member':'legacy',binding:binding?'registered':'legacy',agentName:named(legacy?.definition?.name??legacy?.name,fallback),goal:task.goal,moduleIds:[...task.moduleIds],status:'running',startedAt:stamp,updatedAt:stamp,...(binding?{agentSessionId:binding.agentSessionId,agentInstanceId:binding.agentInstanceId,rootSessionId:binding.rootSessionId}:{}),...(task.workflowContext?.revision?{configurationRevision:task.workflowContext.revision}:{})}};
+    return {version:1,kind:main?'conversation':member?'task':'legacy',journal:source,...(agentCall?{agentCall}:{}),task:publicTask(task),lastSeq:1,journalSeen:true,view:{workspaceId:this.workspaceId,agentId:task.agentId,sessionId:binding?.agentSessionId??`legacy:${task.taskId}`,taskId:task.taskId,runId:event.runId,source:main?'main':member?'member':'legacy',binding:binding?'registered':'legacy',agentName:named(legacy?.definition?.name??legacy?.name,fallback),goal:task.goal,moduleIds:[...task.moduleIds],status:'running',startedAt:stamp,updatedAt:stamp,...(binding?{agentSessionId:binding.agentSessionId,agentInstanceId:binding.agentInstanceId,rootSessionId:binding.rootSessionId}:{}),...(task.workflowContext?.revision?{configurationRevision:task.workflowContext.revision}:{})}};
   }
   /** 一次启动恢复沿用监管已有扫描；重复恢复不重复归档，也不改写原日志。 */
   restoreRun(summary:RunSummary,source:Source){
@@ -118,7 +120,7 @@ export class AgentHistoryService {
       if(event.type==='run.started'){
         const next=this.fromStart(event,source);if(!next)return;
         if(record?.journalSeen){
-          if(record.journal!==source||record.view.agentId!==next.view.agentId||record.view.sessionId!==next.view.sessionId||record.view.agentInstanceId!==next.view.agentInstanceId||JSON.stringify(record.task)!==JSON.stringify(next.task))throw Error('重复运行起始身份冲突');
+          if(record.journal!==source||record.view.agentId!==next.view.agentId||record.view.sessionId!==next.view.sessionId||record.view.agentInstanceId!==next.view.agentInstanceId||JSON.stringify(record.agentCall)!==JSON.stringify(next.agentCall)||JSON.stringify(record.task)!==JSON.stringify(next.task))throw Error('重复运行起始身份冲突');
         }else{
           if(record?.dispatchStatus){next.dispatchStatus=record.dispatchStatus;next.view.status=record.dispatchStatus;next.view.agentName=record.view.agentName;next.view.configurationRevision=record.view.configurationRevision;next.view.startedAt=record.view.startedAt}
           this.put(next);this.live.add(key);record=this.records.get(key)!;
@@ -210,7 +212,7 @@ export class AgentHistoryService {
   private async loadStream(stream:EventStream,record:AgentHistoryRecord){
     try{
       const summary=await this.ports.read(clone(record)),classified=this.fromStart(summary.events[0],record.journal);
-      if(!classified||classified.view.agentId!==record.view.agentId||classified.view.sessionId!==record.view.sessionId||classified.view.agentInstanceId!==record.view.agentInstanceId||summary.runId!==record.view.runId)throw Error('运行详情归属不一致');
+      if(!classified||classified.view.agentId!==record.view.agentId||classified.view.sessionId!==record.view.sessionId||classified.view.agentInstanceId!==record.view.agentInstanceId||JSON.stringify(classified.agentCall)!==JSON.stringify(record.agentCall)||summary.runId!==record.view.runId)throw Error('运行详情归属不一致');
       for(const event of summary.events)this.accept(stream,event,record);
       if(stream.pending.size)throw Error('运行详情存在事件缺口');
       stream.loaded=true;

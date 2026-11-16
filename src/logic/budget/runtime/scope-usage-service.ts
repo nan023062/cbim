@@ -4,8 +4,7 @@
  * 设计原因：同一主会话可跨多个目标，不能按时间或最近日志猜归属；缺失记录与未知价格保留不完整，不参与执行许可。
  * 职责边界：公开查询只读有界来源并前后核实基线；collect 为预算事务复用相同 canonical 校验但不重入存储，不扫描其它主会话、不修复或启动模型。
  */
-import {z} from 'zod';
-import type {AgentCallReference} from '../../agents/contracts';
+import {agentCallReferenceSchema,type AgentCallReference} from '../../agents/contracts';
 import {fail} from '../../../core/errors';
 import {hash,json} from '../../../core/platform/node/serialization';
 import type {KnowledgeWorkspace} from '../../knowledge/rules/ports';
@@ -20,7 +19,6 @@ import type {ScopeGoalPorts} from '../../tasks/runtime/scope-goal-service';
 type Owner=Pick<KnowledgeWorkspace,'entry'|'assert'>;
 /** 查询端口仅读取 canonical 日志；递归身份由本服务沿可信父工具引用逐层核对。 */
 export type ScopeUsageLogs=Pick<ScopeGoalPorts,'inspectMain'|'inspectMember'>&{inspectAgent?(taskId:string,runId:string):Promise<RunSummary>};
-const callReference=z.object({version:z.literal(1),workspaceId:z.string().min(1).max(128),callerTaskId:z.string().regex(/^[a-zA-Z0-9_-]{1,128}$/),callerRunId:z.string().regex(/^[a-zA-Z0-9_-]{1,128}$/),toolCallId:z.string().min(1).max(512),taskId:z.string().regex(/^[a-zA-Z0-9_-]{1,128}$/),runId:z.string().regex(/^[a-zA-Z0-9_-]{1,128}$/)}).strict();
 type Source={kind:'main'|'member';taskId:string;runId:string;task?:TaskNode;run?:DispatchRun;agent?:AgentCallReference;invalid?:boolean};
 function matches(value:unknown,expected:unknown){return json(value)===json(expected)}
 
@@ -90,7 +88,7 @@ export class ScopeUsageService {
             // 只从本周期已核实的祖先发现后代，不扫描目录或以岗位名称猜测归属。
             const discovered:Source[]=[];
             for(const event of summary.events.filter(event=>event.type==='tool.updated'&&event.data.agentCall!==undefined&&event.data.limits!==undefined)){
-              const parsed=callReference.safeParse(event.data.agentCall),ref=parsed.success?parsed.data:undefined;
+              const parsed=agentCallReferenceSchema.safeParse(event.data.agentCall),ref=parsed.success?parsed.data:undefined;
               if(!ref||ref.workspaceId!==input.workspaceId||ref.callerTaskId!==source.taskId||ref.callerRunId!==source.runId||ref.toolCallId!==event.data.id||event.data.name!=='cbim_agent_call'||!summary.events.some(e=>e.seq<event.seq&&e.type==='tool.allowed'&&e.data.id===ref.toolCallId&&e.data.name==='cbim_agent_call'))fail('SCOPE_USAGE_IDENTITY','递归调用来源不一致');
               if(summary.events.some(e=>e.type==='tool.updated'&&e.data.id===ref.toolCallId&&e.data.agentCall!==undefined&&!matches(e.data.agentCall,ref)))fail('SCOPE_USAGE_IDENTITY','递归调用关联冲突');
               if([...sources,...discovered].some(item=>item.runId===ref.runId))fail('SCOPE_USAGE_IDENTITY','递归来源重复或循环');

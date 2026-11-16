@@ -247,6 +247,7 @@ class N_src_logic_workspace["workspace/"] {
 - `governance` → `execution`：导入。
 - `governance` → `workspace`：导入。
 - `governance` → `knowledge`：导入。
+- `history` → `agents`：导入。
 - `history` → `execution`：导入。
 - `history` → `dispatch`：导入。
 - `history` → `tasks`：导入。
@@ -282,6 +283,7 @@ class N_src_logic_workspace["workspace/"] {
 - `tasks` → `runtime`：导入。
 - `team` → `engines`：导入。
 - `team` → `workspace`：导入。
+- `team` → `agents`：导入。
 - `team` → `tasks`：导入。
 - `team` → `execution`：导入。
 - `team` → `models`：导入。

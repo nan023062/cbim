@@ -3279,3 +3279,10 @@ member-pause-pi 四项改用真实递归 Agent 工具：A 实际写入、读取�
 - goal-review 四项验证改为原调用交付核验：成功读取仍是 not_evaluated，失败子调用不生成交付；伪造 callId 无法取得证明；第二次独立复核使用新的工具调用身份，旧结果日志保持不变。根对话解释失败后结束不代表业务验收通过，不再要求旧 goal review 或凭空追加修复轮次。
 - goal-repair 验证主 Agent 在同一真实循环内执行失败命令、修复文件、再次运行命令，原失败与新成功回执并存；重新打开不自动返工、不修改 canonical/native。历史队列、目标修复与审阅服务的单元/契约测试保留，未重新启用旧运行工具。
 - pnpm exec vitest run tests/goal-repair-pi.test.ts --reporter=json --outputFile=build/recursive-direct-repair.json：1/1 通过。goal-review 首轮测试迁移有残留语法块，随后 4 项在重开后误用已关闭的旧 Workspace 句柄失败；改为当前生命周期实例后 build/recursive-goal-review-verified.json：4/4 通过。pnpm typecheck、pnpm check:test-modules 通过。完整 CI/桌面验收仍未完成。
+
+
+## 2026-11-16：停止续聊与同调用等待（Issue #94 / PR #96）
+
+- topic-interruption 的真实 Pi 验证改为显式停止原主循环再 resume 对话；继续前重新读取实际文件，不重建旧话题重规划；唯一已完成子调用身份和 canonical/native 不变。旧话题中断命令的兼容服务测试仍保留。
+- scope-continuation 四项迁移到原工具提问/答复：完成后重开、二次求助的旧题拒绝、答案已接收后停止、独立排队要求不作为答案且仅原任务结束后执行。未把进程内暂停包装成重启恢复旧检查点。
+- build/recursive-interruption.json 1/1、build/recursive-continuation.json 4/4 通过；pnpm typecheck 与 pnpm check:test-modules 通过。共享暂停供应商仅对明确排队标识响应额外根请求，正常子调用路径保留；历史默认 activeInputProvider 行为未改。

@@ -15,7 +15,7 @@ export const activeInputData={
   waitReason:'实际文件证据已核实，请补充最终展示格式；这不是人工验收。',
   draft:'普通草稿：运行中补充不应清除这段内容',
 };
-export type ActiveInputMode='stale-complete'|'stale-waiting'|'replan'|'twice'|'waiting'|'twice-waiting';
+export type ActiveInputMode='stale-complete'|'stale-waiting'|'replan'|'twice'|'waiting'|'twice-waiting'|'interrupt';
 type Request=GoalFixtureRequest&{model:string;tools?:{function:{name:string}}[]};
 
 /** Only local model responses are deterministic; every plan, read, candidate, review and steer stays real. */
@@ -42,11 +42,12 @@ export async function activeInputProvider(mode:ActiveInputMode='replan',recursiv
       };
       if(turn===0)tool('active-call','cbim_agent_call',{agentId:ownerSelection.memberId,message:d.memberGoal,business:{moduleIds:[moduleId],acceptance:d.acceptance}});
       else if(turn===1){assert.equal(mainToolValue(body,'active-call').status,'completed');emit({role:'assistant',content:'原文件已经核实，保持实际主模型流等待新输入。'});await gate(5).promise;reply('本轮文件事实已保存。')}
-      else if(turn===2){assert.ok(JSON.stringify(body.messages).includes(d.insert));if(twice){emit({role:'assistant',content:'已收到第一条真实补充。'});await gate(11).promise;reply('第一条补充已进入原模型上下文。')}else next()}
+      else if(turn===2){assert.ok(JSON.stringify(body.messages).includes(d.insert));if(mode==='interrupt')tool('active-current-read','read',{path:d.file});else if(twice){emit({role:'assistant',content:'已收到第一条真实补充。'});await gate(11).promise;reply('第一条补充已进入原模型上下文。')}else next()}
       else if(twice&&turn===3){assert.ok(JSON.stringify(body.messages).includes(d.second));next()}
       else if(turn===(twice?4:3)){
         if(mode.startsWith('stale-'))assert.ok(JSON.stringify(body.messages.find(m=>m.tool_call_id==='active-retired-review')).match(/error|Error|不存在|不可用|unknown|Unknown|not found|not available/i),'旧目标审阅必须不可用');
         else if(mode==='waiting'||mode==='twice-waiting')assert.equal(mainToolValue(body,'active-question').answers[0].answer,'编号列表');
+        else if(mode==='interrupt')assert.ok(JSON.stringify(body.messages).includes(d.fact));
         else assert.equal(mainToolValue(body,'active-result-check').state,'verified');
         reply('已按当前实际补充汇报，未重放文件执行。');
       }else throw Error('Unexpected recursive active input replay '+turn);

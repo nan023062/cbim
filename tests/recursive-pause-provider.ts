@@ -5,10 +5,11 @@ import type {GoalFixtureRequest} from './goal-provider-fixture';
 import {memberCheckpointFixture as data} from './member-checkpoint-provider';
 type Request=GoalFixtureRequest&{tools?:{function:{name:string}}[]};
 const value=(body:Request,id:string)=>{const m=body.messages.find(m=>m.role==='tool'&&m.tool_call_id===id);assert.ok(m,id);let v=JSON.parse(typeof m.content==='string'?m.content:JSON.stringify(m.content));if(Array.isArray(v.content))v=JSON.parse(v.content.map((p:{text?:string})=>p.text??'').join(''));return v};
+export const pauseQueuedGoal='PAUSE_QUEUED_FOLLOWUP: 此独立要求不能充当暂停问题的答复';
 export const pauseQuestion={questions:[{question:'已保存 A 的真实文件依据，是否继续原调用并核实后继？',options:[{label:'继续核实'},{label:'停止'}]}]};
 /** 仅脚本化模型输出；暂停保持实际 Pi 原 task/run，依赖数据经过真实文件工具传递。 */
 export async function recursivePauseProvider(holdAfterAnswer=false,secondQuestion=false,endWhileWaiting=false){
- const main:Request[]=[],member:Request[]=[],errors:string[]=[],sequence:string[]=[],byChild:Request[][]=[[],[],[]];
+ const queued:Request[]=[],main:Request[]=[],member:Request[]=[],errors:string[]=[],sequence:string[]=[],byChild:Request[][]=[[],[],[]];
  let selection:OwnerExecutionSelection|undefined,moduleId='',childIndex=-1,release!:()=>void;
  const gate=new Promise<void>(resolve=>release=resolve);if(!holdAfterAnswer)release();
  const state:{waiting?:any;waitingAgain?:any;result?:any;results:any[];continued?:boolean}={results:[]};
@@ -19,7 +20,8 @@ export async function recursivePauseProvider(holdAfterAnswer=false,secondQuestio
   const emit=(delta:unknown,finish_reason:string|null=null)=>res.write('data: '+JSON.stringify({id:'pause-'+(main.length+member.length),object:'chat.completion.chunk',created:1,model:data.model,choices:[{index:0,delta,finish_reason}]})+'\n\n');
   const tool=(id:string,name:string,args:unknown)=>{assert.ok(body.tools?.some(t=>t.function.name===name),name);emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]});emit({},'tool_calls')};
   const reply=(content:string)=>{emit({role:'assistant',content});emit({},'stop')};
-  if(isMain){
+  if(isMain&&JSON.stringify(body.messages.filter(m=>m.role==='user').at(-1)?.content).includes(pauseQueuedGoal)){queued.push(body);reply('原调用结束后才处理独立排队要求，不重放子执行。')}
+  else if(isMain){
    const turn=main.length;main.push(body);sequence.push('main:'+turn);
    const call=(index:number)=>{childIndex=index;assert.ok(selection);tool('pause-call-'+index,'cbim_agent_call',{agentId:selection.memberId,message:'按原调用核实阶段 '+index,business:{moduleIds:[moduleId],acceptance:['真实文件与原采集字节一致']}})};
    if(turn===0)call(0);
@@ -60,5 +62,5 @@ export async function recursivePauseProvider(holdAfterAnswer=false,secondQuestio
   res.end('data: [DONE]\n\n');
  }catch(error){errors.push(String(error));if(!res.headersSent)res.writeHead(500);res.end('Recursive pause fixture failed')}});
  await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();assert.ok(address&&typeof address!=='string');
- return {url:'http://127.0.0.1:'+address.port+'/v1',main,member,byChild,errors,sequence,state,bind:(_agent:string,module:string,owner:OwnerExecutionSelection)=>{moduleId=module;selection=structuredClone(owner)},releaseContinuation:release,close:async()=>{release();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
+ return {url:'http://127.0.0.1:'+address.port+'/v1',queued,main,member,byChild,errors,sequence,state,bind:(_agent:string,module:string,owner:OwnerExecutionSelection)=>{moduleId=module;selection=structuredClone(owner)},releaseContinuation:release,close:async()=>{release();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
 }

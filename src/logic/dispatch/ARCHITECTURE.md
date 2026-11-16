@@ -1,65 +1,45 @@
 # src/logic/dispatch 架构
 
-本目录只维护这一份说明。设计与契约直接编辑本文；文件清单、类图和导航由 [架构脚本](../../../scripts/source-architecture.mjs) 更新，生成区域之外的人工说明会保留。
+## 设计意图
 
-## 封装意图
+封装工作区内的任务派发与协作回传。规则提供存储契约，运行层协调任务和执行绑定，存储层保持统一事务边界。
 
-派发存储端口及任务状态约束；服务与规则分开归属，实际依赖通过明确入口验证。
+## 主要组成
 
-## 类与模块的设计意图
-
-本层没有直接源码声明，负责组合下级封装；各子系统的类、状态与公开入口见本文的[子目录导航](#子目录导航)。
-
-## 接口设计契约
-
-本层没有独立代码入口或运行实例。公开契约与资源生命周期分别归属下级封装，按[子目录导航](#子目录导航)进入实际所有者。
-
-## 开闭边界
-
-本目录的职责及允许协作由[封装意图](#封装意图)限定，输入输出、状态与失败语义以[接口设计契约](#接口设计契约)为准。扩展从已有公开入口及实际装配位置进入；没有明确可替换契约的部分按真实影响修改和验证，不预建未使用的基类或插件入口。
+本层由下列子模块组合，每个子模块作为独立的虚拟类封装参与本层协作。
 
 <!-- architecture:generated:start -->
 
-## 文件清单
+## 架构关系
 
-| 文件 | 形式 | 当前职责 |
-| --- | --- | --- |
-| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
-
-本层无直接代码文件。
-
-## 架构类图
-
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
+标注为 `virtual` 的节点是直接子模块的虚拟类封装；内部设计沿下方入口阅读。
 
 ```mermaid
 classDiagram
-class N_src_logic_dispatch_rules["rules/"] {
-  <<directory>>
+class N_20d1340a6358["rules"] {
+  <<virtual>>
 }
-class N_src_logic_dispatch_runtime["runtime/"] {
-  <<directory>>
+click N_20d1340a6358 href "rules/ARCHITECTURE.md"
+class N_9ae7236cfde4["runtime"] {
+  <<virtual>>
 }
-class N_src_logic_dispatch_storage["storage/"] {
-  <<directory>>
+click N_9ae7236cfde4 href "runtime/ARCHITECTURE.md"
+class N_d3b1050ec42a["storage"] {
+  <<virtual>>
 }
-N_src_logic_dispatch_runtime ..> N_src_logic_dispatch_rules : 导入依赖
-N_src_logic_dispatch_storage ..> N_src_logic_dispatch_rules : 导入依赖
+click N_d3b1050ec42a href "storage/ARCHITECTURE.md"
+N_9ae7236cfde4 ..> N_20d1340a6358 : 依赖
+N_d3b1050ec42a ..> N_20d1340a6358 : 依赖
 ```
 
-各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
+## 子模块
 
-- `runtime` → `rules`：导入。
-- `storage` → `rules`：导入。
+| 虚拟封装 | 整体职责 |
+| --- | --- |
+| [rules](rules/ARCHITECTURE.md) | 定义派发、岗位和任务状态共同使用的持久化端口。共享 DispatchStore 保持原子一致性，具体文件实现与业务编排分别位于 storage 和 runtime。 |
+| [runtime](runtime/ARCHITECTURE.md) | 协调主会话派发、成员执行绑定和成果回传。各服务通过共享存储端口保存任务事实，自动协作与回传恢复分别封装，避免把运行流程放进存储实现。 |
+| [storage](storage/ARCHITECTURE.md) | 以工作区日志保存任务图、执行实例与相关命令事实。FileDispatchStore 维护共同的事务边界，预算适配只缩小访问接口，不拆开原子提交。 |
 
-## 子目录导航
-
-- [rules/](rules/ARCHITECTURE.md)：派发存储及命令端口：保持当前宽存储接口和原子性边界。只是明确接口目录，尚未拆分共享 DispatchStore；任务规则仍在 tasks，编排在 logic/dispatch/runtime。
-- [runtime/](runtime/ARCHITECTURE.md)：派发编排：任务状态、领取、图依赖与应用命令通过 logic/dispatch/rules 的派发端口写入；共享 Store 尚未拆分。
-- [storage/](storage/ARCHITECTURE.md)：当前派发图、命令、领取及任务状态的文件存储实现。保留共享事务与 DispatchStore，未按目录拆开一致性边界；这仍是依赖密集的共享实现。
-
-[返回上层](../ARCHITECTURE.md)。
-
-每次修改本目录代码，同步维护文件头、关键契约说明及本图。未实现的治理、证据验收和自动编排能力不列入当前类图。
+[上层设计](../ARCHITECTURE.md)
 
 <!-- architecture:generated:end -->

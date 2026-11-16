@@ -1,164 +1,27 @@
 # src/logic/resources/packages 架构
 
-本目录只维护这一份说明。设计与契约直接编辑本文；文件清单、类图和导航由 [架构脚本](../../../../scripts/source-architecture.mjs) 更新，生成区域之外的人工说明会保留。
+<a id="contract"></a>
 
-## 封装意图
+## 设计意图
 
 静态知识包的发布与预览导入；同时核仓库和知识版本，正式导入复用原知识事务。
 
-## 类与模块的设计意图
+## 主要组成
 
-下表依据源码声明及文件头说明定位封装。字段表示该实例持有的状态或协作引用，不表示它拥有被引用服务的生命周期；实际资源责任和调用限制见下文契约及源码注释。
-
-| 类／模块 | 实现形式与实例字段 | 封装依据 |
-| --- | --- | --- |
-| [contracts.ts](contracts.ts) | 函数／契约模块 | 结果属于资源与知识协作，Bridge 仅转接；不加载包存储服务。 |
-| [WorkspacePackages](workspace-packages.ts) | 实例类；持有 `workspace`、`repositories` | 每个已打开工作区一个门面；共享 ResourceRepositories 与现有目录，不能由前端直接指定磁盘路径。 |
-
-## 接口设计契约
-
-<a id="contract"></a>
-
-<a id="contract-静态知识包发布与导入"></a>
-
-### 静态知识包发布与导入
-
-`WorkspacePackages` 只处理静态架构定义。`Publish` 从工作区校验快照构建完整包，在用户明确发布操作后保存到当前仓库；源工作区、仓库身份或版本改变则拒绝。相同类型、名称、摘要和完整正文已存在时返回原资源，避免丢失回执后重复发布；不会按名称覆盖其他定义。
-
-`Preview` 同时固定工作区实例/版本与源仓库版本/资源哈希，调用原知识校验并将计划保存到工作区的应用缓存 `resource-imports`。预览只显示增删改清单、完整校验和清除绑定提示，不写正式知识。旧普通文本资源、单模块与单 Workflow 资源可继续浏览，不能作为整包应用。
-
-`Commit` 必须显式提供同工作区实例的 `planId`。首次写入前复核两端版本、源内容、目标目录冲突及未知资源；正式写入复用 `KnowledgeWorkspace.Commit` 的事务、索引和请求幂等日志。跨 IPC 创建的多个门面共用按工作区排队的提交队列。同一计划成功后返回持久化回执；如果正式知识已写入但缓存回执失败，重试只能查询原请求的已提交回执，不能以新版本重放包内容。
-
-整体替换后仅清理已经空的目录，不递归删除任何文件。旧小组物理目录清理后再次通过独立知识事务刷新派生索引；主提交回执和索引请求分别持久化。若并发治理导致索引版本冲突，主包不再执行，显式重试只重新准备索引。未知事务失败保留现场并沿用原恢复要求，不自动重放副作用。实例重启后旧计划不能复用，用户须基于当前知识重新预览。
-
-主知识提交成功后的目录、索引或回执失败以 `RESOURCE_IMPORT_APPLIED` 明确报告“静态定义已应用，后续整理未完成”，附同一个计划 ID；不把部分完成描述成尚未写入或完全成功。完整 Team 替换保留旧 people.json，不再校验历史人员的小组引用；当前静态定义与导入映射仍须完整验证。
-
-共享内容不绑定主会话：一个工作区的静态 Team/业务架构与多个主会话分别拥有的成员调度任务图相互独立。导入不启动 Agent、不派任务、不连接工具、不恢复会话、不继承来源项目的人员或维护授权。
-
-<a id="contract-整包导入来源意图"></a>
-
-#### 整包导入来源意图
-
-`WorkspacePackages` 新预览保存 v2 完整不可变计划，源资源指纹、目标域和 add/replace 语义由真实包规划生成；原样 wire 指纹不经 Schema 键序重排。提交仅把计划引用交给固定知识加载器，不能用可变 committed/result 缓存证明来源结算或知识成功。
-
-缓存回执必须与原知识 journal（含需要时的索引 journal）一致。重开后已提交旧计划仅查询并返回原真实回执，不续办旧实例清理、索引或替换；没有原成功日志的旧实例计划拒绝。全包净差异为空继续拒绝，实际整体 replace 中未变字节的对象仍按明确替换域轮换代次。
-
-资源读写由 [仓库服务](../service/ARCHITECTURE.md#contract) 提供，工作区授权连接归 [连接服务](../../connectors/service/ARCHITECTURE.md#contract)。本模块只处理静态定义包，不拥有反馈或网页工具。
-
-## 开闭边界
-
-本目录的职责及允许协作由[封装意图](#封装意图)限定，输入输出、状态与失败语义以[接口设计契约](#接口设计契约)为准。扩展从已有公开入口及实际装配位置进入；没有明确可替换契约的部分按真实影响修改和验证，不预建未使用的基类或插件入口。
+| 组成 | 定位 |
+| --- | --- |
+| [WorkspacePackages](workspace-packages.ts) | 把当前工作区的静态团队/业务架构发布到统一资源仓库，并提供持久化导入预览与显式提交。 |
 
 <!-- architecture:generated:start -->
 
-## 文件清单
-
-| 文件 | 形式 | 当前职责 |
-| --- | --- | --- |
-| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
-| [contracts.ts](contracts.ts) | 源码模块 | 静态知识包发布和导入预览结果。 |
-| [workspace-packages.ts](workspace-packages.ts) | 源码模块 | 把当前工作区的静态团队/业务架构发布到统一资源仓库，并提供持久化导入预览与显式提交。 |
-
-## 架构类图
-
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
-
-### contracts.ts
-
-[查看源码](contracts.ts)。
+## 架构关系
 
 ```mermaid
 classDiagram
-class N_src_logic_resources_packages_contracts_ts["contracts.ts"] {
-  <<module>>
-}
-class N_src_logic_resources_packages_contracts_ts_PublishWorkspaceResult["PublishWorkspaceResult"] {
-  <<interface>>
-  +repository
-  +resourceId
-  +warnings
-  +removedBindings
-}
-N_src_logic_resources_packages_contracts_ts ..> N_src_logic_resources_packages_contracts_ts_PublishWorkspaceResult : 声明
-class N_src_logic_resources_packages_contracts_ts_ImportWorkspacePreview["ImportWorkspacePreview"] {
-  <<type>>
-  +planId
-  +kind
-  +mode
-  +targetRoot
-  +files
-  +warnings
-  +removedBindings
-}
-N_src_logic_resources_packages_contracts_ts ..> N_src_logic_resources_packages_contracts_ts_ImportWorkspacePreview : 声明
+class N_449d609f2b5f["WorkspacePackages"]
+click N_449d609f2b5f href "workspace-packages.ts"
 ```
 
-直接依赖：[../../knowledge/rules/types.ts](../../knowledge/rules/types.ts)、[../index.ts](../index.ts)。
-
-### workspace-packages.ts
-
-[查看源码](workspace-packages.ts)。
-
-```mermaid
-classDiagram
-class N_src_logic_resources_packages_workspace_packages_ts["workspace-packages.ts"] {
-  <<module>>
-}
-class N_src_logic_resources_packages_workspace_packages_ts_ImportPlan["ImportPlan"] {
-  <<interface>>
-  +version
-  +request
-  +source
-  +createdRoots
-  +deletedRoots
-  +kind
-  +mode
-  +targetRoot
-  +planHash
-  +fingerprint
-  +committed
-  +reindexRequest
-  +result
-}
-N_src_logic_resources_packages_workspace_packages_ts ..> N_src_logic_resources_packages_workspace_packages_ts_ImportPlan : 声明
-class N_src_logic_resources_packages_workspace_packages_ts_WorkspacePackages["WorkspacePackages"] {
-  +constructor()
-  +Publish()
-  +Preview()
-  +Commit()
-  -workspace
-  -repositories
-  -Source()
-  -PlanPath()
-  -SavePlan()
-  -ReadPlan()
-  -CommitPlan()
-}
-N_src_logic_resources_packages_workspace_packages_ts ..> N_src_logic_resources_packages_workspace_packages_ts_WorkspacePackages : 声明
-```
-
-直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../knowledge/rules/planned-commit.ts](../../knowledge/rules/planned-commit.ts)、[../../knowledge/rules/portable-package.ts](../../knowledge/rules/portable-package.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../knowledge/rules/types.ts](../../knowledge/rules/types.ts)、[contracts.ts](contracts.ts)、[../service/index.ts](../service/index.ts)。
-
-### 本目录调用边界
-
-```mermaid
-classDiagram
-class N_src_logic_resources_packages_workspace_packages_ts["workspace-packages.ts"] {
-  <<module>>
-}
-class N_src_logic_resources_packages_contracts_ts["contracts.ts"] {
-  <<module>>
-}
-N_src_logic_resources_packages_workspace_packages_ts ..> N_src_logic_resources_packages_contracts_ts : 导入依赖
-```
-
-
-## 子目录导航
-
-无子目录。
-
-[返回上层](../ARCHITECTURE.md)。
-
-每次修改本目录代码，同步维护文件头、关键契约说明及本图。未实现的治理、证据验收和自动编排能力不列入当前类图。
+[上层设计](../ARCHITECTURE.md)
 
 <!-- architecture:generated:end -->

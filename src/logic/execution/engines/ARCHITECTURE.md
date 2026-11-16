@@ -1,224 +1,89 @@
 # src/logic/execution/engines 架构
 
-本目录只维护这一份说明。设计与契约直接编辑本文；文件清单、类图和导航由 [架构脚本](../../../../scripts/source-architecture.mjs) 更新，生成区域之外的人工说明会保留。
-
-## 封装意图
-
-执行域的具体引擎适配边界：Pi、Claude、Codex 及其共享 HTTP 预算传输和原生工具加载。依赖 Logic 引擎/模型契约，由 execution/assembly 选择并注入；不持有任务派发与应用存储。 runtime-binding 在 agentHome 固定原生会话的 E 摘要；包变化时拒绝无兼容依据的恢复，历史不删除、不自动迁移。 可组合 utility 通用入口的分帧与在途集合，不依赖其 Node 入口或其他基础方案。
-
-## 类与模块的设计意图
-
-下表依据源码声明及文件头说明定位封装。字段表示该实例持有的状态或协作引用，不表示它拥有被引用服务的生命周期；实际资源责任和调用限制见下文契约及源码注释。
-
-| 类／模块 | 实现形式与实例字段 | 封装依据 |
-| --- | --- | --- |
-| [native-tools.ts](native-tools.ts) | 函数／契约模块 | Codex 内置执行不能覆盖每次 CBIM 授权；复用已有读取、编辑、输出截断及取消行为，避免维护第二套文件语义。 |
-| [RunInactivityTimer](run-inactivity.ts) | 实例类；持有 `timer`、`closed`、`toolProgress` | 每轮创建一次；过期或 dispose 后迟到事件不能重新启用计时器。 |
-| [runtime-binding.ts](runtime-binding.ts) | 函数／契约模块 | 资源更新可更换下载包，但不能让新引擎静默改写旧原生历史；不修改 SDK 历史文件或业务审计格式。 |
-
-## 接口设计契约
-
 <a id="contract"></a>
 
-<a id="contract-受管引擎包与原生历史"></a>
+## 设计意图
 
-### 受管引擎包与原生历史
+将不同模型引擎适配为统一执行协议。各引擎独立封装会话与工具差异，共用传输能力、无进展计时和运行包绑定；具体选择由上层装配完成。
 
-<a id="contract-通用机制组合"></a>
+## 主要组成
 
-#### 通用机制组合
-
-Pi/Codex RPC 的文本缓冲由 `core/utility` 的 LineFramer 持有，协议策略留在各适配器；Pi 按 UTF-16 长度、Codex 按 UTF-8 字节保留原限额，完整空白帧/CR/未终止尾部按原规则处理。Codex 的工具调用与 RPC 处理使用实例 InFlightOperations；通知链、停止接单、取消、原请求身份及真实进程退出仍归引擎。引擎只允许依赖 utility 通用公开入口，不访问其他基础方案或其私有实现。
-
-<a id="contract-按执行进展续期"></a>
-
-#### 按执行进展续期
-
-`turnTimeoutMs` 保留参数名、范围和持久化格式，含义改为连续无可观察进展的毫秒数，缺省 30 分钟；整轮累计时长不再触发此超时。既有数据不迁移，新启动/显式恢复的运行按新规则使用原选项，已经运行的旧进程不会热切换。
-
-`RunInactivityTimer` 是 Pi、Codex、Claude Code 三个真实消费者共用的计时机制，只拥有本轮 timer 和工具快照摘要。适配器自行识别原生文本、推理及参数增量；统一消息与工具开始、完成、新的非空输出续期。空输出、重复工具快照、状态刷新和自动重试通知不续期。没有可观察输出的长命令仍可能达到无进展上限；这里不根据 CPU、模型自述或“进程还在”推断进展。
-
-原生协议识别留在各适配器，共享计时器不认识供应商、不调用工具或重试。推理只触发时间更新，不保存/公开正文。正常结束、失败、停止和关闭释放 timer；过期后迟到事件不能复活窗口。无进展中断沿原关闭、排空、日志结算路径处理，在途操作保持未知，不自动重放。
-
-此边界由本次重复硬超时缺陷提炼，接口及实现仍属稳定候选，变化频率没有统计依据。新增引擎只组合 `progress/observe/dispose` 并映射自身协议；新增进展类型修改其所属协议适配或公共事件判定，不修改任务调度核心。原生 RPC 单请求超时、工具自身超时及资源排空限制不由此计时器代替。
-
-```mermaid
-classDiagram
-class RunInactivityTimer {
-  -timer
-  -closed
-  -toolProgress
-  +Progress()
-  +Observe(event)
-  +Dispose()
-}
-class PiEngine["PiEngine · pi/engine.ts"] { <<boundary>> }
-class CodexEngine["CodexEngine · codex/engine.ts"] { <<boundary>> }
-class ClaudeCodeEngine["ClaudeCodeEngine · claude/engine.ts"] { <<boundary>> }
-PiEngine --> RunInactivityTimer : 本轮持有
-CodexEngine --> RunInactivityTimer : 本轮持有
-ClaudeCodeEngine --> RunInactivityTimer : 本轮持有
-note for RunInactivityTimer "run-inactivity.ts：续期/到期/释放；工具快照只保留摘要。"
-note for PiEngine "pi/engine.ts；原生进展识别留在适配器。"
-note for CodexEngine "codex/engine.ts；thread/turn 核实后更新时间。"
-note for ClaudeCodeEngine "claude/engine.ts；SDK 增量及工具 Hook。"
-```
-
-具体适配器仍依赖 Core，调度装配选择适配器。EngineRuntimeResolver 由可信主进程注入，返回完整验证后的 root、entry、version、identity；不接受 renderer、模型或工作区提供下载路径。开发/CLI 未注入时保留原依赖解析方式。
-
-Pi 的 CLI、Claude Agent SDK 和 Codex EXE 使用预编译依赖包；用户机器不执行 npm install 或原生编译。当前适配器继续固定 Pi 1.5.0、Claude 0.3.322、Codex 0.167.0，不能仅把远端 version 改为 latest 来升级。Codex 的本机文件工具仍显式依赖受管 Pi 包。
-
-`native-tools.ts` 的 `nativeToolInput` 在 Windows 上将 read/write/edit/find/grep/ls 的单根分隔符路径按工作区解析成完整路径，与授权侧的工作区路径解析一致；不再由 SDK 按宿主进程盘符补齐。原参数不改写，完整盘符路径、UNC、普通相对路径和 POSIX 平台行为保留。这里不解释 Bash/MSYS 挂载表，也不重写命令正文；跨工具传递文件仍优先使用完整 Windows 路径。
-
-程序包与 agentHome 分离；模型账号、凭据和原生历史留在原用户目录。runtime-binding 在 session.bound 前同步保存原生 sessionId 对应的 E 摘要及辅助工具摘要。恢复前先核对；不同摘要不启动新 SDK/EXE 来尝试旧会话。旧整包没有旁路记录时只允许原固定版本迁移，今后提高适配器版本不得同步放宽 legacyVersions。
-
-第一版对不兼容旧会话明确报错并要求新建对话，保留历史；尚未实现按旧会话自动选择旧 E 或跨 E 历史迁移。当前/旧 E 缓存不自动清理，也不把文件留存等同于已验证可恢复。新会话可以使用随新 R 选择的已验证 E。
-
-<a id="contract-独立工厂制品"></a>
-
-##### 独立工厂制品
-
-pi/claude/codex/memory 各有 package.ts，当前适配器版本 1.1.0，与厂商 SDK 版本分开。scripts/build-engine-adapters.mjs 可按官方 ID 单独生成 adapter.cjs 和 adapter.json；两者都携带本包编译时的能力声明，并包含在已签名的完整文件清单中。构建结果可在不加载 SDK、不连接模型时实例化与关闭。现有具体适配器继续持有取消、超时续期、原生历史和未知工具行为。源码开发装配使用兼容表；正式构建把适配器写入各自 E 归档，并通过通用加载器读取。
-
-正式加载在调用 create 前核对包声明与 R 静态选型规则：主模型协议、额外角色/必填项/型号限制、固定依赖和原生历史格式必须一致。缺声明或不一致明确拒绝，不把新 R 的预设套到旧 E，也不自动下载替代包。显示名/业务介绍等展示变化无需更换 E。兼容实现或 SDK 升级可只发 E；改变执行兼容规则需协调 R/E，仍无需更换通用 C。
-
-运行包包装器保留整个依赖闭包引用，真实 close 成功后释放，stop 或失败关闭不释放。历史 schema 1 的 Pi 工具摘要保持 toolsIdentity，其它依赖按名称固定摘要；不改写旧会话内容。
-
-自定义 memory 包使用同一工厂协议和包引用机制，细节见 [记忆引擎契约](memory/ARCHITECTURE.md#contract)。其自研运行库与适配器同版，不需要厂商 SDK；模型请求、知识权限、工具回执和失败界限均沿宿主注入端口。
-
-## 开闭边界
-
-本目录的职责及允许协作由[封装意图](#封装意图)限定，输入输出、状态与失败语义以[接口设计契约](#接口设计契约)为准。扩展从已有公开入口及实际装配位置进入；没有明确可替换契约的部分按真实影响修改和验证，不预建未使用的基类或插件入口。
+| 组成 | 定位 |
+| --- | --- |
+| [RunInactivityTimer](run-inactivity.ts) | 官方引擎共用的无进展计时器；适配器识别真实增量，工具事件复用统一协议。 |
+| [runtime-binding](runtime-binding.ts) | 在具体引擎之外固定原生会话使用的受管 E 包身份，保存在原 agentHome 的私有旁路记录。 |
+| [native-tools](native-tools.ts) | 向宿主托管引擎提供已有文件/命令工具操作，复用 Pi SDK 的独立工具实现而不创建 Pi Loop。 |
 
 <!-- architecture:generated:start -->
 
-## 文件清单
+## 架构关系
 
-| 文件 | 形式 | 当前职责 |
-| --- | --- | --- |
-| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
-| [native-tools.ts](native-tools.ts) | 源码模块 | 向宿主托管引擎提供已有文件/命令工具操作，复用 Pi SDK 的独立工具实现而不创建 Pi Loop。 |
-| [run-inactivity.ts](run-inactivity.ts) | 源码模块 | 官方引擎共用的无进展计时器；适配器识别真实增量，工具事件复用统一协议。 |
-| [runtime-binding.ts](runtime-binding.ts) | 源码模块 | 在具体引擎之外固定原生会话使用的受管 E 包身份，保存在原 agentHome 的私有旁路记录。 |
+标注为 `virtual` 的节点是直接子模块的虚拟类封装；内部设计沿下方入口阅读。
 
-## 架构类图
-
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
+### 关系组 1
 
 ```mermaid
 classDiagram
-class N_src_logic_execution_engines_claude["claude/"] {
-  <<directory>>
+class N_bf0d7359f126["RunInactivityTimer"]
+click N_bf0d7359f126 href "run-inactivity.ts"
+class N_9db869513ee5["claude"] {
+  <<virtual>>
 }
-class N_src_logic_execution_engines_codex["codex/"] {
-  <<directory>>
+click N_9db869513ee5 href "claude/ARCHITECTURE.md"
+class N_536e9126fb77["codex"] {
+  <<virtual>>
 }
-class N_src_logic_execution_engines_memory["memory/"] {
-  <<directory>>
+click N_536e9126fb77 href "codex/ARCHITECTURE.md"
+class N_5187bbd6fe44["memory"] {
+  <<virtual>>
 }
-class N_src_logic_execution_engines_pi["pi/"] {
-  <<directory>>
+click N_5187bbd6fe44 href "memory/ARCHITECTURE.md"
+class N_50b4afc870f3["pi"] {
+  <<virtual>>
 }
-class N_src_logic_execution_engines_transport["transport/"] {
-  <<directory>>
+click N_50b4afc870f3 href "pi/ARCHITECTURE.md"
+class N_27ee7598def9["transport"] {
+  <<virtual>>
 }
-class N_src_logic_execution_engines_native_tools_ts["native-tools.ts"] {
-  <<module>>
-}
-N_src_logic_execution_engines_claude ..> N_src_logic_execution_engines_transport : 导入依赖
-N_src_logic_execution_engines_codex ..> N_src_logic_execution_engines_native_tools_ts : 导入依赖
-N_src_logic_execution_engines_codex ..> N_src_logic_execution_engines_transport : 导入依赖
-N_src_logic_execution_engines_memory ..> N_src_logic_execution_engines_transport : 导入依赖
-N_src_logic_execution_engines_pi ..> N_src_logic_execution_engines_transport : 导入依赖
+click N_27ee7598def9 href "transport/ARCHITECTURE.md"
+N_9db869513ee5 ..> N_bf0d7359f126 : 依赖
+N_9db869513ee5 ..> N_27ee7598def9 : 依赖
+N_536e9126fb77 ..> N_bf0d7359f126 : 依赖
+N_536e9126fb77 ..> N_27ee7598def9 : 依赖
+N_5187bbd6fe44 ..> N_bf0d7359f126 : 依赖
+N_5187bbd6fe44 ..> N_27ee7598def9 : 依赖
+N_50b4afc870f3 ..> N_bf0d7359f126 : 依赖
+N_50b4afc870f3 ..> N_27ee7598def9 : 依赖
 ```
+
+### 关系组 2
 
 ```mermaid
 classDiagram
-class N_src_logic_execution_engines_run_inactivity_ts["run-inactivity.ts"] {
+class N_5370822b05e3["native-tools"] {
   <<module>>
 }
-class N_src_logic_execution_engines_runtime_binding_ts["runtime-binding.ts"] {
+click N_5370822b05e3 href "native-tools.ts"
+class N_031911aaa6a3["runtime-binding"] {
   <<module>>
 }
+click N_031911aaa6a3 href "runtime-binding.ts"
 ```
 
-各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
+### 跨图协作
 
-- `claude` → `run-inactivity.ts`：导入。
-- `claude` → `transport`：导入。
-- `codex` → `native-tools.ts`：导入。
-- `codex` → `run-inactivity.ts`：导入。
-- `codex` → `transport`：导入。
-- `memory` → `run-inactivity.ts`：导入。
-- `memory` → `transport`：导入。
-- `pi` → `run-inactivity.ts`：导入。
-- `pi` → `transport`：导入。
+- [codex](codex/ARCHITECTURE.md)（图 1）→ [native-tools](native-tools.ts)（图 2）：依赖。
 
-### native-tools.ts
+## 子模块
 
-[查看源码](native-tools.ts)。
+| 虚拟封装 | 整体职责 |
+| --- | --- |
+| [claude](claude/ARCHITECTURE.md) | 把 Claude Agent SDK 接入统一执行协议，封装原生会话、事件和工具门禁。运行环境由宿主提供，业务工具通过可信能力接入，不向外提供通用 MCP 服务。 |
+| [codex](codex/ARCHITECTURE.md) | 把 Codex 运行包接入统一执行协议。引擎适配负责会话和事件转换，RPC 对象负责进程通信；账号、安装和任务派发由外层负责。 |
+| [memory](memory/ARCHITECTURE.md) | 实现结合生成模型与向量检索的记忆执行循环。MemoryEngine 组织回合与受控知识工具，会话与派生缓存分别保存，正式知识经注入端口访问。 |
+| [pi](pi/ARCHITECTURE.md) | 把 Pi 运行包接入统一执行协议。引擎适配协调会话、模型和工具，RPC 对象隔离进程协议，业务权限与预算通过注入端口约束。 |
+| [transport](transport/ARCHITECTURE.md) | 引擎 HTTP 请求预算与计量适配。通过 Logic budget/rules 的 RequestBudgetPort 预占、结算或记录未知结果；网络实现与稳定模型端口分离，保留各引擎错误和取消语义。 |
 
-```mermaid
-classDiagram
-class N_src_logic_execution_engines_native_tools_ts["native-tools.ts"] {
-  <<module>>
-  +nativeToolInput()
-  +managedNativeTools()
-}
-```
-
-直接依赖：[../rules/engine-runtime.ts](../rules/engine-runtime.ts)、[../rules/engine-tools.ts](../rules/engine-tools.ts)。
-
-
-### run-inactivity.ts
-
-[查看源码](run-inactivity.ts)。
-
-```mermaid
-classDiagram
-class N_src_logic_execution_engines_run_inactivity_ts["run-inactivity.ts"] {
-  <<module>>
-}
-class N_src_logic_execution_engines_run_inactivity_ts_RunInactivityTimer["RunInactivityTimer"] {
-  +constructor()
-  +Progress()
-  +Observe()
-  +Dispose()
-  -timer
-  -closed
-  -toolProgress
-}
-N_src_logic_execution_engines_run_inactivity_ts ..> N_src_logic_execution_engines_run_inactivity_ts_RunInactivityTimer : 声明
-```
-
-直接依赖：[../rules/types.ts](../rules/types.ts)。
-
-
-### runtime-binding.ts
-
-[查看源码](runtime-binding.ts)。
-
-```mermaid
-classDiagram
-class N_src_logic_execution_engines_runtime_binding_ts["runtime-binding.ts"] {
-  <<module>>
-  +pinRuntimeEngine()
-}
-```
-
-直接依赖：[../rules/engine-runtime.ts](../rules/engine-runtime.ts)、[../rules/types.ts](../rules/types.ts)。
-
-
-## 子目录导航
-
-- [claude/](claude/ARCHITECTURE.md)：Claude Agent SDK 适配、内部工具门禁与真实原生会话生命周期；环境和账号归 CBIM，工具复用上层契约，不提供对外 MCP。原生工具开关只读可信能力的 disableNativeTools 策略，不认识具体业务工具槽位。 SDK 入口可由签名 E 包提供，仍限制适配器支持的版本，账号/历史目录不随缓存迁移。
-- [codex/](codex/ARCHITECTURE.md)：Codex App Server 的受管进程、双向 RPC、真实 thread/turn、Responses 代理与动态工具；固定 CLI 和私有账号目录，内置执行关闭，工具经宿主授权、预算结算及同一回执；宿主原生工具目录按可信能力的 disableNativeTools 策略收窄。 原生 EXE 与 Pi 宿主工具库分别使用可信受管包，不重新编译或借用外部客户端。
-- [memory/](memory/ARCHITECTURE.md)：官方自定义记忆 Loop：生成/向量双模型、受控知识工具、八回合限额与无进展中断；私有会话先同步，未知历史拒绝重放，派生向量缓存按完整代际隔离。
-- [pi/](pi/ARCHITECTURE.md)：Pi 协议、临时桥与运行参数；插入在原生状态查询后复核取消，发送后只凭queued回复确认，不自动重试。工具经一次性gate授权并校验结果；结构验证仅在正式成员有冻结要求及真实端口时公开。受控续执行在启动及加载原生会话后再核冻结证明，回传作为custom数据，不冒充用户授权。 范围模式只注册cbim工具，转发受限读取与隔离Node的原调用身份。 主角色提示要求未配置自定义岗位时自己执行；内置默认执行角色已退役，不能登记后绕过主会话。 受控文件工具仅在真实端口存在时安装，维持桥接容量及调用授权，工具结果和实际文件操作终态分别校验。 CLI 入口由宿主固定包解析；进程、工具门禁与会话验证保持原协议。
-- [transport/](transport/ARCHITECTURE.md)：引擎 HTTP 请求预算与计量适配。通过 Logic budget/rules 的 RequestBudgetPort 预占、结算或记录未知结果；网络实现与稳定模型端口分离，保留各引擎错误和取消语义。
-
-[返回上层](../ARCHITECTURE.md)。
-
-每次修改本目录代码，同步维护文件头、关键契约说明及本图。未实现的治理、证据验收和自动编排能力不列入当前类图。
+[上层设计](../ARCHITECTURE.md)
 
 <!-- architecture:generated:end -->

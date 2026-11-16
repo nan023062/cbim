@@ -43,7 +43,7 @@ pnpm start
 
 日常开发只运行受影响单元的测试：使用 `pnpm exec vitest run` 后跟明确的相关测试文件，必要时用 `-t` 选择用例；类型、依赖和架构检查按实际变化选择。通过后即可记录并提交，不默认执行全量 `pnpm test`、打包或整套桌面测试，详见 [日常验证范围](AGENTS.md#日常验证范围)。面向 `master` 的 PR 由现有 CI 自动执行全量回归；`pnpm package`、`pnpm make` 和 `pnpm test:desktop` 等制品验证留在后续集成／发布阶段按需执行。
 
-正式业务执行使用桌面主对话。`pnpm loop` 保留受限开发兼容接口，旧直接业务启动已拒绝；参数、模型配置和具体限制见 [Loop Engine](src/bridge/server/commands/ARCHITECTURE.md)。
+正式业务执行使用桌面主对话。`pnpm loop` 保留受限开发兼容接口，旧直接业务启动已拒绝；入口定位见 [命令模块设计](src/bridge/server/commands/ARCHITECTURE.md)，参数和具体限制见 [CLI 源码](src/bridge/server/commands/loop-cli.ts)。
 
 ## 分支约定
 
@@ -77,7 +77,7 @@ pnpm start
 
 ## 结构与交付
 
-源码阅读从 [src 整体架构](src/ARCHITECTURE.md) 开始：包含目录划分原因、运行路径、数据归属与逐层类图。代码注释和目录架构文档的同步维护规则仅适用于 `src/`。
+源码阅读从 [src 整体架构](src/ARCHITECTURE.md) 开始：每层解释本模块的设计意图、类定位和关系，直接子模块作为虚拟类封装逐层下钻。代码注释和目录架构文档的同步维护规则仅适用于 `src/`。
 
 源码采用 Core、Logic、Bridge、View 四层：Core 提供共享技术能力，Logic 持有业务与数据，Bridge 处理通信和可信宿主，View 负责界面与交互。便携能力与 Node/Electron 平台入口独立，具体允许依赖以检查器为准。
 
@@ -102,9 +102,9 @@ pnpm start
 
 实现说明随源码维护，可从以下入口逐层阅读：
 
-- [后端模块、源码映射与修改入口](src/logic/ARCHITECTURE.md#boundaries)
+- [业务层模块模型与阅读入口](src/logic/ARCHITECTURE.md)
 - [执行引擎与生命周期](src/logic/execution/rules/ARCHITECTURE.md)
-- [任务身份与派发契约](src/logic/tasks/rules/ARCHITECTURE.md#contract)
+- [任务规则设计](src/logic/tasks/rules/ARCHITECTURE.md)
 - [调度与成员执行](src/logic/ARCHITECTURE.md)
 - [运行统计与准入](src/logic/runtime/rules/ARCHITECTURE.md#contract)
 - [桌面视图与交互](src/view/ARCHITECTURE.md)

@@ -1,170 +1,81 @@
 # src/core 架构
 
-本目录只维护这一份说明。设计与契约直接编辑本文；文件清单、类图和导航由 [架构脚本](../../scripts/source-architecture.mjs) 更新，生成区域之外的人工说明会保留。
-
-## 封装意图
-
-四层架构的共享基础公共层：utility 提供便携算法与数据结构，platform 隔离运行环境；不依赖业务、桥接或视图。前端比较和后端指纹适配组合相同排序实现，业务策略留在消费者。
-
-## 类与模块的设计意图
-
-下表依据源码声明及文件头说明定位封装。字段表示该实例持有的状态或协作引用，不表示它拥有被引用服务的生命周期；实际资源责任和调用限制见下文契约及源码注释。
-
-| 类／模块 | 实现形式与实例字段 | 封装依据 |
-| --- | --- | --- |
-| [Fault](errors.ts) | 实例类；持有 `code` | 作用定位：不依赖业务或平台的带错误码异常与抛出入口。 设计原因：调用方决定错误码和文案，Core 仅保留异常身份；旧后端兼容出口与新 Logic 共用同一构造器。 |
-| [json.ts](json.ts) | 函数／契约模块 | 语法算法由共享 Core utility 提供，业务适配只单向引用它；快照与规则消费者继续得到同一 Fault.code、name 和提示。 |
-
-## 接口设计契约
-
 <a id="contract"></a>
 
-<a id="contract-共享-core"></a>
+## 设计意图
 
-### 共享 Core
+提供不依赖业务的共享技术机制。便携工具、通用端口与平台实现分别封装，由消费者选择入口并持有业务策略；错误与 JSON 适配保留统一的基础协议。
 
-Core 是四层架构的基础公共层，不含业务规则、通信操作、页面状态或应用装配。前端和后端可以组合相同公开能力；运行环境是独立约束，Node 能力不经便携入口加载。
+## 主要组成
 
-<a id="contract-源码阅读约定"></a>
-
-#### 源码阅读约定
-
-按 [源码阅读规范](../../docs/05-工程文件组织与代码阅读设计.md) 使用 Allman 大括号和逐行语句：先通过类／接口与成员分区识别封装，再逐条阅读控制流和副作用。空方法、构造和短代码块同样展开；排版不改变字段初始化、取消、错误或持久化顺序。类图表达实际声明和依赖，排版变化不增造关系；其它成员语义和工具类组织仍按实际模块逐片核实。
-
-<a id="contract-能力与依赖边界"></a>
-
-#### 能力与依赖边界
-
-当前公开能力包括 [utility](utility/ARCHITECTURE.md#contract)、errors.ts 的 Fault/fail、json.ts 的严格解析适配、[纯网页契约与算法](web/ARCHITECTURE.md#contract)、contracts/secrets.ts 的加密端口、[Node 实现](platform/node/ARCHITECTURE.md#contract) 及 [Electron 适配](platform/electron/ARCHITECTURE.md#contract)。utility 仅使用语言/Web Streams 原语及 jsonc-parser；platform/node/digest.ts 仅使用 node:crypto。它们都不依赖 logic、bridge、view 或旧 backend/frontend，包含类型引用。跨模块仅使用已登记公开入口；新 Core 模块必须登记职责、入口及第三方依赖，否则检查失败。
-
-前端 equalJson 是第一条双端复用路径：控制器 → 前端比较适配 → Core JsonUtils.OrderJsonValue；后端历史指纹适配也调用同一算法。比较器、字段选择、错误映射和业务接受条件仍由消费者拥有。共享实现不要求不同策略产生相同字节。
-
-旧领域规则已迁入 Logic；identity 与 StoragePaths 归各自业务端口。json.ts 提供严格 JSON 解析的 Fault 适配，platform/node/serialization.ts 保留 hash/json 的既有字节语义。旧 errors 转发已移除，所有消费者使用同一 Core Fault 构造器。服务、调度、桥接和视图均已按四层归属迁移。
-
-没有全局 Core 容器或统一大导出。公共函数不持有业务状态，队列/集合由调用方逐实例创建并负责关闭策略。通用入口不能经重导出或间接依赖加载 Node/Electron；业务数据、路径权限、事务和进程生命周期不因使用基础库而转移。
-
-
-Web 迁移补充：core/web 为纯契约与正文算法，platform/node/web 为抓取编排，platform/electron/web-reader.ts 为宿主渲染适配。contracts/secrets.ts 提供独立加密端口；模型保留原类型兼容出口，Web 不依赖模型模块。
-
-Node 原生锁位于 platform/node/locking.ts，保留旧锁身份与释放行为；业务决定持有范围。SecretCipher 同时用于模型、Web 和反馈服务，Core 不依赖这些消费者。
-
-
-<a id="contract-共享算法调用边界"></a>
-
-#### 共享算法调用边界
-
-本目录通过 Core 公开入口调用 `JsonUtils.ParseStrictJson`。静态类只承载原算法；本目录继续决定字段、比较器、错误映射及资源生命周期。函数改为静态方法不改变原持久化字节或失败语义。
-
-## 开闭边界
-
-本目录的职责及允许协作由[封装意图](#封装意图)限定，输入输出、状态与失败语义以[接口设计契约](#接口设计契约)为准。扩展从已有公开入口及实际装配位置进入；没有明确可替换契约的部分按真实影响修改和验证，不预建未使用的基类或插件入口。
+| 组成 | 定位 |
+| --- | --- |
+| [Fault](errors.ts) | 携带调用方定义的错误码，保持跨模块一致的异常身份。 |
+| [json](json.ts) | 将 utility 的严格 JSON 解析事实适配为 Core 原有 JSON 错误协议。 |
 
 <!-- architecture:generated:start -->
 
-## 文件清单
+## 架构关系
 
-| 文件 | 形式 | 当前职责 |
-| --- | --- | --- |
-| [ARCHITECTURE.md](ARCHITECTURE.md) | 说明文档 | 本目录的文件清单、真实声明、依赖与子封装导航。 |
-| [errors.ts](errors.ts) | 源码模块 | 不依赖业务或平台的带错误码异常与抛出入口。 |
-| [json.ts](json.ts) | 源码模块 | 将 utility 的严格 JSON 解析事实适配为 Core 原有 JSON 错误协议。 |
+标注为 `virtual` 的节点是直接子模块的虚拟类封装；内部设计沿下方入口阅读。
 
-## 架构类图
-
-成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。
+### 关系组 1
 
 ```mermaid
 classDiagram
-class N_src_core_contracts["contracts/"] {
-  <<directory>>
+class N_03e7b8297943["platform"] {
+  <<virtual>>
 }
-class N_src_core_platform["platform/"] {
-  <<directory>>
+click N_03e7b8297943 href "platform/ARCHITECTURE.md"
+class N_e6a2b581180b["Fault"]
+click N_e6a2b581180b href "errors.ts"
+class N_42bebffebb81["contracts"] {
+  <<virtual>>
 }
-class N_src_core_utility["utility/"] {
-  <<directory>>
+click N_42bebffebb81 href "contracts/ARCHITECTURE.md"
+class N_6b03175635dd["utility"] {
+  <<virtual>>
 }
-class N_src_core_web["web/"] {
-  <<directory>>
+click N_6b03175635dd href "utility/ARCHITECTURE.md"
+class N_0fab5d07aef1["web"] {
+  <<virtual>>
 }
-class N_src_core_errors_ts["errors.ts"] {
-  <<module>>
+click N_0fab5d07aef1 href "web/ARCHITECTURE.md"
+class N_b7b436f4eeb9["Error"] {
+  <<boundary>>
 }
-class N_src_core_json_ts["json.ts"] {
-  <<module>>
-}
-N_src_core_json_ts ..> N_src_core_errors_ts : 导入依赖
-N_src_core_json_ts ..> N_src_core_utility : 导入依赖
-N_src_core_platform ..> N_src_core_contracts : 导入依赖
-N_src_core_platform ..> N_src_core_web : 导入依赖
-N_src_core_platform ..> N_src_core_errors_ts : 导入依赖
-N_src_core_platform ..> N_src_core_utility : 导入依赖
+N_b7b436f4eeb9 <|-- N_e6a2b581180b
+N_03e7b8297943 ..> N_e6a2b581180b : 依赖
+N_03e7b8297943 ..> N_42bebffebb81 : 依赖
+N_03e7b8297943 ..> N_6b03175635dd : 依赖
+N_03e7b8297943 ..> N_0fab5d07aef1 : 依赖
 ```
 
-各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
-
-- `json.ts` → `errors.ts`：导入。
-- `json.ts` → `utility`：导入。
-- `platform` → `contracts`：导入。
-- `platform` → `web`：导入。
-- `platform` → `errors.ts`：导入。
-- `platform` → `utility`：导入。
-
-### errors.ts
-
-[查看源码](errors.ts)。
+### 关系组 2
 
 ```mermaid
 classDiagram
-class N_src_core_errors_ts["errors.ts"] {
-  <<module>>
-  +fail()
-}
-```
-
-```mermaid
-classDiagram
-class N_src_core_errors_ts["errors.ts"] {
+class N_a6e8e0b5c185["json"] {
   <<module>>
 }
-class N_src_core_errors_ts_Fault["Fault"] {
-  +code
-  +constructor()
-}
-N_src_core_errors_ts ..> N_src_core_errors_ts_Fault : 声明
-class N_src_core_errors_ts_external_Error["Error (全局或跨文件声明，见源码)"] {
-  <<external>>
-}
-N_src_core_errors_ts_external_Error <|-- N_src_core_errors_ts_Fault
+click N_a6e8e0b5c185 href "json.ts"
 ```
 
-继承／实现来源：`Error` → `全局或跨文件声明，见源码`。
+### 跨图协作
 
+- [json](json.ts)（图 2）→ [utility](utility/ARCHITECTURE.md)（图 1）：依赖。
 
-### json.ts
+外部继承／实现边界：`Error`。
 
-[查看源码](json.ts)。
+## 子模块
 
-```mermaid
-classDiagram
-class N_src_core_json_ts["json.ts"] {
-  <<module>>
-  +parseJson()
-}
-```
+| 虚拟封装 | 整体职责 |
+| --- | --- |
+| [contracts](contracts/ARCHITECTURE.md) | 通用技术端口；当前 SecretCipher 由模型、Web 与反馈共同使用，具体平台实现由宿主注入。 |
+| [platform](platform/ARCHITECTURE.md) | 按运行环境隔离基础实现；Node 提供摘要、原生锁、文件和网页，Electron 提供匿名网页适配与系统加密。便携 Core 不依赖平台。 |
+| [utility](utility/ARCHITECTURE.md) | 提供按异步协调、字节、JSON、字符串和图组织的通用算法与数据结构。无状态算法采用静态类，有状态协调器按实例隔离；业务规则、取消策略和资源生命周期由消费者决定。 |
+| [web](web/ARCHITECTURE.md) | 纯网页输入/浏览器契约与 HTML 正文算法；公开 index.ts，不加载 Node、Electron 或业务。 |
 
-直接依赖：[errors.ts](errors.ts)、[utility/index.ts](utility/index.ts)。
-
-
-## 子目录导航
-
-- [contracts/](contracts/ARCHITECTURE.md)：通用技术端口；当前 SecretCipher 由模型、Web 与反馈共同使用，具体平台实现由宿主注入。
-- [platform/](platform/ARCHITECTURE.md)：按运行环境隔离基础实现；Node 提供摘要、原生锁、文件和网页，Electron 提供匿名网页适配与系统加密。便携 Core 不依赖平台。
-- [utility/](utility/ARCHITECTURE.md)：前后端共享通用算法与数据结构，按 JSON、字符串、字节、异步协调和图类别内聚。index.ts 是便携公开入口；Node 摘要归 ../platform/node/digest.ts。无业务、Node、Electron 或页面依赖；排序比较器、字段规则、生命周期和业务策略由消费者持有。
-- [web/](web/ARCHITECTURE.md)：纯网页输入/浏览器契约与 HTML 正文算法；公开 index.ts，不加载 Node、Electron 或业务。
-
-[返回上层](../ARCHITECTURE.md)。
-
-每次修改本目录代码，同步维护文件头、关键契约说明及本图。未实现的治理、证据验收和自动编排能力不列入当前类图。
+[上层设计](../ARCHITECTURE.md)
 
 <!-- architecture:generated:end -->

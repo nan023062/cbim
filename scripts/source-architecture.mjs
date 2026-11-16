@@ -1,7 +1,8 @@
-/** 作用定位：只更新各目录 ARCHITECTURE.md 的文件清单、真实类图及子目录导航。
- * 设计原因：设计与契约直接在同一文件维护；严格核对人工章节、成对标记和真实声明来源后整批写入，--check 始终只读。
- * 验证边界：结构一致不证明人工契约正确；不生成业务知识模板，不扫描第三方或构建目录。 */
+/** 作用定位：按人工选择的本层组成与直接子模块生成架构关系图和下钻导航。
+ * 设计原因：设计意图与类定位由维护者在同一文档维护；生成器核实组成与关系，不展开成员清单，--check 始终只读。
+ * 验证边界：结构一致不证明设计意图正确；不生成业务知识模板，不扫描第三方或构建目录。 */
 import fs from 'node:fs';
+import crypto from 'node:crypto';
 import path from 'node:path';
 import ts from 'typescript';
 import { auditDependencies } from './check-dependencies.mjs';
@@ -37,7 +38,7 @@ function markdownLines(source){
 }
 function documentParts(directory){
  const file=directory+'/ARCHITECTURE.md';
- if(!fs.existsSync(file))throw Error('请先编写 '+file+' 的封装意图、类与模块的设计意图、接口设计契约及开闭边界');
+ if(!fs.existsSync(file))throw Error('请先编写 '+file+' 的设计意图及主要组成');
  const original=fs.readFileSync(file,'utf8');
  const lines=markdownLines(original),starts=lines.filter(line=>line.value===generatedStart),ends=lines.filter(line=>line.value===generatedEnd);
  const malformed=lines.some(line=>/<!--\s*architecture\s*:\s*generated/i.test(line.value)&&line.value!==generatedStart&&line.value!==generatedEnd);
@@ -50,8 +51,8 @@ function documentParts(directory){
   if(sections.has(match[1]))throw Error(file+'：重复人工说明章节 '+match[1]);
   sections.set(match[1],match[2].replace(/^#{3,6}[^\n]*$/gm,'').trim());
  }
- for(const title of ['封装意图','类与模块的设计意图','接口设计契约','开闭边界'])if(!sections.get(title))throw Error(file+'：缺少人工说明章节 '+title);
- return {original,prefix,suffix,intent:sections.get('封装意图').split(/\r?\n\s*\r?\n/)[0].replace(/\r?\n/g,' ')};
+ for(const title of ['设计意图','主要组成'])if(!sections.get(title))throw Error(file+'：缺少人工说明章节 '+title);
+ return {original,prefix,suffix,sections,intent:sections.get('设计意图').split(/\r?\n\s*\r?\n/)[0].replace(/\r?\n/g,' ')};
 }
 const documents=new Map(directories.map(directory=>[directory,documentParts(directory)]));
 const text=new Map(files.map(f=>[f,fs.readFileSync(f,'utf8')]));
@@ -83,202 +84,188 @@ compilerHost.resolveModuleNames=(names,containingFile)=>names.map(spec=>{
  return target&&ast.has(target)?{resolvedFileName:path.resolve(target)}:undefined;
 });
 const checker=ts.createProgram([...ast.keys()],compilerOptions,compilerHost).getTypeChecker();
-const id=s=>'N_'+s.replace(/[^a-zA-Z0-9_]/g,'_');
+
+const id=value=>'N_'+crypto.createHash('sha256').update(value).digest('hex').slice(0,12);
 const link=(from,to)=>norm(path.relative(from,to));
-const clean=s=>s.replace(/[<>"{}|\r\n]/g,' ');
-function role(f){return text.get(f).match(/作用定位：([^\r\n]+)/)?.[1]?.trim()||(f.endsWith('.css')?'对应界面的布局与视觉样式。':'源码入口，见文件正文。')}
-/** 文件清单包含说明与资源；这些文件不参与代码依赖或伪装成类图节点。 */
-function fileRole(f){
- if(text.has(f))return role(f);
- const name=path.posix.basename(f);
- const documents={
-  'ARCHITECTURE.md':'本目录的文件清单、真实声明、依赖与子封装导航。',
- };
- if(documents[name])return documents[name];
- if(f.endsWith('.md'))return fs.readFileSync(f,'utf8').match(/^#\s+(.+)$/m)?.[1]?.trim()||'配套说明；具体用途见正文。';
- return '本目录配套资源或配置；具体用途见文件及其调用方。';
-}
-function fileForm(f){
- if(f.endsWith('.md'))return '说明文档';
- if(f.endsWith('.css'))return '样式';
- if(f.endsWith('.tsx')||f.endsWith('.jsx'))return '组件模块';
- return ast.has(f)?'源码模块':'资源／配置';
-}
-function node(f,label=path.posix.basename(f),directory=false,entries=[]){return `class ${id(f)}["${clean(label)}"] {\n  <<${directory?'directory':/\.[jt]sx$/.test(f)?'component':f.endsWith('.css')?'stylesheet':'module'}>>\n${entries.length?entries.join('\n')+'\n':''}}`}
-function declarations(f){
+const label=value=>value.replace(/["<>\r\n]/g,' ');
+
+function declarations(file){
  const result=[];
  function visit(node){
   if(ts.isClassDeclaration(node)||ts.isInterfaceDeclaration(node)||ts.isTypeAliasDeclaration(node)||ts.isEnumDeclaration(node))result.push(node);
   else if(ts.isSourceFile(node)||ts.isModuleDeclaration(node)||ts.isModuleBlock(node))ts.forEachChild(node,visit);
  }
- if(ast.has(f))visit(ast.get(f));
+ if(ast.has(file))visit(ast.get(file));
  return result;
 }
+
 function declarationName(node){
- const scopes=[];for(let parent=node.parent;parent&&!ts.isSourceFile(parent);parent=parent.parent)if(ts.isModuleDeclaration(parent))scopes.unshift(parent.name.getText());
- return [...scopes,node.name?.text||'default'].join('.');
+ const parents=[];
+ for(let parent=node.parent;parent&&!ts.isSourceFile(parent);parent=parent.parent)if(ts.isModuleDeclaration(parent))parents.unshift(parent.name.getText());
+ return [...parents,node.name?.text||'default'].join('.');
 }
-const declarationKind=node=>ts.isClassDeclaration(node)?null:ts.isInterfaceDeclaration(node)?'interface':ts.isEnumDeclaration(node)?'enumeration':'type';
-const chunks=(values,size)=>Array.from({length:Math.ceil(values.length/size)},(_,i)=>values.slice(i*size,(i+1)*size));
-/** 类型别名只展开本地声明的对象字段；引用和联合分支不伪装成无条件拥有的成员。 */
-function objectMembers(type){
- if(ts.isTypeLiteralNode(type))return [...type.members];
- if(ts.isFunctionTypeNode(type)||ts.isConstructorTypeNode(type))return [type];
- if(ts.isParenthesizedTypeNode(type))return objectMembers(type.type);
- return ts.isIntersectionTypeNode(type)?type.types.flatMap(objectMembers):[];
-}
-function members(n,a){
- const declared=ts.isTypeAliasDeclaration(n)?objectMembers(n.type):[...(n.members||[])];
- const properties=declared.filter(ts.isConstructorDeclaration).flatMap(c=>c.parameters.filter(p=>p.modifiers?.some(m=>[ts.SyntaxKind.PublicKeyword,ts.SyntaxKind.PrivateKeyword,ts.SyntaxKind.ProtectedKeyword,ts.SyntaxKind.ReadonlyKeyword].includes(m.kind))));
- const visibility=m=>(m.name&&ts.isPrivateIdentifier(m.name))||m.modifiers?.some(x=>x.kind===ts.SyntaxKind.PrivateKeyword)?'-':m.modifiers?.some(x=>x.kind===ts.SyntaxKind.ProtectedKeyword)?'#':'+';
- // 公开入口先展示，后续分段保留其余成员；不能用私有字段占满固定名额后截掉生命周期接口。
- return [...new Set([...properties,...declared.filter(m=>m.name||ts.isConstructorDeclaration(m)||ts.isCallSignatureDeclaration(m)||ts.isConstructSignatureDeclaration(m)||ts.isIndexSignatureDeclaration(m)||ts.isFunctionTypeNode(m)||ts.isConstructorTypeNode(m))]
-  .sort((a,b)=>Number(visibility(a)!=='+')-Number(visibility(b)!=='+'))
-  .map(m=>{
-   if(ts.isCallSignatureDeclaration(m)||ts.isFunctionTypeNode(m))return '  +调用签名()';
-   if(ts.isConstructSignatureDeclaration(m)||ts.isConstructorTypeNode(m))return '  +构造签名()';
-   if(ts.isIndexSignatureDeclaration(m))return `  +[${m.parameters.map(p=>p.name.getText(a)).join(', ')}] : 索引签名`;
-   const name=ts.isConstructorDeclaration(m)?'constructor':m.name.getText(a);
-   const callable=ts.isConstructorDeclaration(m)||ts.isMethodDeclaration(m)||ts.isMethodSignature(m);
-   const isStatic=m.modifiers?.some(x=>x.kind===ts.SyntaxKind.StaticKeyword);
-   const accessor=ts.isGetAccessorDeclaration(m)?'get':ts.isSetAccessorDeclaration(m)?'set':undefined;
-   const functionValue=!callable&&!accessor&&checker.getSignaturesOfType(checker.getNonNullableType(checker.getTypeAtLocation(m)),ts.SignatureKind.Call).length>0;
-   return `  ${visibility(m)}${clean(name)}${callable?'()':''}${accessor?' : '+accessor:functionValue?' : function':''}${isStatic?'$':''}`;
-  }))];
-}
-/** 模块公开函数单独成图，文件同时声明接口或类型时也不丢失入口。 */
-function valueExports(f,visited=new Set()){
- if(visited.has(f)||!ast.has(f))return new Set();
- const next=new Set([...visited,f]),names=new Set();
- function binding(name){if(ts.isIdentifier(name))names.add(name.text);else for(const element of name.elements)if(ts.isBindingElement(element))binding(element.name)}
- for(const statement of ast.get(f).statements){
-  if(ts.isExportDeclaration(statement)){
-   if(statement.isTypeOnly)continue;
-   if(statement.exportClause){
-    if(ts.isNamedExports(statement.exportClause))for(const element of statement.exportClause.elements){if(!element.isTypeOnly)names.add(element.name.text)}
-    else names.add(statement.exportClause.name.text);
-   }else{
-    const target=dependencyReport.edges.find(edge=>edge.from===f&&edge.spec===statement.moduleSpecifier?.text)?.to;
-    for(const name of valueExports(target,next))if(name!=='default')names.add(name);
-   }
-  }else if(ts.isExportAssignment(statement))names.add('default');
-  else if(statement.modifiers?.some(modifier=>modifier.kind===ts.SyntaxKind.ExportKeyword)){
-   if(statement.modifiers.some(modifier=>modifier.kind===ts.SyntaxKind.DefaultKeyword))names.add('default');
-   else if(ts.isVariableStatement(statement))for(const declaration of statement.declarationList.declarations)binding(declaration.name);
-   else if(statement.name)names.add(statement.name.text);
-  }
- }
- return names;
-}
-function exportedFunctions(f){
- const entries=[];
- const module=ast.has(f)&&checker.getSymbolAtLocation(ast.get(f));
- const values=valueExports(f);
- for(const exported of module?checker.getExportsOfModule(module):[]){
-  if(!values.has(exported.name))continue;
-  if(exported.declarations?.some(n=>ts.isExportSpecifier(n)&&(n.isTypeOnly||n.parent.parent.isTypeOnly)))continue;
-  const symbol=exported.flags&ts.SymbolFlags.Alias?checker.getAliasedSymbol(exported):exported;
-  const declaration=symbol.valueDeclaration;
-  if(!declaration)continue;
-  if(ts.isFunctionDeclaration(declaration))entries.push(`  +${clean(exported.name)}()`);
-  else if(checker.getSignaturesOfType(checker.getTypeOfSymbolAtLocation(symbol,declaration),ts.SignatureKind.Call).length)entries.push(`  +${clean(exported.name)} : function`);
- }
- return [...new Set(entries)];
-}
-function functionDiagrams(f){
- const groups=chunks(exportedFunctions(f),12);
- return groups.map((group,index)=>(groups.length>1?`公开入口 ${index+1}/${groups.length}（同一模块）。\n\n`:'')+diagram([node(f,undefined,false,group)])+'\n').join('');
-}
-/** 跨文件继承保留实际 import 来源和本地别名；不能把项目内契约笼统写成第三方类。 */
-function heritageOrigin(f,expression){
- const name=expression.getText(ast.get(f));
- let symbol=checker.getSymbolAtLocation(expression);
+
+function resolvedDeclaration(node){
+ let symbol=checker.getSymbolAtLocation(node);
  if(symbol?.flags&ts.SymbolFlags.Alias)symbol=checker.getAliasedSymbol(symbol);
- const declaration=symbol?.declarations?.[0];
- const declaredFile=declaration&&norm(path.relative(process.cwd(),path.resolve(declaration.getSourceFile().fileName)));
- const resolved=declaredFile&&ast.has(declaredFile)?{target:declaredFile,declaration,name:declaration.name?.getText()||symbol.getName()}:{};
- const local=name.split('.')[0];
- for(const statement of ast.get(f).statements){
-  if(!ts.isImportDeclaration(statement)||!ts.isStringLiteral(statement.moduleSpecifier))continue;
-  const clause=statement.importClause,bindings=clause?.namedBindings;
-  if(clause?.name?.text!==local&&!(bindings&&(ts.isNamespaceImport(bindings)?bindings.name.text===local:bindings.elements.some(element=>element.name.text===local))))continue;
-  const spec=statement.moduleSpecifier.text;
-  const imported=dependencyReport.edges.find(edge=>edge.from===f&&edge.spec===spec)?.to;
-  if(imported&&!resolved.target)throw Error('继承／实现声明无法解析：'+f+' → '+name+' ('+spec+')');
-  return {spec,...resolved};
- }
- return {spec:'全局或跨文件声明，见源码',...resolved};
+ return symbol?.declarations?.[0];
 }
-function heritage(f,n,key,decl,a,visible){
- const lines=[];
- for(const h of n.heritageClauses||[])for(const t of h.types){
-  const name=t.expression.getText(a),origin=heritageOrigin(f,t.expression),parent=decl.find(x=>x===origin.declaration);
-  const target=parent?id(f+'_'+declarationName(parent)):id(f+'_external_'+name);
-  if(!parent){lines.push(`class ${target}["${clean(name+' ('+origin.spec+')')}"] {\n  <<${origin.target?'boundary':'external'}>>\n}`)}
-  // 分图不改变声明归属：同文件的父接口在另一段时，仍以同一节点表示其边界。
-  else if(!visible.includes(parent)){const kind=declarationKind(parent);lines.push(`class ${target}["${clean(declarationName(parent))}"] {\n${kind?'  <<'+kind+'>>\n':''}}`)}
-  lines.push(`${target} <|${h.token===ts.SyntaxKind.ImplementsKeyword?'..':'--'} ${key}`);
- }
- return lines;
+
+function declarationFile(node){
+ return norm(path.relative(process.cwd(),path.resolve(node.getSourceFile().fileName)));
 }
-function diagram(lines){return '```mermaid\nclassDiagram\n'+lines.join('\n')+'\n```\n'}
-/** 叶子和父层的直接文件共用声明展示；有子目录不能成为省略本层类、接口和成员的理由。 */
-function fileDiagrams(f,d){
- let out=`### ${path.posix.basename(f)}\n\n[查看源码](${link(d,f)})。\n\n`;
- const a=ast.get(f),decl=declarations(f),functions=functionDiagrams(f);out+=functions;
- if(!decl.length&&!functions)out+=diagram([node(f)]);
- for(const group of chunks(decl,4)){
-  const memberGroups=group.map(n=>{const parts=chunks(members(n,a),16);return parts.length?parts:[[]]});
-  const count=Math.max(...memberGroups.map(parts=>parts.length));
-  for(let section=0;section<count;section++){
-   if(count>1)out+=`成员 ${section+1}/${count}（同名节点为同一声明，跨图合并阅读）。\n\n`;
-   const lines=[node(f)],visible=group.filter((_,index)=>memberGroups[index][section]);
-   group.forEach((n,index)=>{const part=memberGroups[index][section];if(!part)return;const key=id(f+'_'+declarationName(n)),kind=declarationKind(n);lines.push(`class ${key}["${clean(declarationName(n))}"] {\n${kind?'  <<'+kind+'>>\n':''}${part.join('\n')}\n}`);lines.push(`${id(f)} ..> ${key} : 声明`);lines.push(...heritage(f,n,key,decl,a,visible))});
-   out+=diagram(lines)+'\n';
+
+/** 组成表是可阅读的模型选择，不是文件清单；直接子模块总是独立虚拟封装。 */
+function model(directory){
+ const document=documents.get(directory),entities=[];
+ const own=files.filter(file=>path.posix.dirname(file)===directory);
+ const children=directories.filter(child=>path.posix.dirname(child)===directory);
+ for(const line of document.sections.get('主要组成').split('\n')){
+  if(!/^\s*\|/.test(line)||!line.includes(']('))continue;
+  const cells=line.trim().replace(/^\||\|$/g,'').split(/(?<!\\)\|/).map(cell=>cell.trim());
+  if(cells.length!==2||!cells[1])throw Error(directory+'：主要组成须为“组成／定位”两列且定位非空');
+  const references=[...cells[0].matchAll(/\[([^\]]+)\]\(([^)]+)\)/g)];
+  if(!references.length)throw Error(directory+'：组成缺少源码链接');
+  for(const [,name,href] of references){
+   const file=norm(path.posix.normalize(path.posix.join(directory,decodeURIComponent(href.split('#')[0]))));
+   if(!own.includes(file))throw Error(directory+'：本层组成必须指向本层源码，不展开子模块或外部实现：'+href);
+   const declaration=declarations(file).find(node=>declarationName(node)===name);
+   const kind=declaration?(ts.isClassDeclaration(declaration)?'class':ts.isInterfaceDeclaration(declaration)?'interface':'type'):/\.[jt]sx$/.test(file)?'component':'module';
+   const key=id(file+'#'+name);
+   if(entities.some(entity=>entity.id===key))throw Error(directory+'：重复组成 '+name);
+   entities.push({id:key,name,file,kind,declaration,files:[file],role:cells[1]});
   }
  }
- const origins=new Map();
- for(const n of decl){
-  for(const h of n.heritageClauses||[])for(const t of h.types){const name=t.expression.getText(a),origin=heritageOrigin(f,t.expression);if(!decl.includes(origin.declaration))origins.set(name,origin)}
-  for(const member of ts.isTypeAliasDeclaration(n)?objectMembers(n.type):n.members||[]){
-   if(ts.isCallSignatureDeclaration(member)||ts.isConstructSignatureDeclaration(member)||ts.isIndexSignatureDeclaration(member)||ts.isFunctionTypeNode(member)||ts.isConstructorTypeNode(member))out+=`匿名签名（${declarationName(n)}，不是具名方法）：\`${member.getText(a).replace(/\s+/g,' ').replaceAll('`','&#96;')}\`。\n`;
+ for(const file of own)for(const declaration of declarations(file).filter(ts.isClassDeclaration)){
+  if(!entities.some(entity=>entity.declaration===declaration))throw Error(directory+'：缺少本层类定位 '+declarationName(declaration)+'，请先更新主要组成');
+ }
+ for(const child of children)entities.push({id:id(child),name:path.posix.basename(child),file:child+'/ARCHITECTURE.md',kind:'virtual',directory:child,files:files.filter(file=>file.startsWith(child+'/')),role:documents.get(child).intent});
+ if(own.some(file=>ast.has(file))&&!entities.some(entity=>entity.kind!=='virtual'))throw Error(directory+'：有本层代码，请说明必要的类或无类模块定位');
+ return {entities,children};
+}
+
+function belongsTo(node,ancestor){
+ for(let current=node;current;current=current.parent)if(current===ancestor)return true;
+ return false;
+}
+
+const fileReferences=new Map();
+function referencedDeclarations(file){
+ if(fileReferences.has(file))return fileReferences.get(file);
+ const result=new Set();
+ function visit(node){
+  if(ts.isIdentifier(node)){const declaration=resolvedDeclaration(node);if(declaration)result.add(declaration)}
+  ts.forEachChild(node,visit);
+ }
+ if(ast.has(file))visit(ast.get(file));
+ fileReferences.set(file,result);
+ return result;
+}
+
+/** 图中的“依赖”只报告源码引用；不从字段持有或目录包含推断资源所有权。 */
+function relationships(directory,entities){
+ const edges=new Map(),boundaries=[];
+ const add=(from,to,kind='依赖')=>{
+  if(from.id===to.id)return;
+  const key=from.id+'>'+to.id;
+  if(!edges.has(key)||kind!=='依赖')edges.set(key,{from,to,kind});
+ };
+ for(const from of entities){
+  if(from.declaration){
+   function visit(node){
+    if(ts.isIdentifier(node)){
+     const declaration=resolvedDeclaration(node);
+     if(declaration){
+      const file=declarationFile(declaration);
+      for(const to of entities)if(to.declaration?belongsTo(declaration,to.declaration):to.files.includes(file))add(from,to);
+     }
+    }
+    ts.forEachChild(node,visit);
+   }
+   visit(from.declaration);
+   for(const heritage of from.declaration.heritageClauses||[])for(const type of heritage.types){
+    const declaration=resolvedDeclaration(type.expression),file=declaration&&declarationFile(declaration);
+    let target=entities.find(entity=>declaration&&entity.declaration===declaration||entity.directory&&file?.startsWith(entity.directory+'/'));
+    if(!target){
+     const name=declaration?.name?.getText()||type.expression.getText();
+     const key=id((file||'external')+'#'+name);
+     target=boundaries.find(entity=>entity.id===key);
+     if(!target){target={id:key,name,file:ast.has(file)?file:undefined,kind:'boundary'};boundaries.push(target)}
+    }
+    // 继承到子目录中的类型，在父层只呈现对虚拟封装的依赖，不把虚拟类画成代码父类。
+    add(from,target,target.kind==='virtual'?'依赖':heritage.token===ts.SyntaxKind.ImplementsKeyword?'实现':'继承');
+   }
+  }else{
+   const references=new Set(from.files.flatMap(file=>deps.get(file)||[]));
+   const symbols=new Set(from.files.flatMap(file=>[...referencedDeclarations(file)]));
+   for(const to of entities)if(to.declaration?[...symbols].some(declaration=>belongsTo(declaration,to.declaration)):to.files.some(file=>references.has(file)))add(from,to);
   }
  }
- for(const [name,origin] of origins)out+=`继承／实现来源：\`${name}\` → ${origin.target?`[${link(d,origin.target)}](${link(d,origin.target)})（声明 \`${origin.name}\`）`:'`'+origin.spec+'`'}。\n`;
- const references=deps.get(f)||[];
- if(references.length)out+='直接依赖：'+references.map(t=>`[${link(d,t)}](${link(d,t)})`).join('、')+'。\n';
- return out+'\n';
+ return {nodes:[...entities,...boundaries],edges:[...edges.values()]};
 }
-const changed=[];
-for(const d of directories){
- const own=files.filter(f=>path.posix.dirname(f)===d),children=directories.filter(c=>path.posix.dirname(c)===d);
- // 首次生成也列出自身，保证下一次 --check 不因新建说明文件产生漂移。
- const directFiles=[...new Set([...allFiles.filter(f=>path.posix.dirname(f)===d),d+'/ARCHITECTURE.md'])].sort();
- let out='## 文件清单\n\n';
- out+='| 文件 | 形式 | 当前职责 |\n| --- | --- | --- |\n'+directFiles.map(f=>`| [${path.posix.basename(f)}](${path.posix.basename(f)}) | ${fileForm(f)} | ${fileRole(f).replaceAll('|','／')} |`).join('\n')+'\n';
- if(!own.length)out+='\n本层无直接代码文件。\n';
- out+='\n## 架构类图\n\n成员标记：`+` 公开、`-` 私有、`#` 受保护、`$` 静态；`function` 为函数值成员，`get`／`set` 为访问器。调用／构造／索引签名按匿名签名列出，不虚构方法名；`global.` 表示全局声明补充，非运行时嵌套类。构造函数单独列出，运行时私有字段保留 `#`。文档和资源仅在文件清单中导航，不作为代码节点。\n\n';
+
+/** 相互协作的节点尽量同图；跨图关系明确列出，避免缩小整张工程图。 */
+function diagramGroups(nodes,edges){
+ const pending=new Set(nodes),groups=[];
+ const neighbours=node=>edges.filter(edge=>edge.from===node||edge.to===node).map(edge=>edge.from===node?edge.to:edge.from);
+ while(pending.size){
+  const seed=[...pending].sort((a,b)=>neighbours(b).length-neighbours(a).length||a.name.localeCompare(b.name))[0];
+  const group=[],queue=[seed];
+  while(queue.length&&group.length<6){
+   const node=queue.shift();if(!pending.delete(node))continue;
+   group.push(node);
+   queue.push(...neighbours(node).filter(next=>pending.has(next)));
+  }
+  // 独立类也可以共同出现在一张图中，不虚构其间连线。
+  for(const node of pending){if(group.length===6)break;pending.delete(node);group.push(node)}
+  groups.push(group);
+ }
+ return groups;
+}
+
+function reference(directory,node){return node.file?'['+node.name+']('+link(directory,node.file)+')':'`'+node.name+'`'}
+
+function render(directory){
+ const {entities,children}=model(directory),{nodes,edges}=relationships(directory,entities);
+ let out='## 架构关系\n\n';
+ if(!nodes.length)out+='本层没有代码或子模块，不绘制类图。\n';
+ else{
+  if(children.length)out+='标注为 `virtual` 的节点是直接子模块的虚拟类封装；内部设计沿下方入口阅读。\n\n';
+  const groups=diagramGroups(nodes,edges),groupOf=new Map();
+  groups.forEach((group,index)=>group.forEach(node=>groupOf.set(node,index+1)));
+  for(const [index,group] of groups.entries()){
+   if(groups.length>1)out+='### 关系组 '+(index+1)+'\n\n';
+   out+='```mermaid\nclassDiagram\n';
+   for(const node of group){
+    out+='class '+node.id+'["'+label(node.name)+'"]'+(node.kind==='class'?'\n':' {\n  <<'+node.kind+'>>\n}\n');
+    if(node.file)out+='click '+node.id+' href "'+link(directory,node.file)+'"\n';
+   }
+   for(const edge of edges.filter(edge=>group.includes(edge.from)&&group.includes(edge.to)))out+=edge.kind==='依赖'?`${edge.from.id} ..> ${edge.to.id} : 依赖\n`:`${edge.to.id} <|${edge.kind==='实现'?'..':'--'} ${edge.from.id}\n`;
+   out+='```\n\n';
+  }
+  const cross=edges.filter(edge=>groupOf.get(edge.from)!==groupOf.get(edge.to));
+  if(cross.length){
+   out+='### 跨图协作\n\n';
+   for(const edge of cross)out+=`- ${reference(directory,edge.from)}（图 ${groupOf.get(edge.from)}）→ ${reference(directory,edge.to)}（图 ${groupOf.get(edge.to)}）：${edge.kind}。\n`;
+   out+='\n';
+  }
+  const external=nodes.filter(node=>node.kind==='boundary');
+  if(external.length)out+='外部继承／实现边界：'+external.map(node=>reference(directory,node)).join('、')+'。\n\n';
+ }
  if(children.length){
-  const boundaries=[...children,...own];
-  const owner=f=>own.includes(f)?f:children.find(c=>f.startsWith(c+'/'));
-  const edges=new Set();for(const f of files.filter(f=>f.startsWith(d+'/'))){const a=owner(f);for(const dep of deps.get(f)||[]){const b=owner(dep);if(a&&b&&a!==b)edges.add(`${id(a)} ..> ${id(b)} : 导入依赖`)}}
-  // 分组展示较大的目录边界，跨组关系另列，避免缩成不可读的大图。
-  for(let i=0;i<boundaries.length;i+=6){const group=boundaries.slice(i,i+6),ids=new Set(group.map(id));out+=diagram([...group.map(f=>node(f,path.posix.basename(f)+(children.includes(f)?'/':''),children.includes(f))),...[...edges].filter(e=>{const [a,,b]=e.split(' ');return ids.has(a)&&ids.has(b)})])+'\n'}
-  out+='各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：\n\n';
-  out+=[...edges].map(e=>{const [a,,b]=e.split(' ');const f=boundaries.find(f=>id(f)===a),t=boundaries.find(f=>id(f)===b);return `- \`${path.posix.basename(f)}\` → \`${path.posix.basename(t)}\`：导入。`}).join('\n')||'本层无目录间直接导入关系。';out+='\n';
-  for(const f of own)out+='\n'+fileDiagrams(f,d);
- }else{
-  for(const f of own)out+=fileDiagrams(f,d);
-  const edges=[];for(const f of own)for(const t of deps.get(f)||[])if(own.includes(t))edges.push([f,t]);
-  if(edges.length){out+='### 本目录调用边界\n\n';for(let i=0;i<edges.length;i+=4){const group=edges.slice(i,i+4),nodes=[...new Set(group.flat())];out+=diagram([...nodes.map(f=>node(f)),...group.map(([f,t])=>`${id(f)} ..> ${id(t)} : 导入依赖`)])+'\n'}}
+  out+='## 子模块\n\n| 虚拟封装 | 整体职责 |\n| --- | --- |\n';
+  for(const child of entities.filter(entity=>entity.kind==='virtual'))out+='| '+reference(directory,child)+' | '+child.role.replaceAll('|','／')+' |\n';
+  out+='\n';
  }
- if(!own.length&&!children.length)out+='本目录无代码，无类图。\n';
- out+='\n## 子目录导航\n\n'+(children.length?children.map(c=>`- [${path.posix.basename(c)}/](${path.posix.basename(c)}/ARCHITECTURE.md)：${documents.get(c).intent}`).join('\n'):'无子目录。')+'\n';
- if(d!=='src')out+='\n[返回上层](../ARCHITECTURE.md)。\n';
- out+='\n每次修改本目录代码，同步维护文件头、关键契约说明及本图。未实现的治理、证据验收和自动编排能力不列入当前类图。\n';
- const document=documents.get(d);
- const updated=document.prefix+generatedStart+'\n\n'+out+'\n'+generatedEnd+document.suffix;
- if(document.original!==updated)changed.push({target:d+'/ARCHITECTURE.md',text:updated});
+ if(directory!=='src')out+='[上层设计](../ARCHITECTURE.md)\n';
+ return out;
+}
+
+const changed=[];
+for(const directory of directories){
+ const document=documents.get(directory);
+ const updated=document.prefix+generatedStart+'\n\n'+render(directory)+'\n'+generatedEnd+document.suffix;
+ if(document.original!==updated)changed.push({target:directory+'/ARCHITECTURE.md',text:updated});
 }
 if(!process.argv.includes('--check'))for(const item of changed)fs.writeFileSync(item.target,item.text);
 console.log(`${directories.length} 个目录，${files.length} 个代码/样式文件；${changed.length} 份架构文档${process.argv.includes('--check')?'存在差异':'已更新'}。`);

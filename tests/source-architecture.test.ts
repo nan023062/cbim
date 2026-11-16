@@ -6,211 +6,196 @@ import {afterEach,expect,test} from 'vitest';
 
 const generator=path.resolve('scripts/source-architecture.mjs');
 const temporary:string[]=[];
+const start='<!-- architecture:generated:start -->',end='<!-- architecture:generated:end -->';
 afterEach(()=>{for(const root of temporary.splice(0))fs.rmSync(root,{recursive:true,force:true})});
 
-function manual(name:string,contract='完成不表示验收。'){
-  return `# ${name}\n\n## 封装意图\n\n测试封装：${name}，接口供夹具调用。\n\n## 类与模块的设计意图\n\nSample 保存本次测试的独立状态。\n\n## 接口设计契约\n\n${contract}\n\n## 开闭边界\n\n测试只组合已声明入口，不增加运行服务。\n\n<!-- architecture:generated:start -->\n<!-- architecture:generated:end -->\n`;
+function manual(name:string,rows:string[]=[]){
+  return `# ${name}\n\n## 设计意图\n\n测试封装：${name}，保存独立状态。\n\n## 主要组成\n\n${rows.length?'| 组成 | 定位 |\n| --- | --- |\n'+rows.join('\n'):'本层由子模块组合。'}\n\n${start}\n${end}\n`;
 }
 
 function fixture(files:Record<string,string>){
   const root=fs.mkdtempSync(path.join(os.tmpdir(),'cbim-architecture-'));temporary.push(root);
+  const directories=new Set<string>();
   for(const [name,content] of Object.entries(files)){
     const file=path.join(root,name);fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file,content);
-    let directory=path.posix.dirname(name);
-    while(directory==='src'||directory.startsWith('src/')){
-      const document=path.join(root,directory,'ARCHITECTURE.md');
-      if(!fs.existsSync(document))fs.writeFileSync(document,manual(directory));
-      if(directory==='src')break;
-      directory=path.posix.dirname(directory);
-    }
+    for(let directory=path.posix.dirname(name);directory==='src'||directory.startsWith('src/');directory=path.posix.dirname(directory))directories.add(directory);
+  }
+  for(const directory of directories){
+    const document=path.join(root,directory,'ARCHITECTURE.md');
+    if(fs.existsSync(document))continue;
+    const rows=Object.entries(files).filter(([name])=>path.posix.dirname(name)===directory&&/\.(?:[cm]?[jt]s|tsx|jsx)$/.test(name)).flatMap(([name,content])=>{
+      const classes=[...content.matchAll(/\bclass\s+(\w+)/g)].map(match=>match[1]);
+      return (classes.length?classes:[path.posix.basename(name)]).map(label=>`| [${label}](${path.posix.basename(name)}) | 保存测试状态，供本层协作。 |`);
+    });
+    fs.writeFileSync(document,manual(directory,rows));
   }
   return {
     run:(check=false)=>spawnSync(process.execPath,[generator,...(check?['--check']:[])],{cwd:root,encoding:'utf8',timeout:15000}),
     read:(file:string)=>fs.readFileSync(path.join(root,file),'utf8'),
-    write:(file:string,content:string)=>fs.writeFileSync(path.join(root,file),content),
+    write:(file:string,content:string)=>{const target=path.join(root,file);fs.mkdirSync(path.dirname(target),{recursive:true});fs.writeFileSync(target,content)},
     mkdir:(directory:string)=>fs.mkdirSync(path.join(root,directory),{recursive:true}),
   };
 }
 
-test('同一模块的类型字段与公开函数均入图，不把内部 helper 伪装成公开入口',()=>{
-  const project=fixture({'src/logic/tasks/rules/sample.ts':`
-    export type Identity={workspaceId:string;taskId:string};
-    export type Cursor=Identity & {seq:number};
-    export interface Port {read():Promise<Identity>}
-    export type Empty=null;
-    export interface ChildPort extends Port {write(value:Identity):void}
-    export function validateIdentity(value:Identity){return value}
-    export const mergeCursor=(value:Cursor)=>value;
-    export const inspect=function(value:Identity){return value};
-    function internalHelper(){return null}
-  `});
-  const result=project.run();expect(result.status,result.stderr).toBe(0);
-  const document=project.read('src/logic/tasks/rules/ARCHITECTURE.md');
-  expect(document).toContain('["Identity"] {\n  <<type>>\n  +workspaceId\n  +taskId');
-  expect(document).toContain('["Cursor"] {\n  <<type>>\n  +seq');
-  expect(document).toContain('+validateIdentity()');
-  for(const name of ['mergeCursor','inspect'])expect(document).toContain(`+${name} : function`);
-  expect(document).not.toContain('+internalHelper()');
-  expect(document).not.toContain('Port (外部契约)');
-  expect(document).toContain('N_src_logic_tasks_rules_sample_ts_Port <|-- N_src_logic_tasks_rules_sample_ts_ChildPort');
-});
+function node(document:string,name:string){
+  const line=document.split('\n').find(value=>value.startsWith('class ')&&value.includes(`["${name}"]`));
+  expect(line,`图中应有 ${name}`).toBeDefined();
+  return line!.split('[')[0].slice(6);
+}
 
-test('长类和多入口模块分段展示，保留全部公开生命周期接口及剩余字段',()=>{
-  const privateFields=Array.from({length:20},(_,i)=>`private cache${i}=0;`).join('\n');
-  const methods=['initialize','start','stop','events','acknowledge','close',...Array.from({length:16},(_,i)=>`action${i}`)];
-  const functions=Array.from({length:15},(_,i)=>`export function entry${i}(){return ${i}}`).join('\n');
-  const project=fixture({'src/logic/tasks/rules/lifecycle.ts':`
-    export class Lifecycle {
-      ${privateFields}
-      ${methods.map(name=>`${name}(){return this.cache0}`).join('\n')}
-    }
-    ${functions}
-  `});
-  const result=project.run();expect(result.status,result.stderr).toBe(0);
-  const document=project.read('src/logic/tasks/rules/ARCHITECTURE.md');
-  for(const name of methods)expect(document).toContain(`+${name}()`);
-  for(let i=0;i<20;i++)expect(document).toContain(`-cache${i}`);
-  for(let i=0;i<15;i++)expect(document).toContain(`+entry${i}()`);
-  expect(document.indexOf('+close()')).toBeLessThan(document.indexOf('-cache0'));
-  expect(document.match(/class N_src_logic_tasks_rules_lifecycle_ts_Lifecycle\[/g)).toHaveLength(3);
-  expect(document).toContain('成员 3/3');
-  expect(document).toContain('公开入口 2/2');
-});
-
-test('非叶子目录保持子目录边界，保留本层类、接口、类型、成员和公开入口',()=>{
+test('本层模型保留类定位和选定契约，不再生成文件、函数与成员清单',()=>{
   const project=fixture({
-    'src/logic/execution/rules/member-run.ts':'export interface Binding {runId:string}; export type State={ready:boolean}; export class Runner {private active=false; Start(){this.active=true}}; export function checkedBinding(value:Binding){return value}',
-    'src/logic/execution/rules/runtime/types.ts':'export interface Model {id:string}',
+    'src/sample.ts':'export interface Port {Read():void} export type Hidden={secret:string}; export class Service implements Port {private cache=0; Read(){} HiddenMethod(){}} export function helper(){}',
+    'src/style.css':'.sample {}','src/defaults.json':'{}',
+    'src/ARCHITECTURE.md':manual('服务',[ '| [Service](sample.ts) | 组合调用入口。 |','| [Port](sample.ts) | 必要的协作契约。 |']),
   });
   const result=project.run();expect(result.status,result.stderr).toBe(0);
-  const document=project.read('src/logic/execution/rules/ARCHITECTURE.md');
-  expect(document).toContain('["runtime/"] {\n  <<directory>>');
-  expect(document).toContain('+checkedBinding()');
-  for(const name of ['Binding','State','Runner'])expect(document).toContain(`["${name}"]`);
-  for(const member of ['+runId','+ready','-active','+Start()'])expect(document).toContain(`  ${member}\n`);
-  expect(document).not.toContain('["Model"]');
-  expect(document).toContain('[runtime/](runtime/ARCHITECTURE.md)');
+  const document=project.read('src/ARCHITECTURE.md');
+  expect(document).toContain(`${node(document,'Port')} <|.. ${node(document,'Service')}`);
+  for(const omitted of ['HiddenMethod','cache','helper','defaults.json','style.css','文件清单','["Hidden"]'])expect(document).not.toContain(omitted);
+  expect(document).toContain('组合调用入口。');
+  expect(document).toContain(`click ${node(document,'Service')} href "sample.ts"`);
 });
 
-test('依赖图解析 js 到 ts、动态导入、require 和样式，并标明跨文件继承的真实来源',()=>{
+test('每层把直接子模块视为虚拟封装，内部类和孙模块只在下一层出现',()=>{
   const project=fixture({
-    'src/core/utility/base.ts':'export class Base {Start(){}}',
-    'src/core/utility/types.mts':'export interface Input {id:string}',
-    'src/core/platform/node/entry.ts':`import {Base as Parent} from '../../utility/base.js';
-      import type {Input} from '../../utility/types.mjs';
-      import './style.css';
-      export class Child extends Parent {input?:Input}
-      export const Load=()=>import('./lazy.js');
-      const helper=require('./helper.cjs');`,
-    'src/core/platform/node/lazy.ts':'export const ready=true;',
-    'src/core/platform/node/helper.cts':'export const value=1;',
-    'src/core/platform/node/style.css':'.sample {}',
+    'src/service.ts':"import {Child} from './domain/api.js'; export class Service extends Child {}",
+    'src/domain/api.ts':"import {Inner} from './storage/item.js'; export class Child {value=new Inner()}",
+    'src/domain/storage/item.ts':'export class Inner {Secret(){}}',
+  });
+  const result=project.run();expect(result.status,result.stderr).toBe(0);
+  const root=project.read('src/ARCHITECTURE.md'),child=project.read('src/domain/ARCHITECTURE.md');
+  expect(root).toContain(`${node(root,'Service')} ..> ${node(root,'domain')} : 依赖`);
+  expect(root).toContain('<<virtual>>');
+  expect(root).toContain('[domain](domain/ARCHITECTURE.md)');
+  for(const detail of ['Child','Inner','storage','Secret','api.ts','<|--'])expect(root).not.toContain(detail);
+  expect(child).toContain('[storage](storage/ARCHITECTURE.md)');
+  expect(child).toContain('["Child"]');
+  expect(child).not.toContain('["Inner"]');
+  expect(project.read('src/domain/storage/ARCHITECTURE.md')).toContain('["Inner"]');
+});
+
+test('引用同文件中的一个类不会伪造对其他类的依赖',()=>{
+  const project=fixture({
+    'src/core/utility/types.ts':'export class Used{} export class Unused{}',
+    'src/core/utility/entry.ts':"import {Used} from './types.js'; export const Create=()=>new Used();",
+  });
+  expect(project.run().status).toBe(0);
+  const document=project.read('src/core/utility/ARCHITECTURE.md');
+  expect(document).toContain(`${node(document,'entry.ts')} ..> ${node(document,'Used')} : 依赖`);
+  expect(document).not.toContain(`${node(document,'entry.ts')} ..> ${node(document,'Unused')}`);
+});
+
+test('真实别名与重导出继承指向来源声明，而非虚构新父类',()=>{
+  const project=fixture({
+    'src/core/utility/base.ts':'export class Base {}',
+    'src/core/utility/index.ts':"export {Base as PublicBase} from './base.js';",
+    'src/core/platform/node/child.ts':"import {PublicBase as Parent} from '../../utility/index.js'; export class Child extends Parent {}",
   });
   const result=project.run();expect(result.status,result.stderr).toBe(0);
   const document=project.read('src/core/platform/node/ARCHITECTURE.md');
-  for(const target of ['../../utility/base.ts','../../utility/types.mts','lazy.ts','helper.cts','style.css'])expect(document).toContain(`[${target}](${target})`);
-  expect(document).toContain('Parent (../../utility/base.js)');
-  expect(document).toContain('继承／实现来源：`Parent` → [../../utility/base.ts](../../utility/base.ts)');
-  expect(project.read('src/core/ARCHITECTURE.md')).toContain('`platform` → `utility`');
-  expect(project.run(true).status).toBe(0);
+  expect(document).toContain(`${node(document,'Base')} <|-- ${node(document,'Child')}`);
+  expect(document).toContain('[Base](../../utility/base.ts)');
+  expect(document).not.toContain('["Parent"]');
 });
 
-test('源码依赖无法解析时拒绝整批写入，不能用缺边的图报告一致',()=>{
-  for(const source of ["export {missing} from './missing.js';","const entry='./runtime.js'; void import(entry);","import './missing.css';","void import('./missing.css');","require('./missing.css');"]){
-    const project=fixture({'src/core/sample.ts':source});
-    const before=project.read('src/ARCHITECTURE.md');
-    const result=project.run();
-    expect(result.status).toBe(1);
-    expect(result.stderr).toContain('源码依赖无法解析');
-    expect(project.read('src/ARCHITECTURE.md')).toBe(before);
-  }
-});
-
-test('文件清单保留源码、样式和资源，契约只在唯一架构文档维护',()=>{
-  const project=fixture({
-    'src/view/foundations/utility/sample.ts':'export class Sample {}',
-    'src/view/foundations/utility/ARCHITECTURE.md':manual('实际用途说明','状态独立。'),
-    'src/view/foundations/utility/style.css':'.sample {}',
-    'src/view/foundations/utility/defaults.json':'{"limit":12}',
-  });
-  expect(project.run().status).toBe(0);
-  expect(project.run(true).status).toBe(0);
-  const document=project.read('src/view/foundations/utility/ARCHITECTURE.md');
-  for(const name of ['sample.ts','style.css','defaults.json','ARCHITECTURE.md']){
-    expect(document).toContain(`| [${name}](${name}) |`);
-  }
-  expect(document).toContain('实际用途说明');
-  expect(document).not.toContain('["defaults.json"]');
-  expect(document).not.toContain('["CONTRACT.md"]');
-});
-
-test('类图区分静态与实例成员，保留私有构造及运行时私有字段',()=>{
-  const project=fixture({'src/core/utility/sample.ts':`
-    export class TextUtils {
-      private static readonly replacement='hidden';
-      private constructor(){}
-      public static redact(){return TextUtils.replacement}
-    }
-    export class Counter {
-      #count=0;
-      constructor(public readonly label:string){}
-      protected get count(){return this.#count}
-      public increment(){return ++this.#count}
-    }
-  `});
+test('本层类依赖按实际符号核实，实例持有不自动变成组合或继承',()=>{
+  const project=fixture({'src/core/utility/a.ts':'export class A {} export class B {constructor(private value:A){}} export class C {}'});
   expect(project.run().status).toBe(0);
   const document=project.read('src/core/utility/ARCHITECTURE.md');
-  for(const entry of ['-replacement$','-constructor()','+redact()$','-#count','+constructor()','+label','#count : get','+increment()']){
-    expect(document).toContain(`  ${entry}\n`);
-  }
-  expect(document).not.toContain('+increment()$');
-  expect(document).not.toContain('+#count');
+  expect(document).toContain(`${node(document,'B')} ..> ${node(document,'A')} : 依赖`);
+  expect(document).not.toMatch(/\*--|<\|--/);
+  expect(document).not.toContain(`${node(document,'B')} ..> ${node(document,'C')}`);
 });
 
-test('--check 检测生成区漂移，重新生成逐字保留同一文件前后的人工契约',()=>{
-  const source='src/logic/tasks/rules/sample.ts',architecture='src/logic/tasks/rules/ARCHITECTURE.md';
-  const project=fixture({[source]:'export function inspect(){}',[architecture]:manual('执行边界')});
+test('未加载的外部父类保持外部边界，不误认本层无类模块',()=>{
+  const project=fixture({
+    'src/core/fault.ts':'export class Fault extends Error {}',
+    'src/core/json.ts':'export function Parse(value:string){return JSON.parse(value)}',
+  });
+  const result=project.run();expect(result.status,result.stderr).toBe(0);
+  const document=project.read('src/core/ARCHITECTURE.md');
+  expect(document).toContain(`${node(document,'Error')} <|-- ${node(document,'Fault')}`);
+  expect(document).not.toContain(`${node(document,'json.ts')} <|--`);
+});
+
+test('所有本层类都有定位，缺失时整批拒绝；主要组成不允许展开子目录源码',()=>{
+  for(const rows of [[],['| [Child](child/c.ts) | 子模块内部类。 |'],['| [Missing](missing.ts) | 失效链接。 |']]){
+    const project=fixture({'src/root.ts':'export class Root {}','src/child/c.ts':'export class Child {}','src/ARCHITECTURE.md':manual('根',rows)});
+    const before=project.read('src/child/ARCHITECTURE.md');
+    const result=project.run();expect(result.status).toBe(1);
+    expect(project.read('src/child/ARCHITECTURE.md')).toBe(before);
+  }
+});
+
+test('大型模型分图保留跨图边与导航，不截断类或缩小巨图',()=>{
+  const project=fixture({'src/core/utility/chain.ts':Array.from({length:14},(_,i)=>`export class C${i} {${i?'value?:C'+(i-1):''}}`).join('\n')});
   expect(project.run().status).toBe(0);
+  const document=project.read('src/core/utility/ARCHITECTURE.md');
+  const blocks=[...document.matchAll(/```mermaid\n([\s\S]*?)```/g)].map(match=>match[1]);
+  expect(blocks).toHaveLength(3);
+  for(const block of blocks)expect((block.match(/^class /gm)||[]).length).toBeLessThanOrEqual(6);
+  for(let i=0;i<14;i++)node(document,'C'+i);
+  const direct=(document.match(/ \.\.> /g)||[]).length,cross=(document.match(/）：依赖。/g)||[]).length;
+  expect(direct+cross).toBe(13);
+  expect(document).toContain('### 跨图协作');
+});
+
+test('模块依赖包括动态导入、require、类型和 CSS，父层聚合为虚拟封装关系',()=>{
+  const project=fixture({
+    'src/core/platform/entry.ts':"import type {Input} from '../contracts/types.mjs'; void import('../utility/lazy.js'); require('../utility/helper.cjs'); import '../utility/style.css'; export const value=1;",
+    'src/core/contracts/types.mts':'export interface Input {}',
+    'src/core/utility/lazy.ts':'export const ready=true;',
+    'src/core/utility/helper.cts':'export const value=1;',
+    'src/core/utility/style.css':'.sample {}',
+  });
+  const result=project.run();expect(result.status,result.stderr).toBe(0);
+  const document=project.read('src/core/ARCHITECTURE.md');
+  for(const name of ['contracts','utility'])expect(document).toContain(`${node(document,'platform')} ..> ${node(document,name)} : 依赖`);
+  expect(project.run(true).status).toBe(0);
+});
+
+test('未解析依赖拒绝整批写入，不生成缺边模型',()=>{
+  for(const source of ["export {missing} from './missing.js';","const entry='./runtime.js'; void import(entry);","import './missing.css';","void import('./missing.css');","require('./missing.css');"]){
+    const project=fixture({'src/core/sample.ts':source});
+    const before=project.read('src/ARCHITECTURE.md'),result=project.run();
+    expect(result.status).toBe(1);expect(result.stderr).toContain('源码依赖无法解析');
+    expect(project.read('src/ARCHITECTURE.md')).toBe(before);
+  }
+},20000);
+
+test('--check 只读检测真实模型漂移；内部方法变化不生成成员噪声',()=>{
+  const source='src/core/utility/sample.ts',architecture='src/core/utility/ARCHITECTURE.md';
+  const project=fixture({[source]:'export class A {} export class B {}'});
+  expect(project.run().status).toBe(0);
+  project.write(source,'export class A {NewMethod(){}} export class B {}');
   expect(project.run(true).status).toBe(0);
   const initial=project.read(architecture);
-  project.write(source,'export function inspect(){}\nexport function recover(){}');
+  project.write(source,'export class A {NewMethod(){}} export class B {value?:A}');
   expect(project.run(true).status).toBe(1);
   expect(project.read(architecture)).toBe(initial);
   expect(project.run().status).toBe(0);
-  const generated=project.read(architecture);
-  expect(generated).toContain('+recover()');
-  expect(generated).toContain('完成不表示验收。');
-  const revised=generated.replace('完成不表示验收。','恢复不重放未知操作。')+'\n### 后置说明\n\n人工维护的字节原样保留。\n';
-  project.write(architecture,revised);
   expect(project.run(true).status).toBe(0);
-  project.write(source,'export function inspect(){}\nexport function recover(){}\nexport function close(){}');
-  expect(project.run(true).status).toBe(1);
-  expect(project.read(architecture)).toBe(revised);
-  expect(project.run().status).toBe(0);
-  const final=project.read(architecture);
-  expect(final.split('<!-- architecture:generated:start -->')[0]).toBe(revised.split('<!-- architecture:generated:start -->')[0]);
-  expect(final.split('<!-- architecture:generated:end -->')[1]).toBe(revised.split('<!-- architecture:generated:end -->')[1]);
-  expect(final).toContain('+close()');
-},20000);
-
-test('多余说明文档拒绝整批生成，不能删除契约或覆盖已经维护的正文',()=>{
-  const project=fixture({'src/sample.ts':'export function Read(){}','src/NOTES.md':'必须合并的重要约束'});
-  const before=project.read('src/ARCHITECTURE.md');
-  for(const check of [true,false]){
-    const result=project.run(check);
-    expect(result.status).toBe(1);
-    expect(result.stderr).toContain('请先合并说明内容');
-    expect(project.read('src/ARCHITECTURE.md')).toBe(before);
-    expect(project.read('src/NOTES.md')).toBe('必须合并的重要约束');
-  }
 });
 
-test('缺失、重复和倒置的生成标记拒绝写入，后续目录错误也不能留下部分更新',()=>{
-  const marker='<!-- architecture:generated:start -->',end='<!-- architecture:generated:end -->';
-  const project=fixture({'src/sample.ts':'export function Read(){}','src/core/sample.ts':'export class Value{}'});
+test('生成逐字保留 CRLF 人工前后正文与围栏中的示例标记',()=>{
+  const file='src/core/utility/ARCHITECTURE.md';
+  const prefix=manual('工具',['| [A](sample.ts) | 独立工具。 |']).split(start)[0]+`\n~~~md\n${start}\n${end}\n~~~\n`;
+  const suffix='\n\n## 协作说明\n\n这是人工说明。\n';
+  const original=(prefix+start+'\n'+end+suffix).replaceAll('\n','\r\n');
+  const project=fixture({'src/core/utility/sample.ts':'export class A {}',[file]:original});
+  expect(project.run().status).toBe(0);
+  const generated=project.read(file);
+  expect(generated.startsWith(prefix.replaceAll('\n','\r\n'))).toBe(true);
+  expect(generated.endsWith(suffix.replaceAll('\n','\r\n'))).toBe(true);
+  expect(project.run(true).status).toBe(0);
+});
+
+test('缺失、重复、倒置和损坏的标记拒绝整批写入',()=>{
+  const project=fixture({'src/sample.ts':'export const value=1;','src/core/value.ts':'export const value=2;'});
   const before=project.read('src/ARCHITECTURE.md');
-  for(const tail of ['',marker,end,`${end}\n${marker}`,`${marker}\n${end}\n${marker}\n${end}`,'<!-- architecture:generated:start ->\n<!-- architecture:generated:end ->',` ${marker}\n${end}`]){
-    const invalid=manual('core').split(marker)[0]+'\n'+tail;
+  for(const markers of ['',start,end,`${end}\n${start}`,`${start}\n${end}\n${start}\n${end}`,'<!-- architecture:generated:start ->\n<!-- architecture:generated:end ->',` ${start}\n${end}`]){
+    const invalid=manual('core',['| [value](value.ts) | 纯值。 |']).split(start)[0]+markers;
     project.write('src/core/ARCHITECTURE.md',invalid);
     for(const check of [true,false]){
       expect(project.run(check).status).toBe(1);
@@ -218,130 +203,50 @@ test('缺失、重复和倒置的生成标记拒绝写入，后续目录错误�
       expect(project.read('src/core/ARCHITECTURE.md')).toBe(invalid);
     }
   }
+},30000);
+
+test('缺少、重复或只有围栏/注释的设计章节拒绝生成',()=>{
+  const project=fixture({'src/item.ts':'export const value=1;'});
+  const valid=project.read('src/ARCHITECTURE.md');
+  for(const invalid of [valid.replace('## 设计意图','## 旧标题'),valid.replace('测试封装：src，保存独立状态。','<!-- 只有注释 -->'),valid.replace('测试封装：src，保存独立状态。','```txt\n示例\n```'),valid+'\n## 主要组成\n\n重复\n']){
+    project.write('src/ARCHITECTURE.md',invalid);
+    expect(project.run().status).toBe(1);
+    expect(project.read('src/ARCHITECTURE.md')).toBe(invalid);
+  }
 },20000);
 
-test('目录意图只有一个来源，子目录修改会使父导航漂移',()=>{
-  const project=fixture({'src/new-domain/item.ts':'export interface Input {name:string}'});
+test('子模块设计意图是唯一职责来源，内部细节变化不进入父层',()=>{
+  const project=fixture({'src/domain/item.ts':'export const value=1;'});
   expect(project.run().status).toBe(0);
-  const child=project.read('src/new-domain/ARCHITECTURE.md');
-  project.write('src/new-domain/ARCHITECTURE.md',child.replace('测试封装：src/new-domain，接口供夹具调用。','新边界说明：只读固定输入，不访问磁盘。'));
+  const child=project.read('src/domain/ARCHITECTURE.md');
+  project.write('src/domain/ARCHITECTURE.md',child.replace('测试封装：src/domain，保存独立状态。','只读固定输入，不访问磁盘。\n\n本层内部的详细协作说明。'));
   expect(project.run(true).status).toBe(1);
   expect(project.run().status).toBe(0);
-  expect(project.read('src/ARCHITECTURE.md')).toContain('新边界说明：只读固定输入，不访问磁盘。');
-  expect(project.run(true).status).toBe(0);
+  const root=project.read('src/ARCHITECTURE.md');
+  expect(root).toContain('只读固定输入，不访问磁盘。');
+  expect(root).not.toContain('本层内部的详细协作说明。');
 });
 
-test('只含资源的子目录也有清单和导航，未编写人工语义不能生成空壳',()=>{
+test('额外说明文档拒绝生成，资源目录保持真实且不虚构类',()=>{
   const project=fixture({'src/resources/defaults.json':'{}'});
   expect(project.run().status).toBe(0);
   const document=project.read('src/resources/ARCHITECTURE.md');
-  expect(document).toContain('[defaults.json](defaults.json)');
-  expect(document).toContain('本目录无代码，无类图');
-  project.write('src/resources/ARCHITECTURE.md','# 只有标题\n\n<!-- architecture:generated:start -->\n<!-- architecture:generated:end -->');
-  const result=project.run();
-  expect(result.status).toBe(1);
-  expect(result.stderr).toContain('缺少人工说明章节');
-});
-
-test('围栏中的示例标记不能授权覆盖正文；真实标记外的 CRLF、示例和后置说明逐字保留',()=>{
-  const project=fixture({'src/core/item.ts':'export class Item {}'});
-  const file='src/core/ARCHITECTURE.md';
-  const example='~~~md\n<!-- architecture:generated:start -->\n## 封装意图\n示例不是维护内容\n<!-- architecture:generated:end -->\n~~~\n';
-  const prefix=(example+manual('core').split('<!-- architecture:generated:start -->')[0]).replace(/\n/g,'\r\n');
-  const suffix='\r\n\r\n### 后置约束\r\n\r\n必须保留。\r\n';
-  project.write(file,prefix+'<!-- architecture:generated:start -->\r\n<!-- architecture:generated:end -->'+suffix);
-  const result=project.run();expect(result.status,result.stderr).toBe(0);
-  const generated=project.read(file);
-  expect(generated.startsWith(prefix)).toBe(true);
-  expect(generated.endsWith(suffix)).toBe(true);
-  expect(project.run(true).status).toBe(0);
-  project.write(file,example+manual('core').split('<!-- architecture:generated:start -->')[0]);
-  expect(project.run().status).toBe(1);
-});
-
-test('人工章节只含注释、锚点、小标题或代码示例仍视为空，重复章节拒绝整批写入',()=>{
-  const project=fixture({'src/core/item.ts':'export class Item {}'});
-  const file='src/core/ARCHITECTURE.md';
-  const initial=project.read('src/ARCHITECTURE.md');
-  for(const body of ['<!-- 稍后补充 -->','<a id="contract"></a>','### 只有小标题','```md\n占位契约\n```']){
-    const invalid=manual('core',body);
-    project.write(file,invalid);
-    const result=project.run();expect(result.status).toBe(1);
-    expect(result.stderr).toContain('缺少人工说明章节 接口设计契约');
-    expect(project.read('src/ARCHITECTURE.md')).toBe(initial);
-    expect(project.read(file)).toBe(invalid);
-  }
-  project.write(file,manual('core')+'\n## 封装意图\n\n第二份冲突职责。\n');
+  expect(document).toContain('本层没有代码或子模块，不绘制类图。');
+  expect(document).not.toContain('classDiagram');
+  project.write('src/resources/NOTES.md','尚未合并的说明');
   const result=project.run();expect(result.status).toBe(1);
-  expect(result.stderr).toContain('重复人工说明章节');
+  expect(result.stderr).toContain('请先合并说明内容');
+  expect(project.read('src/resources/ARCHITECTURE.md')).toBe(document);
 });
 
-test('匿名签名、全局声明、函数值与访问器按真实种类展示，联合分支字段不冒充共同成员',()=>{
-  const project=fixture({'src/core/types.ts':`
-    export interface Callable { (input:string):Promise<number>; new(input:string):object; [key:string]:unknown }
-    export type Factory = (value:string)=>number;
-    export type Variant = { kind:'a'; onlyA:string } | { kind:'b'; onlyB:number };
-    export class Owner {
-      callback:Factory=()=>1;
-      protected get value(){return 1}
-      protected set value(next:number){}
-      Run(){return this.callback('value')}
-    }
-    declare global { interface Window { owner:Owner } }
-    export enum Mode { Ready, Closed }
-    export default class { Start(){} }
-  `});
-  const result=project.run();expect(result.status,result.stderr).toBe(0);
-  const document=project.read('src/core/ARCHITECTURE.md');
-  for(const entry of ['+调用签名()','+构造签名()','+[key] : 索引签名','+callback : function','#value : get','#value : set','+Run()','+owner','+Ready','+Closed','+Start()'])expect(document).toContain('  '+entry+'\n');
-  expect(document).toContain('["global.Window"]');
-  expect(document).toContain('["default"]');
-  expect(document).toContain('<<enumeration>>');
-  expect(document).toContain('匿名签名（Callable，不是具名方法）：`(input:string):Promise<number>;`');
-  expect(document).not.toContain('+callback()');
-  expect(document).not.toContain('+onlyA');
-  expect(document).not.toContain('+onlyB');
-});
-
-test('继承和公开函数穿过具名、星号、默认及命名空间重导出后仍指向真实声明',()=>{
-  const project=fixture({
-    'src/core/base.ts':'export class Base {} export default class DefaultBase {} export function Invoke(){} export const callback=()=>1;',
-    'src/core/renamed.ts':"export {Base as Renamed,default as Primary,Invoke as Call,callback as callbackAlias} from './base.js';",
-    'src/core/index.ts':"export * from './renamed.js'; export type {Invoke as TypeOnlyCall} from './base.js';",
-    'src/core/type-only.ts':"export type * from './base.js';",
-    'src/core/type-forward.ts':"export * from './type-only.js';",
-    'src/core/children.ts':"import {Renamed as Parent,Primary} from './index.js'; import * as Types from './index.js'; export class Child extends Parent {} export class Second extends Primary {} export class Third extends Types.Renamed {}",
-  });
-  const result=project.run();expect(result.status,result.stderr).toBe(0);
-  const document=project.read('src/core/ARCHITECTURE.md');
-  for(const name of ['Parent','Primary','Types.Renamed'])expect(document).toContain('继承／实现来源：`'+name+'` → [base.ts](base.ts)');
-  expect(document).toContain('（声明 `Base`）');
-  expect(document).toContain('（声明 `DefaultBase`）');
-  const barrel=document.split('### index.ts')[1].split('### ')[0];
-  expect(barrel).toContain('+Call()');
-  expect(barrel).toContain('+callbackAlias : function');
-  expect(barrel).not.toContain('+TypeOnlyCall');
-  for(const file of ['type-only.ts','type-forward.ts']){
-    const section=document.split('### '+file)[1].split('### ')[0];
-    expect(section).not.toContain('+Invoke()');
-    expect(section).not.toContain('+callback');
-  }
-  expect(project.run(true).status).toBe(0);
-});
-
-test('扫描排除第三方和构建目录，但不能把缺少说明的维护空目录当作通过',()=>{
-  const project=fixture({
-    'src/core/item.ts':'export class Item {}',
-    'src/node_modules/vendor/README.md':'第三方自有说明',
-    'src/build/bundle.js':'generated invalid source {{{',
-  });
-  const result=project.run();expect(result.status,result.stderr).toBe(0);
-  expect(project.read('src/ARCHITECTURE.md')).not.toContain('[node_modules/]');
-  expect(project.read('src/ARCHITECTURE.md')).not.toContain('[build/]');
-  expect(project.read('src/node_modules/vendor/README.md')).toBe('第三方自有说明');
-  project.mkdir('src/core/unexplained');
-  const initial=project.read('src/core/ARCHITECTURE.md');
-  const invalid=project.run();expect(invalid.status).toBe(1);
-  expect(invalid.stderr).toContain('请先编写 src/core/unexplained/ARCHITECTURE.md');
-  expect(project.read('src/core/ARCHITECTURE.md')).toBe(initial);
+test('忽略第三方和产物，但空维护目录缺少说明不能漏过',()=>{
+  const project=fixture({'src/item.ts':'export const value=1;'});
+  for(const directory of ['node_modules','build','.vite','__pycache__'])project.write('src/'+directory+'/foreign.ts',"import './missing.js';");
+  expect(project.run().status).toBe(0);
+  project.mkdir('src/empty');
+  const result=project.run();expect(result.status).toBe(1);
+  expect(result.stderr).toContain('请先编写 src/empty/ARCHITECTURE.md');
+  project.write('src/empty/ARCHITECTURE.md',manual('空模块'));
+  expect(project.run().status).toBe(0);
+  expect(project.read('src/ARCHITECTURE.md')).toContain('[empty](empty/ARCHITECTURE.md)');
 });

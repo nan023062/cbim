@@ -28,6 +28,6 @@
 
 ## 资料归属与历史
 
-工程资料目录已删除，不再搬到另一目录。操作流程沿现有项目 Skill 与工具维护，变更和验证事实记录在 Git 提交及关联 Issue／PR；完整删除前内容可用 `git show 4bedbca45d1e3b5f7992b21c4a82ce658cfc98e6:<原仓库相对路径>` 本地追溯。该提交尚未推送时，不把它当作在线阅读入口。通用标准在 [docs](../docs/05-工程文件组织与代码阅读设计.md)，产品运行规范由[各业务模块代码常量](../src/logic/knowledge/rules/builtins.ts)提供，品牌等独立资源在 [assets](../assets/)。
+工程资料目录已删除，不再搬到另一目录。操作流程沿现有项目 Skill 与工具维护，变更和验证事实记录在 Git 提交及关联 Issue／PR；完整删除前内容可用 `git show 4bedbca45d1e3b5f7992b21c4a82ce658cfc98e6:<原仓库相对路径>` 本地追溯。该提交尚未推送时，不把它当作在线阅读入口。通用标准在 [docs](../ainative/docs/05-工程文件组织与代码阅读设计.md)，产品运行规范由[各业务模块代码常量](../src/logic/knowledge/rules/builtins.ts)提供，品牌等独立资源在 [assets](../assets/)。
 
 本次收敛前的设计正文可查 [固定历史版本](https://github.com/nan023062/cbim/tree/8c06ff1edacbb296efb994e80eb941a811a1aa8c/design)；更早已退出的方案和报告见 [首次清理前版本](https://github.com/nan023062/cbim/tree/c3178be11e24259d99ed59db60cc4781afb15782/design)。不再维护平行历史副本。

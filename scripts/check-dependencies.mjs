@@ -11,7 +11,7 @@ import {isEngine,isOrchestration,orchestrationRoots,runtimePublicEntries} from '
 
 // 检查维护中的代码，而非编译后的 JS；类型边和 re-export 同样构成架构依赖。
 // .agents 是宿主提供的 Skill 符号链接入口，实际文件归 .claude 扫描，避免重复遍历。
-export const roots = ['src', 'tests', 'unittest', 'scripts', 'design', 'docs', '.claude', '.codex'];
+export const roots = ['src', 'tests', 'unittest', 'scripts', 'design', 'ainative/docs', '.claude', '.codex'];
 const code = /\.(?:[cm]?[jt]sx?)$/;
 const slash = value => value.replaceAll('\\', '/');
 const key = value => process.platform === 'win32' ? slash(path.resolve(value)).toLowerCase() : path.resolve(value);

@@ -60,11 +60,11 @@ C 保存可复用能力，B 保存业务事实，M 可保存个人临时线索�
 
 ## 第六篇：资产组织与实施顺序
 
-产品加载范围由 [内置知识白名单](../src/logic/knowledge/rules/builtins.ts) 决定。被白名单加载的运行知识属于产品资产，不能因普通 Markdown 引用少就删除。项目开发 Skill 与产品内置 Skill 分别维护。
+产品加载范围由 [内置知识白名单](../../src/logic/knowledge/rules/builtins.ts) 决定。被白名单加载的运行知识属于产品资产，不能因普通 Markdown 引用少就删除。项目开发 Skill 与产品内置 Skill 分别维护。
 
 设计目录只保留产品目标、核心取舍、未落地设计和原型；操作流程沿现有工具与项目 Skill 维护，开发与验证事实记录在 Git 提交及关联 Issue／PR，当前实现说明归源码；不强制另建工程资料目录。已完成的旧切片、历史验证及其失效配套快照可按 [资料清理规范](05-工程文件组织与代码阅读设计.md#设计资料的保留与删除) 删除，原文改由固定版本追溯，现行导航同步更新。清理报告不等于取消测试或发布验收，也不因文件位于设计目录就删除构建读取的发布正文、公钥或兼容 Schema。
 
-模块、Agent、Skill 与 Workflow 的具体布局和字段由运行 Schema 定义并校验；任务与恢复以 [任务契约](../src/logic/tasks/rules/ARCHITECTURE.md#contract) 及真实存储为准，本文不复制 Schema 或猜测用户数据路径。
+模块、Agent、Skill 与 Workflow 的具体布局和字段由运行 Schema 定义并校验；任务与恢复以 [任务契约](../../src/logic/tasks/rules/ARCHITECTURE.md#contract) 及真实存储为准，本文不复制 Schema 或猜测用户数据路径。
 
 现行入口是桌面应用与内部 TypeScript 服务。旧 Python 工具、旧方法副本和模块预览器已退出维护，原文可从 Git 历史查阅。
 

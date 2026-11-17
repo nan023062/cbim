@@ -36,7 +36,7 @@ it('resource collection publishes compiled business and legal files, not source 
       'assets/runtime/common-rules.md':'rules',
       'assets/task/task-spec.md':'task',
       'assets/branding/cbim.png':'native brand',
-      'docs/01.md':'concept',
+      'ainative/docs/01.md':'concept',
       'legal/license.txt':'license',
     };
     for(const [name,text]of Object.entries(source)){const file=path.join(repo,name);await fs.mkdir(path.dirname(file),{recursive:true});await fs.writeFile(file,text)}
@@ -48,7 +48,7 @@ it('resource collection publishes compiled business and legal files, not source 
     await collectResources(compiled,target,repo);
     const published=Object.keys(source).filter(name=>name.startsWith('legal/'));
     expect((await inventory(target)).map(file=>file.path)).toEqual(['.vite/build/main.js',...published,'package.json'].sort());
-    for(const name of ['design','docs','engineering','assets'])await expect(fs.stat(path.join(target,name))).rejects.toMatchObject({code:'ENOENT'});
+    for(const name of ['design','ainative','docs','engineering','assets'])await expect(fs.stat(path.join(target,name))).rejects.toMatchObject({code:'ENOENT'});
     await expect(fs.stat(path.join(target,'design/retired'))).rejects.toMatchObject({code:'ENOENT'});
     await expect(fs.stat(path.join(target,'.vite/renderer'))).rejects.toMatchObject({code:'ENOENT'});
     expect((await fs.stat(path.join(repo,'design/retired/scripts'))).isDirectory()).toBe(true);

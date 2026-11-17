@@ -4,6 +4,15 @@ import path from 'node:path';
 import {afterEach, expect, test} from 'vitest';
 import {auditDependencies} from '../../scripts/check-dependencies.mjs';
 
+test('ainative/docs 中维护的示例源码仍参与依赖和类型环检查',()=>{
+  const valid=audit({'ainative/docs/example.ts':'export const value=1;'});
+  expect(valid.ok).toBe(true);
+  expect(valid.sourceFiles).toContain('ainative/docs/example.ts');
+  const circular=audit({'ainative/docs/a.ts':"export type {B} from './b'; export type A=string;",'ainative/docs/b.ts':"export type {A} from './a'; export type B=string;"});
+  expect(circular.ok).toBe(false);
+  expect(circular.cycles).toHaveLength(1);
+});
+
 test('模块单元仍参与依赖扫描，但不冒充产品层或进入生产依赖',()=>{
   const valid=audit({'src/logic/sample/index.ts':'export const value=1;', 'tests/src/logic/sample/sample.test.ts':"import {value} from '../../../../src/logic/sample'; import fs from 'node:fs';"});
   expect(valid.ok).toBe(true);

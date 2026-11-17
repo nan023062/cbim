@@ -2045,7 +2045,7 @@
       "inputs": [
         "src/",
         "scripts/",
-        "docs/",
+        "ainative/docs/",
         "AGENTS.md",
         "package.json",
         "vitest.config.ts"

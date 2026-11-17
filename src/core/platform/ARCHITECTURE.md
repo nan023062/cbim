@@ -4,11 +4,13 @@
 
 ## 设计意图
 
-按运行环境隔离基础实现；Node 提供摘要、原生锁、文件和网页，Electron 提供匿名网页适配与系统加密。便携 Core 不依赖平台。
+按运行环境封装技术实现，避免便携算法和纯协议隐式加载系统能力。
+
+`node` 提供摘要、跨进程锁、单文件 I/O 和 HTTP 读取；`electron` 提供 Chromium 网页适配与系统加密。消费者按环境选择入口，Electron 能力由可信宿主注入业务；目录并列不表示所有平台能力可相互依赖。
 
 ## 主要组成
 
-本层由下列子模块组合，每个子模块作为独立的虚拟类封装参与本层协作。
+本层没有直接产品实现，由下方子模块组成；每个直接子模块作为一个虚拟封装，只在本层呈现整体职责与协作。
 
 <!-- architecture:generated:start -->
 
@@ -33,8 +35,8 @@ N_97e54b4c6962 ..> N_19f11a39d3a8 : 依赖
 
 | 虚拟封装 | 整体职责 |
 | --- | --- |
-| [electron](electron/ARCHITECTURE.md) | Electron 独立技术入口：匿名网页读取与系统加密；由可信 Bridge 注入，普通业务不导入 Electron。 |
-| [node](node/ARCHITECTURE.md) | Node 专属摘要、原生互斥锁、单文件 I/O 与网页读取，分别通过独立公开入口使用；不依赖业务或 Electron。 |
+| [electron](electron/ARCHITECTURE.md) | 将 Chromium 网页读取和系统加密适配为 Core 的小型技术接口，供可信桌面宿主装配。 |
+| [node](node/ARCHITECTURE.md) | 集中 Node 专属的基础能力入口，隔离摘要、原生互斥、文件与网络实现对运行环境的依赖。 |
 
 [上层设计](../ARCHITECTURE.md)
 

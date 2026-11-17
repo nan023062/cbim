@@ -4,7 +4,9 @@
 
 ## 设计意图
 
-Electron 独立技术入口：匿名网页读取与系统加密；由可信 Bridge 注入，普通业务不导入 Electron。
+将 Chromium 网页读取和系统加密适配为 Core 的小型技术接口，供可信桌面宿主装配。
+
+`ElectronBrowserReader` 执行匿名页面采集并管理本次浏览资源，`secrets` 使用 Electron 系统加密。两项能力相互独立，不拥有业务登录、网页工具权限或配置文件；Logic 消费注入端口而不导入 Electron。
 
 ## 主要组成
 

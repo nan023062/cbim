@@ -4,14 +4,20 @@
 
 ## 设计意图
 
-将 Electron 和 CLI 的外部请求接入 Logic/Application。Application 适配类负责委托，main 负责宿主装配，启动、通信和平台传输各自封装；业务生命周期仍由 Logic 持有。
+承接 Electron 与 CLI 的可信入口，把外部操作连接到唯一业务应用，并管理桌面窗口与宿主资源。
+
+本层 `Application` 是 Logic 应用的通信适配，`main` 创建桌面窗口、接入 IPC 并注入平台端口。子模块 `bootstrap` 在业务启动前选择运行资源，`ipc` 分派操作，`platform` 提供进程传输，`commands` 提供 CLI。业务关闭委托 Logic；窗口、IPC 和文件工人的宿主收束仍在 Bridge。
 
 ## 主要组成
 
 | 组成 | 定位 |
 | --- | --- |
 | [Application](application.ts) | 继承 Logic/Application 并补充通信委托，不复制业务状态。 |
-| [main](main.ts) | 本机后端的 Electron 装配入口，区分开发与打包品牌资源路径，管理窗口、固定 IPC、原生文件选择、附件预览与打包验证；前端只通过 bridge/preload 请求服务。 |
+| [main](main.ts) | Electron 运行资源入口，装配窗口、IPC、文件选择及平台端口，向冷壳报告真实启动阶段。 |
+
+## 现状与目标边界
+
+当前是混合目录。[main.ts](main.ts) 是 [桌面构建登记](../../../desktop-builds.ts) 中的运行资源入口，冷壳依赖固定 `main.js` 与 `startDesktop` 导出；它现在仍包含窗口和 IPC 装配，不是纯转接。[application.ts](application.ts) 通过真实继承提供通信委托。目标是保持这些兼容入口最小，把宿主装配与适配实现归入明确子封装；迁移时须同步构建、冷壳加载和 CLI 消费者，不能改变启动确认或业务关闭语义。
 
 <!-- architecture:generated:start -->
 
@@ -19,7 +25,7 @@
 
 标注为 `virtual` 的节点是直接子模块的虚拟类封装；内部设计沿下方入口阅读。
 
-### 关系组 1
+### 关系组 1：Application
 
 ```mermaid
 classDiagram
@@ -52,7 +58,7 @@ N_d64b59b23e98 ..> N_399588f8ad5e : 依赖
 N_272fcdbbcdcb ..> N_02712c31a780 : 依赖
 ```
 
-### 关系组 2
+### 关系组 2：bootstrap
 
 ```mermaid
 classDiagram
@@ -64,7 +70,11 @@ click N_efcc6effcb00 href "bootstrap/ARCHITECTURE.md"
 
 ### 跨图协作
 
-- [bootstrap](bootstrap/ARCHITECTURE.md)（图 2）→ [main](main.ts)（图 1）：依赖。
+按引用方归并目标，保留全部跨图关系；分图只用于阅读，不表示新增模块或依赖边界。
+
+| 引用方 | 关系 | 目标 |
+| --- | --- | --- |
+| [bootstrap](bootstrap/ARCHITECTURE.md)（图 2） | 依赖 | [main](main.ts)（图 1） |
 
 外部继承／实现边界：[Application](../../logic/application/application.ts)。
 
@@ -72,10 +82,10 @@ click N_efcc6effcb00 href "bootstrap/ARCHITECTURE.md"
 
 | 虚拟封装 | 整体职责 |
 | --- | --- |
-| [bootstrap](bootstrap/ARCHITECTURE.md) | 桌面冷启动封装：在业务应用访问用户数据前选择并核实运行资源，持有更新和引擎缓存，再向业务入口注入窄端口。资源选择与业务启动分开，保留失败恢复边界。 |
-| [commands](commands/ARCHITECTURE.md) | CLI 入口，复用应用和调度，不拥有第二套领域规则。 |
-| [ipc](ipc/ARCHITECTURE.md) | 把已接入的桌面操作分派到应用服务。统一入口负责请求解析和路由，业务处理器按领域分组；这里传递身份和返回事实，不拥有业务规则或第二套状态。 |
-| [platform](platform/ARCHITECTURE.md) | Electron utility 文件传输和子进程入口；处理可信私有协议，业务文件规则与 Win32 实现归 Logic。 |
+| [bootstrap](bootstrap/ARCHITECTURE.md) | 在业务访问用户数据前选择可信运行资源，并隔离资源切换、失败恢复与正式应用启动。 |
+| [commands](commands/ARCHITECTURE.md) | 提供面向开发与诊断的命令行执行入口，复用业务应用的初始化、运行与关闭流程。 |
+| [ipc](ipc/ARCHITECTURE.md) | 将已接入的桌面操作解析并分派到对应业务服务，保持传输路由与领域决策分离。 |
+| [platform](platform/ARCHITECTURE.md) | 以 Electron utility 子进程承载受控文件的可信传输，将宿主进程管理与业务文件规则分开。 |
 
 [上层设计](../ARCHITECTURE.md)
 

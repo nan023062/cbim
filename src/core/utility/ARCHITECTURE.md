@@ -4,7 +4,9 @@
 
 ## 设计意图
 
-提供按异步协调、字节、JSON、字符串和图组织的通用算法与数据结构。无状态算法采用静态类，有状态协调器按实例隔离；业务规则、取消策略和资源生命周期由消费者决定。
+按异步协调、字节、JSON、字符串和图组织独立算法与数据结构，供不同业务复用机制而不共享业务状态。
+
+静态工具类处理单次输入，`SerialQueue`、`PendingRequests`、`InFlightOperations` 和 `LineFramer` 各自保存一个实例的队列、关联或缓冲。错误类只报告技术事实。等待 Promise 快照、请求超时和业务取消不是同一保证；进程退出、重试及权限策略仍由消费者控制。
 
 ## 主要组成
 
@@ -25,7 +27,7 @@
 
 ## 架构关系
 
-### 关系组 1
+### 关系组 1：ByteLimitError
 
 ```mermaid
 classDiagram
@@ -46,7 +48,7 @@ N_cd7b7ac94179 <|-- N_7eb8ee989493
 N_357c70bf833c ..> N_7eb8ee989493 : 依赖
 ```
 
-### 关系组 2
+### 关系组 2：StrictJsonError
 
 ```mermaid
 classDiagram

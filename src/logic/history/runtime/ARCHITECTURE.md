@@ -4,7 +4,9 @@
 
 ## 设计意图
 
-会话履历查询编排，依赖 logic/history/rules 履历契约，实际文件索引在 logic/history/service。
+将已提交派发与执行日志投影为角色会话履历，隔离索引查询与真实运行。
+
+`AgentHistoryService` 保存实例内索引及事件读取缓存，通过注入端口持久化和读取原日志。公开契约与存储接口来自 [team/rules](../../team/rules/ARCHITECTURE.md)，物理适配在 [service](../service/ARCHITECTURE.md)。初始化后接入观察，关闭前停止观察并等待索引写完；索引错误不能改写执行事实。
 
 ## 主要组成
 

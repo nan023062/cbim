@@ -4,7 +4,9 @@
 
 ## 设计意图
 
-围绕目标周期协调补充、依赖调整、人工决定、续执行与恢复。服务按命令责任分开，通过派发、证据和执行端口协作；ScopeGoalService 仍承担跨域目标编排。
+将任务规则连接到可信日志、知识和派发事务，按命令责任协调目标变更与人工处置。
+
+依赖变更服务只处理可核实的未领取闭包；补充与人工接续服务保存一次性意图；恢复与重规划服务创建有原证据关联的新周期。`ScopeGoalService` 仍承担计划、审阅及跨域证据编排，各服务使用原事务边界而不自建账本。
 
 ## 主要组成
 
@@ -28,7 +30,7 @@
 
 ## 架构关系
 
-### 关系组 1
+### 关系组 1：ScopeGoalService
 
 ```mermaid
 classDiagram
@@ -51,7 +53,7 @@ N_aa147cb23938 ..> N_3271aab2d78e : 依赖
 N_df9c4bb6fea7 ..> N_3271aab2d78e : 依赖
 ```
 
-### 关系组 2
+### 关系组 2：ScopeReplanService
 
 ```mermaid
 classDiagram
@@ -69,7 +71,7 @@ class N_ca6b4278c2aa["ScopeRecoveryService"]
 click N_ca6b4278c2aa href "scope-recovery-service.ts"
 ```
 
-### 关系组 3
+### 关系组 3：TopicInterruptionService
 
 ```mermaid
 classDiagram
@@ -79,7 +81,11 @@ click N_ecc5d72a43c4 href "topic-interruption-service.ts"
 
 ### 跨图协作
 
-- [ScopeReplanService](scope-replan-service.ts)（图 2）→ [ScopeGoalService](scope-goal-service.ts)（图 1）：依赖。
+按引用方归并目标，保留全部跨图关系；分图只用于阅读，不表示新增模块或依赖边界。
+
+| 引用方 | 关系 | 目标 |
+| --- | --- | --- |
+| [ScopeReplanService](scope-replan-service.ts)（图 2） | 依赖 | [ScopeGoalService](scope-goal-service.ts)（图 1） |
 
 [上层设计](../ARCHITECTURE.md)
 

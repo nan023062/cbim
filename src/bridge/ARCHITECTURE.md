@@ -4,11 +4,13 @@
 
 ## 设计意图
 
-连接业务应用与桌面宿主。通信契约、页面安全桥和可信服务端分别封装，业务状态与生命周期交给 Logic，平台技术机制使用 Core。
+把桌面宿主与业务应用连接起来，同时限制页面可触达的能力。通信数据、安全桥和可信服务端分别封装，业务规则与权威状态留在 Logic。
+
+`contracts` 定义双方共同理解的操作与数据；`preload` 向页面开放固定调用；`server` 校验接入身份、解析请求并委托业务服务。宿主平台能力由 server 装配，页面不能借协议取得任意 Node/Electron 能力。
 
 ## 主要组成
 
-本层由下列子模块组合，每个子模块作为独立的虚拟类封装参与本层协作。
+本层没有直接产品实现，由下方子模块组成；每个直接子模块作为一个虚拟封装，只在本层呈现整体职责与协作。
 
 <!-- architecture:generated:start -->
 
@@ -38,9 +40,9 @@ N_6741bcbdf4f1 ..> N_56e2b9e614cc : 依赖
 
 | 虚拟封装 | 整体职责 |
 | --- | --- |
-| [contracts](contracts/ARCHITECTURE.md) | 定义桌面与业务服务之间可序列化的请求、响应和展示数据。按业务组织契约，由统一调用映射关联操作与输入输出；不向页面暴露凭据、文件句柄或服务实例。 |
-| [preload](preload/ARCHITECTURE.md) | 固定 Electron IPC 桥；不向页面暴露 Node、凭据或任意磁盘 API。 实现关联调用签名并沿原信封转发，不重试错误或改变主Frame授权。 |
-| [server](server/ARCHITECTURE.md) | 将 Electron 和 CLI 的外部请求接入 Logic/Application。Application 适配类负责委托，main 负责宿主装配，启动、通信和平台传输各自封装；业务生命周期仍由 Logic 持有。 |
+| [contracts](contracts/ARCHITECTURE.md) | 定义页面与可信服务端之间可序列化的操作、输入输出和展示事实，使通信消费者不必加载业务服务或平台实现。 |
+| [preload](preload/ARCHITECTURE.md) | 在 Electron 的隔离上下文中提供最小页面调用桥，让界面只使用声明过的操作和文件导入能力。 |
+| [server](server/ARCHITECTURE.md) | 承接 Electron 与 CLI 的可信入口，把外部操作连接到唯一业务应用，并管理桌面窗口与宿主资源。 |
 
 [上层设计](../ARCHITECTURE.md)
 

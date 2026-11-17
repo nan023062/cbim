@@ -2,11 +2,13 @@
 
 ## 设计意图
 
-封装团队角色、稳定岗位与成员执行。规则维护身份和绑定，service 管理岗位登记，runtime 管理运行过程，settings 保存主 Agent 的选型。
+区分静态角色、长期岗位与真实执行，让能力配置、来源采纳和运行身份各自清楚。
+
+`rules` 定义角色与岗位协议，`service` 登记和采纳岗位，`runtime` 执行已派发任务及检查点流程，`settings` 保存主 Agent 选型。岗位存在、配置可用和已取得执行准入是不同事实，实例退役不删除角色履历。
 
 ## 主要组成
 
-本层由下列子模块组合，每个子模块作为独立的虚拟类封装参与本层协作。
+本层没有直接产品实现，由下方子模块组成；每个直接子模块作为一个虚拟封装，只在本层呈现整体职责与协作。
 
 <!-- architecture:generated:start -->
 
@@ -41,10 +43,10 @@ N_b25bffb2e9f6 ..> N_9b6f782505bc : 依赖
 
 | 虚拟封装 | 整体职责 |
 | --- | --- |
-| [rules](rules/ARCHITECTURE.md) | 定义团队角色、岗位、执行绑定和角色履历的纯业务契约。登记、来源采纳与真实执行分别表达，岗位存在不代表已经取得运行许可。 |
-| [runtime](runtime/ARCHITECTURE.md) | 正式成员执行、自动协作与检查点服务；按冻结任务/Workflow 建立真实运行，保留取消、等待与证据绑定。 |
-| [service](service/ARCHITECTURE.md) | 岗位、来源与责任登记的应用服务；协调知识、文件实现和 Logic 领域规则，不拥有正式运行准入。 |
-| [settings](settings/ARCHITECTURE.md) | 仅保留主 Agent 设置及工作区 revision 校验；模型配置服务已迁至 logic/models/service，经 logic/engines/service 的引擎投影复用同一个模型配置短锁。 |
+| [rules](rules/ARCHITECTURE.md) | 表达团队角色、岗位、执行绑定和会话履历的纯契约，为派发与存储提供共同身份依据。 |
+| [runtime](runtime/ARCHITECTURE.md) | 执行已派发成员任务并维护安全停泊、续执行和明确放弃，保留原任务与各运行段的关系。 |
+| [service](service/ARCHITECTURE.md) | 提供工作区岗位登记、来源采纳与差异查询，使长期人员配置独立于模型执行。 |
+| [settings](settings/ARCHITECTURE.md) | 保存每个工作区主 Agent 的引擎与模型选择，让对话栏和团队配置使用同一份状态。 |
 
 [上层设计](../ARCHITECTURE.md)
 

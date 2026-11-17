@@ -2,11 +2,13 @@
 
 ## 设计意图
 
-桌面手动命令终端业务；按工作区与页签持有进程和有界输出，不向界面暴露 Node。
+提供工作区内显式手动命令的终端能力，按页签隔离输出和进程生命周期。
+
+`service` 实现命令执行与清理，Bridge 接入受限操作，View 展示有界输出。该入口不同于 Agent 工具执行，不共享其自动调度或恢复账本，也不向页面开放 Node 对象。
 
 ## 主要组成
 
-本层由下列子模块组合，每个子模块作为独立的虚拟类封装参与本层协作。
+本层没有直接产品实现，由下方子模块组成；每个直接子模块作为一个虚拟封装，只在本层呈现整体职责与协作。
 
 <!-- architecture:generated:start -->
 
@@ -26,7 +28,7 @@ click N_1296c0f72fcb href "service/ARCHITECTURE.md"
 
 | 虚拟封装 | 整体职责 |
 | --- | --- |
-| [service](service/ARCHITECTURE.md) | 逐条命令执行及持续 UTF-8 解码；关闭释放当前进程，不模拟 PTY 或跨命令 shell 会话。 |
+| [service](service/ARCHITECTURE.md) | 按工作区和页签执行用户明确提交的单条命令，保存有界输出并管理当前进程。 |
 
 [上层设计](../ARCHITECTURE.md)
 

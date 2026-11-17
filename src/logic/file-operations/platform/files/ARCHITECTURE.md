@@ -2,7 +2,9 @@
 
 ## 设计意图
 
-受控文件的 Win32 操作、子进程协议、冻结内容和产物读取验证；传输由 Bridge 注入，不能用取消代替物理退出。
+在固定工作区范围内操作与观察真实文件，为受控写入、产物采集和验证提供同字节依据。
+
+读取与清单对象核实普通文件和完整范围，备份对象保存 before/intended-after，Win32 实现持有本次文件和目录句柄；代码检查及冻结范围执行复用这些观察。子进程传输从外部注入，取消信号不能替代真实退出或证明写入未发生。
 
 ## 主要组成
 
@@ -19,7 +21,7 @@
 
 ## 架构关系
 
-### 关系组 1
+### 关系组 1：CodeCheckRunner
 
 ```mermaid
 classDiagram
@@ -42,7 +44,7 @@ N_1190764b56b3 <|.. N_306c630775fa
 N_940140784738 ..> N_5ea4492a8254 : 依赖
 ```
 
-### 关系组 2
+### 关系组 2：ScopedExecutionFiles
 
 ```mermaid
 classDiagram
@@ -57,7 +59,11 @@ N_de497febb0e9 <|.. N_182e20f4398d
 
 ### 跨图协作
 
-- [ScopedExecutionFiles](scoped-execution-files.ts)（图 2）→ [Win32ControlledFile](controlled-file-win32.ts)（图 1）：依赖。
+按引用方归并目标，保留全部跨图关系；分图只用于阅读，不表示新增模块或依赖边界。
+
+| 引用方 | 关系 | 目标 |
+| --- | --- | --- |
+| [ScopedExecutionFiles](scoped-execution-files.ts)（图 2） | 依赖 | [Win32ControlledFile](controlled-file-win32.ts)（图 1） |
 
 外部继承／实现边界：[CodeCheckPort](../../../evidence/rules/code-check.ts)、[ScopedExecutionPort](../../../execution/rules/capabilities/run-scoped-execution.ts)。
 

@@ -145,9 +145,50 @@ test('大型模型分图保留跨图边与导航，不截断类或缩小巨图',
   expect(blocks).toHaveLength(3);
   for(const block of blocks)expect((block.match(/^class /gm)||[]).length).toBeLessThanOrEqual(6);
   for(let i=0;i<14;i++)node(document,'C'+i);
-  const direct=(document.match(/ \.\.> /g)||[]).length,cross=(document.match(/）：依赖。/g)||[]).length;
+  const direct=(document.match(/ \.\.> /g)||[]).length;
+  const cross=document.split('\n').filter(line=>/^\| .* \| 依赖 \| /.test(line)).reduce((count,line)=>count+(line.split(' | ')[2].match(/（图 \d+）/g)||[]).length,0);
   expect(direct+cross).toBe(13);
   expect(document).toContain('### 跨图协作');
+});
+
+test('密集跨图关系按引用方归并，所有目标保留且不与继承混写',()=>{
+  const files:Record<string,string>={};
+  // 十二个类互相引用会产生分图；每个来源的多个跨图目标须完整保留。
+  for(let i=0;i<12;i++)files[`src/core/utility/c${i}.ts`]=Array.from({length:12},(_,j)=>i===j?'':`import ${i===11&&j===0?'':'type '}{C${j}} from './c${j}.js';`).join('\n')+`\nexport class C${i}${i===11?' extends C0':''} {`+Array.from({length:12},(_,j)=>i===j?'':`value${j}?:C${j};`).join('')+'}';
+  const project=fixture(files);
+  expect(project.run().status).toBe(0);
+  const document=project.read('src/core/utility/ARCHITECTURE.md');
+  const edges=new Set<string>();
+  const ids=new Map(Array.from({length:12},(_,i)=>[node(document,'C'+i),'C'+i]));
+  for(const match of document.matchAll(/^(\w+) \.\.> (\w+) : 依赖$/gm))edges.add(ids.get(match[1])+'>'+ids.get(match[2]));
+  const rows=document.split('\n').filter(line=>/^\| .* \| 依赖 \| /.test(line));
+  expect(rows).toHaveLength(12);
+  for(const row of rows){
+    const [,source,,targets]=row.split('|').map(value=>value.trim());
+    const from=source.match(/\[(C\d+)\]/)![1];
+    const names=[...targets.matchAll(/\[(C\d+)\]/g)].map(match=>match[1]);
+    expect(names).toHaveLength(from==='C11'?5:6);
+    for(const to of names)edges.add(from+'>'+to);
+  }
+  const inheritance=document.split('\n').filter(line=>/^\| .* \| 继承 \| /.test(line));
+  expect(inheritance).toHaveLength(1);
+  expect(inheritance[0]).toContain('[C11](c11.ts)（图 2） | 继承 | [C0](c0.ts)（图 1）');
+  edges.add('C11>C0');
+  expect(edges.size).toBe(132);
+  for(let i=0;i<12;i++)for(let j=0;j<12;j++)if(i!==j)expect(edges.has(`C${i}>C${j}`)).toBe(true);
+  expect(project.run(true).status).toBe(0);
+});
+
+test('当前组成与未实施目标分开，生成不将现状映射里的拟议封装画入模型',()=>{
+  const file='src/core/ARCHITECTURE.md';
+  const mapping='## 现状与目标边界\n\n当前 [Root](root.ts) 与子模块并存。拟议 facade 尚未实现，迁移需保持入口和状态归属。\n\n';
+  const original=manual('core',['| [Root](root.ts) | 当前真实实现。 |']).replace(start,mapping+start);
+  const project=fixture({'src/core/root.ts':'export class Root {}','src/core/utility/item.ts':'export const value=1;',[file]:original});
+  expect(project.run().status).toBe(0);
+  const document=project.read(file),generated=document.split(start)[1].split(end)[0];
+  expect(document).toContain(mapping);
+  expect(generated).toContain('["Root"]');expect(generated).toContain('["utility"]');
+  expect(generated).not.toContain('facade');expect(generated).not.toContain('拟议');
 });
 
 test('模块依赖包括动态导入、require、类型和 CSS，父层聚合为虚拟封装关系',()=>{

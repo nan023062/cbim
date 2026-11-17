@@ -4,7 +4,9 @@
 
 ## 设计意图
 
-展示主会话任务图、目标状态与核实处置入口。只读投影组织图和摘要，各控制器维护单类命令的交互与原回执；页面不把本地状态当作业务完成或执行授权。
+展示主会话任务与目标的真实投影，并为证据核实、人工决定和显式接续提供交互入口。
+
+图与周期投影先核实身份和游标再统一发布；各命令控制器保存草稿、冻结请求和原回执，Pool 在同一会话视图间共享未决操作。组件消费这些状态并组合 execution-view，业务完成、恢复许可和平台退出始终由后端返回。当前多类控制器仍同处一个实现目录，图中的分组只是阅读分组。
 
 ## 主要组成
 
@@ -44,7 +46,7 @@
 
 ## 架构关系
 
-### 关系组 1
+### 关系组 1：SessionReadProjection
 
 ```mermaid
 classDiagram
@@ -64,7 +66,7 @@ N_6831114addca ..> N_e1a61fda5f6c : 依赖
 N_6831114addca ..> N_d5844ea822e3 : 依赖
 ```
 
-### 关系组 2
+### 关系组 2：ControlledFileController
 
 ```mermaid
 classDiagram
@@ -85,7 +87,7 @@ N_fd8277a56026 ..> N_d434f04c668d : 依赖
 N_4ad17c13feb3 ..> N_e4dc6dc1fdde : 依赖
 ```
 
-### 关系组 3
+### 关系组 3：ExecutionRecoveryController
 
 ```mermaid
 classDiagram
@@ -105,7 +107,7 @@ N_1d27519fbc69 ..> N_7569f29f82e2 : 依赖
 N_c14912c0e303 ..> N_64a946d9fe1f : 依赖
 ```
 
-### 关系组 4
+### 关系组 4：HumanDecisionPool
 
 ```mermaid
 classDiagram
@@ -124,7 +126,7 @@ click N_a09600bcc1e8 href "replan-state.ts"
 N_a09600bcc1e8 ..> N_257ee3785764 : 依赖
 ```
 
-### 关系组 5
+### 关系组 5：MemberTaskDetail
 
 ```mermaid
 classDiagram
@@ -148,7 +150,11 @@ click N_64c8e50684ab href "ScopeGoalPanel.tsx"
 
 ### 跨图协作
 
-- [HumanDecisionPool](human-decision-state.ts)（图 4）→ [HumanDecisionController](human-decision-state.ts)（图 3）：依赖。
+按引用方归并目标，保留全部跨图关系；分图只用于阅读，不表示新增模块或依赖边界。
+
+| 引用方 | 关系 | 目标 |
+| --- | --- | --- |
+| [HumanDecisionPool](human-decision-state.ts)（图 4） | 依赖 | [HumanDecisionController](human-decision-state.ts)（图 3） |
 
 [上层设计](../ARCHITECTURE.md)
 

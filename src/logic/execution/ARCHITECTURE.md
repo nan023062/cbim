@@ -2,11 +2,13 @@
 
 ## 设计意图
 
-封装 Agent 调用如何成为真实执行。准入、上下文、循环规则、引擎和存储各自承担一部分责任，由 assembly 组合；任务业务策略通过端口接入。
+把已核实的 Agent 调用转化为真实执行，分离准入、上下文、循环机制、引擎适配与运行持久化。
+
+`assembly` 连接各能力，`admission` 管理占用，`context` 冻结执行资料，`rules` 驱动引擎无关协议，`engines` 适配具体运行包；`storage` 保存运行事实，`platform` 和 `ports` 约束本机身份与会话访问。执行结束与目标验收分别由本域和任务域判断。
 
 ## 主要组成
 
-本层由下列子模块组合，每个子模块作为独立的虚拟类封装参与本层协作。
+本层没有直接产品实现，由下方子模块组成；每个直接子模块作为一个虚拟封装，只在本层呈现整体职责与协作。
 
 <!-- architecture:generated:start -->
 
@@ -14,7 +16,7 @@
 
 标注为 `virtual` 的节点是直接子模块的虚拟类封装；内部设计沿下方入口阅读。
 
-### 关系组 1
+### 关系组 1：rules
 
 ```mermaid
 classDiagram
@@ -52,7 +54,7 @@ N_cbe164a75aa0 ..> N_07b2628b12c6 : 依赖
 N_07b2628b12c6 ..> N_6cef01312f2a : 依赖
 ```
 
-### 关系组 2
+### 关系组 2：storage
 
 ```mermaid
 classDiagram
@@ -68,21 +70,24 @@ click N_dd1359259d68 href "platform/ARCHITECTURE.md"
 
 ### 跨图协作
 
-- [storage](storage/ARCHITECTURE.md)（图 2）→ [ports](ports/ARCHITECTURE.md)（图 1）：依赖。
-- [storage](storage/ARCHITECTURE.md)（图 2）→ [rules](rules/ARCHITECTURE.md)（图 1）：依赖。
+按引用方归并目标，保留全部跨图关系；分图只用于阅读，不表示新增模块或依赖边界。
+
+| 引用方 | 关系 | 目标 |
+| --- | --- | --- |
+| [storage](storage/ARCHITECTURE.md)（图 2） | 依赖 | [ports](ports/ARCHITECTURE.md)（图 1）、[rules](rules/ARCHITECTURE.md)（图 1） |
 
 ## 子模块
 
 | 虚拟封装 | 整体职责 |
 | --- | --- |
-| [admission](admission/ARCHITECTURE.md) | 运行准入的票据与运行注册，保持可信入口、占用与释放语义；与业务验收分离。 |
-| [assembly](assembly/ARCHITECTURE.md) | 执行域的具体装配点：把 Agent 调用、运行循环、引擎适配和工具能力连接起来。调度器协调父子调用，装配函数选择真实实现；规则层不反向认识这些选择。 |
-| [context](context/ARCHITECTURE.md) | 根据明确选择的角色、模块和 Workflow 生成执行上下文。自动范围、主会话与成员任务分别解析，共用冻结知识边界，内置规范从本版本代码常量取得并按正文版本复核，不在这里启动模型或持有执行状态。 |
-| [engines](engines/ARCHITECTURE.md) | 将不同模型引擎适配为统一执行协议。各引擎独立封装会话与工具差异，共用传输能力、无进展计时和运行包绑定；具体选择由上层装配完成。 |
-| [platform](platform/ARCHITECTURE.md) | 原生会话文件归属与工作区工具路径保护；业务隔离平台归 file-operations，系统加密归 Core。 |
-| [ports](ports/ARCHITECTURE.md) | 执行及工作区身份格式校验；不拥有路径授权、磁盘访问或应用生命周期。 |
-| [rules](rules/ARCHITECTURE.md) | 提供引擎无关的运行协议与工具协调规则。runtime 封装循环机制，capabilities 封装具体执行能力；它们通过明确端口协作，具体引擎由上层装配选择。 |
-| [storage](storage/ARCHITECTURE.md) | 运行日志、运行内输入和游标文件实现；按 logic/execution/rules 的 RunStorage 等端口提供持久化，保留追加、未知和恢复语义。 |
+| [admission](admission/ARCHITECTURE.md) | 协调应用执行名额与工作区占用，令等待、获准和释放都有可信身份。 |
+| [assembly](assembly/ARCHITECTURE.md) | 选择具体引擎并连接调用协调、运行循环与可信工具，作为执行域认识实现细节的装配点。 |
+| [context](context/ARCHITECTURE.md) | 把明确的角色、模块与 Workflow 选择解析为冻结执行资料，保留来源、版本与范围。 |
+| [engines](engines/ARCHITECTURE.md) | 将不同供应商和专业循环适配到统一执行协议，隔离会话、工具和传输差异。 |
+| [platform](platform/ARCHITECTURE.md) | 核实受管原生会话文件与工作区工具路径，为续执行和工具访问提供本机边界。 |
+| [ports](ports/ARCHITECTURE.md) | 集中校验用于运行目录定位的工作区、任务和运行标识格式，避免调用方拼接未验证标识。 |
+| [rules](rules/ARCHITECTURE.md) | 定义引擎无关的任务、事件、工具和存储协议，组合运行机制与受控能力而不认识具体 SDK。 |
+| [storage](storage/ARCHITECTURE.md) | 保存运行的可靠事件、摘要和业务关联，为实时执行与重启读取提供同一事实来源。 |
 
 [上层设计](../ARCHITECTURE.md)
 

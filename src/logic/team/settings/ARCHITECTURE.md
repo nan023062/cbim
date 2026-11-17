@@ -4,7 +4,9 @@
 
 ## 设计意图
 
-仅保留主 Agent 设置及工作区 revision 校验；模型配置服务已迁至 logic/models/service，经 logic/engines/service 的引擎投影复用同一个模型配置短锁。
+保存每个工作区主 Agent 的引擎与模型选择，让对话栏和团队配置使用同一份状态。
+
+`MainAgentSettings` 校验工作区实例与 revision，通过 engines/service 复用 models 的原子配置捕获。它只负责主 Agent 选择，不接管供应商凭据、模型目录或成员运行中的冻结快照。
 
 ## 主要组成
 

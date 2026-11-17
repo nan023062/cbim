@@ -4,7 +4,9 @@
 
 ## 设计意图
 
-将版本发现、资源准备、安装与恢复封装为独立更新系统。桌面安装、运行资源和引擎制品各有状态与存储，只有明确安装时才通过关闭回调等待业务应用退出。
+实现独立于普通业务的版本发现、制品准备、激活与恢复，保护用户数据和原运行选择。
+
+`DesktopUpdates` 与 `NsisUpdateInstaller` 管理安装通道，`RuntimeUpdates` 组合资源存储和激活日志，`EngineArtifacts` 与 `ManagedEngines` 提供签名引擎制品及固定版本解析。后台准备不改变活动版本；明确应用后等待业务关闭，恢复依据原日志与数据访问阶段。
 
 ## 主要组成
 
@@ -22,7 +24,7 @@
 
 ## 架构关系
 
-### 关系组 1
+### 关系组 1：RuntimeStore
 
 ```mermaid
 classDiagram
@@ -47,7 +49,7 @@ N_8ee0c4c2ec64 ..> N_8fa06dc8085b : 依赖
 N_8ee0c4c2ec64 ..> N_e8ce47c6febe : 依赖
 ```
 
-### 关系组 2
+### 关系组 2：DesktopUpdateInstaller
 
 ```mermaid
 classDiagram
@@ -64,7 +66,11 @@ N_e707e61e3773 <|.. N_9354ac4366a3
 
 ### 跨图协作
 
-- [RuntimeUpdates](runtime-updates.ts)（图 1）→ [DesktopUpdateInstaller](desktop-updates.ts)（图 2）：实现。
+按引用方归并目标，保留全部跨图关系；分图只用于阅读，不表示新增模块或依赖边界。
+
+| 引用方 | 关系 | 目标 |
+| --- | --- | --- |
+| [RuntimeUpdates](runtime-updates.ts)（图 1） | 实现 | [DesktopUpdateInstaller](desktop-updates.ts)（图 2） |
 
 外部继承／实现边界：[EngineArtifactsPort](../engine-artifacts.ts)、[DesktopUpdateInstaller](desktop-updates.ts)。
 

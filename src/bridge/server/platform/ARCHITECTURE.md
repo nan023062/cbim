@@ -2,7 +2,9 @@
 
 ## 设计意图
 
-Electron utility 文件传输和子进程入口；处理可信私有协议，业务文件规则与 Win32 实现归 Logic。
+以 Electron utility 子进程承载受控文件的可信传输，将宿主进程管理与业务文件规则分开。
+
+`UtilityControlledFiles` 管理活动会话，`UtilityFileSession` 关联单个子进程的消息、唯一 apply 与退出等待；`controlled-file-child` 接收固定私有协议并调用 Logic 的文件实现。取消请求与进程真实退出分别处理，传输层不重新决定路径许可或文件补偿策略。
 
 ## 主要组成
 

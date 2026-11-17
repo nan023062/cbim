@@ -8,7 +8,8 @@ import ts from 'typescript';
 import { auditDependencies } from './check-dependencies.mjs';
 
 const norm=p=>p.replaceAll('\\','/');
-// 只为产品目录建模；unittest 仍参与依赖检查。目录本身也登记，不能漏过尚未编写说明的空目录。
+// 只为产品目录建模；根 tests 是验证设施，旧 unittest 也不视为产品子模块。
+// 目录本身也登记，不能漏过尚未编写说明的空目录。
 const excludedDirectories=new Set(['node_modules','.git','build','.vite','test-results','__pycache__','unittest']);
 const sourceDirectories=[];
 function walk(directory){
@@ -234,7 +235,7 @@ function render(directory){
   const groups=diagramGroups(nodes,edges),groupOf=new Map();
   groups.forEach((group,index)=>group.forEach(node=>groupOf.set(node,index+1)));
   for(const [index,group] of groups.entries()){
-   if(groups.length>1)out+='### 关系组 '+(index+1)+'\n\n';
+   if(groups.length>1)out+='### 关系组 '+(index+1)+'：'+label(group[0].name)+'\n\n';
    out+='```mermaid\nclassDiagram\n';
    for(const node of group){
     out+='class '+node.id+'["'+label(node.name)+'"]'+(node.kind==='class'?'\n':' {\n  <<'+node.kind+'>>\n}\n');
@@ -245,8 +246,16 @@ function render(directory){
   }
   const cross=edges.filter(edge=>groupOf.get(edge.from)!==groupOf.get(edge.to));
   if(cross.length){
-   out+='### 跨图协作\n\n';
-   for(const edge of cross)out+=`- ${reference(directory,edge.from)}（图 ${groupOf.get(edge.from)}）→ ${reference(directory,edge.to)}（图 ${groupOf.get(edge.to)}）：${edge.kind}。\n`;
+   out+='### 跨图协作\n\n按引用方归并目标，保留全部跨图关系；分图只用于阅读，不表示新增模块或依赖边界。\n\n';
+   out+='| 引用方 | 关系 | 目标 |\n| --- | --- | --- |\n';
+   // 同一引用方的不同关系分别成行，不能把继承／实现合并成普通依赖。
+   const rows=new Map();
+   for(const edge of cross){
+    const key=edge.from.id+'#'+edge.kind;
+    if(!rows.has(key))rows.set(key,{from:edge.from,kind:edge.kind,targets:[]});
+    rows.get(key).targets.push(edge.to);
+   }
+   for(const row of rows.values())out+=`| ${reference(directory,row.from)}（图 ${groupOf.get(row.from)}） | ${row.kind} | ${row.targets.map(target=>`${reference(directory,target)}（图 ${groupOf.get(target)}）`).join('、')} |\n`;
    out+='\n';
   }
   const external=nodes.filter(node=>node.kind==='boundary');

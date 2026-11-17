@@ -4,7 +4,9 @@
 
 ## 设计意图
 
-组织主会话的消息、输入、附件与交互等待。页面组合共享执行展示，各控制器分别维护草稿、队列和停止状态；后端返回的运行事实仍是状态依据。
+组织主会话正文、输入、附件、队列和话题浏览，保持用户输入与真实运行反馈的来源清楚。
+
+`Conversation` 组合当前执行与共享展示，频道组件各自持有草稿和滚动位置；草稿存储、停止门闩、队列投影与话题补充控制器分别维护局部状态。工具展开使用 execution-view，执行和补充以后端回执为准，切换频道不会创建第二个主执行器。
 
 ## 主要组成
 
@@ -14,7 +16,7 @@
 | [ConversationStopGate](conversation-stop.ts) | 单独维护停止操作的在途状态，不与消息插入等待共用锁。 |
 | [QueueProjection](queue-sync.ts) | 把公开队列快照组织为会话可消费的增量视图。 |
 | [TopicInterruptionController](topic-interruption-state.ts) | 管理指定话题补充的冻结请求、持久恢复和只读回执查询，独立于聊天草稿及 React。 |
-| [Conversation](Conversation.tsx) | 会话固定页签入口（对话/本会话任务/当前工作区自动化），默认主 Agent 普通对话、启动与继续大脑、展示流式 Markdown 正文和按生命周期合并的工具证据，移植 Cindy 输入组件并适配上下文附件、权限审批及本次运行全部通过、结构化选项提问、持久化消息队列及任务用时、生成速度、价值和上下文计量。 |
+| [Conversation](Conversation.tsx) | 主会话的界面装配入口，组合正文、工具、输入、待答、队列与任务投影；统一连接主执行状态。 |
 | [ChannelPane](ChannelPane.tsx) | 中央交互区内的频道子窗，独立滚动与草稿，主会话仍只装配一个执行控制器。 |
 | [ChannelComposer](ChannelComposer.tsx) | 根据原频道状态呈现补充、续接或关联后续任务；草稿归频道，执行仍归主 Agent。 |
 | [ChatMessages](ChatMessages.tsx) | 交互区的用户/主 Agent 聊天正文；只投影公开消息和发送失败，不挂载执行审阅控件。 |
@@ -23,7 +25,7 @@
 
 ## 架构关系
 
-### 关系组 1
+### 关系组 1：ChannelPane
 
 ```mermaid
 classDiagram
@@ -49,7 +51,7 @@ N_35e8c69c53f0 ..> N_e32460f344d1 : 依赖
 N_35e8c69c53f0 ..> N_28fe895ca90b : 依赖
 ```
 
-### 关系组 2
+### 关系组 2：Conversation
 
 ```mermaid
 classDiagram
@@ -63,7 +65,11 @@ click N_a760f716c4ac href "topic-interruption-state.ts"
 
 ### 跨图协作
 
-- [Conversation](Conversation.tsx)（图 2）→ [ConversationStopGate](conversation-stop.ts)（图 1）：依赖。
+按引用方归并目标，保留全部跨图关系；分图只用于阅读，不表示新增模块或依赖边界。
+
+| 引用方 | 关系 | 目标 |
+| --- | --- | --- |
+| [Conversation](Conversation.tsx)（图 2） | 依赖 | [ConversationStopGate](conversation-stop.ts)（图 1） |
 
 [上层设计](../ARCHITECTURE.md)
 

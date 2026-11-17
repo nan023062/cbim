@@ -2,13 +2,15 @@
 
 ## 设计意图
 
-隔离进程、冻结输入、Win32 Job 与 LPAC 恢复；核实原进程与日志，不重建未知执行。
+把冻结程序输入接到 Win32 隔离进程，并保存可用于退出后核实与清理的真实资源身份。
+
+`Win32IsolatedNode` 创建 LPAC、ACL 和 Job，`FileIsolationRecords` 保存启动与清理阶段，`Win32IsolationRecovery` 核实原宿主和资源后回收。恢复只处理已记录资源，不重建未知执行，也不将关闭请求当作进程已退出。
 
 ## 主要组成
 
 | 组成 | 定位 |
 | --- | --- |
-| [Win32IsolatedNode](isolated-node-win32.ts) | 以 Win32 LPAC Token、显式 ACL 和 Job Object 启动并收束真实程序，属于 Main 平台边界。 |
+| [Win32IsolatedNode](isolated-node-win32.ts) | 持有 Win32 LPAC、ACL 与 Job Object，启动并收束一次隔离程序执行。 |
 | [FileIsolationRecords](isolation-records.ts) | 原隔离执行的私有追加记录，保存启动前来源与资源清理阶段。 |
 | [Win32IsolationRecovery](isolation-recovery-win32.ts) | 核实原宿主创建身份、命名 Job 和自有目录，并以固定 Win32 句柄回收残留。 |
 

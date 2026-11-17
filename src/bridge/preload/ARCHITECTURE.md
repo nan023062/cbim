@@ -4,7 +4,9 @@
 
 ## 设计意图
 
-固定 Electron IPC 桥；不向页面暴露 Node、凭据或任意磁盘 API。 实现关联调用签名并沿原信封转发，不重试错误或改变主Frame授权。
+在 Electron 的隔离上下文中提供最小页面调用桥，让界面只使用声明过的操作和文件导入能力。
+
+`preload.ts` 通过 contextBridge 暴露固定的 `window.cbim` 接口，调用沿 `cbim:call` 信封转交主进程；文件导入使用 Electron 提供的真实 File 路径转换。桥本身不持有业务状态、不重试操作，可信来源与主 Frame 校验仍由服务端执行。
 
 ## 主要组成
 

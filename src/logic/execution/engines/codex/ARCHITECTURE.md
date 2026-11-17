@@ -4,7 +4,9 @@
 
 ## 设计意图
 
-把 Codex 运行包接入统一执行协议。引擎适配负责会话和事件转换，RPC 对象负责进程通信；账号、安装和任务派发由外层负责。
+通过 Codex App Server 实现统一引擎生命周期，隔离进程协议与宿主业务工具。
+
+`CodexEngine` 协调线程、轮次、会话和工具，`CodexRpc` 关联双向 JSONL 请求与通知；模型代理和会话适配处理本引擎差异。超时、失败和退出保持各自含义，安装选择及业务派发不在此处维护。
 
 ## 主要组成
 
@@ -12,6 +14,7 @@
 | --- | --- |
 | [CodexEngine](engine.ts) | 通过 Codex App Server 管理进程、线程、轮次和动态工具；目标返工明确为系统反馈，不携带用户图片或新授权。 |
 | [CodexRpc](rpc.ts) | Codex App Server 的双向 JSONL 通信，分别关联宿主请求、原生请求和通知。 |
+| [model-proxy](model-proxy.ts) | 把 Codex 模型网络请求接到宿主配置与请求预算边界。 |
 
 <!-- architecture:generated:start -->
 
@@ -23,11 +26,16 @@ class N_2b676b36a029["CodexEngine"]
 click N_2b676b36a029 href "engine.ts"
 class N_8b0be3d38a52["CodexRpc"]
 click N_8b0be3d38a52 href "rpc.ts"
+class N_cc384ddb73d0["model-proxy"] {
+  <<module>>
+}
+click N_cc384ddb73d0 href "model-proxy.ts"
 class N_649b8a6ac172["AgentEngine"] {
   <<boundary>>
 }
 click N_649b8a6ac172 href "../../rules/types.ts"
 N_2b676b36a029 ..> N_8b0be3d38a52 : 依赖
+N_2b676b36a029 ..> N_cc384ddb73d0 : 依赖
 N_649b8a6ac172 <|.. N_2b676b36a029
 ```
 

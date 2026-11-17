@@ -1767,6 +1767,23 @@
         "integration": []
       }
     },
+    "bridge/server/bootstrap": {
+      "roots": [
+        "src/bridge/server/bootstrap/"
+      ],
+      "directory": "src/bridge/server/bootstrap",
+      "inputs": [
+        "src/bridge/server/bootstrap/desktop.ts",
+        "src/bridge/server/main.ts"
+      ],
+      "tests": {
+        "unit": [
+          "tests/src/bridge/server/bootstrap/desktop.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      }
+    },
     "bridge/server": {
       "roots": [
         "src/bridge/server/main.ts"

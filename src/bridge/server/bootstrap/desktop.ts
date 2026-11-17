@@ -48,12 +48,10 @@ function boot()
   {
     const entry = path.join(__dirname, 'main.js');
 
-    const implementation = loadApplication(entry) as
-      {
-        StartDesktop(runtime?: DesktopRuntimeHost): void
-      };
+    // 复用真实导出类型，防止动态加载边界的入口名称与实现漂移；运行时仍按已选路径加载。
+    const implementation = loadApplication(entry) as typeof import('../main');
 
-    implementation.StartDesktop();
+    implementation.startDesktop();
 
     return;
   }
@@ -167,12 +165,9 @@ function boot()
 
   const entry = path.join(selection.root, '.vite/build/main.js');
 
-  const implementation = loadApplication(entry) as
-    {
-      StartDesktop(runtime?: DesktopRuntimeHost): void
-    };
+  const implementation = loadApplication(entry) as typeof import('../main');
 
-  implementation.StartDesktop(host);
+  implementation.startDesktop(host);
 }
 
 try

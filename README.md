@@ -26,7 +26,7 @@ Windows x64 当前公开桌面版为 [desktop-v0.1.19](https://github.com/nan023
 
 供应商只管理统一模型列表，模型菜单按接口兼容性筛选；对话栏与团队页面设置同一份主 Agent 配置，项目岗位保留独立配置。Windows 安装包仍未签名，可能显示未知发布者或安全提示；`SHA256SUMS.txt` 与资源清单 Ed25519 签名均不能替代 Windows 可信代码签名。后续取得证书后通过更高版本迁移，不改写已公开附件。旧 `v1.x` 是 Python 内核通道，不是当前桌面 APP。
 
-BUG 与需求从对话「+ → BUG 反馈／需求许愿」调用内置 Skill。一句问题或愿望即可提交，其余信息自愿，缺项标“用户未提供”。首次在设置连接自己的 GitHub；成功后由 Agent 简短反馈真实提交结果，不代表开发完成。详见 [反馈模块](src/logic/feedback/ARCHITECTURE.md)。更新程序独立位于 `src/logic/updates/service/`，安装构建用 `pnpm make:desktop`，维护者步骤见 [正式桌面发布](.agents/skills/cbim-release/references/release-runbook.md)。
+BUG 与需求从对话「+ → BUG 反馈／需求许愿」调用内置 Skill。一句问题或愿望即可提交，其余信息自愿，缺项标“用户未提供”。首次在设置连接自己的 GitHub；成功后由 Agent 简短反馈真实提交结果，不代表开发完成。详见 [反馈模块](src/logic/feedback/ARCHITECTURE.md)。更新程序独立位于 `src/logic/updates/service/`，安装构建用 `pnpm make:desktop`，维护者步骤见 [正式桌面发布](ainative/skills/cbim-release/references/release-runbook.md)。
 
 构建目录按北京时间命名：`build/YYYYMMDD-HHmmss/`。Windows 便携程序在其中的 `CBIM Assistant-win32-x64/CBIM.exe`，请保留完整目录。分发包为 `make/zip/win32/x64/CBIM-Assistant-YYYYMMDD-HHmmss-win32-x64-版本.zip`，可按名称排序查找最新构建。
 
@@ -41,7 +41,7 @@ pnpm install --frozen-lockfile
 pnpm start
 ```
 
-日常开发只运行受影响单元的测试：使用 `pnpm exec vitest run` 后跟明确的相关测试文件，必要时用 `-t` 选择用例；类型、依赖和架构检查按实际变化选择。通过后即可记录并提交，不默认执行全量 `pnpm test`、打包或整套桌面测试，详见 [日常验证范围](AGENTS.md#日常验证范围)。面向 `master` 的 PR 由现有 CI 自动执行全量回归；`pnpm package`、`pnpm make` 和 `pnpm test:desktop` 等制品验证留在后续集成／发布阶段按需执行。
+日常开发只运行受影响单元的测试：使用 `pnpm exec vitest run` 后跟明确的相关测试文件，必要时用 `-t` 选择用例；类型、依赖和架构检查按实际变化选择。通过后即可记录并提交，不默认执行全量 `pnpm test`、打包或整套桌面测试，详见 [日常验证范围](ainative/AGENTS.md#日常验证范围)。面向 `master` 的 PR 由现有 CI 自动执行全量回归；`pnpm package`、`pnpm make` 和 `pnpm test:desktop` 等制品验证留在后续集成／发布阶段按需执行。
 
 正式业务执行使用桌面主对话。`pnpm loop` 保留受限开发兼容接口，旧直接业务启动已拒绝；入口定位见 [命令模块设计](src/bridge/server/commands/ARCHITECTURE.md)，参数和具体限制见 [CLI 源码](src/bridge/server/commands/loop-cli.ts)。
 
@@ -58,26 +58,19 @@ pnpm start
 
 ## 开发协作与架构维护
 
-新人先阅读 [项目协作规范（AGENTS.md）](AGENTS.md)；Claude Code 的项目入口见 [CLAUDE.md](CLAUDE.md)。
+新人先阅读 [AI 协作统一入口](ainative/AGENTS.md)。根目录 [AGENTS.md](AGENTS.md)、[CLAUDE.md](CLAUDE.md) 以及各工具的 Skill 入口均转到共享源；已有规则与流程正文只需修改 `ainative/` 一处。
 
-开发清单与实时进度统一从 [GitHub Issues](https://github.com/nan023062/cbim/issues) 获取。读取选定 Issue、相关 PR／Git 提交记录和实际代码，核实范围、依赖与验收后实施，每个 Issue 独立验证、提交并在已有授权内回填。`design/` 只保存[产品目标、核心取舍、未落地设计和原型](design/README.md)，操作流程沿项目 Skill 和工具维护，验证事实进入提交及关联 Issue／PR；`ainative/docs/` 保存下方概念设计与工程文件组织设计。
+开发清单与实时进度统一从 [GitHub Issues](https://github.com/nan023062/cbim/issues) 获取。读取选定 Issue、相关 PR／Git 提交记录和实际代码，核实范围、依赖与验收后实施，每个 Issue 独立验证、提交并在已有授权内回填。`design/` 只保存[产品目标、核心取舍、未落地设计和原型](design/README.md)，操作流程沿项目 Skill 和工具维护，验证事实进入提交及关联 Issue／PR；`ainative/docs/` 保存下方概念设计、编码规范与架构标准。
 
-开发流程 `cbim-development` 提供 [Claude Code](.claude/skills/cbim-development/SKILL.md)、[Codex](.codex/skills/cbim-development/SKILL.md) 和 [通用项目](.agents/skills/cbim-development/SKILL.md) 三个同步入口；必须遵守 [文档 1：通用项目架构设计规范与原则](ainative/docs/06-通用项目架构设计规范与原则.md)。项目架构治理入口 `architecture-evolution` 必须遵守文档 1 并按 [文档 2：架构治理规范与治理流程](ainative/docs/07-架构治理规范与治理流程.md) 执行。上述入口仅服务本工程开发，不是产品内置业务 Skill。
+四个项目工作流均必须读取并遵守 [05《代码阅读设计及编码规范》](ainative/docs/05-代码阅读设计及编码规范.md) 和 [06《架构设计原则和工程结构规范》](ainative/docs/06-架构设计原则和工程结构规范.md)，只引用规范，不复制正文。入口与选择见 [项目协作入口](ainative/AGENTS.md#工作流入口)；架构治理步骤维护在 [architecture-evolution](ainative/skills/architecture-evolution/SKILL.md#架构治理执行流程)。这些入口仅服务本工程开发。
 
-桌面发版使用 `cbim-release`：[通用项目](.agents/skills/cbim-release/SKILL.md)、[Claude Code](.claude/skills/cbim-release/SKILL.md)、[Codex](.codex/skills/cbim-release/SKILL.md)。流程覆盖签名／明确选择的未签名发行、CI、草稿恢复、隔离安装与线上升级、官网及双分支收尾；桌面构建须设置 `CBIM_DESKTOP_NOTES`，指向本次非空发布说明文件；不再从仓库历史资料目录自动取正文。
+桌面发版使用共享 [cbim-release](ainative/skills/cbim-release/SKILL.md)。流程覆盖签名／明确选择的未签名发行、CI、草稿恢复、隔离安装与线上升级、官网及双分支收尾；桌面构建须设置 `CBIM_DESKTOP_NOTES`，指向本次非空发布说明文件；不再从仓库历史资料目录自动取正文。
 
-架构维护流程提供三个同步入口：
-
-- [通用项目：architecture-maintenance](.agents/skills/architecture-maintenance/SKILL.md)
-
-- [Claude Code：architecture-maintenance](.claude/skills/architecture-maintenance/SKILL.md)
-- [Codex：architecture-maintenance](.codex/skills/architecture-maintenance/SKILL.md)
-
-修改源码、拆分或移动模块、检查依赖、更新注释与类图时使用该流程。三个入口内容保持同步；代码注释与目录类图要求仅适用于 `src/`。运行 `pnpm check:architecture` 可检查类图同步及包含类型引用的循环依赖。
+修改源码、拆分或移动模块、检查依赖、更新注释与类图时，使用共享 [architecture-maintenance](ainative/skills/architecture-maintenance/SKILL.md)。各工具只维护发现入口，流程正文与配套资料统一位于 `ainative/skills/`。运行 `pnpm check:architecture` 可检查类图同步及包含类型引用的循环依赖。
 
 ## 结构与交付
 
-源码阅读从 [src 整体架构](src/ARCHITECTURE.md) 开始：每层解释本模块的设计意图、类定位和关系，直接子模块作为虚拟类封装逐层下钻。代码注释和目录架构文档的同步维护规则仅适用于 `src/`。
+源码阅读从 [src 整体架构](src/ARCHITECTURE.md) 开始；阅读设计、注释和架构说明要求统一引用文档 05、06。
 
 源码采用 Core、Logic、Bridge、View 四层：Core 提供共享技术能力，Logic 持有业务与数据，Bridge 处理通信和可信宿主，View 负责界面与交互。便携能力与 Node/Electron 平台入口独立，具体允许依赖以检查器为准。
 
@@ -93,7 +86,7 @@ pnpm start
 | `src/bridge/server/` | 桌面入口、冷启动、IPC、CLI 与平台传输 |
 | `src/bridge/contracts/`、`src/bridge/preload/` | 公开通信契约及受限安全桥 |
 | `src/view/` | React 页面、控制器、hooks 和视图专属适配 |
-| `ainative/docs/` | 01–04 概念设计、05 工程文件组织设计及 06–07 架构标准与治理准则 |
+| `ainative/docs/` | 01–04 概念设计、05 代码阅读设计及编码规范与 06 架构设计原则和工程结构规范 |
 | `design/` | 产品目标、核心取舍、未落地设计和原型 |
 | `assets/` | 实际使用的品牌图像与生成摘要；运行规范由各业务源码模块维护 |
 | `legal/` | 随包分发的第三方许可和 NOTICE |
@@ -141,9 +134,8 @@ pnpm start
 2. [CBIM 架构设计理论](ainative/docs/02-CBIM架构设计理论.md)
 3. [渐进式架构演进与人工认知保障体系](ainative/docs/03-渐进式架构演进与人工认知保障体系.md)
 4. [AI-Native 开发全流程设计方案](ainative/docs/04-AI-Native开发全流程设计方案.md)
-5. [工程文件组织与代码阅读设计](ainative/docs/05-工程文件组织与代码阅读设计.md)
-6. [通用项目架构设计规范与原则](ainative/docs/06-通用项目架构设计规范与原则.md)
-7. [架构治理规范与治理流程](ainative/docs/07-架构治理规范与治理流程.md)
+5. [代码阅读设计及编码规范](ainative/docs/05-代码阅读设计及编码规范.md)
+6. [架构设计原则和工程结构规范](ainative/docs/06-架构设计原则和工程结构规范.md)
 
 `ainative/docs/` 不依赖项目设计或操作记录；项目设计与提交／Issue／PR 中的验证记录依据这些准则维护。
 

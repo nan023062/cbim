@@ -30,4 +30,4 @@ R 精确匹配 C，不能提高资源版本绕过冷基础要求。E 的身份�
 
 独立页面 reload、主进程 HMR、自动回收缓存和更宽的回退范围各有不同前置条件，不能由“热更新”一词推导为默认保证。具体已支持能力回到当前源码核实，旧方案中的阶段状态不在本文维护。
 
-当前模型见 [冷壳](../src/bridge/server/bootstrap/ARCHITECTURE.md)、[更新服务](../src/logic/updates/service/ARCHITECTURE.md)；构建、签名、验收与发布步骤见 [发布流程](../.agents/skills/cbim-release/SKILL.md)。本文不授权投放，也不记录某一历史版本的验收结果。
+当前模型见 [冷壳](../src/bridge/server/bootstrap/ARCHITECTURE.md)、[更新服务](../src/logic/updates/service/ARCHITECTURE.md)；构建、签名、验收与发布步骤见 [发布流程](../ainative/skills/cbim-release/SKILL.md)。本文不授权投放，也不记录某一历史版本的验收结果。

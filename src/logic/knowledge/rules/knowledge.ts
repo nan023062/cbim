@@ -1,5 +1,5 @@
 /**
- * 作用定位：Logic 知识规则（Schema 来自显式 assetsRoot）：校验领域结构、专业正文和引用，并派生注册索引。
+ * 作用定位：Logic 知识规则（Schema 来自所属业务模块常量）：校验领域结构、专业正文和引用，并派生注册索引。
  * 设计原因：调度、桌面和外部适配共用规则；模块 Workflow 的显式程序条件不能绕过完整事务校验。Ajv 使用不改变字段值的兼容副本，原严格 JSON 解析仍保留危险键和重复键拒绝。历史作者和维护声明不再关联真人花名册；结构校验不签发执行或架构批准。
  * 机制边界：存在探测复用独立文件基础库；知识路径、验证和索引语义仍由本模块决定。
  */
@@ -10,6 +10,12 @@ import { ConnectorRegistry } from '../../connectors/rules/registry';
 import path from 'node:path';
 
 import Ajv2020 from 'ajv/dist/2020';
+
+import { moduleSchema } from '../../workspace/rules/standards';
+
+import { agentSchema, teamSkillsSchema } from '../../team/rules/standards';
+
+import { connectorSchema } from '../../connectors/rules/standards';
 
 import ignore from 'ignore';
 
@@ -55,19 +61,16 @@ export function isKnowledge(relative: string)
 
 export class Rules
 {
-  private validators = new Map<string, ReturnType<Ajv2020['compile']>>();
+  /** 实例内编译后的校验器，只读常量解析为副本，不共享可变 Schema。 */
+  private _validators = new Map<string, ReturnType<Ajv2020['compile']>>();
 
-  /** assetsRoot 为安装包或开发工程的 assets 绝对目录，缺失资源直接失败。 */
-  constructor(readonly assetsRoot: string)
-  {
-  }
-
+  /** 编译本版本内置 Schema；不读取安装目录，也不修改输入或业务文件。 */
   async Init()
   {
     const ajv = new Ajv2020({ allErrors: true, strict: false });
 
-    for (const [key, file] of Object.entries({ module: 'business/module.schema.json', agent: 'capability/agent.schema.json', skills: 'capability/team-skills.schema.json', connectors: 'connector/registry.schema.json' }))
-      this.validators.set(key, ajv.compile(parseJson(await fs.readFile(path.join(this.assetsRoot, file), 'utf8'))))
+    for (const [key, text] of Object.entries({ module: moduleSchema, agent: agentSchema, skills: teamSkillsSchema, connectors: connectorSchema }))
+      this._validators.set(key, ajv.compile(parseJson(text)))
   }
 
   /** 对传入的完整候选知识校验并派生索引；读取 source 存在性但不修改业务工程。 */
@@ -121,7 +124,7 @@ export class Rules
         return false
       }
 
-      const validator = this.validators.get(key)!;
+      const validator = this._validators.get(key)!;
 
       // 严格解析产出无原型对象；Ajv 的 uniqueItems 比较依赖 Object.prototype。
       // clone 仅给校验器恢复普通对象原型，不删除 own key、不经 JSON 再编码改变数值，也不修改查询使用的原事实。

@@ -11,10 +11,11 @@
 
 | 组成 | 定位 |
 | --- | --- |
-| [Builtins](builtins.ts) | Builtins：从 assets 白名单发布内置 Skill、规范和 Schema，包括团队/业务架构治理及只需简述、补充自愿的反馈流程。 |
+| [standards](standards.ts) | 知识查询、治理和共享 Skill／Workflow 的通用正文；只提供规则，不持有工作区状态。 |
+| [Builtins](builtins.ts) | 无状态只读目录，组合各业务模块的规范常量，发布 Skill、Schema、正文版本和引用；不读取安装目录。 |
 | [KnowledgeQueries](knowledge-queries.ts) | 只读知识查询门面，取得快照并组合团队与业务模块读取模型。 |
 | [KnowledgeRefresh](knowledge-refresh.ts) | 按原身份、版本与请求 ID 刷新派生知识索引，独立于只读领域查询。 |
-| [Rules](knowledge.ts) | Logic 知识规则（Schema 来自显式 assetsRoot）：校验领域结构、专业正文和引用，并派生注册索引。 |
+| [Rules](knowledge.ts) | Logic 知识规则（Schema 来自所属业务模块常量）：校验领域结构、专业正文和引用，并派生注册索引。 |
 | [ObjectCrud](object-crud.ts) | 规划 Agent、Module、Skill 与 Workflow 的知识变更，通过存储端口提交受控事务。 |
 | [portable-package](portable-package.ts) | 把工作区静态团队能力或完整业务架构转为可复用资源包，并纯计算目标知识变更。 |
 | [ports](ports.ts) | 核心知识领域需要的工作区存取与事务接口。 |
@@ -37,12 +38,14 @@ class N_e26a65304778["KnowledgeQueries"]
 click N_e26a65304778 href "knowledge-queries.ts"
 class N_8f8fc54f0952["KnowledgeRefresh"]
 click N_8f8fc54f0952 href "knowledge-refresh.ts"
+class N_91f013e046fb["standards"] {
+  <<module>>
+}
+click N_91f013e046fb href "standards.ts"
 class N_aa6b02a9f836["Builtins"]
 click N_aa6b02a9f836 href "builtins.ts"
 class N_fbad4322fecc["Rules"]
 click N_fbad4322fecc href "knowledge.ts"
-class N_c0cc3923403e["ObjectCrud"]
-click N_c0cc3923403e href "object-crud.ts"
 N_e26a65304778 ..> N_00e65f54da3f : 依赖
 N_8f8fc54f0952 ..> N_00e65f54da3f : 依赖
 ```
@@ -51,6 +54,8 @@ N_8f8fc54f0952 ..> N_00e65f54da3f : 依赖
 
 ```mermaid
 classDiagram
+class N_c0cc3923403e["ObjectCrud"]
+click N_c0cc3923403e href "object-crud.ts"
 class N_46a3a7b22ab1["ports"] {
   <<module>>
 }
@@ -59,11 +64,8 @@ class N_6652180623f8["portable-package"] {
   <<module>>
 }
 click N_6652180623f8 href "portable-package.ts"
+N_c0cc3923403e ..> N_46a3a7b22ab1 : 依赖
 ```
-
-### 跨图协作
-
-- [ObjectCrud](object-crud.ts)（图 1）→ [ports](ports.ts)（图 2）：依赖。
 
 ## 子模块
 

@@ -21,7 +21,7 @@ it.each(['complete-restart','stop','again'] as const)('isolates damaged recursiv
   await app.Shutdown();
   for(const file of originalPaths)await fs.appendFile(file,'{"invalid_history":true}\n');
   const damaged=await Promise.all(originalPaths.map(p=>fs.readFile(p))),native=await fs.readFile(root.sessionFile!);
-  app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.Init();
+  app=new Application(new Paths(f.user,path.resolve('.')));await app.Init();
   const report=await observe();expect(report.source.logState).toBe('invalid');expect(report.basis).not.toBe(before.basis);
   const options={...source.seed.options,permission:'read' as const},req:RecoveryRequest={...identity,commandId:randomUUID(),source:{...source.subject,reportBasis:report.basis},operation:'inspect_effects',observation:{text:data.observation},input:{message:data.inspectGoal},options};
   await expect(app.Dispatch('loop.recoveryStart',{...req,source:{...req.source,reportBasis:before.basis}})).rejects.toMatchObject({code:'RECOVERY_REPORT_STALE'});
@@ -54,7 +54,7 @@ it.each(['complete-restart','stop','again'] as const)('isolates damaged recursiv
   expect(await Promise.all(originalPaths.map(p=>fs.readFile(p)))).toEqual(damaged);expect(await fs.readFile(root.sessionFile!)).toEqual(native);expect(await fs.readFile(source.original.nativePath)).toEqual(source.original.native);
   expect(await fs.readFile(path.join(f.a,data.file),'utf8')).toBe(data.oldText);
   const lookup={...identity,commandId:req.commandId},stored=await app.Dispatch('loop.recoveryReceipt',lookup),counts=[provider.main.length,provider.member.length],journal=await fs.readFile(path.join(f.user,id,'dispatch/dispatch.jsonl'));
-  await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.Init();
+  await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')));await app.Init();
   expect(await state()).toEqual(saved);expect(await app.Dispatch('loop.recoveryReceipt',lookup)).toEqual(stored);expect((await app.Dispatch('loop.recoveryStart',req)).recovery).toEqual(receipt.recovery);
   expect(await fs.readFile(path.join(f.user,id,'dispatch/dispatch.jsonl'))).toEqual(journal);expect([provider.main.length,provider.member.length]).toEqual(counts);expect(await Promise.all(originalPaths.map(p=>fs.readFile(p)))).toEqual(damaged);
  }finally{provider.releaseInspection();await app.Shutdown();await provider.close();await f.cleanup()}

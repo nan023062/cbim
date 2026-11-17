@@ -14,7 +14,7 @@ const stopping=process.argv.includes('--stop'),restartHeld=process.argv.includes
 const mode=stopping?'stop':restartHeld?'restart-held':'complete',artifact='queued-dependency-addition-'+mode,exe=await latestExecutable(),temp=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-dependency-add-ui-')),project=path.join(temp,'project'),user=path.join(temp,'user');
 const provider=await dependencyAdditionProvider(),pageErrors:string[]=[];let setup:Application|undefined,desktop:ElectronApplication|undefined,keepTemp=false,report:Record<string,unknown>|undefined;
 try{
-  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.Init();const {entry}=await seedDependencyAddition(setup,project,provider);await setup.Shutdown();setup=undefined;
+  setup=new Application(new Paths(user,path.resolve('.')));await setup.Init();const {entry}=await seedDependencyAddition(setup,project,provider);await setup.Shutdown();setup=undefined;
   desktop=await electron.launch({executablePath:exe,env:{...process.env,CBIM_USER_DATA_ROOT:user},timeout:60000});let page=await desktop.firstWindow();page.setDefaultTimeout(30000);page.on('pageerror',error=>pageErrors.push(error.message));
   const call=(action:string,args:unknown={})=>page.evaluate(({action,args})=>(window as any).cbim.call(action,args),{action,args}),active=()=>page.locator('.workspace-panel:not([hidden])'),input=()=>active().getByRole('textbox',{name:'对话草稿',exact:true}),records=()=>additionRecords(user,entry.id);
   const select=async()=>{await page.getByRole('button',{name:'project · 运行中',exact:true}).click();await page.locator('.workspace-conversations button').filter({hasText:'DEPENDENCY_ADD_MAIN:'}).first().click();await input().waitFor()};

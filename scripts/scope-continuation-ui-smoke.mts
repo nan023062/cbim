@@ -24,7 +24,7 @@ const provider=await scopeContinuationProvider({holdContinuation:true}),pageErro
 const draft='主输入框保留的下一任务草稿，不作为本次目标补充';
 let desktop:ElectronApplication|undefined,setup:Application|undefined,keepTemp=false;
 try{
-  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.Init();
+  setup=new Application(new Paths(user,path.resolve('.')));await setup.Init();
   await setup.models.Save({profile:{name:'Local continuation UI',api:'openai-completions',baseUrl:provider.url,auth:'none',defaultModel:'continue-fixture',models:[{id:'continue-fixture',name:'Continue fixture',enabled:true,contextWindow:65536,maxTokens:4096,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});
   const profileId=(await setup.models.List()).selectedId!,entry=await setup.Dispatch('add',{path:project}),workspace=setup.Workspace(entry.id),team=await seedTeam(workspace);
   const knowledge=await workspace.Snapshot(),modulePath=team.input.moduleId+'/module.json',definition=JSON.parse(knowledge.files.find(file=>file.path===modulePath)!.text);

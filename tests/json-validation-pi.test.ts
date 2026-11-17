@@ -96,7 +96,7 @@ it.each(formats.flatMap(format=>(['complete','changed','stop']as const).map(mode
     const graph=await app.Dispatch('dispatch.graphSnapshot',{identity:{workspaceId:entry.id,rootSessionId:started.taskId}});
     expect(graph.tasks).toHaveLength(0); // No legacy Team task was created to pass this regression.
     const bytes=await jsonValidationLogBytes(f.user,entry.id),counts={main:provider.main.length,member:provider.member.length},stat=await fs.stat(file);
-    await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.Init();
+    await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')));await app.Init();
     expect(await records()).toEqual(saved);expect(await jsonValidationLogBytes(f.user,entry.id)).toEqual(bytes);
     expect({main:provider.main.length,member:provider.member.length}).toEqual(counts);expect((await fs.stat(file)).mtimeMs).toBe(stat.mtimeMs);
     expect(await fs.readFile(file)).toEqual(payload(mode==='stop'?data.bad:mode==='changed'?data.changed:data.good));expect(provider.errors).toEqual([]);
@@ -153,7 +153,7 @@ it.each(formats.flatMap(format=>(['reject','request_evidence']as const).map(deci
     expect(await fs.readFile(path.join(childDir,'events.jsonl'),'utf8')).toBe(childBefore);
     expect((await app.Dispatch('dispatch.graphSnapshot',{identity:{workspaceId:entry.id,rootSessionId:started.taskId}})).tasks).toHaveLength(0);
     const bytes=await jsonValidationLogBytes(f.user,entry.id),saved=await records(),stat=await fs.stat(file);
-    await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.Init();
+    await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')));await app.Init();
     expect(await questions()).toEqual([]);expect(await records()).toEqual(saved);expect(await jsonValidationLogBytes(f.user,entry.id)).toEqual(bytes);
     expect((await readRoot()).events).toEqual(root.events);expect(provider.main).toHaveLength(4);expect(provider.member).toHaveLength(16);
     await expect(app.Dispatch('loop.answerQuestion',answer)).rejects.toThrow();

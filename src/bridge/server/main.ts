@@ -1,6 +1,6 @@
 /**
  * 引擎菜单仅调用固定 status/prepare 端口；只允许主 Frame 和已签名版本，查看不安装。
- * 资源边界：桌面从当前 R 的 assets 注入业务规范；开发态使用工程 assets，窗口品牌仍按安装边界读取。
+ * 资源边界：业务规范随当前 R 的业务代码编译，窗口品牌仍按安装边界读取。
  * 原生窗口及页面标题显示 CBIM，原 productName/EXE/用户目录和更新通道保留兼容。
  * 文件工人边界：app.ready 后装配独立打包 utility 入口，不复用窗口主入口作为工人；退出等待所有原文件操作排空。
  * 作用定位：本机后端的 Electron 装配入口，区分开发与打包品牌资源路径，管理窗口、固定 IPC、原生文件选择、附件预览与打包验证；前端只通过 bridge/preload 请求服务。
@@ -97,8 +97,6 @@ export function startDesktop(runtime?: DesktopRuntimeHost)
   {
     const install = app.isPackaged ? process.resourcesPath : app.getAppPath();
 
-    const resources = runtime?.assetsRoot ?? install;
-
     app.setAppUserModelId('com.cbim.assistant.desktop');
 
     let release:
@@ -131,7 +129,7 @@ export function startDesktop(runtime?: DesktopRuntimeHost)
 
     updates = runtime ? runtime.Updates(beforeInstall, installed) : new DesktopUpdates(app.getVersion(), typeof release.notes === 'string' ? release.notes : '', installed, latestDesktopRelease, new NsisUpdateInstaller(), beforeInstall);
 
-    application = new Application(new Paths(userRoot, app.isPackaged ? path.dirname(app.getPath('exe')) : install, runtime ? [runtime.cacheRoot] : []), path.join(resources, 'assets'), systemSecretCipher, { controlledFiles: createControlledFileTransport(), engineArtifacts: runtime?.engineArtifacts, webBrowser: new ElectronBrowserReader() });
+    application = new Application(new Paths(userRoot, app.isPackaged ? path.dirname(app.getPath('exe')) : install, runtime ? [runtime.cacheRoot] : []), systemSecretCipher, { controlledFiles: createControlledFileTransport(), engineArtifacts: runtime?.engineArtifacts, webBrowser: new ElectronBrowserReader() });
 
     await application.Init({ restore: false });
 

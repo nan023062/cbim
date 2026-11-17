@@ -10,6 +10,7 @@
 
 | 组成 | 定位 |
 | --- | --- |
+| [skills](skills.ts) | 反馈 Skill 的只读正文；不执行提交，权限与真实回执仍由反馈服务维护。 |
 | [contracts](contracts.ts) | CBIM 反馈 Skill、可信 GitHub 端口和桌面登录共用的纯协议。 |
 
 <!-- architecture:generated:start -->
@@ -24,6 +25,10 @@ class N_5a99d71c9101["contracts"] {
   <<module>>
 }
 click N_5a99d71c9101 href "contracts.ts"
+class N_8cdab2bb9b20["skills"] {
+  <<module>>
+}
+click N_8cdab2bb9b20 href "skills.ts"
 class N_42298f81f22c["service"] {
   <<virtual>>
 }

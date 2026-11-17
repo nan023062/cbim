@@ -29,7 +29,7 @@ it('实际工具字段解析与原事务 fingerprint 相同，失败查询不执
 it('旧实例完整原请求可在重开后只读核实，新的实例不能借相同 requestId 冒领',async()=>{
  const f=await fixture();let app=f.app;try{
   const entry=await app.Dispatch('add',{path:f.a}),workspace=app.Workspace(entry.id),input=request(await workspace.Snapshot(),[{path:'.cbim/README.md',text:'原请求精确正文\n'}]),reference=originalKnowledgeWrite('cbim_knowledge_commit',input)!;await workspace.Commit(input);
-  const before=await observeKnowledgeTransaction(workspace,reference),file=path.join(f.user,entry.id,'transactions',input.requestId+'.json'),bytes=await fs.readFile(file);await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.Init();const reopened=app.Workspace(entry.id);expect(reopened.instanceId).not.toBe(input.instanceId);
+  const before=await observeKnowledgeTransaction(workspace,reference),file=path.join(f.user,entry.id,'transactions',input.requestId+'.json'),bytes=await fs.readFile(file);await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')));await app.Init();const reopened=app.Workspace(entry.id);expect(reopened.instanceId).not.toBe(input.instanceId);
   expect(await observeKnowledgeTransaction(reopened,reference)).toEqual(before);expect(await fs.readFile(file)).toEqual(bytes);const wrong=originalKnowledgeWrite('cbim_knowledge_commit',{...input,instanceId:reopened.instanceId})!;expect(await observeKnowledgeTransaction(reopened,wrong)).toMatchObject({state:'unverifiable'});
  }finally{await app.Shutdown();await f.cleanup()}
 });

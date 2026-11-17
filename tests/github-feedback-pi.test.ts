@@ -13,7 +13,7 @@ import type {RunSummary} from '../src/logic/execution/rules/types';
 it.each(['ask','read','unconnected'] as const)('real Pi main invokes feedback Skill and guarded submission (%s)',async mode=>{
   const f=await fixture();await f.app.Shutdown();
   const cipher={Available:()=>true,Encrypt:(value:string)=>Buffer.from(value).toString('base64'),Decrypt:(value:string)=>Buffer.from(value,'base64').toString()};
-  const app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'),cipher);await app.Init();
+  const app=new Application(new Paths(f.user,path.resolve('.')),cipher);await app.Init();
   const entry=await app.Dispatch('add',{path:f.a}),workspace=app.Workspace(entry.id),before=await workspace.Snapshot();
   const input={kind:'bug',summary:'安装后的桌面图标与启动后窗口图标不一致'};
   const token='gho_private_fixture_token',issues:unknown[]=[],requests:any[]=[],errors:string[]=[];const actualFetch=globalThis.fetch;

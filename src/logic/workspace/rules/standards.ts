@@ -1,4 +1,10 @@
-# Module 定义与维护规范
+/**
+ * 作用定位：模块与 Workflow 定义规范的代码常量，由所属业务模块维护，供内置资料查询或结构校验使用。
+ * 设计原因：正文随业务代码编译发布，消除安装目录文件读取；这里只声明规则，不执行流程或授予权限。
+ * 兼容边界：保留迁移前的正文与换行字节，避免仅因存储位置改变使已冻结任务的内容版本失效。
+ */
+/** 只读流程正文；调用方仍须遵守真实工具权限与业务状态。 */
+const moduleSpec = `# Module 定义与维护规范
 
 > 结构设计：workspace 是根容器，一级 Module 是按领域划分的工程节点，以下是各工程的模块节点。每个 Module 可用的 Workflow 仅为自身 module.json.workflows，不继承父模块或工程节点流程，不设置根级或模块级共享 workflows.json。Agent 任务基于明确的 Module。详见 [Team 与 Workspace 结构设计](../runtime/shared-skills-workflows.md)；工程层级的新增校验尚未实现，不据此自动改写已有工程。
 
@@ -6,12 +12,12 @@
 
 ## 模块层级与物理工作区源
 
-- 模块目录名与 `name` 统一使用小写 snake_case（`xxx_xxxx`），多单词用下划线连接，已有层级编号保留并以下划线分隔，例如 `01_core_engine`。模块 id、导航和结构图同步该名称；真实源码路径、程序集名和类型名保持原有拼写。
+- 模块目录名与 \`name\` 统一使用小写 snake_case（\`xxx_xxxx\`），多单词用下划线连接，已有层级编号保留并以下划线分隔，例如 \`01_core_engine\`。模块 id、导航和结构图同步该名称；真实源码路径、程序集名和类型名保持原有拼写。
 
 - 模块目录层级表达经确认的领域与架构父子关系；每个非根节点只有一个父模块，禁止树内成环。
 - 模块树由项目指定的负责人定义并确认，按适用的领域与架构分层组织，不能由物理目录自动反推正式模块树。
 - module.json 的 children 是直属子模块的压缩导航清单，必须与实际模块树一致，不保存 parent 字段。module.md 在第三节统一一张结构关系图：正式直属子模块与承载直属内容的虚拟子模块按同层抽象子节点展示；source 是虚拟子模块内容的物理定位依据，不据每条 source 再拆一个虚拟子模块。图以 JSON 的 children、sources 及维护边界为依据，不展开正式子模块内部或重复其 sources。组成关系与经人工确认的架构依赖约束须区分，不从目录推导调用关系。
-- sources 定义模块的物理工作区源，`sources.location` 只能引用文件夹，不允许直接引用任何类型的文件，包括无扩展名文件。需要定位某个文件时，登记其所在文件夹，通过 scope 和 overview 说明该文件所属的维护范围。一个模块可以具有多个分散的目录源，可包含代码、配置、资源、测试和文档。
+- sources 定义模块的物理工作区源，\`sources.location\` 只能引用文件夹，不允许直接引用任何类型的文件，包括无扩展名文件。需要定位某个文件时，登记其所在文件夹，通过 scope 和 overview 说明该文件所属的维护范围。一个模块可以具有多个分散的目录源，可包含代码、配置、资源、测试和文档。
 - 同一文件夹内的多个文件合并为一条 source，不为每个文件重复登记所在文件夹。目录引用不扩大维护权限；scope 必须保留必要的范围与排除项。不同模块的文件若位于同一文件夹，须先明确目录的唯一维护归属，其他模块通过知识引用定位，不以不同 scope 重复登记同一目录。
 - 同一物理源路径仅保留一份维护声明；同模块内或跨模块的重复声明均应消除，共享使用方通过知识引用定位维护模块，不靠复制 sources 建立所有权。路径别名按同一源处理；父子及祖先模块的同向目录包含是正常关系，不作为问题；跨分支的物理目录包含保留为工程结构存量警告，不自动调整模块树或源码目录。
 - sources 自动登记服从调用方提供的模块注册排除规则；命中的路径不单独登记，也不参与源重复或包含关系比较。忽略之前仍须校验路径合法性与 scope，不能用忽略掩盖越界或无效声明。默认配置排除 Unity .meta 伴随文件；它们随对应资产维护，不作为独立 source，也不能因未索引就删除或丢失其 GUID。目录 source 不因包含被排除单独登记的伴随文件而整体失效。排除登记不限制读取、引用、依赖分析或任务授权，不表示该内容不存在；用户明确指定处理时仍可按实际路径定位。
@@ -31,11 +37,11 @@
 
 虚拟子模块命名固定为以下三项，不加父模块前缀、路径、编号或业务别名：
 
-- 显示名称：`直属内容（虚拟子模块）`，使用中文全角括号。
-- Mermaid 图内标识：`CbimDirectContent`，大小写固定。它仅在当前图内有效，不是正式模块的目录名或注册 id，不适用正式模块目录的 snake_case 规则。
-- 类型标记：`<<virtual>>`，与正式子模块的 `<<module>>` 区分。
+- 显示名称：\`直属内容（虚拟子模块）\`，使用中文全角括号。
+- Mermaid 图内标识：\`CbimDirectContent\`，大小写固定。它仅在当前图内有效，不是正式模块的目录名或注册 id，不适用正式模块目录的 snake_case 规则。
+- 类型标记：\`<<virtual>>\`，与正式子模块的 \`<<module>>\` 区分。
 
-每张图有直属内容时恰好一个该节点，无直属内容时为零；各模块可复用相同图内标识。统一写法为 `class CbimDirectContent["直属内容（虚拟子模块）"]`，另行标记 `<<virtual>> CbimDirectContent`。名称、标识或类型标记偏离、重复声明均须修正；不创建虚拟模块的全局注册名称。
+每张图有直属内容时恰好一个该节点，无直属内容时为零；各模块可复用相同图内标识。统一写法为 \`class CbimDirectContent["直属内容（虚拟子模块）"]\`，另行标记 \`<<virtual>> CbimDirectContent\`。名称、标识或类型标记偏离、重复声明均须修正；不创建虚拟模块的全局注册名称。
 
 虚拟子模块不接管其他模块已登记的内容，不因物理父目录包含而覆盖已确认的职责排除。未命中任何模块有效维护范围的文件仍是游离文件；归属冲突或尚未明确的范围继续单列核实。只有后续形成值得独立维护的内聚职责并获确认时，才从虚拟子模块中抽出正式子模块，不因文件数量或目录存在而自动拆分。
 
@@ -61,7 +67,7 @@ scope 示例（仅示意写法，须按实际内容填写）：“插件集成�
 
 ## 模块目录与唯一职责
 
-```text
+\`\`\`text
 <模块目录>/
 ├── module.json       压缩索引与结构化定义
 ├── module.md       完整模块知识（必需）
@@ -72,7 +78,7 @@ scope 示例（仅示意写法，须按实际内容填写）：“插件集成�
     ├── module.json
     ├── module.md
     └── ...
-```
+\`\`\`
 
 每个模块只维护一份与 module.json 平级的 module.md。模块的 Workflow 与 Agent 的 Skill 对偶：分别在 workflows/<工作流名>/ 与 skills/<技能名>/ 下独立成目录。流程目录使用小写 snake_case，入口固定为 workflow.md，可按需包含 scripts/、资源和参考资料。无流程时 workflows/ 可不存在；不建立 dna/ 或重复知识正文。DNA 的唯一正文是 module.md。
 
@@ -108,11 +114,11 @@ overview 和 workflows[].reference 相对 module.json 所在目录解析；id、
 
 ## module.md：完整模块知识
 
-`cbim_object_preview` 的 module.data 不支持 name；结构化 name 固定为目录 slug，中文显示名写在 body 的 H1。data 只允许 summary、authors、sources、connectors。
+\`cbim_object_preview\` 的 module.data 不支持 name；结构化 name 固定为目录 slug，中文显示名写在 body 的 H1。data 只允许 summary、authors、sources、connectors。
 
 以下是可复制结构（内容须按真实业务填写，有 sources 时还需对应的直属内容虚拟节点）：
 
-````markdown
+\`\`\`\`markdown
 # 中文模块名称
 
 ## 定位
@@ -122,10 +128,10 @@ overview 和 workflows[].reference 相对 module.json 所在目录解析；id、
 无
 
 ## 结构关系图与抽象设计决策
-```mermaid
+\`\`\`mermaid
 classDiagram
 class Module
-```
+\`\`\`
 按实际结构解释设计原因。
 
 ## 雷区与排障
@@ -133,32 +139,32 @@ class Module
 
 ## 观察模式-待抽象
 无
-````
+\`\`\`\`
 
 
 正文必须且只能包含以下五个二级章节，名称与顺序严格一致，不允许新增、缺失、重复或使用旧标题。一级标题仅用于模块名称，不显示模块 id。除第二节用于逐条说明 source 的路径标题及“子模块”“Source 路径与维护说明”分组标题外，不增加三级或更深章节。已有内容按职责归入这五节，不另设“注意事项与待验证项”“结构核验”“维护范围注意”等重复章节。JSON 是结构化索引权威；节点章节解释知识并导航，不维护第二份独立定义。
 
 各章节或字段没有实际内容时，正文只写“无”，不填默认提示、通用告诫或泛泛的待核实事项。已有具体事实、风险、待验证问题或观察不得替换为“无”。“无”仅表示当前无可记录内容，不代表已经验证不存在问题；具体核验限制记入 overview 的“雷区与排障”，执行证据留在任务记录中。结构图和节点已有内容时照常保留，不因没有设计决策而删除。
 
-### 标题原文：`## 定位`
+### 标题原文：\`## 定位\`
 
 说明模块负责的功能及主要定位，保持精简，不照抄 summary。
 
-### 标题原文：`## 子模块和 source 节点`
+### 标题原文：\`## 子模块和 source 节点\`
 
 正式子模块与直属内容的虚拟子模块都是抽象子节点。正式直属子模块以名称链接到其 overview，不复制子模块内部知识；直属内容统一说明为虚拟子模块，其 source 按 JSON 顺序集中列出完整路径，每条说明不超过 250 字，说明用途、混装边界和待核实事项。没有节点时写“无”。子模块内部的 source 不在父模块重复列出。
 
-### 标题原文：`## 结构关系图与抽象设计决策`
+### 标题原文：\`## 结构关系图与抽象设计决策\`
 
 模块类图是经人工 review 并确认的设计规范与约束，包含模块结构及依赖关系，是 Agent 核查实现的架构依据，不是从代码自动生成的现状图。正文用于解释图中的契约与设计理由，不另建重复的依赖索引。代码与类图不一致时记录实现偏差；只有取得人工确认的架构变更决定后，才能修改相应类图与约束。尚未确认的建议或观察不得混入正式类图。
 
 统一一张非空 Mermaid classDiagram，加极简的正式设计理由与依据。正式直属子模块与“直属内容（虚拟子模块）”按同层节点呈现，分别标注 module/virtual 类型。正式节点对应 children，虚拟节点统一对应本模块 sources 排除已归属其他模块后的直属内容，不要求每条 source 各占一个节点。不另建独立注册清单或展开正式子模块内部；没有子节点及直属内容时保留本模块节点。组成关系与经人工确认的架构依赖约束须区分，不从目录推导调用关系。没有抽象设计决策时写“无”，不补通用占位语，也不把观察模式画成已生效规范。
 
-### 标题原文：`## 雷区与排障`
+### 标题原文：\`## 雷区与排障\`
 
 记录潜规则、已知风险、易误用点、失败现象、诊断与恢复知识，以及注意事项、核验限制和具体待验证问题；这些内容直接并入本节，不另设重复章节。不重复节点章节已有说明。重复执行的操作步骤归 workflow，本节引用。未调查不能写成无风险。
 
-### 标题原文：`## 观察模式-待抽象`
+### 标题原文：\`## 观察模式-待抽象\`
 
 记录实践中发现、仍待验证或抽象的规律、证据及适用线索，明确非正式规范身份，可标记 observing、pending_review、hold、reject。普通注意事项、未完成验证和归属待核实不是待抽象规律，应放在“雷区与排障”；没有实际模式时写“无”。数量和相似度仅触发评审，不自动批准抽象。经有效决定后将生效内容迁入第三节，仅留下必要状态与决定引用，避免重复正文。
 
@@ -202,3 +208,143 @@ summary 必须由负责维护的 AI 成员 结合整体模块体系、目标完�
 ## connectors 列表
 
 connectors 是无重复的注册表逻辑 id 数组，无引用时为 []。按 [连接器声明规范](../connector/connector-spec.md) 引用资源仓库或兼容的旧插件声明，不指向本地实现目录。所属任务将唯一 AI 成员与全部作业模块的声明合并，作为任务连接器需求集合；不表示独占或操作授权。实际外部工具接入仍需适配器；当前声明不证明工具已可调用。
+`;
+
+/** JSON Schema 原文；校验器解析副本，查询返回同一正文。 */
+const moduleSchema = `{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Module definition",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "name",
+    "summary",
+    "authors",
+    "sources",
+    "connectors",
+    "id",
+    "children",
+    "overview",
+    "workflows"
+  ],
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 100,
+      "pattern": "^[^\\\\r\\\\n]+$",
+      "description": "100–250 non-whitespace characters; checked by the maintenance script."
+    },
+    "authors": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^\\\\S+$"
+      },
+      "description": "Human author IDs from one team; empty when unknown. References and team membership checked by maintenance script."
+    },
+    "maintenance": {
+      "type": "object",
+      "deprecated": true,
+      "description": "Legacy human-maintenance metadata retained without operational meaning. New modules do not require or generate it; assignments use workspace members and module ownership."
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/source"
+      }
+    },
+    "connectors": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^\\\\.cbim/connectors/[A-Za-z0-9_-]+(?:/[A-Za-z0-9_-]+)*$"
+      }
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^(?!/)(?!.*(?:^|/)\\\\.{1,2}(?:/|$))[^\\\\\\\\\\\\s:/]+(?:/[^\\\\\\\\\\\\s:/]+)*$"
+    },
+    "children": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^(?!/)(?!.*(?:^|/)\\\\.{1,2}(?:/|$))[^\\\\\\\\\\\\s:/]+(?:/[^\\\\\\\\\\\\s:/]+)*$"
+      }
+    },
+    "overview": {
+      "const": "module.md"
+    },
+    "workflows": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "reference"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reference": {
+            "type": "string",
+            "pattern": "^workflows/[a-z][a-z0-9]*(?:_[a-z0-9]+)*/workflow\\\\.md$"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "location",
+        "scope"
+      ],
+      "properties": {
+        "location": {
+          "type": "string",
+          "minLength": 1,
+          "description": "仅引用项目相对文件夹路径，不直接引用文件；文件按所在文件夹登记，具体维护范围由 scope 与 overview 说明。路径类型需依据文件系统或工程证据核实。"
+        },
+        "scope": {
+          "type": "string",
+          "minLength": 1,
+          "description": "一句话说明物理源的主要维护对象及必要排除条件；混装细节、具体边界与核验限制归 overview，不在索引中展开。"
+        }
+      }
+    }
+  }
+}
+`.replaceAll('\n', '\r\n');
+
+/** 只读流程正文；调用方仍须遵守真实工具权限与业务状态。 */
+const createWorkflow = `---
+name: create-workflow
+description: 为已有 Module 创建独立 Workflow，经内部知识工具维护清单并验证。
+---
+# 创建模块 Workflow
+
+遵循[通用规范](builtin:common-rules)、[Module 规范](builtin:module-spec)和[共享方法结构](builtin:shared-skills-workflows)。创建流程不自动执行流程中的业务操作。
+
+1. cbim_module_registry → cbim_module_get 定位目标模块、职责与现有流程，核实新增授权、重复内容和边界。
+2. 明确触发、输入、约束、步骤、所需能力、输出、验收及失败恢复方式。工具名称以实际发现为准。
+3. 调用 cbim_object_preview，operations 使用 kind=workflow、action=create、parentId=目标 Module ID、slug、data（name）、body（完整流程）。服务规划正文位置并维护清单，不直接操作 .cbim。
+4. Workflow 只属于本模块，不继承父模块、领域工程、兄弟或 workspace 根的流程。跨模块任务分别核实步骤。
+5. 核对 diff 与校验，取得有效写入授权后 cbim_object_commit(planId)，再 cbim_module_get 核实。更新和删除使用返回的 Workflow id，通过相同预览提交流程完成。
+6. 核实可执行性、失败分支与验证依据；未实跑只能报告静态检查结果，交付归属、变更、验证和待确认项。
+`.replaceAll('\n', '\r\n');
+
+export { moduleSpec, moduleSchema, createWorkflow };

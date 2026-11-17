@@ -362,6 +362,7 @@
       ],
       "tests": {
         "unit": [
+          "tests/builtin-documents.test.ts",
           "tests/knowledge-queries.test.ts",
           "tests/unit/logic/knowledge/memory-index.test.ts"
         ],

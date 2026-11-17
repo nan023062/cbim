@@ -41,7 +41,7 @@ it('重开后旧已提交包只查原 journal 和索引回执，不复活旧实�
   const f=await setup();let reopened:Application|undefined;try{
     const published=await f.publish('team'),done=await f.preview(published.resourceId,{slug:'complete'}),pending=await f.preview(published.resourceId,{slug:'unaccepted'}),receipt=await f.commit(done.planId);
     const id=f.target.entry.id,dir=path.join(f.user,id,'transactions'),evidence=async()=>Promise.all((await fs.readdir(dir)).sort().map(async name=>[name,await fs.readFile(path.join(dir,name),'utf8')]));
-    const before=await evidence();await f.app.Shutdown();reopened=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await reopened.Init();
+    const before=await evidence();await f.app.Shutdown();reopened=new Application(new Paths(f.user,path.resolve('.')));await reopened.Init();
     const w=reopened.Workspace(id),service=new WorkspacePackages(w,reopened.resources);
     expect(await service.Commit({workspaceId:id,instanceId:w.instanceId,planId:done.planId})).toEqual(receipt);expect(await evidence()).toEqual(before);
     await expect(service.Commit({workspaceId:id,instanceId:w.instanceId,planId:pending.planId})).rejects.toMatchObject({code:'STALE_INSTANCE'});expect(await evidence()).toEqual(before);

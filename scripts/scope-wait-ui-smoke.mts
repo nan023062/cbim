@@ -28,7 +28,7 @@ const desktopProcesses:{pid:number;stderr:string[]}[]=[],crashProcesses:unknown[
 function observeDesktop(app:ElectronApplication){const child=app.process(),record={pid:child.pid!,stderr:[] as string[]};desktopProcesses.push(record);child.stderr?.on('data',chunk=>record.stderr.push(String(chunk)))}
 function processTree(pid:number){return JSON.parse(execFileSync('powershell.exe',['-NoProfile','-Command',`Get-CimInstance Win32_Process -Filter 'ProcessId=${pid} OR ParentProcessId=${pid}' | Select-Object ProcessId,ParentProcessId,Name,ExecutablePath,CommandLine | ConvertTo-Json -Depth 3`],{encoding:'utf8',windowsHide:true}).trim()||'[]')}
 try{
-  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.Init();
+  setup=new Application(new Paths(user,path.resolve('.')));await setup.Init();
   await setup.models.Save({profile:{name:'Local scope waiting UI',api:'openai-completions',baseUrl:provider.url,auth:'none',defaultModel:'wait-fixture',models:[{id:'wait-fixture',name:'Wait fixture',enabled:true,contextWindow:65536,maxTokens:4096,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});
   const entry=await setup.Dispatch('add',{path:project}),workspace=setup.Workspace(entry.id),team=await seedTeam(workspace);
   const knowledge=await workspace.Snapshot(),modulePath=team.input.moduleId+'/module.json',definition=JSON.parse(knowledge.files.find(file=>file.path===modulePath)!.text);

@@ -9,6 +9,7 @@ import type { DesktopUpdates } from './desktop-updates';
 /** 仅由冷壳构造，所有路径属于已验证的不可变目录；会话和凭据不在这些目录内。 */
 export interface DesktopRuntimeHost
 {
+  /** 已发布冷壳保留的 R 根路径字段；当前内置规范随业务代码编译，不再用它读取正文。 */
   assetsRoot: string;
 
   cacheRoot: string;

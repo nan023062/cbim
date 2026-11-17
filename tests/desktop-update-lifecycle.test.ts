@@ -11,7 +11,7 @@ it('catalog startup can precede workspace restore, and shutdown cancels later ba
   const f=await fixture();let early:Application|undefined;
   try{
     const entry=await f.app.Dispatch('add',{path:f.a});await f.app.Shutdown();
-    early=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await early.Init({restore:false});
+    early=new Application(new Paths(f.user,path.resolve('.')));await early.Init({restore:false});
     expect((await early.Dispatch('list')).entries.map((entry:any)=>entry.id)).toContain(entry.id);expect(()=>early!.Workspace(entry.id)).toThrow();
     await early.Restore();expect(early.Workspace(entry.id).entry.id).toBe(entry.id);await early.Shutdown();await early.Restore();expect(()=>early!.Workspace(entry.id)).toThrow();
   }finally{await early?.Shutdown();await f.cleanup()}
@@ -31,7 +31,7 @@ it('prefetch leaves the workspace open; explicit install drains and preserves it
     expect((await f.app.Workspace(entry.id).Snapshot()).files).toEqual(before.files);
     await updates.Install();
     expect(stop).toHaveBeenCalledOnce();expect(calls).toEqual(['prepare','download','drain','drained','install']);expect(updates.Status().phase).toBe('installing');
-    reopened=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await reopened.Init();
+    reopened=new Application(new Paths(f.user,path.resolve('.')));await reopened.Init();
     const after=await reopened.Workspace(entry.id).Snapshot();expect(after.files).toEqual(before.files);expect(after.workspaceId).toBe(before.workspaceId);
     expect(await fs.readFile(path.join(f.a,'retained.txt'),'utf8')).toBe('original business file');expect(await fs.readFile(path.join(f.user,'update-marker.txt'),'utf8')).toBe('original user profile');expect(await reopened.Dispatch('loop.list',{id:entry.id})).toEqual([]);
   }finally{updates?.Close();await reopened?.Shutdown();await f.cleanup()}

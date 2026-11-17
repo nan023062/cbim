@@ -74,7 +74,7 @@ it.each(['complete','owner-before-claim','profile-before-claim','profile-after-c
   if(mode==='bad-wire'){expect(lostReplies).toBe(1);expect(thread[0].toolReceipts?.find(r=>r.toolCallId==='execution-call-check')?.outcome).toBe('succeeded')}
   const files=summaries.flatMap(s=>[path.join(f.user,workspaceId,'loop-engine/tasks',s.task.taskId,s.runId,'events.jsonl'),s.sessionFile!]);
   const bytes=await Promise.all(files.map(file=>fs.readFile(file))),sequence=[...provider.sequence];
-  vi.restoreAllMocks();await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.Init();
+  vi.restoreAllMocks();await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')));await app.Init();
   expect(await records()).toEqual(saved);expect(await state()).toEqual(persisted);expect(provider.sequence).toEqual(sequence);
   expect(await Promise.all(files.map(file=>fs.readFile(file)))).toEqual(bytes);expect(app.runtime.Snapshot().pressure.activeRuns).toBe(0);
   await fs.mkdir('test-results',{recursive:true});await fs.writeFile('test-results/recursive-owner-'+mode+'.json',JSON.stringify({mode,identity,business,httpRequests:provider.httpRequests,errors:provider.errors,restartWithoutReplay:true},null,2));

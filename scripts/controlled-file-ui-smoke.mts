@@ -38,7 +38,7 @@ const instrumentation=String.raw`({ipcMain,utilityProcess})=>{
   }return child};
 }`;
 try{
-  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.Init();const seeded=await seedControlledFile(setup,project,provider.url);provider.bind(seeded.agentId,seeded.moduleId,seeded.selection);await setup.models.Select(seeded.options.profileId);await setup.Shutdown();setup=undefined;assert.equal(provider.main.length+provider.member.length,0);
+  setup=new Application(new Paths(user,path.resolve('.')));await setup.Init();const seeded=await seedControlledFile(setup,project,provider.url);provider.bind(seeded.agentId,seeded.moduleId,seeded.selection);await setup.models.Select(seeded.options.profileId);await setup.Shutdown();setup=undefined;assert.equal(provider.main.length+provider.member.length,0);
   if(partial)mapping=await holdControlledReadonlyMapping(root,path.join(project,data.file));
   const id=seeded.entry.id,records=()=>additionRecords(user,id),journal=()=>fs.readFile(path.join(user,id,'dispatch','dispatch.jsonl'));
   // 字符串表达式仅返回函数；明确调用测试自有探针，不能把“求值成功”当成监听已安装。

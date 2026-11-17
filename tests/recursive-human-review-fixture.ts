@@ -56,7 +56,7 @@ export async function prepareRecursiveHumanReview(reconsider=false,afterReview?:
       await until(()=>expect(app.runtime.Snapshot().pressure.activeRuns).toBe(0));
       const sequence=[...provider.sequence],logs=await humanDecisionLogBytes(f.user,entry.id),state=await app.Workspace(entry.id).dispatchStore.Read(),records=await decisions();
       expect(await fs.readFile(path.join(childDir,'events.jsonl'),'utf8')).toBe(childBefore);
-      await app.Shutdown();app=new ConcreteApplication(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.Init();await app.Open(entry.id);
+      await app.Shutdown();app=new ConcreteApplication(new Paths(f.user,path.resolve('.')));await app.Init();await app.Open(entry.id);
       expect(await questions()).toEqual([]);expect(await decisions()).toEqual(records);
       expect(await humanDecisionLogBytes(f.user,entry.id)).toEqual(logs);
       expect(await app.Workspace(entry.id).dispatchStore.Read()).toEqual(state);

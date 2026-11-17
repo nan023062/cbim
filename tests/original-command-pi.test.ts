@@ -29,7 +29,7 @@ it.each(['lost-registration','lost-result','before-call'] as OriginalRecursiveMo
   if(selection)for(let i=0;i<3;i++)expect((await app.Dispatch('dispatch.executionReport',selection)).basis).toEqual(report!.basis);
   expect(await fs.readFile(path.join(f.user,id,'dispatch/dispatch.jsonl'))).toEqual(journal);
   expect(await Promise.all(originalFiles.map(p=>fs.readFile(p)))).toEqual(bytes);
-  await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.Init();
+  await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')));await app.Init();
   expect(await app.Workspace(id).dispatchStore.Read()).toEqual(state);
   if(selection)expect((await app.Dispatch('dispatch.executionReport',selection)).basis).toEqual(report!.basis);
   expect(await fs.readFile(path.join(f.user,id,'dispatch/dispatch.jsonl'))).toEqual(journal);expect(await Promise.all(originalFiles.map(p=>fs.readFile(p)))).toEqual(bytes);expect([provider.main.length,provider.member.length,provider.other.length]).toEqual(counts);

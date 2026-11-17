@@ -49,7 +49,7 @@ it('actual Application registers two independent positions and explicitly adopts
     const final=await get(first.receipt.memberId);expect(final.member.state).toBe('retired');expect(final.member.adoption).toEqual(adoptedModel.member.adoption);expect(final.member.runtimePolicy).toEqual(adoptedModel.member.runtimePolicy);await unchanged();
     await expect(commitWorkspaceMember(app,id,{kind:'state',memberId:first.receipt.memberId,expectedRevision:retired.receipt.memberRevision,nextState:'active',reason:'不得复活已退休岗位。'})).rejects.toMatchObject({code:'MEMBER_RETIRED'});
     const journalPath=path.join(f.user,id,'dispatch','dispatch.jsonl'),journal=await fs.readFile(journalPath);const finalList=await list();
-    await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.Init();
+    await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')));await app.Init();
     const reopened=await get(first.receipt.memberId);expect(reopened.member).toEqual(final.member);expect((await list()).items).toEqual(finalList.items);expect((await list()).registryCursor).toEqual(finalList.registryCursor);
     expect(await app.Dispatch('workspace.members.receipt',{workspaceId:id,commandId:first.input.commandId})).toEqual(first.receipt);expect(await app.Dispatch('workspace.members.commit',first.input)).toEqual(first.receipt);expect(await fs.readFile(journalPath)).toEqual(journal);await unchanged();
   }finally{await app.Shutdown();await probe.close();await f.cleanup()}
@@ -68,7 +68,7 @@ it('actual accepted registration survives a deliberately lost caller reply, rest
     const journalPath=path.join(f.user,id,'dispatch','dispatch.jsonl'),bytes=await fs.readFile(journalPath),records=bytes.toString('utf8').trim().split('\n').map(line=>JSON.parse(line) as {body:{command:{commandId:string};mutation:{workspaceMemberChanges?:unknown[]}}});
     expect(records.filter(record=>record.body.command.commandId==='workspace-member-'+input.commandId)).toHaveLength(1);expect(records.flatMap(record=>record.body.mutation.workspaceMemberChanges??[])).toHaveLength(1);
     expect(workspaceMemberListSchema.parse(await app.Dispatch('workspace.members.list',identity)).total).toBe(1);expect(await app.Dispatch('workspace.members.receipt',{workspaceId:id,commandId:randomUUID()})).toBeUndefined();
-    await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.Init();
+    await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')));await app.Init();
     expect(app.Workspace(id).instanceId).not.toBe(identity.instanceId);expect(await app.Dispatch('workspace.members.receipt',{workspaceId:id,commandId:input.commandId})).toEqual(accepted);
     expect(await app.Dispatch('workspace.members.commit',input)).toEqual(accepted);expect(await app.Dispatch('workspace.members.commit',input)).toEqual(accepted);
     await expect(app.Dispatch('workspace.members.commit',{...input,change:{...change,name:'不得复用原命令的其它名称'}})).rejects.toMatchObject({code:'MEMBER_COMMAND_CONFLICT'});

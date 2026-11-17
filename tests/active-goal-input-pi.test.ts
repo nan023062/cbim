@@ -81,7 +81,7 @@ it.each(modes)('recursive active input retains identity, receipt and stop bounda
   const state=await app.Workspace(seed.entry.id).dispatchStore.Read();expect(state.graphs[0].tasks).toEqual([]);expect(state.agentBusinessRuns).toHaveLength(1);
   expect(provider.member).toHaveLength(5);expect(provider.errors).toEqual([]);
   const queue=await app.Dispatch('loop.queue',{id:seed.entry.id,taskId:start.taskId}),nativeFile=summaries[0].sessionFile!,native=await fs.readFile(nativeFile),counts=[provider.main.length,provider.member.length];
-  await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.Init();
+  await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')));await app.Init();
   expect(await seed.scopes()).toEqual([final]);expect(await app.Execution(seed.entry.id).Thread(start.taskId)).toEqual(summaries);
   expect(await app.Workspace(seed.entry.id).dispatchStore.Read()).toEqual(state);
   expect(await app.Dispatch('loop.queue',{id:seed.entry.id,taskId:start.taskId})).toEqual(queue.map((item:QueuedMessage)=>({...item,status:'paused',reason:'应用已重启，请确认后继续队列'})));

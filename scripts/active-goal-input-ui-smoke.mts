@@ -17,7 +17,7 @@ const temp=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-active-input-ui-')),proj
 const provider=await activeInputProvider(stopping||unknown?'stale-complete':'twice-waiting'),pageErrors:string[]=[];
 let desktop:ElectronApplication|undefined,setup:Application|undefined,keepTemp=false,report:Record<string,unknown>|undefined;
 try{
-  await fs.mkdir(project,{recursive:true});setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.Init();const seed=await seedActiveInput(setup,project,user,provider),{entry}=seed;await setup.Shutdown();setup=undefined;
+  await fs.mkdir(project,{recursive:true});setup=new Application(new Paths(user,path.resolve('.')));await setup.Init();const seed=await seedActiveInput(setup,project,user,provider),{entry}=seed;await setup.Shutdown();setup=undefined;
   desktop=await electron.launch({executablePath:exe,env:{...process.env,CBIM_USER_DATA_ROOT:user},timeout:60000});let page=await desktop.firstWindow();page.setDefaultTimeout(30000);page.on('pageerror',error=>pageErrors.push(error.message));
   const call=(action:string,args:unknown={})=>page.evaluate(({action,args})=>(window as any).cbim.call(action,args),{action,args}),active=()=>page.locator('.workspace-panel:not([hidden])'),input=()=>active().getByRole('textbox',{name:'对话草稿',exact:true});
   await desktop.evaluate(({ipcMain},{stopping,unknown,model})=>{

@@ -1,4 +1,4 @@
-import fs from 'node:fs/promises';
+import {connectorSchema} from '../src/logic/connectors/rules/standards';
 import {randomUUID} from 'node:crypto';
 import Ajv2020 from 'ajv/dist/2020';
 import {describe,it,expect} from 'vitest';
@@ -17,7 +17,7 @@ import {seedTeam} from './team-fixture';
 const repositoryId='0ab132f1-c678-409b-b0b6-99ee5a8d2263';
 const plugin={id:'.cbim/connectors/docs',name:'文档桥',summary:'既有插件静态映射',plugin:{ghost_id:'docs',namespace:null}};
 const repository={id:'.cbim/connectors/resources',name:'资源仓库',summary:'只保存可复用仓库身份',provider:'resource_repository_v1' as const,repository:{repositoryId}};
-async function validator(){return new Ajv2020({allErrors:true,strict:false}).compile(JSON.parse(await fs.readFile('assets/connector/registry.schema.json','utf8')))}
+async function validator(){return new Ajv2020({allErrors:true,strict:false}).compile(JSON.parse(connectorSchema))}
 
 it('纯协议与实际知识 JSON Schema 同时接受原插件和资源仓库，不补造字段',async()=>{
   const validate=await validator();

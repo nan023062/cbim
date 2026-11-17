@@ -26,7 +26,7 @@ export async function prepareRecursivePause(secondQuestion=false,holdAfterAnswer
   const directory=path.join(f.user,entry.id,'loop-engine/tasks',binding.taskId,binding.runId);
   const child=()=>new FileRunStorage().Read(directory);
   const stop=()=>app.Dispatch('loop.stop',{id:entry.id,taskId:start.taskId});
-  const reopen=async()=>{await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.Init()};
+  const reopen=async()=>{await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')));await app.Init()};
   return {f,provider,entry,start,first,binding,directory,until,questions,question,answer,state,persistedState,child,stop,reopen,get app(){return app},cleanup:async()=>{provider.releaseContinuation();await app.Shutdown();await provider.close();await f.cleanup()}};
  }catch(error){provider.releaseContinuation();await app.Shutdown();await provider.close();await f.cleanup();throw error}
 }

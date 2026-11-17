@@ -61,7 +61,7 @@ it.each(['complete','waiting','stop','unknown-log'] as const)('hands help to the
   expect((await app.Dispatch('dispatch.graphSnapshot',{identity:{workspaceId:entry.id,rootSessionId:started.taskId}})).tasks).toEqual([]);
   expect(await questions()).toEqual([]);
   const counts=[provider.mainRequests.length,provider.memberRequests.length],snapshot=await records(),bytes=await globalRuntimeLogBytes(f.user,entry.id);
-  await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.Init();
+  await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')));await app.Init();
   expect(await records()).toEqual(snapshot);expect(await globalRuntimeLogBytes(f.user,entry.id)).toEqual(bytes);
   expect([provider.mainRequests.length,provider.memberRequests.length]).toEqual(counts);expect(app.runtime.Snapshot().pressure.activeRuns).toBe(0);
   if(markerStat){expect(await fs.readFile(marker,'utf8')).toBe(data.markerText);expect((await fs.stat(marker)).mtimeMs).toBe(markerStat.mtimeMs)}

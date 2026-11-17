@@ -48,7 +48,7 @@ it.each(['help','checkpoint']as MemberToolFault[])('keeps original recursive que
   const nativeBytes=await fs.readFile(sessionFile,'utf8'),native=nativeBytes.trim().split('\n').map(line=>JSON.parse(line));
   expect(native.find(item=>item.message?.toolCallId==='member-contract-stage')?.message).toMatchObject({isError:true,content:[{type:'text',text:expect.stringContaining('TOOL_OUTPUT_INVALID')}]});
   const counts=[provider.main.length,provider.member.length],bytes=await mainToolContractLogBytes(f.user,entry.id),events=await fs.readFile(path.join(dir,'events.jsonl')),stat=await fs.stat(path.join(f.a,data.file));
-  vi.restoreAllMocks();await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.Init();
+  vi.restoreAllMocks();await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')));await app.Init();
   expect(await graph()).toEqual(finished);expect(await records()).toEqual(saved);expect((await app.Workspace(entry.id).dispatchStore.Read()).agentBusinessRuns).toEqual(business);
   expect(await mainToolContractLogBytes(f.user,entry.id)).toEqual(bytes);expect(await fs.readFile(path.join(dir,'events.jsonl'))).toEqual(events);expect(await fs.readFile(sessionFile,'utf8')).toBe(nativeBytes);
   expect((await fs.stat(path.join(f.a,data.file))).mtimeMs).toBe(stat.mtimeMs);expect([provider.main.length,provider.member.length]).toEqual(counts);expect(provider.errors).toEqual([]);

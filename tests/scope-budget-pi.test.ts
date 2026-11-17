@@ -45,7 +45,7 @@ it.each(['main-limit','member-limit','cost-limit','unknown-price','tokens-unpric
   const queue=await app.Dispatch('loop.queue',{id:entry.id,taskId:started.taskId});
   if(!complete&&mode!=='unknown-price')expect(queue[0]).toMatchObject({message:data.queued,status:'paused'});
   const journal=path.join(f.user,entry.id,'dispatch/dispatch.jsonl'),bytes=await fs.readFile(journal),sequence=[...provider.sequence];
-  await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.Init();
+  await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')));await app.Init();
   expect(await app.Dispatch('budget.settings')).toEqual(raised);expect(await app.Workspace(entry.id).dispatchStore.Read()).toEqual(saved);
   expect(await app.Dispatch('dispatch.requestBudget',query)).toEqual(report);expect(await fs.readFile(journal)).toEqual(bytes);expect(provider.sequence).toEqual(sequence);
   expect(await fs.readFile(path.join(f.a,data.file),'utf8')).toBe(data.fact);

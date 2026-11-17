@@ -26,7 +26,7 @@ it.each(['openai-completions','openai-responses','anthropic-messages'] as Resolv
     expect(inspected.events.find(event=>event.type==='engine.status'&&event.data.metric==='tool-catalog'&&event.data.stage==='active')?.data.missing).toEqual([]);
     const report=requestBudgetReportSchema.parse(await app.Dispatch('dispatch.requestBudget',query));expect(report).toMatchObject({requests:1,reported:1,tokens:120,reservedTokens:0,unknown:0,estimatedCostUsd:0.000125});
     const journal=path.join(app.paths.Project(entry.id),'dispatch','dispatch.jsonl'),bytes=await fs.readFile(journal);expect(bytes.toString()).not.toContain('Request budget verified.');
-    await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.Init();await app.Open(entry.id);expect(await app.Dispatch('dispatch.requestBudget',query)).toEqual(report);expect(await fs.readFile(journal)).toEqual(bytes);expect(provider.requests).toHaveLength(1);
+    await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')));await app.Init();await app.Open(entry.id);expect(await app.Dispatch('dispatch.requestBudget',query)).toEqual(report);expect(await fs.readFile(journal)).toEqual(bytes);expect(provider.requests).toHaveLength(1);
   }finally{await app.Shutdown();await provider.close();await f.cleanup()}
 },45000);
 

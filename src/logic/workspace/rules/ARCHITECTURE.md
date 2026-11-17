@@ -10,6 +10,7 @@
 
 | 组成 | 定位 |
 | --- | --- |
+| [standards](standards.ts) | 模块定义、Workflow 创建规范与 Module Schema 的唯一代码正文。 |
 | [module-outline](module-outline.ts) | 模块正文的固定章节和可复制模板，供知识校验与桌面编辑共同使用。 |
 | [workflow-contract](workflow-contract.ts) | 定义模块 Workflow 正文中可选执行条件的严格协议，供知识治理、资源包与执行准备共同解析。 |
 | [module-ownership](module-ownership.ts) | 单模块负责人控制面的严格公开协议，供岗位、责任服务、持久化及桌面共用。 |
@@ -30,6 +31,10 @@ class N_1dc9e5052350["workflow-contract"] {
   <<module>>
 }
 click N_1dc9e5052350 href "workflow-contract.ts"
+class N_64c575364e6c["standards"] {
+  <<module>>
+}
+click N_64c575364e6c href "standards.ts"
 class N_3227e75daacb["module-outline"] {
   <<module>>
 }

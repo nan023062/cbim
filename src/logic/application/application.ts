@@ -2,7 +2,7 @@
  * 作用定位：Logic 层的业务应用入口，持有应用级服务和按工作区装配的唯一服务实例。
  * 设计原因：集中管理打开、退役、排空和关闭顺序；通信适配留在 Bridge，业务服务不反向读取本类。
  * 实现形式：有状态实例类；运行集合、准入代际和退出 Promise 均属于当前 Application。
- * 资源边界：assetsRoot、密钥适配、文件传输及受管引擎端口只由可信宿主注入，不接受对话参数替换。
+ * 资源边界：密钥适配、文件传输及受管引擎端口只由可信宿主注入，不接受对话参数替换。
  * 生命周期：先撤销等待与新触发，再排空执行和文件操作，最后关闭共享存储、历史与工作区锁；未知结果不自动重放。
  * 初始化：字段初值只含独立容器、标记及监管/准入对象，无跨字段读取；构造体内的服务装配顺序保持原样。
  */
@@ -277,9 +277,9 @@ export class Application
     return this.stopping;
   }
 
-  /** 装配应用级服务；仅可信宿主提供资源根、密钥适配和平台端口，持久配置由 init 读取。 */
+  /** 装配应用级服务；可信宿主提供工作区路径、密钥适配和平台端口，Init 编译代码内置规则并读取持久配置。 */
   // 可信文件传输同时供旧运行恢复与新 Agent 业务装配；公开对话参数不能替换该端口。
-  public constructor(paths: Paths, assetsRoot: string, secretCipher?: SecretCipher, platform: ApplicationPlatform = {})
+  public constructor(paths: Paths, secretCipher?: SecretCipher, platform: ApplicationPlatform = {})
   {
     this.paths = paths;
 
@@ -318,7 +318,7 @@ export class Application
 
     this.catalog = new Catalog(paths);
 
-    this.rules = new Rules(assetsRoot);
+    this.rules = new Rules();
 
     this.resources = new ResourceRepositories(paths);
 

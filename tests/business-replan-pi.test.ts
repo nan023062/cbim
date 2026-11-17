@@ -57,7 +57,7 @@ it.each(['execute','ask','stop'] as const)('creates explicit recursive business 
   expect((await app.Dispatch('loop.queue',{id:entry.id,taskId:identity.rootSessionId}))[0]).toMatchObject({message:data.queued,status:'paused'});
   expect((await app.Dispatch('dispatch.replans.preview',query)).eligible).toBe(false);
   const counts=[provider.mainRequests.length,provider.memberRequests.length];
-  await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.Init();
+  await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')));await app.Init();
   expect(await seed.scopes()).toEqual(scopes);expect((await app.Dispatch('loop.replanReceipt',lookup))?.scopeStatus).toBe('closed');expect((await app.Dispatch('loop.replanStart',request)).replan).toEqual(receipt.replan);
   expect([provider.mainRequests.length,provider.memberRequests.length]).toEqual(counts);await seed.unchanged();expect(provider.errors).toEqual([]);
  }catch(error){await fs.mkdir('test-results',{recursive:true});await fs.writeFile('test-results/recursive-replan-'+mode+'.json',JSON.stringify({error:String(error),main:provider.mainRequests,member:provider.memberRequests,errors:provider.errors},null,2));throw error}

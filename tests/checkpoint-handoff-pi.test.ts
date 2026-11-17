@@ -54,7 +54,7 @@ it.each(['complete','answer-retry','prepare-stop','lost-output'] as const)('hand
   if(mode==='lost-output'){expect(lost).toBe(1);expect(provider.state.checks).toMatchObject({state:'verified',acceptance:'not_evaluated'})}
   const thread=await app.Execution(id).Thread(start.taskId);expect(thread).toHaveLength(1);
   const paths=[...thread,...summaries].flatMap(s=>[path.join(f.user,id,'loop-engine/tasks',s.task.taskId,s.runId,'events.jsonl'),s.sessionFile!]),bytes=await Promise.all(paths.map(p=>fs.readFile(p))),counts=[provider.main.length,provider.a.length,provider.b.length];
-  vi.restoreAllMocks();await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.Init();
+  vi.restoreAllMocks();await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')));await app.Init();
   expect(await state()).toEqual(saved);expect(await Promise.all(paths.map(p=>fs.readFile(p)))).toEqual(bytes);expect([provider.main.length,provider.a.length,provider.b.length]).toEqual(counts);
  }finally{vi.restoreAllMocks();await app.Shutdown();await provider.close();await f.cleanup()}
 },120000);

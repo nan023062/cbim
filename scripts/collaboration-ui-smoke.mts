@@ -95,7 +95,7 @@ const address=server.address();assert.ok(address&&typeof address!=='string');
 let desktop:ElectronApplication|undefined,setup:Application|undefined;
 const pageErrors:string[]=[];
 try{
-  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.Init();
+  setup=new Application(new Paths(user,path.resolve('.')));await setup.Init();
   const modelSettings=await setup.models.Save({profile:{name:'Local collaboration UI',api:'openai-completions',baseUrl:`http://127.0.0.1:${address.port}/v1`,auth:'none',defaultModel:'collaboration-ui',models:[{id:'collaboration-ui',name:'Collaboration UI',enabled:true,contextWindow:65536,maxTokens:4096,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});
   const entry=await setup.Dispatch('add',{path:project}),workspace=setup.Workspace(entry.id),team=await seedTeam(workspace);
   const scopes=async()=>{

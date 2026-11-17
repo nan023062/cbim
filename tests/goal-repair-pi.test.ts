@@ -43,7 +43,7 @@ it('主 Agent 在原调用循环内读取失败、修复并重测，不创建旧
     expect(await fs.readFile(path.join(f.a,'repair-target.txt'),'utf8')).toBe('fixed');expect(requests).toHaveLength(4);
     const canonicalPath=path.join(f.user,entry.id,'loop-engine/tasks',started.taskId,history[0].runId,'events.jsonl');
     const canonical=await fs.readFile(canonicalPath),native=await fs.readFile(history[0].sessionFile!);
-    await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.Init();
+    await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')));await app.Init();
     expect(await app.Execution(entry.id).Thread(started.taskId)).toEqual(history);expect(await app.Workspace(entry.id).dispatchStore.Read()).toEqual(state);
     expect(await fs.readFile(canonicalPath)).toEqual(canonical);expect(await fs.readFile(history[0].sessionFile!)).toEqual(native);expect(requests).toHaveLength(4);
   }finally{await app.Shutdown();await f.cleanup();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}

@@ -37,7 +37,7 @@ it.each(['complete','stop'] as const)('captures real Pi read identities and insp
     const listing=artifactReportSchema.parse(await f.app.Dispatch('dispatch.artifactReport',query));expect(listing.verification).toBeUndefined();expect(listing.baselines).toEqual(matched.baselines);
     const serialized=JSON.stringify(listing);for(const privateValue of [f.a,f.user,data.facts[0],data.facts[1],'sessionFile'])expect(serialized).not.toContain(privateValue);
     expect(await files.read()).toEqual(bytes);expect(await graph()).toEqual(closedGraph);expect(await records()).toEqual(closedRecords);expect(provider.sequence).toEqual(requests);
-    await f.app.Shutdown();reopened=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await reopened.Init();
+    await f.app.Shutdown();reopened=new Application(new Paths(f.user,path.resolve('.')));await reopened.Init();
     const restoredList=artifactReportSchema.parse(await reopened.Dispatch('dispatch.artifactReport',query));expect(restoredList.verification).toBeUndefined();expect(restoredList.baselines).toEqual(matched.baselines);
     assertArtifactVerification(await reopened.Dispatch('dispatch.artifactReport',selected),['changed','missing']);
     expect(await files.read()).toEqual(bytes);expect(await reopened.Dispatch('dispatch.graphSnapshot',{identity})).toEqual(closedGraph);expect(await records()).toEqual(closedRecords);expect(provider.sequence).toEqual(requests);expect(provider.errors).toEqual([]);

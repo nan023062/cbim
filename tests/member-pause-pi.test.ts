@@ -52,7 +52,7 @@ it.each(['complete-restart','stop-wait','changed-files','submitted-stop'] as con
   const expected=mode==='changed-files'?'external change during original pause':data.facts[0];
   expect(await fs.readFile(path.join(f.a,data.files[0]),'utf8')).toBe(expected);
   const sequence=[...provider.sequence],logs=await Promise.all(runs.map(r=>fs.readFile(path.join(f.user,entry.id,'loop-engine/tasks',r.binding.taskId,r.binding.runId,'events.jsonl'),'utf8')));
-  await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.Init();
+  await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')));await app.Init();
   expect(await app.Workspace(entry.id).dispatchStore.Read()).toEqual(state);expect(await questions()).toEqual([]);expect(provider.sequence).toEqual(sequence);
   await expect(app.Dispatch('loop.answerQuestion',{id:entry.id,taskId:start.taskId,questionId:question.id,answers:[{option:0,other:''}]})).rejects.toThrow();
   expect(await Promise.all(runs.map(r=>fs.readFile(path.join(f.user,entry.id,'loop-engine/tasks',r.binding.taskId,r.binding.runId,'events.jsonl'),'utf8')))).toEqual(logs);

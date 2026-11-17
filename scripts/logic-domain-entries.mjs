@@ -21,6 +21,12 @@ export const domainRoots=[
   "src/logic/workspace/rules/"
 ];
 export const domainPublicEntries=new Set([
+  "src/logic/knowledge/rules/standards.ts",
+  "src/logic/governance/rules/standards.ts",
+  "src/logic/workspace/rules/standards.ts",
+  "src/logic/team/rules/standards.ts",
+  "src/logic/tasks/rules/standards.ts",
+  "src/logic/connectors/rules/standards.ts",
   "src/logic/agents/agent.ts",
   "src/logic/agents/contracts.ts",
   "src/logic/execution/rules/engine-adapter.ts",

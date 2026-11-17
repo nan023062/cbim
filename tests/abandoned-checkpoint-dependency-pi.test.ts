@@ -35,7 +35,7 @@ it.each(['complete','bad-output','submitted-stop','restart-held'] as const)('use
   const originals=summaries.flatMap(s=>[path.join(f.user,id,'loop-engine/tasks',s.task.taskId,s.runId,'events.jsonl'),s.sessionFile!]),bytes=await Promise.all(originals.map(p=>fs.readFile(p)));
   expect(provider.state.results).toHaveLength(1);
   if(mode==='submitted-stop')await app.Dispatch('loop.stop',{id,taskId:start.taskId});
-  else if(mode==='restart-held'){await app.Shutdown();provider.releaseSuccessors();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.Init()}
+  else if(mode==='restart-held'){await app.Shutdown();provider.releaseSuccessors();app=new Application(new Paths(f.user,path.resolve('.')));await app.Init()}
   provider.releaseSuccessors();
   await until(async()=>{expect((await state()).scopes?.[0].status).toBe('closed');expect(app.runtime.Snapshot().pressure.activeRuns).toBe(0)});
   const saved=await state(),runs=saved.agentBusinessRuns!,complete=mode==='complete'||mode==='bad-output';
@@ -52,7 +52,7 @@ it.each(['complete','bad-output','submitted-stop','restart-held'] as const)('use
   }else expect(provider.b).toHaveLength(5);
   if(mode==='bad-output'){expect(returns).toBe(1);expect(provider.state.checks).toMatchObject({state:'verified',runId:initial[1].binding.runId})}
   const counts=[provider.main.length,provider.a.length,provider.b.length],journal=await fs.readFile(path.join(f.user,id,'dispatch/dispatch.jsonl'));
-  vi.restoreAllMocks();await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.Init();
+  vi.restoreAllMocks();await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')));await app.Init();
   expect(await state()).toEqual(saved);expect(await Promise.all(originals.map(p=>fs.readFile(p)))).toEqual(bytes);expect(await fs.readFile(path.join(f.user,id,'dispatch/dispatch.jsonl'))).toEqual(journal);expect([provider.main.length,provider.a.length,provider.b.length]).toEqual(counts);
  }finally{provider.releaseSuccessors();vi.restoreAllMocks();await app.Shutdown();await provider.close();await f.cleanup()}
 },120000);

@@ -22,7 +22,7 @@ const provider=await ownerExecutionProvider(stale?'owner-before-claim':progress?
 let setup:Application|undefined,desktop:ElectronApplication|undefined,page!:Page,keepTemp=false,report:Record<string,unknown>|undefined;
 const cleanup={desktopClosed:false,providerClosed:false,tempRemoved:false};
 try{
-  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.Init();
+  setup=new Application(new Paths(user,path.resolve('.')));await setup.Init();
   const seeded=await seedOwnerExecution(setup,project,provider.urls);provider.bind(seeded.team.input.agentId,seeded.modules);await setup.models.Select(seeded.mainOptions.profileId);await setup.Shutdown();setup=undefined;
   const id=seeded.entry.id,records=()=>ownerExecutionRecords(user,id);
   const launch=async()=>{desktop=await electron.launch({executablePath:exe,env:{...process.env,CBIM_USER_DATA_ROOT:user},timeout:60000});page=await desktop.firstWindow();page.setDefaultTimeout(30000);page.on('pageerror',error=>pageErrors.push(error.message));page.on('requestfailed',request=>transportErrors.push(request.url()+': '+request.failure()?.errorText))};

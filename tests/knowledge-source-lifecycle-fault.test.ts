@@ -32,7 +32,7 @@ it.each(['prepare-reply-lost','final-not-saved','final-reply-lost'] as const)('a
       await knowledgeSourceMemberChange(call,id,{kind:'update',memberId:seeded.registered.receipt.memberId,expectedRevision:1,patch:{name:data.memberName+'（保留旧来源）'},reason:'待核实期间仅调整岗位名称'});
       expect((await coordinator.Pending()).map(value=>value.requestId)).toEqual([preview.planId]);
     }
-    vi.restoreAllMocks();const beforeRestart=await knowledgeSourceDiskEvidence(f.user,id);await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.Init();
+    vi.restoreAllMocks();const beforeRestart=await knowledgeSourceDiskEvidence(f.user,id);await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')));await app.Init();
     expect(app.Workspace(id).state).toBe('running');expect(await app.Workspace(id).sources!.Pending()).toEqual([]);
     const recovered=JSON.parse(await fs.readFile(journalPath,'utf8'));expect(recovered.state).toBe(mode==='prepare-reply-lost'?'rolled_back':'committed');
     const currentIdentity={workspaceId:id,instanceId:app.Workspace(id).instanceId,planId:preview.planId};
@@ -44,7 +44,7 @@ it.each(['prepare-reply-lost','final-not-saved','final-reply-lost'] as const)('a
     expect(sourceEvents.filter(value=>value.kind==='resolved'&&value.transitionId===transitionId)).toHaveLength(1);
     if(mode==='final-reply-lost')expect(recoveredDisk.dispatchBytes).toEqual(beforeRestart.dispatchBytes);
     const transitions=await app.Workspace(id).sources!.Transitions();expect(transitions.filter(value=>value.transitionId===transitionId)).toHaveLength(1);expect(transitions.find(value=>value.transitionId===transitionId)!.state).toBe(mode==='prepare-reply-lost'?'rolled_back':'committed');
-    const afterRetry=await knowledgeSourceDiskEvidence(f.user,id);await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.Init();expect((await knowledgeSourceDiskEvidence(f.user,id)).dispatchBytes).toEqual(afterRetry.dispatchBytes);expect(probe.requests).toEqual([]);
+    const afterRetry=await knowledgeSourceDiskEvidence(f.user,id);await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')));await app.Init();expect((await knowledgeSourceDiskEvidence(f.user,id)).dispatchBytes).toEqual(afterRetry.dispatchBytes);expect(probe.requests).toEqual([]);
   }finally{vi.restoreAllMocks();await app.Shutdown();await f.cleanup();await probe.close()}
 },90000);
 
@@ -63,7 +63,7 @@ it.each([false,true])('a genuine prepared journal without DS admission never ove
     vi.restoreAllMocks();await app.Shutdown();
     if(externalChange){expect(journal.after[relative]).toBe(data.changedPrinciples);await fs.writeFile(file,journal.after[relative],'utf8')}
     const expectedBytes=await fs.readFile(file),expectedMtime=(await fs.stat(file)).mtimeMs;
-    app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.Init();
+    app=new Application(new Paths(f.user,path.resolve('.')));await app.Init();
     expect(await fs.readFile(file)).toEqual(expectedBytes);expect((await fs.stat(file)).mtimeMs).toBe(expectedMtime);expect((await knowledgeSourceDiskEvidence(f.user,id)).dispatchBytes).toEqual(dispatchBefore);
     const recovered=JSON.parse(await fs.readFile(journalPath,'utf8'));
     if(externalChange){expect(app.Workspace(id).state).toBe('failed');expect(recovered.state).not.toBe('rolled_back');expect(recovered.before).toEqual(journal.before);expect(recovered.after).toEqual(journal.after)}

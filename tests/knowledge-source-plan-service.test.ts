@@ -41,7 +41,7 @@ it('original request and nested change key order survive source journal replay w
     const s=await f.w.Snapshot(),original={changes:[{text:'# Actual request order',path:'.cbim/source-order.md'}],requestId:randomUUID(),revision:s.revision,instanceId:s.instanceId,workspaceId:s.workspaceId};
     const receipt=await f.w.Commit(original),file=path.join(f.user,f.id,'transactions',original.requestId+'.json'),bytes=await fs.readFile(file);
     expect(JSON.parse(bytes.toString()).fingerprint).toBe(hash(json(original)));expect(await f.w.CommittedReceipt(original)).toEqual(receipt);
-    await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.Init();expect(await app.Workspace(f.id).CommittedReceipt(original)).toEqual(receipt);expect(await fs.readFile(file)).toEqual(bytes);
+    await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')));await app.Init();expect(await app.Workspace(f.id).CommittedReceipt(original)).toEqual(receipt);expect(await fs.readFile(file)).toEqual(bytes);
   }finally{await app.Shutdown();await f.cleanup()}
 });
 

@@ -61,7 +61,7 @@ it.each(['complete','stop','cancel-not-success'] as const)('preserves sequential
     expect((await app.Dispatch('dispatch.graphSnapshot',{identity})).tasks).toEqual([]);
     expect(await questions()).toEqual([]);
     const counts=[provider.mainRequests.length,provider.memberRequests.length],bytes=await globalRuntimeLogBytes(f.user,entry.id);
-    await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.Init();
+    await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')));await app.Init();
     expect(await records()).toEqual(saved);expect(await globalRuntimeLogBytes(f.user,entry.id)).toEqual(bytes);
     expect([provider.mainRequests.length,provider.memberRequests.length]).toEqual(counts);
     if(mode!=='complete'){

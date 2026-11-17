@@ -17,7 +17,7 @@ const temp=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-persistent-effect-ui-'))
 const pageErrors:string[]=[],transportErrors:string[]=[],screenshots:string[]=[];let setup:Application|undefined,desktop:ElectronApplication|undefined,page!:Page,keep=false,report:Record<string,unknown>|undefined,source:Awaited<ReturnType<typeof preparePersistentEffect>>|undefined;
 const cleanup={desktopClosed:false,providerClosed:false,tempRemoved:false};
 try{
- setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.Init();source=await preparePersistentEffect(setup,user,project,temp,mode);
+ setup=new Application(new Paths(user,path.resolve('.')));await setup.Init();source=await preparePersistentEffect(setup,user,project,temp,mode);
  const {id,started,selection,callId,provider}=source,identity={workspaceId:id,rootSessionId:started.taskId},name=path.basename(source.seeded.entry.path),expectedRequests=provider.requests.length;
  const dispatchFile=path.join(user,id,'dispatch','dispatch.jsonl'),originalDispatch=await fs.readFile(dispatchFile),archive='test-results/'+artifact+'-ui-original';await fs.mkdir(archive,{recursive:true});
  await fs.writeFile(path.join(archive,'dispatch.jsonl'),originalDispatch);await fs.writeFile(path.join(archive,'module-ledger.json'),source.ledgerBytes);await fs.writeFile(path.join(archive,'native.jsonl'),source.native);await fs.writeFile(path.join(archive,'canonical-native-logs.json'),JSON.stringify(source.canonical,null,2));

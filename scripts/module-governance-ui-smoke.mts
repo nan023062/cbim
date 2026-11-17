@@ -14,7 +14,7 @@ import {latestExecutable} from './build-artifact.mjs';
 const mode=process.argv.includes('--defer')?'defer':process.argv.includes('--reject')?'reject':'approve',artifact='module-governance-'+mode,exe=await latestExecutable(),temp=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-module-governance-ui-')),project=path.join(temp,'governance-project'),user=path.join(temp,'user');await fs.mkdir(project);
 const pageErrors:string[]=[],dialogs:string[]=[];let setup:Application|undefined,desktop:ElectronApplication|undefined,keepTemp=false;
 try{
-  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.Init();const seeded=await seedModuleGovernance(setup,project);await setup.Shutdown();setup=undefined;
+  setup=new Application(new Paths(user,path.resolve('.')));await setup.Init();const seeded=await seedModuleGovernance(setup,project);await setup.Shutdown();setup=undefined;
   desktop=await electron.launch({executablePath:exe,env:{...process.env,CBIM_USER_DATA_ROOT:user},timeout:60000});let page=await desktop.firstWindow();const observe=()=>{page.setDefaultTimeout(30000);page.on('pageerror',error=>pageErrors.push(error.message));page.on('dialog',async dialog=>{dialogs.push(dialog.type()+': '+dialog.message());await dialog.dismiss()})};observe();
   // Invoke the real handler first. Only its successful persisted approve reply is dropped once; recovery must query that original command.
   await desktop.evaluate(({ipcMain},loseDecisionReply)=>{

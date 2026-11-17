@@ -21,7 +21,7 @@ it('fixed loader/native/installer inputs force C, while business output and engi
 it('identical resource content produces the same ZIP identity without an installer',async()=>{
   const f=await runtimeFixture();try{const first=f.manifest.resource,second=await archiveDirectory(f.source,f.output,first.tag,'repeat');expect(second.sha256).toBe(first.sha256);expect(second.files).toEqual(first.files)}finally{await f.cleanup()}
 });
-it('resource collection omits empty retired directories without changing source or declared bytes',async()=>{
+it('resource collection publishes compiled business and legal files, not source standards or retired assets',async()=>{
   const f=await runtimeFixture();try{
     const repo=path.join(f.root,'collection-repo'),compiled=path.join(f.root,'compiled'),target=path.join(f.root,'collected');
     const source={
@@ -46,9 +46,9 @@ it('resource collection omits empty retired directories without changing source 
     await fs.writeFile(path.join(compiled,'build/main.js'),'business');
     await fs.writeFile(path.join(compiled,'build/desktop.js'),'cold');
     await collectResources(compiled,target,repo);
-    const published=Object.keys(source).filter(name=>name.startsWith('legal/')||name.startsWith('assets/')&&!name.startsWith('assets/branding/'));
+    const published=Object.keys(source).filter(name=>name.startsWith('legal/'));
     expect((await inventory(target)).map(file=>file.path)).toEqual(['.vite/build/main.js',...published,'package.json'].sort());
-    for(const name of ['design','docs','engineering','assets/branding'])await expect(fs.stat(path.join(target,name))).rejects.toMatchObject({code:'ENOENT'});
+    for(const name of ['design','docs','engineering','assets'])await expect(fs.stat(path.join(target,name))).rejects.toMatchObject({code:'ENOENT'});
     await expect(fs.stat(path.join(target,'design/retired'))).rejects.toMatchObject({code:'ENOENT'});
     await expect(fs.stat(path.join(target,'.vite/renderer'))).rejects.toMatchObject({code:'ENOENT'});
     expect((await fs.stat(path.join(repo,'design/retired/scripts'))).isDirectory()).toBe(true);

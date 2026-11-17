@@ -21,7 +21,8 @@ it('实际 IPC 校验工作区实例并持久保存；重开不启动，损坏�
   const seed=await seedOwnerExecution(f.app,f.a,p.urls),identity={workspaceId:seed.entry.id,instanceId:f.app.Workspace(seed.entry.id).instanceId};
   const catalog=await f.app.Dispatch('automation.catalog',identity);expect(catalog.agents).toHaveLength(2);expect(catalog.modules.some((m:{id:string})=>m.id===seed.modules[0])).toBe(true);
   const initial=await f.app.Dispatch('agent.mainSettings',identity);await f.app.Dispatch('agent.configureMain',{...initial,selection:{engine:'pi',profileId:seed.profiles[0].id,modelId:seed.profiles[0].modelId}});
-  const job=await f.app.Dispatch('automation.save',{...identity,id:randomUUID(),expectedRevision:0,definition});
+  expect(catalog.skills.some((skill:{id:string})=>skill.id==='builtin:knowledge-query')).toBe(true);
+  const job=await f.app.Dispatch('automation.save',{...identity,id:randomUUID(),expectedRevision:0,definition:{...definition,skillIds:['builtin:knowledge-query']}});
   expect(p.calls).toEqual([]);expect(automationActionSchemas['automation.save'].safeParse({...identity,expectedRevision:0,definition,root:f.b}).success).toBe(false);
   await expect(f.app.Dispatch('automation.save',{...identity,instanceId:randomUUID(),expectedRevision:job.revision,id:job.id,definition})).rejects.toMatchObject({code:'STALE_INSTANCE'});
   await f.app.Open(identity.workspaceId,true);const next={...identity,instanceId:f.app.Workspace(identity.workspaceId).instanceId};expect((await f.app.Dispatch('automation.list',next)).jobs).toEqual([job]);expect(p.calls).toEqual([]);

@@ -14,7 +14,7 @@ import {latestExecutable} from './build-artifact.mjs';
 const stopping=process.argv.includes('--stop'),mode=stopping?'stop':'complete',artifact='main-tool-contract-'+mode,exe=await latestExecutable(),temp=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-main-tool-contract-ui-')),project=path.join(temp,'project'),user=path.join(temp,'user');await fs.mkdir(project);
 const provider=await mainToolContractProvider(mode),pageErrors:string[]=[];let setup:Application|undefined,desktop:ElectronApplication|undefined,keepTemp=false;
 try{
-  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.Init();const {entry}=await seedMainToolContract(setup,project,provider);await setup.Shutdown();setup=undefined;
+  setup=new Application(new Paths(user,path.resolve('.')));await setup.Init();const {entry}=await seedMainToolContract(setup,project,provider);await setup.Shutdown();setup=undefined;
   const until=async(check:()=>Promise<boolean>,label:string)=>{const end=Date.now()+60000;while(Date.now()<end){assert.deepEqual(provider.errors,[]);if(await check())return;await new Promise(resolve=>setTimeout(resolve,40))}throw Error('等待验收超时：'+label)},records=()=>mainToolContractRecords(user,entry.id);
   desktop=await electron.launch({executablePath:exe,env:{...process.env,CBIM_USER_DATA_ROOT:user},timeout:60000});let page=await desktop.firstWindow();page.setDefaultTimeout(30000);page.on('pageerror',error=>pageErrors.push(error.message));
   const call=(action:string,args:unknown={})=>page.evaluate(({action,args})=>(window as any).cbim.call(action,args),{action,args}),active=()=>page.locator('.workspace-panel:not([hidden])'),input=()=>active().getByRole('textbox',{name:'对话草稿',exact:true});

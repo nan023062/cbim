@@ -5,3 +5,5 @@
 export { githubFeedbackScopeSchema, feedbackInputSchema, feedbackResultSchema, feedbackReceiptInputSchema, feedbackConnectionCheckSchema, feedbackAvailabilitySchema, githubFeedbackConfigSchema, feedbackIssue } from './contracts';
 
 export type { FeedbackInput, FeedbackScope, FeedbackResult, FeedbackToolsPort, FeedbackConnectionCheck, FeedbackAvailability, GitHubFeedbackConfig, GitHubFeedbackStatus } from './contracts';
+
+export { bugFeedback, featureWish } from './skills';

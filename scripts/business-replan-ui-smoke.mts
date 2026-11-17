@@ -19,7 +19,7 @@ const artifact='business-replan'+(stopping?'-stop':unknown?'-unknown':''),exe=aw
 const project=path.join(temp,'project'),user=path.join(temp,'user');await fs.mkdir(project);
 const provider=await businessReplanProvider({holdBusiness:true,holdOld:true}),pageErrors:string[]=[];let desktop:ElectronApplication|undefined,setup:Application|undefined,keepTemp=false;
 try{
-  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.Init();const {entry}=await seedExecutionReport(setup,project,provider),profileId=(await setup.models.List()).selectedId!;await setup.Shutdown();setup=undefined;
+  setup=new Application(new Paths(user,path.resolve('.')));await setup.Init();const {entry}=await seedExecutionReport(setup,project,provider),profileId=(await setup.models.List()).selectedId!;await setup.Shutdown();setup=undefined;
   const scopes=()=>inspectionScopes(user,entry.id),waitUntil=async(check:()=>Promise<boolean>,label:string)=>{const end=Date.now()+30000;while(Date.now()<end){if(await check())return;await new Promise(resolve=>setTimeout(resolve,50))}throw Error('等待验收超时：'+label)};
   desktop=await electron.launch({executablePath:exe,env:{...process.env,CBIM_USER_DATA_ROOT:user},timeout:60000});let page=await desktop.firstWindow();page.setDefaultTimeout(30000);page.on('pageerror',error=>pageErrors.push(error.message));
   const call=(action:string,args:unknown={})=>page.evaluate(({action,args})=>(window as any).cbim.call(action,args),{action,args}),active=()=>page.locator('.workspace-panel:not([hidden])'),input=()=>active().getByRole('textbox',{name:'对话草稿',exact:true}),panel=()=>active().getByTestId('conversation-goal-summary'),form=()=>panel().getByTestId('scope-replan-form');

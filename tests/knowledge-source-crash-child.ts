@@ -8,7 +8,7 @@ import {knowledgeSourceFixture as data} from './knowledge-source-lifecycle-fixtu
 // Test-only separate process: hold precisely after the actual committed knowledge journal and before the real source final write.
 async function main(){
   const [user,workspaceId]=process.argv.slice(2);assert.ok(user&&workspaceId&&process.send);
-  const app=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await app.Init();
+  const app=new Application(new Paths(user,path.resolve('.')));await app.Init();
   const workspace=app.Workspace(workspaceId),coordinator=workspace.sources;assert.ok(coordinator);
   const snapshot=await workspace.Snapshot(),preview=await app.Dispatch('architecture.preview',{workspaceId,instanceId:workspace.instanceId,revision:snapshot.revision,operations:[{kind:'agent',action:'update',id:data.agentId,body:data.changedPrinciples}]});
   const realSettle=coordinator.Settle.bind(coordinator);

@@ -57,7 +57,7 @@ it.each(['complete','stop','lost-registration','lost-parent-link']as MainToolCon
   }
   expect(await fs.readFile(path.join(f.a,data.file),'utf8')).toBe(data.fact);
   const bytes=await mainToolContractLogBytes(f.user,id),counts=[provider.main.length,provider.member.length],journal=await fs.readFile(path.join(f.user,id,'dispatch/dispatch.jsonl')),native=await fs.readFile(summary.sessionFile!);
-  vi.restoreAllMocks();await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.Init();
+  vi.restoreAllMocks();await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')));await app.Init();
   expect(await graph()).toEqual(finished);expect(await records()).toEqual(saved);expect(await mainToolContractLogBytes(f.user,id)).toEqual(bytes);expect(await fs.readFile(path.join(f.user,id,'dispatch/dispatch.jsonl'))).toEqual(journal);
   expect(await fs.readFile(summary.sessionFile!)).toEqual(native);expect([provider.main.length,provider.member.length]).toEqual(counts);expect(provider.errors).toEqual([]);
  }finally{vi.restoreAllMocks();provider.release();await app.Shutdown();await f.cleanup();await provider.close()}

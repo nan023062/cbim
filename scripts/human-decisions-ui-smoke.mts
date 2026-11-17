@@ -15,7 +15,7 @@ const stale=process.argv.includes('--stale'),reject=process.argv.includes('--rej
 const mode=stale?'stale':reject?'reject':requestEvidence?'request_evidence':'accept',artifact='human-decisions-'+mode,exe=await latestExecutable(),temp=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-human-decisions-ui-')),project=path.join(temp,'project'),user=path.join(temp,'user');await fs.mkdir(project);
 const provider=await humanDecisionProvider(),pageErrors:string[]=[],dialogs:string[]=[];let setup:Application|undefined,desktop:ElectronApplication|undefined,keepTemp=false;
 try{
-  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.Init();const {entry}=await seedHumanDecision(setup,project,provider);await setup.Shutdown();setup=undefined;
+  setup=new Application(new Paths(user,path.resolve('.')));await setup.Init();const {entry}=await seedHumanDecision(setup,project,provider);await setup.Shutdown();setup=undefined;
   const until=async(check:()=>Promise<boolean>,label:string)=>{const end=Date.now()+60000;while(Date.now()<end){if(await check())return;await new Promise(resolve=>setTimeout(resolve,40))}throw Error('等待验收超时：'+label)};
   desktop=await electron.launch({executablePath:exe,env:{...process.env,CBIM_USER_DATA_ROOT:user},timeout:60000});let page=await desktop.firstWindow();
   const observe=()=>{page.setDefaultTimeout(30000);page.on('pageerror',error=>pageErrors.push(error.message));page.on('dialog',async dialog=>{dialogs.push(dialog.type()+': '+dialog.message());await dialog.dismiss()})};observe();

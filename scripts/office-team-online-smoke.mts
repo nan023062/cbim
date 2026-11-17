@@ -76,7 +76,7 @@ const pause = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 try {
   await fs.copyFile(path.join(os.homedir(), '.cbim/llm.json'), path.join(user, 'llm.json'));
   await fs.copyFile(path.join(os.homedir(), '.cbim/desktop/Local State'), path.join(user, 'desktop/Local State'));
-  setup = new Application(new Paths(user, repo), path.join(repo, 'assets'));
+  setup = new Application(new Paths(user, repo));
   await setup.Init();
   const models = await setup.models.List();
   const model = models.profiles.find(item => item.id === models.selectedId);

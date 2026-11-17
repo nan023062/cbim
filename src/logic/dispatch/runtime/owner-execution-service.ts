@@ -37,7 +37,8 @@ import { currentKnowledgeSource, knowledgeSourceRef } from '../../workspace/rule
 
 import { resolveDispatchAgent, resolveDispatchModules } from '../../execution/context/dispatch-context';
 
-export type OwnerExecutionWorkspace = Pick<KnowledgeWorkspace, 'entry' | 'instanceId' | 'Assert' | 'Snapshot' | 'Read' | 'rules'> & Partial<SourceSnapshotReader>;
+/** 只取得知识身份与快照能力；内置规范由执行准备模块直接导入，不注入资料目录。 */
+export type OwnerExecutionWorkspace = Pick<KnowledgeWorkspace, 'entry' | 'instanceId' | 'Assert' | 'Snapshot' | 'Read'> & Partial<SourceSnapshotReader>;
 
 /** 公开模型配置端口不含解密、网络或默认选型；短锁回调不得反向取得知识锁。 */
 export interface OwnerExecutionModelPorts

@@ -10,7 +10,7 @@
 
 | 组成 | 定位 |
 | --- | --- |
-| [WorkspaceAutomations](service.ts) | 将工作区知识、已采纳岗位和真实协作接入自动化端口，提供桌面目录与实例校验。 |
+| [WorkspaceAutomations](service.ts) | 将工作区知识、已采纳岗位和真实协作接入自动化端口，提供桌面目录与实例校验；内置流程通过同一代码常量目录读取。 |
 | [FileAutomations](storage.ts) | 在工作区私有用户目录保存自动化定义与有界运行历史。 |
 
 <!-- architecture:generated:start -->

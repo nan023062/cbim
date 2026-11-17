@@ -54,7 +54,7 @@ it('a parent ending with an unanswered recursive call fails and drains the origi
   const child=await new FileRunStorage().Read(directory);expect(child.status).toBe('cancelled');expect(child.taskProgress?.delivery).toBeUndefined();
   expect(provider.byChild.map(c=>c.length)).toEqual([5,0,0]);expect(provider.main).toHaveLength(2);
   const requests=[...provider.sequence],bytes=await fs.readFile(path.join(directory,'events.jsonl'),'utf8');
-  await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.Init();
+  await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')));await app.Init();
   expect(await app.Workspace(entry.id).dispatchStore.Read()).toEqual(state);expect(provider.sequence).toEqual(requests);
   expect(await fs.readFile(path.join(directory,'events.jsonl'),'utf8')).toBe(bytes);expect(await app.Execution(entry.id).Thread(start.taskId)).toEqual(thread);
  }finally{await app.Shutdown();await provider.close();await f.cleanup()}

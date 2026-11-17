@@ -49,7 +49,7 @@ it.each(['same','changed-set','broken-source'] as const)('recursive reconsiderat
   expect(provider.member).toHaveLength(8);expect(provider.main).toHaveLength(5);
   expect(await fs.readFile(childFile,'utf8')).toBe(original+(mode==='broken-source'?'{"partial":':''));
   const sequence=[...provider.sequence],state=await completeOutputRecords(f.user,entry.id),rootBytes=await fs.readFile(path.join(rootDir,'events.jsonl'),'utf8');
-  await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.Init();
+  await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')));await app.Init();
   expect(await completeOutputRecords(f.user,entry.id)).toEqual(state);expect(await records()).toEqual(saved);expect(await questions()).toEqual([]);
   expect(await fs.readFile(path.join(rootDir,'events.jsonl'),'utf8')).toBe(rootBytes);expect(provider.sequence).toEqual(sequence);
   expect(await fs.readFile(path.join(f.a,d.file),'utf8')).toBe(d.content);

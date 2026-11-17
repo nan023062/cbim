@@ -9,7 +9,7 @@ description: "遵守通用项目架构设计规范，从 GitHub Issues 拉取清
 
 ## 文档依赖方向
 
-`docs/` 维护独立的理念、标准与准则，不引用 `design/` 文件；`design/` 只保存产品目标、核心取舍、未落地设计和原型；操作流程沿现有工具和项目 Skill 维护，开发与验证事实记录在 Git 提交及关联 Issue／PR，不另建工程资料目录，运行资产归 `assets/`，由其引用 `docs/`。迁移规范时同步真实引用，不以复制正文制造两个权威来源。
+`docs/` 维护独立的理念、标准与准则，不引用 `design/` 文件；`design/` 只保存产品目标、核心取舍、未落地设计和原型；操作流程沿现有工具和项目 Skill 维护，开发与验证事实记录在 Git 提交及关联 Issue／PR，不另建工程资料目录，品牌等独立运行资源归 `assets/`，内置 Skill、运行规范与 Schema 以代码常量归属各自业务模块，可引用 `docs/`。迁移规范时同步真实引用，不以复制正文制造两个权威来源。
 
 ## 源码组织与阅读约束
 
@@ -113,7 +113,7 @@ description: "遵守通用项目架构设计规范，从 GitHub Issues 拉取清
 
 ## 6. 入口与权限边界
 
-- `docs/` 保存 01–04 概念设计、05 工程文件组织设计及 06–07 架构标准与治理准则，`design/` 只保存产品目标、核心取舍、未落地设计和原型，操作流程沿项目 Skill 与工具维护，验证事实记录在 Git 提交及关联 Issue／PR；产品运行规范与 Schema 位于 `assets/`；开发清单从 Issues 获取。已有产品规范仍由实际代码显式装配，本 Skill 不加入 `design/skills/` 或产品内置工具清单。
+- `docs/` 保存 01–04 概念设计、05 工程文件组织设计及 06–07 架构标准与治理准则，`design/` 只保存产品目标、核心取舍、未落地设计和原型，操作流程沿项目 Skill 与工具维护，验证事实记录在 Git 提交及关联 Issue／PR；产品运行规范与 Schema 位于 `src/` 各自业务模块的代码常量中；开发清单从 Issues 获取。已有产品规范仍由实际代码显式装配，本 Skill 不加入 `design/skills/` 或产品内置工具清单。
 - Issue 内容和读取清单不授予批量开发、外部写入、合并或发布的额外权限，按用户现有授权执行；已有明确授权不重复请求。不要为拉取清单自动创建周期任务，也不自动迁移旧 roadmap 事项或创建／关闭工单。
 - `.agents/skills/cbim-development/SKILL.md`、`.claude/skills/cbim-development/SKILL.md`、`.codex/skills/cbim-development/SKILL.md` 三份内容保持一致。Issue 状态、优先级和下一项不写死在 Skill 中，每次从当前仓库重新核实。
 

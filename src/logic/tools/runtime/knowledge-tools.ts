@@ -1,5 +1,5 @@
 /**
- * 资源边界：内置查询使用 rules.assetsRoot 的白名单资源，不开放任意 assets 文件读取。
+ * 资源边界：内置规范来自本版本业务模块常量；读取不依赖安装目录，仍核对正文版本与执行权限。
  * 知识身份允许缺省：先核实绑定实例并读取当前身份；显式身份不覆盖，业务版本/命令与写权限不自动补齐。
  * 对象维护优先 object_preview/commit；底层 knowledge 文件事务标为兼容，保留无法由对象操作表达的维护场景。
  * 作用定位：向 CBIM 内部大脑提供知识查询、对象事务和内置 Skill 工具。
@@ -40,8 +40,6 @@ export class KnowledgeTools
 
     const identity = { workspaceId: z.string().default(() => currentIdentity().workspaceId), instanceId: z.string().default(() => currentIdentity().instanceId) };
 
-    const builtins = new Builtins(workspace.rules.assetsRoot);
-
     const queries = this.queries = new KnowledgeQueries({ Snapshot: () => workspace.Snapshot() });
 
     const refresh = new KnowledgeRefresh({ Snapshot: () => workspace.Snapshot(), Assert: identity => workspace.Assert(identity), CommittedReceipt: request => workspace.CommittedReceipt(request), Commit: request => workspace.Commit(request) });
@@ -62,15 +60,15 @@ export class KnowledgeTools
 
     register('cbim_knowledge_search', { inputSchema: { ...identity, query: z.string().max(200) } }, wrap(async args => { const snapshot = await workspace.Read(); return { ...snapshot, files: snapshot.files.filter(f => f.path.includes(args.query) || f.text.toLowerCase().includes(args.query.toLowerCase())) } }));
 
-    register('cbim_builtin_catalog', { description: '列出 CBIM 内置知识治理 Skill、通用规范与 Schema，返回可读取 ID、内容版本和来源；只读。', inputSchema: identity }, wrap(() => builtins.Catalog()));
+    register('cbim_builtin_catalog', { description: '列出 CBIM 内置知识治理 Skill、通用规范与 Schema，返回可读取 ID、内容版本和来源；只读。', inputSchema: identity }, wrap(() => Builtins.Catalog()));
 
-    register('cbim_builtin_read', { description: '按 cbim_builtin_catalog 或 references 返回的 ID 获取内置正文、版本及已解析引用。不是本地文件读取接口；资料只读。', inputSchema: { ...identity, id: z.string().max(100), expectedVersion: z.string().optional() } }, wrap(args => builtins.Read(args.id, args.expectedVersion)));
+    register('cbim_builtin_read', { description: '按 cbim_builtin_catalog 或 references 返回的 ID 获取内置正文、版本及已解析引用。不是本地文件读取接口；资料只读。', inputSchema: { ...identity, id: z.string().max(100), expectedVersion: z.string().optional() } }, wrap(args => Builtins.Read(args.id, args.expectedVersion)));
 
     for (const skill of builtinSkills)
     {
       const name = 'cbim_skill_' + skill.id.replaceAll('-', '_');
 
-      register(name, { description: `读取内置「${skill.title}」流程：${skill.description}。返回正文、版本及引用，由调用方执行；调用本工具不会启动业务或修改文件。`, inputSchema: identity }, wrap(() => builtins.Read(skill.id)))
+      register(name, { description: `读取内置「${skill.title}」流程：${skill.description}。返回正文、版本及引用，由调用方执行；调用本工具不会启动业务或修改文件。`, inputSchema: identity }, wrap(() => Builtins.Read(skill.id)))
     }
 
     register('cbim_module_registry', { version: 2, description: '查询当前模块注册表与始终可用的 projectRoot（cbim:project）；关键词仅筛选已定义模块，不改写磁盘。', inputSchema: { ...identity, query: z.string().max(200).optional() } }, wrap(args => queries.Modules(args.query)));

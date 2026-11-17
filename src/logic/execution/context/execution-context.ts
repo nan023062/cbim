@@ -1,5 +1,5 @@
 /**
- * 资源边界：冻结与恢复均通过 rules.assetsRoot 读取同包规范，保留正文摘要和版本变化拒绝语义。
+ * 资源边界：内置规范来自本版本业务模块常量；读取不依赖安装目录，仍核对正文版本与执行权限。
  * 无模块自动执行只生成内存中的隐式全项目知识；正式模块及岗位登记均保持原样。
  * 作用定位：为已派发成员任务冻结完整执行知识和各模块可选 Workflow 程序约定，并在启动、恢复或未启动依赖替换前复核基线。
  * 算法边界：复用后端 orderJsonValue，保留字符序、原 undefined 规则及历史序列化字节；业务身份与指纹内容仍在本模块。
@@ -41,7 +41,7 @@ import { validateTaskWorkflowSelections } from '../../tasks/rules/workflow-selec
 const standardIds = ['business-execution', 'common-rules'];
 
 /** 只读执行知识准备所需能力；依赖修订复用它，不需要工作区写入或任务控制接口。 */
-export type DispatchKnowledgeWorkspace = Pick<KnowledgeWorkspace, 'entry' | 'Assert' | 'Snapshot' | 'Read' | 'rules'>;
+export type DispatchKnowledgeWorkspace = Pick<KnowledgeWorkspace, 'entry' | 'Assert' | 'Snapshot' | 'Read'>;
 
 /** 比较规范化 JSON，知识定义的对象字段排列不改变业务绑定，数组顺序保持原义。 */
 function canonical(value: unknown): string
@@ -100,9 +100,7 @@ export async function prepareDispatchExecutionContext(workspace: DispatchKnowled
 
   const bindings = structuredClone(task.modules);
 
-  const builtin = new Builtins(workspace.rules.assetsRoot);
-
-  const standards = await Promise.all(standardIds.map(async id => { const doc = await builtin.Read(id); return { id, version: doc.version, text: doc.text } }));
+  const standards = await Promise.all(standardIds.map(async id => { const doc = await Builtins.Read(id); return { id, version: doc.version, text: doc.text } }));
 
   const business = new BusinessWorkspace(snapshot);
 
@@ -146,11 +144,9 @@ export async function recheckDispatchExecutionContext(workspace: DispatchKnowled
 
   await check();
 
-  const builtin = new Builtins(workspace.rules.assetsRoot);
-
   for (const standard of prepared.standards)
   {
-    const current = await builtin.Read(standard.id);
+    const current = await Builtins.Read(standard.id);
 
     if (current.version !== standard.version)
       fail('KNOWLEDGE_CHANGED', '内置执行规范已经变化，请核实后重新准备任务')

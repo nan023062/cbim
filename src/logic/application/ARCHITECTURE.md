@@ -10,7 +10,7 @@
 
 | 组成 | 定位 |
 | --- | --- |
-| [Application](application.ts) | 组织应用服务的生命周期与工作区装配。 |
+| [Application](application.ts) | 组织应用服务的生命周期与工作区装配；初始化内置 Schema，无需注入规范目录。 |
 
 <!-- architecture:generated:start -->
 

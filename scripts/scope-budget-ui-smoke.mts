@@ -14,7 +14,7 @@ const selected=['member-limit','cost-limit','waiting','complete','unknown-price'
 const mode=(selected[0]??'main-limit') as BudgetFixtureMode,artifact='scope-budget-'+mode,exe=await latestExecutable(),temp=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-scope-budget-ui-')),project=path.join(temp,'project'),user=path.join(temp,'user');await fs.mkdir(project);
 const provider=await scopeBudgetProvider(mode),pageErrors:string[]=[];let setup:Application|undefined,desktop:ElectronApplication|undefined,keepTemp=false;
 try{
-  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.Init();const {entry}=await seedScopeBudget(setup,project,provider,mode);await setup.Shutdown();setup=undefined;
+  setup=new Application(new Paths(user,path.resolve('.')));await setup.Init();const {entry}=await seedScopeBudget(setup,project,provider,mode);await setup.Shutdown();setup=undefined;
   const until=async(check:()=>Promise<boolean>,label:string)=>{const end=Date.now()+40000;while(Date.now()<end){if(await check())return;await new Promise(resolve=>setTimeout(resolve,40))}throw Error('等待验收超时：'+label)};
   desktop=await electron.launch({executablePath:exe,env:{...process.env,CBIM_USER_DATA_ROOT:user},timeout:60000});let page=await desktop.firstWindow();page.setDefaultTimeout(30000);page.on('pageerror',error=>pageErrors.push(error.message));
   const call=(action:string,args:unknown={})=>page.evaluate(({action,args})=>(window as any).cbim.call(action,args),{action,args}),active=()=>page.locator('.workspace-panel:not([hidden])'),input=()=>active().getByRole('textbox',{name:'对话草稿',exact:true}),scopes=()=>budgetScopes(user,entry.id),goal=()=>active().getByTestId('conversation-goal-summary');

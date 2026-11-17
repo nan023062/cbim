@@ -52,7 +52,7 @@ it.each(['complete','stop','restart-inflight'] as const)('counts parent and chil
   if(mode==='complete')provider.releaseMember('a');
   else if(mode==='stop')await app.Dispatch('loop.stop',{id:ids.a,taskId:a.taskId});
   else await app.Shutdown();
-  if(mode==='restart-inflight'){app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.Init()}
+  if(mode==='restart-inflight'){app=new Application(new Paths(f.user,path.resolve('.')));await app.Init()}
   await until(async()=>expect((await read()).occupied).toEqual([]));
   expect((await read()).waiting).toEqual([]);
   const summary=await app.Execution(ids.a).Inspect(a.taskId,fresh.runId);
@@ -61,7 +61,7 @@ it.each(['complete','stop','restart-inflight'] as const)('counts parent and chil
   expect(scopes[0].status).toBe('closed');expect(scopes[1].status).toBe('closed');
   expect(await app.Execution(ids.a).Inspect(a.taskId,a.runId)).toEqual(denied);
   const sequence=[...provider.sequence],bytes=await globalRuntimeLogBytes(f.user,ids.a);
-  await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.Init();
+  await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')));await app.Init();
   expect((await read()).occupied).toEqual([]);expect((await read()).waiting).toEqual([]);expect(provider.sequence).toEqual(sequence);
   expect(await globalRuntimeLogBytes(f.user,ids.a)).toEqual(bytes);expect(await admissionScopes(f.user,ids.a)).toEqual(scopes);
   for(const key of ['a','b'] as const)expect(await fs.readFile(path.join(key==='a'?f.a:f.b,data.file),'utf8')).toBe(data.fact(key));

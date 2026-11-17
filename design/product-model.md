@@ -20,4 +20,4 @@ Module 表达工作对象的职责、边界、知识和流程，与“谁有能�
 
 分开能力、工作对象和执行任务，使新增专业角色不要求复制项目知识，调整模块知识也不要求重写所有 Agent。代价是需要保持引用准确，并在执行时明确身份、权限及资料版本。
 
-当前文件格式分别由 [Agent 规范](../assets/capability/agent-spec.md)、[Module 规范](../assets/business/module-spec.md) 和 [Task 规范](../assets/task/task-spec.md) 维护。本页不再复刻字段表或虚构与代码类对应的 BaseAgent／BaseModule 类图。
+当前文件格式分别由 [Agent 规范](../src/logic/team/rules/standards.ts)、[Module 规范](../src/logic/workspace/rules/standards.ts) 和 [Task 规范](../src/logic/tasks/rules/standards.ts) 维护。本页不再复刻字段表或虚构与代码类对应的 BaseAgent／BaseModule 类图。

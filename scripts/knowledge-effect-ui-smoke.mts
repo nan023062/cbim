@@ -22,7 +22,7 @@ const provider=mode==='direct'?await knowledgeContractProvider('malformed-after-
 const pageErrors:string[]=[],transportErrors:string[]=[],screenshots:string[]=[];let setup:Application|undefined,desktop:ElectronApplication|undefined,page!:Page,keep=false,report:Record<string,unknown>|undefined;
 const cleanup={desktopClosed:false,providerClosed:false,tempRemoved:false};
 try{
- setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.Init();const {entry}=await seedKnowledgeContract(setup,project,provider),workspace=setup.Workspace(entry.id);
+ setup=new Application(new Paths(user,path.resolve('.')));await setup.Init();const {entry}=await seedKnowledgeContract(setup,project,provider),workspace=setup.Workspace(entry.id);
  if(mode==='object')await workspace.Commit(request(await workspace.Snapshot(),moduleFiles()));if(mode==='refresh')for(const file of moduleFiles()){const target=path.join(project,file.path);await fs.mkdir(path.dirname(target),{recursive:true});await fs.writeFile(target,file.text)}
  let writes=0;const actual=workspace.Commit.bind(workspace),planned=workspace.CommitPlanned.bind(workspace);
  if(mode!=='object')workspace.Commit=async input=>{const value=await actual(input);writes++;return {...value,changed:'PRIVATE_INVALID_OUTPUT_SENTINEL'} as unknown as typeof value};

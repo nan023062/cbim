@@ -40,7 +40,7 @@ export async function verifyRecursiveDependency(family:RecursiveDependencyFamily
    expect(provider.byNode.slice(provider.heldIndex+1).every(list=>list.length===0)).toBe(true);
    const summaries=await Promise.all(held.map(r=>storage.Read(path.join(f.user,id,'loop-engine/tasks',r.binding.taskId,r.binding.runId))));
    originals=summaries.flatMap(s=>[path.join(f.user,id,'loop-engine/tasks',s.task.taskId,s.runId,'events.jsonl'),s.sessionFile!]);bytes=await Promise.all(originals.map(p=>fs.readFile(p)));
-   if(mode==='restart-held'){await app.Shutdown();provider.releaseSuccessors();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.Init()}
+   if(mode==='restart-held'){await app.Shutdown();provider.releaseSuccessors();app=new Application(new Paths(f.user,path.resolve('.')));await app.Init()}
    else if(!complete)await app.Dispatch('loop.stop',{id,taskId:start.taskId});
   }
   provider.releaseStart();provider.releaseSuccessors();
@@ -62,7 +62,7 @@ export async function verifyRecursiveDependency(family:RecursiveDependencyFamily
   }
   if(lost)expect(returns).toBe(1);
   const counts=provider.byNode.map(list=>list.length),rootCount=provider.main.length,journal=await fs.readFile(path.join(f.user,id,'dispatch/dispatch.jsonl'));
-  vi.restoreAllMocks();await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.Init();
+  vi.restoreAllMocks();await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')));await app.Init();
   expect(await state()).toEqual(saved);expect(await Promise.all(originals.map(p=>fs.readFile(p)))).toEqual(bytes);expect(await fs.readFile(path.join(f.user,id,'dispatch/dispatch.jsonl'))).toEqual(journal);expect(provider.byNode.map(list=>list.length)).toEqual(counts);expect(provider.main.length).toBe(rootCount);
  }finally{provider.releaseStart();provider.releaseSuccessors();vi.restoreAllMocks();await app.Shutdown();await provider.close();await f.cleanup()}
 }

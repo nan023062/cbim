@@ -55,7 +55,7 @@ it('observes an actual lost write result, records disposition, inspects fresh, t
   const publicRepair=await app.Dispatch('dispatch.sessionRead',{identity:source.identity,selectedScopeId:repair.scopeId});
   expect(publicRepair.detail.mode).toBe('updated');expect(JSON.stringify(publicRepair.detail)).not.toMatch(/"context"|nativeSessionId|sessionFile|excludedRunIds/);
   const finalJournal=await journal(f.user,id);
-  await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.Init();
+  await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')));await app.Init();
   expect(await app.Dispatch('dispatch.effectDisposition',request)).toEqual(saved);expect(await app.Dispatch('dispatch.effectDisposition',repairDecision)).toEqual(repairSaved);
   expect((await app.Dispatch('loop.recoveryStart',recovery)).recovery).toEqual(accepted.recovery);expect((await app.Dispatch('loop.replanStart',replan)).replan).toEqual(repair.replan);
   expect(await journal(f.user,id)).toEqual(finalJournal);await assertOriginalEffectUnchanged(source.original);expect(provider.main).toHaveLength(6);expect(provider.member).toHaveLength(15);
@@ -81,7 +81,7 @@ it.each(['changed','unsupported','edit']as const)('does not turn current files o
     const other=await app.Dispatch('loop.chat',{id,message:data.otherGoal,options:source.seed.options});await effectWait(async()=>{const records=await effectRecords(f.user,id);return records.scopes.length===2&&records.scopes.every(scope=>scope.status==='closed')&&app.runtime.Snapshot().pressure.activeRuns===0},provider,'other root closed');
     const wrongRoot=await read({...selection,rootSessionId:other.taskId});expect(wrongRoot.source.state).toBe('unverifiable');expect(wrongRoot.calls[0].coverage).toBe('unsupported');expect(wrongRoot.calls[0].toolName).toBeUndefined();expect(wrongRoot.calls[0].file).toBeUndefined();
     const allRuns=await effectRunBytes(app,f.user,id,source.identity.rootSessionId),otherRuns=await effectRunBytes(app,f.user,id,other.taskId),logs=await effectLogBytes(f.user,id),records=await effectRecords(f.user,id),bytes=await journal(f.user,id);await assertOriginalEffectUnchanged(source.original);await archiveEffectRuns('test-results/effect-observation-'+mode+'-pi-bytes',f.user,id,[...allRuns,...otherRuns]);
-    await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.Init();
+    await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')));await app.Init();
     expect(await app.Dispatch('dispatch.effectDisposition',request)).toEqual(saved);expect((await read()).basis).toBe(finalObservation.basis);expect(await effectRecords(f.user,id)).toEqual(records);expect(await effectLogBytes(f.user,id)).toEqual(logs);expect(await journal(f.user,id)).toEqual(bytes);expect(await effectRunBytes(app,f.user,id,source.identity.rootSessionId)).toEqual(allRuns);expect(await effectRunBytes(app,f.user,id,other.taskId)).toEqual(otherRuns);expect([provider.main.length,provider.member.length,provider.other.length]).toEqual([2,3,1]);expect(provider.errors).toEqual([]);
     await fs.writeFile('test-results/effect-observation-'+mode+'-pi-evidence.json',JSON.stringify({mode,first,finalObservation,saved,wrongRoot,requests:{main:2,member:3,other:1},reopenNoReplay:true,originalBytesUnchanged:true,runs:effectRunEvidence([...allRuns,...otherRuns])},null,2));
   }catch(error){keep=true;await fs.writeFile('test-results/effect-observation-'+mode+'-pi-failure.json',JSON.stringify({temp:f.temp,error:String(error),stack:error instanceof Error?error.stack:undefined,requests:{main:provider.main.length,member:provider.member.length,other:provider.other.length},providerErrors:provider.errors},null,2));throw error}
@@ -102,7 +102,7 @@ it('observes a failed recursive parent response separately from actual child fac
   const request:EffectDispositionInput={...selection,commandId:randomUUID(),expectedBasis:report.basis,expectedRevision:report.dispositionRevision,decision:'leave_unresolved',reason:'The failed parent acknowledgement does not rewrite the actual child facts.'};
   const receipt=effectDispositionReceiptSchema.parse(await app.Dispatch('dispatch.effectDisposition',request));
   const bytes=await journal(f.user,id),runs=await effectRunBytes(app,f.user,id,identity.rootSessionId),counts=[provider.main.length,provider.member.length];
-  await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.Init();
+  await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')));await app.Init();
   const restored=effectObservationReportSchema.parse(await app.Dispatch('dispatch.effectObserve',selection));
   expect(restored.calls).toEqual(report.calls);expect(restored.basis).toEqual(report.basis);expect(await app.Dispatch('dispatch.effectDisposition',request)).toEqual(receipt);
   expect(await effectRunBytes(app,f.user,id,identity.rootSessionId)).toEqual(runs);expect(await journal(f.user,id)).toEqual(bytes);expect([provider.main.length,provider.member.length]).toEqual(counts);expect(provider.errors).toEqual([]);

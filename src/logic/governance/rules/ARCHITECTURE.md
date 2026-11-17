@@ -10,6 +10,7 @@
 
 | 组成 | 定位 |
 | --- | --- |
+| [standards](standards.ts) | 架构治理与认知交付的内置准则，供知识目录读取，不替代人工决策。 |
 | [module-governance](module-governance.ts) | 单个 Module 正式知识治理的严格输入、不可变提案、本机决定及实施回执协议。 |
 | [module-governance-rules](module-governance-rules.ts) | 模块知识治理的纯事实投影、提案依据、决定追加和知识写入门禁。 |
 | [module-governance-feedback](module-governance-feedback.ts) | 核实新提案对原本机反馈的精确回应引用，并派生当前/已替代状态与逐项评价范围。 |
@@ -37,6 +38,10 @@ class N_09c421be79f2["module-governance-tools"] {
   <<module>>
 }
 click N_09c421be79f2 href "module-governance-tools.ts"
+class N_0e3b924a4543["standards"] {
+  <<module>>
+}
+click N_0e3b924a4543 href "standards.ts"
 N_965ffbd829bd ..> N_f9aeb652fd94 : 依赖
 N_63344702b555 ..> N_f9aeb652fd94 : 依赖
 N_63344702b555 ..> N_965ffbd829bd : 依赖

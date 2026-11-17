@@ -36,7 +36,7 @@ it('projects real parent and child runs across workspaces without replay on obse
   const closed=app.runtime.Snapshot(),bytesA=await globalRuntimeLogBytes(f.user,ids.a),bytesB=await globalRuntimeLogBytes(f.user,ids.b);
   expect(closed.scopes.every(scope=>scope.outcome==='cancelled')).toBe(true);
   expect(closed.cursor.revision).toBeGreaterThan(snapshot.cursor.revision);expect(provider.sequence).toEqual(sequence);
-  await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.Init();
+  await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')));await app.Init();
   const restored=app.runtime.Snapshot();expect(restored.pressure.activeRuns).toBe(0);expect(restored.scopes).toEqual(closed.scopes);
   expect(restored.cursor.streamId).not.toBe(closed.cursor.streamId);
   expect(restored.tasks.find(task=>task.taskId===ref.taskId)).toMatchObject({source:'loop',status:'cancelled',activeRunIds:[]});

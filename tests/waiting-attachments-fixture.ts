@@ -35,6 +35,6 @@ export async function seedWaitingAttachments(app:Application,project:string,prov
   return {entry,profileId,team,sources,png,scopes,options,continuation,
     importFiles:async(current:Application)=>{const inputs=new ChatInputs(current.Workspace(entry.id));return [await inputs.Path('file',sources.text),await inputs.Path('file',sources.image)]},
     snapshotPath:(id:string)=>path.join(app.paths.Project(entry.id),'chat-inputs',id+'.json'),
-    reopen:(user:string)=>new Application(new Paths(user,path.resolve('.')),path.resolve('assets')),
+    reopen:(user:string)=>new Application(new Paths(user,path.resolve('.'))),
   };
 }

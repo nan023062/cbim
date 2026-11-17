@@ -22,7 +22,7 @@ let setup:Application|undefined,desktop:ElectronApplication|undefined,page!:Page
 let report:Record<string,unknown>|undefined;
 try{
   await fs.mkdir('test-results',{recursive:true});
-  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.Init();
+  setup=new Application(new Paths(user,path.resolve('.')));await setup.Init();
   const seeded=await seedWorkspaceMembers(setup,temp,probe.url),id=seeded.entry.id,moduleId=seeded.team.input.moduleId;
   await setup.Shutdown();setup=undefined;
   const launch=async()=>{

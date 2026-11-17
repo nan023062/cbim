@@ -72,7 +72,7 @@ const server=http.createServer(async(req,res)=>{
 await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();assert.ok(address&&typeof address!=='string');
 let desktop:ElectronApplication|undefined,setup:Application|undefined;
 try{
-  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.Init();
+  setup=new Application(new Paths(user,path.resolve('.')));await setup.Init();
   await setup.models.Save({profile:{name:'Local goal status UI',api:'openai-completions',baseUrl:`http://127.0.0.1:${address.port}/v1`,auth:'none',defaultModel:'goal-status-ui',models:[{id:'goal-status-ui',name:'Goal status UI',enabled:true,contextWindow:65536,maxTokens:4096,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});
   const entry=await setup.Dispatch('add',{path:project}),workspace=setup.Workspace(entry.id),team=await seedTeam(workspace);agentId=team.input.agentId;moduleId=team.input.moduleId;
   if(defaultExecutor){const snapshot=await workspace.Snapshot(),plan=await team.call('cbim_object_preview',{revision:snapshot.revision,operations:[{kind:'agent',action:'delete',id:agentId,cascade:true}]});await team.call('cbim_object_commit',{planId:plan.planId},true)}

@@ -10,6 +10,7 @@
 
 | 组成 | 定位 |
 | --- | --- |
+| [standards](standards.ts) | 任务执行、知识基线与恢复的内置规范，执行准备通过知识目录冻结正文版本。 |
 | [MemberCheckpointTools](member-checkpoint-tools.ts) | 包装正式执行成员的检查点工具，限制模型输入并将真实调用 ID 交给运行时。 |
 | [MemberHelpTools](member-help-tools.ts) | 为正式执行成员提供一次性求助工具，并在求助授权至本轮结束期间封住后续工具调用。 |
 
@@ -21,6 +22,10 @@
 classDiagram
 class N_7a45e92e8828["MemberCheckpointTools"]
 click N_7a45e92e8828 href "member-checkpoint-tools.ts"
+class N_319fed2a00c7["standards"] {
+  <<module>>
+}
+click N_319fed2a00c7 href "standards.ts"
 class N_55acefacaaa4["MemberHelpTools"]
 click N_55acefacaaa4 href "member-help-tools.ts"
 ```

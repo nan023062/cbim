@@ -49,7 +49,7 @@ it.each(['automatic','changed','human','human-saved-change'] as const)('recursiv
     expect(await fs.readFile(file,'utf8')).toBe(d.content);expect(await fs.readFile(childDir+'/events.jsonl','utf8')).toBe(childBytes);
     expect((await app.Dispatch('dispatch.graphSnapshot',{identity:{workspaceId:entry.id,rootSessionId:start.taskId}})).tasks).toHaveLength(0);
     const final=await records(),rootBytes=await fs.readFile(path.join(rootDir,'events.jsonl'),'utf8'),sequence=[...provider.sequence],stat=await fs.stat(file);
-    await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.Init();
+    await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')));await app.Init();
     expect(await records()).toEqual(final);expect(await fs.readFile(path.join(rootDir,'events.jsonl'),'utf8')).toBe(rootBytes);
     expect(await fs.readFile(path.join(childDir,'events.jsonl'),'utf8')).toBe(childBytes);expect(provider.sequence).toEqual(sequence);
     expect((await fs.stat(file)).mtimeMs).toBe(stat.mtimeMs);expect(await fs.readFile(file,'utf8')).toBe(d.content);expect(await questions()).toEqual([]);

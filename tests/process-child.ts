@@ -6,7 +6,7 @@ import {writeSync} from 'node:fs';
 import path from 'node:path';
 async function main(){
 const [mode,root,user]=process.argv.slice(2);
-const app=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));
+const app=new Application(new Paths(user,path.resolve('.')));
 await app.Init();const entry=await app.catalog.Add(root);
 if(mode==='catalog'){console.log(entry.id);process.exit(0)}
 if(mode==='crash'){

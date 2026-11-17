@@ -1,6 +1,12 @@
-# Agent 定义与维护规范
+/**
+ * 作用定位：团队、Agent 与 Skill 定义规范的代码常量，由所属业务模块维护，供内置资料查询或结构校验使用。
+ * 设计原因：正文随业务代码编译发布，消除安装目录文件读取；这里只声明规则，不执行流程或授予权限。
+ * 兼容边界：保留迁移前的正文与换行字节，避免仅因存储位置改变使已冻结任务的内容版本失效。
+ */
+/** 只读流程正文；调用方仍须遵守真实工具权限与业务状态。 */
+const agentSpec = `# Agent 定义与维护规范
 
-CBIM 团队中的专业角色称为“AI 成员”，由 CBIM AI 助理组织和派发任务。Agent 是 AI 成员的能力定义抽象；`agent.json`、Schema 字段及类型名称保留技术标识。
+CBIM 团队中的专业角色称为“AI 成员”，由 CBIM AI 助理组织和派发任务。Agent 是 AI 成员的能力定义抽象；\`agent.json\`、Schema 字段及类型名称保留技术标识。
 
 新增、修改能力定义或核实能力契约时按需读取。项目实例、索引位置及有效授权由调用方提供；本规范不组织任务调度。
 
@@ -41,7 +47,7 @@ agent.json 通过名称与摘要表达职业和技术定位，具体技术能力
 
 能力侧是一棵树：根节点是 Team，中间非叶子节点是小组，只有叶子节点是 Agent。小组可继续包含小组或直属 Agent，Agent 不包含小组或其他 Agent。目录表达唯一父子关系，小组不限定层数，不新增 Leader 调度职责。现有规范及文件格式中 Team 可泛指组织节点；产品层级明确区分根 Team 与小组。Team、小组、Agent 都有自己的 Skill，Agent 可用 Skill 是自身与沿父链递归到根 Team 的全部祖先节点 Skill。空团队初始化时根仍为 Team，不能按空目录推断 Agent；详见 [结构设计](../runtime/shared-skills-workflows.md)。
 
-Agent 的 `agent.json.skills` 只登记专属方法，入口为自身 `skills/<skill-name>/SKILL.md`。共享方法归属于能覆盖实际使用者的最近共同 Team，存入该 Team 的 `skills/`，由同级 `skills.json` 登记 name、purpose、reference；结构遵循 [Team Skill Schema](team-skills.schema.json)。全团队通用的方法放在 team 根。没有共享方法可不创建 skills.json；显式空清单写 `{"skills": []}`。不得将共享方法复制或重复登记到每个 Agent。
+Agent 的 \`agent.json.skills\` 只登记专属方法，入口为自身 \`skills/<skill-name>/SKILL.md\`。共享方法归属于能覆盖实际使用者的最近共同 Team，存入该 Team 的 \`skills/\`，由同级 \`skills.json\` 登记 name、purpose、reference；结构遵循 [Team Skill Schema](team-skills.schema.json)。全团队通用的方法放在 team 根。没有共享方法可不创建 skills.json；显式空清单写 \`{"skills": []}\`。不得将共享方法复制或重复登记到每个 Agent。
 
 每次加载 Agent，必须按“自身 → 直属 Team → 逐级祖先 Team → team 根”读取完整 Skill 清单，保留来源和入口，不能跳过空层、只加载直属 Team 或越过根。不继承兄弟 Team、后代 Team 或其他 Agent 的专属方法。执行前按任务相关性读取方法正文及必要引用；完整加载清单不等于无差别执行或读取所有方法正文。公共能力可见不代表获得执行授权或具备对应专业能力。
 
@@ -51,7 +57,7 @@ Agent 的 `agent.json.skills` 只登记专属方法，入口为自身 `skills/<s
 
 ## 五、文件组织与职责
 
-```text
+\`\`\`text
 team/
 ├── registry.json
 ├── skills.json                 # 可选：根 Team 公共清单
@@ -65,7 +71,7 @@ team/
     │       ├── principles.md
     │       └── skills/
     └── <another-agent>/
-```
+\`\`\`
 
 这是抽象布局约定，不指向任何实际目录；扩展根的位置与实例由项目侧确定。agent.json 是字段与引用的唯一来源，遵循 [Agent JSON Schema](agent.schema.json)。Markdown 仅保存工作原则、Skill 等正文，不复制 summary 或作者字段。读取 JSON 后按引用加载执行指令，JSON 本身不是确定性执行器。Agent Schema 定义单个 AI 成员，Team 的嵌套关系由目录树表达；groups → agents 是树的扁平检索索引，不限制 Team 深度。组织层级不新增 Leader 或任务调度职责。
 
@@ -80,7 +86,7 @@ team/
 
 ### 最小数据结构
 
-顶层仅包含 groups 列表，每项包含 Team 的完整目录 id 和直属 agents。任意深度的 Team 均进入索引，父 Team 由目录父路径确定；Agent 仅归直属 Team，空组保留 agents: []。team 根为隐式根，有直属 Agent 时也登记根项。候选检索可以展开指定 Team 的子树，Skill 继承仍只沿祖先链。所有 id 均相对项目根目录（包含 .cbim/ 的目录），使用 `/` 分隔；不相对注册表位置或当前命令目录解析，不另设路径基准字段。每个 Agent 条目保留两个字段：
+顶层仅包含 groups 列表，每项包含 Team 的完整目录 id 和直属 agents。任意深度的 Team 均进入索引，父 Team 由目录父路径确定；Agent 仅归直属 Team，空组保留 agents: []。team 根为隐式根，有直属 Agent 时也登记根项。候选检索可以展开指定 Team 的子树，Skill 继承仍只沿祖先链。所有 id 均相对项目根目录（包含 .cbim/ 的目录），使用 \`/\` 分隔；不相对注册表位置或当前命令目录解析，不另设路径基准字段。每个 Agent 条目保留两个字段：
 
 | 字段 | 设计用途 |
 |---|---|
@@ -124,3 +130,251 @@ connectors 是无重复的注册表逻辑 id 数组，无引用时为 []。按 [
 agent.json 可选 runtime 为 null 或 {engine, profileId, modelId}。engine 取 pi / claude-code / codex，两个 ID 只引用 CBIM 本机用户模型配置。桌面以级联下拉选择，不填写密钥、地址或任意启动命令。没有选型时，新登记可使用本机默认；明确引用失效必须重新选择，不能暗中回落。
 
 该字段不改变专业能力和 Skill 继承，也不覆盖已登记岗位的采纳快照。已登记岗位在岗位配置中明确改选或采纳。Team/Agent 资源导出会移除此本机引用，导入方自行选型。
+`.replaceAll('\n', '\r\n');
+
+/** JSON Schema 原文；校验器解析副本，查询返回同一正文。 */
+const agentSchema = `{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Agent definition",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "name",
+    "summary",
+    "authors",
+    "capabilities",
+    "limitations",
+    "work_principles",
+    "skills",
+    "connectors"
+  ],
+  "properties": {
+    "authors": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^\\\\S+$"
+      },
+      "description": "Human author IDs from one team; empty when unknown. References and team membership checked by maintenance script."
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 100,
+      "pattern": "^[^\\\\r\\\\n]+$",
+      "description": "100–250 non-whitespace characters; semantic content authored by an Agent."
+    },
+    "capabilities": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "work_principles": {
+      "type": "string",
+      "minLength": 1
+    },
+    "skills": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/skill"
+      },
+      "description": "Only Agent-owned skills; inherited Team skills are resolved at load time."
+    },
+    "connectors": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^\\\\.cbim/connectors/[A-Za-z0-9_-]+(?:/[A-Za-z0-9_-]+)*$"
+      }
+    },
+    "runtime": {
+      "description": "本机默认引擎与模型引用；岗位登记时独立采纳，null 表示采用本机默认配置。",
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "engine",
+            "profileId",
+            "modelId"
+          ],
+          "properties": {
+            "engine": {
+              "enum": [
+                "pi",
+                "claude-code",
+                "codex"
+              ]
+            },
+            "profileId": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+            },
+            "modelId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160
+            }
+          }
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "skill": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "purpose",
+        "reference"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "purpose": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reference": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^skills/[^/]+/SKILL\\\\.md$"
+        }
+      }
+    }
+  }
+}
+`.replaceAll('\n', '\r\n');
+
+/** JSON Schema 原文；校验器解析副本，查询返回同一正文。 */
+const agentRegistrySchema = `{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "groups"
+  ],
+  "properties": {
+    "groups": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "agents"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^\\\\.cbim/team(?:/[^/]+)*$"
+          },
+          "agents": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "summary"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^\\\\.cbim/team/(?:[^/]+/)*[^/]+$"
+                },
+                "summary": {
+                  "type": "string",
+                  "minLength": 100
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+`.replaceAll('\n', '\r\n');
+
+/** JSON Schema 原文；校验器解析副本，查询返回同一正文。 */
+const teamSkillsSchema = `{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Team shared Skill inventory",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "skills"
+  ],
+  "properties": {
+    "skills": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "purpose",
+          "reference"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "purpose": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reference": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^skills/[^/]+/SKILL\\\\.md$"
+          }
+        }
+      }
+    }
+  }
+}
+`.replaceAll('\n', '\r\n');
+
+/** 只读流程正文；调用方仍须遵守真实工具权限与业务状态。 */
+const createAgentSkill = `---
+name: create-agent-skill
+description: 为已有 Agent、Team 或小组创建专业 Skill，维护归属清单并核实继承。
+---
+# 创建专业 Skill
+
+遵循[通用规范](builtin:common-rules)、[Agent 规范](builtin:agent-spec)、[Team Skill Schema](builtin:team-skills-schema)、[共享方法结构](builtin:shared-skills-workflows)。本流程只维护工作区团队 Skill，不修改应用内置流程，不自动执行新 Skill 描述的业务操作。
+
+1. 通过 cbim_agent_registry、cbim_agent_get 明确实际使用者、已有方法与祖先继承，核实新增授权。已有同等能力优先复用，避免同名冲突。
+2. 专属方法归 Agent；共享方法归能覆盖使用者的最近共同组织节点。不放到兄弟节点，不将内置治理流程复制到每个 Agent。
+3. 调用 cbim_object_preview，operations 使用 kind=skill、action=create、parentId=查询返回的所属节点 ID、slug、data（name、purpose）和 body（完整 Skill 正文）。正文写明触发、输入、步骤、输出、验证和失败处理，frontmatter 含 name、description。只创建方法，不自动执行其业务操作。
+4. 服务创建正文、更新 Agent 或 Team 的方法清单，并检查继承与引用。核对 diff、归属与影响后，在有效写入授权下 cbim_object_commit(planId)。不直接操作 .cbim 或自行写清单；辅助资源创建接口缺失则记录，不伪造可用脚本。
+5. 提交后 cbim_agent_get 查询所有受影响成员的可用列表、正文和来源，确认祖先继承正确、无同名覆盖或兄弟继承。修改方法使用 action=update 与返回的 Skill id，删除使用 action=delete；共享方法修改影响所有继承者。
+6. 检查触发条件、步骤与实际工具是否一致。创建成功不等于执行验证通过；交付实际创建、校验结果、影响对象及尚未实跑的部分。
+`.replaceAll('\n', '\r\n');
+
+export { agentSpec, agentSchema, agentRegistrySchema, teamSkillsSchema, createAgentSkill };

@@ -22,7 +22,7 @@ const ordinaryDraft='普通输入框的下一任务草稿与附件，不是本�
 let setup:Application|undefined,desktop:ElectronApplication|undefined,page:Page|undefined,keepTemp=false;
 await fs.mkdir('test-results',{recursive:true});
 try{
-  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.Init();
+  setup=new Application(new Paths(user,path.resolve('.')));await setup.Init();
   const seed=await seedWaitingAttachments(setup,project,provider);await setup.Shutdown();setup=undefined;
   const start=async()=>{desktop=await electron.launch({executablePath:exe,env:{...process.env,CBIM_USER_DATA_ROOT:user},timeout:60000});page=await desktop.firstWindow();page.setDefaultTimeout(30000);page.on('pageerror',error=>pageErrors.push(error.message));};
   await start();

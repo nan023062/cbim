@@ -21,7 +21,7 @@ async function main()
   if (Boolean(values.task) !== Boolean(values.resume))
     throw Error('--task 与 --resume 必须同时提供');
 
-  const application = new Application(new Paths(values['user-data'], path.resolve('.')), path.resolve('assets'));
+  const application = new Application(new Paths(values['user-data'], path.resolve('.')));
 
   let stop: (() => void) | undefined;
 

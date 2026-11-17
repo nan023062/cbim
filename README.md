@@ -95,7 +95,7 @@ pnpm start
 | `src/view/` | React 页面、控制器、hooks 和视图专属适配 |
 | `docs/` | 01–04 概念设计、05 工程文件组织设计及 06–07 架构标准与治理准则 |
 | `design/` | 产品目标、核心取舍、未落地设计和原型 |
-| `assets/` | 实际使用的品牌图像、内置 Skill／运行规范与 Schema；不放维护者说明文档 |
+| `assets/` | 实际使用的品牌图像与生成摘要；运行规范由各业务源码模块维护 |
 | `legal/` | 随包分发的第三方许可和 NOTICE |
 | `tests/` | 隔离工程、规则、内部工具、调度与故障恢复测试 |
 | `scripts/` | 构建与桌面验证脚本 |
@@ -145,4 +145,4 @@ pnpm start
 
 `docs/` 不依赖项目设计或操作记录；项目设计与提交／Issue／PR 中的验证记录依据这些准则维护。
 
-其余旧设计文档已清理，历史内容可用 `git show 812bec16:<原仓库相对路径>` 查阅。产品实际读取的 [Skill／Workflow 规范](assets/runtime/shared-skills-workflows.md) 归入运行资料；Cindy 的 [许可](legal/cindy-LICENSE) 与 [NOTICE](legal/cindy-NOTICE) 归入 `legal/` 并随包分发，NOTICE 中的上游目录说明保留原文。
+其余旧设计文档已清理，历史内容可用 `git show 812bec16:<原仓库相对路径>` 查阅。产品实际读取的 [Skill／Workflow 规范](src/logic/knowledge/rules/standards.ts) 作为业务代码常量维护，内置资料目录见 [Builtins](src/logic/knowledge/rules/builtins.ts)；Cindy 的 [许可](legal/cindy-LICENSE) 与 [NOTICE](legal/cindy-NOTICE) 归入 `legal/` 并随包分发，NOTICE 中的上游目录说明保留原文。

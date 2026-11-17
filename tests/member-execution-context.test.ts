@@ -1,11 +1,9 @@
-import fs from 'node:fs/promises';
-import path from 'node:path';
 import {expect,it,vi} from 'vitest';
 import {fixture} from './helpers';
 import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
-import {json} from '../src/core/platform/node/serialization';
-import type {KnowledgeWorkspace} from '../src/logic/knowledge/rules/ports';
+import {json,hash} from '../src/core/platform/node/serialization';
+import {Builtins} from '../src/logic/knowledge/rules/builtins';
 import type {TaskNode} from '../src/logic/tasks/rules/graph-types';
 import {dispatchKnowledgeFingerprint,validatePreparedDispatchKnowledge,preparedWorkflowContracts} from '../src/logic/tasks/rules/execution-context';
 import {resolveDispatchModules} from '../src/logic/execution/context/dispatch-context';
@@ -95,13 +93,9 @@ it('读取期间版本变化或正文缺失不会生成半新半旧的执行快�
 it('应用内置规范更新、正文或指纹篡改均拒绝恢复，冻结快照不接受授权字段',async()=>{
   const f=await setup();
   try{
-    const runtime=path.join(f.temp,'rules','assets','runtime');await fs.mkdir(runtime,{recursive:true});
-    for(const id of ['business-execution','common-rules'])await fs.copyFile(path.join(f.w.rules.assetsRoot,'runtime',id+'.md'),path.join(runtime,id+'.md'));
-    const isolated=Object.create(f.w) as KnowledgeWorkspace;
-    Object.defineProperty(isolated,'rules',{value:{assetsRoot:path.dirname(runtime)}});
-    const prepared=await prepareDispatchExecutionContext(isolated,f.task);
-    await fs.appendFile(path.join(runtime,'common-rules.md'),'\n新的发布规范。\n');
-    await expect(recheckDispatchExecutionContext(isolated,prepared)).rejects.toMatchObject({code:'KNOWLEDGE_CHANGED'});
+    const prepared=await prepareDispatchExecutionContext(f.w,f.task),read=Builtins.Read.bind(Builtins);
+    const updated=vi.spyOn(Builtins,'Read').mockImplementation(async(id,version)=>{const doc=await read(id,version);if(id!=='common-rules')return doc;const text=doc.text+'\n新的发布规范。\n';return {...doc,text,version:hash(text)}});
+    try{await expect(recheckDispatchExecutionContext(f.w,prepared)).rejects.toMatchObject({code:'KNOWLEDGE_CHANGED'})}finally{updated.mockRestore()}
     const edited=structuredClone(prepared);edited.agent.principles+='改变';
     expect(()=>validatePreparedDispatchKnowledge(edited)).toThrow(expect.objectContaining({code:'EXECUTION_CONTEXT_INVALID'}));
     const wrongGeneral=structuredClone(prepared);wrongGeneral.modules[1].workflowText='替换通用流程';wrongGeneral.fingerprint=dispatchKnowledgeFingerprint(wrongGeneral);

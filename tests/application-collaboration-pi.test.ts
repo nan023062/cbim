@@ -146,7 +146,7 @@ it.each(['normal','repair','restart','restart-corrupt','restart-pending','restar
       await crash(processChild);await exited;
       if(mode==='restart-corrupt')await fs.appendFile(path.join(f.user,entry.id,'loop-engine','tasks',started.taskId,started.runId,'events.jsonl'),'{');
       const counts=[p.main.length,p.member.length],stat=await fs.stat(path.join(f.a,'collaboration-output.txt'));
-      f.app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));
+      f.app=new Application(new Paths(f.user,path.resolve('.')));
       await f.app.Init({restore:false});
       if(mode==='restart-model'){
         const {id,hasKey,...profile}=(await f.app.models.List()).profiles[0];

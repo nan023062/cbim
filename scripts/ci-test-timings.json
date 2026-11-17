@@ -399,7 +399,6 @@
     "tests/source-architecture.test.ts": 4017,
     "tests/static-owners.test.ts": 1003,
     "tests/tabs.test.ts": 1005,
-    "tests/task-graph-layout.test.ts": 1093,
     "tests/task-progress-bounds.test.ts": 1041,
     "tests/task-progress-pi.test.ts": 2214,
     "tests/task-progress.test.ts": 1021,

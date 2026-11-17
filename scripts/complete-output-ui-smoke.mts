@@ -6,8 +6,8 @@ import assert from 'node:assert/strict';
 import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
 import {humanDecisionHistorySchema} from '../src/logic/tasks/rules/human-decisions';
-import {completeOutputProvider,completeOutputData as d,type CompleteOutputMode} from '../tests/complete-output-provider';
-import {seedCompleteOutput,completeOutputRecords,completeOutputSourceBytes} from '../tests/complete-output-pi-fixture';
+import {completeOutputProvider,completeOutputData as d,type CompleteOutputMode} from '../src/logic/execution/assembly/unittest/support/complete-output-provider';
+import {seedCompleteOutput,completeOutputRecords,completeOutputSourceBytes} from '../src/logic/execution/assembly/unittest/support/complete-output-pi-fixture';
 import {latestExecutable} from './build-artifact.mjs';
 
 const mode:CompleteOutputMode=process.argv.includes('--human')?'human':process.argv.includes('--changed')?'changed':'automatic',tag=process.env.CBIM_SMOKE_TAG??'',artifact='complete-output-'+mode+(tag?'-'+tag:''),exe=await latestExecutable();

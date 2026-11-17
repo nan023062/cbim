@@ -1,5 +1,5 @@
 import fs from 'node:fs/promises';
-import {createKnowledgeSourceLegacyFixture} from '../tests/knowledge-source-legacy-fixture';
+import {createKnowledgeSourceLegacyFixture} from '../src/logic/workspace/service/unittest/support/knowledge-source-legacy-fixture';
 
 // This is an explicit old-version fixture producer, not the final Step32 desktop acceptance.
 // All records are committed by the actual fixed Step31 EXE. No source/generation or successful journal is synthesized.

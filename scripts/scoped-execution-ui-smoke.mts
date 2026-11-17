@@ -1,8 +1,8 @@
 import {_electron as electron,type ElectronApplication} from 'playwright-core';
 import fs from 'node:fs/promises';import path from 'node:path';import os from 'node:os';import assert from 'node:assert/strict';
 import {Application} from '../src/bridge/server/application';import {Paths} from '../src/logic/workspace/service/paths';
-import {scopedData,scopedProvider} from '../tests/scoped-execution-provider';
-import {seedScopedExecution,scopedRecords,scopedLogBytes} from '../tests/scoped-execution-fixture';
+import {scopedData,scopedProvider} from '../src/logic/file-operations/service/unittest/support/scoped-execution-provider';
+import {seedScopedExecution,scopedRecords,scopedLogBytes} from '../src/logic/file-operations/service/unittest/support/scoped-execution-fixture';
 import {FileRunStorage} from '../src/logic/execution/storage/run-storage';
 import {latestExecutable} from './build-artifact.mjs';
 const mode=process.argv.includes('--stop')?'stop':process.argv.includes('--ask')?'ask':'complete',tag=process.env.CBIM_SCOPED_REPORT_PREFIX??'scoped-'+mode;

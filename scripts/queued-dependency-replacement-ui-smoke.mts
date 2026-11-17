@@ -5,8 +5,8 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
-import {dependencyReplacementProvider,dependencyReplacementFixture as data} from '../tests/queued-dependency-replacement-provider';
-import {seedDependencyReplacement,dependencyRecords,dependencyRuns,assertDependencyReplacement} from '../tests/queued-dependency-replacement-fixture';
+import {dependencyReplacementProvider,dependencyReplacementFixture as data} from '../src/logic/tasks/runtime/unittest/support/queued-dependency-replacement-provider';
+import {seedDependencyReplacement,dependencyRecords,dependencyRuns,assertDependencyReplacement} from '../src/logic/tasks/runtime/unittest/support/queued-dependency-replacement-fixture';
 import {latestExecutable} from './build-artifact.mjs';
 
 // Real packaged desktop/Pi and native reads; only localhost model responses are deterministic.

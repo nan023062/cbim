@@ -1,0 +1,2094 @@
+{
+  "version": 1,
+  "modules": {
+    "agents": {
+      "roots": [
+        "src/logic/agents/"
+      ],
+      "tests": {
+        "unit": [
+          "src/logic/agents/unittest/agent-call-exchange.test.ts",
+          "src/logic/agents/unittest/agent-object.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      },
+      "directory": "src/logic/agents"
+    },
+    "logic/budget/rules": {
+      "roots": [
+        "src/logic/budget/rules/"
+      ],
+      "tests": {
+        "unit": [
+          "src/logic/budget/rules/unittest/model-role-rules.test.ts"
+        ],
+        "contract": [
+          "src/logic/budget/rules/unittest/scope-usage-metering.test.ts"
+        ],
+        "integration": [
+          "src/logic/budget/rules/unittest/scope-budget.test.ts"
+        ]
+      },
+      "directory": "src/logic/budget/rules"
+    },
+    "logic/connectors/rules": {
+      "roots": [
+        "src/logic/connectors/rules/"
+      ],
+      "tests": {
+        "unit": [
+          "src/logic/connectors/rules/unittest/connector-registry.test.ts"
+        ],
+        "contract": [],
+        "integration": [
+          "src/logic/connectors/rules/unittest/connector-definitions.test.ts"
+        ]
+      },
+      "directory": "src/logic/connectors/rules"
+    },
+    "logic/evidence/rules": {
+      "roots": [
+        "src/logic/evidence/rules/"
+      ],
+      "tests": {
+        "unit": [
+          "src/logic/evidence/rules/unittest/task-progress.test.ts"
+        ],
+        "contract": [
+          "src/logic/evidence/rules/unittest/artifact-evidence.test.ts",
+          "src/logic/evidence/rules/unittest/artifact-transition-evidence.test.ts",
+          "src/logic/evidence/rules/unittest/code-check.test.ts",
+          "src/logic/evidence/rules/unittest/json-artifact-validation-core.test.ts",
+          "src/logic/evidence/rules/unittest/output-manifest-evidence.test.ts",
+          "src/logic/evidence/rules/unittest/task-progress-bounds.test.ts",
+          "src/logic/evidence/rules/unittest/workflow-evidence.test.ts"
+        ],
+        "integration": [
+          "src/logic/evidence/rules/unittest/module-ownership-evidence.test.ts",
+          "src/logic/evidence/rules/unittest/question-evidence.test.ts"
+        ]
+      },
+      "directory": "src/logic/evidence/rules"
+    },
+    "logic/execution/rules": {
+      "roots": [
+        "src/logic/execution/rules/"
+      ],
+      "tests": {
+        "unit": [
+          "src/logic/execution/rules/unittest/engine-session.test.ts",
+          "src/logic/execution/rules/unittest/runtime-usage.test.ts"
+        ],
+        "contract": [
+          "src/logic/execution/rules/unittest/business-run-registry.test.ts",
+          "src/logic/execution/rules/unittest/engine-capabilities.test.ts",
+          "src/logic/execution/rules/unittest/engine-tools.test.ts",
+          "src/logic/execution/rules/unittest/human-continuation-source.test.ts",
+          "src/logic/execution/rules/unittest/member-continuation.test.ts",
+          "src/logic/execution/rules/unittest/run-failure.test.ts",
+          "src/logic/execution/rules/unittest/tool-failure-control.test.ts"
+        ],
+        "integration": []
+      },
+      "directory": "src/logic/execution/rules"
+    },
+    "logic/execution/rules/capabilities": {
+      "roots": [
+        "src/logic/execution/rules/capabilities/"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [
+          "src/logic/execution/rules/capabilities/unittest/artifact-runtime.test.ts",
+          "src/logic/execution/rules/capabilities/unittest/artifact-transition-runtime.test.ts",
+          "src/logic/execution/rules/capabilities/unittest/complete-output-runtime.test.ts",
+          "src/logic/execution/rules/capabilities/unittest/csv-validation-runtime.test.ts",
+          "src/logic/execution/rules/capabilities/unittest/json-validation-runtime.test.ts",
+          "src/logic/execution/rules/capabilities/unittest/output-manifest-runtime.test.ts",
+          "src/logic/execution/rules/capabilities/unittest/png-validation-runtime.test.ts"
+        ],
+        "integration": [
+          "src/logic/execution/rules/capabilities/unittest/artifact-baseline-pi.test.ts",
+          "src/logic/execution/rules/capabilities/unittest/output-manifest-pi.test.ts"
+        ]
+      },
+      "directory": "src/logic/execution/rules/capabilities"
+    },
+    "logic/execution/rules/runtime": {
+      "roots": [
+        "src/logic/execution/rules/runtime/"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [
+          "src/logic/execution/rules/runtime/unittest/active-goal-input-runtime.test.ts",
+          "src/logic/execution/rules/runtime/unittest/controlled-file-runtime.test.ts",
+          "src/logic/execution/rules/runtime/unittest/conversation-binding.test.ts",
+          "src/logic/execution/rules/runtime/unittest/human-continuation-source.test.ts",
+          "src/logic/execution/rules/runtime/unittest/loop-engine.test.ts",
+          "src/logic/execution/rules/runtime/unittest/member-checkpoint-runtime.test.ts",
+          "src/logic/execution/rules/runtime/unittest/member-continuation-pi.test.ts",
+          "src/logic/execution/rules/runtime/unittest/member-continuation.test.ts",
+          "src/logic/execution/rules/runtime/unittest/member-help-runtime.test.ts",
+          "src/logic/execution/rules/runtime/unittest/member-run-pi.test.ts",
+          "src/logic/execution/rules/runtime/unittest/member-run.test.ts",
+          "src/logic/execution/rules/runtime/unittest/runtime-continuation.test.ts",
+          "src/logic/execution/rules/runtime/unittest/runtime-failed-retry.test.ts",
+          "src/logic/execution/rules/runtime/unittest/runtime-fresh-main.test.ts",
+          "src/logic/execution/rules/runtime/unittest/scoped-execution-runtime.test.ts",
+          "src/logic/execution/rules/runtime/unittest/tool-result-pi.test.ts"
+        ],
+        "integration": []
+      },
+      "directory": "src/logic/execution/rules/runtime"
+    },
+    "logic/file-operations/rules": {
+      "roots": [
+        "src/logic/file-operations/rules/"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [
+          "src/logic/file-operations/rules/unittest/controlled-file-core.test.ts"
+        ],
+        "integration": []
+      },
+      "directory": "src/logic/file-operations/rules"
+    },
+    "logic/governance/rules": {
+      "roots": [
+        "src/logic/governance/rules/"
+      ],
+      "tests": {
+        "unit": [
+          "src/logic/governance/rules/unittest/governance-feedback-wire.test.ts",
+          "src/logic/governance/rules/unittest/module-governance-core.test.ts",
+          "src/logic/governance/rules/unittest/module-governance-feedback-core.test.ts"
+        ],
+        "contract": [
+          "src/logic/governance/rules/unittest/governance-tool-core.test.ts"
+        ],
+        "integration": []
+      },
+      "directory": "src/logic/governance/rules"
+    },
+    "logic/knowledge/rules": {
+      "roots": [
+        "src/logic/knowledge/rules/"
+      ],
+      "tests": {
+        "unit": [
+          "src/logic/knowledge/rules/unittest/builtin-documents.test.ts",
+          "src/logic/knowledge/rules/unittest/knowledge-queries.test.ts",
+          "src/logic/knowledge/rules/unittest/memory-index.test.ts"
+        ],
+        "contract": [
+          "src/logic/knowledge/rules/unittest/engine-configuration.test.ts",
+          "src/logic/knowledge/rules/unittest/knowledge-query-ports.test.ts",
+          "src/logic/knowledge/rules/unittest/rules.test.ts",
+          "src/logic/knowledge/rules/unittest/utility-json-order-contract.test.ts"
+        ],
+        "integration": [
+          "src/logic/knowledge/rules/unittest/core-domains-integration.test.ts",
+          "src/logic/knowledge/rules/unittest/knowledge-refresh.test.ts",
+          "src/logic/knowledge/rules/unittest/object-crud.test.ts",
+          "src/logic/knowledge/rules/unittest/path-contract.test.ts",
+          "src/logic/knowledge/rules/unittest/project-root-module.test.ts",
+          "src/logic/knowledge/rules/unittest/rules-json-arrays.test.ts",
+          "src/logic/knowledge/rules/unittest/workflow-contract-knowledge.test.ts",
+          "src/logic/knowledge/rules/unittest/workspace.test.ts"
+        ]
+      },
+      "directory": "src/logic/knowledge/rules"
+    },
+    "logic/knowledge/rules/read-models": {
+      "roots": [
+        "src/logic/knowledge/rules/read-models/"
+      ],
+      "tests": {
+        "unit": [
+          "src/logic/knowledge/rules/read-models/unittest/core-domains.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      },
+      "directory": "src/logic/knowledge/rules/read-models"
+    },
+    "logic/tasks/rules": {
+      "roots": [
+        "src/logic/tasks/rules/"
+      ],
+      "tests": {
+        "unit": [
+          "src/logic/tasks/rules/unittest/effect-observation-core.test.ts",
+          "src/logic/tasks/rules/unittest/human-continuation-core.test.ts",
+          "src/logic/tasks/rules/unittest/human-decisions-core.test.ts",
+          "src/logic/tasks/rules/unittest/member-topic-context.test.ts",
+          "src/logic/tasks/rules/unittest/queued-dependency-replacement-core.test.ts",
+          "src/logic/tasks/rules/unittest/queued-dependency-revision-core.test.ts",
+          "src/logic/tasks/rules/unittest/scope-active-input-core.test.ts"
+        ],
+        "contract": [
+          "src/logic/tasks/rules/unittest/automatic-return.test.ts",
+          "src/logic/tasks/rules/unittest/checkpoint-handoff-core.test.ts",
+          "src/logic/tasks/rules/unittest/command-verification-core.test.ts",
+          "src/logic/tasks/rules/unittest/continuation-source-core.test.ts",
+          "src/logic/tasks/rules/unittest/dispatch-graph.test.ts",
+          "src/logic/tasks/rules/unittest/main-tool-output-core.test.ts",
+          "src/logic/tasks/rules/unittest/member-checkpoint-core.test.ts",
+          "src/logic/tasks/rules/unittest/member-tool-output-core.test.ts",
+          "src/logic/tasks/rules/unittest/member-tool-output-wrappers.test.ts",
+          "src/logic/tasks/rules/unittest/queued-dependency-addition-core.test.ts",
+          "src/logic/tasks/rules/unittest/scope-detail-recovery.test.ts",
+          "src/logic/tasks/rules/unittest/utility-json-order-contract.test.ts",
+          "src/logic/tasks/rules/unittest/workflow-selection-core.test.ts"
+        ],
+        "integration": [
+          "src/logic/tasks/rules/unittest/scope-budget.test.ts"
+        ]
+      },
+      "directory": "src/logic/tasks/rules"
+    },
+    "logic/team/rules": {
+      "roots": [
+        "src/logic/team/rules/"
+      ],
+      "tests": {
+        "unit": [
+          "src/logic/team/rules/unittest/team-session.test.ts"
+        ],
+        "contract": [
+          "src/logic/team/rules/unittest/owner-execution-core.test.ts",
+          "src/logic/team/rules/unittest/utility-json-order-contract.test.ts",
+          "src/logic/team/rules/unittest/workspace-member-core.test.ts"
+        ],
+        "integration": [
+          "src/logic/team/rules/unittest/automatic-execution.test.ts",
+          "src/logic/team/rules/unittest/default-executor.test.ts"
+        ]
+      },
+      "directory": "src/logic/team/rules"
+    },
+    "logic/tools/rules": {
+      "roots": [
+        "src/logic/tools/rules/"
+      ],
+      "tests": {
+        "unit": [
+          "src/logic/tools/rules/unittest/tool-registry.test.ts"
+        ],
+        "contract": [
+          "src/logic/tools/rules/unittest/repository-tool-core.test.ts",
+          "src/logic/tools/rules/unittest/tool-output-wire.test.ts",
+          "src/logic/tools/rules/unittest/tool-results.test.ts",
+          "src/logic/tools/rules/unittest/workflow-runtime.test.ts"
+        ],
+        "integration": []
+      },
+      "directory": "src/logic/tools/rules"
+    },
+    "logic/workspace/rules": {
+      "roots": [
+        "src/logic/workspace/rules/"
+      ],
+      "tests": {
+        "unit": [
+          "src/logic/workspace/rules/unittest/workflow-contract.test.ts"
+        ],
+        "contract": [
+          "src/logic/workspace/rules/unittest/artifact-transition-evidence.test.ts",
+          "src/logic/workspace/rules/unittest/csv-artifact-validation-core.test.ts",
+          "src/logic/workspace/rules/unittest/execution-scope.test.ts",
+          "src/logic/workspace/rules/unittest/knowledge-source-core.test.ts",
+          "src/logic/workspace/rules/unittest/module-ownership-core.test.ts",
+          "src/logic/workspace/rules/unittest/utility-json-order-contract.test.ts"
+        ],
+        "integration": []
+      },
+      "directory": "src/logic/workspace/rules"
+    },
+    "logic/execution/engines": {
+      "roots": [
+        "src/logic/execution/engines/"
+      ],
+      "tests": {
+        "unit": [
+          "src/logic/execution/engines/unittest/native-tool-paths.test.ts"
+        ],
+        "contract": [
+          "src/logic/execution/engines/unittest/engine-capability-policy.test.ts",
+          "src/logic/execution/engines/unittest/engine-inactivity.test.ts",
+          "src/logic/execution/engines/unittest/engine-runtime-binding.test.ts",
+          "src/logic/execution/engines/unittest/engine-runtime-loader.test.ts",
+          "src/logic/execution/engines/unittest/utility-redaction-contract.test.ts",
+          "src/logic/execution/engines/unittest/utility-rpc-framing-contract.test.ts"
+        ],
+        "integration": []
+      },
+      "directory": "src/logic/execution/engines"
+    },
+    "logic/execution/engines/claude": {
+      "roots": [
+        "src/logic/execution/engines/claude/"
+      ],
+      "tests": {
+        "unit": [
+          "src/logic/execution/engines/claude/unittest/claude-engine.test.ts"
+        ],
+        "contract": [
+          "src/logic/execution/engines/claude/unittest/claude-schema.test.ts"
+        ],
+        "integration": [
+          "src/logic/execution/engines/claude/unittest/claude-tools.test.ts"
+        ]
+      },
+      "directory": "src/logic/execution/engines/claude"
+    },
+    "logic/execution/engines/codex": {
+      "roots": [
+        "src/logic/execution/engines/codex/"
+      ],
+      "tests": {
+        "unit": [
+          "src/logic/execution/engines/codex/unittest/codex-engine.test.ts",
+          "src/logic/execution/engines/codex/unittest/codex-tools.test.ts",
+          "src/logic/execution/engines/codex/unittest/codex-write-recovery.test.ts"
+        ],
+        "contract": [],
+        "integration": [
+          "src/logic/execution/engines/codex/unittest/codex-interruption.test.ts",
+          "src/logic/execution/engines/codex/unittest/codex-lifecycle.test.ts"
+        ]
+      },
+      "directory": "src/logic/execution/engines/codex"
+    },
+    "logic/execution/engines/pi": {
+      "roots": [
+        "src/logic/execution/engines/pi/"
+      ],
+      "tests": {
+        "unit": [
+          "src/logic/execution/engines/pi/unittest/engine-inactivity-pi.test.ts",
+          "src/logic/execution/engines/pi/unittest/model-request-budget-bootstrap.test.ts",
+          "src/logic/execution/engines/pi/unittest/pi-cancellation.test.ts",
+          "src/logic/execution/engines/pi/unittest/pi-rpc.test.ts",
+          "src/logic/execution/engines/pi/unittest/pi-tool-catalog.test.ts"
+        ],
+        "contract": [
+          "src/logic/execution/engines/pi/unittest/human-continuation-source.test.ts",
+          "src/logic/execution/engines/pi/unittest/member-continuation.test.ts",
+          "src/logic/execution/engines/pi/unittest/model-capacity-sdk.test.ts"
+        ],
+        "integration": [
+          "src/logic/execution/engines/pi/unittest/pi-runtime-config.test.ts"
+        ]
+      },
+      "directory": "src/logic/execution/engines/pi"
+    },
+    "logic/execution/engines/transport": {
+      "roots": [
+        "src/logic/execution/engines/transport/"
+      ],
+      "tests": {
+        "unit": [
+          "src/logic/execution/engines/transport/unittest/model-request-budget-usage.test.ts"
+        ],
+        "contract": [
+          "src/logic/execution/engines/transport/unittest/model-json-requests.test.ts"
+        ],
+        "integration": [
+          "src/logic/execution/engines/transport/unittest/model-request-budget-transport.test.ts"
+        ]
+      },
+      "directory": "src/logic/execution/engines/transport"
+    },
+    "logic/dispatch/storage": {
+      "roots": [
+        "src/logic/dispatch/storage/"
+      ],
+      "tests": {
+        "unit": [
+          "src/logic/dispatch/storage/unittest/command-evidence-store.test.ts"
+        ],
+        "contract": [
+          "src/logic/dispatch/storage/unittest/controlled-file-store.test.ts",
+          "src/logic/dispatch/storage/unittest/dispatch-execution-store.test.ts",
+          "src/logic/dispatch/storage/unittest/dispatch-store.test.ts",
+          "src/logic/dispatch/storage/unittest/effect-disposition-store.test.ts",
+          "src/logic/dispatch/storage/unittest/owner-execution-store.test.ts",
+          "src/logic/dispatch/storage/unittest/request-budget-ports.test.ts",
+          "src/logic/dispatch/storage/unittest/runtime-feeds.test.ts"
+        ],
+        "integration": [
+          "src/logic/dispatch/storage/unittest/scope-budget.test.ts"
+        ]
+      },
+      "directory": "src/logic/dispatch/storage"
+    },
+    "logic/file-operations/service": {
+      "roots": [
+        "src/logic/file-operations/service/"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [
+          "src/logic/file-operations/service/unittest/controlled-file-service.test.ts",
+          "src/logic/file-operations/service/unittest/isolated-executions.test.ts"
+        ],
+        "integration": [
+          "src/logic/file-operations/service/unittest/agent-controlled-file-pi.test.ts",
+          "src/logic/file-operations/service/unittest/controlled-file-pi.test.ts",
+          "src/logic/file-operations/service/unittest/scoped-execution-pi.test.ts"
+        ]
+      },
+      "directory": "src/logic/file-operations/service"
+    },
+    "logic/history/service": {
+      "roots": [
+        "src/logic/history/service/"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [
+          "src/logic/history/service/unittest/agent-history-assembly.test.ts"
+        ],
+        "integration": []
+      },
+      "directory": "src/logic/history/service"
+    },
+    "bridge/server/ipc": {
+      "roots": [
+        "src/bridge/server/ipc/"
+      ],
+      "tests": {
+        "unit": [
+          "src/bridge/server/ipc/unittest/ipc-requests.test.ts"
+        ],
+        "contract": [
+          "src/bridge/server/ipc/unittest/engine-settings-ipc.test.ts",
+          "src/bridge/server/ipc/unittest/queue-insertion-view.test.ts"
+        ],
+        "integration": [
+          "src/bridge/server/ipc/unittest/agent-history-ipc.test.ts",
+          "src/bridge/server/ipc/unittest/automation-application.test.ts",
+          "src/bridge/server/ipc/unittest/model-actions.test.ts",
+          "src/bridge/server/ipc/unittest/web-settings-ipc.test.ts"
+        ]
+      },
+      "directory": "src/bridge/server/ipc"
+    },
+    "logic/team/settings": {
+      "roots": [
+        "src/logic/team/settings/"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [],
+        "integration": [
+          "src/logic/team/settings/unittest/main-agent-settings.test.ts"
+        ]
+      },
+      "directory": "src/logic/team/settings"
+    },
+    "logic/execution/platform": {
+      "roots": [
+        "src/logic/execution/platform/"
+      ],
+      "tests": {
+        "unit": [
+          "src/logic/execution/platform/unittest/native-session-files.test.ts"
+        ],
+        "contract": [],
+        "integration": [
+          "src/logic/execution/platform/unittest/native-tool-guard.test.ts"
+        ]
+      },
+      "directory": "src/logic/execution/platform"
+    },
+    "logic/file-operations/platform/files": {
+      "roots": [
+        "src/logic/file-operations/platform/files/"
+      ],
+      "tests": {
+        "unit": [
+          "src/logic/file-operations/platform/files/unittest/artifact-files.test.ts",
+          "src/logic/file-operations/platform/files/unittest/controlled-namespace-platform.test.ts",
+          "src/logic/file-operations/platform/files/unittest/png-artifact-files.test.ts",
+          "src/logic/file-operations/platform/files/unittest/scoped-execution-platform.test.ts"
+        ],
+        "contract": [
+          "src/logic/file-operations/platform/files/unittest/csv-artifact-files.test.ts",
+          "src/logic/file-operations/platform/files/unittest/json-artifact-files.test.ts",
+          "src/logic/file-operations/platform/files/unittest/output-manifest-files.test.ts",
+          "src/logic/file-operations/platform/files/unittest/png-artifact-validation-core.test.ts"
+        ],
+        "integration": [
+          "src/logic/file-operations/platform/files/unittest/controlled-file-platform.test.ts"
+        ]
+      },
+      "directory": "src/logic/file-operations/platform/files"
+    },
+    "logic/file-operations/platform/isolation": {
+      "roots": [
+        "src/logic/file-operations/platform/isolation/"
+      ],
+      "tests": {
+        "unit": [
+          "src/logic/file-operations/platform/isolation/unittest/isolated-node.test.ts"
+        ],
+        "contract": [
+          "src/logic/file-operations/platform/isolation/unittest/isolation-records.test.ts"
+        ],
+        "integration": [
+          "src/logic/file-operations/platform/isolation/unittest/isolated-node-crash.test.ts",
+          "src/logic/file-operations/platform/isolation/unittest/isolation-recovery-crash.test.ts",
+          "src/logic/file-operations/platform/isolation/unittest/isolation-recovery-win32.test.ts"
+        ]
+      },
+      "directory": "src/logic/file-operations/platform/isolation"
+    },
+    "logic/execution/storage": {
+      "roots": [
+        "src/logic/execution/storage/"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [
+          "src/logic/execution/storage/unittest/business-run-storage.test.ts",
+          "src/logic/execution/storage/unittest/run-journal-integrity.test.ts"
+        ],
+        "integration": []
+      },
+      "directory": "src/logic/execution/storage"
+    },
+    "logic/runtime/settings": {
+      "roots": [
+        "src/logic/runtime/settings/"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [
+          "src/logic/runtime/settings/unittest/admission-settings.test.ts"
+        ],
+        "integration": []
+      },
+      "directory": "src/logic/runtime/settings"
+    },
+    "logic/execution/admission": {
+      "roots": [
+        "src/logic/execution/admission/"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [
+          "src/logic/execution/admission/unittest/run-admission.test.ts"
+        ],
+        "integration": [
+          "src/logic/execution/admission/unittest/conversation-identity.test.ts"
+        ]
+      },
+      "directory": "src/logic/execution/admission"
+    },
+    "logic/automation/runtime": {
+      "roots": [
+        "src/logic/automation/runtime/"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [
+          "src/logic/automation/runtime/unittest/automation-scheduler.test.ts"
+        ],
+        "integration": [
+          "src/logic/automation/runtime/unittest/automation-application.test.ts"
+        ]
+      },
+      "directory": "src/logic/automation/runtime"
+    },
+    "logic/budget/runtime": {
+      "roots": [
+        "src/logic/budget/runtime/"
+      ],
+      "tests": {
+        "unit": [
+          "src/logic/budget/runtime/unittest/model-role-service.test.ts",
+          "src/logic/budget/runtime/unittest/scope-usage-service.test.ts"
+        ],
+        "contract": [
+          "src/logic/budget/runtime/unittest/agent-request-budget.test.ts",
+          "src/logic/budget/runtime/unittest/request-budget-ports.test.ts"
+        ],
+        "integration": [
+          "src/logic/budget/runtime/unittest/model-request-budget-pi.test.ts",
+          "src/logic/budget/runtime/unittest/model-request-budget.test.ts",
+          "src/logic/budget/runtime/unittest/scope-budget-pi.test.ts",
+          "src/logic/budget/runtime/unittest/scope-budget-service.test.ts",
+          "src/logic/budget/runtime/unittest/scope-usage-pi.test.ts"
+        ]
+      },
+      "directory": "src/logic/budget/runtime"
+    },
+    "logic/conversation/runtime": {
+      "roots": [
+        "src/logic/conversation/runtime/"
+      ],
+      "tests": {
+        "unit": [
+          "src/logic/conversation/runtime/unittest/main-history-context.test.ts",
+          "src/logic/conversation/runtime/unittest/message-queue.test.ts",
+          "src/logic/conversation/runtime/unittest/questions.test.ts"
+        ],
+        "contract": [
+          "src/logic/conversation/runtime/unittest/agent-role-instructions.test.ts",
+          "src/logic/conversation/runtime/unittest/execution-collaboration.test.ts",
+          "src/logic/conversation/runtime/unittest/queue-insertion-boundary.test.ts",
+          "src/logic/conversation/runtime/unittest/recovery-start-race.test.ts",
+          "src/logic/conversation/runtime/unittest/replan-start-race.test.ts",
+          "src/logic/conversation/runtime/unittest/runtime-feeds.test.ts"
+        ],
+        "integration": [
+          "src/logic/conversation/runtime/unittest/active-goal-input-pi.test.ts",
+          "src/logic/conversation/runtime/unittest/automatic-execution-pi.test.ts",
+          "src/logic/conversation/runtime/unittest/chat-inputs.test.ts",
+          "src/logic/conversation/runtime/unittest/conversation-identity.test.ts",
+          "src/logic/conversation/runtime/unittest/conversation-retry.test.ts",
+          "src/logic/conversation/runtime/unittest/direct-main-execution-pi.test.ts",
+          "src/logic/conversation/runtime/unittest/pi-length.test.ts",
+          "src/logic/conversation/runtime/unittest/queue-insert.test.ts",
+          "src/logic/conversation/runtime/unittest/queue-insertion-pi.test.ts",
+          "src/logic/conversation/runtime/unittest/run-approval.test.ts",
+          "src/logic/conversation/runtime/unittest/team-workflow.test.ts",
+          "src/logic/conversation/runtime/unittest/topic-interruption-pi.test.ts",
+          "src/logic/conversation/runtime/unittest/vision.test.ts",
+          "src/logic/conversation/runtime/unittest/waiting-attachments-manager.test.ts",
+          "src/logic/conversation/runtime/unittest/waiting-attachments-pi.test.ts",
+          "src/logic/conversation/runtime/unittest/waiting-mixed-sources-pi.test.ts"
+        ]
+      },
+      "directory": "src/logic/conversation/runtime"
+    },
+    "logic/dispatch/runtime": {
+      "roots": [
+        "src/logic/dispatch/runtime/"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [
+          "src/logic/dispatch/runtime/unittest/auto-collaboration.test.ts",
+          "src/logic/dispatch/runtime/unittest/goal-repair.test.ts",
+          "src/logic/dispatch/runtime/unittest/member-failure-limit.test.ts"
+        ],
+        "integration": [
+          "src/logic/dispatch/runtime/unittest/auto-continuation-recovery.test.ts",
+          "src/logic/dispatch/runtime/unittest/conversation-identity.test.ts",
+          "src/logic/dispatch/runtime/unittest/dispatch-scope-wait.test.ts",
+          "src/logic/dispatch/runtime/unittest/dispatch-scope.test.ts",
+          "src/logic/dispatch/runtime/unittest/dispatch-session-read.test.ts",
+          "src/logic/dispatch/runtime/unittest/member-dispatch.test.ts",
+          "src/logic/dispatch/runtime/unittest/owner-execution-legacy.test.ts",
+          "src/logic/dispatch/runtime/unittest/workflow-selection-service.test.ts"
+        ]
+      },
+      "directory": "src/logic/dispatch/runtime"
+    },
+    "logic/evidence/runtime": {
+      "roots": [
+        "src/logic/evidence/runtime/"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [
+          "src/logic/evidence/runtime/unittest/agent-artifact-verification.test.ts",
+          "src/logic/evidence/runtime/unittest/artifact-report-service.test.ts",
+          "src/logic/evidence/runtime/unittest/command-verification-service.test.ts",
+          "src/logic/evidence/runtime/unittest/controlled-effect-service.test.ts",
+          "src/logic/evidence/runtime/unittest/effect-observation-service.test.ts",
+          "src/logic/evidence/runtime/unittest/knowledge-effect-service.test.ts",
+          "src/logic/evidence/runtime/unittest/output-manifest-report-service.test.ts",
+          "src/logic/evidence/runtime/unittest/persistent-effect-service.test.ts"
+        ],
+        "integration": [
+          "src/logic/evidence/runtime/unittest/command-verification-main.test.ts",
+          "src/logic/evidence/runtime/unittest/effect-observation-pi.test.ts",
+          "src/logic/evidence/runtime/unittest/execution-report-pi.test.ts",
+          "src/logic/evidence/runtime/unittest/execution-report.test.ts",
+          "src/logic/evidence/runtime/unittest/knowledge-effect-pi.test.ts",
+          "src/logic/evidence/runtime/unittest/persistent-effect-pi.test.ts"
+        ]
+      },
+      "directory": "src/logic/evidence/runtime"
+    },
+    "logic/tasks/runtime": {
+      "roots": [
+        "src/logic/tasks/runtime/"
+      ],
+      "tests": {
+        "unit": [
+          "src/logic/tasks/runtime/unittest/office-history-service.test.ts"
+        ],
+        "contract": [],
+        "integration": [
+          "src/logic/tasks/runtime/unittest/abandoned-checkpoint-dependency-service.test.ts",
+          "src/logic/tasks/runtime/unittest/active-goal-input-service.test.ts",
+          "src/logic/tasks/runtime/unittest/checkpoint-handoff-service.test.ts",
+          "src/logic/tasks/runtime/unittest/complete-output-human.test.ts",
+          "src/logic/tasks/runtime/unittest/human-continuation-service.test.ts",
+          "src/logic/tasks/runtime/unittest/human-decision-service.test.ts",
+          "src/logic/tasks/runtime/unittest/human-reconsideration-service.test.ts",
+          "src/logic/tasks/runtime/unittest/implicit-owner-service.test.ts",
+          "src/logic/tasks/runtime/unittest/json-validation-human-decisions.test.ts",
+          "src/logic/tasks/runtime/unittest/owner-execution-service.test.ts",
+          "src/logic/tasks/runtime/unittest/queued-dependency-addition-service.test.ts",
+          "src/logic/tasks/runtime/unittest/queued-dependency-replacement-service.test.ts",
+          "src/logic/tasks/runtime/unittest/queued-dependency-revision-service.test.ts",
+          "src/logic/tasks/runtime/unittest/queued-task-cancel.test.ts",
+          "src/logic/tasks/runtime/unittest/scope-continuation-attachments.test.ts",
+          "src/logic/tasks/runtime/unittest/scope-continuation.test.ts",
+          "src/logic/tasks/runtime/unittest/scope-goal.test.ts",
+          "src/logic/tasks/runtime/unittest/scope-recovery.test.ts",
+          "src/logic/tasks/runtime/unittest/scope-replan.test.ts",
+          "src/logic/tasks/runtime/unittest/scope-run-tracking.test.ts",
+          "src/logic/tasks/runtime/unittest/topic-interruption-service.test.ts",
+          "src/logic/tasks/runtime/unittest/workflow-selection-evidence.test.ts"
+        ]
+      },
+      "directory": "src/logic/tasks/runtime"
+    },
+    "logic/history/runtime": {
+      "roots": [
+        "src/logic/history/runtime/"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [
+          "src/logic/history/runtime/unittest/agent-history-store.test.ts"
+        ],
+        "integration": [
+          "src/logic/history/runtime/unittest/agent-history.test.ts"
+        ]
+      },
+      "directory": "src/logic/history/runtime"
+    },
+    "logic/runtime/monitoring": {
+      "roots": [
+        "src/logic/runtime/monitoring/"
+      ],
+      "tests": {
+        "unit": [
+          "src/logic/runtime/monitoring/unittest/global-runtime.test.ts",
+          "src/logic/runtime/monitoring/unittest/public-run-events.test.ts"
+        ],
+        "contract": [
+          "src/logic/runtime/monitoring/unittest/member-events.test.ts"
+        ],
+        "integration": [
+          "src/logic/runtime/monitoring/unittest/global-runtime-scopes.test.ts",
+          "src/logic/runtime/monitoring/unittest/global-runtime-view-pi.test.ts"
+        ]
+      },
+      "directory": "src/logic/runtime/monitoring"
+    },
+    "logic/tools/runtime": {
+      "roots": [
+        "src/logic/tools/runtime/"
+      ],
+      "tests": {
+        "unit": [
+          "src/logic/tools/runtime/unittest/candidate-review-tools.test.ts",
+          "src/logic/tools/runtime/unittest/coordination-schema.test.ts",
+          "src/logic/tools/runtime/unittest/office-history-tools.test.ts",
+          "src/logic/tools/runtime/unittest/web-tools.test.ts"
+        ],
+        "contract": [
+          "src/logic/tools/runtime/unittest/dispatch-tools.test.ts",
+          "src/logic/tools/runtime/unittest/github-feedback-status.test.ts",
+          "src/logic/tools/runtime/unittest/github-feedback-tools.test.ts",
+          "src/logic/tools/runtime/unittest/goal-tools.test.ts",
+          "src/logic/tools/runtime/unittest/question-tools.test.ts",
+          "src/logic/tools/runtime/unittest/queued-dependency-replacement-tools.test.ts",
+          "src/logic/tools/runtime/unittest/queued-task-cancel-tools.test.ts",
+          "src/logic/tools/runtime/unittest/workspace-member-tools.test.ts"
+        ],
+        "integration": [
+          "src/logic/tools/runtime/unittest/builtins.test.ts",
+          "src/logic/tools/runtime/unittest/coordination-pi.test.ts",
+          "src/logic/tools/runtime/unittest/coordination-tools.test.ts",
+          "src/logic/tools/runtime/unittest/failure.test.ts",
+          "src/logic/tools/runtime/unittest/github-feedback-lifecycle-pi.test.ts",
+          "src/logic/tools/runtime/unittest/github-feedback-pi.test.ts",
+          "src/logic/tools/runtime/unittest/knowledge-contract-pi.test.ts",
+          "src/logic/tools/runtime/unittest/knowledge-tool-contracts.test.ts",
+          "src/logic/tools/runtime/unittest/knowledge-tool-output.test.ts",
+          "src/logic/tools/runtime/unittest/main-governance-tools.test.ts",
+          "src/logic/tools/runtime/unittest/main-tool-output-service.test.ts",
+          "src/logic/tools/runtime/unittest/module-governance-tools-pi.test.ts",
+          "src/logic/tools/runtime/unittest/module-ownership-pi.test.ts",
+          "src/logic/tools/runtime/unittest/module-ownership-tools.test.ts",
+          "src/logic/tools/runtime/unittest/office-history-pi.test.ts",
+          "src/logic/tools/runtime/unittest/question-tool-contract-pi.test.ts",
+          "src/logic/tools/runtime/unittest/repository-tools-pi.test.ts",
+          "src/logic/tools/runtime/unittest/repository-tools.test.ts",
+          "src/logic/tools/runtime/unittest/task-progress-pi.test.ts",
+          "src/logic/tools/runtime/unittest/web-tools-pi.test.ts",
+          "src/logic/tools/runtime/unittest/workflow-selection-service.test.ts",
+          "src/logic/tools/runtime/unittest/workspace-member-tools-pi.test.ts",
+          "src/logic/tools/runtime/unittest/workspace.test.ts"
+        ]
+      },
+      "directory": "src/logic/tools/runtime"
+    },
+    "logic/updates/service": {
+      "roots": [
+        "src/logic/updates/service/"
+      ],
+      "tests": {
+        "unit": [
+          "src/logic/updates/service/unittest/desktop-updates.test.ts",
+          "src/logic/updates/service/unittest/engine-artifacts.test.ts",
+          "src/logic/updates/service/unittest/engine-index.test.ts",
+          "src/logic/updates/service/unittest/nsis-differential-download.test.ts",
+          "src/logic/updates/service/unittest/nsis-updater.test.ts",
+          "src/logic/updates/service/unittest/release-http.test.ts",
+          "src/logic/updates/service/unittest/update-restart-profile.test.ts"
+        ],
+        "contract": [
+          "src/logic/updates/service/unittest/managed-engines.test.ts",
+          "src/logic/updates/service/unittest/runtime-download.test.ts",
+          "src/logic/updates/service/unittest/runtime-journal.test.ts",
+          "src/logic/updates/service/unittest/runtime-manifest.test.ts",
+          "src/logic/updates/service/unittest/runtime-store.test.ts",
+          "src/logic/updates/service/unittest/runtime-updates.test.ts",
+          "src/logic/updates/service/unittest/utility-body-consumers.test.ts"
+        ],
+        "integration": []
+      },
+      "directory": "src/logic/updates/service"
+    },
+    "bridge/contracts": {
+      "roots": [
+        "src/bridge/contracts/"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [
+          "src/bridge/contracts/unittest/ipc-browser.test.ts"
+        ],
+        "integration": []
+      },
+      "directory": "src/bridge/contracts"
+    },
+    "bridge/preload": {
+      "roots": [
+        "src/bridge/preload/"
+      ],
+      "tests": {
+        "unit": [
+          "src/bridge/preload/unittest/ipc-preload.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      },
+      "directory": "src/bridge/preload"
+    },
+    "view/components": {
+      "roots": [
+        "src/view/components/"
+      ],
+      "tests": {
+        "unit": [
+          "src/view/components/unittest/deferred-view.test.ts"
+        ],
+        "contract": [
+          "src/view/components/unittest/engine-configuration.test.ts",
+          "src/view/components/unittest/provider-connections.test.ts",
+          "src/view/components/unittest/repository-tools-view.test.ts"
+        ],
+        "integration": []
+      },
+      "directory": "src/view/components"
+    },
+    "view/conversation": {
+      "roots": [
+        "src/view/conversation/"
+      ],
+      "tests": {
+        "unit": [
+          "src/view/conversation/unittest/brain-status.test.ts",
+          "src/view/conversation/unittest/channel-draft.test.ts",
+          "src/view/conversation/unittest/chat-messages.test.ts",
+          "src/view/conversation/unittest/conversation-activity.test.ts",
+          "src/view/conversation/unittest/conversation-topics.test.ts",
+          "src/view/conversation/unittest/thread-recovery-notice.test.ts",
+          "src/view/conversation/unittest/topic-interruption-view.test.ts",
+          "src/view/conversation/unittest/usage.test.ts"
+        ],
+        "contract": [
+          "src/view/conversation/unittest/chat-chrome.test.ts",
+          "src/view/conversation/unittest/conversation-waiting.test.ts",
+          "src/view/conversation/unittest/interaction-mode-toggle.test.ts",
+          "src/view/conversation/unittest/queue-insertion-view.test.ts",
+          "src/view/conversation/unittest/queue-sync.test.ts",
+          "src/view/conversation/unittest/team-conversation-view.test.ts"
+        ],
+        "integration": [
+          "src/view/conversation/unittest/chat-clipboard.test.ts"
+        ]
+      },
+      "directory": "src/view/conversation"
+    },
+    "view/execution-view": {
+      "roots": [
+        "src/view/execution-view/"
+      ],
+      "tests": {
+        "unit": [
+          "src/view/execution-view/unittest/agent-call-view.test.ts",
+          "src/view/execution-view/unittest/conversation.test.ts",
+          "src/view/execution-view/unittest/knowledge-tool-view.test.ts",
+          "src/view/execution-view/unittest/markdown.test.ts",
+          "src/view/execution-view/unittest/run-view.test.ts",
+          "src/view/execution-view/unittest/team-conversations.test.ts"
+        ],
+        "contract": [
+          "src/view/execution-view/unittest/inline-conversation.test.ts",
+          "src/view/execution-view/unittest/member-continuation.test.ts"
+        ],
+        "integration": [
+          "src/view/execution-view/unittest/pi-length.test.ts"
+        ]
+      },
+      "directory": "src/view/execution-view"
+    },
+    "view/governance": {
+      "roots": [
+        "src/view/governance/"
+      ],
+      "tests": {
+        "unit": [
+          "src/view/governance/unittest/governance-feedback-view.test.ts",
+          "src/view/governance/unittest/governance-origin-view.test.ts",
+          "src/view/governance/unittest/governance-pending.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      },
+      "directory": "src/view/governance"
+    },
+    "view/knowledge": {
+      "roots": [
+        "src/view/knowledge/"
+      ],
+      "tests": {
+        "unit": [
+          "src/view/knowledge/unittest/knowledge-file-tree.test.ts",
+          "src/view/knowledge/unittest/static-owners.test.ts"
+        ],
+        "contract": [
+          "src/view/knowledge/unittest/knowledge-source-view.test.ts"
+        ],
+        "integration": []
+      },
+      "directory": "src/view/knowledge"
+    },
+    "view/resources": {
+      "roots": [
+        "src/view/resources/"
+      ],
+      "tests": {
+        "unit": [
+          "src/view/resources/unittest/repository-connection-state.test.ts",
+          "src/view/resources/unittest/resource-application.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      },
+      "directory": "src/view/resources"
+    },
+    "view/runtime": {
+      "roots": [
+        "src/view/runtime/"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [
+          "src/view/runtime/unittest/runtime-feed.test.ts",
+          "src/view/runtime/unittest/runtime-view.test.ts"
+        ],
+        "integration": []
+      },
+      "directory": "src/view/runtime"
+    },
+    "view/settings": {
+      "roots": [
+        "src/view/settings/"
+      ],
+      "tests": {
+        "unit": [
+          "src/view/settings/unittest/appearance-settings.test.ts",
+          "src/view/settings/unittest/budget-settings-view.test.ts",
+          "src/view/settings/unittest/engine-overview-view.test.ts",
+          "src/view/settings/unittest/settings-navigation.test.ts"
+        ],
+        "contract": [
+          "src/view/settings/unittest/model-request-budget-view.test.ts",
+          "src/view/settings/unittest/provider-connections.test.ts"
+        ],
+        "integration": []
+      },
+      "directory": "src/view/settings"
+    },
+    "view/shell": {
+      "roots": [
+        "src/view/shell/"
+      ],
+      "tests": {
+        "unit": [
+          "src/view/shell/unittest/conversation-tabs.test.ts",
+          "src/view/shell/unittest/runtime-navigation.test.ts",
+          "src/view/shell/unittest/tabs.test.ts"
+        ],
+        "contract": [],
+        "integration": [
+          "src/view/shell/unittest/workspace-navigation.test.ts"
+        ]
+      },
+      "directory": "src/view/shell"
+    },
+    "view/tasks": {
+      "roots": [
+        "src/view/tasks/"
+      ],
+      "tests": {
+        "unit": [
+          "src/view/tasks/unittest/artifact-report-view.test.ts",
+          "src/view/tasks/unittest/candidate-review.test.ts",
+          "src/view/tasks/unittest/command-verification-view.test.ts",
+          "src/view/tasks/unittest/continuation-source-view.test.ts",
+          "src/view/tasks/unittest/controlled-file-view.test.ts",
+          "src/view/tasks/unittest/effect-observation-view.test.ts",
+          "src/view/tasks/unittest/execution-recovery-repeat.test.ts",
+          "src/view/tasks/unittest/execution-report-view.test.ts",
+          "src/view/tasks/unittest/member-cancellation-view.test.ts",
+          "src/view/tasks/unittest/member-checkpoint-view.test.ts",
+          "src/view/tasks/unittest/member-dependency-addition-view.test.ts",
+          "src/view/tasks/unittest/member-dependency-revision-view.test.ts",
+          "src/view/tasks/unittest/member-dependency-view.test.ts",
+          "src/view/tasks/unittest/member-help-view.test.ts",
+          "src/view/tasks/unittest/office-scene.test.ts",
+          "src/view/tasks/unittest/output-manifest-view.test.ts",
+          "src/view/tasks/unittest/scope-budget-view.test.ts",
+          "src/view/tasks/unittest/scope-continuation-view.test.ts",
+          "src/view/tasks/unittest/scope-replan-view.test.ts",
+          "src/view/tasks/unittest/scope-usage-view.test.ts",
+          "src/view/tasks/unittest/session-task-view.test.ts",
+          "src/view/tasks/unittest/task-history-view.test.ts"
+        ],
+        "contract": [
+          "src/view/tasks/unittest/active-goal-input-view.test.ts",
+          "src/view/tasks/unittest/admission-view.test.ts",
+          "src/view/tasks/unittest/artifact-transition-evidence.test.ts",
+          "src/view/tasks/unittest/conversation-progress.test.ts",
+          "src/view/tasks/unittest/dispatch-graph.test.ts",
+          "src/view/tasks/unittest/execution-recovery-view.test.ts",
+          "src/view/tasks/unittest/human-continuation-view.test.ts",
+          "src/view/tasks/unittest/human-decision-view.test.ts",
+          "src/view/tasks/unittest/member-event-state.test.ts",
+          "src/view/tasks/unittest/member-validation-state.test.ts",
+          "src/view/tasks/unittest/model-request-budget-view.test.ts",
+          "src/view/tasks/unittest/owner-execution-view.test.ts",
+          "src/view/tasks/unittest/scope-detail-recovery.test.ts",
+          "src/view/tasks/unittest/scope-goal-view.test.ts",
+          "src/view/tasks/unittest/session-graph-state.test.ts"
+        ],
+        "integration": []
+      },
+      "directory": "src/view/tasks"
+    },
+    "view/team": {
+      "roots": [
+        "src/view/team/"
+      ],
+      "tests": {
+        "unit": [
+          "src/view/team/unittest/agent-history-view.test.ts",
+          "src/view/team/unittest/team-model.test.ts",
+          "src/view/team/unittest/workspace-member-view.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      },
+      "directory": "src/view/team"
+    },
+    "view/updates": {
+      "roots": [
+        "src/view/updates/"
+      ],
+      "tests": {
+        "unit": [
+          "src/view/updates/unittest/software-updates-view.test.ts",
+          "src/view/updates/unittest/update-button-state.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      },
+      "directory": "src/view/updates"
+    },
+    "view/workspace": {
+      "roots": [
+        "src/view/workspace/"
+      ],
+      "tests": {
+        "unit": [
+          "src/view/workspace/unittest/module-ownership-view.test.ts",
+          "src/view/workspace/unittest/module-source-tree.test.ts"
+        ],
+        "contract": [],
+        "integration": [
+          "src/view/workspace/unittest/inline-module-ownership.test.ts"
+        ]
+      },
+      "directory": "src/view/workspace"
+    },
+    "tooling/check-dependencies": {
+      "roots": [
+        "scripts/check-dependencies.mjs"
+      ],
+      "tests": {
+        "unit": [
+          "scripts/unittest/dependencies.test.ts"
+        ],
+        "contract": [
+          "scripts/unittest/core-layer-contracts.test.ts",
+          "scripts/unittest/layer-boundaries.test.ts"
+        ],
+        "integration": []
+      },
+      "directory": "scripts",
+      "inputs": [
+        "src/",
+        "scripts/",
+        "unittest/",
+        "tsconfig.json"
+      ]
+    },
+    "tooling/source-format": {
+      "roots": [
+        "scripts/source-format.mjs"
+      ],
+      "tests": {
+        "unit": [
+          "scripts/unittest/source-format.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      },
+      "directory": "scripts"
+    },
+    "tooling/method-names": {
+      "roots": [
+        "scripts/check-method-names.mjs"
+      ],
+      "tests": {
+        "unit": [
+          "scripts/unittest/method-names.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      },
+      "directory": "scripts"
+    },
+    "tooling/runtime-acceptance-inputs": {
+      "roots": [
+        "scripts/runtime-acceptance-inputs.mjs"
+      ],
+      "tests": {
+        "unit": [
+          "scripts/unittest/runtime-acceptance-inputs.test.mjs"
+        ],
+        "contract": [],
+        "integration": []
+      },
+      "directory": "scripts"
+    },
+    "tooling/desktop-acceptance-inputs": {
+      "roots": [
+        "scripts/desktop-acceptance-inputs.mjs"
+      ],
+      "tests": {
+        "unit": [
+          "scripts/unittest/desktop-acceptance-inputs.test.mjs"
+        ],
+        "contract": [],
+        "integration": []
+      },
+      "directory": "scripts"
+    },
+    "tooling/desktop-acceptance-process": {
+      "roots": [
+        "scripts/desktop-acceptance-process.mjs",
+        "scripts/desktop-acceptance-process.ps1"
+      ],
+      "tests": {
+        "unit": [
+          "scripts/unittest/desktop-acceptance-process.test.mjs"
+        ],
+        "contract": [],
+        "integration": [
+          "scripts/unittest/desktop-acceptance-process-integration.test.mjs",
+          "scripts/unittest/desktop-acceptance-windows.test.mjs"
+        ]
+      },
+      "directory": "scripts"
+    },
+    "tooling/desktop-inspector-connection": {
+      "roots": [
+        "scripts/desktop-inspector-connection.mjs"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [],
+        "integration": [
+          "scripts/unittest/desktop-inspector-connection.test.mjs"
+        ]
+      },
+      "directory": "scripts"
+    },
+    "tooling/desktop-update-network-evidence": {
+      "roots": [
+        "scripts/desktop-update-network-evidence.mjs"
+      ],
+      "tests": {
+        "unit": [
+          "scripts/unittest/desktop-update-network-evidence.test.mjs"
+        ],
+        "contract": [],
+        "integration": []
+      },
+      "directory": "scripts"
+    },
+    "tooling/package-pi-runtime": {
+      "roots": [
+        "scripts/package-pi-runtime.mjs"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [
+          "scripts/unittest/claude-packaging.test.ts",
+          "scripts/unittest/codex-packaging.test.ts"
+        ],
+        "integration": []
+      },
+      "directory": "scripts"
+    },
+    "tooling/repair-pi-tool-result": {
+      "roots": [
+        "scripts/repair-pi-tool-result.mjs"
+      ],
+      "tests": {
+        "unit": [
+          "scripts/unittest/session-repair.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      },
+      "directory": "scripts"
+    },
+    "tooling/runtime-packaging": {
+      "roots": [
+        "scripts/runtime-packaging.ts"
+      ],
+      "tests": {
+        "unit": [
+          "scripts/unittest/runtime-packaging.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      },
+      "directory": "scripts"
+    },
+    "tooling/test-modules": {
+      "roots": [
+        "scripts/test-modules.mjs",
+        "scripts/test-fingerprints.mjs",
+        "scripts/incremental-tests.mjs",
+        "scripts/test-paths.mjs"
+      ],
+      "tests": {
+        "unit": [
+          "scripts/unittest/incremental-tests.test.mjs",
+          "scripts/unittest/test-modules.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      },
+      "directory": "scripts"
+    },
+    "tooling/ci-validation": {
+      "roots": [
+        "scripts/ci-scope.mjs",
+        "scripts/ci-result.mjs",
+        "scripts/ci-test-shards.ts",
+        "scripts/ci-test-sequencer.ts",
+        "scripts/ci-test-coverage.mjs"
+      ],
+      "tests": {
+        "unit": [
+          "scripts/unittest/ci-validation.test.mjs"
+        ],
+        "contract": [],
+        "integration": []
+      },
+      "directory": "scripts",
+      "inputs": [
+        ".github/workflows/validate.yml"
+      ]
+    },
+    "view/foundations/utility": {
+      "roots": [
+        "src/view/foundations/utility/"
+      ],
+      "tests": {
+        "unit": [
+          "src/view/foundations/utility/unittest/async.test.ts",
+          "src/view/foundations/utility/unittest/events.test.ts",
+          "src/view/foundations/utility/unittest/graphs.test.ts",
+          "src/view/foundations/utility/unittest/json.test.ts",
+          "src/view/foundations/utility/unittest/storage.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      },
+      "directory": "src/view/foundations/utility"
+    },
+    "core/utility": {
+      "roots": [
+        "src/core/utility/"
+      ],
+      "tests": {
+        "unit": [
+          "src/core/utility/unittest/bounded-bytes.test.ts",
+          "src/core/utility/unittest/graphs.test.ts",
+          "src/core/utility/unittest/in-flight.test.ts",
+          "src/core/utility/unittest/json-order.test.ts",
+          "src/core/utility/unittest/json-text.test.ts",
+          "src/core/utility/unittest/line-framer.test.ts",
+          "src/core/utility/unittest/pending-requests.test.ts",
+          "src/core/utility/unittest/redaction.test.ts",
+          "src/core/utility/unittest/serial-queue.test.ts",
+          "src/core/utility/unittest/strict-json.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      },
+      "directory": "src/core/utility"
+    },
+    "core/platform/node": {
+      "roots": [
+        "src/core/platform/node/"
+      ],
+      "tests": {
+        "unit": [
+          "src/core/platform/node/unittest/digest.test.ts"
+        ],
+        "contract": [
+          "src/core/platform/node/unittest/utility-serialization-contract.test.ts"
+        ],
+        "integration": []
+      },
+      "directory": "src/core/platform/node"
+    },
+    "logic/models": {
+      "roots": [
+        "src/logic/models/index.ts",
+        "src/logic/models/catalog.ts",
+        "src/logic/models/config.ts",
+        "src/logic/models/provider-connections.ts",
+        "src/logic/models/provider-presets.ts",
+        "src/logic/models/ports.ts"
+      ],
+      "tests": {
+        "unit": [
+          "src/logic/models/unittest/model-catalog.test.ts",
+          "src/logic/models/unittest/provider-connections.test.ts"
+        ],
+        "contract": [],
+        "integration": [
+          "src/logic/models/unittest/vision.test.ts"
+        ]
+      },
+      "directory": "src/logic/models"
+    },
+    "logic/models/service": {
+      "roots": [
+        "src/logic/models/service/",
+        "src/logic/models/index.ts"
+      ],
+      "tests": {
+        "unit": [
+          "src/logic/models/service/unittest/embedding-test.test.ts",
+          "src/logic/models/service/unittest/llm.test.ts",
+          "src/logic/models/service/unittest/model-operations.test.ts",
+          "src/logic/models/service/unittest/owner-model-configuration.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      },
+      "directory": "src/logic/models/service"
+    },
+    "core/platform/node/files": {
+      "roots": [
+        "src/core/platform/node/files/"
+      ],
+      "tests": {
+        "unit": [
+          "src/core/platform/node/files/unittest/files.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      },
+      "directory": "src/core/platform/node/files"
+    },
+    "core/errors": {
+      "roots": [
+        "src/core/errors.ts"
+      ],
+      "tests": {
+        "unit": [
+          "src/core/unittest/errors.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      },
+      "directory": "src/core"
+    },
+    "logic/web/service": {
+      "roots": [
+        "src/logic/web/service/",
+        "src/logic/web/index.ts"
+      ],
+      "tests": {
+        "unit": [
+          "src/logic/web/service/unittest/web-service.test.ts",
+          "src/logic/web/service/unittest/web-settings.test.ts"
+        ],
+        "contract": [
+          "src/logic/web/service/unittest/web-browser-fallback.test.ts"
+        ],
+        "integration": []
+      },
+      "directory": "src/logic/web/service"
+    },
+    "core/web": {
+      "roots": [
+        "src/core/web/"
+      ],
+      "tests": {
+        "unit": [
+          "src/core/web/unittest/web-content.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      },
+      "directory": "src/core/web"
+    },
+    "core/platform/node/web": {
+      "roots": [
+        "src/core/platform/node/web/"
+      ],
+      "tests": {
+        "unit": [
+          "src/core/platform/node/web/unittest/web-foundations.test.ts",
+          "src/core/platform/node/web/unittest/web-page-reader.test.ts"
+        ],
+        "contract": [],
+        "integration": [
+          "src/core/platform/node/web/unittest/web-browser-proxy.test.ts",
+          "src/core/platform/node/web/unittest/web-http-transport.test.ts"
+        ]
+      },
+      "directory": "src/core/platform/node/web"
+    },
+    "logic/feedback": {
+      "roots": [
+        "src/logic/feedback/index.ts",
+        "src/logic/feedback/contracts.ts"
+      ],
+      "tests": {
+        "unit": [
+          "src/logic/feedback/unittest/feedback-contracts.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      },
+      "directory": "src/logic/feedback"
+    },
+    "logic/feedback/service": {
+      "roots": [
+        "src/logic/feedback/service/index.ts",
+        "src/logic/feedback/service/github-feedback.ts",
+        "src/logic/feedback/service/github-feedback-auth.ts"
+      ],
+      "tests": {
+        "unit": [
+          "src/logic/feedback/service/unittest/github-feedback-auth.test.ts"
+        ],
+        "contract": [
+          "src/logic/feedback/service/unittest/github-feedback.test.ts",
+          "src/logic/feedback/service/unittest/utility-body-consumers.test.ts"
+        ],
+        "integration": []
+      },
+      "directory": "src/logic/feedback/service"
+    },
+    "core/platform/node/locking": {
+      "roots": [
+        "src/core/platform/node/locking.ts"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [],
+        "integration": [
+          "src/core/platform/node/unittest/kernel-lock.test.ts"
+        ]
+      },
+      "directory": "src/core/platform/node"
+    },
+    "logic/feedback/http": {
+      "roots": [
+        "src/logic/feedback/service/github-api.ts"
+      ],
+      "tests": {
+        "unit": [
+          "src/logic/feedback/service/unittest/github-api.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      },
+      "directory": "src/logic/feedback/service"
+    },
+    "logic/resources/service": {
+      "roots": [
+        "src/logic/resources/service/"
+      ],
+      "tests": {
+        "unit": [
+          "src/logic/resources/service/unittest/resource-store.test.ts"
+        ],
+        "contract": [
+          "src/logic/resources/service/unittest/utility-body-consumers.test.ts"
+        ],
+        "integration": [
+          "src/logic/resources/service/unittest/repository-connection-http.test.ts",
+          "src/logic/resources/service/unittest/resource-repository.test.ts"
+        ]
+      },
+      "directory": "src/logic/resources/service"
+    },
+    "logic/terminal/service": {
+      "roots": [
+        "src/logic/terminal/service/"
+      ],
+      "tests": {
+        "unit": [
+          "src/logic/terminal/service/unittest/terminal.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      },
+      "directory": "src/logic/terminal/service"
+    },
+    "logic/budget/settings": {
+      "roots": [
+        "src/logic/budget/settings/"
+      ],
+      "tests": {
+        "unit": [
+          "src/logic/budget/settings/unittest/budget-settings.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      },
+      "directory": "src/logic/budget/settings"
+    },
+    "logic/engines": {
+      "roots": [
+        "src/logic/engines/"
+      ],
+      "tests": {
+        "unit": [
+          "src/logic/engines/unittest/catalog.test.ts",
+          "src/logic/engines/unittest/model-choices.test.ts",
+          "src/logic/engines/unittest/model-roles.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      },
+      "directory": "src/logic/engines"
+    },
+    "logic/engines/packages": {
+      "roots": [
+        "src/logic/engines/packages/"
+      ],
+      "tests": {
+        "unit": [
+          "src/logic/engines/packages/unittest/packages.test.ts"
+        ],
+        "contract": [
+          "src/logic/engines/packages/unittest/engine-cache-retention.test.ts"
+        ],
+        "integration": []
+      },
+      "directory": "src/logic/engines/packages"
+    },
+    "tooling/engine-release": {
+      "roots": [
+        "scripts/engine-release.ts",
+        "scripts/sign-engines.ts",
+        "scripts/make-engines.ts"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [
+          "scripts/unittest/engine-release.test.ts"
+        ],
+        "integration": [
+          "scripts/unittest/engine-build-cli.test.ts"
+        ]
+      },
+      "directory": "scripts"
+    },
+    "logic/execution/engines/memory": {
+      "roots": [
+        "src/logic/execution/engines/memory/"
+      ],
+      "tests": {
+        "unit": [
+          "src/logic/execution/engines/memory/unittest/memory-engine.test.ts",
+          "src/logic/execution/engines/memory/unittest/memory-protocol.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      },
+      "directory": "src/logic/execution/engines/memory"
+    },
+    "logic/workspace/service": {
+      "roots": [
+        "src/logic/workspace/service/"
+      ],
+      "tests": {
+        "unit": [
+          "src/logic/workspace/service/unittest/module-source-browser.test.ts"
+        ],
+        "contract": [],
+        "integration": [
+          "src/logic/workspace/service/unittest/architecture-service.test.ts",
+          "src/logic/workspace/service/unittest/failure.test.ts",
+          "src/logic/workspace/service/unittest/knowledge-source-lifecycle-application.test.ts",
+          "src/logic/workspace/service/unittest/knowledge-source-lifecycle-fault.test.ts",
+          "src/logic/workspace/service/unittest/knowledge-source-lifecycle-process.test.ts",
+          "src/logic/workspace/service/unittest/knowledge-source-plan-service.test.ts",
+          "src/logic/workspace/service/unittest/maintenance-cancel.test.ts",
+          "src/logic/workspace/service/unittest/module-ownership-application.test.ts",
+          "src/logic/workspace/service/unittest/module-ownership-service.test.ts",
+          "src/logic/workspace/service/unittest/path-contract.test.ts",
+          "src/logic/workspace/service/unittest/retired-entry.test.ts",
+          "src/logic/workspace/service/unittest/workspace-history-startup.test.ts",
+          "src/logic/workspace/service/unittest/workspace-navigation.test.ts",
+          "src/logic/workspace/service/unittest/workspace.test.ts"
+        ]
+      },
+      "directory": "src/logic/workspace/service"
+    },
+    "view/diagnostics": {
+      "roots": [
+        "src/view/diagnostics/"
+      ],
+      "tests": {
+        "unit": [
+          "src/view/diagnostics/unittest/diagnostics-view.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      },
+      "directory": "src/view/diagnostics"
+    },
+    "logic/execution/assembly": {
+      "roots": [
+        "src/logic/execution/assembly/"
+      ],
+      "tests": {
+        "unit": [
+          "src/logic/execution/assembly/unittest/agent-call-scheduler.test.ts"
+        ],
+        "contract": [],
+        "integration": [
+          "src/logic/execution/assembly/unittest/abandoned-checkpoint-dependency-pi.test.ts",
+          "src/logic/execution/assembly/unittest/artifact-transition-pi.test.ts",
+          "src/logic/execution/assembly/unittest/business-replan-pi.test.ts",
+          "src/logic/execution/assembly/unittest/checkpoint-handoff-pi.test.ts",
+          "src/logic/execution/assembly/unittest/complete-output-pi.test.ts",
+          "src/logic/execution/assembly/unittest/goal-repair-pi.test.ts",
+          "src/logic/execution/assembly/unittest/goal-review-pi.test.ts",
+          "src/logic/execution/assembly/unittest/human-continuation-pi.test.ts",
+          "src/logic/execution/assembly/unittest/human-decisions-pi.test.ts",
+          "src/logic/execution/assembly/unittest/human-reconsideration-pi.test.ts",
+          "src/logic/execution/assembly/unittest/inspection-cycle-pi.test.ts",
+          "src/logic/execution/assembly/unittest/json-validation-pi.test.ts",
+          "src/logic/execution/assembly/unittest/main-tool-contract-pi.test.ts",
+          "src/logic/execution/assembly/unittest/member-checkpoint-chain-pi.test.ts",
+          "src/logic/execution/assembly/unittest/member-checkpoint-pi.test.ts",
+          "src/logic/execution/assembly/unittest/member-help-pi.test.ts",
+          "src/logic/execution/assembly/unittest/member-pause-pi.test.ts",
+          "src/logic/execution/assembly/unittest/member-tool-contract-pi.test.ts",
+          "src/logic/execution/assembly/unittest/original-command-pi.test.ts",
+          "src/logic/execution/assembly/unittest/owner-execution-checkpoint-pi.test.ts",
+          "src/logic/execution/assembly/unittest/queued-dependency-addition-pi.test.ts",
+          "src/logic/execution/assembly/unittest/queued-dependency-replacement-pi.test.ts",
+          "src/logic/execution/assembly/unittest/queued-dependency-revision-pi.test.ts",
+          "src/logic/execution/assembly/unittest/queued-task-cancel-pi.test.ts",
+          "src/logic/execution/assembly/unittest/scope-continuation-pi.test.ts",
+          "src/logic/execution/assembly/unittest/scope-wait-pi.test.ts",
+          "src/logic/execution/assembly/unittest/workflow-condition-pi.test.ts",
+          "src/logic/execution/assembly/unittest/workflow-selection-pi.test.ts"
+        ]
+      },
+      "directory": "src/logic/execution/assembly"
+    },
+    "tooling/production-test-guard": {
+      "roots": [
+        "scripts/production-test-guard.mjs"
+      ],
+      "directory": "scripts",
+      "tests": {
+        "unit": [
+          "scripts/unittest/production-test-guard.test.mjs"
+        ],
+        "contract": [],
+        "integration": []
+      }
+    },
+    "bridge/server": {
+      "roots": [
+        "src/bridge/server/main.ts"
+      ],
+      "directory": "src/bridge/server",
+      "tests": {
+        "unit": [
+          "src/bridge/server/unittest/ipc-desktop.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      }
+    },
+    "logic/application/assembly": {
+      "directory": "src/logic/application/assembly",
+      "roots": [
+        "src/logic/application/assembly/"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [
+          "src/logic/application/assembly/unittest/agent-call-assembly.test.ts"
+        ],
+        "integration": [
+          "src/logic/application/assembly/unittest/claude-application.test.ts",
+          "src/logic/application/assembly/unittest/codex-application.test.ts",
+          "src/logic/application/assembly/unittest/memory-engine-application.test.ts",
+          "src/logic/application/assembly/unittest/owner-execution-pi.test.ts"
+        ]
+      }
+    },
+    "project": {
+      "directory": ".",
+      "roots": [
+        "src/logic/application/",
+        "src/bridge/server/application.ts"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [],
+        "integration": [
+          "unittest/application-collaboration-pi.test.ts",
+          "unittest/application-member-pi.test.ts",
+          "unittest/application-runtime.test.ts",
+          "unittest/desktop-update-lifecycle.test.ts",
+          "unittest/failure.test.ts",
+          "unittest/global-admission-pi.test.ts",
+          "unittest/main-session-instance-pi.test.ts",
+          "unittest/pi-loop.test.ts",
+          "unittest/workspace-lifecycle.test.ts",
+          "unittest/workspace.test.ts"
+        ]
+      },
+      "cache": false
+    },
+    "logic/materials/service": {
+      "directory": "src/logic/materials/service",
+      "roots": [
+        "src/logic/materials/service/"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [
+          "src/logic/materials/service/unittest/utility-body-consumers.test.ts"
+        ],
+        "integration": [
+          "src/logic/materials/service/unittest/chat-clipboard.test.ts",
+          "src/logic/materials/service/unittest/chat-inputs.test.ts",
+          "src/logic/materials/service/unittest/chat-material-imports.test.ts",
+          "src/logic/materials/service/unittest/continuation-chat-inputs.test.ts",
+          "src/logic/materials/service/unittest/vision.test.ts"
+        ]
+      }
+    },
+    "logic/execution/context": {
+      "directory": "src/logic/execution/context",
+      "roots": [
+        "src/logic/execution/context/"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [],
+        "integration": [
+          "src/logic/execution/context/unittest/dispatch-context.test.ts",
+          "src/logic/execution/context/unittest/member-execution-context.test.ts",
+          "src/logic/execution/context/unittest/team-workflow.test.ts",
+          "src/logic/execution/context/unittest/workflow-selection-service.test.ts"
+        ]
+      }
+    },
+    "logic/evidence/service": {
+      "directory": "src/logic/evidence/service",
+      "roots": [
+        "src/logic/evidence/service/"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [],
+        "integration": [
+          "src/logic/evidence/service/unittest/knowledge-effect-reader.test.ts"
+        ]
+      }
+    },
+    "logic/team/runtime": {
+      "directory": "src/logic/team/runtime",
+      "roots": [
+        "src/logic/team/runtime/"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [],
+        "integration": [
+          "src/logic/team/runtime/unittest/member-checkpoint-chain-service.test.ts",
+          "src/logic/team/runtime/unittest/member-checkpoint-domain.test.ts",
+          "src/logic/team/runtime/unittest/member-checkpoint-service.test.ts",
+          "src/logic/team/runtime/unittest/member-execution.test.ts",
+          "src/logic/team/runtime/unittest/member-help.test.ts",
+          "src/logic/team/runtime/unittest/member-pause-service.test.ts"
+        ]
+      }
+    },
+    "logic/governance/service": {
+      "directory": "src/logic/governance/service",
+      "roots": [
+        "src/logic/governance/service/"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [],
+        "integration": [
+          "src/logic/governance/service/unittest/module-governance-application.test.ts",
+          "src/logic/governance/service/unittest/module-governance-feedback-pi.test.ts",
+          "src/logic/governance/service/unittest/module-governance-feedback-service.test.ts",
+          "src/logic/governance/service/unittest/module-governance-review.test.ts",
+          "src/logic/governance/service/unittest/module-governance-service.test.ts"
+        ]
+      }
+    },
+    "logic/team/service": {
+      "directory": "src/logic/team/service",
+      "roots": [
+        "src/logic/team/service/"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [],
+        "integration": [
+          "src/logic/team/service/unittest/owner-execution-application.test.ts",
+          "src/logic/team/service/unittest/workflow-selection-service.test.ts",
+          "src/logic/team/service/unittest/workspace-member-application.test.ts",
+          "src/logic/team/service/unittest/workspace-member-service.test.ts"
+        ]
+      }
+    },
+    "logic/application": {
+      "directory": "src/logic/application",
+      "roots": [
+        "src/logic/application/"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [],
+        "integration": [
+          "src/logic/application/unittest/path-contract.test.ts"
+        ]
+      }
+    },
+    "logic/connectors/service": {
+      "directory": "src/logic/connectors/service",
+      "roots": [
+        "src/logic/connectors/service/"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [],
+        "integration": [
+          "src/logic/connectors/service/unittest/repository-connection-application.test.ts",
+          "src/logic/connectors/service/unittest/repository-connection-service.test.ts"
+        ]
+      }
+    },
+    "logic/knowledge/storage": {
+      "directory": "src/logic/knowledge/storage",
+      "roots": [
+        "src/logic/knowledge/storage/"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [],
+        "integration": [
+          "src/logic/knowledge/storage/unittest/retired-entry.test.ts",
+          "src/logic/knowledge/storage/unittest/workflow-contract-knowledge.test.ts",
+          "src/logic/knowledge/storage/unittest/workspace.test.ts"
+        ]
+      }
+    },
+    "logic/tools/rules/policy": {
+      "directory": "src/logic/tools/rules/policy",
+      "roots": [
+        "src/logic/tools/rules/policy/"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [],
+        "integration": [
+          "src/logic/tools/rules/policy/unittest/unified-tool-policy.test.ts"
+        ]
+      }
+    },
+    "logic/resources/packages": {
+      "directory": "src/logic/resources/packages",
+      "roots": [
+        "src/logic/resources/packages/"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [],
+        "integration": [
+          "src/logic/resources/packages/unittest/workflow-contract-knowledge.test.ts",
+          "src/logic/resources/packages/unittest/workspace-packages.test.ts"
+        ]
+      }
+    },
+    "tooling/build-engine-adapters": {
+      "directory": "scripts",
+      "roots": [
+        "scripts/build-engine-adapters.mjs"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [],
+        "integration": [
+          "scripts/unittest/engine-adapter-package.test.ts"
+        ]
+      }
+    },
+    "tooling/engine-package-build": {
+      "directory": "scripts",
+      "roots": [
+        "scripts/engine-package-build.mjs"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [],
+        "integration": [
+          "scripts/unittest/engine-production-boundary.test.ts"
+        ]
+      }
+    },
+    "tooling/desktop-signing": {
+      "directory": "scripts/desktop-signing",
+      "roots": [
+        "scripts/desktop-signing/"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [
+          "scripts/desktop-signing/unittest/desktop-signing.test.mjs"
+        ],
+        "integration": []
+      }
+    },
+    "tooling/source-architecture": {
+      "directory": "scripts",
+      "roots": [
+        "scripts/source-architecture.mjs"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [
+          "scripts/unittest/source-documentation.test.ts",
+          "scripts/unittest/source-architecture.test.ts"
+        ],
+        "integration": []
+      },
+      "inputs": [
+        "src/",
+        "scripts/",
+        "docs/",
+        "AGENTS.md",
+        "package.json",
+        "vitest.config.ts"
+      ]
+    },
+    "core": {
+      "directory": "src/core",
+      "roots": [
+        "src/core/"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [
+          "src/core/unittest/utility-json-contract.test.ts"
+        ],
+        "integration": []
+      }
+    },
+    "logic/engines/service": {
+      "directory": "src/logic/engines/service",
+      "roots": [
+        "src/logic/engines/service/"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [
+          "src/logic/engines/service/unittest/engine-configuration.test.ts"
+        ],
+        "integration": []
+      }
+    },
+    "logic/engines/rules": {
+      "directory": "src/logic/engines/rules",
+      "roots": [
+        "src/logic/engines/rules/"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [
+          "src/logic/engines/rules/unittest/engine-configuration.test.ts"
+        ],
+        "integration": []
+      }
+    }
+  }
+}

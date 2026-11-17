@@ -7,7 +7,7 @@ import path from 'node:path';
 import os from 'node:os';
 import http from 'node:http';
 import {latestExecutable} from './build-artifact.mjs';
-import {moduleFiles,request} from '../tests/knowledge-data';
+import {moduleFiles,request} from '../src/logic/knowledge/rules/unittest/support/knowledge-data';
 const temp=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-automation-ui-')),user=path.join(temp,'user'),project=path.join(temp,'automation-project');
 await fs.mkdir(project);await fs.mkdir(user);await fs.mkdir('test-results',{recursive:true});
 const report=process.env.CBIM_AUTOMATION_UI_REPORT??'test-results/automation-ui-smoke.json';

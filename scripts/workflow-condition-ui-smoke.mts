@@ -6,8 +6,8 @@ import assert from 'node:assert/strict';
 import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
 import {FileRunStorage} from '../src/logic/execution/storage/run-storage';
-import {workflowConditionProvider,workflowConditionFixture as data,type WorkflowConditionMode} from '../tests/workflow-condition-provider';
-import {seedWorkflowCondition,workflowConditionRecords,workflowConditionLogBytes} from '../tests/workflow-condition-fixture';
+import {workflowConditionProvider,workflowConditionFixture as data,type WorkflowConditionMode} from '../src/logic/execution/assembly/unittest/support/workflow-condition-provider';
+import {seedWorkflowCondition,workflowConditionRecords,workflowConditionLogBytes} from '../src/logic/execution/assembly/unittest/support/workflow-condition-fixture';
 import {latestExecutable} from './build-artifact.mjs';
 
 // Packaged Electron, real Pi, real file/approval/knowledge paths; only model replies are local deterministic SSE.

@@ -2,7 +2,7 @@ import {expect,test} from 'vitest';
 import fs from 'node:fs/promises';
 import {randomUUID} from 'node:crypto';
 import {CodexEngine,codexEnvironment} from '../engine';
-import {codexFixture} from '../../../../../../tests/codex-fixture';
+import {codexFixture} from './support/codex-fixture';
 
 test('real Codex streams text, binds its actual thread ID and resumes the same file',async()=>{
   const f=await codexFixture();let resumed:CodexEngine|undefined;

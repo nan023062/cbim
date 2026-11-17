@@ -80,7 +80,7 @@ describe('balanced full test coverage', () => {
   });
   it('uses the actual Vitest discovered set, including new tests absent from history', async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(),'cbim-ci-'));temporary.push(root);
-    const files = ['tests/controlled-file-pi.test.ts','src/logic/sample/unittest/new-test.test.ts','scripts/unittest/new-test.test.mjs','tests/test with spaces.test.ts'].map(name=>({moduleId:path.join(root,name),project:{name:''}}));
+    const files = ['src/logic/file-operations/service/unittest/controlled-file-pi.test.ts','src/logic/sample/unittest/new-test.test.ts','scripts/unittest/new-test.test.mjs','unittest/test with spaces.test.ts'].map(name=>({moduleId:path.join(root,name),project:{name:''}}));
     vi.stubEnv('CI','true');
     const plans = [];
     for(let index=1;index<=4;index++) plans.push(await new CiTestSequencer({config:{root,shard:{index,count:4}}}).shard(files));
@@ -157,7 +157,7 @@ it('wires shared checks independently and keeps one unconditional aggregate resu
 
 describe('full CI artifact coverage', () => {
   function reports() {
-    const allFiles=[':tests/1.test.ts',':src/logic/sample/unittest/2.test.ts',':scripts/unittest/3.test.mjs',':tests/4.test.ts'].sort();
+    const allFiles=[':unittest/1.test.ts',':src/logic/sample/unittest/2.test.ts',':scripts/unittest/3.test.mjs',':unittest/4.test.ts'].sort();
     const discoveredDigest=createHash('sha256').update(JSON.stringify(allFiles)).digest('hex');
     return allFiles.map((name,index)=>({plan:{index:index+1,count:4,allFiles,discovered:4,discoveredDigest,files:[name]},result:{success:true,numFailedTests:0,numPassedTests:1,numPendingTests:0,testResults:[{name:'D:/repo/'+name.slice(1)}]}}));
   }

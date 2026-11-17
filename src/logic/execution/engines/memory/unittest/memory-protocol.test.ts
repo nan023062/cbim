@@ -1,6 +1,6 @@
 import {test,expect} from 'vitest';
 import {memoryDecision,memoryVectors} from '../protocol';
-import {memoryChatReply} from '../../../../../../tests/memory-engine-data';
+import {memoryChatReply} from './support/memory-engine-data';
 test('截断、未知工具、重复键和多工具响应不能产生执行决定',()=>{
   const allowed=new Set(['cbim_object_commit']);expect(memoryDecision(memoryChatReply('cbim_object_commit'),allowed).tool_calls).toHaveLength(1);
   const truncated=memoryChatReply('cbim_object_commit');truncated.choices[0].finish_reason='length';expect(()=>memoryDecision(truncated,allowed)).toThrow('上限');

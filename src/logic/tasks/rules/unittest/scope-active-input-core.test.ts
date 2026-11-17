@@ -10,7 +10,7 @@ import {scopedActiveInputHash,validateScopeActiveInputs} from '../scope-active-i
 import {mainToolScopeSchema,projectMainScope} from '../main-tool-scope';
 import {summarizeScope,emptyScopeSnapshot,validateScopeSnapshot} from '../scope-view';
 import {currentHumanContinuation} from '../human-continuation-rules';
-import {humanFixture,continued} from '../../../../../tests/human-continuation-core-fixture';
+import {humanFixture,continued} from './support/human-continuation-core-fixture';
 
 const at='2026-11-07T08:00:00.000Z',later='2026-11-07T08:00:01.000Z';
 const identity={workspaceId:'workspace',rootSessionId:'root'},cursor={streamId:'stream',seq:1};

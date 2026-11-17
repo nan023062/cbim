@@ -6,8 +6,8 @@ import path from 'node:path';
 import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
 import type {RunSummary} from '../src/logic/execution/rules/types';
-import {originalCommandProvider,originalCommandData as data,type OriginalCommandMode} from '../tests/original-command-provider';
-import {executeOriginalCommandSeed,originalCommandRecords,originalCommandLogBytes,originalCommandRunBytes,originalCommandByteEvidence,archiveOriginalCommandEvidence,waitOriginalCommand} from '../tests/original-command-fixture';
+import {originalCommandProvider,originalCommandData as data,type OriginalCommandMode} from '../src/logic/evidence/runtime/unittest/support/original-command-provider';
+import {executeOriginalCommandSeed,originalCommandRecords,originalCommandLogBytes,originalCommandRunBytes,originalCommandByteEvidence,archiveOriginalCommandEvidence,waitOriginalCommand} from '../src/logic/evidence/runtime/unittest/support/original-command-fixture';
 import {latestExecutable} from './build-artifact.mjs';
 
 // The Application seed runs actual Pi and actual commits; only its test-local service return is corrupted.

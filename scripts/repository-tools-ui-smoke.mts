@@ -5,8 +5,8 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
-import {repositoryToolsProvider,repositoryToolsFixture as data} from '../tests/repository-tools-provider';
-import {seedRepositoryTools,repositoryToolsRecords,repositoryToolsLogBytes} from '../tests/repository-tools-fixture';
+import {repositoryToolsProvider,repositoryToolsFixture as data} from '../src/logic/tools/runtime/unittest/support/repository-tools-provider';
+import {seedRepositoryTools,repositoryToolsRecords,repositoryToolsLogBytes} from '../src/logic/tools/runtime/unittest/support/repository-tools-fixture';
 import {latestExecutable} from './build-artifact.mjs';
 
 // Real packaged Electron, Pi and repository HTTP. Only the isolated model response sequence is deterministic.

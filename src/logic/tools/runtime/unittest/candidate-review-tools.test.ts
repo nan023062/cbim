@@ -1,7 +1,7 @@
 import {expect,it,vi} from 'vitest';
 import type {TaskNode} from '../../../../bridge/contracts/dispatch';
 import {CandidateReviewTools} from '../candidate-review-tools';
-import {binding,request,approved} from '../../../../../tests/support/candidate-review';
+import {binding,request,approved} from '../../../tasks/rules/unittest/support/candidate-review';
 it('审阅工具要求可信调用，输出绑定当前主运行；坏回包不重放',async()=>{
   const save=vi.fn(async()=>approved()),tools=new CandidateReviewTools(binding,save),signal=new AbortController().signal;
   expect(tools.Has('cbim_dispatch_review')).toBe(true);expect(tools.List()[0].outputSchema).toBeDefined();

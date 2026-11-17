@@ -65,8 +65,8 @@ it('冷启动建立模块回执，输入未变时不再启动测试进程', () =
 
 it('独立契约不变的实现修改只重跑自身，真实组合契约仍验证新的实现', () => {
   const f = fixture();
-  f.write('tests/parent.test.ts', "import * as value from '../src/logic/parent';");
-  f.catalog.modules.parent.tests.contract = ['tests/parent.test.ts'];
+  f.write('src/logic/parent/unittest/parent-contract.test.ts', "import * as value from '..';");
+  f.catalog.modules.parent.tests.contract = ['src/logic/parent/unittest/parent-contract.test.ts'];
   const before = f.snapshot();
   f.write('src/logic/child/index.ts', 'export const value=2;');
   expect(changed(planTests(f.snapshot(), passes(before), {kind: 'all'}))).toEqual(['child:unit', 'parent:contract']);
@@ -115,10 +115,10 @@ it('环境、配置和锁文件变化不能复用旧环境的结果', () => {
 
 it('额外读取全仓文件不会把业务模块误判为依赖检查工具', () => {
   const f = fixture();
-  f.catalog.modules.unrelated.inputs = ['src/logic/', 'tests/README.md'];
-  f.write('tests/README.md', 'test instructions v1');
+  f.catalog.modules.unrelated.inputs = ['src/logic/', 'unittest/README.md'];
+  f.write('unittest/README.md', 'test instructions v1');
   let before = f.snapshot();
-  f.write('tests/README.md', 'test instructions v2');
+  f.write('unittest/README.md', 'test instructions v2');
   expect(changed(planTests(f.snapshot(), passes(before)))).toEqual(['unrelated:unit']);
   before = f.snapshot();
   f.write('src/logic/child/index.ts', 'export const value=2;');
@@ -174,8 +174,8 @@ it('残留 running、损坏回执和明确不缓存的模块都会重跑', () =>
 
 it('集成测试不复用本地缓存，受外部状态影响的验收每次真实运行', () => {
   const f = fixture();
-  f.write('tests/child.test.ts', "import * as subject from '../src/logic/child';");
-  f.catalog.modules.child.tests.integration = ['tests/child.test.ts'];
+  f.write('src/logic/child/unittest/child-integration.test.ts', "import * as subject from '..';");
+  f.catalog.modules.child.tests.integration = ['src/logic/child/unittest/child-integration.test.ts'];
   const snapshot = f.snapshot();
   expect(changed(planTests(snapshot, passes(snapshot), {kind: 'integration'}))).toEqual(['child:integration']);
 });

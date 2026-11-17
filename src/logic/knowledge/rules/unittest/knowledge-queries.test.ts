@@ -3,7 +3,7 @@ import {KnowledgeQueries} from '../knowledge-queries';
 import {KnowledgeRefresh,type KnowledgeRefreshPort as KnowledgeRefreshWorkspace} from '../knowledge-refresh';
 const refreshKnowledgeIndexes=(workspace:KnowledgeRefreshWorkspace,input:Parameters<KnowledgeRefresh['Refresh']>[0])=>new KnowledgeRefresh(workspace).Refresh(input);
 import type {Snapshot} from '../types';
-import {knowledgeFixture,teamKnowledgeFiles,teamIds} from '../../../../../tests/knowledge-fixture';
+import {knowledgeFixture,teamKnowledgeFiles,teamIds} from './support/knowledge-fixture';
 
 it('查询只取得快照端口，保持筛选、Skill 继承、本模块流程与内置根身份',async()=>{
   const f=await knowledgeFixture();try{

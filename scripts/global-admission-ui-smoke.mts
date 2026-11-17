@@ -5,8 +5,8 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
-import {globalAdmissionProvider,globalAdmissionFixture as data} from '../tests/global-admission-provider';
-import {seedGlobalAdmission,admissionScopes} from '../tests/global-admission-fixture';
+import {globalAdmissionProvider,globalAdmissionFixture as data} from '../src/logic/application/assembly/unittest/support/global-admission-provider';
+import {seedGlobalAdmission,admissionScopes} from '../src/logic/application/assembly/unittest/support/global-admission-fixture';
 import {latestExecutable} from './build-artifact.mjs';
 
 // One packaged application, two real workspaces, real Pi subprocesses and actual native reads.

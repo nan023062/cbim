@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {MemoryEngine} from '../engine';
 import type {EngineContext,EngineEvent} from '../../../rules/types';
-import {memoryModel,memorySnapshot,memoryEmbeddingReply,memoryChatReply} from '../../../../../../tests/memory-engine-data';
+import {memoryModel,memorySnapshot,memoryEmbeddingReply,memoryChatReply} from './support/memory-engine-data';
 const temporary:string[]=[];
 afterEach(async()=>{vi.unstubAllGlobals();for(const root of temporary.splice(0)){if(path.dirname(root)!==path.resolve(os.tmpdir())||!path.basename(root).startsWith('cbim-memory-unit-'))throw Error('cleanup boundary');await fs.rm(root,{recursive:true,force:true})}});
 const json=(value:unknown)=>new Response(JSON.stringify(value),{headers:{'content-type':'application/json'}});

@@ -5,8 +5,8 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
-import {seedTeam} from '../tests/team-fixture';
-import {summary} from '../tests/data/knowledge';
+import {seedTeam} from '../src/logic/knowledge/service/unittest/support/team-fixture';
+import {summary} from '../src/logic/knowledge/rules/unittest/data/knowledge';
 import {latestExecutable} from './build-artifact.mjs';
 
 // 真实便携 Electron + IPC；仅用独立 Application 准备静态知识和无网络模型配置。

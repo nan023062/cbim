@@ -5,8 +5,8 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
-import {memberCheckpointChainProvider,memberChainData as data} from '../tests/member-checkpoint-chain-provider';
-import {seedMemberCheckpoint,checkpointRecords,checkpointRuns,checkpointLogBytes} from '../tests/member-checkpoint-fixture';
+import {memberCheckpointChainProvider,memberChainData as data} from '../src/logic/team/runtime/unittest/support/member-checkpoint-chain-provider';
+import {seedMemberCheckpoint,checkpointRecords,checkpointRuns,checkpointLogBytes} from '../src/logic/team/runtime/unittest/support/member-checkpoint-fixture';
 import type {GoalContinuationRequest} from '../src/logic/tasks/rules/scope-continuation';
 import {latestExecutable} from './build-artifact.mjs';
 

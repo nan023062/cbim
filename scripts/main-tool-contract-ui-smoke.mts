@@ -5,8 +5,8 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
-import {mainToolContractProvider,mainToolContractFixture as data} from '../tests/main-tool-contract-provider';
-import {seedMainToolContract,mainToolContractRecords,mainToolContractLogBytes} from '../tests/main-tool-contract-fixture';
+import {mainToolContractProvider,mainToolContractFixture as data} from '../src/logic/execution/assembly/unittest/support/main-tool-contract-provider';
+import {seedMainToolContract,mainToolContractRecords,mainToolContractLogBytes} from '../src/logic/execution/assembly/unittest/support/main-tool-contract-fixture';
 import {latestExecutable} from './build-artifact.mjs';
 
 // The EXE, Pi, tool services and native read are real. Only model responses are deterministic;

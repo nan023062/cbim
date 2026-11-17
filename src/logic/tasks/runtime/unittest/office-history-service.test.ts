@@ -3,7 +3,7 @@ import {OfficeHistoryService} from '../office-history-service';
 import type {DispatchState,DispatchStore} from '../../../dispatch/rules/dispatch-storage';
 import type {DispatchRun} from '../../rules/dispatch-execution';
 import type {RunSummary} from '../../../execution/rules/types';
-import {mainToolGraph,mainToolTask,mainToolTime,mainToolBinding} from '../../../../../tests/main-tool-output-fixture';
+import {mainToolGraph,mainToolTask,mainToolTime,mainToolBinding} from '../../rules/unittest/support/main-tool-output-fixture';
 
 const identity={workspaceId:mainToolBinding.workspaceId,rootSessionId:mainToolBinding.rootSessionId},scopeId=mainToolBinding.scopeId;
 function fixture(){

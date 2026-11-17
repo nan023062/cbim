@@ -8,9 +8,9 @@ import {randomUUID} from 'node:crypto';
 import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
 import type {DispatchScope} from '../src/logic/tasks/rules/dispatch-scope';
-import {seedTeam} from '../tests/team-fixture';
-import {request} from '../tests/data/knowledge';
-import {goalCompleteArguments,goalPlanArguments,type GoalFixtureRequest} from '../tests/goal-provider-fixture';
+import {seedTeam} from '../src/logic/knowledge/service/unittest/support/team-fixture';
+import {request} from '../src/logic/knowledge/rules/unittest/data/knowledge';
+import {goalCompleteArguments,goalPlanArguments,type GoalFixtureRequest} from '../src/logic/tasks/rules/unittest/support/goal-provider-fixture';
 import {latestExecutable} from './build-artifact.mjs';
 
 // Real packaged Electron + Pi + persistent dispatch state. Only model responses use a local deterministic provider.

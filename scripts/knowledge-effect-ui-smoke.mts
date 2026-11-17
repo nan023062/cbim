@@ -1,4 +1,4 @@
-import {knowledgeRefreshProvider} from '../tests/knowledge-refresh-provider';
+import {knowledgeRefreshProvider} from '../src/logic/knowledge/service/unittest/support/knowledge-refresh-provider';
 import {_electron as electron,type ElectronApplication,type Page,type Locator} from 'playwright-core';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
@@ -9,10 +9,10 @@ import {Paths} from '../src/logic/workspace/service/paths';
 import {hash} from '../src/core/platform/node/serialization';
 import {effectObservationReportSchema,effectDispositionReceiptSchema} from '../src/logic/tasks/rules/effect-observation';
 import type {RunSummary} from '../src/logic/execution/rules/types';
-import {knowledgeContractProvider,knowledgeContractFixture as data} from '../tests/knowledge-contract-provider';
-import {knowledgeEffectObjectProvider} from '../tests/knowledge-effect-object-provider';
-import {seedKnowledgeContract,knowledgeContractRecords,knowledgeContractLogBytes} from '../tests/knowledge-contract-fixture';
-import {moduleFiles,request} from '../tests/data/knowledge';
+import {knowledgeContractProvider,knowledgeContractFixture as data} from '../src/logic/tools/runtime/unittest/support/knowledge-contract-provider';
+import {knowledgeEffectObjectProvider} from '../src/logic/evidence/runtime/unittest/support/knowledge-effect-object-provider';
+import {seedKnowledgeContract,knowledgeContractRecords,knowledgeContractLogBytes} from '../src/logic/tools/runtime/unittest/support/knowledge-contract-fixture';
+import {moduleFiles,request} from '../src/logic/knowledge/rules/unittest/data/knowledge';
 import {latestExecutable} from './build-artifact.mjs';
 
 // 只在隔离源码 Application 中破坏一次实际提交后的返回；最终 EXE 通过真实点击查询/处置，产品没有测试入口。

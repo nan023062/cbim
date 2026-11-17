@@ -1,0 +1,109 @@
+import {afterEach,expect,it,vi} from 'vitest';
+import {randomUUID} from 'node:crypto';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import type {Snapshot} from '../../../knowledge/rules/types';
+import {fixture} from '../../../application/unittest/support/helpers';
+import {request} from '../../../knowledge/rules/unittest/data/knowledge';
+import {seedModuleOwnership,moduleOwnershipChange,commitModuleOwnership,moduleOwnershipJournal} from './support/module-ownership-fixture';
+import {commitWorkspaceMember} from '../../../team/service/unittest/support/workspace-member-fixture';
+import type {ModuleOwnershipChangeInput,ModuleOwnershipPreview} from '../../rules/module-ownership';
+
+const cleanups:Array<()=>Promise<void>>=[];
+afterEach(async()=>{vi.restoreAllMocks();for(const cleanup of cleanups.splice(0).reverse())await cleanup()});
+async function setup(){
+  const f=await fixture();cleanups.push(f.cleanup);const seed=await seedModuleOwnership(f.app,f.temp,'http://127.0.0.1:9/v1');
+  const workspace=f.app.Workspace(seed.entry.id),service=f.app.WorkspaceOwnerships(seed.entry.id),identity={workspaceId:seed.entry.id,instanceId:workspace.instanceId};
+  const change=(memberId=seed.first.receipt.memberId):ModuleOwnershipChangeInput=>({moduleId:seed.moduleId,expectedBinding:null,nextOwner:{memberId,expectedRevision:1},reason:'Explicit ownership test'});
+  const preview=(value:ModuleOwnershipChangeInput=change())=>service.Preview({...identity,change:value});
+  const command=(p:ModuleOwnershipPreview)=>({...identity,change:p.change,commandId:randomUUID(),expectedBasis:p.basis,expectedOwnershipCursor:p.ownershipCursor});
+  const commit=(value:ReturnType<typeof command>)=>service.Commit(value,{kind:'local_desktop',interaction:'explicit_submit'});
+  return {...f,...seed,workspace,service,identity,change,preview,command,commit};
+}
+function deferred(){let resolve!:()=>void;const promise=new Promise<void>(done=>{resolve=done});return {promise,resolve}}
+
+it('已有同岗位、已有其他岗位与真正旧版本分别指向下一步，诊断不增加责任历史',async()=>{
+  const f=await setup();await f.commit(f.command(await f.preview()));
+  const before=await f.service.Get({...f.identity,moduleId:f.moduleId}),binding=before.view.binding!;
+  await expect(f.preview()).rejects.toMatchObject({code:'OWNERSHIP_NO_CHANGE',message:expect.stringContaining('无需重复设置')});
+  await expect(f.preview(f.change(f.second.receipt.memberId))).rejects.toMatchObject({code:'OWNERSHIP_ALREADY_EXISTS',message:expect.stringContaining('不要继续传 null')});
+  const expectedBinding={bindingId:binding.bindingId,revision:binding.revision+1,ownerMemberId:binding.ownerMemberId};
+  await expect(f.preview({...f.change(f.second.receipt.memberId),expectedBinding})).rejects.toMatchObject({code:'OWNERSHIP_BINDING_STALE',message:expect.stringContaining('不要原样重试')});
+  const after=await f.service.Get({...f.identity,moduleId:f.moduleId});expect(after.view.binding).toEqual(binding);expect(after.history).toEqual(before.history);
+});
+
+it('two explicit commits from one preview append only one ownership change',async()=>{
+  const f=await setup(),p=await f.preview(),a=f.command(p),b=f.command(p),results=await Promise.allSettled([f.commit(a),f.commit(b)]);
+  expect(results.filter(value=>value.status==='fulfilled')).toHaveLength(1);expect(results.find(value=>value.status==='rejected')).toMatchObject({reason:{code:'OWNERSHIP_REGISTRY_STALE'}});
+  expect((await f.service.Get({...f.identity,moduleId:f.moduleId})).history.total).toBe(1);
+});
+
+it('original command lookup precedes retired instance and failed sources without replay',async()=>{
+  const f=await setup(),command=f.command(await f.preview()),receipt=await f.commit(command);await f.app.Open(f.identity.workspaceId,true);
+  const current=f.app.WorkspaceOwnerships(f.identity.workspaceId),snapshot=vi.spyOn(f.app.Workspace(f.identity.workspaceId),'Snapshot').mockRejectedValue(Error('no source read'));
+  expect(await current.Commit(command,{kind:'local_desktop',interaction:'explicit_submit'})).toEqual(receipt);
+  expect(await current.Receipt({workspaceId:f.identity.workspaceId,commandId:command.commandId})).toEqual(receipt);
+  await expect(current.Commit({...command,commandId:randomUUID()},{kind:'local_desktop',interaction:'explicit_submit'})).rejects.toMatchObject({code:'OWNERSHIP_IDENTITY'});
+  await expect(current.Commit({...command,change:{...command.change,reason:'changed request'}},{kind:'local_desktop',interaction:'explicit_submit'})).rejects.toMatchObject({code:'OWNERSHIP_COMMAND_CONFLICT'});expect(snapshot).not.toHaveBeenCalled();
+});
+
+it('both adopted member revision and actual knowledge changes invalidate a new commit',async()=>{
+  const f=await setup(),command=f.command(await f.preview());
+  await commitWorkspaceMember(f.app,f.identity.workspaceId,{kind:'update',memberId:f.first.receipt.memberId,expectedRevision:1,patch:{name:'changed position'},reason:'metadata changed'});
+  await expect(f.commit(command)).rejects.toMatchObject({code:'OWNERSHIP_MEMBER_CHANGED'});
+  const next={...f.change(),nextOwner:{memberId:f.first.receipt.memberId,expectedRevision:2}},second=f.command(await f.preview(next)),s=await f.workspace.Snapshot();
+  await f.workspace.Commit(request(s,[{path:'.cbim/README.md',text:'# Explicit changed knowledge'}]));
+  await expect(f.commit(second)).rejects.toMatchObject({code:'OWNERSHIP_BASIS_STALE'});
+  expect((await f.service.Get({...f.identity,moduleId:f.moduleId})).view.binding).toBeNull();
+});
+
+it('knowledge changing after the captured snapshot is rejected before the shared journal append',async()=>{
+  const f=await setup(),command=f.command(await f.preview()),original=f.workspace.WithSourceSnapshot.bind(f.workspace);
+  vi.spyOn(f.workspace,'WithSourceSnapshot').mockImplementationOnce(<T>(operation:(s:Snapshot)=>Promise<T>)=>original(async s=>{await fs.writeFile(path.join(f.workspace.entry.path,'.cbim/README.md'),'# Changed outside the knowledge queue during capture');return operation(s)}));
+  await expect(f.commit(command)).rejects.toMatchObject({code:'OWNERSHIP_SOURCE_CHANGED'});
+  expect(await f.service.Receipt({workspaceId:f.identity.workspaceId,commandId:command.commandId})).toBeUndefined();
+});
+
+it('workspace stop during source capture prevents new registration and drains the same store',async()=>{
+  const f=await setup(),command=f.command(await f.preview()),entered=deferred(),release=deferred(),original=f.workspace.WithSourceSnapshot.bind(f.workspace);
+  vi.spyOn(f.workspace,'WithSourceSnapshot').mockImplementationOnce(<T>(operation:(s:Snapshot)=>Promise<T>)=>original(async s=>{entered.resolve();await release.promise;return operation(s)}));
+  const pending=f.commit(command),checked=expect(pending).rejects.toMatchObject({code:'OWNERSHIP_UNAVAILABLE'});await entered.promise;
+  const stopped=f.app.Stop(f.identity.workspaceId);release.resolve();await checked;await stopped;await f.app.Open(f.identity.workspaceId);
+  expect(await f.app.WorkspaceOwnerships(f.identity.workspaceId).Receipt({workspaceId:f.identity.workspaceId,commandId:command.commandId})).toBeUndefined();
+});
+
+it('releasing responsibility uses only its original binding even when knowledge is unavailable',async()=>{
+  const f=await setup(),assigned=await commitModuleOwnership(f.app,f.identity.workspaceId,f.change()),value=await moduleOwnershipChange(f.app,f.identity.workspaceId,f.moduleId,null);
+  const snapshot=vi.spyOn(f.workspace,'Snapshot').mockRejectedValue(Error('missing source'));
+  const receipt=await f.commit(f.command(await f.preview(value)));expect(receipt).toMatchObject({bindingId:assigned.receipt.bindingId,action:'unassign',revision:2});expect(snapshot).not.toHaveBeenCalled();
+});
+
+it('read basis includes member and knowledge changes even while the ownership cursor remains unchanged',async()=>{
+  const f=await setup(),page=await f.service.List({...f.identity,limit:1});
+  await commitWorkspaceMember(f.app,f.identity.workspaceId,{kind:'update',memberId:f.first.receipt.memberId,expectedRevision:1,patch:{name:'new name'},reason:'changes displayed source'});
+  await expect(f.service.List({...f.identity,offset:1,expectedReadBasis:page.basis})).rejects.toMatchObject({code:'OWNERSHIP_REGISTRY_STALE'});
+  const next=await f.service.List({...f.identity,limit:1}),s=await f.workspace.Snapshot();await f.workspace.Commit(request(s,[{path:'.cbim/README.md',text:'# new version'}]));
+  await expect(f.service.List({...f.identity,offset:1,expectedReadBasis:next.basis})).rejects.toMatchObject({code:'OWNERSHIP_REGISTRY_STALE'});
+  expect(next.basis.ownershipCursor).toBeNull();
+});
+
+it('a real newly queued related task invalidates the preview impact without changing its owner',async()=>{
+  const f=await setup(),s=await f.workspace.Snapshot(),modulePath=f.moduleId+'/module.json',definition=JSON.parse(s.files.find(item=>item.path===modulePath)!.text);
+  definition.maintenance={bindingId:'maintain',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'explicit-test',source:'local_user',confirmedAt:'2026-11-07T00:00:00.000Z'}};
+  await f.workspace.Commit(request(s,[{path:modulePath,text:JSON.stringify(definition)},{path:'.cbim/team/people.json',text:JSON.stringify({people:[{id:'owner',name:'Owner',team:'.cbim/team'}]})}]));
+  // 先明确登记原负责人及真实目标计划；预览换人之后只新增排队事实，不能借旧无周期派发绕过岗位门禁。
+  const assigned=await commitModuleOwnership(f.app,f.identity.workspaceId,f.change()),change=await moduleOwnershipChange(f.app,f.identity.workspaceId,f.moduleId,{memberId:f.second.receipt.memberId,expectedRevision:1});
+  const dispatch=f.app.MemberDispatch(f.identity.workspaceId),identity={workspaceId:f.identity.workspaceId,rootSessionId:'ownership-related-root'},scopeId=randomUUID(),runId=randomUUID();
+  await dispatch.OpenScope(identity,scopeId,{message:'a real queued task'},runId);
+  const ownerSelection=(await dispatch.owners.Discover([f.moduleId])).groups[0].selection!;
+  expect(ownerSelection.memberId).toBe(f.first.receipt.memberId);
+  await dispatch.goals.Plan(identity,scopeId,runId,randomUUID(),{expectedRevision:1,objective:'a real queued task',constraints:[],criteria:[{id:'evidence',text:'evidence',kind:'evidence'}],assignments:[{agentId:f.team.input.agentId,moduleIds:[f.moduleId],ownerSelection,criterionIds:['evidence'],reason:'由原负责人执行当前模块任务'}],reason:'为真实排队影响建立当前目标计划'});
+  const command=f.command(await f.preview(change)),before=(await moduleOwnershipJournal(f.user,f.identity.workspaceId)).records.filter(record=>record.body.command.commandId.startsWith('module-ownership-')),graph=await dispatch.Snapshot(identity);
+  const queued=await dispatch.DispatchTask({...identity,commandId:randomUUID(),expectedParentRevision:graph.root.revision,task:{assigneeAgentId:f.team.input.agentId,moduleIds:[f.moduleId],ownerSelection,goal:'a real queued task',acceptance:[{id:'evidence',text:'evidence'}],prerequisites:[]}},scopeId);
+  expect((await dispatch.Snapshot(identity)).tasks.find(task=>task.taskId===queued.taskId)).toMatchObject({status:'queued',runIds:[],ownerBinding:{memberId:f.first.receipt.memberId}});
+  await expect(f.commit(command)).rejects.toMatchObject({code:'OWNERSHIP_BASIS_STALE'});
+  const preview=await f.preview(change);expect(preview.impact).toMatchObject({total:1,counts:{unclaimed:1}});expect(preview.basis).not.toBe(command.expectedBasis);
+  expect((await f.service.Get({...f.identity,moduleId:f.moduleId})).view.binding).toMatchObject({bindingId:assigned.receipt.bindingId,revision:assigned.receipt.revision,ownerMemberId:f.first.receipt.memberId});
+  expect(await f.service.Receipt({workspaceId:f.identity.workspaceId,commandId:command.commandId})).toBeUndefined();
+  const records=(await moduleOwnershipJournal(f.user,f.identity.workspaceId)).records;expect(records.filter(record=>record.body.command.commandId.startsWith('module-ownership-'))).toEqual(before);
+});

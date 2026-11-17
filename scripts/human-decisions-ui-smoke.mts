@@ -6,8 +6,8 @@ import assert from 'node:assert/strict';
 import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
 import {humanDecisionHistorySchema,humanDecisionReceiptSchema,type HumanDecisionKind} from '../src/logic/tasks/rules/human-decisions';
-import {humanDecisionProvider,humanDecisionFixture as data} from '../tests/human-decisions-provider';
-import {seedHumanDecision,humanDecisionRecords,humanDecisionLogBytes} from '../tests/human-decisions-fixture';
+import {humanDecisionProvider,humanDecisionFixture as data} from '../src/logic/tasks/runtime/unittest/support/human-decisions-provider';
+import {seedHumanDecision,humanDecisionRecords,humanDecisionLogBytes} from '../src/logic/tasks/runtime/unittest/support/human-decisions-fixture';
 import {latestExecutable} from './build-artifact.mjs';
 
 // Packaged Electron/Pi with only a localhost model; all evidence and explicit clicks are real.

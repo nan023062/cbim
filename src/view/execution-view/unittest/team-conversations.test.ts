@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest';
 import {teamConversations,memberConversationTasks,teamConversationKey,taskConversationTarget} from '../team-conversations';
-import {officeSession,officeGraph,officeTask} from '../../../../tests/team-conversation-fixture';
+import {officeSession,officeGraph,officeTask} from '../../../logic/tasks/rules/unittest/support/team-conversation-fixture';
 
 it('一个逻辑子 Session 合并多个任务执行实例，并跨话题保留唯一导航',()=>{
   const first=officeTask('first'),second={...officeTask('second','next'),status:'running' as const,activeRunId:'run'};

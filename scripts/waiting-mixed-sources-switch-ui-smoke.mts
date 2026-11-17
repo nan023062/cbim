@@ -6,9 +6,9 @@ import assert from 'node:assert/strict';
 import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
 import type {RunSummary} from '../src/logic/execution/rules/types';
-import {waitingMixedSourcesProvider,mixedSourceGoal as goal} from '../tests/waiting-mixed-sources-provider';
-import {seedWaitingAttachments,attachmentWait} from '../tests/waiting-attachments-fixture';
-import {mixedRecords,mixedRunBytes,mixedRunByteEvidence} from '../tests/waiting-mixed-sources-fixture';
+import {waitingMixedSourcesProvider,mixedSourceGoal as goal} from '../src/logic/conversation/runtime/unittest/support/waiting-mixed-sources-provider';
+import {seedWaitingAttachments,attachmentWait} from '../src/logic/conversation/runtime/unittest/support/waiting-attachments-fixture';
+import {mixedRecords,mixedRunBytes,mixedRunByteEvidence} from '../src/logic/conversation/runtime/unittest/support/waiting-mixed-sources-fixture';
 import {latestExecutable} from './build-artifact.mjs';
 
 // A separate real EXE scenario: navigation, not a fake selected target, must cancel the held HTTP import.

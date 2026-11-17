@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {it,expect} from 'vitest';
 import {coldFingerprint,archiveDirectory,collectResources,inventory} from '../runtime-packaging';
-import {runtimeFixture} from '../../tests/runtime-fixture';
+import {runtimeFixture} from '../../src/logic/updates/service/unittest/support/runtime-fixture';
 it('fixed loader/native/installer inputs force C, while business output and engine changes do not',async()=>{
   const f=await runtimeFixture();try{
     for(const [name,value]of Object.entries({'package.json':JSON.stringify({name:'cbim',productName:'CBIM'}),'node_modules/electron/package.json':JSON.stringify({version:'40.0.0'}),'node_modules/koffi/addon.node':'native','forge.config.ts':'forge','desktop-builds.ts':'entries','electron-builder.config.cjs':'nsis','vite.main.config.ts':'main','vite.bootstrap.config.ts':'bootstrap','scripts/desktop-signing/config.cjs':'signing','desktop.js':'cold','main.js':'business'})){

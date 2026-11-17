@@ -2,7 +2,7 @@ import {expect,it,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {atomic,exists,readJson} from '..';
-import {tempDirectory} from '../../../../../../tests/support/temp-directory';
+import {tempDirectory} from '../../../../../../scripts/unittest/support/temp-directory';
 
 it('创建父目录，替换完整 UTF-8 JSON；读取不暗中验证业务 Schema',async()=>{
   const f=await tempDirectory();try{

@@ -9,9 +9,9 @@ import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
-import {seedTeam} from '../tests/team-fixture';
-import {modelRequestBudgetProvider} from '../tests/model-request-budget-provider';
-import {codexResponse} from '../tests/codex-fixture';
+import {seedTeam} from '../src/logic/knowledge/service/unittest/support/team-fixture';
+import {modelRequestBudgetProvider} from '../src/logic/budget/runtime/unittest/support/model-request-budget-provider';
+import {codexResponse} from '../src/logic/execution/engines/codex/unittest/support/codex-fixture';
 import {latestExecutable} from './build-artifact.mjs';
 
 const exe=await latestExecutable(),evidence=path.resolve(process.env.CBIM_ENGINE_REPORT_DIR??'test-results/multi-engine-ui');

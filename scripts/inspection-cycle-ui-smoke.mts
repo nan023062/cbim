@@ -6,9 +6,9 @@ import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
-import {inspectionCycleProvider,inspectionFixture as data} from '../tests/inspection-cycle-provider';
-import {seedExecutionReport} from '../tests/execution-report-fixture';
-import {corruptInspectionHistory,inspectionScopes} from '../tests/inspection-cycle-fixture';
+import {inspectionCycleProvider,inspectionFixture as data} from '../src/logic/tasks/runtime/unittest/support/inspection-cycle-provider';
+import {seedExecutionReport} from '../src/logic/evidence/runtime/unittest/support/execution-report-fixture';
+import {corruptInspectionHistory,inspectionScopes} from '../src/logic/tasks/runtime/unittest/support/inspection-cycle-fixture';
 import type {RecoveryRequest} from '../src/logic/tasks/rules/scope-recovery';
 import {latestExecutable} from './build-artifact.mjs';
 

@@ -6,7 +6,7 @@ import {projectEffectDispositionMutation,validateEffectDispositionLink} from '..
 import {recoveryRequestSchema,scopeRecoverySchema,recoveryRequestSource,recoverySourceKey,type ScopeRecovery} from '../scope-recovery';
 import {inspectionProofSchema} from '../scope-replan';
 import type {DispatchScope} from '../dispatch-scope';
-import {effectIdentity,effectTime,effectState,effectReport,effectRecord} from '../../../../../tests/effect-core-fixture';
+import {effectIdentity,effectTime,effectState,effectReport,effectRecord} from '../../../evidence/rules/unittest/support/effect-core-fixture';
 
 function inspect(record=effectRecord()):DispatchScope {const report=record.observation,scopeId=randomUUID();return {...effectIdentity,scopeId,status:'active',createdAt:effectTime,recovery:{recoveryId:scopeId,acceptedAt:effectTime,source:{...report.identity.subject,scopeId:'source',reportBasis:report.basis,scopeOutcome:'failed',reportExecution:'unknown',logState:'verified',unknownToolCount:1,sourceGoalRevision:1,sourceInputRevision:1},operation:'inspect_effects',observation:{text:'明确核实'},input:{message:'读取现状'},options:{permission:'read',profileId:randomUUID(),provider:'fixture',model:'fixture'},context:{initialRunId:'inspect-run',nativeSessionId:randomUUID(),excludedRunIds:['main-run']},dispositionId:record.dispositionId}} as DispatchScope}
 function append(state=effectState(),record=effectRecord()){return projectEffectDispositionMutation(state,{effectDispositions:[record],receipt:effectDispositionReceipt(record)},effectDispositionCommand(record.request))}

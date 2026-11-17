@@ -1,0 +1,128 @@
+import {it,expect,vi} from 'vitest';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import {fixture} from '../../../application/unittest/support/helpers';
+import {request} from '../../../knowledge/rules/unittest/data/knowledge';
+import {seedTeam} from '../../../knowledge/service/unittest/support/team-fixture';
+import {json} from '../../../../core/platform/node/serialization';
+import {cancelQueuedTasksInputSchema} from '../../rules/queued-task-cancel';
+import {queuedCancellationSelection} from '../../rules/queued-task-cancel-rules';
+import {FileDispatchStore} from '../../../dispatch/storage/dispatch-store';
+import {FileRunStorage} from '../../../execution/storage/run-storage';
+import {RunJournal} from '../../../execution/storage/run-journal';
+import {WorkspaceDispatchService} from '../../../dispatch/runtime/dispatch-service';
+import {MemberExecutionManager,type PreparedEngine} from '../../../team/runtime/member-execution';
+import {registerFixtureOwner} from '../../../team/service/unittest/support/owner-execution-fixture';
+import {LoopRuntime} from '../../../execution/rules/runtime/runtime';
+import type {TaskSpec} from '../../../execution/rules/types';
+import type {DispatchMutation} from '../../../dispatch/rules/dispatch-storage';
+
+async function setup(){
+  const f=await fixture(),entry=await f.app.Dispatch('add',{path:f.a}),owner=f.app.Workspace(entry.id),team=await seedTeam(owner),snapshot=await owner.Snapshot(),moduleId=team.input.moduleId;
+  const definition=JSON.parse(snapshot.files.find(item=>item.path===moduleId+'/module.json')!.text);definition.maintenance={bindingId:'maintain',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'review',source:'local_user',confirmedAt:'2026-11-06T00:00:00.000Z'}};
+  await owner.Commit(request(snapshot,[{path:'.cbim/team/people.json',text:json({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})},{path:moduleId+'/module.json',text:json(definition)}]));
+  const saved=await f.app.models.Save({profile:{name:'撤销竞争执行岗位',api:'openai-completions',baseUrl:'https://example.test/v1',auth:'none',defaultModel:'fixture',models:[{id:'fixture',name:'fixture',enabled:true,contextWindow:200000,maxTokens:1000,reasoning:false,vision:false}]}}),profileId=saved.profiles.find(item=>item.name==='撤销竞争执行岗位')!.id;
+  await registerFixtureOwner(f.app,entry.id,{agentId:'.cbim/team/dev',moduleIds:[moduleId],profileId,modelId:'fixture',name:'撤销竞争岗位',adaptation:{instructions:'只处理分配模块的明确任务。',references:[]}});
+  const store=owner.dispatchStore,directory=store.directory,model=await f.app.engineModels.Configuration(profileId,'fixture'),storage=new FileRunStorage(),identity={workspaceId:entry.id,rootSessionId:'main-root'},scopeId='cycle',runId='main-run';
+  let journal:RunJournal;const service=new WorkspaceDispatchService(owner,store,{InspectMain:()=>RunJournal.Read(journal.directory),InspectMember:run=>storage.Read(path.join(directory,'runs',run.binding.taskId,run.binding.runId))},undefined,undefined,f.app.engineModels);
+  const task:TaskSpec={mode:'chat',taskId:identity.rootSessionId,workspaceId:entry.id,root:f.a,goal:'完成目标',agentId:'cbim:main',moduleIds:[],acceptance:[]},binding=await service.ConversationBinding(task);
+  await service.OpenScope(identity,scopeId,{message:'完成明确业务目标'});journal=new RunJournal(path.join(directory,'main'),task,runId);await journal.Init();await journal.Append({type:'run.started',data:{task,conversationBinding:binding}});
+  const ownerSelection=(await service.owners.Discover([moduleId])).groups[0].selection!;
+  const plan={expectedRevision:1,objective:'完成明确业务目标',constraints:[],criteria:[{id:'artifact',text:'真实产物',kind:'evidence' as const}],assignments:[{agentId:'.cbim/team/dev',moduleIds:[moduleId],ownerSelection,criterionIds:['artifact'],reason:'按模块执行'}],reason:'按图派发'};
+  await service.goals.Plan(identity,scopeId,runId,'goal-plan',plan);let count=0;
+  const assign=(prerequisites:string[]=[])=>service.DispatchTask({...identity,commandId:'assign-'+(++count),expectedParentRevision:1,task:{assigneeAgentId:'.cbim/team/dev',moduleIds:[moduleId],ownerSelection,goal:'工作'+count,acceptance:[{id:'artifact',text:'真实产物'}],prerequisites:prerequisites.map(taskId=>({taskId,expectedPlanRevision:1}))}},scopeId);
+  const a=await assign(),b=await assign([a.taskId]),c=await assign([b.taskId]);
+  const input=async(ids=[b.taskId,c.taskId])=>{const graph=await service.Snapshot(identity);return {expectedGraphCursor:{streamId:graph.cursor.streamId,seq:graph.cursor.seq},targets:ids.map(taskId=>({taskId,expectedRevision:graph.tasks.find(task=>task.taskId===taskId)!.revision})),reason:'缺少上游输入，撤销未启动依赖并等待补充'}};
+  const cancel=(draft:Awaited<ReturnType<typeof input>>,commandId='cancel-one')=>service.CancelQueued(identity,scopeId,runId,commandId,draft);
+  return {...f,entry,owner,directory,store,storage,model,identity,scopeId,runId,service,journal,plan,a,b,c,assign,input,cancel,cleanup:async()=>{await service.Close();await f.cleanup()}};
+}
+
+it('B→C必须显式完整撤销，节点/信封/待办原子提交，幂等与重放不启动或改写历史',async()=>{
+  const f=await setup();try{
+    const before=await f.store.Read(),bytes=await fs.readFile(path.join(f.directory,'dispatch.jsonl')),partial=await f.input([f.b.taskId]);
+    const preview=await f.service.goals.PreviewClosure(f.identity,f.scopeId,partial);
+    expect(preview).toMatchObject({readOnly:true,requiresConfirmation:true,issues:[],affectedTaskIds:[f.b.taskId,f.c.taskId],retainedTaskIds:[f.a.taskId]});
+    expect(preview.cancel).toEqual(await f.input());expect(await f.store.Read()).toEqual(before);
+    const stale=await f.service.goals.PreviewClosure(f.identity,f.scopeId,{...partial,expectedGraphCursor:{...partial.expectedGraphCursor,seq:0}});
+    expect(stale.cancel).toBeUndefined();expect(stale.issues[0].code).toBe('CANCEL_GRAPH_STALE');
+    await expect(f.cancel(partial)).rejects.toMatchObject({code:'CANCEL_DEPENDENTS_REQUIRED',message:expect.stringContaining(f.c.taskId)});expect(await fs.readFile(path.join(f.directory,'dispatch.jsonl'))).toEqual(bytes);
+    const draft=await f.input(),receipt=await f.cancel(draft);expect(receipt.cancelledTaskIds).toEqual([f.b.taskId,f.c.taskId]);expect(receipt.graphCursor.seq).toBe(draft.expectedGraphCursor.seq+1);
+    const state=await f.store.Read(),tasks=state.graphs[0].tasks.filter(task=>receipt.cancelledTaskIds.includes(task.taskId));
+    for(const task of tasks){expect(task).toMatchObject({status:'cancelled',revision:2,planRevision:1,runIds:[],cancelledBeforeStart:{commandId:'cancel-one',scopeId:f.scopeId,mainRunId:f.runId,reason:draft.reason,previousRevision:1,graphCursor:draft.expectedGraphCursor}});expect(task.updatedAt).toBe(task.cancelledBeforeStart!.cancelledAt);expect(state.outbox.find(item=>item.taskId===task.taskId)).toMatchObject({delivery:'processed'});expect(state.members.find(item=>item.agentInstanceId===task.assignee.agentInstanceId)).toMatchObject({activity:'idle',lifecycle:'active',waitingTaskIds:[],communicatingMessageIds:[]})}
+    expect(state.graphs[0].tasks[0]).toEqual(before.graphs[0].tasks[0]);expect(state.graphs[0].edges).toEqual(before.graphs[0].edges);expect(state.runs).toEqual([]);expect(state.scopes).toEqual(before.scopes);
+    const saved=await fs.readFile(path.join(f.directory,'dispatch.jsonl'));expect(await f.cancel(draft)).toEqual(receipt);expect(await fs.readFile(path.join(f.directory,'dispatch.jsonl'))).toEqual(saved);
+    await expect(f.cancel({...draft,reason:'改参'})).rejects.toMatchObject({code:'COMMAND_ID_CONFLICT'});
+    await f.service.CloseScope(f.identity,f.scopeId,'cancelled');expect(await f.cancel(draft)).toEqual(receipt);expect((await f.store.Read()).graphs[0].tasks.filter(task=>receipt.cancelledTaskIds.includes(task.taskId))).toEqual(tasks);
+    const restored=new FileDispatchStore(f.directory,f.entry.id);try{expect(await restored.Read()).toEqual(await f.store.Read())}finally{await restored.Close()}
+  }finally{await f.cleanup()}
+});
+
+it('严格输入、图版本、任务版本、跨身份和历史终态整体拒绝且不产生取消记录',async()=>{
+  const f=await setup();try{
+    const draft=await f.input(),before=await fs.readFile(path.join(f.directory,'dispatch.jsonl'));
+    for(const invalid of [{...draft,runId:'forged'},{...draft,targets:[draft.targets[0],draft.targets[0]]},{...draft,targets:[{taskId:'../other',expectedRevision:1}]},{...draft,expectedGraphCursor:{...draft.expectedGraphCursor,rootSessionId:'foreign'}},{...draft,targets:[]}])expect(cancelQueuedTasksInputSchema.safeParse(invalid).success).toBe(false);
+    await expect(f.cancel({...draft,expectedGraphCursor:{...draft.expectedGraphCursor,seq:draft.expectedGraphCursor.seq-1}})).rejects.toMatchObject({code:'CANCEL_GRAPH_STALE'});
+    await expect(f.cancel({...draft,targets:draft.targets.map(target=>({...target,expectedRevision:2}))})).rejects.toMatchObject({code:'CANCEL_TASK_STALE'});
+    await expect(f.service.CancelQueued({...f.identity,rootSessionId:'foreign'},f.scopeId,f.runId,'foreign-root',draft)).rejects.toMatchObject({code:'DISPATCH_SCOPE_IDENTITY'});
+    await expect(f.service.CancelQueued(f.identity,'foreign-scope',f.runId,'foreign-scope',draft)).rejects.toMatchObject({code:'DISPATCH_SCOPE_IDENTITY'});
+    expect(await fs.readFile(path.join(f.directory,'dispatch.jsonl'))).toEqual(before);
+    await f.cancel(draft);await expect(f.cancel(await f.input(),'second-cancel')).rejects.toMatchObject({code:'CANCEL_NOT_ALLOWED'});
+    await f.service.CloseScope(f.identity,f.scopeId,'cancelled');await expect(f.cancel(await f.input([f.a.taskId]),'closed')).rejects.toMatchObject({code:'DISPATCH_SCOPE_CLOSED'});
+  }finally{await f.cleanup()}
+});
+
+it('依赖闭包穿过已撤销节点检查后继，已领取/候选/求助/跨周期事实不能漏判',async()=>{
+  const f=await setup();try{
+    const draft=await f.input([f.a.taskId,f.b.taskId,f.c.taskId]),state=await f.store.Read();
+    const cases=[(s:typeof state)=>{s.graphs[0].tasks[2].runIds=['old-run']},(s:typeof state)=>{s.graphs[0].tasks[2].scopeId='other-scope'},(s:typeof state)=>{s.outbox.find(item=>item.taskId===f.c.taskId)!.claim={runId:'claimed',leaseEpoch:1}},(s:typeof state)=>{s.graphs[0].tasks[1].status='blocked'}];
+    for(const mutate of cases){const changed=structuredClone(state);mutate(changed);expect(()=>queuedCancellationSelection(changed,f.identity,f.scopeId,draft)).toThrowError(expect.objectContaining({code:'CANCEL_NOT_ALLOWED'}))}
+    await f.cancel(await f.input([f.c.taskId]),'cancel-tail');const oldC=(await f.store.Read()).graphs[0].tasks[2];await f.cancel(await f.input([f.b.taskId]),'cancel-middle');expect((await f.store.Read()).graphs[0].tasks[2]).toEqual(oldC);
+    const later=await f.assign([f.c.taskId]);await expect(f.cancel(await f.input([f.a.taskId]),'cancel-head-only')).rejects.toMatchObject({code:'CANCEL_DEPENDENTS_REQUIRED',message:expect.stringContaining(later.taskId)});
+    await f.cancel(await f.input([f.a.taskId,later.taskId]),'cancel-head-and-new-tail');expect((await f.store.Read()).graphs[0].tasks.every(task=>task.status==='cancelled')).toBe(true);
+  }finally{await f.cleanup()}
+});
+
+it('撤销推进图基线使旧等待审阅失效；新审阅可安全等待，但撤销本身不能使目标完成',async()=>{
+  const f=await setup();try{
+    const review={expectedRevision:2,decision:'awaiting_user' as const,checks:[{criterionId:'artifact',outcome:'unmet' as const,reason:'缺少输入',evidence:[]}],superseded:[],gaps:['需用户补充'],reason:'等待补充'};
+    const old=await f.service.goals.Review(f.identity,f.scopeId,f.runId,'wait-before',review);
+    await f.cancel(await f.input([f.a.taskId,f.b.taskId,f.c.taskId]));await f.journal.Append({type:'run.settled',data:{status:'completed'}});const summary=await RunJournal.Read(f.journal.directory);
+    await expect(f.service.ParkScope(f.identity,f.scopeId,summary,[f.runId])).rejects.toMatchObject({code:'GOAL_GRAPH_CHANGED'});
+    await expect(f.service.goals.Review(f.identity,f.scopeId,f.runId,'cannot-complete',{...review,expectedRevision:3,decision:'complete'})).rejects.toThrow();
+    const fresh=await f.service.goals.Review(f.identity,f.scopeId,f.runId,'wait-after',{...review,expectedRevision:3});expect(fresh.goal!.review!.graphCursor.seq).toBeGreaterThan(old.goal!.review!.graphCursor.seq);
+    const waiting=await f.service.ParkScope(f.identity,f.scopeId,summary,[f.runId]);expect(waiting.status).toBe('waiting');expect((await f.store.Read()).members.filter(item=>item.executionScopeId===f.scopeId).every(item=>item.lifecycle==='active'&&item.activity==='idle')).toBe(true);
+    await expect(f.cancel(await f.input(),'while-waiting')).rejects.toMatchObject({code:'DISPATCH_SCOPE_WAITING'});
+  }finally{await f.cleanup()}
+});
+
+it('持久事务不能遗漏依赖后继、顺带改目标、伪造领取或重写已撤销任务',async()=>{
+  const f=await setup();try{
+    const before=await fs.readFile(path.join(f.directory,'dispatch.jsonl')),draft=await f.input();let captured:DispatchMutation|undefined;
+    const original=f.store.Transact.bind(f.store),spy=vi.spyOn(f.store,'Transact');spy.mockImplementation((command,prepare)=>original(command,async state=>{const mutation=await prepare(state);captured=structuredClone(mutation);return mutation}));
+    await f.cancel(draft);spy.mockRestore();
+    for(const mode of ['omit','rewrite','claim'] as const){
+      const dir=path.join(f.temp,'invalid-'+mode);await fs.mkdir(dir);await fs.writeFile(path.join(dir,'dispatch.jsonl'),before);const store=new FileDispatchStore(dir,f.entry.id);
+      try{const mutation=structuredClone(captured!);
+        if(mode==='omit'){mutation.batch!.changes=mutation.batch!.changes.filter(change=>change.type==='task.upserted'?change.task.taskId!==f.c.taskId:change.type==='agent.upserted'?change.agent.agentInstanceId!==captured!.members![1].agentInstanceId:true);mutation.members=mutation.members!.slice(0,1);mutation.messages=mutation.messages!.slice(0,1)}
+        if(mode==='rewrite'){const change=mutation.batch!.changes.find(change=>change.type==='task.upserted')!;if(change.type==='task.upserted')change.task.goal='改写业务目标'}
+        if(mode==='claim')mutation.messages![0]={...mutation.messages![0],claim:{runId:'forged-run',leaseEpoch:0}};
+        await expect(store.Transact({commandId:'cancel-one',fingerprint:'forged-'+mode},async()=>mutation)).rejects.toThrow();expect(await fs.readFile(path.join(dir,'dispatch.jsonl'))).toEqual(before);
+      }finally{await store.Close()}
+    }
+    const state=await f.store.Read(),graph=state.graphs[0],task=graph.tasks.find(item=>item.taskId===f.b.taskId)!;
+    await expect(f.store.Transact({commandId:'rewrite-history',fingerprint:'rewrite'},async()=>({batch:{version:1,identity:graph.identity,streamId:graph.cursor.streamId,seq:graph.cursor.seq+1,eventId:'rewrite',commandId:'rewrite-history',cause:'task.revised',committedAt:new Date().toISOString(),changes:[{type:'task.upserted',task:{...task,revision:task.revision+1,waitReason:'改写'}}]},receipt:true}))).rejects.toMatchObject({code:'GRAPH_INPUT_INVALID'});
+  }finally{await f.cleanup()}
+});
+
+it('领取与撤销竞争只有一个提交者；已登记运行绝不改称未启动撤销',async()=>{
+  for(const winner of ['cancel','start'] as const){const f=await setup();let wake=()=>{},releasePrepare=()=>{};let members:MemberExecutionManager|undefined;try{
+    const target=await f.assign(),draft=await f.input([target.taskId]);let preparing=()=>{};const prepareReached=new Promise<void>(resolve=>{preparing=resolve}),prepareGate=new Promise<void>(resolve=>{releasePrepare=resolve});
+    // 在实际领取事务的岗位核验中暂停，保持原用例“领取先占事务、撤销随后竞争”的顺序。
+    const verify=f.service.owners.VerifyTask.bind(f.service.owners);vi.spyOn(f.service.owners,'VerifyTask').mockImplementation(async(...args)=>{const binding=await verify(...args);preparing();if(winner==='start')await prepareGate;return binding});
+    const prepare=():PreparedEngine=>({model:f.model,Create:async(_run,_task,hooks)=>new LoopRuntime({storage:f.storage,directory:path.join(f.directory,'runs'),AcquireLease:async()=>()=>{},OnEngineReady:hooks.OnEngineReady,OnEvent:hooks.OnEvent,ToolPolicy:async()=>({allow:true}),CreateEngine:()=>({kind:'cancel-race',start:async context=>context.emit({type:'session.bound',data:{sessionId:context.nativeSessionId,sessionFile:path.join(f.directory,'native-'+context.nativeSessionId)}}),run:()=>new Promise(resolve=>{wake=()=>resolve({status:'cancelled'})}),stop:async()=>wake(),close:async()=>{}})})});
+    members=new MemberExecutionManager(f.owner,f.store,{Acquire:()=>()=>{},Inspect:run=>f.storage.Read(path.join(f.directory,'runs',run.binding.taskId,run.binding.runId)),owners:f.service.owners,Prepare:async()=>prepare(),WithEngineConfiguration:(reference,_options,use)=>f.app.engineModels.WithRuntimeConfiguration(reference,configuration=>use({model:configuration.profile,Prepare: prepare}))});await members.Initialize();
+    const start=()=>members!.Start({...f.identity,taskId:target.taskId,expectedRevision:1,commandId:'start-race',options:{permission:'read'}});
+    if(winner==='cancel'){await f.cancel(draft,'cancel-race');await expect(start()).rejects.toMatchObject({code:'GRAPH_REVISION_CONFLICT'});expect((await members.Inspect({...f.identity,taskId:target.taskId})).runs).toEqual([])}
+    else {const launched=start();await prepareReached;const cancellation=f.cancel(draft,'cancel-race');releasePrepare();await launched;await expect(cancellation).rejects.toMatchObject({code:'CANCEL_GRAPH_STALE'});const view=await members.Inspect({...f.identity,taskId:target.taskId});expect(view.runs).toHaveLength(1);expect(view.task.cancelledBeforeStart).toBeUndefined();await members.Stop({...f.identity,taskId:target.taskId});await members.WaitForSettlement({...f.identity,taskId:target.taskId});await expect(f.cancel(await f.input([target.taskId]),'after-run')).rejects.toMatchObject({code:'CANCEL_NOT_ALLOWED'})}
+  }finally{releasePrepare();wake();await members?.Close();await f.cleanup()}}
+});

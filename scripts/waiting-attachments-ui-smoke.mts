@@ -7,8 +7,8 @@ import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
 import type {RunSummary} from '../src/logic/execution/rules/types';
 import type {GoalContinuationRequest,GoalContinuationReceipt} from '../src/logic/tasks/rules/scope-continuation';
-import {attachmentFixture as data,waitingAttachmentsProvider,requestImages} from '../tests/waiting-attachments-provider';
-import {attachmentHash,attachmentWait,seedWaitingAttachments} from '../tests/waiting-attachments-fixture';
+import {attachmentFixture as data,waitingAttachmentsProvider,requestImages} from '../src/logic/conversation/runtime/unittest/support/waiting-attachments-provider';
+import {attachmentHash,attachmentWait,seedWaitingAttachments} from '../src/logic/conversation/runtime/unittest/support/waiting-attachments-fixture';
 import {latestExecutable} from './build-artifact.mjs';
 
 // 真实 Windows Electron/Pi；模型响应由本机确定性 SSE 提供。本脚本不替换原生文件选择器。

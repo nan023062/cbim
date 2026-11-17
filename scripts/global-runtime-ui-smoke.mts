@@ -7,7 +7,7 @@ import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
 import type {RuntimeSnapshot} from '../src/logic/runtime/rules/types';
 import {admissionReadSchema} from '../src/logic/runtime/rules/admission';
-import {globalRuntimeProviders,seedGlobalRuntime,globalRuntimeFixture as data,waitFixture,globalAdmissionFixture as admissionData,admissionScopes,globalRuntimeLogBytes} from '../tests/global-runtime-fixture';
+import {globalRuntimeProviders,seedGlobalRuntime,globalRuntimeFixture as data,waitFixture,globalAdmissionFixture as admissionData,admissionScopes,globalRuntimeLogBytes} from '../src/logic/runtime/monitoring/unittest/support/global-runtime-fixture';
 import {latestExecutable} from './build-artifact.mjs';
 
 const exe=await latestExecutable(),temp=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-global-runtime-ui-')),projects={a:path.join(temp,'runtime-project-a'),b:path.join(temp,'runtime-project-b')},user=path.join(temp,'user');await fs.mkdir(projects.a);await fs.mkdir(projects.b);

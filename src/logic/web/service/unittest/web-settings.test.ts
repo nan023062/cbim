@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import {tempDirectory} from '../../../../../tests/support/temp-directory';
+import {tempDirectory} from '../../../../../scripts/unittest/support/temp-directory';
 import {WebSettings} from '..';
 const cipher={Available:()=>true,Encrypt:(value:string)=>Buffer.from(value).toString('base64'),Decrypt:(value:string)=>Buffer.from(value,'base64').toString()};
 it('旧配置缺省允许浏览器读取，策略独立保存、重启保留且旧客户端不重置',async()=>{

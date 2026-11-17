@@ -8,10 +8,10 @@ import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
 import type {DispatchScope} from '../src/logic/tasks/rules/dispatch-scope';
 import type {GoalContinuationRequest} from '../src/logic/tasks/rules/scope-continuation';
-import {seedTeam} from '../tests/team-fixture';
-import {registerExplicitFixtureOwner} from '../tests/explicit-owner-fixture';
-import {request} from '../tests/data/knowledge';
-import {scopeContinuationProvider,continuationFixture as data} from '../tests/scope-continuation-provider';
+import {seedTeam} from '../src/logic/knowledge/service/unittest/support/team-fixture';
+import {registerExplicitFixtureOwner} from '../src/logic/team/service/unittest/support/explicit-owner-fixture';
+import {request} from '../src/logic/knowledge/rules/unittest/data/knowledge';
+import {scopeContinuationProvider,continuationFixture as data} from '../src/logic/tasks/runtime/unittest/support/scope-continuation-provider';
 import {latestExecutable} from './build-artifact.mjs';
 
 // Real packaged UI + Pi; only the model's responses are deterministic and local.

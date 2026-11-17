@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import {execFileSync} from 'node:child_process';
 import {afterEach,expect,it} from 'vitest';
 import {checkTestModules,selectModuleTests} from '../test-modules.mjs';
 
@@ -21,10 +22,10 @@ it('合法单模块单元可选中，空模块及非法测试类型不会降级�
 });
 it('单元必须在其责任模块的 unittest，不能只登记新标签保留散落路径',()=>{
   const f=sample();
-  fs.mkdirSync(path.join(f.root,'tests'));
-  fs.writeFileSync(path.join(f.root,'tests/misplaced.test.ts'),'');
-  f.catalog.modules['logic/example'].tests.unit=['tests/misplaced.test.ts'];
-  expect(f.run().errors.some(error=>error.includes('Unit must live'))).toBe(true);
+  fs.mkdirSync(path.join(f.root,'unittest'));
+  fs.writeFileSync(path.join(f.root,'unittest/misplaced.test.ts'),'');
+  f.catalog.modules['logic/example'].tests.unit=['unittest/misplaced.test.ts'];
+  expect(f.run().errors.some(error=>error.includes('Test must live'))).toBe(true);
 });
 it('不允许单元通过辅助文件间接加载完整应用，也禁止类型引用掩盖依赖',()=>{
   for(const clause of ['import','import type']){
@@ -36,11 +37,31 @@ it('拒绝跨模块单元和未登记的新测试；契约测试显式保留跨�
   const extra={'src/logic/example/unittest/example.test.ts':"import {value} from '..';import {other} from '../../other';",'src/logic/other/index.ts':'export const other=2;'};
   expect(sample(extra).run().errors.some(error=>error.includes('Unit crosses module'))).toBe(true);
   expect(sample(extra,'contract').run().ok).toBe(true);
-  const f=sample();expect(checkTestModules(f.root,{catalog:f.catalog,files:['tests/new.test.ts']}).errors).toContain('Unregistered test: tests/new.test.ts');
+  const f=sample();expect(checkTestModules(f.root,{catalog:f.catalog,files:['unittest/new.test.ts']}).errors).toContain('Unregistered test: unittest/new.test.ts');
 });
 it('任何测试类型都禁止直接或通过辅助模块导入其它测试套件',()=>{
   const f=sample({'src/logic/example/unittest/example.test.ts':"import './fixture';",'src/logic/example/unittest/fixture.ts':"import './other.test';",'src/logic/example/unittest/other.test.ts':'export const other=1;'},'integration');
   expect(f.run().errors.some(error=>error.includes('Test imports another suite'))).toBe(true);
+});
+it('已提交的旧 tests 目录套件必须报告遗漏，不能因不再发现该目录而静默跳过',()=>{
+  const f=sample({'tests/forgotten.test.ts':''});
+  execFileSync('git',['init','--quiet'],{cwd:f.root});
+  execFileSync('git',['add','--','tests/forgotten.test.ts'],{cwd:f.root});
+  const result=checkTestModules(f.root,{catalog:f.catalog});
+  expect(result.errors).toContain('Unregistered test: tests/forgotten.test.ts');
+});
+it('整体测试只属于工程根模块且登记为集成；模块契约和集成不能放在根目录',()=>{
+  for(const kind of ['contract','integration']){
+    const f=sample({},kind),file='unittest/application.test.ts';
+    fs.mkdirSync(path.join(f.root,'unittest'));
+    fs.writeFileSync(path.join(f.root,file),"import '../src/logic/example';");
+    f.catalog.modules['logic/example'].tests[kind]=[file];
+    expect(f.run().errors.some(error=>error.includes('Test must live'))).toBe(true);
+    const catalog={version:1,modules:{project:{directory:'.',roots:['src/logic/example/'],tests:{[kind]:[file]}}}};
+    const result=checkTestModules(f.root,{catalog,files:[file]});
+    expect(result.ok).toBe(kind==='integration');
+    if(kind==='contract')expect(result.errors.some(error=>error.includes('Project-wide tests must be integration'))).toBe(true);
+  }
 });
 it.each([
   "import {} from '../../other';",

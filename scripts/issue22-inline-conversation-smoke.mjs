@@ -5,8 +5,8 @@ const root=process.cwd(),out=path.join(root,'test-results');await fs.mkdir(out,{
 await fs.writeFile(path.join(out,'issue22-ui.html'),'<div id="root"></div><script type="module" src="/test-results/issue22-ui.tsx"></script>');
 await fs.writeFile(path.join(out,'issue22-ui.tsx'),String.raw`
 import React from 'react';import {createRoot} from 'react-dom/client';import '/src/view/shell/shell.css';
-import {progressFixture,progressMemberRun,progressIdentity} from '/tests/conversation-progress-fixture.ts';
-import {inlineMainRuns} from '/tests/inline-conversation-fixture.ts';
+import {progressFixture,progressMemberRun,progressIdentity} from '/src/view/tasks/unittest/support/conversation-progress-fixture.ts';
+import {inlineMainRuns} from '/src/view/execution-view/unittest/support/inline-conversation-fixture.ts';
 const id=progressIdentity.workspaceId,entry={id,name:'inline-project',path:'C:/fixture',state:'running',instanceId:'instance',tasks:[],revision:'revision'};
 window.fixture={phase:Number(sessionStorage.getItem('inline-phase')||0),calls:[],unexpected:[]};
 window.cbim={call:async(action,args)=>{const f=window.fixture;f.calls.push({action,args});const value=progressFixture(f.phase),runs=inlineMainRuns(f.phase);

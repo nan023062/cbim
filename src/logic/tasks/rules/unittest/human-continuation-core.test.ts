@@ -9,7 +9,7 @@ import {validateDispatchScopes} from '../dispatch-scope-invariants';
 import {dispatchScopeGoalSchema} from '../scope-goal';
 import type {DispatchState} from '../../../dispatch/rules/dispatch-storage';
 import {humanDecisionBasis} from '../human-decision-proof';
-import {at,identity,options,humanFixture,continued,planned,reviewed} from '../../../../../tests/human-continuation-core-fixture';
+import {at,identity,options,humanFixture,continued,planned,reviewed} from './support/human-continuation-core-fixture';
 
 const transition=(before:DispatchState,after:DispatchState)=>validateDispatchScopes(before,after,{scopes:after.scopes,receipt:true});
 it('新入口无自由正文/actor/主体，普通补充不能带人工来源；联合保留旧无kind记录',()=>{

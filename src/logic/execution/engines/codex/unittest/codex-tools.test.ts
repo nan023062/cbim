@@ -1,7 +1,7 @@
 import {expect,test} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import {codexFixture} from '../../../../../../tests/codex-fixture';
+import {codexFixture} from './support/codex-fixture';
 
 test.each(['internal','read','write','bash'] as const)('real Codex routes %s through original call identity and persists one result',async tool=>{
   const f=await codexFixture({tool});try{

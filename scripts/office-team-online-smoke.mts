@@ -9,10 +9,10 @@ import {_electron, type ElectronApplication, type Page} from 'playwright-core';
 import electronPath from 'electron';
 import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
-import {seedTeam} from '../tests/team-fixture';
-import {request} from '../tests/data/knowledge';
-import {registerExplicitFixtureOwner} from '../tests/explicit-owner-fixture';
-import {usageScopes} from '../tests/scope-usage-fixture';
+import {seedTeam} from '../src/logic/knowledge/service/unittest/support/team-fixture';
+import {request} from '../src/logic/knowledge/rules/unittest/data/knowledge';
+import {registerExplicitFixtureOwner} from '../src/logic/team/service/unittest/support/explicit-owner-fixture';
+import {usageScopes} from '../src/logic/budget/runtime/unittest/support/scope-usage-fixture';
 
 // 可以在原始日志上补核身份和上下文，不重发付费模型请求，也不改写原验收报告。
 async function verifyMemberEvidence(report: Record<string, any>) {

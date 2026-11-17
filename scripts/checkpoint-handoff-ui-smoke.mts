@@ -8,9 +8,9 @@ import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
 import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
 import type {RunSummary} from '../src/logic/execution/rules/types';
-import {seedCheckpointHandoff,checkpointHandoffRecords,checkpointHandoffRunBytes} from '../tests/checkpoint-handoff-fixture';
-import {checkpointHandoffProvider,checkpointHandoffData as data} from '../tests/checkpoint-handoff-provider';
-import {additionRunBytes,additionRunByteEvidence} from '../tests/queued-dependency-addition-fixture';
+import {seedCheckpointHandoff,checkpointHandoffRecords,checkpointHandoffRunBytes} from '../src/logic/execution/assembly/unittest/support/checkpoint-handoff-fixture';
+import {checkpointHandoffProvider,checkpointHandoffData as data} from '../src/logic/execution/assembly/unittest/support/checkpoint-handoff-provider';
+import {additionRunBytes,additionRunByteEvidence} from '../src/logic/tasks/runtime/unittest/support/queued-dependency-addition-fixture';
 import {latestExecutable} from './build-artifact.mjs';
 
 // Actual packaged UI and Pi. The provider holds its own response only; this script adds no production bridge or synthetic execution receipts.

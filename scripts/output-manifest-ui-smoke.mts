@@ -6,8 +6,8 @@ import assert from 'node:assert/strict';
 import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
 import {outputManifestResultSchema,outputManifestReportSchema} from '../src/logic/evidence/rules/output-manifest';
-import {outputManifestData as d,outputManifestProvider} from '../tests/output-manifest-provider';
-import {seedOutputManifest,manifestRecords,manifestLogFiles,assertManifestReport} from '../tests/output-manifest-pi-fixture';
+import {outputManifestData as d,outputManifestProvider} from '../src/logic/execution/rules/capabilities/unittest/support/output-manifest-provider';
+import {seedOutputManifest,manifestRecords,manifestLogFiles,assertManifestReport} from '../src/logic/execution/rules/capabilities/unittest/support/output-manifest-pi-fixture';
 import {latestExecutable} from './build-artifact.mjs';
 
 const mode=process.argv.includes('--stop')?'stop':process.argv.includes('--limit')?'limit':'complete',stopping=mode==='stop',tag=process.env.CBIM_SMOKE_TAG??'',artifact='output-manifest-'+mode+(tag?'-'+tag:''),exe=await latestExecutable();

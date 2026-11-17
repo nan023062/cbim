@@ -3,7 +3,7 @@ import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {MemberTaskDetail} from '../MemberTaskDetail';
 import {MemberActivityCard} from '../MemberActivity';
-import {identity,request,candidate,approved} from '../../../../tests/support/candidate-review';
+import {identity,request,candidate,approved} from '../../../logic/tasks/rules/unittest/support/candidate-review';
 it.each(['pending','accept','reject'] as const)('任务详情与内联卡展示真实审阅阶段：%s',decision=>{
   const task=decision==='pending'?candidate():approved();if(decision==='reject')task.candidateReview!.decision='reject';
   const detail=renderToStaticMarkup(createElement(MemberTaskDetail,{...identity,task}));

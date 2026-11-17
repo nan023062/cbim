@@ -13,7 +13,7 @@ test('模块单元仍参与依赖扫描，但不冒充产品层或进入生产�
 });
 
 test('生产代码经工程辅助模块间接引用测试或直接引用测试运行器均拒绝',()=>{
-  const indirect=audit({'src/logic/sample/index.ts':"import '../../..//scripts/helper';",'scripts/helper.ts':"import '../tests/fixture';",'tests/fixture.ts':'export const data=1;'});
+  const indirect=audit({'src/logic/sample/index.ts':"import '../../..//scripts/helper';",'scripts/helper.ts':"import '../unittest/fixture';",'unittest/fixture.ts':'export const data=1;'});
   expect(indirect.logicalViolations.some(item=>item.rule==='production-test-dependency')).toBe(true);
   const runner=audit({'src/logic/sample/index.ts':"import {expect} from 'vitest';"});
   expect(runner.logicalViolations.some(item=>item.rule==='production-test-dependency')).toBe(true);
@@ -347,11 +347,11 @@ test('all maintained code has no cycles including type dependencies and no unrev
     for(let i=0;i<queue.length;i++)for(const edge of result.edges.filter(e=>e.from===queue[i]))if(!seen.has(edge.to)){seen.add(edge.to);queue.push(edge.to)}
     return [...seen];
   };
-  for(const file of result.edges.map(edge=>edge.from).filter(file=>file.startsWith('src/view/execution-view/'))){
+  for(const file of result.edges.map(edge=>edge.from).filter(file=>file.startsWith('src/view/execution-view/')&&!file.includes('/unittest/'))){
     expect(reachable(file).filter(value=>value.startsWith('src/view/tasks/')||value.startsWith('src/view/conversation/')||value.startsWith('src/view/team/')),file).toEqual([]);
   }
-  for(const file of ['tests/data/knowledge.ts','tests/data/domain-snapshot.ts','src/logic/knowledge/rules/read-models/unittest/core-domains.test.ts']){
-    expect(reachable(file).filter(value=>value.startsWith('src/bridge/server/')||value.startsWith('src/logic/scheduling-fixture/')||value==='tests/helpers.ts'),file).toEqual([]);
+  for(const file of ['src/logic/knowledge/rules/unittest/data/knowledge.ts','src/logic/knowledge/rules/unittest/data/domain-snapshot.ts','src/logic/knowledge/rules/read-models/unittest/core-domains.test.ts']){
+    expect(reachable(file).filter(value=>value.startsWith('src/bridge/server/')||value.startsWith('src/logic/scheduling-fixture/')||value==='src/logic/application/unittest/support/helpers.ts'),file).toEqual([]);
   }
 });
 
@@ -397,14 +397,14 @@ test('P1 narrow boundaries reject restored write access, shared stores and busin
   }
 });
 test('test data rejects Application imports and private helper reexports',()=>{
-  const direct=audit({'tests/data/knowledge.ts':"import type {App} from '../../src/logic/application/application';",'src/logic/application/application.ts':'export class App {}'});
+  const direct=audit({'src/logic/knowledge/rules/unittest/data/knowledge.ts':"import type {App} from '../../../../application/application';",'src/logic/application/application.ts':'export class App {}'});
   expect(direct.logicalViolations).toContainEqual(expect.objectContaining({rule:'logical-direction',boundary:'test-data'}));expect(direct.ok).toBe(false);
-  const privateEntry=audit({'tests/data/private.ts':'export const value=1;','tests/sample.ts':"export {value} from './data/private';"});
+  const privateEntry=audit({'src/logic/knowledge/rules/unittest/data/private.ts':'export const value=1;','unittest/sample.ts':"export {value} from '../src/logic/knowledge/rules/unittest/data/private';"});
   expect(privateEntry.logicalViolations).toContainEqual(expect.objectContaining({rule:'private-entry',boundary:'test-data'}));expect(privateEntry.ok).toBe(false);
 });
 test('a shared pure helper cannot hide an indirect filesystem or SDK dependency',()=>{
   const indirect=audit({
-    'tests/data/knowledge.ts':"import {hash} from '../../src/core/platform/node/serialization';",
+    'src/logic/knowledge/rules/unittest/data/knowledge.ts':"import {hash} from '../../../../../core/platform/node/serialization';",
     'src/core/platform/node/serialization.ts':"import {write} from './files'; export const hash=write;",
     'src/core/platform/node/files.ts':'export const write=()=>{};',
   });
@@ -470,8 +470,8 @@ test('snapshot contracts and domain views reject reverse or private dependencies
   const denied=[
     [contracts,snapshot],[snapshot,team],[team,workspace],[workspace,team],
     [team,port],[query,port],['src/core/json.ts',contracts],
-    ['tests/knowledge-data.ts','tests/helpers.ts'],
-    ['tests/knowledge-fixture.ts','src/logic/application/application.ts'],
+    ['src/logic/knowledge/rules/unittest/support/knowledge-data.ts','src/logic/application/unittest/support/helpers.ts'],
+    ['src/logic/knowledge/rules/unittest/support/knowledge-fixture.ts','src/logic/application/application.ts'],
     ['src/logic/budget/rules/model-request-budget-storage.ts','src/logic/dispatch/rules/dispatch-storage.ts'],
     ['src/logic/budget/runtime/model-request-budget-service.ts','src/logic/dispatch/rules/dispatch-storage.ts'],
     ['src/logic/execution/rules/engine-tools.ts','src/logic/evidence/rules/progress-tools.ts'],

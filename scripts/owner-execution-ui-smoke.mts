@@ -8,9 +8,9 @@ import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
 import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
 import type {RunSummary} from '../src/logic/execution/rules/types';
-import {seedOwnerExecution,ownerExecutionData as data,ownerExecutionRecords} from '../tests/owner-execution-fixture';
-import {ownerExecutionProvider} from '../tests/owner-execution-provider';
-import {additionRunBytes,additionRunByteEvidence} from '../tests/queued-dependency-addition-fixture';
+import {seedOwnerExecution,ownerExecutionData as data,ownerExecutionRecords} from '../src/logic/team/service/unittest/support/owner-execution-fixture';
+import {ownerExecutionProvider} from '../src/logic/team/runtime/unittest/support/owner-execution-provider';
+import {additionRunBytes,additionRunByteEvidence} from '../src/logic/tasks/runtime/unittest/support/queued-dependency-addition-fixture';
 import {latestExecutable} from './build-artifact.mjs';
 
 // Actual packaged main/member Pi and controls. Only provider responses and a held response window are deterministic localhost fixtures.

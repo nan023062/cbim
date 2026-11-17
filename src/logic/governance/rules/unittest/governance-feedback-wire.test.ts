@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest';
 import http from 'node:http';
-import {governanceFeedbackProvider,governanceFeedbackFixture} from '../../../../../tests/module-governance-feedback-provider';
-import {moduleGovernanceToolNames} from '../../../../../tests/module-governance-tools-provider';
+import {governanceFeedbackProvider,governanceFeedbackFixture} from '../../service/unittest/support/module-governance-feedback-provider';
+import {moduleGovernanceToolNames} from '../../../tools/runtime/unittest/support/module-governance-tools-provider';
 
 it('确定性治理模型按 UTF-8 解码跨 HTTP 数据块的中文，不改写工具正文',async()=>{
   const provider=await governanceFeedbackProvider();

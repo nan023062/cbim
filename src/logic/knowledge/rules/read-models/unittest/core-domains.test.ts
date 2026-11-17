@@ -1,6 +1,6 @@
 import {it,expect} from 'vitest';
 import {Team,BusinessWorkspace,content} from '..';
-import {domainSnapshot} from '../../../../../../tests/data/domain-snapshot';
+import {domainSnapshot} from '../../unittest/data/domain-snapshot';
 
 it('核心领域在固定快照上解析团队 Skill 和本模块 Workflow，无需 main 实例',async()=>{
   const seed=domainSnapshot(),before=structuredClone(seed.snapshot);

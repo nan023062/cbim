@@ -5,8 +5,8 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
-import {scopeBudgetProvider,scopeBudgetFixture as data,type BudgetFixtureMode} from '../tests/scope-budget-provider';
-import {seedScopeBudget,budgetScopes,budgetLimits,budgetDenies} from '../tests/scope-budget-fixture';
+import {scopeBudgetProvider,scopeBudgetFixture as data,type BudgetFixtureMode} from '../src/logic/budget/runtime/unittest/support/scope-budget-provider';
+import {seedScopeBudget,budgetScopes,budgetLimits,budgetDenies} from '../src/logic/budget/runtime/unittest/support/scope-budget-fixture';
 import {latestExecutable} from './build-artifact.mjs';
 
 // Settings, task controls and continuation are real clicks in the packaged app; no user account or project is used.

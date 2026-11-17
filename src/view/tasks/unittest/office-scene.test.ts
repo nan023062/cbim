@@ -3,7 +3,7 @@ import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {officeScene,OfficeEventTracker} from '../office-state';
 import {OfficeScene} from '../OfficeScene';
-import {officeGraph,officeTask,officeSession,officeTime} from '../../../../tests/team-conversation-fixture';
+import {officeGraph,officeTask,officeSession,officeTime} from '../../../logic/tasks/rules/unittest/support/team-conversation-fixture';
 import type {ScopeSummary} from '../../../bridge/contracts/dispatch';
 
 const scope:ScopeSummary={scopeId:'topic',status:'active',createdAt:officeTime,hasGoal:true,hasPlan:false,inputPreview:'当前目标',stamp:{scopeId:'topic',streamId:'scopes:graph',seq:1}};

@@ -210,8 +210,8 @@ export const logicalBoundaries = [
     external:['react','react-markdown','remark-gfm','rehype-highlight'],
   },
   {
-    id:'test-data', prefix:'tests/data/',
-    public:['tests/data/knowledge.ts','tests/data/domain-snapshot.ts'],
+    id:'test-data', prefix:'src/logic/knowledge/rules/unittest/data/',
+    public:['src/logic/knowledge/rules/unittest/data/knowledge.ts','src/logic/knowledge/rules/unittest/data/domain-snapshot.ts'],
     dependencies:['core-errors','pure-foundation','knowledge-data'], external:['node:crypto'],
   },
 ];

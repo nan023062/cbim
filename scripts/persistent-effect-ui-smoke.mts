@@ -7,8 +7,8 @@ import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
 import {hash} from '../src/core/platform/node/serialization';
 import {effectObservationReportSchema,effectDispositionReceiptSchema} from '../src/logic/tasks/rules/effect-observation';
-import {preparePersistentEffect,type PersistentEffectMode} from '../tests/persistent-effect-fixture';
-import {moduleGovernanceToolsLogBytes,moduleGovernanceToolsJournalBytes} from '../tests/module-governance-tools-fixture';
+import {preparePersistentEffect,type PersistentEffectMode} from '../src/logic/evidence/runtime/unittest/support/persistent-effect-fixture';
+import {moduleGovernanceToolsLogBytes,moduleGovernanceToolsJournalBytes} from '../src/logic/tools/runtime/unittest/support/module-governance-tools-fixture';
 import {latestExecutable} from './build-artifact.mjs';
 
 // 真实源码运行保存后丢回包；最终包使用隔离数据，所有核实和处置均由真实桌面按钮发起。

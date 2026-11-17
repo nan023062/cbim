@@ -5,8 +5,8 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
-import {activeInputData as data,activeInputProvider} from '../tests/active-goal-input-provider';
-import {activeInputWait,seedActiveInput} from '../tests/active-goal-input-fixture';
+import {activeInputData as data,activeInputProvider} from '../src/logic/conversation/runtime/unittest/support/active-goal-input-provider';
+import {activeInputWait,seedActiveInput} from '../src/logic/conversation/runtime/unittest/support/active-goal-input-fixture';
 import {latestExecutable} from './build-artifact.mjs';
 
 // Fault modes wrap only the test EXE's own Pi pipe after an actual queued ACK.

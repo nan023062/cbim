@@ -5,9 +5,9 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
-import {modelRequestBudgetProvider} from '../tests/model-request-budget-provider';
-import {scopeBudgetProvider,scopeBudgetFixture} from '../tests/scope-budget-provider';
-import {seedScopeBudget,budgetScopes} from '../tests/scope-budget-fixture';
+import {modelRequestBudgetProvider} from '../src/logic/budget/runtime/unittest/support/model-request-budget-provider';
+import {scopeBudgetProvider,scopeBudgetFixture} from '../src/logic/budget/runtime/unittest/support/scope-budget-provider';
+import {seedScopeBudget,budgetScopes} from '../src/logic/budget/runtime/unittest/support/scope-budget-fixture';
 import {requestBudgetReportSchema} from '../src/logic/budget/rules/model-request-budget';
 import {latestExecutable} from './build-artifact.mjs';
 

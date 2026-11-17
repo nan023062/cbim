@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {mainToolTask,mainToolBinding} from '../../../../tests/main-tool-output-fixture';
+import {mainToolTask,mainToolBinding} from '../../../logic/tasks/rules/unittest/support/main-tool-output-fixture';
 import type {TaskNode,DependencyRevision} from '../../../bridge/contracts/dispatch';
 import {MemberDependencyNotice} from '../MemberDependencyNotice';
 import {MemberTaskDetail} from '../MemberTaskDetail';

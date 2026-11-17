@@ -7,8 +7,8 @@ import {randomUUID} from 'node:crypto';
 import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
 import {moduleGovernanceListSchema} from '../src/logic/governance/rules/module-governance';
-import {governanceFeedbackProvider,governanceFeedbackFixture as data} from '../tests/module-governance-feedback-provider';
-import {seedGovernanceFeedback,governanceFeedbackRecords,governanceFeedbackLogBytes,governanceFeedbackJournalBytes} from '../tests/module-governance-feedback-fixture';
+import {governanceFeedbackProvider,governanceFeedbackFixture as data} from '../src/logic/governance/service/unittest/support/module-governance-feedback-provider';
+import {seedGovernanceFeedback,governanceFeedbackRecords,governanceFeedbackLogBytes,governanceFeedbackJournalBytes} from '../src/logic/governance/service/unittest/support/module-governance-feedback-fixture';
 import {latestExecutable} from './build-artifact.mjs';
 
 // Only response content is deterministic: both proposals, human feedback, assessment and final application use the packaged application's real paths.

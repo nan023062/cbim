@@ -5,8 +5,8 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
-import {questionContractData as data,questionContractProvider} from '../tests/question-tool-contract-provider';
-import {questionWait,questionRun,seedQuestionContract} from '../tests/question-tool-contract-fixture';
+import {questionContractData as data,questionContractProvider} from '../src/logic/tools/runtime/unittest/support/question-tool-contract-provider';
+import {questionWait,questionRun,seedQuestionContract} from '../src/logic/tools/runtime/unittest/support/question-tool-contract-fixture';
 import {latestExecutable} from './build-artifact.mjs';
 
 // 真正的打包 EXE、Pi、QuestionQueue、系统 IPC 和文件读取；只有供应商响应可控。

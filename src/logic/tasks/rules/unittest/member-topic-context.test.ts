@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest';
 import {createMemberTopicContext,resolveMemberTopicContext} from '../member-topic-context-rules';
 import type {DispatchScope,TaskNode} from '../../../../bridge/contracts/dispatch';
-import {officeIdentity,officeTime,officeGraph,officeTask,officeSession} from '../../../../../tests/team-conversation-fixture';
+import {officeIdentity,officeTime,officeGraph,officeTask,officeSession} from './support/team-conversation-fixture';
 
 const scope:DispatchScope={...officeIdentity,scopeId:'topic',status:'active',createdAt:officeTime,goal:{revision:1,input:{message:'CURRENT_TOPIC_USER',attachmentIds:[]}}};
 function candidate(id:string,scopeId='topic'):TaskNode{return {...officeTask(id,scopeId),status:'result_ready',result:{resultId:'result-'+id,runId:'run-'+id,planRevision:1,summary:id,evidenceRefs:['tool'],limitations:[],acceptance:'not_evaluated'}}}

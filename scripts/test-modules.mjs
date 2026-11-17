@@ -60,11 +60,12 @@ export function testSubjects(root,file,edges){
 
 /** 目录是版本控制中的测试以及显式登记的新测试；不接管别人的未跟踪本地工作。CI 中新增测试必被纳入。 */
 function maintainedTests(root){
-  return execFileSync('git',['ls-files','-z','--','tests','src','scripts'],{cwd:root,encoding:'utf8'}).split('\0').filter(file=>testFile.test(file)&&fs.existsSync(path.join(root,file)));
+  // 旧目录不再执行，但仍识别已提交的残留测试，避免迁移遗漏或误放后静默失去覆盖。
+  return execFileSync('git',['ls-files','-z','--','unittest','tests','src','scripts'],{cwd:root,encoding:'utf8'}).split('\0').filter(file=>(testFile.test(file)||/^tests\/.*\.test\.(?:ts|mjs)$/.test(file))&&fs.existsSync(path.join(root,file)));
 }
 
 export function checkTestModules(root=process.cwd(),options={}){
-  const catalog=options.catalog??JSON.parse(fs.readFileSync(path.join(root,'tests/modules.json'),'utf8'));
+  const catalog=options.catalog??JSON.parse(fs.readFileSync(path.join(root,'unittest/modules.json'),'utf8'));
   const report=options.dependencies??auditDependencies(root);
   const errors=[],entries=[],seen=new Set(),graph=new Map();
   if(report.ok===false)errors.push('Dependency audit failed; resolve invalid imports before selecting tests');
@@ -72,16 +73,18 @@ export function checkTestModules(root=process.cwd(),options={}){
   if(catalog.version!==1||!catalog.modules||typeof catalog.modules!=='object')return {ok:false,errors:['Invalid module catalog'],entries:[]};
   for(const [module,definition] of Object.entries(catalog.modules)){
     if(!/^[a-z0-9][a-z0-9/_-]*$/.test(module)||!Array.isArray(definition.roots)||definition.roots.some(root=>!root.startsWith('src/')&&!root.startsWith('scripts/')))errors.push(`Invalid module: ${module}`);
-    if(definition.directory&&(!/^(?:src|scripts)(?:\/[a-zA-Z0-9_-]+)*$/.test(definition.directory)||!definition.roots.some(entry=>entry===definition.directory+'/'||path.posix.dirname(entry)===definition.directory)))errors.push(`Invalid module directory: ${module}`);
+    const project=module==='project'&&definition.directory==='.';
+    if(definition.directory&&!project&&(!/^(?:src|scripts)(?:\/[a-zA-Z0-9_-]+)*$/.test(definition.directory)||!definition.roots.some(entry=>entry===definition.directory+'/'||path.posix.dirname(entry)===definition.directory)))errors.push(`Invalid module directory: ${module}`);
     for(const kind of Object.keys(definition.tests??{})){
       if(!kinds.includes(kind)){errors.push(`Unknown test kind: ${module}/${kind}`);continue}
       for(const file of definition.tests[kind]){
         if(!testFile.test(file)||file.split('/').includes('..')||!fs.existsSync(path.join(root,file))){errors.push(`Missing/invalid test: ${file}`);continue}
         if(seen.has(file))errors.push(`Duplicate owner: ${file}`);seen.add(file);entries.push({file,module,kind});
+        if(path.posix.dirname(file)!==unitTestDirectory(definition))errors.push(`Test must live in owner unittest/: ${module} -> ${file}`);
+        if(project&&kind!=='integration')errors.push(`Project-wide tests must be integration: ${file}`);
         if(kind!=='unit')continue;
-        if(path.posix.dirname(file)!==unitTestDirectory(definition))errors.push(`Unit must live in module unittest/: ${module} -> ${file}`);
         const dependencies=reachable(file,graph);
-        const assembly=[...dependencies].find(value=>value==='src/logic/application/application.ts'||value==='tests/helpers.ts');
+        const assembly=[...dependencies].find(value=>value==='src/logic/application/application.ts'||value==='src/logic/application/unittest/support/helpers.ts');
         if(assembly)errors.push(`Unit loads application: ${file} -> ${assembly}`);
         const foreign=testSubjects(root,file,report.edges).filter(target=>![...definition.roots,...supportRoots].some(prefix=>belongs(target,prefix)));
         if(foreign.length)errors.push(`Unit crosses module: ${file} -> ${foreign.join(', ')}`);

@@ -9,8 +9,8 @@ const root=process.cwd(),out=path.join(root,'test-results');await fs.mkdir(out,{
 await fs.writeFile(path.join(out,'interrupted-chat-ui.html'),'<div id="root"></div><script type="module" src="/test-results/interrupted-chat-ui.tsx"></script>');
 await fs.writeFile(path.join(out,'interrupted-chat-ui.tsx'),String.raw`
 import React from 'react';import {createRoot} from 'react-dom/client';import '/src/view/shell/shell.css';
-import {progressFixture,progressIdentity,progressTime} from '/tests/conversation-progress-fixture.ts';
-import {inlineMainRuns} from '/tests/inline-conversation-fixture.ts';
+import {progressFixture,progressIdentity,progressTime} from '/src/view/tasks/unittest/support/conversation-progress-fixture.ts';
+import {inlineMainRuns} from '/src/view/execution-view/unittest/support/inline-conversation-fixture.ts';
 const id=progressIdentity.workspaceId,instanceId='11111111-1111-4111-8111-111111111111',profileId='22222222-2222-4222-8222-222222222222';
 const entry={id,name:'recovery-project',path:'C:/fixture',state:'running',instanceId,tasks:[],revision:'revision'};
 window.fixture={mode:'missing',seq:2,calls:[],unexpected:[],set(mode){this.mode=mode;this.seq++}};

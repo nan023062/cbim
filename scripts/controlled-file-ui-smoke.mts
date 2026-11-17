@@ -7,11 +7,11 @@ import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
 import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
 import {controlledFileReportSchema,fileCompensationReceiptSchema} from '../src/logic/file-operations/rules/controlled-file-operation';
-import {controlledFileProvider,controlledFileFixture as data} from '../tests/controlled-file-provider';
-import {seedControlledFile} from '../tests/controlled-file-seed';
-import {holdControlledReadonlyMapping} from '../tests/controlled-file-electron-fixture';
-import {additionRecords} from '../tests/queued-dependency-addition-fixture';
-import {effectPersistedRunBytes,effectRunEvidence,archiveEffectRuns} from '../tests/effect-observation-fixture';
+import {controlledFileProvider,controlledFileFixture as data} from '../src/logic/file-operations/service/unittest/support/controlled-file-provider';
+import {seedControlledFile} from '../src/logic/file-operations/service/unittest/support/controlled-file-seed';
+import {holdControlledReadonlyMapping} from '../src/bridge/server/platform/unittest/support/controlled-file-electron-fixture';
+import {additionRecords} from '../src/logic/tasks/runtime/unittest/support/queued-dependency-addition-fixture';
+import {effectPersistedRunBytes,effectRunEvidence,archiveEffectRuns} from '../src/logic/evidence/runtime/unittest/support/effect-observation-fixture';
 import {latestExecutable} from './build-artifact.mjs';
 import {effectObservationReportSchema,effectDispositionReceiptSchema} from '../src/logic/tasks/rules/effect-observation';
 

@@ -8,8 +8,8 @@ import {Paths} from '../src/logic/workspace/service/paths';
 import {humanDecisionHistorySchema} from '../src/logic/tasks/rules/human-decisions';
 import {humanContinuationReceiptSchema} from '../src/logic/tasks/rules/human-continue';
 import type {TaskNode} from '../src/logic/tasks/rules/graph-types';
-import {humanContinuationProvider,humanContinuationFixture as data,type HumanContinuationMode} from '../tests/human-continuation-provider';
-import {seedHumanContinuation,humanContinuationRecords,humanContinuationSourceBytes} from '../tests/human-continuation-fixture';
+import {humanContinuationProvider,humanContinuationFixture as data,type HumanContinuationMode} from '../src/logic/tasks/runtime/unittest/support/human-continuation-provider';
+import {seedHumanContinuation,humanContinuationRecords,humanContinuationSourceBytes} from '../src/logic/tasks/runtime/unittest/support/human-continuation-fixture';
 import {latestExecutable} from './build-artifact.mjs';
 
 // Real packaged Electron/Pi and native file evidence; only model responses use isolated localhost SSE.

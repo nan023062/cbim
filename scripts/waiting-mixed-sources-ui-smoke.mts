@@ -8,8 +8,8 @@ import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
 import type {RunSummary} from '../src/logic/execution/rules/types';
 import type {GoalContinuationRequest,GoalContinuationReceipt} from '../src/logic/tasks/rules/scope-continuation';
-import {waitingMixedSourcesProvider,mixedSourceGoal as goal,mixedSourceData as data,mixedResourceKinds,mixedResourceText,requestImages} from '../tests/waiting-mixed-sources-provider';
-import {seedMixedSources,mixedSnapshotEvidence,mixedRecords,mixedRunBytes,mixedRunByteEvidence,attachmentHash,attachmentWait} from '../tests/waiting-mixed-sources-fixture';
+import {waitingMixedSourcesProvider,mixedSourceGoal as goal,mixedSourceData as data,mixedResourceKinds,mixedResourceText,requestImages} from '../src/logic/conversation/runtime/unittest/support/waiting-mixed-sources-provider';
+import {seedMixedSources,mixedSnapshotEvidence,mixedRecords,mixedRunBytes,mixedRunByteEvidence,attachmentHash,attachmentWait} from '../src/logic/conversation/runtime/unittest/support/waiting-mixed-sources-fixture';
 import {latestExecutable} from './build-artifact.mjs';
 
 // Real EXE/Pi/native file and folder dialogs. Only Cindy computer operates the exact owned PID/window; no dialog return replacement.

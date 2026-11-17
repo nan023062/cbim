@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {CodexEngine} from '../engine';
-import {codexFixture} from '../../../../../../tests/codex-fixture';
+import {codexFixture} from './support/codex-fixture';
 
 test('真实 Codex 长写入完整落盘，参数错误返回工具失败且原文件保留',async()=>{
   for(const invalid of [false,true]){

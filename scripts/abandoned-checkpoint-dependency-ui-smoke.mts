@@ -5,8 +5,8 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
-import {abandonedDependencyProvider,abandonedDependencyData as data} from '../tests/abandoned-checkpoint-dependency-provider';
-import {seedAbandonedDependency,assertAbandonedDependency,abandonedRecords,abandonedWait,abandonedRunBytes,abandonedRunByteEvidence} from '../tests/abandoned-checkpoint-dependency-fixture';
+import {abandonedDependencyProvider,abandonedDependencyData as data} from '../src/logic/tasks/runtime/unittest/support/abandoned-checkpoint-dependency-provider';
+import {seedAbandonedDependency,assertAbandonedDependency,abandonedRecords,abandonedWait,abandonedRunBytes,abandonedRunByteEvidence} from '../src/logic/tasks/runtime/unittest/support/abandoned-checkpoint-dependency-fixture';
 import {latestExecutable} from './build-artifact.mjs';
 
 // Actual packaged EXE/Pi with isolated explicit owner and localhost deterministic model; no production user data.

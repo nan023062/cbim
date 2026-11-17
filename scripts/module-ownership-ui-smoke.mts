@@ -8,7 +8,7 @@ import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
 import type {Snapshot} from '../src/bridge/contracts/workspace';
 import {moduleOwnershipDetailSchema,moduleOwnershipPageSchema,moduleOwnershipReceiptSchema,type ModuleOwnershipReceipt} from '../src/logic/workspace/rules/module-ownership';
-import {seedModuleOwnership,moduleOwnershipFixture as data,moduleOwnershipHttpProbe,moduleOwnershipJournal,moduleOwnershipRunFiles} from '../src/logic/workspace/service/unittest/support/module-ownership-fixture';
+import {seedModuleOwnership,moduleOwnershipFixture as data,moduleOwnershipHttpProbe,moduleOwnershipJournal,moduleOwnershipRunFiles} from '../tests/src/logic/workspace/service/support/module-ownership-fixture';
 import {latestExecutable} from './build-artifact.mjs';
 
 // All ownership writes use actual packaged controls and the real service. --unknown drops one reply only after a real persisted commit.

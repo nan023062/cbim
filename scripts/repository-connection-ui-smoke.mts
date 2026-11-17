@@ -5,7 +5,7 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
-import {seedRepositoryConnection,repositoryConnectionFixture as data,repositoryConnectionRunFiles} from '../src/logic/connectors/service/unittest/support/repository-connection-fixture';
+import {seedRepositoryConnection,repositoryConnectionFixture as data,repositoryConnectionRunFiles} from '../tests/src/logic/connectors/service/support/repository-connection-fixture';
 import {latestExecutable} from './build-artifact.mjs';
 
 // One packaged application serves its explicitly shared local repository. No URL/token input, second server, account or model fixture.

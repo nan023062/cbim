@@ -1,4 +1,4 @@
-import {createOwnerExecutionLegacyFixture} from '../src/logic/dispatch/runtime/unittest/support/owner-execution-legacy-fixture';
+import {createOwnerExecutionLegacyFixture} from '../tests/src/logic/dispatch/runtime/support/owner-execution-legacy-fixture';
 
 // Explicitly generate the retained pre-owner sample with fixed Step32 EXE. This is not Step33 desktop acceptance.
 const sample=await createOwnerExecutionLegacyFixture();

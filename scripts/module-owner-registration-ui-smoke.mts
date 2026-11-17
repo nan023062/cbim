@@ -9,7 +9,7 @@ import {Paths} from '../src/logic/workspace/service/paths';
 import type {Snapshot} from '../src/bridge/contracts/workspace';
 import {workspaceMemberListSchema} from '../src/bridge/contracts/workspace-members';
 import {moduleOwnershipDetailSchema} from '../src/bridge/contracts/module-ownership';
-import {seedWorkspaceMembers,workspaceMemberHttpProbe,workspaceMemberRunFiles} from '../src/logic/team/service/unittest/support/workspace-member-fixture';
+import {seedWorkspaceMembers,workspaceMemberHttpProbe,workspaceMemberRunFiles} from '../tests/src/logic/team/service/support/workspace-member-fixture';
 import {latestExecutable} from './build-artifact.mjs';
 
 // Issue #9: start with actual static Agents and zero registered positions. Every write uses the packaged UI and real IPC.

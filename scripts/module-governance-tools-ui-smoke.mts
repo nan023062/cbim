@@ -6,8 +6,8 @@ import assert from 'node:assert/strict';
 import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
 import {moduleGovernanceListSchema} from '../src/logic/governance/rules/module-governance';
-import {moduleGovernanceToolsProvider,moduleGovernanceToolsFixture as data} from '../src/logic/tools/runtime/unittest/support/module-governance-tools-provider';
-import {seedModuleGovernanceTools,moduleGovernanceToolsRecords,moduleGovernanceToolsLogBytes,moduleGovernanceToolsJournalBytes} from '../src/logic/tools/runtime/unittest/support/module-governance-tools-fixture';
+import {moduleGovernanceToolsProvider,moduleGovernanceToolsFixture as data} from '../tests/src/logic/tools/runtime/support/module-governance-tools-provider';
+import {seedModuleGovernanceTools,moduleGovernanceToolsRecords,moduleGovernanceToolsLogBytes,moduleGovernanceToolsJournalBytes} from '../tests/src/logic/tools/runtime/support/module-governance-tools-fixture';
 import {latestExecutable} from './build-artifact.mjs';
 
 // Real packaged Pi calls and desktop approval/application; only the local provider's response sequence is deterministic.

@@ -8,10 +8,10 @@ import {execFileSync} from 'node:child_process';
 import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
 import type {DispatchScope} from '../src/logic/tasks/rules/dispatch-scope';
-import {seedTeam} from '../src/logic/knowledge/service/unittest/support/team-fixture';
-import {registerExplicitFixtureOwner} from '../src/logic/team/service/unittest/support/explicit-owner-fixture';
-import {request} from '../src/logic/knowledge/rules/unittest/data/knowledge';
-import {scopeWaitProvider,waitFixture} from '../src/logic/tasks/runtime/unittest/support/scope-wait-provider';
+import {seedTeam} from '../tests/src/logic/knowledge/service/support/team-fixture';
+import {registerExplicitFixtureOwner} from '../tests/src/logic/team/service/support/explicit-owner-fixture';
+import {request} from '../tests/src/logic/knowledge/rules/data/knowledge';
+import {scopeWaitProvider,waitFixture} from '../tests/src/logic/tasks/runtime/support/scope-wait-provider';
 import {latestExecutable} from './build-artifact.mjs';
 
 // Real packaged Electron and native Pi. The local model supplies deterministic responses,

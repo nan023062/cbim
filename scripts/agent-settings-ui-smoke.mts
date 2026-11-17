@@ -5,8 +5,8 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import {createServer} from 'vite';
 import {chromium} from 'playwright-core';
-import {fixture} from '../src/logic/application/unittest/support/helpers';
-import {seedTeam} from '../src/logic/knowledge/service/unittest/support/team-fixture';
+import {fixture} from '../tests/src/logic/application/support/helpers';
+import {seedTeam} from '../tests/src/logic/knowledge/service/support/team-fixture';
 
 const f=await fixture(),root=process.cwd(),out=path.resolve('test-results/agent-settings-ui-'+Date.now());await fs.mkdir(out,{recursive:true});
 const actions:string[]=[],errors:string[]=[],checks:string[]=[];

@@ -5,7 +5,7 @@ import os from 'node:os';
 import http from 'node:http';
 import assert from 'node:assert/strict';
 import {latestExecutable} from './build-artifact.mjs';
-import {knowledgeContractResult} from '../src/logic/tools/runtime/unittest/support/knowledge-contract-provider';
+import {knowledgeContractResult} from '../tests/src/logic/tools/runtime/support/knowledge-contract-provider';
 
 // Real portable Electron/IPC/Pi; only model replies and GitHub HTTP are fixtures.
 // Never connects a real account, creates an online Issue or touches an installed client.

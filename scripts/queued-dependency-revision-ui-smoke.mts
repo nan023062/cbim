@@ -5,8 +5,8 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
-import {dependencyRevisionProvider,dependencyRevisionData as data} from '../src/logic/tasks/runtime/unittest/support/queued-dependency-revision-provider';
-import {seedDependencyRevision,assertDependencyRevision,revisionRecords,revisionWait,revisionRunBytes,revisionRunByteEvidence} from '../src/logic/tasks/runtime/unittest/support/queued-dependency-revision-pi-fixture';
+import {dependencyRevisionProvider,dependencyRevisionData as data} from '../tests/src/logic/tasks/runtime/support/queued-dependency-revision-provider';
+import {seedDependencyRevision,assertDependencyRevision,revisionRecords,revisionWait,revisionRunBytes,revisionRunByteEvidence} from '../tests/src/logic/tasks/runtime/support/queued-dependency-revision-pi-fixture';
 import {latestExecutable} from './build-artifact.mjs';
 
 // Real packaged EXE and Pi, with an isolated deterministic HTTP provider; no production user directory is used.

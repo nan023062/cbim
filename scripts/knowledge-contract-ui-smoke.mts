@@ -5,8 +5,8 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
-import {knowledgeContractProvider,knowledgeContractFixture as data} from '../src/logic/tools/runtime/unittest/support/knowledge-contract-provider';
-import {seedKnowledgeContract,knowledgeContractRecords,knowledgeContractLogBytes} from '../src/logic/tools/runtime/unittest/support/knowledge-contract-fixture';
+import {knowledgeContractProvider,knowledgeContractFixture as data} from '../tests/src/logic/tools/runtime/support/knowledge-contract-provider';
+import {seedKnowledgeContract,knowledgeContractRecords,knowledgeContractLogBytes} from '../tests/src/logic/tools/runtime/support/knowledge-contract-fixture';
 import {latestExecutable} from './build-artifact.mjs';
 
 // Real packaged Electron and Pi; model responses alone use deterministic localhost SSE. No output fault injection in this desktop script.

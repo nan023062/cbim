@@ -92,7 +92,7 @@ try{
   checks.push('preset-fills-connection-and-mobile-layout-fits');
   await page.screenshot({path:path.join(out,'provider-connections-mobile.png'),fullPage:true});
   assert.deepEqual(errors,[]);
-  const report={checks,errors,scope:'真实 React 组件和确定性 IPC；真实 HTTP 协议与鉴权由 src/logic/models/service/unittest/llm.test.ts 验证，未调用在线模型'};
+  const report={checks,errors,scope:'真实 React 组件和确定性 IPC；真实 HTTP 协议与鉴权由 tests/src/logic/models/service/llm.test.ts 验证，未调用在线模型'};
   await fs.writeFile(path.join(out,'provider-connections-ui-report.json'),JSON.stringify(report,null,2));
   console.log(JSON.stringify(report,null,2));
 }catch(error){

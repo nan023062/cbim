@@ -5,8 +5,8 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
-import {memberCheckpointProvider,memberCheckpointFixture as data} from '../src/logic/team/runtime/unittest/support/member-checkpoint-provider';
-import {seedMemberCheckpoint,checkpointRecords,checkpointRuns,checkpointLogBytes,assertCheckpointGraph} from '../src/logic/team/runtime/unittest/support/member-checkpoint-fixture';
+import {memberCheckpointProvider,memberCheckpointFixture as data} from '../tests/src/logic/team/runtime/support/member-checkpoint-provider';
+import {seedMemberCheckpoint,checkpointRecords,checkpointRuns,checkpointLogBytes,assertCheckpointGraph} from '../tests/src/logic/team/runtime/support/member-checkpoint-fixture';
 import {latestExecutable} from './build-artifact.mjs';
 
 // Real packaged Electron/Pi, native write/read and checkpoint continuation; localhost provider only.

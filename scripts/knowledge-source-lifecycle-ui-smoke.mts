@@ -10,9 +10,9 @@ import {workspaceMemberDetailSchema} from '../src/logic/team/rules/workspace-mem
 import {moduleOwnershipDetailSchema} from '../src/logic/workspace/rules/module-ownership';
 import {knowledgeSourceRefSchema,knowledgeSourceChangeSchema,type KnowledgeSourceChange} from '../src/logic/workspace/rules/knowledge-source';
 import type {Snapshot} from '../src/bridge/contracts/workspace';
-import {seedKnowledgeSource,knowledgeSourceFixture as data,knowledgeSourceDiskEvidence,knowledgeSourceHttpProbe} from '../src/logic/workspace/service/unittest/support/knowledge-source-lifecycle-fixture';
-import {createKnowledgeSourceLegacyFixture} from '../src/logic/workspace/service/unittest/support/knowledge-source-legacy-fixture';
-import {summary,moduleFiles} from '../src/logic/knowledge/rules/unittest/data/knowledge';
+import {seedKnowledgeSource,knowledgeSourceFixture as data,knowledgeSourceDiskEvidence,knowledgeSourceHttpProbe} from '../tests/src/logic/workspace/service/support/knowledge-source-lifecycle-fixture';
+import {createKnowledgeSourceLegacyFixture} from '../tests/src/logic/workspace/service/support/knowledge-source-legacy-fixture';
+import {summary,moduleFiles} from '../tests/src/logic/knowledge/rules/data/knowledge';
 import {latestExecutable} from './build-artifact.mjs';
 
 // Product controls perform every lifecycle mutation after setup. --legacy first creates actual old records using the fixed pre-source EXE, never synthetic journals.

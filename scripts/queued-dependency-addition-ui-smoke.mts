@@ -5,8 +5,8 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
-import {dependencyAdditionProvider,dependencyAdditionData as data} from '../src/logic/tasks/runtime/unittest/support/queued-dependency-addition-provider';
-import {seedDependencyAddition,additionRecords,additionWait,assertDependencyAddition,additionRunBytes,additionRunByteEvidence} from '../src/logic/tasks/runtime/unittest/support/queued-dependency-addition-fixture';
+import {dependencyAdditionProvider,dependencyAdditionData as data} from '../tests/src/logic/tasks/runtime/support/queued-dependency-addition-provider';
+import {seedDependencyAddition,additionRecords,additionWait,assertDependencyAddition,additionRunBytes,additionRunByteEvidence} from '../tests/src/logic/tasks/runtime/support/queued-dependency-addition-fixture';
 import {latestExecutable} from './build-artifact.mjs';
 
 // Production EXE, Pi and file reads are real. Only the isolated localhost provider's responses are deterministic.

@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
 import {moduleGovernanceListSchema,moduleGovernanceReceiptSchema} from '../src/logic/governance/rules/module-governance';
-import {seedModuleGovernance,moduleGovernanceFixture as data,moduleGovernanceRunFiles} from '../src/logic/governance/service/unittest/support/module-governance-fixture';
+import {seedModuleGovernance,moduleGovernanceFixture as data,moduleGovernanceRunFiles} from '../tests/src/logic/governance/service/support/module-governance-fixture';
 import {latestExecutable} from './build-artifact.mjs';
 
 // Real packaged UI and KnowledgeStore. The approve case drops one successful decide reply at the test IPC boundary; no product hook or fabricated receipt.

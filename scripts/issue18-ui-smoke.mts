@@ -5,8 +5,8 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
-import {seedTeam} from '../src/logic/knowledge/service/unittest/support/team-fixture';
-import {request,summary} from '../src/logic/knowledge/rules/unittest/data/knowledge';
+import {seedTeam} from '../tests/src/logic/knowledge/service/support/team-fixture';
+import {request,summary} from '../tests/src/logic/knowledge/rules/data/knowledge';
 import {latestExecutable} from './build-artifact.mjs';
 
 const temp=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-issue18-')),root=path.join(temp,'issue18-project'),user=path.join(temp,'user');

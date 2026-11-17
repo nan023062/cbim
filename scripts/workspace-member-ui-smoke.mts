@@ -8,7 +8,7 @@ import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
 import type {Snapshot} from '../src/bridge/contracts/workspace';
 import {workspaceMemberDetailSchema,workspaceMemberListSchema,workspaceMemberReceiptSchema,type WorkspaceMemberReceipt} from '../src/logic/team/rules/workspace-member';
-import {seedWorkspaceMembers,workspaceMemberFixture as data,workspaceMemberHttpProbe,workspaceMemberRunFiles} from '../src/logic/team/service/unittest/support/workspace-member-fixture';
+import {seedWorkspaceMembers,workspaceMemberFixture as data,workspaceMemberHttpProbe,workspaceMemberRunFiles} from '../tests/src/logic/team/service/support/workspace-member-fixture';
 import {latestExecutable} from './build-artifact.mjs';
 
 // Packaged UI, real registry journal and real knowledge/profile services. This registration slice has no model execution.

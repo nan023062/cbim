@@ -5,8 +5,8 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
-import {executionReportProvider,reportFixture as data} from '../src/logic/evidence/runtime/unittest/support/execution-report-provider';
-import {seedExecutionReport,reportFiles} from '../src/logic/evidence/runtime/unittest/support/execution-report-fixture';
+import {executionReportProvider,reportFixture as data} from '../tests/src/logic/evidence/runtime/support/execution-report-provider';
+import {seedExecutionReport,reportFiles} from '../tests/src/logic/evidence/runtime/support/execution-report-fixture';
 import {latestExecutable} from './build-artifact.mjs';
 
 // The EXE, Pi, tools and receipt reader are real. Only model responses and explicitly identified

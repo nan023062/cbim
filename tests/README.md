@@ -1,0 +1,59 @@
+# 按模块维护测试
+
+`modules.json` 是测试归属与执行选择器，不是开发待办。每个测试文件只登记一次责任模块、源码入口和测试类型。所有测试集中维护在根目录 `tests/`，按源码的仓库相对路径镜像组织：`src/<模块>/` 对应 `tests/src/<模块>/`，`scripts/<工具>/` 对应 `tests/scripts/<工具>/`。模块的单元、契约、集成测试及领域夹具放在该镜像目录，源码模块内不再建立 `unittest/`。父模块组合测试仍归父层；工程整体测试直接放在根 `tests/`，在 `tests/modules.json` 登记为 `project` 的 `integration`，不缓存。物理位置不改变责任模块、测试分类及增量验证边界。 模块按业务变化原因划分，不要求一个类一个模块。
+
+| 类型 | 验证责任 | 夹具边界 |
+| --- | --- | --- |
+| `unit` | 一个模块的规则、状态和失败语义 | 直接构造模块；依赖使用窄端口或受控适配；不加载 Application，不依赖其它测试执行 |
+| `contract` | 明确的模块间协议、生产者/消费者约束及架构规则 | 保留必要真实协作，说明两端和断言目标；不能把不相关单元塞入此类以绕过检查 |
+| `integration` | 应用装配、真实进程/平台、端到端生命周期 | 拥有独立目录、进程与清理；保留恢复、未知结果和真实协作证据 |
+
+纯断言与临时目录分别使用 [assertions](scripts/support/assertions.ts) 和 [temp-directory](scripts/support/temp-directory.ts)；领域数据和场景夹具放在相应镜像目录的 `data/` 或 `support/`。[Application 夹具](src/logic/application/support/helpers.ts) 专门负责完整应用生命周期，不混放纯断言。辅助文件不能 import `.test` 文件；测试之间不能传递状态、执行顺序、端口或目录。每个测试清理自己的资源并恢复 mock，禁止依赖前一个测试的产物。
+
+## 目录镜像
+
+```text
+src/logic/tasks/rules/       → tests/src/logic/tasks/rules/
+src/view/tasks/              → tests/src/view/tasks/
+scripts/desktop-signing/     → tests/scripts/desktop-signing/
+工程整体                     → tests/*.test.ts
+```
+
+测试说明和归属登记分别集中在 `tests/README.md`、`tests/modules.json`。责任模块的 `directory`、`roots` 仍指向真实源码，不将镜像目录误作产品模块。
+
+## 日常执行
+
+```sh
+pnpm test:module --list
+pnpm test:incremental --list
+pnpm test:incremental
+pnpm test:module --module core/platform/node/files
+pnpm test:module --module logic/web/service
+pnpm test:module --module logic/web/service --kind contract --list
+pnpm test:module --module project --kind integration --list
+pnpm check:test-modules
+```
+
+`test:incremental` 默认只运行没有有效成功回执或受到变化影响的模块单元；首次使用没有基线，会运行全部已登记单元。`test:module` 只选择指定模块，也按指纹复用结果。`--force` 强制重跑；`--incremental --list` 或 `--json` 输出计划和原因，不执行测试。契约测试须明确选择 `--kind contract`，集成测试须明确选择 `--kind integration`；集成不缓存。CI 四分片仍执行完整发现集合，不读取本地缓存。
+
+本地记录位于 `test-results/module-tests/state.json`，原始报告位于同目录 `runs/`，都被 Git 忽略。记录包括模块与测试类型、实现／契约／输入／环境指纹、依赖契约和实际结果。只有批次正常结束、完整报告与精确选择匹配、模块内各文件通过且至少有一个通过用例、执行前后输入相同时才可复用。同批其他模块失败不撤销本模块的有效成功结果；本模块失败、全跳过、取消或进程异常中断不会保留旧成功资格。不要手工编辑为通过。
+
+模块默认以实现依赖闭包作保守契约指纹。确有独立边界时可登记 `contract: {"files": ["相对契约文件路径"], "revision": "行为版本"}`；行为语义变化必须更新正文或版本，不能仅凭类型未变跳过消费者。单元可以在这样的依赖边界停止传播，契约测试继续追踪实际组合实现。`inputs` 额外列出动态读取的本地配置／数据／目录，`cache: false` 禁用受不可固定外部状态影响的缓存；这些约定需要 review，静态依赖图不能识别任意动态读取。
+
+`tests/` 不进入产品架构模型和自动命名／排版范围，但仍参与类型及依赖检查。生产代码不得导入任何测试设施；桌面主进程、preload、界面和引擎适配器的构建入口都有测试依赖拦截，资源／安装暂存目录还有文件检查，Release 不编入自有测试代码。
+
+默认仅执行所选模块的 `unit`。需要消费者验证时根据 diff 显式选择 `--kind contract`、`--kind integration`、`--kind all`，或用 `pnpm exec vitest run <明确文件> [-t <用例>]` 选取更小范围。不存在的模块、空选择和错误参数退出失败，不退回全仓执行。`--module` 限定选择范围，不自动追加消费者；公共契约变化时应使用全模块增量计划或显式检查受影响消费者，不能只运行基础库自身测试。
+
+## 自动检查与 review
+
+`scripts/test-modules.mjs` 和 PR 验证共同执行以下规则：
+
+- 所有 Git 已跟踪测试及显式登记的新测试有唯一归属；缺文件、漏登记、重复归属和未知类型均失败。未提交、未登记的个人草稿暂不接管；新增测试一旦加入 Git 就必须登记。
+- 所有类型均核对源码目录到 `tests/` 的镜像映射。模块测试不得散落在 `tests/` 根层或其他模块目录；只有 `project` 的 `integration` 直接使用根层。跨模块协作由具体父模块负责时仍归该模块。旧 `unittest/` 中已跟踪的套件仍会被检查并报错，不能静默漏掉。
+- 单元沿测试辅助文件查真实运行时导入，限制在所属模块及明示的基础数据/契约支持范围。目录根只包含该目录直接文件；需要子模块须明确列出根，不能用 `src/` 隐藏全仓依赖。
+- 所有导入（含类型）都参与完整应用可达性判断；单元不能间接到达 `Application` 或完整应用夹具。所有测试类型都禁止导入其它测试套件。
+- 基础库只能经公开入口使用，其业务反向依赖和循环由现有依赖检查负责。测试目录归属不改变源码分层。
+
+静态检查不能证明断言只有一个业务责任，也不能发现所有动态共享状态或 mock 与真实端口不一致。Review 仍须检查变更原因、夹具生命周期、断言归属和失败语义。既有真实跨模块/应用测试按事实登记并保留；不能把它们一律宣称为已解耦单元，也不能删除断言换取通过。当前归属是可审阅基线，随实际修改继续精化，不是已对全部历史测试逐条完成语义审阅的保证。
+
+完整四片回归仍由面向 master 的 PR 验证执行；日常模块通过不等于全量、桌面安装或发布通过。拆分与迁移保留原有场景和断言，具体变更及验证事实以 Git 提交为准。

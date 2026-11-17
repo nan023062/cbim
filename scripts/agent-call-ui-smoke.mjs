@@ -9,7 +9,7 @@ await fs.writeFile(path.join(out,'agent-call-ui.html'),'<meta name="viewport" co
 await fs.writeFile(path.join(out,'agent-call-ui.tsx'),String.raw`
 import React from 'react';import {createRoot} from 'react-dom/client';
 import '/src/view/styles';
-import {inlineMainRuns} from '/src/view/execution-view/unittest/support/inline-conversation-fixture.ts';
+import {inlineMainRuns} from '/tests/src/view/execution-view/support/inline-conversation-fixture.ts';
 import {ToolTimeline} from '/src/view/execution-view/ToolTimeline.tsx';
 import {AgentCallDetails} from '/src/view/execution-view/AgentCallDetails.tsx';
 const parent=structuredClone(inlineMainRuns(0)[0]);parent.status='completed';

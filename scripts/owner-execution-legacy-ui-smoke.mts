@@ -4,9 +4,9 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import {createHash,randomUUID} from 'node:crypto';
 import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
-import {createOwnerExecutionLegacyFixture} from '../src/logic/dispatch/runtime/unittest/support/owner-execution-legacy-fixture';
-import {ownerExecutionRecords} from '../src/logic/team/service/unittest/support/owner-execution-fixture';
-import {knowledgeSourceDiskEvidence} from '../src/logic/workspace/service/unittest/support/knowledge-source-lifecycle-fixture';
+import {createOwnerExecutionLegacyFixture} from '../tests/src/logic/dispatch/runtime/support/owner-execution-legacy-fixture';
+import {ownerExecutionRecords} from '../tests/src/logic/team/service/support/owner-execution-fixture';
+import {knowledgeSourceDiskEvidence} from '../tests/src/logic/workspace/service/support/knowledge-source-lifecycle-fixture';
 import {latestExecutable} from './build-artifact.mjs';
 
 // The released old EXE creates all three historical states. The final EXE only reads/reconciles them;

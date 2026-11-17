@@ -61,11 +61,11 @@ export function testSubjects(root,file,edges){
 /** 目录是版本控制中的测试以及显式登记的新测试；不接管别人的未跟踪本地工作。CI 中新增测试必被纳入。 */
 function maintainedTests(root){
   // 旧目录不再执行，但仍识别已提交的残留测试，避免迁移遗漏或误放后静默失去覆盖。
-  return execFileSync('git',['ls-files','-z','--','unittest','tests','src','scripts'],{cwd:root,encoding:'utf8'}).split('\0').filter(file=>(testFile.test(file)||/^tests\/.*\.test\.(?:ts|mjs)$/.test(file))&&fs.existsSync(path.join(root,file)));
+  return execFileSync('git',['ls-files','-z','--','tests','unittest','src','scripts'],{cwd:root,encoding:'utf8'}).split('\0').filter(file=>(testFile.test(file)||/^(?:unittest\/|(?:src|scripts)\/(?:.*\/)?unittest\/).*\.test\.(?:ts|mjs)$/.test(file))&&fs.existsSync(path.join(root,file)));
 }
 
 export function checkTestModules(root=process.cwd(),options={}){
-  const catalog=options.catalog??JSON.parse(fs.readFileSync(path.join(root,'unittest/modules.json'),'utf8'));
+  const catalog=options.catalog??JSON.parse(fs.readFileSync(path.join(root,'tests/modules.json'),'utf8'));
   const report=options.dependencies??auditDependencies(root);
   const errors=[],entries=[],seen=new Set(),graph=new Map();
   if(report.ok===false)errors.push('Dependency audit failed; resolve invalid imports before selecting tests');
@@ -80,11 +80,11 @@ export function checkTestModules(root=process.cwd(),options={}){
       for(const file of definition.tests[kind]){
         if(!testFile.test(file)||file.split('/').includes('..')||!fs.existsSync(path.join(root,file))){errors.push(`Missing/invalid test: ${file}`);continue}
         if(seen.has(file))errors.push(`Duplicate owner: ${file}`);seen.add(file);entries.push({file,module,kind});
-        if(path.posix.dirname(file)!==unitTestDirectory(definition))errors.push(`Test must live in owner unittest/: ${module} -> ${file}`);
+        if(path.posix.dirname(file)!==unitTestDirectory(definition))errors.push(`Test must mirror owner directory under tests/: ${module} -> ${file}`);
         if(project&&kind!=='integration')errors.push(`Project-wide tests must be integration: ${file}`);
         if(kind!=='unit')continue;
         const dependencies=reachable(file,graph);
-        const assembly=[...dependencies].find(value=>value==='src/logic/application/application.ts'||value==='src/logic/application/unittest/support/helpers.ts');
+        const assembly=[...dependencies].find(value=>value==='src/logic/application/application.ts'||value==='tests/src/logic/application/support/helpers.ts');
         if(assembly)errors.push(`Unit loads application: ${file} -> ${assembly}`);
         const foreign=testSubjects(root,file,report.edges).filter(target=>![...definition.roots,...supportRoots].some(prefix=>belongs(target,prefix)));
         if(foreign.length)errors.push(`Unit crosses module: ${file} -> ${foreign.join(', ')}`);

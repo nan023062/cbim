@@ -6,9 +6,9 @@ import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
-import {businessReplanProvider,businessReplanFixture as data} from '../src/logic/execution/assembly/unittest/support/business-replan-provider';
-import {seedExecutionReport} from '../src/logic/evidence/runtime/unittest/support/execution-report-fixture';
-import {inspectionScopes,corruptInspectionHistory} from '../src/logic/tasks/runtime/unittest/support/inspection-cycle-fixture';
+import {businessReplanProvider,businessReplanFixture as data} from '../tests/src/logic/execution/assembly/support/business-replan-provider';
+import {seedExecutionReport} from '../tests/src/logic/evidence/runtime/support/execution-report-fixture';
+import {inspectionScopes,corruptInspectionHistory} from '../tests/src/logic/tasks/runtime/support/inspection-cycle-fixture';
 import type {ReplanRequest} from '../src/logic/tasks/rules/scope-replan';
 import {latestExecutable} from './build-artifact.mjs';
 

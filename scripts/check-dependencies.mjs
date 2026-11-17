@@ -11,7 +11,7 @@ import {isEngine,isOrchestration,orchestrationRoots,runtimePublicEntries} from '
 
 // 检查维护中的代码，而非编译后的 JS；类型边和 re-export 同样构成架构依赖。
 // .agents 是宿主提供的 Skill 符号链接入口，实际文件归 .claude 扫描，避免重复遍历。
-export const roots = ['src', 'unittest', 'scripts', 'design', 'docs', '.claude', '.codex'];
+export const roots = ['src', 'tests', 'unittest', 'scripts', 'design', 'docs', '.claude', '.codex'];
 const code = /\.(?:[cm]?[jt]sx?)$/;
 const slash = value => value.replaceAll('\\', '/');
 const key = value => process.platform === 'win32' ? slash(path.resolve(value)).toLowerCase() : path.resolve(value);
@@ -100,8 +100,8 @@ const moduleBoundaries=[
   {sources:['src/logic/execution/rules/index.ts'],allow:['src/logic/execution/rules/types.ts','src/logic/execution/rules/storage.ts','src/logic/execution/rules/runtime/runtime.ts','src/logic/execution/rules/member-run.ts','src/logic/execution/rules/input-source.ts','src/logic/execution/rules/conversation-binding.ts']},
   {sources:['src/logic/budget/runtime/model-request-budget-service.ts'],allow:[foundation,'src/logic/budget/rules/model-request-budget-storage.ts','src/logic/budget/rules/model-request-budget.ts','src/logic/budget/rules/model-request-budget-rules.ts','src/logic/budget/rules/model-request-configuration.ts',modelPublic,'src/logic/budget/rules/request-budget.ts','src/logic/team/rules/workspace-member-rules.ts','src/logic/budget/runtime/scope-budget-service.ts']},
   // 领域样本不能通过 helpers 或其他中间文件重新加载完整应用。
-  {sources:['src/logic/knowledge/rules/unittest/support/knowledge-data.ts'],allow:[knowledgeTypes,foundation]},
-  {sources:['src/logic/knowledge/rules/unittest/support/knowledge-fixture.ts'],allow:[knowledgeTypes,foundation,'src/logic/knowledge/rules/knowledge.ts','src/logic/knowledge/rules/unittest/support/knowledge-data.ts']},
+  {sources:['tests/src/logic/knowledge/rules/support/knowledge-data.ts'],allow:[knowledgeTypes,foundation]},
+  {sources:['tests/src/logic/knowledge/rules/support/knowledge-fixture.ts'],allow:[knowledgeTypes,foundation,'src/logic/knowledge/rules/knowledge.ts','tests/src/logic/knowledge/rules/support/knowledge-data.ts']},
   // 调度器只组合可移植公开算法，不取得 Node、files 或 web 的访问权。
   {sources:[...orchestrationRoots],allow:[...orchestrationRoots,'src/logic/execution/engines/','@domain-public','src/core/utility/index.ts',modelPublic,enginePublic,webPublic,feedbackPublic]},
 ];
@@ -120,7 +120,7 @@ export const externalLoads = [
   {file:'src/logic/file-operations/platform/files/controlled-file-win32.ts', expression:'requireNative(koffiPath)', reason:'专用 utility 的私有参数仅由 Main 固定 resources/koffi 或 require.resolve(koffi) 注入；独立 Electron 测试宿主同样使用真实第三方库，不来自模型或桌面 IPC'},
   {file:'src/logic/file-operations/platform/isolation/isolation-recovery-win32.ts', expression:'requireNative(koffiPath)', reason:'只接受Main私有装配的resources/koffi或require.resolve(koffi)，用于实际原进程/Job/目录核实，不接模型或桌面路径'},
   {file:'src/logic/file-operations/platform/isolation/isolated-node-win32.ts', expression:'requireNative(koffiPath)', reason:'隔离平台装配固定 resources/koffi 或 require.resolve(koffi)；仅加载第三方原生库，业务请求不能提供该私有参数'},
-  {file:'src/logic/execution/engines/pi/unittest/model-capacity-sdk.test.ts', expression:"import(pathToFileURL(path.resolve('node_modules/@earendil-works/pi-ai/dist/api/simple-options.js')).href)", reason:'测试固定版本的第三方 Pi 内部容量函数'},
+  {file:'tests/src/logic/execution/engines/pi/model-capacity-sdk.test.ts', expression:"import(pathToFileURL(path.resolve('node_modules/@earendil-works/pi-ai/dist/api/simple-options.js')).href)", reason:'测试固定版本的第三方 Pi 内部容量函数'},
 ];
 // 冷壳从已验证的构建目录加载固定业务入口；仍把源码边纳入分层与循环检查，不作为外部豁免。
 export const generatedLoads = [
@@ -281,7 +281,7 @@ export function auditDependencies(root = process.cwd(), options = {}) {
   });
   const circular = cycles([...known.values()],edges);
   // 产品层规则不作用于验证设施，但迁移后的纯领域数据仍保留原有窄依赖/公开入口检查。
-  const testData=file=>file.startsWith('src/logic/knowledge/rules/unittest/data/');
+  const testData=file=>file.startsWith('tests/src/logic/knowledge/rules/data/');
   const logical = checkLogicalBoundaries([...known.values()].filter(file=>!isUnitTestPath(file)||testData(file)),edges.filter(edge=>(!isUnitTestPath(edge.from)&&!isUnitTestPath(edge.to))||testData(edge.from)||testData(edge.to)),externalReferences.filter(reference=>!isUnitTestPath(reference.file)||testData(reference.file)));
   for(const file of known.values())if(file.startsWith('src/')&&!isTestSupport(file)&&!layers[layerOf(file)])logical.violations.push({file,rule:'unknown-source-layer',boundary:layerOf(file)});
   logical.violations.push(...modelFacadeViolations);

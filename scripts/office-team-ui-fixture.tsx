@@ -2,8 +2,8 @@
 import React from 'react';
 import {createRoot} from 'react-dom/client';
 import '../src/view/styles';
-import {progressFixture,progressMemberRun,progressIdentity,progressTime} from '../src/view/tasks/unittest/support/conversation-progress-fixture';
-import {inlineMainRuns} from '../src/view/execution-view/unittest/support/inline-conversation-fixture';
+import {progressFixture,progressMemberRun,progressIdentity,progressTime} from '../tests/src/view/tasks/support/conversation-progress-fixture';
+import {inlineMainRuns} from '../tests/src/view/execution-view/support/inline-conversation-fixture';
 import {summarizeScope} from '../src/logic/tasks/rules/scope-view';
 const id=progressIdentity.workspaceId,profileId='11111111-1111-4111-8111-111111111111',instanceId='33333333-3333-4333-8333-333333333333';
 const entry={id,name:'办公室验收夹具',path:'C:/isolated-office-fixture',state:'running',instanceId,tasks:[],revision:'revision'};

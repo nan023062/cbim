@@ -5,8 +5,8 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
-import {insertionData as data,insertionProvider} from '../src/logic/conversation/runtime/unittest/support/queue-insertion-provider';
-import {insertionWait,seedInsertion} from '../src/logic/conversation/runtime/unittest/support/queue-insertion-fixture';
+import {insertionData as data,insertionProvider} from '../tests/src/logic/conversation/runtime/support/queue-insertion-provider';
+import {insertionWait,seedInsertion} from '../tests/src/logic/conversation/runtime/support/queue-insertion-fixture';
 import {latestExecutable} from './build-artifact.mjs';
 
 // 仅本测试进程/快照的读取返回可延迟；文件、Pi、队列以及停止按钮均为真实生产路径。

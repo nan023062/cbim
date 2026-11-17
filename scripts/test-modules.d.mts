@@ -1,4 +1,4 @@
-export interface TestModuleDefinition {roots:string[];tests:Record<string,string[]>}
+export interface TestModuleDefinition {roots:string[];directory?:string;inputs?:string[];contract?:{files:string[];revision:string};cache?:boolean;tests:Record<string,string[]>}
 export interface TestModuleCatalog {version:number;modules:Record<string,TestModuleDefinition>}
 export interface TestModuleEntry {file:string;module:string;kind:string}
 export interface TestDependencyEdge {from:string;to:string;line:number;kind:string;spec:string}

@@ -1,6 +1,6 @@
 export interface DependencyEdge {from:string; to:string; line:number; kind:string; spec:string}
 export interface DependencyReport {
-  ok:boolean; files:number; edges:DependencyEdge[];
+  ok:boolean; files:number; sourceFiles:string[]; edges:DependencyEdge[];
   cycles:{files:string[]; edges:DependencyEdge[]}[];
   unresolved:unknown[]; dynamic:unknown[]; external:unknown[]; violations:DependencyEdge[];
   logicalViolations:({rule:string;boundary:string}&Partial<DependencyEdge>&{file?:string})[];

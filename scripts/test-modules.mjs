@@ -2,13 +2,15 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {execFileSync,spawnSync} from 'node:child_process';
-import {createRequire} from 'node:module';
+import {execFileSync} from 'node:child_process';
 import ts from 'typescript';
 import {auditDependencies} from './check-dependencies.mjs';
+import {testFilePattern, isTestSupport, unitTestDirectory} from './test-paths.mjs';
+import {snapshotTests, planTests} from './test-fingerprints.mjs';
+import {defaultStateFile, readTestState, runIncrementalTests} from './incremental-tests.mjs';
 
 const kinds=['unit','contract','integration'];
-const testFile=/^tests\/.*\.test\.(?:ts|mjs)$/;
+const testFile=testFilePattern;
 const belongs=(file,root)=>file===root||root.endsWith('/')&&path.posix.dirname(file)+'/'===root;
 // 这些是数据/契约支持，不是允许导入其它领域实现的豁免；完整应用和跨套件依赖仍独立检查。
 const supportRoots=['src/core/errors.ts','src/core/json.ts','src/core/platform/node/serialization.ts','src/bridge/contracts/','src/core/utility/index.ts','src/core/platform/node/digest.ts'];
@@ -49,7 +51,7 @@ export function testSubjects(root,file,edges){
     if(seen.has(queue[i]))continue;seen.add(queue[i]);
     for(const edge of edges.filter(item=>item.from===queue[i])){
       if(!runtimeReference(root,edge))continue;
-      if(edge.to.startsWith('tests/'))queue.push(edge.to);
+      if(isTestSupport(edge.to))queue.push(edge.to);
       else if(edge.to.startsWith('src/')||edge.to.startsWith('scripts/'))subjects.add(edge.to);
     }
   }
@@ -58,7 +60,7 @@ export function testSubjects(root,file,edges){
 
 /** 目录是版本控制中的测试以及显式登记的新测试；不接管别人的未跟踪本地工作。CI 中新增测试必被纳入。 */
 function maintainedTests(root){
-  return execFileSync('git',['ls-files','-z','--','tests'],{cwd:root,encoding:'utf8'}).split('\0').filter(file=>testFile.test(file));
+  return execFileSync('git',['ls-files','-z','--','tests','src','scripts'],{cwd:root,encoding:'utf8'}).split('\0').filter(file=>testFile.test(file)&&fs.existsSync(path.join(root,file)));
 }
 
 export function checkTestModules(root=process.cwd(),options={}){
@@ -70,12 +72,14 @@ export function checkTestModules(root=process.cwd(),options={}){
   if(catalog.version!==1||!catalog.modules||typeof catalog.modules!=='object')return {ok:false,errors:['Invalid module catalog'],entries:[]};
   for(const [module,definition] of Object.entries(catalog.modules)){
     if(!/^[a-z0-9][a-z0-9/_-]*$/.test(module)||!Array.isArray(definition.roots)||definition.roots.some(root=>!root.startsWith('src/')&&!root.startsWith('scripts/')))errors.push(`Invalid module: ${module}`);
+    if(definition.directory&&(!/^(?:src|scripts)(?:\/[a-zA-Z0-9_-]+)*$/.test(definition.directory)||!definition.roots.some(entry=>entry===definition.directory+'/'||path.posix.dirname(entry)===definition.directory)))errors.push(`Invalid module directory: ${module}`);
     for(const kind of Object.keys(definition.tests??{})){
       if(!kinds.includes(kind)){errors.push(`Unknown test kind: ${module}/${kind}`);continue}
       for(const file of definition.tests[kind]){
         if(!testFile.test(file)||file.split('/').includes('..')||!fs.existsSync(path.join(root,file))){errors.push(`Missing/invalid test: ${file}`);continue}
         if(seen.has(file))errors.push(`Duplicate owner: ${file}`);seen.add(file);entries.push({file,module,kind});
         if(kind!=='unit')continue;
+        if(path.posix.dirname(file)!==unitTestDirectory(definition))errors.push(`Unit must live in module unittest/: ${module} -> ${file}`);
         const dependencies=reachable(file,graph);
         const assembly=[...dependencies].find(value=>value==='src/logic/application/application.ts'||value==='tests/helpers.ts');
         if(assembly)errors.push(`Unit loads application: ${file} -> ${assembly}`);
@@ -85,8 +89,8 @@ export function checkTestModules(root=process.cwd(),options={}){
     }
   }
   for(const file of options.files??maintainedTests(root))if(!seen.has(file))errors.push(`Unregistered test: ${file}`);
-  for(const edge of report.edges)if(edge.from.startsWith('tests/')&&testFile.test(edge.to))errors.push(`Test imports another suite: ${edge.from} -> ${edge.to}`);
-  return {ok:errors.length===0,errors,entries};
+  for(const edge of report.edges)if(isTestSupport(edge.from)&&testFile.test(edge.to))errors.push(`Test imports another suite: ${edge.from} -> ${edge.to}`);
+  return {ok:errors.length===0,errors,entries,catalog,dependencies:report};
 }
 
 /** 默认只选模块单元；契约/集成须显式选择，未知模块或空选择直接失败，不退回全仓。 */
@@ -101,21 +105,33 @@ function main(){
   const args=process.argv.slice(2),value=name=>{const i=args.indexOf(name);return i<0?undefined:args[i+1]};
   for(let i=0;i<args.length;i++){
     if(['--module','--kind'].includes(args[i])){if(!args[++i]||args[i].startsWith('--'))throw Error('Missing option value')}
-    else if(!['--check','--list'].includes(args[i]))throw Error(`Unknown option: ${args[i]}`);
+    else if(!['--check','--list','--incremental','--force','--json'].includes(args[i]))throw Error(`Unknown option: ${args[i]}`);
   }
   const report=checkTestModules();
   if(!report.ok)throw Error(report.errors.join('\n'));
   if(args.includes('--check')){console.log(`测试边界通过：${report.entries.length} 文件，${kinds.map(kind=>`${kind}=${report.entries.filter(entry=>entry.kind===kind).length}`).join('，')}`);return}
   const module=value('--module');
-  if(!module){
+  if(!module&&!args.includes('--incremental')){
     if(!args.includes('--list'))throw Error('Specify --module <name>, --list or --check');
     for(const name of [...new Set(report.entries.map(entry=>entry.module))].sort())console.log(`${name}: ${kinds.map(kind=>`${kind}=${report.entries.filter(entry=>entry.module===name&&entry.kind===kind).length}`).join(' ')}`);
     return;
   }
-  const files=selectModuleTests(report.entries,module,value('--kind'));
-  if(args.includes('--list')){console.log(files.join('\n'));return}
-  const require=createRequire(import.meta.url),cli=path.join(path.dirname(require.resolve('vitest/package.json')),'vitest.mjs');
-  const result=spawnSync(process.execPath,[cli,'run',...files],{stdio:'inherit',windowsHide:true});
-  if(result.error)throw result.error;process.exitCode=result.status??1;
+  const options={module,kind:value('--kind'),force:args.includes('--force')};
+  if(args.includes('--list')&&!args.includes('--incremental')&&!args.includes('--json')){console.log(selectModuleTests(report.entries,module,value('--kind')).join('\n'));return}
+  const root=process.cwd();
+  const snapshot=()=>{
+    const current=checkTestModules(root);
+    if(!current.ok)throw Error(current.errors.join('\n'));
+    return snapshotTests(root,current.catalog,current.entries,current.dependencies);
+  };
+  if(args.includes('--list')||args.includes('--json')){
+    const plan=planTests(snapshotTests(root,report.catalog,report.entries,report.dependencies),readTestState(defaultStateFile(root)).records,options);
+    if(args.includes('--json'))console.log(JSON.stringify(plan,null,2));
+    else for(const item of plan)console.log(`${item.action} ${item.key} (${item.files.length}) ${item.reason}`);
+    return;
+  }
+  const result=runIncrementalTests(root,snapshot,options);
+  console.log(`模块测试：运行 ${result.ran}，复用 ${result.reused}。`);
+  if(!result.ok)process.exitCode=1;
 }
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url))try{main()}catch(error){console.error(error.message);process.exitCode=1}

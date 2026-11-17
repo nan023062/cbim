@@ -1,2 +1,3 @@
 import { defineConfig } from 'vite';
-export default defineConfig({build:{rollupOptions:{external:['electron']}}});
+import {productionTestGuard} from './scripts/production-test-guard.mjs';
+export default defineConfig({plugins:[productionTestGuard()],build:{rollupOptions:{external:['electron']}}});

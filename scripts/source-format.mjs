@@ -345,7 +345,7 @@ function sourceFiles(directory)
   return fs.readdirSync(directory, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name, 'en')).flatMap(entry => {
     const file = path.join(directory, entry.name);
     if (entry.isSymbolicLink()) throw Error(`源码目录不接受符号链接：${file}`);
-    return entry.isDirectory() ? sourceFiles(file) : /\.[cm]?[jt]sx?$/.test(entry.name) ? [file] : [];
+    return entry.isDirectory() ? entry.name === 'unittest' ? [] : sourceFiles(file) : /\.[cm]?[jt]sx?$/.test(entry.name) ? [file] : [];
   });
 }
 

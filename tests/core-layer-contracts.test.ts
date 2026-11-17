@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 it('领域规则不反向导入服务、具体引擎、Bridge、View 或 Electron，包括类型依赖',()=>{
-  const walk=(directory:string):string[]=>fs.readdirSync(directory,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(path.join(directory,e.name)):[path.join(directory,e.name)]);
+  const walk=(directory:string):string[]=>fs.readdirSync(directory,{withFileTypes:true}).flatMap(e=>e.isDirectory()?e.name==='unittest'?[]:walk(path.join(directory,e.name)):[path.join(directory,e.name)]);
   const files=walk('src/logic').filter(p=>p.endsWith('.ts')&&(/\/logic\/[^/]+\/(rules|ports)(\/|$)/.test(path.resolve(p).replaceAll('\\','/'))||path.resolve(p).replaceAll('\\','/').endsWith('/logic/agents/contracts.ts')));
   expect(files.length).toBeGreaterThan(0);
   for(const file of files){
@@ -16,7 +16,7 @@ it('领域规则不反向导入服务、具体引擎、Bridge、View 或 Electro
 });
 it('编排仅在 execution/assembly 选择具体引擎，不直接取得应用服务或平台',()=>{
   const root=path.resolve('src').replaceAll('\\','/');
-  const walk=(directory:string):string[]=>fs.readdirSync(directory,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(path.join(directory,e.name)):[path.join(directory,e.name)]);
+  const walk=(directory:string):string[]=>fs.readdirSync(directory,{withFileTypes:true}).flatMap(e=>e.isDirectory()?e.name==='unittest'?[]:walk(path.join(directory,e.name)):[path.join(directory,e.name)]);
   const orchestration=(p:string)=>/\/logic\/(execution\/(admission|assembly|context)|[^/]+\/(runtime|monitoring))\//.test(p);
   const files=walk('src/logic').filter(p=>p.endsWith('.ts')&&orchestration(path.resolve(p).replaceAll('\\','/')));
   expect(files.length).toBeGreaterThan(0);

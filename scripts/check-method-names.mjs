@@ -115,7 +115,7 @@ export function checkMethodNames(root = process.cwd())
     for (const entry of fs.readdirSync(directory, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name)))
     {
       const file = path.join(directory, entry.name);
-      if (entry.isDirectory()) visit(file);
+      if (entry.isDirectory()) { if (entry.name !== 'unittest') visit(file); }
       else if (entry.isFile() && /\.(?:ts|tsx|js|mjs|cjs)$/.test(entry.name)) sources.push({ file: slash(path.relative(root, file)), text: fs.readFileSync(file, 'utf8') });
     }
   }

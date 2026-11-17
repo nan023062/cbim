@@ -3,6 +3,7 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {builtinModules} from 'node:module';
 import ts from 'typescript';
+import {isTestSupport, isUnitTestPath} from './test-paths.mjs';
 import {checkLogicalBoundaries} from './architecture-boundaries.mjs';
 import {isDomainFile,domainPublicEntries} from './logic-domain-entries.mjs';
 import {isService,servicePublicEntries,businessDataEntries} from './logic-service-entries.mjs';
@@ -252,6 +253,8 @@ export function auditDependencies(root = process.cwd(), options = {}) {
     }
   }
   const violations = edges.filter(e => {
+    if(e.from.startsWith('src/')&&!isTestSupport(e.from)&&isTestSupport(e.to))return true;
+    if(isUnitTestPath(e.from))return false;
     if(e.from.startsWith('src/')&&e.to.startsWith('src/')){
       const a=layerOf(e.from),b=layerOf(e.to);
       if(e.to==='src/core/platform/electron/web-reader.ts'&&e.from!=='src/bridge/server/main.ts'&&!e.from.startsWith('src/core/platform/electron/'))return true;
@@ -274,18 +277,28 @@ export function auditDependencies(root = process.cwd(), options = {}) {
     return !!boundary&&!boundary.allow.some(target=>matchesBoundary(e.to,target));
   });
   const circular = cycles([...known.values()],edges);
-  const logical = checkLogicalBoundaries([...known.values()],edges,externalReferences);
-  for(const file of known.values())if(file.startsWith('src/')&&!layers[layerOf(file)])logical.violations.push({file,rule:'unknown-source-layer',boundary:layerOf(file)});
+  const logical = checkLogicalBoundaries([...known.values()].filter(file=>!isUnitTestPath(file)),edges.filter(edge=>!isUnitTestPath(edge.from)&&!isUnitTestPath(edge.to)),externalReferences.filter(reference=>!isUnitTestPath(reference.file)));
+  for(const file of known.values())if(file.startsWith('src/')&&!isTestSupport(file)&&!layers[layerOf(file)])logical.violations.push({file,rule:'unknown-source-layer',boundary:layerOf(file)});
   logical.violations.push(...modelFacadeViolations);
+  // 生产入口不能经工程辅助文件间接加载测试设施；类型边同样参与可达性判断。
+  const reverse=new Map();
+  for(const edge of edges){if(!reverse.has(edge.to))reverse.set(edge.to,[]);reverse.get(edge.to).push(edge.from)}
+  const testing=new Set([...known.values()].filter(isTestSupport));
+  for(const reference of externalReferences)if(/^(?:vitest(?:\/|$)|@vitest\/|node:test$)/.test(reference.spec))testing.add(reference.file);
+  const testingQueue=[...testing];
+  for(let i=0;i<testingQueue.length;i++)for(const source of reverse.get(testingQueue[i])??[])if(!testing.has(source)){testing.add(source);testingQueue.push(source)}
+  for(const file of testing)if(file.startsWith('src/')&&!isTestSupport(file))logical.violations.push({file,rule:'production-test-dependency',boundary:'production'});
   // 运行环境限制同时覆盖 npm/内置模块导入，避免绕过 Core 平台入口直接取得 Node/Electron。
   for(const reference of externalReferences){
+    if(isTestSupport(reference.file))continue;
+    if(reference.file.startsWith('src/')&&/^(?:vitest(?:\/|$)|@vitest\/|node:test$)/.test(reference.spec))logical.violations.push({...reference,rule:'production-test-dependency',boundary:'production'});
     const layer=layerOf(reference.file);
     if(['view','bridge/client','bridge/contracts','core/platform/browser'].includes(layer)
       &&(reference.spec.startsWith('node:')||builtinModules.includes(reference.spec)||reference.spec==='electron'||reference.spec.startsWith('electron/'))){
       logical.violations.push({...reference,rule:'runtime-environment',boundary:layer});
     }
   }
-  return {ok:!circular.length && !unresolved.length && !dynamic.length && !violations.length && !logical.violations.length, files:unique.length, edges, cycles:circular, unresolved, dynamic, external, violations, logicalViolations:logical.violations, logicalCoverage:logical.coverage};
+  return {ok:!circular.length && !unresolved.length && !dynamic.length && !violations.length && !logical.violations.length, files:unique.length, sourceFiles:[...known.values()], edges, cycles:circular, unresolved, dynamic, external, violations, logicalViolations:logical.violations, logicalCoverage:logical.coverage};
 }
 
 if (process.argv[1] && key(fileURLToPath(import.meta.url)) === key(process.argv[1])) {

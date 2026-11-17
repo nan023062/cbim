@@ -21,7 +21,8 @@ export function codexResponse(res:http.ServerResponse,call?:{id:string;name:stri
 export async function codexFixture(options:{tool?:'internal'|'read'|'write'|'bash';allow?:boolean|'throw';hold?:boolean;failFirst?:boolean;afterTool?:'incomplete'|'hold';incompleteTool?:boolean}={}){
   const root=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-codex-')),cwd=path.join(root,'project'),home=path.join(root,'engine');await fs.mkdir(cwd);await fs.writeFile(path.join(cwd,'sample.txt'),'sample content');
   const calls:ToolCall[]=[],events:EngineEvent[]=[],invocations:unknown[]=[],requests:any[]=[],errors:string[]=[];
-  const callId='tool_'+randomUUID(),tool=options.tool,input=tool==='write'?{path:path.join(cwd,'written.txt'),content:'Codex wrote this'}:tool==='read'?{path:path.join(cwd,'sample.txt')}:tool==='bash'?{command:'echo cbim-codex-command'}:{value:'test'},name=tool==='internal'?'cbim_test_read':'cbim_native_'+tool;
+  // 调用方可在请求开始前替换样本路径；显式可写类型避免条件对象联合被推断为只读属性。
+  const callId='tool_'+randomUUID(),tool=options.tool,input:Record<string,string>=tool==='write'?{path:path.join(cwd,'written.txt'),content:'Codex wrote this'}:tool==='read'?{path:path.join(cwd,'sample.txt')}:tool==='bash'?{command:'echo cbim-codex-command'}:{value:'test'},name=tool==='internal'?'cbim_test_read':'cbim_native_'+tool;
   let arrived!:()=>void;const received=new Promise<void>(resolve=>{arrived=resolve});
   const server=http.createServer(async(req,res)=>{try{let text='';for await(const chunk of req)text+=chunk;const body=JSON.parse(text);requests.push({url:req.url,body});arrived();if(options.hold)return;if(options.failFirst&&requests.length===1){res.writeHead(400,{'content-type':'application/json'});res.end(JSON.stringify({error:{message:'Invalid test tool schema',type:'invalid_request_error'}}));return}
     if(requests.length===2&&options.afterTool){

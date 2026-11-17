@@ -7,6 +7,15 @@ import {afterEach,expect,test} from 'vitest';
 const generator=path.resolve('scripts/source-architecture.mjs');
 const temporary:string[]=[];
 const start='<!-- architecture:generated:start -->',end='<!-- architecture:generated:end -->';
+
+test('模块内 unittest 不是业务子模块，忽略其模型与测试辅助依赖',()=>{
+  const project=fixture({'src/logic/sample/index.ts':'export class Service {}'});
+  project.write('src/logic/sample/unittest/service.test.ts',"import {Service} from '..'; import {helper} from '../../../../tests/helper';");
+  project.write('tests/helper.ts','export const helper=1;');
+  const result=project.run();expect(result.status,result.stderr).toBe(0);
+  const document=project.read('src/logic/sample/ARCHITECTURE.md');
+  expect(document).not.toContain('unittest');expect(document).not.toContain('helper');
+});
 afterEach(()=>{for(const root of temporary.splice(0))fs.rmSync(root,{recursive:true,force:true})});
 
 function manual(name:string,rows:string[]=[]){

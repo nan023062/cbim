@@ -5,6 +5,7 @@ import {createHash,createPrivateKey,createPublicKey,sign} from 'node:crypto';
 import {createRequire} from 'node:module';
 import {pipeline} from 'node:stream/promises';
 import {execFileSync} from 'node:child_process';
+import {assertProductionTree} from './production-test-guard.mjs';
 import {validateRuntimeFiles,verifyRuntimeManifest,type ColdRuntime,type RuntimeFile,type RuntimePackage,type RuntimeManifest,type EnginePackage} from '../src/logic/updates/service/runtime-manifest';
 
 const require=createRequire(import.meta.url),{ZipFile}=require('yazl');
@@ -47,6 +48,7 @@ export async function coldFingerprint(bootstrap:string,repo=process.cwd()){
 }
 /** 仅收集编译后的业务和法律资料；内置正文已编入业务代码，设计、独立规范文件和原生品牌不进入可更新 R。 */
 export async function collectResources(viteDirectory:string,target:string,repo=process.cwd()){
+  assertProductionTree(viteDirectory);
   await fs.mkdir(target);await fs.cp(viteDirectory,path.join(target,'.vite'),{recursive:true,filter:file=>!['desktop.js','desktop.js.map'].includes(path.basename(file))&&!file.endsWith('.map')});
   await fs.cp(path.join(repo,'legal'),path.join(target,'legal'),{recursive:true});
   await fs.writeFile(path.join(target,'package.json'),JSON.stringify({private:true,type:'commonjs'}));
@@ -86,6 +88,7 @@ export async function signRuntimeManifest(manifest:RuntimeManifest,key:Awaited<R
 }
 /** Forge 包装后冻结 R1 与 E 制品，安装包仅携带冷壳和 R1；E 从固定 Release 下载。 */
 export async function stageColdRuntime(appDirectory:string,buildRoot:string,version:string,notes:string){
+  assertProductionTree(appDirectory);
   if(process.platform!=='win32'||process.arch!=='x64')throw Error('分层桌面包目前只支持 Windows x64');
   const key=await runtimeSigningKey(),output=path.join(buildRoot,'runtime'),resourceRoot=path.join(buildRoot,'bundled-resources');
   const cold:ColdRuntime={schema:1,codeVersion:version,platform:'win32-x64',coldFingerprint:await coldFingerprint(path.join(appDirectory,'.vite/build/desktop.js')),publicKey:createPublicKey(key).export({type:'spki',format:'pem'}).toString()};

@@ -7,12 +7,13 @@
       ],
       "tests": {
         "unit": [
-          "tests/agent-object.test.ts",
-          "tests/agent-call-exchange.test.ts"
+          "src/logic/agents/unittest/agent-object.test.ts",
+          "src/logic/agents/unittest/agent-call-exchange.test.ts"
         ],
         "contract": [],
         "integration": []
-      }
+      },
+      "directory": "src/logic/agents"
     },
     "application": {
       "roots": [
@@ -215,7 +216,8 @@
           "tests/memory-engine-application.test.ts",
           "tests/agent-controlled-file-pi.test.ts"
         ]
-      }
+      },
+      "directory": "src/logic/application"
     },
     "logic/budget/rules": {
       "roots": [
@@ -223,13 +225,14 @@
       ],
       "tests": {
         "unit": [
-          "tests/unit/logic/budget/model-role-rules.test.ts"
+          "src/logic/budget/rules/unittest/model-role-rules.test.ts"
         ],
         "contract": [
           "tests/scope-usage-metering.test.ts"
         ],
         "integration": []
-      }
+      },
+      "directory": "src/logic/budget/rules"
     },
     "logic/connectors/rules": {
       "roots": [
@@ -237,11 +240,12 @@
       ],
       "tests": {
         "unit": [
-          "tests/connector-registry.test.ts"
+          "src/logic/connectors/rules/unittest/connector-registry.test.ts"
         ],
         "contract": [],
         "integration": []
-      }
+      },
+      "directory": "src/logic/connectors/rules"
     },
     "logic/evidence/rules": {
       "roots": [
@@ -249,7 +253,7 @@
       ],
       "tests": {
         "unit": [
-          "tests/task-progress.test.ts"
+          "src/logic/evidence/rules/unittest/task-progress.test.ts"
         ],
         "contract": [
           "tests/artifact-evidence.test.ts",
@@ -263,7 +267,8 @@
           "tests/workflow-evidence.test.ts"
         ],
         "integration": []
-      }
+      },
+      "directory": "src/logic/evidence/rules"
     },
     "logic/execution/rules": {
       "roots": [
@@ -271,8 +276,8 @@
       ],
       "tests": {
         "unit": [
-          "tests/engine-session.test.ts",
-          "tests/runtime-usage.test.ts"
+          "src/logic/execution/rules/unittest/engine-session.test.ts",
+          "src/logic/execution/rules/unittest/runtime-usage.test.ts"
         ],
         "contract": [
           "tests/conversation-binding.test.ts",
@@ -291,7 +296,8 @@
         "integration": [
           "tests/isolation-recovery-win32.test.ts"
         ]
-      }
+      },
+      "directory": "src/logic/execution/rules"
     },
     "logic/execution/rules/capabilities": {
       "roots": [
@@ -307,7 +313,8 @@
           "tests/png-validation-runtime.test.ts"
         ],
         "integration": []
-      }
+      },
+      "directory": "src/logic/execution/rules/capabilities"
     },
     "logic/execution/rules/runtime": {
       "roots": [
@@ -324,7 +331,8 @@
           "tests/scoped-execution-runtime.test.ts"
         ],
         "integration": []
-      }
+      },
+      "directory": "src/logic/execution/rules/runtime"
     },
     "logic/file-operations/rules": {
       "roots": [
@@ -338,7 +346,8 @@
           "tests/controlled-file-store.test.ts"
         ],
         "integration": []
-      }
+      },
+      "directory": "src/logic/file-operations/rules"
     },
     "logic/governance/rules": {
       "roots": [
@@ -346,15 +355,16 @@
       ],
       "tests": {
         "unit": [
-          "tests/governance-feedback-wire.test.ts",
-          "tests/module-governance-core.test.ts",
-          "tests/module-governance-feedback-core.test.ts"
+          "src/logic/governance/rules/unittest/governance-feedback-wire.test.ts",
+          "src/logic/governance/rules/unittest/module-governance-core.test.ts",
+          "src/logic/governance/rules/unittest/module-governance-feedback-core.test.ts"
         ],
         "contract": [
           "tests/governance-tool-core.test.ts"
         ],
         "integration": []
-      }
+      },
+      "directory": "src/logic/governance/rules"
     },
     "logic/knowledge/rules": {
       "roots": [
@@ -362,16 +372,17 @@
       ],
       "tests": {
         "unit": [
-          "tests/builtin-documents.test.ts",
-          "tests/knowledge-queries.test.ts",
-          "tests/unit/logic/knowledge/memory-index.test.ts"
+          "src/logic/knowledge/rules/unittest/builtin-documents.test.ts",
+          "src/logic/knowledge/rules/unittest/knowledge-queries.test.ts",
+          "src/logic/knowledge/rules/unittest/memory-index.test.ts"
         ],
         "contract": [
           "tests/knowledge-query-ports.test.ts",
           "tests/rules.test.ts"
         ],
         "integration": []
-      }
+      },
+      "directory": "src/logic/knowledge/rules"
     },
     "logic/knowledge/rules/read-models": {
       "roots": [
@@ -379,11 +390,12 @@
       ],
       "tests": {
         "unit": [
-          "tests/core-domains.test.ts"
+          "src/logic/knowledge/rules/read-models/unittest/core-domains.test.ts"
         ],
         "contract": [],
         "integration": []
-      }
+      },
+      "directory": "src/logic/knowledge/rules/read-models"
     },
     "logic/tasks/rules": {
       "roots": [
@@ -391,13 +403,13 @@
       ],
       "tests": {
         "unit": [
-          "tests/effect-observation-core.test.ts",
-          "tests/member-topic-context.test.ts",
-          "tests/human-continuation-core.test.ts",
-          "tests/human-decisions-core.test.ts",
-          "tests/queued-dependency-replacement-core.test.ts",
-          "tests/queued-dependency-revision-core.test.ts",
-          "tests/scope-active-input-core.test.ts"
+          "src/logic/tasks/rules/unittest/effect-observation-core.test.ts",
+          "src/logic/tasks/rules/unittest/member-topic-context.test.ts",
+          "src/logic/tasks/rules/unittest/human-continuation-core.test.ts",
+          "src/logic/tasks/rules/unittest/human-decisions-core.test.ts",
+          "src/logic/tasks/rules/unittest/queued-dependency-replacement-core.test.ts",
+          "src/logic/tasks/rules/unittest/queued-dependency-revision-core.test.ts",
+          "src/logic/tasks/rules/unittest/scope-active-input-core.test.ts"
         ],
         "contract": [
           "tests/automatic-return.test.ts",
@@ -415,7 +427,8 @@
           "tests/workflow-selection-core.test.ts"
         ],
         "integration": []
-      }
+      },
+      "directory": "src/logic/tasks/rules"
     },
     "logic/team/rules": {
       "roots": [
@@ -423,7 +436,7 @@
       ],
       "tests": {
         "unit": [
-          "tests/team-session.test.ts"
+          "src/logic/team/rules/unittest/team-session.test.ts"
         ],
         "contract": [
           "tests/owner-execution-core.test.ts",
@@ -431,7 +444,8 @@
           "tests/workspace-member-core.test.ts"
         ],
         "integration": []
-      }
+      },
+      "directory": "src/logic/team/rules"
     },
     "logic/tools/rules": {
       "roots": [
@@ -439,7 +453,7 @@
       ],
       "tests": {
         "unit": [
-          "tests/tool-registry.test.ts"
+          "src/logic/tools/rules/unittest/tool-registry.test.ts"
         ],
         "contract": [
           "tests/repository-tool-core.test.ts",
@@ -448,7 +462,8 @@
           "tests/workflow-runtime.test.ts"
         ],
         "integration": []
-      }
+      },
+      "directory": "src/logic/tools/rules"
     },
     "logic/workspace/rules": {
       "roots": [
@@ -456,7 +471,7 @@
       ],
       "tests": {
         "unit": [
-          "tests/workflow-contract.test.ts"
+          "src/logic/workspace/rules/unittest/workflow-contract.test.ts"
         ],
         "contract": [
           "tests/artifact-transition-evidence.test.ts",
@@ -466,7 +481,8 @@
           "tests/module-ownership-core.test.ts"
         ],
         "integration": []
-      }
+      },
+      "directory": "src/logic/workspace/rules"
     },
     "logic/execution/engines": {
       "roots": [
@@ -474,7 +490,7 @@
       ],
       "tests": {
         "unit": [
-          "tests/native-tool-paths.test.ts"
+          "src/logic/execution/engines/unittest/native-tool-paths.test.ts"
         ],
         "contract": [
           "tests/engine-runtime-binding.test.ts",
@@ -484,7 +500,8 @@
           "tests/engine-adapter-package.test.ts",
           "tests/engine-production-boundary.test.ts"
         ]
-      }
+      },
+      "directory": "src/logic/execution/engines"
     },
     "logic/execution/engines/claude": {
       "roots": [
@@ -492,13 +509,14 @@
       ],
       "tests": {
         "unit": [
-          "tests/claude-engine.test.ts"
+          "src/logic/execution/engines/claude/unittest/claude-engine.test.ts"
         ],
         "contract": [
           "tests/engine-capability-policy.test.ts"
         ],
         "integration": []
-      }
+      },
+      "directory": "src/logic/execution/engines/claude"
     },
     "logic/execution/engines/codex": {
       "roots": [
@@ -506,13 +524,14 @@
       ],
       "tests": {
         "unit": [
-          "tests/codex-engine.test.ts",
-          "tests/codex-tools.test.ts",
-          "tests/codex-write-recovery.test.ts"
+          "src/logic/execution/engines/codex/unittest/codex-engine.test.ts",
+          "src/logic/execution/engines/codex/unittest/codex-tools.test.ts",
+          "src/logic/execution/engines/codex/unittest/codex-write-recovery.test.ts"
         ],
         "contract": [],
         "integration": []
-      }
+      },
+      "directory": "src/logic/execution/engines/codex"
     },
     "logic/execution/engines/pi": {
       "roots": [
@@ -520,17 +539,18 @@
       ],
       "tests": {
         "unit": [
-          "tests/engine-inactivity-pi.test.ts",
-          "tests/model-request-budget-bootstrap.test.ts",
-          "tests/pi-cancellation.test.ts",
-          "tests/pi-rpc.test.ts",
-          "tests/pi-tool-catalog.test.ts"
+          "src/logic/execution/engines/pi/unittest/engine-inactivity-pi.test.ts",
+          "src/logic/execution/engines/pi/unittest/model-request-budget-bootstrap.test.ts",
+          "src/logic/execution/engines/pi/unittest/pi-cancellation.test.ts",
+          "src/logic/execution/engines/pi/unittest/pi-rpc.test.ts",
+          "src/logic/execution/engines/pi/unittest/pi-tool-catalog.test.ts"
         ],
         "contract": [
           "tests/engine-inactivity.test.ts"
         ],
         "integration": []
-      }
+      },
+      "directory": "src/logic/execution/engines/pi"
     },
     "logic/execution/engines/transport": {
       "roots": [
@@ -538,14 +558,15 @@
       ],
       "tests": {
         "unit": [
-          "tests/model-request-budget-usage.test.ts"
+          "src/logic/execution/engines/transport/unittest/model-request-budget-usage.test.ts"
         ],
         "contract": [
           "tests/model-capacity-sdk.test.ts",
           "tests/model-json-requests.test.ts"
         ],
         "integration": []
-      }
+      },
+      "directory": "src/logic/execution/engines/transport"
     },
     "logic/dispatch/storage": {
       "roots": [
@@ -553,7 +574,7 @@
       ],
       "tests": {
         "unit": [
-          "tests/command-evidence-store.test.ts"
+          "src/logic/dispatch/storage/unittest/command-evidence-store.test.ts"
         ],
         "contract": [
           "tests/dispatch-execution-store.test.ts",
@@ -565,7 +586,8 @@
           "tests/scope-detail-recovery.test.ts"
         ],
         "integration": []
-      }
+      },
+      "directory": "src/logic/dispatch/storage"
     },
     "logic/file-operations/service": {
       "roots": [
@@ -578,7 +600,8 @@
           "tests/isolated-executions.test.ts"
         ],
         "integration": []
-      }
+      },
+      "directory": "src/logic/file-operations/service"
     },
     "logic/history/service": {
       "roots": [
@@ -590,7 +613,8 @@
           "tests/agent-history-assembly.test.ts"
         ],
         "integration": []
-      }
+      },
+      "directory": "src/logic/history/service"
     },
     "bridge/server/ipc": {
       "roots": [
@@ -598,11 +622,12 @@
       ],
       "tests": {
         "unit": [
-          "tests/ipc-requests.test.ts"
+          "src/bridge/server/ipc/unittest/ipc-requests.test.ts"
         ],
         "contract": [],
         "integration": []
-      }
+      },
+      "directory": "src/bridge/server/ipc"
     },
     "logic/team/settings": {
       "roots": [
@@ -612,7 +637,8 @@
         "unit": [],
         "contract": [],
         "integration": []
-      }
+      },
+      "directory": "src/logic/team/settings"
     },
     "logic/execution/platform": {
       "roots": [
@@ -620,11 +646,12 @@
       ],
       "tests": {
         "unit": [
-          "tests/native-session-files.test.ts"
+          "src/logic/execution/platform/unittest/native-session-files.test.ts"
         ],
         "contract": [],
         "integration": []
-      }
+      },
+      "directory": "src/logic/execution/platform"
     },
     "logic/file-operations/platform/files": {
       "roots": [
@@ -632,10 +659,10 @@
       ],
       "tests": {
         "unit": [
-          "tests/artifact-files.test.ts",
-          "tests/controlled-namespace-platform.test.ts",
-          "tests/png-artifact-files.test.ts",
-          "tests/scoped-execution-platform.test.ts"
+          "src/logic/file-operations/platform/files/unittest/artifact-files.test.ts",
+          "src/logic/file-operations/platform/files/unittest/controlled-namespace-platform.test.ts",
+          "src/logic/file-operations/platform/files/unittest/png-artifact-files.test.ts",
+          "src/logic/file-operations/platform/files/unittest/scoped-execution-platform.test.ts"
         ],
         "contract": [
           "tests/csv-artifact-files.test.ts",
@@ -646,7 +673,8 @@
         "integration": [
           "tests/controlled-file-platform.test.ts"
         ]
-      }
+      },
+      "directory": "src/logic/file-operations/platform/files"
     },
     "logic/file-operations/platform/isolation": {
       "roots": [
@@ -654,7 +682,7 @@
       ],
       "tests": {
         "unit": [
-          "tests/isolated-node.test.ts"
+          "src/logic/file-operations/platform/isolation/unittest/isolated-node.test.ts"
         ],
         "contract": [
           "tests/isolation-records.test.ts"
@@ -662,7 +690,8 @@
         "integration": [
           "tests/isolation-recovery-crash.test.ts"
         ]
-      }
+      },
+      "directory": "src/logic/file-operations/platform/isolation"
     },
     "logic/execution/storage": {
       "roots": [
@@ -676,7 +705,8 @@
           "tests/business-run-storage.test.ts"
         ],
         "integration": []
-      }
+      },
+      "directory": "src/logic/execution/storage"
     },
     "logic/runtime/settings": {
       "roots": [
@@ -688,7 +718,8 @@
           "tests/admission-settings.test.ts"
         ],
         "integration": []
-      }
+      },
+      "directory": "src/logic/runtime/settings"
     },
     "logic/execution/admission": {
       "roots": [
@@ -700,7 +731,8 @@
           "tests/run-admission.test.ts"
         ],
         "integration": []
-      }
+      },
+      "directory": "src/logic/execution/admission"
     },
     "logic/automation/runtime": {
       "roots": [
@@ -712,7 +744,8 @@
           "tests/automation-scheduler.test.ts"
         ],
         "integration": []
-      }
+      },
+      "directory": "src/logic/automation/runtime"
     },
     "logic/budget/runtime": {
       "roots": [
@@ -720,14 +753,15 @@
       ],
       "tests": {
         "unit": [
-          "tests/scope-usage-service.test.ts",
-          "tests/unit/logic/budget/model-role-service.test.ts"
+          "src/logic/budget/runtime/unittest/scope-usage-service.test.ts",
+          "src/logic/budget/runtime/unittest/model-role-service.test.ts"
         ],
         "contract": [
           "tests/agent-request-budget.test.ts"
         ],
         "integration": []
-      }
+      },
+      "directory": "src/logic/budget/runtime"
     },
     "logic/conversation/runtime": {
       "roots": [
@@ -735,9 +769,9 @@
       ],
       "tests": {
         "unit": [
-          "tests/main-history-context.test.ts",
-          "tests/message-queue.test.ts",
-          "tests/questions.test.ts"
+          "src/logic/conversation/runtime/unittest/main-history-context.test.ts",
+          "src/logic/conversation/runtime/unittest/message-queue.test.ts",
+          "src/logic/conversation/runtime/unittest/questions.test.ts"
         ],
         "contract": [
           "tests/agent-role-instructions.test.ts",
@@ -747,7 +781,8 @@
           "tests/replan-start-race.test.ts"
         ],
         "integration": []
-      }
+      },
+      "directory": "src/logic/conversation/runtime"
     },
     "logic/dispatch/runtime": {
       "roots": [
@@ -761,7 +796,8 @@
           "tests/member-failure-limit.test.ts"
         ],
         "integration": []
-      }
+      },
+      "directory": "src/logic/dispatch/runtime"
     },
     "logic/evidence/runtime": {
       "roots": [
@@ -777,7 +813,8 @@
           "tests/agent-artifact-verification.test.ts"
         ],
         "integration": []
-      }
+      },
+      "directory": "src/logic/evidence/runtime"
     },
     "logic/tasks/runtime": {
       "roots": [
@@ -785,13 +822,14 @@
       ],
       "tests": {
         "unit": [
-          "tests/office-history-service.test.ts"
+          "src/logic/tasks/runtime/unittest/office-history-service.test.ts"
         ],
         "contract": [
           "tests/command-verification-service.test.ts"
         ],
         "integration": []
-      }
+      },
+      "directory": "src/logic/tasks/runtime"
     },
     "logic/history/runtime": {
       "roots": [
@@ -803,7 +841,8 @@
           "tests/agent-history-store.test.ts"
         ],
         "integration": []
-      }
+      },
+      "directory": "src/logic/history/runtime"
     },
     "logic/runtime/monitoring": {
       "roots": [
@@ -811,14 +850,15 @@
       ],
       "tests": {
         "unit": [
-          "tests/global-runtime.test.ts",
-          "tests/public-run-events.test.ts"
+          "src/logic/runtime/monitoring/unittest/global-runtime.test.ts",
+          "src/logic/runtime/monitoring/unittest/public-run-events.test.ts"
         ],
         "contract": [
           "tests/member-events.test.ts"
         ],
         "integration": []
-      }
+      },
+      "directory": "src/logic/runtime/monitoring"
     },
     "logic/tools/runtime": {
       "roots": [
@@ -826,10 +866,10 @@
       ],
       "tests": {
         "unit": [
-          "tests/candidate-review-tools.test.ts",
-          "tests/office-history-tools.test.ts",
-          "tests/coordination-schema.test.ts",
-          "tests/web-tools.test.ts"
+          "src/logic/tools/runtime/unittest/candidate-review-tools.test.ts",
+          "src/logic/tools/runtime/unittest/office-history-tools.test.ts",
+          "src/logic/tools/runtime/unittest/coordination-schema.test.ts",
+          "src/logic/tools/runtime/unittest/web-tools.test.ts"
         ],
         "contract": [
           "tests/claude-schema.test.ts",
@@ -843,7 +883,8 @@
           "tests/workspace-member-tools.test.ts"
         ],
         "integration": []
-      }
+      },
+      "directory": "src/logic/tools/runtime"
     },
     "logic/updates/service": {
       "roots": [
@@ -851,13 +892,13 @@
       ],
       "tests": {
         "unit": [
-          "tests/desktop-updates.test.ts",
-          "tests/nsis-differential-download.test.ts",
-          "tests/nsis-updater.test.ts",
-          "tests/release-http.test.ts",
-          "tests/update-restart-profile.test.ts",
-          "tests/unit/logic/updates/engine-index.test.ts",
-          "tests/unit/logic/updates/engine-artifacts.test.ts"
+          "src/logic/updates/service/unittest/desktop-updates.test.ts",
+          "src/logic/updates/service/unittest/nsis-differential-download.test.ts",
+          "src/logic/updates/service/unittest/nsis-updater.test.ts",
+          "src/logic/updates/service/unittest/release-http.test.ts",
+          "src/logic/updates/service/unittest/update-restart-profile.test.ts",
+          "src/logic/updates/service/unittest/engine-index.test.ts",
+          "src/logic/updates/service/unittest/engine-artifacts.test.ts"
         ],
         "contract": [
           "tests/runtime-download.test.ts",
@@ -868,19 +909,19 @@
           "tests/managed-engines.test.ts"
         ],
         "integration": []
-      }
+      },
+      "directory": "src/logic/updates/service"
     },
     "bridge/contracts": {
       "roots": [
         "src/bridge/contracts/"
       ],
       "tests": {
-        "unit": [
-          "tests/ipc-desktop.test.ts"
-        ],
+        "unit": [],
         "contract": [],
         "integration": []
-      }
+      },
+      "directory": "src/bridge/contracts"
     },
     "bridge/preload": {
       "roots": [
@@ -888,11 +929,12 @@
       ],
       "tests": {
         "unit": [
-          "tests/ipc-preload.test.ts"
+          "src/bridge/preload/unittest/ipc-preload.test.ts"
         ],
         "contract": [],
         "integration": []
-      }
+      },
+      "directory": "src/bridge/preload"
     },
     "view/components": {
       "roots": [
@@ -900,13 +942,14 @@
       ],
       "tests": {
         "unit": [
-          "tests/deferred-view.test.ts"
+          "src/view/components/unittest/deferred-view.test.ts"
         ],
         "contract": [
           "tests/repository-tools-view.test.ts"
         ],
         "integration": []
-      }
+      },
+      "directory": "src/view/components"
     },
     "view/conversation": {
       "roots": [
@@ -914,14 +957,14 @@
       ],
       "tests": {
         "unit": [
-          "tests/brain-status.test.ts",
-          "tests/conversation-activity.test.ts",
-          "tests/conversation-topics.test.ts",
-          "tests/topic-interruption-view.test.ts",
-          "tests/thread-recovery-notice.test.ts",
-          "tests/usage.test.ts",
-          "tests/chat-messages.test.ts",
-          "tests/channel-draft.test.ts"
+          "src/view/conversation/unittest/brain-status.test.ts",
+          "src/view/conversation/unittest/conversation-activity.test.ts",
+          "src/view/conversation/unittest/conversation-topics.test.ts",
+          "src/view/conversation/unittest/topic-interruption-view.test.ts",
+          "src/view/conversation/unittest/thread-recovery-notice.test.ts",
+          "src/view/conversation/unittest/usage.test.ts",
+          "src/view/conversation/unittest/chat-messages.test.ts",
+          "src/view/conversation/unittest/channel-draft.test.ts"
         ],
         "contract": [
           "tests/chat-chrome.test.ts",
@@ -932,7 +975,8 @@
           "tests/interaction-mode-toggle.test.ts"
         ],
         "integration": []
-      }
+      },
+      "directory": "src/view/conversation"
     },
     "view/execution-view": {
       "roots": [
@@ -940,18 +984,19 @@
       ],
       "tests": {
         "unit": [
-          "tests/conversation.test.ts",
-          "tests/knowledge-tool-view.test.ts",
-          "tests/markdown.test.ts",
-          "tests/run-view.test.ts",
-          "tests/team-conversations.test.ts",
-          "tests/agent-call-view.test.ts"
+          "src/view/execution-view/unittest/conversation.test.ts",
+          "src/view/execution-view/unittest/knowledge-tool-view.test.ts",
+          "src/view/execution-view/unittest/markdown.test.ts",
+          "src/view/execution-view/unittest/run-view.test.ts",
+          "src/view/execution-view/unittest/team-conversations.test.ts",
+          "src/view/execution-view/unittest/agent-call-view.test.ts"
         ],
         "contract": [
           "tests/inline-conversation.test.ts"
         ],
         "integration": []
-      }
+      },
+      "directory": "src/view/execution-view"
     },
     "view/governance": {
       "roots": [
@@ -959,13 +1004,14 @@
       ],
       "tests": {
         "unit": [
-          "tests/governance-feedback-view.test.ts",
-          "tests/governance-origin-view.test.ts",
-          "tests/governance-pending.test.ts"
+          "src/view/governance/unittest/governance-feedback-view.test.ts",
+          "src/view/governance/unittest/governance-origin-view.test.ts",
+          "src/view/governance/unittest/governance-pending.test.ts"
         ],
         "contract": [],
         "integration": []
-      }
+      },
+      "directory": "src/view/governance"
     },
     "view/knowledge": {
       "roots": [
@@ -973,14 +1019,15 @@
       ],
       "tests": {
         "unit": [
-          "tests/knowledge-file-tree.test.ts",
-          "tests/static-owners.test.ts"
+          "src/view/knowledge/unittest/knowledge-file-tree.test.ts",
+          "src/view/knowledge/unittest/static-owners.test.ts"
         ],
         "contract": [
           "tests/knowledge-source-view.test.ts"
         ],
         "integration": []
-      }
+      },
+      "directory": "src/view/knowledge"
     },
     "view/resources": {
       "roots": [
@@ -988,12 +1035,13 @@
       ],
       "tests": {
         "unit": [
-          "tests/repository-connection-state.test.ts",
-          "tests/resource-application.test.ts"
+          "src/view/resources/unittest/repository-connection-state.test.ts",
+          "src/view/resources/unittest/resource-application.test.ts"
         ],
         "contract": [],
         "integration": []
-      }
+      },
+      "directory": "src/view/resources"
     },
     "view/runtime": {
       "roots": [
@@ -1006,7 +1054,8 @@
           "tests/runtime-view.test.ts"
         ],
         "integration": []
-      }
+      },
+      "directory": "src/view/runtime"
     },
     "view/settings": {
       "roots": [
@@ -1014,14 +1063,15 @@
       ],
       "tests": {
         "unit": [
-          "tests/appearance-settings.test.ts",
-          "tests/budget-settings-view.test.ts",
-          "tests/engine-overview-view.test.ts",
-          "tests/settings-navigation.test.ts"
+          "src/view/settings/unittest/appearance-settings.test.ts",
+          "src/view/settings/unittest/budget-settings-view.test.ts",
+          "src/view/settings/unittest/engine-overview-view.test.ts",
+          "src/view/settings/unittest/settings-navigation.test.ts"
         ],
         "contract": [],
         "integration": []
-      }
+      },
+      "directory": "src/view/settings"
     },
     "view/shell": {
       "roots": [
@@ -1029,13 +1079,14 @@
       ],
       "tests": {
         "unit": [
-          "tests/conversation-tabs.test.ts",
-          "tests/runtime-navigation.test.ts",
-          "tests/tabs.test.ts"
+          "src/view/shell/unittest/conversation-tabs.test.ts",
+          "src/view/shell/unittest/runtime-navigation.test.ts",
+          "src/view/shell/unittest/tabs.test.ts"
         ],
         "contract": [],
         "integration": []
-      }
+      },
+      "directory": "src/view/shell"
     },
     "view/tasks": {
       "roots": [
@@ -1043,28 +1094,28 @@
       ],
       "tests": {
         "unit": [
-          "tests/artifact-report-view.test.ts",
-          "tests/candidate-review.test.ts",
-          "tests/command-verification-view.test.ts",
-          "tests/continuation-source-view.test.ts",
-          "tests/controlled-file-view.test.ts",
-          "tests/effect-observation-view.test.ts",
-          "tests/execution-recovery-repeat.test.ts",
-          "tests/execution-report-view.test.ts",
-          "tests/member-cancellation-view.test.ts",
-          "tests/member-checkpoint-view.test.ts",
-          "tests/member-dependency-addition-view.test.ts",
-          "tests/member-dependency-revision-view.test.ts",
-          "tests/member-dependency-view.test.ts",
-          "tests/member-help-view.test.ts",
-          "tests/office-scene.test.ts",
-          "tests/output-manifest-view.test.ts",
-          "tests/scope-budget-view.test.ts",
-          "tests/scope-continuation-view.test.ts",
-          "tests/scope-replan-view.test.ts",
-          "tests/scope-usage-view.test.ts",
-          "tests/session-task-view.test.ts",
-          "tests/task-history-view.test.ts"
+          "src/view/tasks/unittest/artifact-report-view.test.ts",
+          "src/view/tasks/unittest/candidate-review.test.ts",
+          "src/view/tasks/unittest/command-verification-view.test.ts",
+          "src/view/tasks/unittest/continuation-source-view.test.ts",
+          "src/view/tasks/unittest/controlled-file-view.test.ts",
+          "src/view/tasks/unittest/effect-observation-view.test.ts",
+          "src/view/tasks/unittest/execution-recovery-repeat.test.ts",
+          "src/view/tasks/unittest/execution-report-view.test.ts",
+          "src/view/tasks/unittest/member-cancellation-view.test.ts",
+          "src/view/tasks/unittest/member-checkpoint-view.test.ts",
+          "src/view/tasks/unittest/member-dependency-addition-view.test.ts",
+          "src/view/tasks/unittest/member-dependency-revision-view.test.ts",
+          "src/view/tasks/unittest/member-dependency-view.test.ts",
+          "src/view/tasks/unittest/member-help-view.test.ts",
+          "src/view/tasks/unittest/office-scene.test.ts",
+          "src/view/tasks/unittest/output-manifest-view.test.ts",
+          "src/view/tasks/unittest/scope-budget-view.test.ts",
+          "src/view/tasks/unittest/scope-continuation-view.test.ts",
+          "src/view/tasks/unittest/scope-replan-view.test.ts",
+          "src/view/tasks/unittest/scope-usage-view.test.ts",
+          "src/view/tasks/unittest/session-task-view.test.ts",
+          "src/view/tasks/unittest/task-history-view.test.ts"
         ],
         "contract": [
           "tests/active-goal-input-view.test.ts",
@@ -1080,7 +1131,8 @@
           "tests/session-graph-state.test.ts"
         ],
         "integration": []
-      }
+      },
+      "directory": "src/view/tasks"
     },
     "view/team": {
       "roots": [
@@ -1088,13 +1140,14 @@
       ],
       "tests": {
         "unit": [
-          "tests/agent-history-view.test.ts",
-          "tests/team-model.test.ts",
-          "tests/workspace-member-view.test.ts"
+          "src/view/team/unittest/agent-history-view.test.ts",
+          "src/view/team/unittest/team-model.test.ts",
+          "src/view/team/unittest/workspace-member-view.test.ts"
         ],
         "contract": [],
         "integration": []
-      }
+      },
+      "directory": "src/view/team"
     },
     "view/updates": {
       "roots": [
@@ -1102,12 +1155,13 @@
       ],
       "tests": {
         "unit": [
-          "tests/update-button-state.test.ts",
-          "tests/software-updates-view.test.ts"
+          "src/view/updates/unittest/update-button-state.test.ts",
+          "src/view/updates/unittest/software-updates-view.test.ts"
         ],
         "contract": [],
         "integration": []
-      }
+      },
+      "directory": "src/view/updates"
     },
     "view/workspace": {
       "roots": [
@@ -1115,12 +1169,13 @@
       ],
       "tests": {
         "unit": [
-          "tests/module-ownership-view.test.ts",
-          "tests/module-source-tree.test.ts"
+          "src/view/workspace/unittest/module-ownership-view.test.ts",
+          "src/view/workspace/unittest/module-source-tree.test.ts"
         ],
         "contract": [],
         "integration": []
-      }
+      },
+      "directory": "src/view/workspace"
     },
     "tooling/check-dependencies": {
       "roots": [
@@ -1128,11 +1183,18 @@
       ],
       "tests": {
         "unit": [
-          "tests/dependencies.test.ts"
+          "scripts/unittest/dependencies.test.ts"
         ],
         "contract": [],
         "integration": []
-      }
+      },
+      "directory": "scripts",
+      "inputs": [
+        "src/",
+        "scripts/",
+        "tests/",
+        "tsconfig.json"
+      ]
     },
     "tooling/source-format": {
       "roots": [
@@ -1140,11 +1202,12 @@
       ],
       "tests": {
         "unit": [
-          "tests/source-format.test.ts"
+          "scripts/unittest/source-format.test.ts"
         ],
         "contract": [],
         "integration": []
-      }
+      },
+      "directory": "scripts"
     },
     "tooling/method-names": {
       "roots": [
@@ -1152,11 +1215,12 @@
       ],
       "tests": {
         "unit": [
-          "tests/method-names.test.ts"
+          "scripts/unittest/method-names.test.ts"
         ],
         "contract": [],
         "integration": []
-      }
+      },
+      "directory": "scripts"
     },
     "tooling/config": {
       "roots": [
@@ -1168,7 +1232,8 @@
           "tests/desktop-signing.test.mjs"
         ],
         "integration": []
-      }
+      },
+      "directory": "scripts/desktop-signing"
     },
     "tooling/runtime-acceptance-inputs": {
       "roots": [
@@ -1176,11 +1241,12 @@
       ],
       "tests": {
         "unit": [
-          "tests/runtime-acceptance-inputs.test.mjs"
+          "scripts/unittest/runtime-acceptance-inputs.test.mjs"
         ],
         "contract": [],
         "integration": []
-      }
+      },
+      "directory": "scripts"
     },
     "tooling/desktop-acceptance-inputs": {
       "roots": [
@@ -1188,11 +1254,12 @@
       ],
       "tests": {
         "unit": [
-          "tests/desktop-acceptance-inputs.test.mjs"
+          "scripts/unittest/desktop-acceptance-inputs.test.mjs"
         ],
         "contract": [],
         "integration": []
-      }
+      },
+      "directory": "scripts"
     },
     "tooling/desktop-acceptance-process": {
       "roots": [
@@ -1201,14 +1268,15 @@
       ],
       "tests": {
         "unit": [
-          "tests/desktop-acceptance-process.test.mjs"
+          "scripts/unittest/desktop-acceptance-process.test.mjs"
         ],
         "contract": [],
         "integration": [
           "tests/desktop-acceptance-process-integration.test.mjs",
           "tests/desktop-acceptance-windows.test.mjs"
         ]
-      }
+      },
+      "directory": "scripts"
     },
     "tooling/desktop-inspector-connection": {
       "roots": [
@@ -1220,7 +1288,8 @@
         "integration": [
           "tests/desktop-inspector-connection.test.mjs"
         ]
-      }
+      },
+      "directory": "scripts"
     },
     "tooling/desktop-update-network-evidence": {
       "roots": [
@@ -1228,11 +1297,12 @@
       ],
       "tests": {
         "unit": [
-          "tests/desktop-update-network-evidence.test.mjs"
+          "scripts/unittest/desktop-update-network-evidence.test.mjs"
         ],
         "contract": [],
         "integration": []
-      }
+      },
+      "directory": "scripts"
     },
     "tooling/package-pi-runtime": {
       "roots": [
@@ -1245,7 +1315,8 @@
           "tests/codex-packaging.test.ts"
         ],
         "integration": []
-      }
+      },
+      "directory": "scripts"
     },
     "tooling/repair-pi-tool-result": {
       "roots": [
@@ -1253,11 +1324,12 @@
       ],
       "tests": {
         "unit": [
-          "tests/session-repair.test.ts"
+          "scripts/unittest/session-repair.test.ts"
         ],
         "contract": [],
         "integration": []
-      }
+      },
+      "directory": "scripts"
     },
     "tooling/runtime-packaging": {
       "roots": [
@@ -1265,11 +1337,12 @@
       ],
       "tests": {
         "unit": [
-          "tests/runtime-packaging.test.ts"
+          "scripts/unittest/runtime-packaging.test.ts"
         ],
         "contract": [],
         "integration": []
-      }
+      },
+      "directory": "scripts"
     },
     "tooling/source-contracts": {
       "roots": [],
@@ -1284,19 +1357,32 @@
         "integration": [
           "tests/isolated-node-crash.test.ts"
         ]
-      }
+      },
+      "inputs": [
+        "src/",
+        "scripts/",
+        "docs/",
+        "AGENTS.md",
+        "package.json",
+        "vitest.config.ts"
+      ]
     },
     "tooling/test-modules": {
       "roots": [
-        "scripts/test-modules.mjs"
+        "scripts/test-modules.mjs",
+        "scripts/test-fingerprints.mjs",
+        "scripts/incremental-tests.mjs",
+        "scripts/test-paths.mjs"
       ],
       "tests": {
         "unit": [
-          "tests/test-modules.test.ts"
+          "scripts/unittest/test-modules.test.ts",
+          "scripts/unittest/incremental-tests.test.mjs"
         ],
         "contract": [],
         "integration": []
-      }
+      },
+      "directory": "scripts"
     },
     "tooling/ci-validation": {
       "roots": [
@@ -1308,11 +1394,15 @@
       ],
       "tests": {
         "unit": [
-          "tests/ci-validation.test.mjs"
+          "scripts/unittest/ci-validation.test.mjs"
         ],
         "contract": [],
         "integration": []
-      }
+      },
+      "directory": "scripts",
+      "inputs": [
+        ".github/workflows/validate.yml"
+      ]
     },
     "view/foundations/utility": {
       "roots": [
@@ -1320,15 +1410,16 @@
       ],
       "tests": {
         "unit": [
-          "tests/unit/frontend/foundations/utility/async.test.ts",
-          "tests/unit/frontend/foundations/utility/events.test.ts",
-          "tests/unit/frontend/foundations/utility/graphs.test.ts",
-          "tests/unit/frontend/foundations/utility/json.test.ts",
-          "tests/unit/frontend/foundations/utility/storage.test.ts"
+          "src/view/foundations/utility/unittest/async.test.ts",
+          "src/view/foundations/utility/unittest/events.test.ts",
+          "src/view/foundations/utility/unittest/graphs.test.ts",
+          "src/view/foundations/utility/unittest/json.test.ts",
+          "src/view/foundations/utility/unittest/storage.test.ts"
         ],
         "contract": [],
         "integration": []
-      }
+      },
+      "directory": "src/view/foundations/utility"
     },
     "core/utility": {
       "roots": [
@@ -1336,16 +1427,16 @@
       ],
       "tests": {
         "unit": [
-          "tests/unit/foundations/utility/bounded-bytes.test.ts",
-          "tests/unit/foundations/utility/graphs.test.ts",
-          "tests/unit/foundations/utility/in-flight.test.ts",
-          "tests/unit/foundations/utility/json-order.test.ts",
-          "tests/unit/foundations/utility/json-text.test.ts",
-          "tests/unit/foundations/utility/line-framer.test.ts",
-          "tests/unit/foundations/utility/pending-requests.test.ts",
-          "tests/unit/foundations/utility/redaction.test.ts",
-          "tests/unit/foundations/utility/serial-queue.test.ts",
-          "tests/unit/foundations/utility/strict-json.test.ts"
+          "src/core/utility/unittest/bounded-bytes.test.ts",
+          "src/core/utility/unittest/graphs.test.ts",
+          "src/core/utility/unittest/in-flight.test.ts",
+          "src/core/utility/unittest/json-order.test.ts",
+          "src/core/utility/unittest/json-text.test.ts",
+          "src/core/utility/unittest/line-framer.test.ts",
+          "src/core/utility/unittest/pending-requests.test.ts",
+          "src/core/utility/unittest/redaction.test.ts",
+          "src/core/utility/unittest/serial-queue.test.ts",
+          "src/core/utility/unittest/strict-json.test.ts"
         ],
         "contract": [
           "tests/utility-body-consumers.test.ts",
@@ -1356,7 +1447,8 @@
           "tests/utility-serialization-contract.test.ts"
         ],
         "integration": []
-      }
+      },
+      "directory": "src/core/utility"
     },
     "core/platform/node": {
       "roots": [
@@ -1364,11 +1456,12 @@
       ],
       "tests": {
         "unit": [
-          "tests/unit/foundations/utility/digest.test.ts"
+          "src/core/platform/node/unittest/digest.test.ts"
         ],
         "contract": [],
         "integration": []
-      }
+      },
+      "directory": "src/core/platform/node"
     },
     "logic/models": {
       "roots": [
@@ -1382,14 +1475,15 @@
       ],
       "tests": {
         "unit": [
-          "tests/model-catalog.test.ts",
-          "tests/unit/logic/models/provider-connections.test.ts"
+          "src/logic/models/unittest/model-catalog.test.ts",
+          "src/logic/models/unittest/provider-connections.test.ts"
         ],
         "contract": [
           "tests/provider-connections.test.ts"
         ],
         "integration": []
-      }
+      },
+      "directory": "src/logic/models"
     },
     "logic/models/service": {
       "roots": [
@@ -1398,14 +1492,15 @@
       ],
       "tests": {
         "unit": [
-          "tests/llm.test.ts",
-          "tests/owner-model-configuration.test.ts",
-          "tests/unit/logic/models/model-operations.test.ts",
-          "tests/unit/logic/models/embedding-test.test.ts"
+          "src/logic/models/service/unittest/llm.test.ts",
+          "src/logic/models/service/unittest/owner-model-configuration.test.ts",
+          "src/logic/models/service/unittest/model-operations.test.ts",
+          "src/logic/models/service/unittest/embedding-test.test.ts"
         ],
         "contract": [],
         "integration": []
-      }
+      },
+      "directory": "src/logic/models/service"
     },
     "core/platform/node/files": {
       "roots": [
@@ -1413,11 +1508,12 @@
       ],
       "tests": {
         "unit": [
-          "tests/unit/foundations/files.test.ts"
+          "src/core/platform/node/files/unittest/files.test.ts"
         ],
         "contract": [],
         "integration": []
-      }
+      },
+      "directory": "src/core/platform/node/files"
     },
     "core/errors": {
       "roots": [
@@ -1425,11 +1521,12 @@
       ],
       "tests": {
         "unit": [
-          "tests/unit/core/errors.test.ts"
+          "src/core/unittest/errors.test.ts"
         ],
         "contract": [],
         "integration": []
-      }
+      },
+      "directory": "src/core"
     },
     "logic/web": {
       "roots": [
@@ -1440,7 +1537,8 @@
         "unit": [],
         "contract": [],
         "integration": []
-      }
+      },
+      "directory": "src/logic/web"
     },
     "logic/web/service": {
       "roots": [
@@ -1449,14 +1547,15 @@
       ],
       "tests": {
         "unit": [
-          "tests/web-service.test.ts",
-          "tests/web-settings.test.ts"
+          "src/logic/web/service/unittest/web-service.test.ts",
+          "src/logic/web/service/unittest/web-settings.test.ts"
         ],
         "contract": [
           "tests/web-browser-fallback.test.ts"
         ],
         "integration": []
-      }
+      },
+      "directory": "src/logic/web/service"
     },
     "core/web": {
       "roots": [
@@ -1464,11 +1563,12 @@
       ],
       "tests": {
         "unit": [
-          "tests/web-content.test.ts"
+          "src/core/web/unittest/web-content.test.ts"
         ],
         "contract": [],
         "integration": []
-      }
+      },
+      "directory": "src/core/web"
     },
     "core/platform/node/web": {
       "roots": [
@@ -1476,15 +1576,16 @@
       ],
       "tests": {
         "unit": [
-          "tests/web-foundations.test.ts",
-          "tests/web-page-reader.test.ts"
+          "src/core/platform/node/web/unittest/web-foundations.test.ts",
+          "src/core/platform/node/web/unittest/web-page-reader.test.ts"
         ],
         "contract": [],
         "integration": [
           "tests/web-http-transport.test.ts",
           "tests/web-browser-proxy.test.ts"
         ]
-      }
+      },
+      "directory": "src/core/platform/node/web"
     },
     "logic/feedback": {
       "roots": [
@@ -1493,11 +1594,12 @@
       ],
       "tests": {
         "unit": [
-          "tests/feedback-contracts.test.ts"
+          "src/logic/feedback/unittest/feedback-contracts.test.ts"
         ],
         "contract": [],
         "integration": []
-      }
+      },
+      "directory": "src/logic/feedback"
     },
     "logic/feedback/service": {
       "roots": [
@@ -1507,13 +1609,14 @@
       ],
       "tests": {
         "unit": [
-          "tests/github-feedback-auth.test.ts"
+          "src/logic/feedback/service/unittest/github-feedback-auth.test.ts"
         ],
         "contract": [
           "tests/github-feedback.test.ts"
         ],
         "integration": []
-      }
+      },
+      "directory": "src/logic/feedback/service"
     },
     "core/platform/node/locking": {
       "roots": [
@@ -1525,7 +1628,8 @@
         "integration": [
           "tests/kernel-lock.test.ts"
         ]
-      }
+      },
+      "directory": "src/core/platform/node"
     },
     "logic/feedback/http": {
       "roots": [
@@ -1533,11 +1637,12 @@
       ],
       "tests": {
         "unit": [
-          "tests/github-api.test.ts"
+          "src/logic/feedback/service/unittest/github-api.test.ts"
         ],
         "contract": [],
         "integration": []
-      }
+      },
+      "directory": "src/logic/feedback/service"
     },
     "logic/resources": {
       "roots": [
@@ -1548,7 +1653,8 @@
         "unit": [],
         "contract": [],
         "integration": []
-      }
+      },
+      "directory": "src/logic/resources"
     },
     "logic/resources/service": {
       "roots": [
@@ -1556,11 +1662,12 @@
       ],
       "tests": {
         "unit": [
-          "tests/resource-store.test.ts"
+          "src/logic/resources/service/unittest/resource-store.test.ts"
         ],
         "contract": [],
         "integration": []
-      }
+      },
+      "directory": "src/logic/resources/service"
     },
     "logic/terminal/service": {
       "roots": [
@@ -1568,11 +1675,12 @@
       ],
       "tests": {
         "unit": [
-          "tests/terminal.test.ts"
+          "src/logic/terminal/service/unittest/terminal.test.ts"
         ],
         "contract": [],
         "integration": []
-      }
+      },
+      "directory": "src/logic/terminal/service"
     },
     "logic/budget/settings": {
       "roots": [
@@ -1580,11 +1688,12 @@
       ],
       "tests": {
         "unit": [
-          "tests/budget-settings.test.ts"
+          "src/logic/budget/settings/unittest/budget-settings.test.ts"
         ],
         "contract": [],
         "integration": []
-      }
+      },
+      "directory": "src/logic/budget/settings"
     },
     "logic/engines": {
       "roots": [
@@ -1592,15 +1701,16 @@
       ],
       "tests": {
         "unit": [
-          "tests/unit/logic/engines/catalog.test.ts",
-          "tests/unit/logic/engines/model-roles.test.ts",
-          "tests/unit/logic/engines/model-choices.test.ts"
+          "src/logic/engines/unittest/catalog.test.ts",
+          "src/logic/engines/unittest/model-roles.test.ts",
+          "src/logic/engines/unittest/model-choices.test.ts"
         ],
         "contract": [
           "tests/engine-configuration.test.ts"
         ],
         "integration": []
-      }
+      },
+      "directory": "src/logic/engines"
     },
     "logic/engines/packages": {
       "roots": [
@@ -1608,14 +1718,15 @@
       ],
       "tests": {
         "unit": [
-          "tests/unit/logic/engines/packages.test.ts"
+          "src/logic/engines/packages/unittest/packages.test.ts"
         ],
         "contract": [
           "tests/engine-cache-retention.test.ts",
           "tests/engine-settings-ipc.test.ts"
         ],
         "integration": []
-      }
+      },
+      "directory": "src/logic/engines/packages"
     },
     "tooling/engine-release": {
       "roots": [
@@ -1631,7 +1742,8 @@
         "integration": [
           "tests/engine-build-cli.test.ts"
         ]
-      }
+      },
+      "directory": "scripts"
     },
     "logic/execution/engines/memory": {
       "roots": [
@@ -1639,12 +1751,13 @@
       ],
       "tests": {
         "unit": [
-          "tests/unit/logic/execution/memory-engine.test.ts",
-          "tests/unit/logic/execution/memory-protocol.test.ts"
+          "src/logic/execution/engines/memory/unittest/memory-engine.test.ts",
+          "src/logic/execution/engines/memory/unittest/memory-protocol.test.ts"
         ],
         "contract": [],
         "integration": []
-      }
+      },
+      "directory": "src/logic/execution/engines/memory"
     },
     "logic/workspace/service": {
       "roots": [
@@ -1652,11 +1765,12 @@
       ],
       "tests": {
         "unit": [
-          "tests/module-source-browser.test.ts"
+          "src/logic/workspace/service/unittest/module-source-browser.test.ts"
         ],
         "contract": [],
         "integration": []
-      }
+      },
+      "directory": "src/logic/workspace/service"
     },
     "view/diagnostics": {
       "roots": [
@@ -1664,11 +1778,12 @@
       ],
       "tests": {
         "unit": [
-          "tests/diagnostics-view.test.ts"
+          "src/view/diagnostics/unittest/diagnostics-view.test.ts"
         ],
         "contract": [],
         "integration": []
-      }
+      },
+      "directory": "src/view/diagnostics"
     },
     "logic/execution/assembly": {
       "roots": [
@@ -1676,7 +1791,34 @@
       ],
       "tests": {
         "unit": [
-          "tests/agent-call-scheduler.test.ts"
+          "src/logic/execution/assembly/unittest/agent-call-scheduler.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      },
+      "directory": "src/logic/execution/assembly"
+    },
+    "tooling/production-test-guard": {
+      "roots": [
+        "scripts/production-test-guard.mjs"
+      ],
+      "directory": "scripts",
+      "tests": {
+        "unit": [
+          "scripts/unittest/production-test-guard.test.mjs"
+        ],
+        "contract": [],
+        "integration": []
+      }
+    },
+    "bridge/server": {
+      "roots": [
+        "src/bridge/server/main.ts"
+      ],
+      "directory": "src/bridge/server",
+      "tests": {
+        "unit": [
+          "src/bridge/server/unittest/ipc-desktop.test.ts"
         ],
         "contract": [],
         "integration": []

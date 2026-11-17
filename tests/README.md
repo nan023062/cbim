@@ -1,6 +1,6 @@
 # 按模块维护测试
 
-`modules.json` 是测试归属与执行选择器，不是开发待办。每个已维护测试文件只登记一次：责任模块、源码入口和测试类型。模块按业务变化原因划分，不要求一个类一个模块，也不要求把所有历史文件搬目录。新增模块单元优先放在 `tests/unit/<模块>/`。
+`modules.json` 是测试归属与执行选择器，不是开发待办。每个已维护测试文件只登记一次：责任模块、源码入口、所属目录和测试类型。全部单元测试位于所属源码或工程工具目录的 `unittest/`，当前 `tests/` 保留契约／集成测试及共用数据、夹具。模块按业务变化原因划分，不要求一个类一个模块；子模块验证自身功能，父模块验证本层组合。
 
 | 类型 | 验证责任 | 夹具边界 |
 | --- | --- | --- |
@@ -14,13 +14,23 @@
 
 ```sh
 pnpm test:module --list
+pnpm test:incremental --list
+pnpm test:incremental
 pnpm test:module --module core/platform/node/files
 pnpm test:module --module logic/web/service
 pnpm test:module --module logic/web/service --kind contract --list
 pnpm check:test-modules
 ```
 
-默认仅执行所选模块的 `unit`。需要消费者验证时根据 diff 显式选择 `--kind contract`、`--kind integration`、`--kind all`，或用 `pnpm exec vitest run <明确文件> [-t <用例>]` 选取更小范围。不存在的模块、空选择和错误参数退出失败，不退回全仓执行。模块选择不是影响分析器：公共契约变化仍须查消费者，不只运行基础库自身测试。
+`test:incremental` 默认只运行没有有效成功回执或受到变化影响的模块单元；首次使用没有基线，会运行全部已登记单元。`test:module` 只选择指定模块，也按指纹复用结果。`--force` 强制重跑；`--incremental --list` 或 `--json` 输出计划和原因，不执行测试。契约测试须明确选择 `--kind contract`，集成测试须明确选择 `--kind integration`；集成不缓存。CI 四分片仍执行完整发现集合，不读取本地缓存。
+
+本地记录位于 `test-results/module-tests/state.json`，原始报告位于同目录 `runs/`，都被 Git 忽略。记录包括模块与测试类型、实现／契约／输入／环境指纹、依赖契约和实际结果。只有批次正常结束、完整报告与精确选择匹配、模块内各文件通过且至少有一个通过用例、执行前后输入相同时才可复用。同批其他模块失败不撤销本模块的有效成功结果；本模块失败、全跳过、取消或进程异常中断不会保留旧成功资格。不要手工编辑为通过。
+
+模块默认以实现依赖闭包作保守契约指纹。确有独立边界时可登记 `contract: {"files": ["相对契约文件路径"], "revision": "行为版本"}`；行为语义变化必须更新正文或版本，不能仅凭类型未变跳过消费者。单元可以在这样的依赖边界停止传播，契约测试继续追踪实际组合实现。`inputs` 额外列出动态读取的本地配置／数据／目录，`cache: false` 禁用受不可固定外部状态影响的缓存；这些约定需要 review，静态依赖图不能识别任意动态读取。
+
+`unittest/` 不进入产品架构模型和自动命名／排版范围，但仍参与类型及依赖检查。生产代码不得导入任何测试设施；桌面主进程、preload、界面和引擎适配器的构建入口都有测试依赖拦截，资源／安装暂存目录还有文件检查，Release 不编入自有测试代码。
+
+默认仅执行所选模块的 `unit`。需要消费者验证时根据 diff 显式选择 `--kind contract`、`--kind integration`、`--kind all`，或用 `pnpm exec vitest run <明确文件> [-t <用例>]` 选取更小范围。不存在的模块、空选择和错误参数退出失败，不退回全仓执行。`--module` 限定选择范围，不自动追加消费者；公共契约变化时应使用全模块增量计划或显式检查受影响消费者，不能只运行基础库自身测试。
 
 ## 自动检查与 review
 

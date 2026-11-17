@@ -8,8 +8,8 @@ import ts from 'typescript';
 import { auditDependencies } from './check-dependencies.mjs';
 
 const norm=p=>p.replaceAll('\\','/');
-// 与依赖扫描的排除范围一致；目录本身也登记，不能漏过尚未编写说明的空目录。
-const excludedDirectories=new Set(['node_modules','.git','build','.vite','test-results','__pycache__']);
+// 只为产品目录建模；unittest 仍参与依赖检查。目录本身也登记，不能漏过尚未编写说明的空目录。
+const excludedDirectories=new Set(['node_modules','.git','build','.vite','test-results','__pycache__','unittest']);
 const sourceDirectories=[];
 function walk(directory){
  sourceDirectories.push(directory);
@@ -59,7 +59,7 @@ const text=new Map(files.map(f=>[f,fs.readFileSync(f,'utf8')]));
 const ast=new Map(files.filter(f=>!f.endsWith('.css')).map(f=>[f,ts.createSourceFile(f,text.get(f),ts.ScriptTarget.Latest,true)]));
 // 与依赖检查共用实际解析结果，包含类型、动态导入、require 和已登记构建入口；CSS 单独补入。
 const dependencyReport=auditDependencies(process.cwd(),{roots:['src']});
-const unresolved=[...dependencyReport.unresolved,...dependencyReport.dynamic].filter(item=>item.file.startsWith('src/'));
+const unresolved=[...dependencyReport.unresolved,...dependencyReport.dynamic].filter(item=>item.file.startsWith('src/')&&!item.file.includes('/unittest/'));
 if(unresolved.length)throw Error('源码依赖无法解析，不能生成不完整类图：'+JSON.stringify(unresolved));
 function imports(f){
  const targets=dependencyReport.edges.filter(edge=>edge.from===f&&text.has(edge.to)).map(edge=>edge.to);

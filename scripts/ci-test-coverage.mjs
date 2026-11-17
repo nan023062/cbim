@@ -7,10 +7,11 @@ const equalSet = (actual, expected) => {
   const left=[...actual].sort(), right=[...expected].sort();
   return left.length === right.length && new Set(left).size === left.length && left.every((name,index)=>name===right[index]);
 };
-const reportPath = name => {
-  const normalized = name.replaceAll('\\','/'), start = normalized.lastIndexOf('/tests/');
-  if (start < 0) throw Error('Unexpected test report path: ' + name);
-  return ':' + normalized.slice(start + 1);
+const reportPath = (name, expected) => {
+  const normalized = name.replaceAll('\\','/');
+  const matches = expected.filter(id=>id.startsWith(':')&&(normalized===id.slice(1)||normalized.endsWith('/'+id.slice(1))));
+  if (matches.length !== 1) throw Error('Unexpected test report path: ' + name);
+  return matches[0];
 };
 
 /** 从每片独立产物核对发现全集、分配并集和实际执行报告；不能只凭四个绿色 job 宣称全量覆盖。 */
@@ -24,7 +25,7 @@ export function verifyShardCoverage(reports) {
   for (const {plan,result} of reports) {
     if (plan.count !== 4 || plan.discovered !== all.length || plan.discoveredDigest !== digest || !equalSet(plan.allFiles,all)) throw Error('Discovered test sets differ between shards');
     if (!result.success || result.numFailedTests !== 0) throw Error('Failed test report');
-    if (!equalSet(result.testResults.map(file=>reportPath(file.name)),plan.files)) throw Error('Executed tests differ from assigned shard');
+    if (!equalSet(result.testResults.map(file=>reportPath(file.name,plan.files)),plan.files)) throw Error('Executed tests differ from assigned shard');
     assigned.push(...plan.files);
     passed += result.numPassedTests;
     skipped += result.numPendingTests;

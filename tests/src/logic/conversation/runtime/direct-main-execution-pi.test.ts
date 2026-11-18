@@ -29,8 +29,8 @@ it.each(cases)('main direct work keeps permission and knowledge boundaries ($mod
       res.writeHead(200,{'Content-Type':'text/event-stream'});
       const emit=(delta:unknown,finish_reason:string|null)=>res.write('data: '+JSON.stringify({id:'direct-'+turn,object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason}]})+'\n\n');
       const calls=[
-        ['cbim_module_registry',{...identity,query:'no-matching-module'}],
-        ['cbim_module_get',{...identity,id:'cbim:project'}],
+        ['cbim_workspace_registry',{...identity,query:'no-matching-module'}],
+        ['cbim_workspace_get',{...identity,id:'cbim:project'}],
         ['write',{path:'.cbim/README.md',content:'forbidden knowledge overwrite'}],
         ['write',{path:'direct-work.txt',content:'ISSUE14_DIRECT_WORK'}],
         ['read',{path:'input.txt'}],
@@ -92,7 +92,7 @@ it.each(cases)('main direct work keeps permission and knowledge boundaries ($mod
     if(canWrite)expect(JSON.stringify(requests[6].messages)).toContain('ISSUE14_NATIVE_COMMAND');
     await vi.waitFor(async()=>expect((await workspace.dispatchStore.Read()).scopes?.find(scope=>scope.rootSessionId===started.taskId)).toMatchObject({status:'closed',outcome:'completed'}),{timeout:5000});
     const state=await workspace.dispatchStore.Read();expect(state.graphs[0].tasks).toEqual([]);expect(state.workspaceMembers??[]).toEqual([]);expect(state.moduleOwnerships??[]).toEqual([]);
-    const registry=await internalKnowledge(workspace).call('cbim_module_registry');expect(registry.projectRoot.id).toBe('cbim:project');expect(registry.projectRoot.children.length>0).toBe(modules);
+    const registry=await internalKnowledge(workspace).call('cbim_workspace_registry');expect(registry.projectRoot.id).toBe('cbim:project');expect(registry.projectRoot.children.length>0).toBe(modules);
     const count=requests.length;await f.app.Open(entry.id,true);expect(await f.app.Execution(entry.id).Thread(started.taskId)).toHaveLength(1);expect(requests).toHaveLength(count);
     if(canWrite)expect(await fs.readFile(path.join(f.a,'direct-work.txt'),'utf8')).toBe('ISSUE14_DIRECT_WORK');
   }finally{await f.cleanup();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}

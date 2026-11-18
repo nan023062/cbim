@@ -34,8 +34,8 @@ async function fixture(mode:'implicit-engine'|'chain'|'different-model'|'changed
   const modelC:ResolvedLlm={profile:{...llm.profile,id:'profile-c',model:'model-c',engine:'codex',api:'openai-responses',pricing:{input:3,output:6,cacheRead:1,cacheWrite:2}},apiKey:'leaf-key'};
   const target=(memberId:string)=>mode.startsWith('cross-model')?(memberId==='worker-b'?modelB:modelC):llm;
   const memberGet=vi.fn(async({memberId}:{memberId:string})=>({
-    member:{memberId,name:memberId,state:'active',adaptation:{instructions:'Use only the requested scope'},
-      adoption:{configuration:{agentId:'.cbim/team/'+memberId,principles:'Report evidence to the caller',effectiveSkills:[]}},
+    member:{memberId,name:memberId,state:'active',position:'Duty '+memberId,adaptation:{instructions:'Use only the requested scope',references:[]},
+      adoption:{configuration:{agentId:'.cbim/team/'+memberId,principles:'Report evidence to the caller',effectiveSkills:[{skillId:'sk-'+memberId,ownerId:memberId,inherited:false,content:'Procedure '+memberId}]}},
       runtimePolicy:{profileId:target(memberId).profile.id,modelId:mode==='different-model'?'other-model':target(memberId).profile.model,engine:target(memberId).profile.engine,configurationHash:workspaceMemberModelHash(target(memberId).profile)}},
     currentDiff:{capability:{status:mode==='changed-capability'?'changed':'same'},model:{status:'same'}},
   }));
@@ -58,6 +58,17 @@ async function fixture(mode:'implicit-engine'|'chain'|'different-model'|'changed
       const tools=await runtimeEngineTools(context,engineOptions.knowledge);
       const names=(await tools.list()).map(tool=>tool.name);
       expect(names).toContain('cbim_agent_call');expect(names).not.toContain('cbim_dispatch_task');
+      if(mode==='cross-model' && message!=='root'){
+        const member=message==='child'?'worker-b':'worker-c';
+        const call={id:'read-role-skill',name:'cbim_agent_skill_read',input:{skillId:'sk-'+member}};
+        expect(names).toContain(call.name);
+        expect((await context.beforeTool(call)).allow).toBe(true);
+        const receipt:any=await tools.call(call.name,call.input,new AbortController().signal,call.id);
+        const {position,skill}=JSON.parse(receipt.content[0].text);
+        expect([position,skill.content]).toEqual(['Duty '+member,'Procedure '+member]);
+        await context.emit({type:'tool.finished',data:{...call,result:receipt}});
+        await context.emit({type:'message',data:{text:position+' / '+skill.content}});
+      }
       const ask=async()=>{
         const call={id:'ask-parent',name:'cbim_ask_user_question',input:{questions:[{question:'Choose scope',options:[{label:'Small'},{label:'Large'}]}]}};
         expect((await context.beforeTool(call)).allow).toBe(true);
@@ -131,6 +142,8 @@ it('root request budget refusal prevents child startup and closes the root scope
 it('uses different frozen engine/model selections and budgets for each level without changing root selection',async()=>{
  const f=await fixture('cross-model');expect((await f.run()).status).toBe('completed');expect(f.events).toHaveLength(3);
  const options=fake.engine.mock.calls.map(([options])=>options);
+ expect(options[0].prompt).toContain('接收用户任务');
+ for(const [i,id] of ['worker-b','worker-c'].entries()){expect(options[i+1].prompt).toContain('Duty '+id);expect(options[i+1].prompt).toContain('Procedure '+id);expect(options[i+1].prompt).toContain('Report evidence to the caller')}
  expect(options.map(o=>[o.llm.profile.engine,o.llm.profile.model,o.llm.apiKey])).toEqual([['pi','model',''],['claude-code','model-b','child-key'],['codex','model-c','leaf-key']]);
  expect(f.forRun.mock.calls.map(c=>(c[1] as ResolvedLlm).profile.model)).toEqual(['model','model-b','model-c']);
  expect(f.forRun.mock.calls[1][0]).toMatchObject({kind:'main',taskId:'root-task',agentRun:{taskId:f.events[1].task.taskId,runId:f.events[1].runId}});

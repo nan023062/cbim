@@ -4,7 +4,7 @@
  */
 import type { IpcCaller } from './ipc-call';
 
-export type { TaskView, KnowledgeFile, Change, ChangeRequest, Issue, Validation, ModuleNode, Snapshot, Preview } from '../../logic/knowledge/rules/types';
+export type { TaskView, KnowledgeFile, Change, ChangeRequest, Issue, Validation, Workspace, Snapshot, Preview } from '../../logic/knowledge/rules/types';
 
 export { projectRootModuleId, projectRootModule } from '../../logic/workspace/rules/project-root';
 

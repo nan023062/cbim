@@ -45,7 +45,7 @@ export function mainModuleOwnershipTools(owner: KnowledgeWorkspace, service: Mod
     Commit: (raw, toolCallId, signal) =>
     {
       const input = moduleOwnerCommitInputSchema.parse(raw),
-        actor = moduleOwnershipMainActorSchema.parse({ kind: 'main_agent', rootSessionId: fixed.rootSessionId, scopeId: fixed.scopeId, agentInstanceId: main.agentInstanceId, agentSessionId: main.agentSessionId, runId: fixed.runId, toolCallId, toolName: 'cbim_module_owner_change_commit' });
+        actor = moduleOwnershipMainActorSchema.parse({ kind: 'main_agent', rootSessionId: fixed.rootSessionId, scopeId: fixed.scopeId, agentInstanceId: main.agentInstanceId, agentSessionId: main.agentSessionId, runId: fixed.runId, toolCallId, toolName: 'cbim_workspace_owner_change_commit' });
 
       const commandId = moduleOwnershipMainCommandId(identity.workspaceId, actor),
         request = { ...identity, ...input, commandId };

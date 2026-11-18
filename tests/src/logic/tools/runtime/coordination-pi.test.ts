@@ -14,9 +14,9 @@ it('真实 Pi 统一责任快照和原回执可达，过期依据不给重试许
   expect(names).toEqual(expect.arrayContaining(['cbim_state_inspect','cbim_receipt_inspect','cbim_agent_call']));expect(names).not.toContain('cbim_goal_plan');
   if(turn===0)for(const tool of body.tools.filter((item:any)=>['cbim_state_inspect','cbim_receipt_inspect'].includes(item.function.name)))new Ajv({strict:false,validateFormats:false}).compile(tool.function.parameters);
   const previous=turn?knowledgeContractResult(body,'call-'+(turn-1)):undefined;
-  let name='cbim_module_owner_change_commit',args:unknown=commit;
+  let name='cbim_workspace_owner_change_commit',args:unknown=commit;
   if(turn===0){name='cbim_state_inspect';args={target:'owner',input:{members:true,limit:20}}}
-  else if(turn===1){expect(previous.memberPage.total).toBe(1);const member=previous.memberPage.items[0];change={moduleId,expectedBinding:null,nextOwner:{memberId:member.memberId,expectedRevision:member.revision},reason:'Test original stale basis'};name='cbim_module_owner_change_preview';args={change}}
+  else if(turn===1){expect(previous.memberPage.total).toBe(1);const member=previous.memberPage.items[0];change={moduleId,expectedBinding:null,nextOwner:{memberId:member.memberId,expectedRevision:member.revision},reason:'Test original stale basis'};name='cbim_workspace_owner_change_preview';args={change}}
   else if(turn===2){expect(previous.preview.change).toEqual(change);commit={change,expectedOwnershipCursor:previous.preview.ownershipCursor,expectedBasis:'0'.repeat(64)};args=commit}
   else if(turn===3){expect(previous).toMatchObject({status:'unknown',retryable:false,terminal:true,code:'OWNERSHIP_BASIS_STALE',reconcileTool:'cbim_receipt_inspect'});name=previous.reconcileTool;args=previous.reconcileArgs}
   else if(turn>6)throw Error('Failure circuit did not stop further model requests');
@@ -33,7 +33,7 @@ it('真实 Pi 统一责任快照和原回执可达，过期依据不给重试许
   await vi.waitFor(async()=>{if(errors.length)return;expect((await inspect()).status).not.toBe('running')},{timeout:30000,interval:50});
   const result=await inspect();expect(errors).toEqual([]);expect(result.status).toBe('failed');expect(requests).toHaveLength(7);
   expect(result.events.filter(event=>event.type==='tool.finished'&&event.data.name==='cbim_receipt_inspect')).toHaveLength(1);
-  expect(result.events.find(event=>event.type==='engine.status'&&event.data.state==='blocked')?.data).toMatchObject({tool:'cbim_module_owner_change_commit',consecutive:3});
+  expect(result.events.find(event=>event.type==='engine.status'&&event.data.state==='blocked')?.data).toMatchObject({tool:'cbim_workspace_owner_change_commit',consecutive:3});
   const state=await f.app.Workspace(seed.entry.id).dispatchStore.Read();expect(state.ownershipChanges).toEqual(before.ownershipChanges);expect(state.scopes?.[0].goal?.plan).toBeUndefined();expect(state.graphs[0].tasks).toEqual([]);
  }finally{await f.app.Shutdown();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));await f.cleanup()}
 },45000);

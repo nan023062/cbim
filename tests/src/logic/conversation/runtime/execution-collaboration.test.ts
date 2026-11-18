@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import {WorkspaceExecutionManager} from '../../../../../src/logic/conversation/runtime/execution-manager';
-import {Agent} from '../../../../../src/logic/agents/agent';
+import {Agent} from '../../../../../src/framework/cability/agent';
 import type {ExecutionCollaboration} from '../../../../../src/logic/conversation/runtime/execution-manager';
 import {LoopRuntime} from '../../../../../src/logic/execution/rules/runtime/runtime';
 import type {AgentEngine,EngineContext,RunInputSource,TaskSpec} from '../../../../../src/logic/execution/rules/types';
@@ -20,7 +20,7 @@ test('统一 Agent 根运行只使用独立生命周期，不触发旧协调器'
   const f=await fixture();
   const lifecycle={BeforeRun:vi.fn(async()=>{}),Settled:vi.fn(async()=>{}),Failed:vi.fn(async()=>{})};
   const original=f.factory.getMockImplementation()!;
-  f.factory.mockImplementation(async(...args)=>({...await original(...args),agent:new Agent({id:'cbim:main',name:'main',instructions:'',permission:'ask'},{workspaceId:args[1].workspaceId,taskId:args[1].taskId}),unifiedAgentTools:true,agentLifecycle:lifecycle}));
+  f.factory.mockImplementation(async(...args)=>({...await original(...args),agent:new Agent({id:'cbim:main',name:'main',instructions:''},{workspaceId:args[1].workspaceId,taskId:args[1].taskId}),unifiedAgentTools:true,agentLifecycle:lifecycle}));
   try{
     const run=await f.manager.Chat('通过统一工具执行',options);
     expect(f.factory.mock.calls[0][2].executionModel).toBe('agent-tools-v1');
@@ -36,7 +36,7 @@ test('统一 Agent 受理失败归原生命周期，不能调用旧失败清理'
   const f=await fixture();const refusal=new Error('budget denied');
   const lifecycle={BeforeRun:vi.fn(async()=>{throw refusal}),Settled:vi.fn(async()=>{}),Failed:vi.fn(async()=>{})};
   const original=f.factory.getMockImplementation()!;
-  f.factory.mockImplementation(async(...args)=>({...await original(...args),agent:new Agent({id:'cbim:main',name:'main',instructions:'',permission:'ask'},{workspaceId:args[1].workspaceId,taskId:args[1].taskId}),unifiedAgentTools:true,agentLifecycle:lifecycle}));
+  f.factory.mockImplementation(async(...args)=>({...await original(...args),agent:new Agent({id:'cbim:main',name:'main',instructions:''},{workspaceId:args[1].workspaceId,taskId:args[1].taskId}),unifiedAgentTools:true,agentLifecycle:lifecycle}));
   try{
     await expect(f.manager.Chat('拒绝前不得派发',options)).rejects.toThrow('budget denied');
     expect(lifecycle.Failed).toHaveBeenCalledWith(refusal);
@@ -351,7 +351,7 @@ test.each([false,true])('closing waits for unified Agent durable settlement and 
  const f=await fixture();let release!:()=>void;const gate=new Promise<void>(resolve=>release=resolve);
  const lifecycle={BeforeRun:vi.fn(async()=>{}),Settled:vi.fn(async()=>{await gate;if(reject)throw Error('durable settlement failed')}),Failed:vi.fn(async()=>{})};
  const original=f.factory.getMockImplementation()!;
- f.factory.mockImplementation(async(...args)=>({...await original(...args),agent:new Agent({id:'cbim:main',name:'main',instructions:'',permission:'ask'},{workspaceId:args[1].workspaceId,taskId:args[1].taskId}),unifiedAgentTools:true,agentLifecycle:lifecycle}));
+ f.factory.mockImplementation(async(...args)=>({...await original(...args),agent:new Agent({id:'cbim:main',name:'main',instructions:''},{workspaceId:args[1].workspaceId,taskId:args[1].taskId}),unifiedAgentTools:true,agentLifecycle:lifecycle}));
  try{
   const run=await f.manager.Chat('关闭仍需保存原运行事实',options);
   await f.manager.Enqueue(run.taskId,'关闭后不得自动执行',options);

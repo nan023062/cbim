@@ -36,7 +36,7 @@ const definitions = {
     schema: inspectInput, effects: ['read'] as const,
   },
   cbim_goal_plan: {
-    description: '按 expectedRevision 保存目标、约束、验收项与模块分工。业务 assignments 必须使用 cbim_module_owner_inspect 的 execution.groups 中真实 ownerSelection，并明确对应 agentId；不同岗位拆分。workflowSelections 仅选本模块实际挂载流程。未指定自定义 Agent 的模块分配给 cbim:main 在当前会话直接执行，不填 ownerSelection 或成员专属 Workflow，不派发给自己。计划和派发保持同一岗位/流程，变化须重新规划新任务；旧成果按原岗位解释，保存计划不派发或授予权限。',
+    description: '按 expectedRevision 保存目标、约束、验收项与模块分工。业务 assignments 必须使用 cbim_workspace_owner_inspect 的 execution.groups 中真实 ownerSelection，并明确对应 agentId；不同岗位拆分。workflowSelections 仅选本模块实际挂载流程。未指定自定义 Agent 的模块分配给 cbim:main 在当前会话直接执行，不填 ownerSelection 或成员专属 Workflow，不派发给自己。计划和派发保持同一岗位/流程，变化须重新规划新任务；旧成果按原岗位解释，保存计划不派发或授予权限。',
     schema: ownerPlanInput, effects: ['maintenance'] as const,
   },
   cbim_goal_review: {

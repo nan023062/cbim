@@ -33,8 +33,8 @@ it('真实知识查询、内置资料及所有Skill别名保留原输出，内�
     const snapshot=accepts(knowledgeSnapshotOutputSchema,await call('cbim_knowledge_snapshot'));
     const found=accepts(knowledgeSearchOutputSchema,await call('cbim_knowledge_search',{query:'module.json'}));
     expect(found.revision).toBe(snapshot.revision);expect(found.files.length).toBeLessThan(snapshot.files.length);expect(found.validation).toBeUndefined();
-    accepts(moduleRegistryOutputSchema,await call('cbim_module_registry'));
-    const module=accepts(moduleGetOutputSchema,await call('cbim_module_get',{id:seeded.input.moduleId}));expect(module.workflows[0].inherited).toBe(false);
+    accepts(moduleRegistryOutputSchema,await call('cbim_workspace_registry'));
+    const module=accepts(moduleGetOutputSchema,await call('cbim_workspace_get',{id:seeded.input.moduleId}));expect(module.workflows[0].inherited).toBe(false);
     const registry=accepts(agentRegistryOutputSchema,await call('cbim_agent_registry'));expect(registry.builtinAgents).toEqual([]);
     const own=accepts(agentGetOutputSchema,await call('cbim_agent_get',{id:seeded.input.agentId}));expect(own.definitionFile.path).toContain('/agent.json');expect(own.skills.some((skill:any)=>skill.inherited)).toBe(true);
     await expect(call('cbim_agent_get',{id:'cbim:executor'})).rejects.toMatchObject({code:'AGENT_RETIRED'});
@@ -58,7 +58,7 @@ it('旧花名册不再提供查询或作者映射，其他无效知识仍能完�
     const modulePath=path.join(f.a,seeded.input.moduleId,'module.json'),module=JSON.parse(await fs.readFile(modulePath,'utf8'));module.summary=summary.repeat(3);await fs.writeFile(modulePath,JSON.stringify(module));
     const snapshot=accepts(knowledgeSnapshotOutputSchema,await call('cbim_knowledge_snapshot'));expect(snapshot.validation.structural).toBe(false);
     const registry=accepts(agentRegistryOutputSchema,await call('cbim_agent_registry'));expect(registry.groups.flatMap((group:any)=>group.agents)[0].authorPeople).toEqual([]);
-    const detail=accepts(moduleGetOutputSchema,await call('cbim_module_get',{id:seeded.input.moduleId}));expect(detail.structural).toBe(false);expect(detail.definition.summary).toBe(summary.repeat(3));
+    const detail=accepts(moduleGetOutputSchema,await call('cbim_workspace_get',{id:seeded.input.moduleId}));expect(detail.structural).toBe(false);expect(detail.definition.summary).toBe(summary.repeat(3));
     await fs.writeFile(path.join(f.a,'.cbim/team/people.json'),'不再解析的历史内容');
     const legacy=await ws.Snapshot();expect(legacy.validation!.issues.some(issue=>issue.path==='.cbim/team/people.json')).toBe(false);
     expect(legacy.files.find(file=>file.path==='.cbim/team/people.json')!.text).toBe('不再解析的历史内容');
@@ -72,7 +72,7 @@ it('空正文、缺失引用与Skill继承冲突仍保留明确可用状态',asy
     await fs.writeFile(path.join(f.a,seeded.input.moduleId,'module.md'),'');await fs.unlink(path.join(f.a,seeded.input.workflowId,'workflow.md'));
     const agentPath=path.join(f.a,seeded.input.agentId,'agent.json'),definition=JSON.parse(await fs.readFile(agentPath,'utf8'));definition.skills[0].name='review';await fs.writeFile(agentPath,JSON.stringify(definition));
     await fs.unlink(path.join(f.a,seeded.input.agentId,definition.work_principles));
-    const module=accepts(moduleGetOutputSchema,await call('cbim_module_get',{id:seeded.input.moduleId}));
+    const module=accepts(moduleGetOutputSchema,await call('cbim_workspace_get',{id:seeded.input.moduleId}));
     expect(module.overview).toMatchObject({available:true,text:''});expect(module.workflows[0].content).toMatchObject({available:false,reference:'workflows/build/workflow.md'});
     const agent=accepts(agentGetOutputSchema,await call('cbim_agent_get',{id:seeded.input.agentId}));expect(agent.skillSelectionValid).toBe(false);expect(agent.skillConflicts.length).toBeGreaterThan(0);expect(agent.principles.available).toBe(false);
     const snapshot=await ws.Snapshot();expect(accepts(knowledgeContentOutputSchema,content(snapshot,seeded.input.moduleId,{invalid:['reference']}))).toEqual({available:false,reference:{invalid:['reference']}});

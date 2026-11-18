@@ -54,7 +54,7 @@ export function isModuleOwnershipSourceAdoption(change: ModuleOwnershipChangeInp
   return change.kind === 'adopt_source'
 }
 
-export const moduleOwnershipMainActorSchema = z.object({ kind: z.literal('main_agent'), rootSessionId: id, scopeId: id, agentInstanceId: id, agentSessionId: id, runId: id, toolCallId: id, toolName: z.literal('cbim_module_owner_change_commit') }).strict();
+export const moduleOwnershipMainActorSchema = z.object({ kind: z.literal('main_agent'), rootSessionId: id, scopeId: id, agentInstanceId: id, agentSessionId: id, runId: id, toolCallId: id, toolName: z.literal('cbim_workspace_owner_change_commit') }).strict();
 
 export type ModuleOwnershipMainActor = z.infer<typeof moduleOwnershipMainActorSchema>;
 

@@ -12,11 +12,16 @@ import { parseJson } from '../../../io-errors/json';
 
 import type { Snapshot } from '../types';
 
-import { projectRootModuleId, projectRootModule, projectRootOverview } from '../../../workspace/rules/project-root';
+import { Project, projectRootModuleId, projectRootWithChildren, projectRootOverview } from '../../../workspace/rules/project-root';
 
 /** 实例固定绑定一个快照；刷新知识后由调用方创建新的领域视图。 */
 export class BusinessWorkspace
 {
+  private get project(): Project
+  {
+    return new Project(this.snapshot.validation?.tree ?? { roots: [], nodes: {} });
+  }
+
   constructor(private snapshot: Snapshot)
   {
   }
@@ -26,7 +31,7 @@ export class BusinessWorkspace
     const s = this.snapshot,
       index = parseJson(s.validation!.indexes['.cbim/workspace/registry.json']);
 
-    return { ...context(s), workspaceRootId: '.cbim/workspace', projectRoot: { ...projectRootModule, children: [...s.validation!.tree.roots] }, modules: index.modules.filter((m: any) => !query || `${m.id} ${m.summary}`.toLowerCase().includes(query.toLowerCase())), roots: s.validation!.tree.roots, indexSource: 'current-definitions', persistedIndexMatches: s.files.find(f => f.path === '.cbim/workspace/registry.json')?.text === s.validation!.indexes['.cbim/workspace/registry.json'] };
+    return { ...context(s), workspaceRootId: '.cbim/workspace', projectRoot: projectRootWithChildren(this.project.children), modules: index.modules.filter((m: any) => !query || `${m.id} ${m.summary}`.toLowerCase().includes(query.toLowerCase())), roots: s.validation!.tree.roots, indexSource: 'current-definitions', persistedIndexMatches: s.files.find(f => f.path === '.cbim/workspace/registry.json')?.text === s.validation!.indexes['.cbim/workspace/registry.json'] };
   }
 
   async Module(id: string)
@@ -34,12 +39,14 @@ export class BusinessWorkspace
     const s = this.snapshot;
 
     if (id === projectRootModuleId)
-      return { ...context(s), id, source: 'builtin' as const, definition: { ...projectRootModule, children: [...(s.validation?.tree.roots ?? [])], workflows: [] }, overview: { available: true as const, text: projectRootOverview }, workflows: [], workflowScope: 'own-only' as const };
+      return { ...context(s), id, source: 'builtin' as const, definition: { ...projectRootWithChildren(this.project.children), workflows: [] }, overview: { available: true as const, text: projectRootOverview }, workflows: [], workflowScope: 'own-only' as const };
 
-    if (!Object.hasOwn(s.validation!.tree.nodes, id))
+    const workspace = this.project.FindWorkspace(id);
+
+    if (!workspace)
       throw new Error('Module 不存在或定义未通过校验，请先查询模块注册表与问题清单');
 
-    const definition = data(s, id + '/module.json');
+    const definition = data(s, workspace.id + '/module.json');
 
     return { ...context(s), id, definition, definitionFile: s.files.find(f => f.path === id + '/module.json'), overview: content(s, id, definition.overview), workflows: definition.workflows.map((w: any) => ({ ...w, id: path.posix.dirname(path.posix.join(id, w.reference)), owner: id, inherited: false, content: content(s, id, w.reference) })), workflowScope: 'own-only' };
   }

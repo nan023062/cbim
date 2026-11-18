@@ -1,3 +1,5 @@
+import type { WorkspaceTree } from '../../../framework/business';
+export type { Workspace } from '../../../framework/business';
 /**
  * 作用定位：知识快照、校验与事务的数据契约，维护任务与业务任务分开。
  * 设计原因：领域数据由 Core 拥有，避免知识规则反向依赖桌面 IPC 或展示类型。
@@ -71,12 +73,7 @@ export interface Validation
 
   indexes: Record<string, string>;
 
-  tree:
-  {
-    nodes: Record<string, ModuleNode>;
-
-    roots: string[]
-  };
+  tree: WorkspaceTree;
 
   skills?: Record<string,
     {
@@ -104,25 +101,7 @@ export interface Validation
 }
 
 /** 正式模块包含树节点；children 为模块 ID，sources 描述目录归属而非运行时依赖。 */
-export interface ModuleNode
-{
-  id: string;
 
-  name: string;
-
-  summary: string;
-
-  sources:
-  {
-    location: string;
-
-    scope: string
-  }[];
-
-  children: string[];
-
-  virtual?: boolean
-}
 
 /** 同一知识版本的正文快照；revision 由所有文件内容共同决定。 */
 export interface Snapshot

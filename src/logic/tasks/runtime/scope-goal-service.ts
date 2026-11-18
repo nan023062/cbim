@@ -366,7 +366,7 @@ export class ScopeGoalService
 
     check(allowed && allowed.seq < event.seq && allowed.data.name === receipt.toolName && receipt.inputHash === hash(JSON.stringify(allowed.data.input)) && allowed.seq >= lastEffect(summary), 'GOAL_EVIDENCE_STALE', '证据不属于最后一次副作用之后的有效执行');
 
-    check(!receipt.toolName.startsWith('cbim_task_') && !receipt.toolName.startsWith('cbim_dispatch_') && !receipt.toolName.startsWith('cbim_goal_') && !receipt.toolName.startsWith('cbim_governance_') && !receipt.toolName.startsWith('cbim_module_owner_') && receipt.toolName !== 'cbim_delivery_prepare', 'GOAL_EVIDENCE_INVALID', '调度、计划、审阅或责任治理回执不能作为业务完成证据');
+    check(!receipt.toolName.startsWith('cbim_task_') && !receipt.toolName.startsWith('cbim_dispatch_') && !receipt.toolName.startsWith('cbim_goal_') && !receipt.toolName.startsWith('cbim_governance_') && !receipt.toolName.startsWith('cbim_workspace_owner_') && receipt.toolName !== 'cbim_delivery_prepare', 'GOAL_EVIDENCE_INVALID', '调度、计划、审阅或责任治理回执不能作为业务完成证据');
 
     return { receipt, event };
   }

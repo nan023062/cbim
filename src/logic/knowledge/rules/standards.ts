@@ -12,7 +12,7 @@ CBIM 是本地／多端 AI Native 工作流工具。Agent 对象、执行循环�
 
 先核对本轮实际工具目录，使用 cbim_workspace_identity 确认工作区与实例。内置 cbim_skill_* 返回由当前 Agent 执行的方法；cbim_builtin_catalog/cbim_builtin_read 返回只读正文、版本与可解析引用。unavailable 引用记录缺口，不猜安装路径或读取不存在的工具。
 
-业务知识按 cbim_module_registry → cbim_module_get 定位；能力知识按 cbim_agent_registry → cbim_agent_get 定位。能力目录路径不等于可执行岗位标识；调用 Agent 使用当前提供的 cbim_agent_list 的真实标识及可用性。没有 Team 配置时主 Agent 仍可自己完成已授权工作。
+业务知识按 cbim_workspace_registry → cbim_workspace_get 定位；能力知识按 cbim_agent_registry → cbim_agent_get 定位。能力目录路径不等于可执行岗位标识；调用 Agent 使用当前提供的 cbim_agent_list 的真实标识及可用性。没有 Team 配置时主 Agent 仍可自己完成已授权工作。
 
 Team 是可调用 Agent 的能力配置集合。资料目录分组和 Skill 继承只组织知识，不构成运行调用层级；不读取兄弟节点私有方法，不以能力可见推断授权。
 
@@ -51,7 +51,7 @@ description: 通过 CBIM 内部知识工具定位权威知识、核实证据并�
 遵循[通用规范](builtin:common-rules)。调用本 Skill 只取得流程，不代表已完成调查。
 
 1. 明确问题、范围和需要回答的决定；核对 cbim_workspace_identity。恢复任务先核实当前版本与已有结论。
-2. 业务问题先 cbim_module_registry 查询候选模块，再用返回 ID 调用 cbim_module_get，取得知识正文与本模块 Workflow。能力问题先 cbim_agent_registry，再 cbim_agent_get 获取专业定义、原则及继承 Skill。authors 只保存来源说明，不要求登记真人，也不等于授权。
+2. 业务问题先 cbim_workspace_registry 查询候选模块，再用返回 ID 调用 cbim_workspace_get，取得知识正文与本模块 Workflow。能力问题先 cbim_agent_registry，再 cbim_agent_get 获取专业定义、原则及继承 Skill。authors 只保存来源说明，不要求登记真人，也不等于授权。
 3. cbim_knowledge_search 用于补查相关正文；需要全量校验和版本时 cbim_knowledge_snapshot。不得用旧注册表或缓存冒充当前结果。
 4. 区分正式知识、实际业务产物、观察和推断。必要时在授权范围用当前运行的原生工具核查源码或资产；知识正文是依据，不自动证明业务行为。
 5. 检查答案是否覆盖问题、来源是否一致、关键引用是否可用。Agent 的继承冲突不能静默选择一个版本；模块流程不能从祖先推导继承。

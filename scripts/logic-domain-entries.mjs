@@ -1,7 +1,6 @@
 // Logic 领域规则的明确入口；沿迁移前真实消费者核对，新增公开文件须在此登记并审阅。
 // 不聚合成全域 barrel，避免无关运行实现被纯协议消费者加载；具体逻辑边界继续限制私有读模型等入口。
 export const domainRoots=[
-  "src/logic/agents/agent.ts",
   "src/logic/agents/contracts.ts",
   "src/logic/automation/rules/",
   "src/logic/budget/rules/",
@@ -27,7 +26,6 @@ export const domainPublicEntries=new Set([
   "src/logic/team/rules/standards.ts",
   "src/logic/tasks/rules/standards.ts",
   "src/logic/connectors/rules/standards.ts",
-  "src/logic/agents/agent.ts",
   "src/logic/agents/contracts.ts",
   "src/logic/execution/rules/engine-adapter.ts",
   "src/logic/tasks/rules/topic-interruption.ts",

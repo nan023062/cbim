@@ -79,7 +79,7 @@ const definitions = {
     schema: resumeMemberInputSchema, effects: ['maintenance'] as const,
   },
   cbim_dispatch_task: {
-    description: '按当前目标计划向模块负责岗位派发任务。先用 cbim_module_owner_inspect 的 moduleIds 查询 execution.groups，明确 agentId、ownerSelection、goal、moduleIds、acceptance；不同负责人拆任务，无负责人或配置失效不能回退主模型或默认执行者。workflowSelections 只选对应模块实际挂载流程，与计划一致。成功仅表示排队，结束本轮让调度继续；不能指定实例、权限、知识正文或伪造维护人。',
+    description: '按当前目标计划向模块负责岗位派发任务。先用 cbim_workspace_owner_inspect 的 moduleIds 查询 execution.groups，明确 agentId、ownerSelection、goal、moduleIds、acceptance；不同负责人拆任务，无负责人或配置失效不能回退主模型或默认执行者。workflowSelections 只选对应模块实际挂载流程，与计划一致。成功仅表示排队，结束本轮让调度继续；不能指定实例、权限、知识正文或伪造维护人。',
     schema: taskInput, effects: ['maintenance'] as const,
   },
   cbim_dispatch_inspect: {

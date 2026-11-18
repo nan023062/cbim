@@ -46,7 +46,7 @@ export async function checkpointHandoffProvider(mode:CheckpointHandoffMode='comp
     if((role==='main')&&reviews.handle(body,'handoff-final',tool,reply)){res.end('data: [DONE]\n\n');return}
     if(role==='main'){
       assert.ok(body.tools?.some(item=>item.function.name==='cbim_dispatch_abandon_checkpoint'));assert.ok(body.tools?.every(item=>!['cbim_task_help','cbim_task_checkpoint'].includes(item.function.name)));
-      if(turn===0)tool('handoff-discover-a','cbim_module_owner_inspect',{moduleIds:[moduleId]});
+      if(turn===0)tool('handoff-discover-a','cbim_workspace_owner_inspect',{moduleIds:[moduleId]});
       else if(turn===1)tool('handoff-plan-a','cbim_goal_plan',goalPlanArguments({objective:d.goal,agentId,moduleIds:[moduleId],ownerSelection:discovery(body,'handoff-discover-a'),acceptance:[...d.acceptance]}));
       else if(turn===2)assign('handoff-old-a',0,discovery(body,'handoff-discover-a'));
       else if(turn===3)assign('handoff-old-b',1,discovery(body,'handoff-discover-a'),handoffToolValue(body,'handoff-old-a').taskId);
@@ -68,7 +68,7 @@ export async function checkpointHandoffProvider(mode:CheckpointHandoffMode='comp
       }else if(turn===10+shift){
         const {graph}=goalInspection(body,'handoff-after'),oldA=graph.tasks.find(item=>item.goal===d.oldGoals[0]);assert.ok(oldA);assert.equal(oldA.status,'cancelled');assert.equal(oldA.runIds.length,1);assert.equal(oldA.checkpointAbandonment?.kind,'abandoned_by_handoff');state.after=structuredClone(graph);
         const targets=graph.tasks.filter(item=>d.oldGoals.slice(1).some(goal=>goal===item.goal));assert.equal(targets.length,2);assert.ok(targets.every(item=>item.runIds.length===0));tool('handoff-cancel-successors','cbim_dispatch_cancel',{expectedGraphCursor:{streamId:graph.cursor.streamId,seq:graph.cursor.seq},targets:targets.map(item=>({taskId:item.taskId,expectedRevision:item.revision})),reason:d.cancelReason});
-      }else if(turn===11+shift){assert.ok(!handoffToolValue(body,'handoff-cancel-successors').error);tool('handoff-discover-b','cbim_module_owner_inspect',{moduleIds:[moduleId]})}
+      }else if(turn===11+shift){assert.ok(!handoffToolValue(body,'handoff-cancel-successors').error);tool('handoff-discover-b','cbim_workspace_owner_inspect',{moduleIds:[moduleId]})}
       else if(turn===12+shift){assert.notEqual(discovery(body,'handoff-discover-b').memberId,discovery(body,'handoff-discover-a').memberId);tool('handoff-replan-basis','cbim_goal_inspect',{})}
       else if(turn===13+shift){const {scope}=goalInspection(body,'handoff-replan-basis');tool('handoff-plan-b','cbim_goal_plan',{...goalPlanArguments({objective:d.goal,agentId,moduleIds:[moduleId],ownerSelection:discovery(body,'handoff-discover-b'),acceptance:[...d.acceptance]},scope.goal.revision),reason:'旧节点保留为历史，按当前负责岗位新建三项任务及依赖，不恢复原检查点'})}
       else if(turn===14+shift)assign('handoff-new-a',0,discovery(body,'handoff-discover-b'));

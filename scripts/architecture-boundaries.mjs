@@ -1,6 +1,10 @@
 // 逻辑边界独立于目录层级。只登记本轮已核实的边界；其他模块继续受物理层和文件无环约束。
 // files 是成员归属，public 是允许跨边界读取的入口；新增私有实现必须登记，不能靠换目录绕过。
 export const logicalBoundaries = [
+  {id:'framework-business',prefix:'src/framework/business/',public:['src/framework/business/index.ts'],dependencies:[],external:[]},
+  {id:'framework-office',prefix:'src/framework/office/',public:['src/framework/office/index.ts'],dependencies:['framework-agent'],external:[]},
+  {id:'framework-team',prefix:'src/framework/cability/team/',public:['src/framework/cability/team/index.ts','src/framework/cability/team/session.ts'],dependencies:[],external:['zod']},
+  {id:'framework-agent',prefix:'src/framework/cability/agent/',public:['src/framework/cability/agent/index.ts','src/framework/cability/agent/questions.ts','src/framework/cability/agent/call.ts','src/framework/cability/agent/exchange.ts','src/framework/cability/agent/identity.ts','src/framework/cability/agent/runtime-config.ts'],dependencies:['framework-team','execution-kernel'],external:['zod']},
   {id:'execution-kernel',files:['src/framework/kernel/index.ts'],public:['src/framework/kernel/index.ts'],dependencies:['framework-models','framework-engines'],external:[]},
   {id:'framework-models',prefix:'src/framework/kernel/models/',public:['src/framework/kernel/models/index.ts'],dependencies:[],external:['zod']},
   {id:'framework-engines',prefix:'src/framework/kernel/engines/',public:['src/framework/kernel/engines/index.ts'],dependencies:['framework-models','io'],external:['zod']},
@@ -62,11 +66,11 @@ export const logicalBoundaries = [
   },
   {
     id:'knowledge-data', files:['src/logic/knowledge/rules/types.ts'],
-    public:['src/logic/knowledge/rules/types.ts'], dependencies:[], external:[],
+    public:['src/logic/knowledge/rules/types.ts'], dependencies:['framework-business'], external:[],
   },
   {
     id:'project-definition', files:['src/logic/workspace/rules/project-root.ts'],
-    public:['src/logic/workspace/rules/project-root.ts'], dependencies:[], external:[],
+    public:['src/logic/workspace/rules/project-root.ts'], dependencies:['framework-business'], external:[],
   },
   {
     id:'knowledge-read-models',

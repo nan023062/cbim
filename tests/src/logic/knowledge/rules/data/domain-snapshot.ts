@@ -1,5 +1,5 @@
 import {hash,json} from '../../../../../../src/core/io/serialization';
-import type {KnowledgeFile,Snapshot,ModuleNode} from '../../../../../../src/logic/knowledge/rules/types';
+import type {KnowledgeFile,Snapshot,Workspace} from '../../../../../../src/logic/knowledge/rules/types';
 import {moduleFiles,summary} from './knowledge';
 
 /** 固定“已校验快照”输入，只用于读取模型；不代替 Rules 校验、知识事务或真实集成夹具。 */
@@ -16,7 +16,7 @@ export function domainSnapshot(){
   add(own+'/SKILL.md','# 专业实现规则');
   add(shared+'/SKILL.md','# 团队校验规则');
   add(workflowId+'/workflow.md','# 工作流\n先理解目标，再验证并记录证据。');
-  const nodes=Object.fromEntries([moduleId,child].map(id=>[id,JSON.parse(files.find(file=>file.path===id+'/module.json')!.text) as ModuleNode]));
+  const nodes=Object.fromEntries([moduleId,child].map(id=>[id,{kind:'workspace',...JSON.parse(files.find(file=>file.path===id+'/module.json')!.text)} as Workspace]));
   const indexes={
     '.cbim/team/registry.json':json({groups:[{id:'.cbim/team',agents:[{id:agentId,summary}]}]}),
     '.cbim/workspace/registry.json':json({modules:[moduleId,child].map(id=>({id,summary}))}),

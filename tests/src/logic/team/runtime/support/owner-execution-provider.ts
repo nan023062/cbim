@@ -33,7 +33,7 @@ export async function ownerExecutionProvider(mode:OwnerExecutionMode='complete',
     const reply=(text:string)=>{emit({role:'assistant',content:text});emit({},'stop')};
     if(isMain&&recursive){
       assert.ok(body.tools?.some(item=>item.function.name==='cbim_agent_call'));assert.ok(!body.tools?.some(item=>item.function.name==='cbim_dispatch_task'));
-      if(turn===0)tool('execution-owner-discovery','cbim_module_owner_inspect',{moduleIds:modules});
+      if(turn===0)tool('execution-owner-discovery','cbim_workspace_owner_inspect',{moduleIds:modules});
       else if(turn===1||turn===2){
         if(turn===1){const discovery=ownerExecutionDiscoverySchema.parse(ownerExecutionToolValue(body,'execution-owner-discovery').execution);state.discovery=discovery;assert.equal(discovery.groups.length,2);state.selections=modules.map(moduleId=>{const group=discovery.groups.find(g=>g.moduleIds.includes(moduleId));assert.ok(group?.selection);assert.deepEqual(group.issues,[]);return group.selection})}
         else if(mode==='bad-wire'){const value=ownerExecutionToolValue(body,'execution-call-0');assert.ok(JSON.stringify(value).includes('OWNER_REPLY_LOST'));state.badWire=value;tool('execution-call-check','cbim_agent_result_check',{callId:'execution-call-0'});res.end('data: [DONE]\n\n');return}
@@ -45,9 +45,9 @@ export async function ownerExecutionProvider(mode:OwnerExecutionMode='complete',
       else if(turn===(mode==='bad-wire'?4:3)){assert.equal(ownerExecutionToolValue(body,'execution-call-1').verification.state,'verified');reply(data.final)}
       else throw Error('Unexpected recursive owner replay '+turn);
     }else if(isMain){
-      assert.ok(body.tools?.some(item=>item.function.name==='cbim_module_owner_inspect'));
+      assert.ok(body.tools?.some(item=>item.function.name==='cbim_workspace_owner_inspect'));
       assert.ok(body.tools?.every(item=>!['write','edit','bash'].includes(item.function.name)));
-      if(turn===0)tool('execution-owner-discovery','cbim_module_owner_inspect',{moduleIds:modules});
+      if(turn===0)tool('execution-owner-discovery','cbim_workspace_owner_inspect',{moduleIds:modules});
       else if(turn===1){
         const output=ownerExecutionToolValue(body,'execution-owner-discovery'),discovery=ownerExecutionDiscoverySchema.parse(output.execution);state.discovery=discovery;
         assert.equal(discovery.groups.length,2);state.selections=modules.map(moduleId=>{const group=discovery.groups.find(group=>group.moduleIds.includes(moduleId));assert.ok(group);assert.equal(group.agentId,agentId);assert.deepEqual(group.issues,[]);assert.ok(group.selection);return group.selection});
@@ -82,7 +82,7 @@ export async function ownerExecutionProvider(mode:OwnerExecutionMode='complete',
       }else if(turn===8){const review=ownerExecutionToolValue(body,'execution-owner-review');assert.ok(!review.error,JSON.stringify(review));reply(mode==='owner-before-claim'||mode==='profile-before-claim'?'原岗位执行条件变化，目标保持未完成，需要重新规划。':data.final)}
       else throw Error('Unexpected main replay: '+turn);
     }else{
-      const context=JSON.stringify(body.messages);assert.ok(body.tools?.every(item=>!item.function.name.startsWith('cbim_dispatch_')&&!item.function.name.startsWith('cbim_module_owner_')));
+      const context=JSON.stringify(body.messages);assert.ok(body.tools?.every(item=>!item.function.name.startsWith('cbim_dispatch_')&&!item.function.name.startsWith('cbim_workspace_owner_')));
       if(turn===0){
         assert.ok(context.includes(data.adaptations[index]),'The actual model input omitted position adaptation');assert.ok(!context.includes(data.adaptations[1-index]),'Another position adaptation leaked into this model input');
         assert.ok(context.includes(data.sharedSkill),'Inherited Skill text was not supplied');assert.ok(context.includes(data.ownSkill),'Agent Skill text was not supplied');assert.ok(context.includes(data.goals[index]));

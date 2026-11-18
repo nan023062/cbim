@@ -34,9 +34,9 @@ export function assertModuleOwnershipExpectedBinding(change: ModuleOwnershipChan
   if (change.expectedBinding === null && previous)
   {
     if (change.nextOwner?.memberId === previous.ownerMemberId)
-      throw new Error('模块已绑定该岗位，无需重复设置。请调用 cbim_module_owner_inspect 查询 execution.groups；若来源变化，请明确采纳当前来源。');
+      throw new Error('模块已绑定该岗位，无需重复设置。请调用 cbim_workspace_owner_inspect 查询 execution.groups；若来源变化，请明确采纳当前来源。');
 
-    throw new Error('模块已有责任记录。请调用 cbim_module_owner_inspect 读取 binding，将 bindingId、revision、ownerMemberId 作为 expectedBinding 后再预览更换或解除；不要继续传 null。');
+    throw new Error('模块已有责任记录。请调用 cbim_workspace_owner_inspect 读取 binding，将 bindingId、revision、ownerMemberId 作为 expectedBinding 后再预览更换或解除；不要继续传 null。');
   }
 
   const actual = previous ? { bindingId: previous.bindingId, revision: previous.revision, ownerMemberId: previous.ownerMemberId } : null;

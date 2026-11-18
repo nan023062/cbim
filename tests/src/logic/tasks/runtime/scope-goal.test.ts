@@ -138,7 +138,7 @@ it('纯负责人控制面写入不强造业务计划，但已有业务审阅仍�
   for(const business of [false,true]){
     const f=await setup();try{
       if(business){await f.service.goals.Plan(f.identity,f.scope.scopeId,f.runId,'ownership-plan',plan());await f.commit();await f.service.goals.Review(f.identity,f.scope.scopeId,f.runId,'ownership-review',review())}
-      await f.emitTool({id:'owner-commit',name:'cbim_module_owner_change_commit',input:{}},{allow:true,effects:['knowledge-write'],scope:{kind:'knowledge',workspaceId:f.entry.id}},jsonToolResult('cbim_module_owner_change_commit',{status:'recorded'}));
+      await f.emitTool({id:'owner-commit',name:'cbim_workspace_owner_change_commit',input:{}},{allow:true,effects:['knowledge-write'],scope:{kind:'knowledge',workspaceId:f.entry.id}},jsonToolResult('cbim_workspace_owner_change_commit',{status:'recorded'}));
       await f.journal.Append({type:'run.settled',data:{status:'completed'}});
       const summary=await RunJournal.Read(f.journal.directory);
       if(business)await expect(f.service.CloseScope(f.identity,f.scope.scopeId,'completed',summary)).rejects.toMatchObject({code:'GOAL_EFFECT_CHANGED'});

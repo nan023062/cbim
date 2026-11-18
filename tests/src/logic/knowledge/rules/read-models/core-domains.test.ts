@@ -14,8 +14,8 @@ it('核心领域在固定快照上解析团队 Skill 和本模块 Workflow，无
 });
 it('固定快照缺对象或正文时明确报告，不从磁盘补造资料',async()=>{
   const {snapshot,agentId}=domainSnapshot();
-  await expect(new Team(snapshot).Agent('.cbim/team/missing')).rejects.toMatchObject({code:'OBJECT_NOT_FOUND'});
-  await expect(new BusinessWorkspace(snapshot).Module('.cbim/workspace/missing')).rejects.toMatchObject({code:'OBJECT_NOT_FOUND'});
+  await expect(new Team(snapshot).Agent('.cbim/team/missing')).rejects.toThrow('Agent 不存在');
+  await expect(new BusinessWorkspace(snapshot).Module('.cbim/workspace/missing')).rejects.toThrow('Module 不存在');
   expect(content(snapshot,agentId,'missing.md')).toMatchObject({available:false});
   expect(content(snapshot,agentId,'../../../secret.md')).toMatchObject({available:false,reason:'引用越界'});
 });

@@ -1,3 +1,5 @@
+import { OfficeDispatcher } from '../../../framework/office';
+
 /**
  * 作用定位：execution 内的递归调用协调，拥有父子关联、深度限制、业务结果核验、用户意见的两阶段保存、反馈与后代取消。
  * 设计原因：直接复用 LoopRuntime；全局准入和根预算由既有执行装配提供，不自建循环或并发账本。
@@ -5,7 +7,7 @@
  */
 import { z } from 'zod';
 
-import type { Agent } from '../../agents/agent';
+import { readRoleSkill, type Agent } from '../../../framework/cability/agent';
 
 import { AgentCallExchange } from '../../agents/exchange';
 
@@ -73,7 +75,7 @@ export class AgentCallScheduler
     }>();
 
   /** 退出未确认仍保留真实占用；后续只重试排空，不重放工作。 */
-  private readonly stranded = new Map<string, Awaited<ReturnType<AgentSchedulerPorts['Prepare']>>>();
+  private readonly stranded = new Map<string, () => Promise<void>>();
 
   private readonly replyHistory = new Map<string, AgentCallExchange>();
 
@@ -107,7 +109,7 @@ export class AgentCallScheduler
   }
 
   /** 每个循环取得自己的工具绑定；停止只取消该调用者的直属调用，AbortSignal 继续向后代传播。 */
-  Bind(context: AgentToolContext, depth = 0): AgentToolsBinding
+  Bind(context: AgentToolContext, depth = 0, agent?: Agent): AgentToolsBinding
   {
     let pending = 0;
 
@@ -116,9 +118,17 @@ export class AgentCallScheduler
     return {
       GuardEffects: (effects) => this.humanBlocked.has(context.runId) && (!effects?.length || effects.some(effect => !['read', 'preview'].includes(effect))) ? 'AGENT_HUMAN_DECISION_REQUIRED: 意见不授权返工或修改，请等待新的用户执行指令' : undefined, AllowsWhileWaiting: (name) => { const active = [...this.activeCalls].filter(([key]) => key.startsWith(prefix)); return active.length > 0 && active.every(([, call]) => call.exchange.Waiting()) && [agentReplyToolName, agentListToolName, 'cbim_ask_user_question'].includes(name) }, Active: () => pending > 0 || [...this.stranded.keys()].some(key => key.startsWith(prefix)), Stop: async () => { for (const [key, controller] of this.reviewControllers) if (key.startsWith(prefix)) controller.abort(); await Promise.allSettled([...this.reviews].filter(([key]) => key.startsWith(prefix)).map(([, review]) => review.result)); const active = [...this.activeCalls].filter(([key]) => key.startsWith(prefix)).map(([, value]) => value); for (const item of active) item.controller.abort(); await Promise.allSettled(active.map(item => item.done)); await this.Drain(prefix) }, capability: {
         id: 'agent-call', instructions: ['明确业务模块的调用须提供 business.moduleIds 与 acceptance；宿主冻结该模块 Workflow。业务返回的 verification 只证明当时证据与文件一致，不替代人工验收；交付前用 cbim_agent_result_check 按原 callId 复核当前字节，失败不能报告完成。', '调用其他 Agent 与普通工具相同；结果和提问只返回直接调用方。仅可调用本轮实际配置能力。深度、并发或预算错误不是成功，不重复相同调用或绕过权限。'], tools: {
-          list: async () => [...(depth === 0 && this.ports.RequestReview ? [{ name: 'cbim_agent_result_review', description: '请用户评价本次子 Agent 交付。保存意见后再明确选择是否继续；文件变化不能接受，意见不授权自动返工。', inputSchema: { type: 'object', properties: { callId: { type: 'string' } }, required: ['callId'], additionalProperties: false } }] : []), { name: 'cbim_agent_result_check', description: '按当前调用者原 callId 重新核验子 Agent 的交付证据及实际文件；不重启执行，不代替用户验收。', inputSchema: { type: 'object', properties: { callId: { type: 'string' } }, required: ['callId'], additionalProperties: false } }, { name: agentReplyToolName, description: '回答原 Agent 调用返回的求助，等待原子运行继续；不创建新任务。result 必须对应原问题。', inputSchema: zodToJsonSchema(replyInput) as Record<string, unknown> }, ...(this.ports.List ? [{ name: agentListToolName, description: '读取已登记可调用 Agent 的真实 ID、名称、模型与可用性。', inputSchema: { type: 'object', properties: {}, additionalProperties: false } }] : []), { name: agentCallToolName, description: '调用一个已配置 Agent，等待其真实执行结果；执行 Agent 也可使用此工具。', inputSchema: zodToJsonSchema(callInput) as Record<string, unknown> }],
+          list: async () => [...(agent?.definition.effectiveSkills?.length ? [{ name: 'cbim_agent_skill_read', description: '按技能 ID 读取当前岗位本次运行的技能步骤。', inputSchema: { type: 'object', properties: { skillId: { type: 'string' } }, required: ['skillId'], additionalProperties: false } }] : []), ...(depth === 0 && this.ports.RequestReview ? [{ name: 'cbim_agent_result_review', description: '请用户评价本次子 Agent 交付。保存意见后再明确选择是否继续；文件变化不能接受，意见不授权自动返工。', inputSchema: { type: 'object', properties: { callId: { type: 'string' } }, required: ['callId'], additionalProperties: false } }] : []), { name: 'cbim_agent_result_check', description: '按当前调用者原 callId 重新核验子 Agent 的交付证据及实际文件；不重启执行，不代替用户验收。', inputSchema: { type: 'object', properties: { callId: { type: 'string' } }, required: ['callId'], additionalProperties: false } }, { name: agentReplyToolName, description: '回答原 Agent 调用返回的求助，等待原子运行继续；不创建新任务。result 必须对应原问题。', inputSchema: zodToJsonSchema(replyInput) as Record<string, unknown> }, ...(this.ports.List ? [{ name: agentListToolName, description: '读取已登记可调用 Agent 的真实 ID、名称、模型与可用性。', inputSchema: { type: 'object', properties: {}, additionalProperties: false } }] : []), { name: agentCallToolName, description: '调用一个已配置 Agent，等待其真实执行结果；执行 Agent 也可使用此工具。', inputSchema: zodToJsonSchema(callInput) as Record<string, unknown> }],
           call: async (name, args, signal, id) =>
           {
+            if (name === 'cbim_agent_skill_read' && agent?.definition.effectiveSkills?.length)
+            {
+              signal.throwIfAborted();
+              const input = z.object({ skillId: z.string().min(1) }).strict().parse(args);
+              const skill = readRoleSkill(agent.definition, input.skillId);
+              return jsonToolResult(name, { position: agent.definition.position, skill });
+            }
+
             if (name === 'cbim_agent_result_review')
             {
               const parsed = z.object({ callId: z.string().min(1) }).strict().safeParse(args);
@@ -302,46 +312,52 @@ export class AgentCallScheduler
 
   private async Execute(context: AgentToolContext, depth: number, id: string, input: z.infer<typeof callInput>, signal: AbortSignal, exchange: AgentCallExchange, onReference: (ref: AgentCallReference) => void): Promise<ToolResult>
   {
-    let prepared: Awaited<ReturnType<AgentSchedulerPorts['Prepare']>> | undefined,
-      reference: AgentCallReference | undefined;
-
+    let reference: AgentCallReference | undefined;
     const ref = (taskId: string, runId: string): AgentCallReference => ({ version: 1, workspaceId: context.task.workspaceId, callerTaskId: context.task.taskId, callerRunId: context.runId, toolCallId: id, taskId, runId });
+    const caller = { workspaceId: context.task.workspaceId, taskId: context.task.taskId };
+    const key = context.runId + ':' + id;
+    const office = new OfficeDispatcher<RunSummary, ToolResult>(caller, async step =>
+    {
+      const prepared = await this.ports.Prepare({ ...input, agentId: step.memberId, message: step.task, parent: { task: context.task, runId: context.runId, depth }, signal, reference: ref, RequestQuestion: (question, questionSignal) => exchange.Ask(question, AbortSignal.any([signal, questionSignal])) });
+      const verify = prepared.Verify?.bind(prepared);
+      return {
+        Start: async () =>
+        {
+          const control = {
+            signal, BeforeRun: async ({ runId }: { runId: string }) => { reference = ref(prepared.agent.conversation.taskId, runId); onReference(reference); await context.Emit({ type: 'tool.updated', data: { id, name: agentCallToolName, agentCall: reference, limits: { depth: depth + 1, maxDepth: this.limits.maxDepth, ...this.Capacity() } } }); await prepared.BeforeRun?.(runId) }
+          };
+    
+          return prepared.launch ? await prepared.runtime.StartMember!(prepared.task, input.message, prepared.launch, control) : await prepared.runtime.Start(prepared.task, input.message, undefined, undefined, control);
+        },
+        Settle: async summary =>
+        {
+          let verification: unknown;
+
+          if (verify && summary.status === 'completed' && !summary.unresolvedTools.length)
+          {
+            this.checks.set(context.runId + ':' + id, signal => verify(summary, signal));
+
+            verification = await verify(summary, signal);
+
+            this.reviewProofs.set(context.runId + ':' + id, structuredClone(verification))
+          }
+
+          const output = { agentCall: reference, status: summary.status, summary: this.Message(summary), ...(verification ? { verification } : {}), unresolvedTools: summary.unresolvedTools };
+          const completed = summary.status === 'completed' && !summary.unresolvedTools.length;
+          return { completed, summary: output.summary, value: { ...jsonToolResult(agentCallToolName, output), ...(!completed ? { isError: true } : {}) } };
+        },
+        Close: () => prepared.runtime.Close(),
+        Release: () => prepared.Release()
+      };
+    }, retry => this.stranded.set(key, retry), signal);
 
     try
     {
-      signal.throwIfAborted();
-
-      prepared = await this.ports.Prepare({ ...input, parent: { task: context.task, runId: context.runId, depth }, signal, reference: ref, RequestQuestion: (input, questionSignal) => exchange.Ask(input, AbortSignal.any([signal, questionSignal])) });
-
-      signal.throwIfAborted();
-
-      const control = {
-        signal, BeforeRun: async ({ runId }: { runId: string }) => { reference = ref(prepared!.agent.conversation.taskId, runId); onReference(reference); await context.Emit({ type: 'tool.updated', data: { id, name: agentCallToolName, agentCall: reference, limits: { depth: depth + 1, maxDepth: this.limits.maxDepth, ...this.Capacity() } } }); await prepared!.BeforeRun?.(runId) }
-      };
-
-      const run = prepared.launch ? await prepared.runtime.StartMember!(prepared.task, input.message, prepared.launch, control) : await prepared.runtime.Start(prepared.task, input.message, undefined, undefined, control);
-
-      const summary = await run.done;
-
-      let verification: unknown;
-
-      if (prepared.Verify && summary.status === 'completed' && !summary.unresolvedTools.length)
-      {
-        const verify = prepared.Verify;
-
-        this.checks.set(context.runId + ':' + id, signal => verify(summary, signal));
-
-        verification = await verify(summary, signal);
-
-        this.reviewProofs.set(context.runId + ':' + id, structuredClone(verification))
-      }
-
-      const output = { agentCall: reference, status: summary.status, summary: this.Message(summary), ...(verification ? { verification } : {}), unresolvedTools: summary.unresolvedTools };
-
-      return { ...jsonToolResult(agentCallToolName, output), ...(summary.status !== 'completed' || summary.unresolvedTools.length ? { isError: true } : {}) };
+      return (await office.Dispatch(caller, { kind: 'forward', memberId: input.agentId, task: input.message })).value;
     }
     catch (error)
     {
+      if (this.stranded.has(key)) throw error;
       const failure = error as
         {
           code?: string;
@@ -350,24 +366,6 @@ export class AgentCallScheduler
         };
 
       return errorResult(failure.code ?? (signal.aborted ? 'AGENT_CALL_CANCELLED' : 'AGENT_CALL_FAILED'), failure.message ?? String(error), { started: !!reference, ...(error instanceof AgentConstraintError ? error.constraint : {}), ...(reference ? { agentCall: reference } : {}) })
-    }
-    finally
-    {
-      if (prepared)
-      {
-        try
-        {
-          await prepared.runtime.Close();
-
-          await prepared.Release()
-        }
-        catch (error)
-        {
-          this.stranded.set(context.runId + ':' + id, prepared);
-
-          throw error
-        }
-      }
     }
   }
 
@@ -507,9 +505,7 @@ export class AgentCallScheduler
       if (!key.startsWith(prefix))
         continue;
 
-      await value.runtime.Close();
-
-      await value.Release();
+      await value();
 
       this.stranded.delete(key)
     }

@@ -108,7 +108,7 @@ export function isProgressEvidence(receipt: unknown, identity: ProgressToolIdent
 
   const value = checked.data;
 
-  return value.workspaceId === identity.workspaceId && value.taskId === identity.taskId && value.runId === identity.runId && value.scope.workspaceId === identity.workspaceId && value.outcome === 'succeeded' && !!value.resultHash && !!value.toolName.trim() && value.scope.kind !== 'repository' && !['cbim_repository_', 'cbim_governance_', 'cbim_module_owner_', 'cbim_task_', 'cbim_dispatch_', 'cbim_goal_'].some(prefix => value.toolName.startsWith(prefix)) && value.toolName !== 'cbim_delivery_prepare' && value.toolName !== questionToolName;
+  return value.workspaceId === identity.workspaceId && value.taskId === identity.taskId && value.runId === identity.runId && value.scope.workspaceId === identity.workspaceId && value.outcome === 'succeeded' && !!value.resultHash && !!value.toolName.trim() && value.scope.kind !== 'repository' && !['cbim_repository_', 'cbim_governance_', 'cbim_workspace_owner_', 'cbim_task_', 'cbim_dispatch_', 'cbim_goal_'].some(prefix => value.toolName.startsWith(prefix)) && value.toolName !== 'cbim_delivery_prepare' && value.toolName !== questionToolName;
 }
 
 /** 公开的是实际协议和限制；求助、检查点的门闩不允许模型为了查询而继续调用工具。 */

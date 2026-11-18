@@ -91,7 +91,7 @@ export const knowledgeContextSchema = z.object({ ...knowledgeIdentityShape, stru
 
 const source = z.object({ location: z.string(), scope: z.string() }).strict();
 
-const node = z.object({ id: knowledgeOutputIdSchema, name: z.string(), summary: z.string(), sources: z.array(source), children: z.array(z.string()), virtual: z.boolean().optional() }).strict();
+const node = z.object({ kind: z.literal('workspace').default('workspace'), id: knowledgeOutputIdSchema, name: z.string(), summary: z.string(), sources: z.array(source), children: z.array(z.string()), virtual: z.boolean().optional() }).strict();
 
 const skillEntry = z.object({ name: z.string(), purpose: z.string(), reference: z.string(), owner: z.string(), scope: z.enum(['agent', 'team']) }).strict();
 

@@ -22,7 +22,7 @@ it('真实对象CRUD保存并读取原Workflow条件，坏声明在保存预览�
     expect((await workspace.Snapshot()).revision).toBe(snapshot.revision);await expect(fs.access(path.join(f.a,workflowPath))).rejects.toThrow();
     const preview=await call('cbim_object_preview',{revision:snapshot.revision,operations:[operation]});expect(preview.validation.structural).toBe(true);
     const committed=await call('cbim_object_commit',{planId:preview.planId},true);expect(committed.revision).not.toBe(snapshot.revision);
-    const detail=await call('cbim_module_get',{id:'.cbim/workspace/game'});expect(detail.workflows[0].content.text).toBe(body);expect(parseWorkflowContract(detail.workflows[0].content.text)?.beforeEffects?.requirePlan).toBe(true);
+    const detail=await call('cbim_workspace_get',{id:'.cbim/workspace/game'});expect(detail.workflows[0].content.text).toBe(body);expect(parseWorkflowContract(detail.workflows[0].content.text)?.beforeEffects?.requirePlan).toBe(true);
     await expect(call('cbim_object_preview',{revision:committed.revision,operations:[{kind:'workflow',action:'update',id:preview.objects[0],body:body+'\n'+body}]})).rejects.toMatchObject({code:'WORKFLOW_CONTRACT_INVALID'});
     expect(await fs.readFile(path.join(f.a,workflowPath),'utf8')).toBe(body);
   }finally{await f.cleanup()}

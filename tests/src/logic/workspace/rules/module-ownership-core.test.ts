@@ -45,7 +45,7 @@ const mutation=(event:ModuleOwnershipChange):DispatchMutation=>({ownershipChange
 const advance=(state:DispatchState,event:ModuleOwnershipChange):DispatchState=>({...state,...projectModuleOwnershipMutation(state,mutation(event),moduleOwnershipCommand(event.request,event.actor))});
 const commit=(store:FileDispatchStore,event:ModuleOwnershipChange)=>store.Transact(moduleOwnershipCommand(event.request,event.actor),async()=>mutation(event));
 const main:AgentRef={agentId:'cbim:main',agentInstanceId:'main-instance',agentSessionId:'main-task-channel',name:'主调度'};
-const actor:ModuleOwnershipMainActor={kind:'main_agent',rootSessionId:'root',scopeId:'scope',agentInstanceId:main.agentInstanceId,agentSessionId:'main-conversation',runId:'main-run',toolCallId:'ownership-call',toolName:'cbim_module_owner_change_commit'};
+const actor:ModuleOwnershipMainActor={kind:'main_agent',rootSessionId:'root',scopeId:'scope',agentInstanceId:main.agentInstanceId,agentSessionId:'main-conversation',runId:'main-run',toolCallId:'ownership-call',toolName:'cbim_workspace_owner_change_commit'};
 function mainMutation():DispatchMutation{
   const identity={workspaceId,rootSessionId:actor.rootSessionId};
   const batch:GraphEventBatch={version:1,identity,streamId:'graph-stream',seq:1,eventId:'event-main',commandId:'setup-main',cause:'graph.created',committedAt:at,changes:[{type:'root.upserted',root:{kind:'session-root',nodeId:'session:root',identity,agent:main,revision:1,createdAt:at}},{type:'agent.upserted',agent:{agentInstanceId:main.agentInstanceId,agentId:main.agentId,name:main.name,revision:1,state:'idle',waitingTaskIds:[]}}]};

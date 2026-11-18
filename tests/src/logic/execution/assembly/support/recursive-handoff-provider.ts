@@ -22,11 +22,11 @@ export async function recursiveHandoffProvider(lostOutput=false,holdAfterReplace
   const call=(index:number)=>tool('handoff-new-'+index,'cbim_agent_call',{agentId:owner('handoff-owner-b'),message:goal(index),business:{moduleIds:[moduleId],acceptance:data.acceptance}});
   if(role==='main'){
    assert.ok(body.tools?.every(t=>!t.function.name.startsWith('cbim_dispatch_')&&!t.function.name.startsWith('cbim_goal_')));
-   if(turn===0)tool('handoff-owner-a','cbim_module_owner_inspect',{moduleIds:[moduleId]});
+   if(turn===0)tool('handoff-owner-a','cbim_workspace_owner_inspect',{moduleIds:[moduleId]});
    else if(turn===1)tool('handoff-old-call','cbim_agent_call',{agentId:owner('handoff-owner-a'),message:data.oldGoals[0],business:{moduleIds:[moduleId],acceptance:data.acceptance}});
    else if(turn===2){state.waiting=mainToolValue(body,'handoff-old-call');assert.equal(state.waiting.status,'waiting');tool('handoff-question','cbim_ask_user_question',state.waiting.questions)}
    else if(turn===3)tool('handoff-old-answer','cbim_agent_reply',{callId:'handoff-old-call',questionId:state.waiting.questionId,result:mainToolValue(body,'handoff-question')});
-   else if(turn===4){state.oldResult=mainToolValue(body,'handoff-old-answer');assert.ok(state.oldResult.error);tool('handoff-owner-b','cbim_module_owner_inspect',{moduleIds:[moduleId]})}
+   else if(turn===4){state.oldResult=mainToolValue(body,'handoff-old-answer');assert.ok(state.oldResult.error);tool('handoff-owner-b','cbim_workspace_owner_inspect',{moduleIds:[moduleId]})}
    else if(turn===5){assert.notEqual(owner('handoff-owner-a'),owner('handoff-owner-b'));call(0)}
    else if(turn===6&&lostOutput){assert.ok(JSON.stringify(mainToolValue(body,'handoff-new-0')).includes('HANDOFF_REPLY_LOST'));tool('handoff-original-check','cbim_agent_result_check',{callId:'handoff-new-0'})}
    else if(turn===(lostOutput?7:6)){const proof=mainToolValue(body,lostOutput?'handoff-original-check':'handoff-new-0');if(lostOutput){assert.equal(proof.state,'verified');state.checks=proof}else assert.equal(proof.verification.state,'verified');state.results.push(proof);if(holdAfterReplacement){state.replacementReady=true;emit({role:'assistant',content:'新岗位第一项已验证，尚未启动后继。'});await successorGate}call(1)}

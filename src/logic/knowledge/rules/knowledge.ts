@@ -27,7 +27,7 @@ import { parseWorkflowContract } from '../../workspace/rules/workflow-contract';
 
 import { moduleSections, moduleBodyTemplate } from '../../workspace/rules/module-outline';
 
-import type { KnowledgeFile, Validation, Issue, ModuleNode } from './types';
+import type { KnowledgeFile, Validation, Issue, Workspace } from './types';
 
 import { parseJson } from '../../io-errors/json';
 
@@ -389,12 +389,12 @@ export class Rules
       skills[agent] = { chain, entries }
     }
 
-    const nodes: Record<string, ModuleNode> = {},
+    const nodes: Record<string, Workspace> = {},
       parents = new Map<string, string>();
 
     for (const [id, d] of modules)
     {
-      nodes[id] = { id, name: d.name, summary: d.summary, sources: d.sources, children: d.children };
+      nodes[id] = { kind: 'workspace', id, name: d.name, summary: d.summary, sources: d.sources, children: d.children };
 
       for (const child of d.children)
       {

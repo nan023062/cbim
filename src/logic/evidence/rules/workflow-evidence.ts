@@ -121,7 +121,7 @@ export function evaluateWorkflowDelivery(bindings: readonly WorkflowContractBind
 
     valid(receipt.toolName !== commandReportToolName, 'WORKFLOW_EVIDENCE_INVALID', '原命令核实只报告控制面事实，不能作为 Workflow 交付证据');
 
-    valid(receipt.workspaceId === identity.workspaceId && receipt.taskId === identity.taskId && receipt.runId === identity.runId && receipt.scope.workspaceId === identity.workspaceId && receipt.scope.kind !== 'repository' && !receipt.toolName.startsWith('cbim_repository_') && !receipt.toolName.startsWith('cbim_governance_') && !receipt.toolName.startsWith('cbim_module_owner_') && receipt.outcome === 'succeeded' && hex(receipt.inputHash) && hex(receipt.resultHash), 'WORKFLOW_EVIDENCE_INVALID', 'Workflow 交付回执必须是本任务本轮的真实业务成功结果，外部资料与治理记录不能作交付证据');
+    valid(receipt.workspaceId === identity.workspaceId && receipt.taskId === identity.taskId && receipt.runId === identity.runId && receipt.scope.workspaceId === identity.workspaceId && receipt.scope.kind !== 'repository' && !receipt.toolName.startsWith('cbim_repository_') && !receipt.toolName.startsWith('cbim_governance_') && !receipt.toolName.startsWith('cbim_workspace_owner_') && receipt.outcome === 'succeeded' && hex(receipt.inputHash) && hex(receipt.resultHash), 'WORKFLOW_EVIDENCE_INVALID', 'Workflow 交付回执必须是本任务本轮的真实业务成功结果，外部资料与治理记录不能作交付证据');
 
     valid(!unique.has(receipt.toolCallId) || same(unique.get(receipt.toolCallId), receipt), 'WORKFLOW_EVIDENCE_INVALID', '同一工具 ID 的 Workflow 证据不一致');
 

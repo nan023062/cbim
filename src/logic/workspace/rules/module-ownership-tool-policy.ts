@@ -4,11 +4,11 @@
  */
 import type { ToolReceipt } from '../../tools/rules/types';
 
-export const moduleOwnershipToolEffects = { cbim_module_owner_inspect: 'read', cbim_module_owner_change_preview: 'preview', cbim_module_owner_change_commit: 'knowledge-write', cbim_module_owner_receipt: 'read', } as const;
+export const moduleOwnershipToolEffects = { cbim_workspace_owner_inspect: 'read', cbim_workspace_owner_change_preview: 'preview', cbim_workspace_owner_change_commit: 'knowledge-write', cbim_workspace_owner_receipt: 'read', } as const;
 
 export type ModuleOwnershipToolName = keyof typeof moduleOwnershipToolEffects;
 
-export const moduleOwnershipToolPrefix = 'cbim_module_owner_';
+export const moduleOwnershipToolPrefix = 'cbim_workspace_owner_';
 
 /** 只识别已定义的四项工具，不把相同前缀视作执行授权。 */
 export function isModuleOwnershipToolName(name: string): name is ModuleOwnershipToolName
@@ -19,5 +19,5 @@ export function isModuleOwnershipToolName(name: string): name is ModuleOwnership
 /** 控制面回执仍是知识写入；本判断只避免纯责任会话被强制当成业务目标，不能用于排除副作用。 */
 export function isModuleOwnershipControlReceipt(receipt: ToolReceipt, workspaceId: string)
 {
-  return receipt.toolName === 'cbim_module_owner_change_commit' && receipt.workspaceId === workspaceId && receipt.scope.kind === 'knowledge' && receipt.scope.workspaceId === workspaceId && receipt.effects.length === 1 && receipt.effects[0] === 'knowledge-write';
+  return receipt.toolName === 'cbim_workspace_owner_change_commit' && receipt.workspaceId === workspaceId && receipt.scope.kind === 'knowledge' && receipt.scope.workspaceId === workspaceId && receipt.effects.length === 1 && receipt.effects[0] === 'knowledge-write';
 }

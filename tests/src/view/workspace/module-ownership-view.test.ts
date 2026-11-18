@@ -34,7 +34,7 @@ it('分页核三项依据及前进，反查不接受其他岗位，详情不接�
 it('回执固定原身份、当前选择及本机来源，后续查询不能更换任何已受理事实',()=>{
   const request={...input,commandId:randomUUID(),expectedOwnershipCursor:null,expectedBasis:hash},value=receipt(request);
   expect(checkedModuleOwnershipReceipt(value,request)).toEqual(value);
-  for(const bad of [{...value,commandId:randomUUID()},{...value,moduleId:moduleId+'/other'},{...value,ownerMemberId:randomUUID()},{...value,basis:otherHash},{...value,bindingId:randomUUID()},{...value,actor:{kind:'main_agent',rootSessionId:'root',scopeId:'scope',agentInstanceId:'agent',agentSessionId:'channel',runId:'run',toolCallId:'call',toolName:'cbim_module_owner_change_commit'}}])expect(()=>checkedModuleOwnershipReceipt(bad,request,value)).toThrow();
+  for(const bad of [{...value,commandId:randomUUID()},{...value,moduleId:moduleId+'/other'},{...value,ownerMemberId:randomUUID()},{...value,basis:otherHash},{...value,bindingId:randomUUID()},{...value,actor:{kind:'main_agent',rootSessionId:'root',scopeId:'scope',agentInstanceId:'agent',agentSessionId:'channel',runId:'run',toolCallId:'call',toolName:'cbim_workspace_owner_change_commit'}}])expect(()=>checkedModuleOwnershipReceipt(bad,request,value)).toThrow();
 });
 
 it('发送前保存完整请求，双击与跨面板共享不会并发创建两次命令',async()=>{

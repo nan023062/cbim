@@ -69,9 +69,9 @@ export class KnowledgeTools
       register(name, { description: `读取内置「${skill.title}」流程：${skill.description}。返回正文、版本及引用，由调用方执行；调用本工具不会启动业务或修改文件。`, inputSchema: identity }, wrap(() => Builtins.Read(skill.id)))
     }
 
-    register('cbim_module_registry', { version: 2, description: '查询当前模块注册表与始终可用的 projectRoot（cbim:project）；关键词仅筛选已定义模块，不改写磁盘。', inputSchema: { ...identity, query: z.string().max(200).optional() } }, wrap(args => queries.Modules(args.query)));
+    register('cbim_workspace_registry', { version: 2, description: '查询当前模块注册表与始终可用的 projectRoot（cbim:project）；关键词仅筛选已定义模块，不改写磁盘。', inputSchema: { ...identity, query: z.string().max(200).optional() } }, wrap(args => queries.Modules(args.query)));
 
-    register('cbim_module_get', { version: 2, description: '按 ID 返回 Module 定义、正文及本模块 Workflow；cbim:project 返回内置项目根范围，不伪造文件或继承流程。', inputSchema: { ...identity, id: z.string() } }, wrap(args => queries.Module(args.id)));
+    register('cbim_workspace_get', { version: 2, description: '按 ID 返回 Module 定义、正文及本模块 Workflow；cbim:project 返回内置项目根范围，不伪造文件或继承流程。', inputSchema: { ...identity, id: z.string() } }, wrap(args => queries.Module(args.id)));
 
     register('cbim_agent_registry', { description: '查询团队分组与自定义 Agent 注册表。未配置自定义负责 Agent 的模块由主 Agent 在当前会话直接执行；builtinAgents 保留空数组，不再提供默认执行员。', inputSchema: { ...identity, query: z.string().max(200).optional() } }, wrap(async args => ({ ...await queries.Agents(args.query), builtinAgents: [] })));
 

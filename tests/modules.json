@@ -7,8 +7,7 @@
       ],
       "tests": {
         "unit": [
-          "tests/src/logic/agents/agent-call-exchange.test.ts",
-          "tests/src/logic/agents/agent-object.test.ts"
+          "tests/src/logic/agents/agent-call-exchange.test.ts"
         ],
         "contract": [],
         "integration": []
@@ -1361,8 +1360,28 @@
       "directory": "src/view/foundations/utility"
     },
     "core/io": {
-      "roots": ["src/core/io/"],
-      "tests": {"unit": ["tests/src/core/io/bounded-bytes.test.ts", "tests/src/core/io/json-order.test.ts", "tests/src/core/io/json-text.test.ts", "tests/src/core/io/line-framer.test.ts", "tests/src/core/io/redaction.test.ts", "tests/src/core/io/strict-json.test.ts", "tests/src/core/io/io.test.ts", "tests/src/core/io/text-files.test.ts", "tests/src/core/io/digest.test.ts"], "contract": ["tests/src/core/io/utility-serialization-contract.test.ts"], "integration": ["tests/src/core/io/kernel-lock.test.ts"]},
+      "roots": [
+        "src/core/io/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/src/core/io/bounded-bytes.test.ts",
+          "tests/src/core/io/json-order.test.ts",
+          "tests/src/core/io/json-text.test.ts",
+          "tests/src/core/io/line-framer.test.ts",
+          "tests/src/core/io/redaction.test.ts",
+          "tests/src/core/io/strict-json.test.ts",
+          "tests/src/core/io/io.test.ts",
+          "tests/src/core/io/text-files.test.ts",
+          "tests/src/core/io/digest.test.ts"
+        ],
+        "contract": [
+          "tests/src/core/io/utility-serialization-contract.test.ts"
+        ],
+        "integration": [
+          "tests/src/core/io/kernel-lock.test.ts"
+        ]
+      },
       "directory": "src/core/io"
     },
     "core/utility": {
@@ -2036,6 +2055,33 @@
         "unit": [],
         "contract": [
           "tests/src/logic/engines/rules/engine-configuration.test.ts"
+        ],
+        "integration": []
+      }
+    },
+    "framework/cability/agent": {
+      "roots": [
+        "src/framework/cability/agent/",
+        "src/framework/cability/team/"
+      ],
+      "directory": "src/framework/cability/agent",
+      "tests": {
+        "unit": [
+          "tests/src/framework/cability/agent/agent-object.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      }
+    },
+    "framework/office": {
+      "roots": [
+        "src/framework/office/"
+      ],
+      "directory": "src/framework/office",
+      "tests": {
+        "unit": [],
+        "contract": [
+          "tests/src/framework/office/dispatcher.test.ts"
         ],
         "integration": []
       }

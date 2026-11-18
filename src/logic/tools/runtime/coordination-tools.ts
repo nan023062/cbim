@@ -21,9 +21,9 @@ interface ReadPort
   Call(name: string, input: Record<string, unknown>, signal: AbortSignal, toolCallId?: string): Promise<unknown>;
 }
 
-const inspectRoutes = { state: 'cbim_goal_inspect', task: 'cbim_dispatch_inspect', owner: 'cbim_module_owner_inspect', member: 'cbim_member_inspect', governance: 'cbim_governance_get' };
+const inspectRoutes = { state: 'cbim_goal_inspect', task: 'cbim_dispatch_inspect', owner: 'cbim_workspace_owner_inspect', member: 'cbim_member_inspect', governance: 'cbim_governance_get' };
 
-const receiptRoutes = { dispatch: 'cbim_dispatch_command_report', owner: 'cbim_module_owner_receipt', member: 'cbim_member_receipt', governance: 'cbim_governance_receipt' };
+const receiptRoutes = { dispatch: 'cbim_dispatch_command_report', owner: 'cbim_workspace_owner_receipt', member: 'cbim_member_receipt', governance: 'cbim_governance_receipt' };
 
 /** Zod 目录的 #/ 引用以独立 input 为根；嵌套后定位到真实分支，不修改原兼容工具的 Schema。 */
 function nestedInputSchema(schema: Record<string, unknown>, index: number): Record<string, unknown>

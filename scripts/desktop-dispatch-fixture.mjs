@@ -35,7 +35,7 @@ export async function desktopDispatchFixture(call){
       res.writeHead(200,{'Content-Type':'text/event-stream'});
       const emit=(delta,finish_reason=null)=>res.write('data: '+JSON.stringify({id:randomUUID(),object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason}]})+'\n\n');
       const tool=(id,name,args)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]});emit({},'tool_calls');res.end('data: [DONE]\n\n')};
-      if(turn===0)tool('inspect-owner','cbim_module_owner_inspect',{moduleIds:scenario.moduleIds});
+      if(turn===0)tool('inspect-owner','cbim_workspace_owner_inspect',{moduleIds:scenario.moduleIds});
       else if(turn===1){
         const discovery=toolResult(body,'inspect-owner').execution;
         assert.equal(discovery.groups.length,1);

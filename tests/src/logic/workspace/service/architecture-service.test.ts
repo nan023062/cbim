@@ -51,11 +51,11 @@ it('桌面 Agent/Skill/Workflow CRUD复用知识校验、继承和显式级联�
     expect((await call('cbim_agent_get',{id:'.cbim/team/developer'})).skills[0]).toMatchObject({name:'审阅',inherited:true});
     await apply([{kind:'agent',action:'update',id:'.cbim/team/developer',data:{name:'工程成员'},body:'# 变更原则'},{kind:'skill',action:'update',id:'.cbim/team/skills/review',data:{purpose:'核实测试'},body:'# Review'},{kind:'workflow',action:'update',id:'.cbim/workspace/game/workflows/build',data:{name:'构建并验证'},body:'# 验证'}]);
     expect((await call('cbim_agent_get',{id:'.cbim/team/developer'})).definition.name).toBe('工程成员');
-    expect((await call('cbim_module_get',{id:'.cbim/workspace/game'})).workflows[0].name).toBe('构建并验证');
+    expect((await call('cbim_workspace_get',{id:'.cbim/workspace/game'})).workflows[0].name).toBe('构建并验证');
     await expect(service.Preview({...await identity(workspace),operations:[{kind:'module',action:'delete',id:'.cbim/workspace/game'}]})).rejects.toMatchObject({code:'HAS_CHILDREN'});
     await apply([{kind:'module',action:'delete',id:'.cbim/workspace/game',cascade:true},{kind:'agent',action:'delete',id:'.cbim/team/developer'},{kind:'skill',action:'delete',id:'.cbim/team/skills/review'}]);
     expect(await fs.readFile(path.join(f.a,'game/index.ts'),'utf8')).toBe('export const untouched = true;');
-    expect((await call('cbim_module_registry')).modules).toEqual([]);
+    expect((await call('cbim_workspace_registry')).modules).toEqual([]);
   }finally{await f.cleanup()}
 });
 

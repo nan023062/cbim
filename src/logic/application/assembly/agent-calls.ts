@@ -11,7 +11,7 @@ import { prepareAgentBusiness, type AgentBusinessServices } from './agent-busine
 
 import { randomUUID } from 'node:crypto';
 
-import { Agent, type AgentToolContext } from '../../agents';
+import { Agent, type AgentDescription, type AgentToolContext } from '../../agents';
 
 import { AgentCallScheduler } from '../../execution/assembly/agent-call-scheduler';
 
@@ -80,7 +80,9 @@ export function createAgentCallAssembly(input: AgentCallAssemblyInput)
 {
   const { workspace, task, options, llm, storage, members, admission, dispatch, requestBudgets } = input;
 
-  const rootAgent = new Agent({ id: task.agentId ?? 'cbim:main', name: '主 Agent', instructions: '', permission: options.permission ?? (options.allowNativeExecution ? 'execute' : 'read'), ...(llm ? { model: { engine: options.engine ?? llm.profile.engine ?? 'pi', profileId: llm.profile.id, modelId: llm.profile.model } } : {}) }, { workspaceId: workspace.entry.id, taskId: task.taskId });
+  const officePermission = options.permission ?? (options.allowNativeExecution ? 'execute' : 'read');
+
+  const rootAgent = new Agent({ id: task.agentId ?? 'cbim:main', name: '主 Agent', position: '接收用户任务、协调岗位并向用户交付成果', principles: '依据实际结果验证交付，明确尚未完成的工作。', effectiveSkills: [], references: [], instructions: '', ...(llm ? { model: { engine: options.engine ?? llm.profile.engine ?? 'pi', profileId: llm.profile.id, modelId: llm.profile.model } } : {}) } satisfies AgentDescription, { workspaceId: workspace.entry.id, taskId: task.taskId });
 
   let scopeId: string = randomUUID();
 
@@ -144,9 +146,9 @@ export function createAgentCallAssembly(input: AgentCallAssemblyInput)
       const childTaskId = randomUUID(),
         definition = detail.member.adoption.configuration;
 
-      const agent = new Agent({ id: detail.member.memberId, name: detail.member.name, permission: rootAgent.definition.permission, model: { engine: workspaceMemberEngine(policy) ?? 'pi', profileId: policy.profileId, modelId: policy.modelId }, instructions: [definition.principles, detail.member.adaptation.instructions, ...definition.effectiveSkills.map(skill => skill.content)].filter(Boolean).join('\n\n') }, { workspaceId: workspace.entry.id, taskId: childTaskId });
+      const agent = new Agent({ id: detail.member.memberId, name: detail.member.name, model: { engine: workspaceMemberEngine(policy) ?? 'pi', profileId: policy.profileId, modelId: policy.modelId }, position: detail.member.position, principles: definition.principles, instructions: detail.member.adaptation.instructions, references: detail.member.adaptation.references, effectiveSkills: definition.effectiveSkills } satisfies AgentDescription, { workspaceId: workspace.entry.id, taskId: childTaskId });
 
-      const permit = admission.manager.Attempt({ workspaceId: workspace.entry.id, rootSessionId: task.taskId, taskId: childTaskId, scopeId, requestId: childTaskId, ownerEpoch: admission.ownerEpoch, source: 'direct', workspacePermission: agent.definition.permission }, {
+      const permit = admission.manager.Attempt({ workspaceId: workspace.entry.id, rootSessionId: task.taskId, taskId: childTaskId, scopeId, requestId: childTaskId, ownerEpoch: admission.ownerEpoch, source: 'direct', workspacePermission: officePermission }, {
         // 根独占租约仍在；Runtime 已核实父工具批次唯一，不能将此入口暴露给任意任务。
         CanAcquire: () => undefined, Acquire: () => () => { }, IsCurrent: () => admission.IsCurrent() && !closed && !request.signal.aborted,
       });
@@ -163,7 +165,7 @@ export function createAgentCallAssembly(input: AgentCallAssemblyInput)
         if (request.parent.task.moduleIds.length && (!request.business || request.business.moduleIds.some(id => !request.parent.task.moduleIds.includes(id))))
           throw new Error('业务子调用须保留父调用的冻结模块范围');
 
-        const business = request.business ? await prepareAgentBusiness({ workspace, dispatch: dispatch ?? (() => { throw new Error('缺少业务来源核实服务'); })(), member: detail.member, model: childLlm, taskId: childTaskId, rootSessionId: task.taskId, message: request.message, permission: agent.definition.permission, storage, business: request.business, signal: request.signal, artifactTransitions: input.artifactTransitions?.(), scopeId, reference: request.reference, businessServices: input.businessServices }) : undefined;
+        const business = request.business ? await prepareAgentBusiness({ workspace, dispatch: dispatch ?? (() => { throw new Error('缺少业务来源核实服务'); })(), member: detail.member, model: childLlm, taskId: childTaskId, rootSessionId: task.taskId, message: request.message, permission: officePermission, storage, business: request.business, signal: request.signal, artifactTransitions: input.artifactTransitions?.(), scopeId, reference: request.reference, businessServices: input.businessServices }) : undefined;
 
         const childTask: TaskSpec = business?.task ?? { ...task, taskId: childTaskId, agentId: definition.agentId, goal: request.message, moduleIds: [], acceptance: [], mode: 'chat' };
 
@@ -175,9 +177,9 @@ export function createAgentCallAssembly(input: AgentCallAssemblyInput)
         const assertChild = () => { workspace.Assert(); if (closed || !childAlive || request.signal.aborted) throw new Error('原子调用已结束，不能发送新请求') };
 
         const child = await createWorkspaceLoop(workspace.paths, workspace, {
-          ...options, engine, llm: childLlm, profileId: policy.profileId, model: policy.modelId, modelRoles: policy.modelRoles, provider: 'cbim-' + policy.profileId, process: undefined, images: [], attachmentIds: [], RequestQuestion: async (args, signal) => { if (!childContext) throw new Error('子调用尚未受理'); childContext.AssertQuestionWait?.(); return request.RequestQuestion(args, signal); }
+          ...options, permission: officePermission, engine, llm: childLlm, profileId: policy.profileId, model: policy.modelId, modelRoles: policy.modelRoles, provider: 'cbim-' + policy.profileId, process: undefined, images: [], attachmentIds: [], RequestQuestion: async (args, signal) => { if (!childContext) throw new Error('子调用尚未受理'); childContext.AssertQuestionWait?.(); return request.RequestQuestion(args, signal); }
         }, {
-          ...business?.services, storage, agent, AgentCall: request.reference, AgentTools: context => { childContext = context; return scheduler.Bind(context, request.parent.depth + 1) }, RequestBudget: (context, role = 'primary') => { assertChild(); let result = childBudgets.get(role); if (!result) { result = requestBudgets?.ForRun({ rootSessionId: task.taskId, taskId: task.taskId, runId: rootRunId!, kind: 'main', agentRun: { taskId: childTaskId, runId: context.runId } }, childLlm, role, assertChild) ?? Promise.resolve(undefined); childBudgets.set(role, result) } return result; },
+          ...business?.services, storage, agent, AgentCall: request.reference, AgentTools: context => { childContext = context; return scheduler.Bind(context, request.parent.depth + 1, agent) }, RequestBudget: (context, role = 'primary') => { assertChild(); let result = childBudgets.get(role); if (!result) { result = requestBudgets?.ForRun({ rootSessionId: task.taskId, taskId: task.taskId, runId: rootRunId!, kind: 'main', agentRun: { taskId: childTaskId, runId: context.runId } }, childLlm, role, assertChild) ?? Promise.resolve(undefined); childBudgets.set(role, result) } return result; },
           AcquireLease: async () => { workspace.Assert(); if (closed || request.signal.aborted) throw new Error('调用已停止'); return () => { } },
           AuthorizeNative: input.authorizeNative,
         });
@@ -263,7 +265,7 @@ export function createAgentCallAssembly(input: AgentCallAssemblyInput)
 
     officeHistory: dispatch ? new OfficeHistoryTools(identity, (query, signal) => { workspace.Assert(); if (closed || !rootRunId) throw new Error('原主运行已经结束'); return dispatch.history.Read(identity, query, signal) }) : undefined,
 
-    AgentTools: (context: AgentToolContext) => scheduler.Bind(context),
+    AgentTools: (context: AgentToolContext) => scheduler.Bind(context, 0, rootAgent),
 
     requestBudget: budget,
 

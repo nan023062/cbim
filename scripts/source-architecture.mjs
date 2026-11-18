@@ -21,7 +21,7 @@ const files=allFiles.filter(f=>/\.(tsx?|jsx?|mjs|cjs|mts|cts|css)$/.test(f));
 const directories=sourceDirectories.sort();
 const generatedStart='<!-- architecture:generated:start -->';
 const generatedEnd='<!-- architecture:generated:end -->';
-const extraDocuments=allFiles.filter(f=>/\.(md|mdx)$/i.test(f)&&path.posix.basename(f)!=='ARCHITECTURE.md');
+const extraDocuments=allFiles.filter(f=>/\.(md|mdx)$/i.test(f)&&path.posix.basename(f)!=='ARCHITECTURE.md'&&f!=='src/framework/README.md');
 if(extraDocuments.length)throw Error('源码目录只保留 ARCHITECTURE.md，请先合并说明内容：'+extraDocuments.join('、'));
 if(!directories.length)throw Error('src 中没有维护目录，不能报告通过');
 

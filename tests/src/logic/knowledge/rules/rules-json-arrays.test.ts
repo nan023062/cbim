@@ -11,7 +11,7 @@ it('真实 ObjectCRUD 可连续创建两个 Workflow，uniqueItems 仍拒绝重�
     const [moduleId]=await mutate([{kind:'module',action:'create',parentId:'.cbim/workspace',slug:'game',data:{summary},body:moduleFiles('game')[1].text}]);
     const [first]=await mutate([{kind:'workflow',action:'create',parentId:moduleId,slug:'build',data:{name:'默认构建'},body:'# 默认构建'}]);
     const [second]=await mutate([{kind:'workflow',action:'create',parentId:moduleId,slug:'validate_json',data:{name:'JSON 验证'},body:'# JSON 验证'}]);
-    const detail=await call('cbim_module_get',{id:moduleId});expect(detail.workflows.map((item:{id:string})=>item.id)).toEqual([first,second]);
+    const detail=await call('cbim_workspace_get',{id:moduleId});expect(detail.workflows.map((item:{id:string})=>item.id)).toEqual([first,second]);
     const before=await workspace.Snapshot(),file=before.files.find(item=>item.path===moduleId+'/module.json')!,definition=JSON.parse(file.text);
     const duplicate={...definition,workflows:[definition.workflows[0],{reference:definition.workflows[0].reference,name:definition.workflows[0].name}]};
     const invalid=request(before,[{path:file.path,text:JSON.stringify(duplicate)}]),preview=await workspace.Preview(invalid);

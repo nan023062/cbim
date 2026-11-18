@@ -95,10 +95,10 @@ const moduleBoundaries=[
   {sources:['src/view/tasks/'],allow:['src/view/tasks/','src/view/execution-view/','src/view/components/','src/view/foundations/utility/index.ts','src/bridge/contracts/']},
   {sources:['src/core/io/serialization.ts'],allow:['src/core/io/index.ts','src/core/io/digest.ts']},
   {sources:[foundation],allow:[foundation,'src/core/utility/index.ts','src/core/io/digest.ts']},
-  {sources:[knowledgeTypes],allow:[]},
+  {sources:[knowledgeTypes],allow:['src/framework/business/index.ts']},
   {sources:[knowledgeSnapshot],allow:[knowledgeTypes,foundation]},
   {sources:[teamView],allow:[knowledgeTypes,knowledgeSnapshot,foundation]},
-  {sources:[projectRoot],allow:[]},
+  {sources:[projectRoot],allow:['src/framework/business/index.ts']},
   {sources:[businessView],allow:[knowledgeTypes,knowledgeSnapshot,projectRoot,foundation]},
   {sources:['src/logic/knowledge/rules/knowledge-queries.ts'],allow:['src/logic/knowledge/rules/read-models/index.ts',knowledgeTypes,foundation]},
   // 文件索引只实现稳定存储契约；工作区身份、服务和日志读取由 workspace 装配。
@@ -111,7 +111,7 @@ const moduleBoundaries=[
   {sources:['tests/src/logic/knowledge/rules/support/knowledge-data.ts'],allow:[knowledgeTypes,foundation]},
   {sources:['tests/src/logic/knowledge/rules/support/knowledge-fixture.ts'],allow:[knowledgeTypes,foundation,'src/logic/knowledge/rules/knowledge.ts','tests/src/logic/knowledge/rules/support/knowledge-data.ts']},
   // 调度器只组合可移植公开算法，不取得 Node、files 或 web 的访问权。
-  {sources:[...orchestrationRoots],allow:[...orchestrationRoots,'src/core/io/index.ts','src/logic/execution/engines/','@domain-public','src/core/utility/index.ts',modelPublic,enginePublic,webPublic,feedbackPublic]},
+  {sources:[...orchestrationRoots],allow:[...orchestrationRoots,'src/framework/office/index.ts','src/framework/cability/agent/exchange.ts','src/framework/cability/agent/index.ts','src/core/io/index.ts','src/logic/execution/engines/','@domain-public','src/core/utility/index.ts',modelPublic,enginePublic,webPublic,feedbackPublic]},
 ];
 const matchesBoundary=(file,entry)=>{
   if(entry==='@domain-public')return isDomainFile(file)&&domainPublicEntries.has(file)||['src/core/io/json.ts','src/core/io/serialization.ts'].includes(file);

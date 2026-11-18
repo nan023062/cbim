@@ -33,7 +33,7 @@ import { memoryDecision, memoryVectors, memoryInstructions, type MemoryMessage }
 import { MemoryIndexCache, MemorySession } from './storage';
 
 /** 工具名单只收敛专业范围，不赋予权限；真实运行仍逐调用执行 beforeTool。 */
-const memoryTool = (name: string) => /^cbim_(knowledge_|object_|builtin_|skill_|module_|workspace_identity$|rules_validate$|task_|ask_user_question$|receipt_inspect$)/.test(name);
+const memoryTool = (name: string) => /^cbim_(knowledge_|object_|builtin_|skill_|workspace_(?:registry|get|identity)$|workspace_owner_|rules_validate$|task_|ask_user_question$|receipt_inspect$)/.test(name);
 
 export class MemoryEngine implements AgentEngine
 {

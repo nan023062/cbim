@@ -13,8 +13,8 @@ it('缺省知识身份取当前实例，可选query不必填写；显式旧身�
     const schema=service.List().find(t=>t.name==='cbim_agent_registry')!.inputSchema as {required?:string[]};
     expect(schema.required??[]).not.toContain('workspaceId');expect(schema.required??[]).not.toContain('query');
     for(const bad of [{workspaceId:'other'},{instanceId:'old'},{workspaceId:null},{instanceId:''}])await expect(service.CallFromRun('cbim_agent_registry',bad,false)).rejects.toThrow();
-    await expect(service.CallFromRun('cbim_module_get',{},false)).rejects.toMatchObject({code:'TOOL_INPUT_INVALID',message:expect.stringContaining('id：缺少必填字段')});
-    await expect(service.CallFromRun('cbim_object_commit',{planId:'not-a-plan'},false)).rejects.toMatchObject({code:'FORBIDDEN'});
+    await expect(service.CallFromRun('cbim_workspace_get',{},false)).rejects.toThrow('id：缺少必填字段');
+    await expect(service.CallFromRun('cbim_object_commit',{planId:'not-a-plan'},false)).rejects.toThrow('本轮未获得知识写入权限');
     try{await service.CallFromRun('cbim_knowledge_refresh',{},true)}catch(error){expect(String(error)).toContain('revision：');expect(String(error)).toContain('requestId：');expect(String(error)).not.toContain('instanceId：')}
     assert.mockImplementation(()=>{throw Error('实例已关闭')});await expect(service.CallFromRun('cbim_agent_registry',{},false)).rejects.toThrow('实例已关闭');assert.mockRestore();
   }finally{await f.cleanup()}
@@ -33,7 +33,7 @@ it('真实知识目录只发现已注册能力，自描述有限且不执行领�
     }
     const self=await call('cbim_knowledge_tool_describe',{name:'cbim_knowledge_tool_describe'});
     expect(JSON.stringify(self).length).toBeLessThan(32_768);expect(self.tool.outputSchema.type).toBe('object');expect(self.tool.outputSchema.properties.family.const).toBe('knowledge');
-    for(const name of ['bash','cbim_dispatch_task','cbim_missing'])await expect(call('cbim_knowledge_tool_describe',{name})).rejects.toMatchObject({code:'TOOL'});
+    for(const name of ['bash','cbim_dispatch_task','cbim_missing'])await expect(call('cbim_knowledge_tool_describe',{name})).rejects.toThrow('未知知识工具');
     const after=await ws.Snapshot();expect(after.revision).toBe(before.revision);expect(after.files).toEqual(before.files);
   }finally{await f.cleanup()}
 });

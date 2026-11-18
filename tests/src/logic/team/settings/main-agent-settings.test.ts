@@ -29,7 +29,7 @@ test('对话与团队入口读写同一主 Agent 配置，新对话读取角色�
     expect(await f.app.Dispatch('agent.mainSettings',identity)).toEqual(saved);
     const frozen=await f.app.ChatOptions(entry.id,{permission:'read'},[]);
     expect(frozen).toMatchObject({engine:'claude-code',profileId,model:'shared'});
-    await expect(f.app.Dispatch('agent.configureMain',{...team,selection:{...selection,engine:'pi'}})).rejects.toMatchObject({code:'AGENT_SETTINGS_CONFLICT'});
+    await expect(f.app.Dispatch('agent.configureMain',{...team,selection:{...selection,engine:'pi'}})).rejects.toThrow('主 Agent 配置已在其他入口更新');
     const next=await f.app.Dispatch('agent.configureMain',{...saved,selection:{...selection,engine:'pi'}});
     expect(await f.app.ChatOptions(entry.id,{permission:'read'},[])).toMatchObject({engine:'pi',profileId,model:'shared'});
     expect(frozen.engine).toBe('claude-code');
@@ -50,14 +50,14 @@ test('主 Agent 兼容性与工作区隔离：错误协议不覆盖配置，另�
     const entry=await f.app.Dispatch('add',{path:f.a}),other=await f.app.Dispatch('add',{path:f.b});
     const identity={workspaceId:entry.id,instanceId:f.app.Workspace(entry.id).instanceId};
     const initial=await f.app.Dispatch('agent.mainSettings',identity);
-    await expect(f.app.Dispatch('agent.configureMain',{...initial,selection:{engine:'codex',profileId,modelId:'shared'}})).rejects.toMatchObject({code:'LLM_ENGINE_API'});
+    await expect(f.app.Dispatch('agent.configureMain',{...initial,selection:{engine:'codex',profileId,modelId:'shared'}})).rejects.toThrow('没有满足所选协议要求的兼容接口');
     expect(await f.app.Dispatch('agent.mainSettings',identity)).toEqual(initial);
     const saved=await f.app.Dispatch('agent.configureMain',{...initial,selection:{engine:'claude-code',profileId,modelId:'shared'}});
     expect(saved.revision).toBe(1);
     expect(await f.app.Dispatch('agent.mainSettings',{workspaceId:other.id,instanceId:f.app.Workspace(other.id).instanceId})).toMatchObject({selection:null,revision:0});
     await fs.writeFile(path.join(f.app.paths.Project(entry.id),'main-agent.json'),'broken');
-    await expect(f.app.Dispatch('agent.mainSettings',identity)).rejects.toMatchObject({code:'AGENT_SETTINGS_READ'});
-    await expect(f.app.Dispatch('agent.configureMain',{...saved,selection:null})).rejects.toMatchObject({code:'AGENT_SETTINGS_READ'});
+    await expect(f.app.Dispatch('agent.mainSettings',identity)).rejects.toThrow('主 Agent 配置读取失败');
+    await expect(f.app.Dispatch('agent.configureMain',{...saved,selection:null})).rejects.toThrow('主 Agent 配置读取失败');
     expect(await fs.readFile(path.join(f.app.paths.Project(entry.id),'main-agent.json'),'utf8')).toBe('broken');
   }finally{await f.cleanup()}
 });
@@ -72,7 +72,7 @@ test('V2 主 Agent 选型持久化并随聊天选项完整捕获，不回填旧�
     expect(saved.selection?.modelRoles).toEqual(modelRoles);
     expect(await f.app.ChatOptions(entry.id,{permission:'read'},[])).toMatchObject({engine:'pi',profileId,model:'shared',modelRoles});
     expect((await f.app.Dispatch('agent.mainSettings',identity)).selection).toEqual(saved.selection);
-    await expect(f.app.Dispatch('agent.configureMain',{...saved,selection:{...saved.selection,modelRoles:{version:2,roles:{memory:{kind:'embedding',profileId,modelId:'vec'}}}}})).rejects.toMatchObject({code:'LLM_MODEL_ROLE'});
+    await expect(f.app.Dispatch('agent.configureMain',{...saved,selection:{...saved.selection,modelRoles:{version:2,roles:{memory:{kind:'embedding',profileId,modelId:'vec'}}}}})).rejects.toThrow('引擎未声明模型角色：memory');
     expect((await f.app.Dispatch('agent.mainSettings',identity)).revision).toBe(saved.revision);
   }finally{await f.cleanup()}
 });

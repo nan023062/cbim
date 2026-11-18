@@ -87,7 +87,7 @@ export function originalPersistentWrite(name: string, raw: unknown, binding: Per
       return reference;
     }
 
-    if (name === 'cbim_module_owner_change_commit')
+    if (name === 'cbim_workspace_owner_change_commit')
     {
       const reference: PersistentWriteReference = { kind: 'ownership', workspaceId, source: moduleOwnershipMainActorSchema.parse({ kind: 'main_agent', ...main, scopeId, toolName: name }), input: moduleOwnerCommitInputSchema.parse(raw) };
 

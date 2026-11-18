@@ -7,9 +7,7 @@ import { z } from 'zod';
 
 import { isDeepStrictEqual } from 'node:util';
 
-import { hash } from '../../../core/platform/node/serialization';
-
-import { fail } from '../../../core/errors';
+import { hash } from '../../../core/io/serialization';
 
 import { codeCheckLimits, codeTestSummarySchema, type CodeCheckRequirement } from '../../workspace/rules/code-check';
 
@@ -99,7 +97,7 @@ export function codeCheckOutput(record: CodeCheckRecord)
 function valid(value: unknown, message: string): asserts value
 {
   if (!value)
-    fail('CODE_CHECK_EVIDENCE', message)
+    throw new Error(message)
 }
 
 /** 只有可信事件与真实成功工具回执、回包完全对应时才形成检查事实；rejected 仍保留。 */

@@ -3,9 +3,7 @@
  * 作用定位：把应用级并发准入与本工作区文件/实例租约组合为主轮和成员轮共用的同步领取入口。
  * 设计原因：等待不占任何租约；工作区装配代际与可信批次回调隔离迟到唤醒，准入错误区分未受理与可继续等待。
  */
-import { fail } from '../../../core/errors';
-
-import { hash } from '../../../core/platform/node/serialization';
+import { hash } from '../../../core/io/serialization';
 
 import type { AdmissionRequest } from '../../runtime/rules/admission';
 
@@ -57,20 +55,20 @@ export function acquireExecutionLease(lease: WorkspaceExecutionLease, runKey: st
 
     wait?.RegisterWithdraw(request.requestId, () => { admission.manager.Withdraw(identity) });
 
-    fail('CAPACITY_WAITING', '当前执行名额或工作区占用暂不可用，已受理的协作任务等待后重新核实启动');
+    throw new Error('当前执行名额或工作区占用暂不可用，已受理的协作任务等待后重新核实启动');
   }
 
   if (attempt.reason === 'stale_request')
-    fail('COLLABORATION_STOPPED', '当前启动所属工作区或调度批次已停止');
+    throw new Error('当前启动所属工作区或调度批次已停止');
 
   if (attempt.reason === 'agent_busy')
-    fail('MEMBER_BUSY', '该成员实例正在执行其他任务，请等待当前运行结束');
+    throw new Error('该成员实例正在执行其他任务，请等待当前运行结束');
 
   if (attempt.reason === 'workspace_conflict')
-    fail('WORKSPACE_EXECUTION_BUSY', '工作区有冲突运行，本次启动尚未受理');
+    throw new Error('工作区有冲突运行，本次启动尚未受理');
 
   if (attempt.reason === 'global_capacity' || attempt.reason === 'fairness')
-    fail('CAPACITY_BUSY', '当前运行名额暂不可用，本次启动尚未受理，请稍后重试');
+    throw new Error('当前运行名额暂不可用，本次启动尚未受理，请稍后重试');
 
-  fail('ADMISSION_FAILED', '运行占用无法确认，未重新启动任务，请核实当前执行状态');
+  throw new Error('运行占用无法确认，未重新启动任务，请核实当前执行状态');
 }

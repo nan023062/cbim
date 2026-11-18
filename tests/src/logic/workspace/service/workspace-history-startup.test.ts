@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fixture} from '../../application/support/helpers';
 import {Workspace} from '../../../../../src/logic/workspace/service/workspace';
-import {KernelLock} from '../../../../../src/core/platform/node/locking';
+import {KernelLock} from '../../../../../src/core/io/locking';
 import {FileDispatchStore} from '../../../../../src/logic/dispatch/storage/dispatch-store';
 import {FileAgentHistoryStore} from '../../../../../src/logic/history/service/file-store';
 

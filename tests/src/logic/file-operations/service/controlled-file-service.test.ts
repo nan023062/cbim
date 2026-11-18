@@ -6,7 +6,7 @@ import type {Workspace} from '../../../../../src/logic/workspace/service/workspa
 import {WorkspaceExecutionLease} from '../../../../../src/logic/execution/admission/workspace-lease';
 import {FileRunStorage} from '../../../../../src/logic/execution/storage/run-storage';
 import {controlledFileOperation,controlledFileOperationId} from '../../../../../src/logic/file-operations/rules/controlled-file-rules';
-import {hash} from '../../../../../src/core/platform/node/serialization';
+import {hash} from '../../../../../src/core/io/serialization';
 import {storeFixture,fact} from '../rules/support/controlled-file-core-fixture';
 import {instanceId} from '../../team/rules/support/owner-execution-core-fixture';
 import {deferred} from '../../execution/rules/capabilities/support/artifact-runtime-fixture';

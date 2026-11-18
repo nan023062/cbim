@@ -5,9 +5,7 @@
  */
 import { z } from 'zod';
 
-import { fail } from '../../../core/errors';
-
-import { hash, json } from '../../../core/platform/node/serialization';
+import { hash, json } from '../../../core/io/serialization';
 
 import type { KnowledgeWorkspace } from '../../knowledge/rules/ports';
 
@@ -64,7 +62,7 @@ export type AcceptedRecovery =
 function check(condition: unknown, code: string, message: string): asserts condition
 {
   if (!condition)
-    fail(code, message)
+    throw new Error(message)
 }
 
 export class ScopeRecoveryService
@@ -78,7 +76,7 @@ export class ScopeRecoveryService
     const parsed = schema.safeParse(raw);
 
     if (!parsed.success)
-      fail('RECOVERY_INPUT_INVALID', '只读核实请求或可信启动参数无效');
+      throw new Error('只读核实请求或可信启动参数无效');
 
     return parsed.data
   }

@@ -4,8 +4,6 @@
  */
 import { ZodError } from 'zod';
 
-import { Fault } from '../../../core/errors';
-
 /** 仅接受结构完整的校验问题；未知文本保持调用方原处理，不解释为已知未执行。 */
 export function inputIssueMessage(issues: unknown): string | undefined
 {
@@ -18,5 +16,5 @@ export function inputIssueMessage(issues: unknown): string | undefined
 /** 只在执行前校验边界调用；执行后的 Zod 错误不能据此判为未执行。 */
 export function toolInputError(error: unknown): unknown
 {
-  return error instanceof ZodError ? new Fault('TOOL_INPUT_INVALID', `参数无效；${inputIssueMessage(error.issues) ?? '请按工具声明检查参数'}。可选参数可省略，已声明默认值会自动使用；请补齐必填字段或修正格式。本次尚未执行。`) : error;
+  return error instanceof ZodError ? new Error(`参数无效；${inputIssueMessage(error.issues) ?? '请按工具声明检查参数'}。可选参数可省略，已声明默认值会自动使用；请补齐必填字段或修正格式。本次尚未执行。`) : error;
 }

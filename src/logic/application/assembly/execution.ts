@@ -32,13 +32,11 @@ import type { EngineModelProfiles } from '../../engines/service';
 
 import type { Workspace } from '../../workspace/service/workspace';
 
-import { KernelLock } from '../../../core/platform/node/locking';
+import { acquireLock } from '../../io-errors/locking';
 
 import { guard } from '../../execution/platform/tool-guard';
 
-import { hash } from '../../../core/platform/node/serialization';
-
-import { fail } from '../../../core/errors';
+import { hash } from '../../../core/io/serialization';
 
 import { WorkspaceExecutionManager } from '../../conversation/runtime/execution-manager';
 
@@ -102,7 +100,7 @@ export function createExecutionManager(workspace: Workspace, models: EngineModel
     if (images.length && (!llm || !llm.profile.vision))
     {
       if (launch.preparedInputImages !== undefined)
-        fail('GOAL_ATTACHMENT_VISION', '当前模型配置未启用图片输入，请选择视觉模型后再补充');
+        throw new Error('当前模型配置未启用图片输入，请选择视觉模型后再补充');
 
       if (llm)
         throw Error('当前模型未启用图片输入，请在设置中确认视觉能力，或切换支持图片的模型');
@@ -152,7 +150,7 @@ export function createExecutionManager(workspace: Workspace, models: EngineModel
 
         try
         {
-          const lock = new KernelLock(directory, hash(workspace.entry.id + ':' + task.taskId), 'loop');
+          const lock = acquireLock(directory, hash(workspace.entry.id + ':' + task.taskId), 'loop');
 
           return () => { try { lock.Close() } finally { release() } }
         }

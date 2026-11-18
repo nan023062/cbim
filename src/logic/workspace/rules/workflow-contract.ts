@@ -8,9 +8,7 @@ import { codeCheckRequirementSchema } from './code-check';
 
 import { z } from 'zod';
 
-import { fail } from '../../../core/errors';
-
-import { parseJson } from '../../../core/json';
+import { parseJson } from '../../io-errors/json';
 
 import { boundedJsonSchemaSchema, jsonValidationLimits } from './json-validation-schema';
 
@@ -72,33 +70,33 @@ export function assertWorkflowCapabilities(bindings: readonly { contract: Workfl
     available = scoped ? capabilities.scopedTools : capabilities.availableTools;
 
   if (scoped && !available)
-    fail('EXECUTION_SCOPE_UNAVAILABLE', '本机引擎没有实际范围执行能力');
+    throw new Error('本机引擎没有实际范围执行能力');
 
   if (!bindings.length)
     return;
 
   if (!available)
-    fail('WORKFLOW_CAPABILITIES_UNAVAILABLE', '本次引擎未提供可信工具能力清单，不能执行带约定的 Workflow');
+    throw new Error('本次引擎未提供可信工具能力清单，不能执行带约定的 Workflow');
 
   const missing = [...new Set(bindings.flatMap(binding => binding.contract.delivery?.requiredToolEvidence?.map(item => item.toolName) ?? []))].filter(name => !available.includes(name));
 
   if (missing.length)
-    fail('WORKFLOW_TOOL_UNAVAILABLE', '当前权限或引擎未提供 Workflow 必需工具：' + missing.join('、'));
+    throw new Error('当前权限或引擎未提供 Workflow 必需工具：' + missing.join('、'));
 
   const requirements = bindings.flatMap(binding => binding.contract.delivery?.requiredValidations ?? []);
 
   if (requirements.length > jsonValidationLimits.records)
-    fail('WORKFLOW_VALIDATION_LIMIT', '本任务的结构验证要求超过单轮记录上限，请拆分明确模块任务');
+    throw new Error('本任务的结构验证要求超过单轮记录上限，请拆分明确模块任务');
 
   const validators = [...new Set(requirements.map(item => item.validator))];
 
   if (validators.some(validator => !capabilities.availableValidators?.includes(validator)) || validators.length && !capabilities.artifacts)
-    fail('WORKFLOW_VALIDATION_UNAVAILABLE', '当前引擎或文件端口未提供 Workflow 必需结构验证能力');
+    throw new Error('当前引擎或文件端口未提供 Workflow 必需结构验证能力');
 }
 
 function invalid(reason: string): never
 {
-  fail('WORKFLOW_CONTRACT_INVALID', 'Workflow 执行约定无效：' + reason)
+  throw new Error('Workflow 执行约定无效：' + reason)
 }
 
 /**

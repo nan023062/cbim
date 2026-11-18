@@ -23,15 +23,13 @@
  */
 import type { GoalPlanInput } from '../../tasks/rules/scope-goal';
 
-import { hash, json } from '../../../core/platform/node/serialization';
+import { hash, json } from '../../../core/io/serialization';
 
 import { randomUUID } from 'node:crypto';
 
 import { currentMemberResumeRequest } from '../../tasks/rules/member-checkpoint-chain';
 
 import { isMemberCheckpointPending } from '../../tasks/rules/member-checkpoint';
-
-import { fail } from '../../../core/errors';
 
 import type { TaskSpec, RunSummary, RunInputSource } from '../../execution/rules/types';
 
@@ -235,7 +233,7 @@ export class AutoCollaboration
     this.releaseListener = lease.ObserveRelease(() => this.Schedule());
 
     execution.AttachCollaboration({
-      ValidateFollowup: async (rootSessionId, scopeId) => { const scope = await dispatch.goals.Inspect({ workspaceId: owner.entry.id, rootSessionId }, scopeId); if (scope.status !== 'closed') fail('TOPIC_FOLLOWUP_OPEN', '原话题尚未结束，请在话题内明确补充') }, InterruptTopic: (request, stopMain) => this.InterruptTopic(request, stopMain), ActiveInputReceipt: (rootSessionId, runId, queueId) => dispatch.activeInputs.Inspect({ workspaceId: owner.entry.id, rootSessionId }, runId, queueId), InsertActiveInput: (rootSessionId, runId, queueId, input, signal, send) => this.InsertActiveInput(rootSessionId, runId, queueId, input, signal, send), HoldMain: runId => dispatch.budgets.HoldMain(runId), Busy: id => this.Busy(id), Waiting: id => this.waitingSlots.has(id), HumanContinuationReceipt: query => dispatch.humanContinuations.Inspect(query), HumanContinuationPreflight: request => this.HumanContinuationPreflight(request), AcceptHumanContinuation: (request, task, runId, signal) => this.AcceptHumanContinuation(request, task, runId, signal), ReplanReceipt: query => dispatch.replans.Inspect(query), ReplanPreflight: request => this.ReplanPreflight(request), AcceptReplan: (request, task, context) => this.AcceptReplan(request, task, context), RecoveryReceipt: query => dispatch.recoveries.Inspect(query), RecoveryPreflight: request => this.RecoveryPreflight(request), AcceptRecovery: (request, task, context) => this.AcceptRecovery(request, task, context), RecoveryContext: rootSessionId => dispatch.recoveries.LatestContext({ workspaceId: owner.entry.id, rootSessionId }), RecoveryRunIds: rootSessionId => dispatch.recoveries.PriorRunIds({ workspaceId: owner.entry.id, rootSessionId }), ContinuationReceipt: query => dispatch.continuations.Inspect(query), ContinuationCheckpoint: request => this.ContinuationCheckpoint(request), AcceptContinuation: (request, task, runId, trusted) => this.AcceptContinuation(request, task, runId, trusted), Starting: (task, options, source, message, runId, queuedTopicId, followupOf) => this.Starting(task, source, options, message, options.attachmentIds, runId, queuedTopicId, followupOf), StartFailed: (task, source, error) => this.StartFailed(task, source, error), Settled: (task, _options, summary) => this.Settled(task, summary), Stop: id => this.Stop(id)
+      ValidateFollowup: async (rootSessionId, scopeId) => { const scope = await dispatch.goals.Inspect({ workspaceId: owner.entry.id, rootSessionId }, scopeId); if (scope.status !== 'closed') throw new Error('原话题尚未结束，请在话题内明确补充') }, InterruptTopic: (request, stopMain) => this.InterruptTopic(request, stopMain), ActiveInputReceipt: (rootSessionId, runId, queueId) => dispatch.activeInputs.Inspect({ workspaceId: owner.entry.id, rootSessionId }, runId, queueId), InsertActiveInput: (rootSessionId, runId, queueId, input, signal, send) => this.InsertActiveInput(rootSessionId, runId, queueId, input, signal, send), HoldMain: runId => dispatch.budgets.HoldMain(runId), Busy: id => this.Busy(id), Waiting: id => this.waitingSlots.has(id), HumanContinuationReceipt: query => dispatch.humanContinuations.Inspect(query), HumanContinuationPreflight: request => this.HumanContinuationPreflight(request), AcceptHumanContinuation: (request, task, runId, signal) => this.AcceptHumanContinuation(request, task, runId, signal), ReplanReceipt: query => dispatch.replans.Inspect(query), ReplanPreflight: request => this.ReplanPreflight(request), AcceptReplan: (request, task, context) => this.AcceptReplan(request, task, context), RecoveryReceipt: query => dispatch.recoveries.Inspect(query), RecoveryPreflight: request => this.RecoveryPreflight(request), AcceptRecovery: (request, task, context) => this.AcceptRecovery(request, task, context), RecoveryContext: rootSessionId => dispatch.recoveries.LatestContext({ workspaceId: owner.entry.id, rootSessionId }), RecoveryRunIds: rootSessionId => dispatch.recoveries.PriorRunIds({ workspaceId: owner.entry.id, rootSessionId }), ContinuationReceipt: query => dispatch.continuations.Inspect(query), ContinuationCheckpoint: request => this.ContinuationCheckpoint(request), AcceptContinuation: (request, task, runId, trusted) => this.AcceptContinuation(request, task, runId, trusted), Starting: (task, options, source, message, runId, queuedTopicId, followupOf) => this.Starting(task, source, options, message, options.attachmentIds, runId, queuedTopicId, followupOf), StartFailed: (task, source, error) => this.StartFailed(task, source, error), Settled: (task, _options, summary) => this.Settled(task, summary), Stop: id => this.Stop(id)
     });
   }
 
@@ -243,10 +241,10 @@ export class AutoCollaboration
   private async HumanContinuationPreflight(request: HumanContinuationRequest)
   {
     if (this.closed)
-      fail('COLLABORATION_STOPPED', '协作调度正在关闭');
+      throw new Error('协作调度正在关闭');
 
     if (this.waitingSlots.get(request.rootSessionId)?.scopeId !== request.scopeId)
-      fail('HUMAN_CONTINUATION_NOT_WAITING', '当前会话没有匹配的人工决定等待目标');
+      throw new Error('当前会话没有匹配的人工决定等待目标');
 
     return this.dispatch.humanContinuations.Preflight(request);
   }
@@ -257,9 +255,9 @@ export class AutoCollaboration
     if (this.closed || this.resuming.has(task.taskId))
       return Promise.reject(Object.assign(Error('人工接续正在关闭或已有提交'), { code: 'COLLABORATION_STOPPED' }));
 
-    const alive = () => { signal.throwIfAborted(); if (this.closed) fail('COLLABORATION_STOPPED', '协作调度正在关闭') };
+    const alive = () => { signal.throwIfAborted(); if (this.closed) throw new Error('协作调度正在关闭') };
 
-    const pending = (async () => { alive(); if (task.mode !== 'chat' || task.agentId !== 'cbim:main' || task.taskId !== request.rootSessionId || task.workspaceId !== request.workspaceId || task.root !== this.owner.entry.path) fail('COLLABORATION_IDENTITY', '人工决定与主会话身份不一致'); if (this.waitingSlots.get(task.taskId)?.scopeId !== request.scopeId) fail('HUMAN_CONTINUATION_NOT_WAITING', '人工决定没有匹配的当前等待'); const graph = await this.dispatch.Snapshot({ workspaceId: request.workspaceId, rootSessionId: request.rootSessionId }); alive(); const accepted = await this.dispatch.humanContinuations.Accept(request, runId, alive); if (!accepted.fresh) fail('HUMAN_CONTINUATION_REPLAY', '人工接续已受理，请查询原回执，不重复启动'); const cycle: Cycle = { task: structuredClone(task), scopeId: accepted.scope.scopeId, collaborationMode: accepted.scope.executionPolicy?.mode ?? 'team', tasks: new Set(graph.tasks.filter(node => node.scopeId === request.scopeId).map(node => node.taskId)), operations: new Set(), mainRuns: new Set([...accepted.continuation.wait.mainRunIds, runId]), workRequested: true, stopped: false, readOnly: !!accepted.scope.recovery }; this.cycles.set(task.taskId, cycle); this.waitingSlots.delete(task.taskId); })().catch(async error => { try { const receipt = await this.dispatch.humanContinuations.Inspect({ workspaceId: request.workspaceId, rootSessionId: request.rootSessionId, scopeId: request.scopeId, commandId: request.commandId }); if (receipt?.continuation.runId === runId) { await this.dispatch.CloseScope({ workspaceId: request.workspaceId, rootSessionId: request.rootSessionId }, request.scopeId, 'interrupted'); this.waitingSlots.delete(task.taskId) } } catch (problem) { this.reportIssue(task.taskId, problem) } throw error; });
+    const pending = (async () => { alive(); if (task.mode !== 'chat' || task.agentId !== 'cbim:main' || task.taskId !== request.rootSessionId || task.workspaceId !== request.workspaceId || task.root !== this.owner.entry.path) throw new Error('人工决定与主会话身份不一致'); if (this.waitingSlots.get(task.taskId)?.scopeId !== request.scopeId) throw new Error('人工决定没有匹配的当前等待'); const graph = await this.dispatch.Snapshot({ workspaceId: request.workspaceId, rootSessionId: request.rootSessionId }); alive(); const accepted = await this.dispatch.humanContinuations.Accept(request, runId, alive); if (!accepted.fresh) throw new Error('人工接续已受理，请查询原回执，不重复启动'); const cycle: Cycle = { task: structuredClone(task), scopeId: accepted.scope.scopeId, collaborationMode: accepted.scope.executionPolicy?.mode ?? 'team', tasks: new Set(graph.tasks.filter(node => node.scopeId === request.scopeId).map(node => node.taskId)), operations: new Set(), mainRuns: new Set([...accepted.continuation.wait.mainRunIds, runId]), workRequested: true, stopped: false, readOnly: !!accepted.scope.recovery }; this.cycles.set(task.taskId, cycle); this.waitingSlots.delete(task.taskId); })().catch(async error => { try { const receipt = await this.dispatch.humanContinuations.Inspect({ workspaceId: request.workspaceId, rootSessionId: request.rootSessionId, scopeId: request.scopeId, commandId: request.commandId }); if (receipt?.continuation.runId === runId) { await this.dispatch.CloseScope({ workspaceId: request.workspaceId, rootSessionId: request.rootSessionId }, request.scopeId, 'interrupted'); this.waitingSlots.delete(task.taskId) } } catch (problem) { this.reportIssue(task.taskId, problem) } throw error; });
 
     this.resuming.set(task.taskId, pending);
 
@@ -270,10 +268,10 @@ export class AutoCollaboration
   private async ReplanPreflight(request: ReplanRequest)
   {
     if (this.closed)
-      fail('COLLABORATION_STOPPED', '协作调度正在关闭');
+      throw new Error('协作调度正在关闭');
 
     if (this.Busy(request.rootSessionId) || this.resuming.has(request.rootSessionId))
-      fail('REPLAN_BUSY', '当前主会话还有未结束目标');
+      throw new Error('当前主会话还有未结束目标');
 
     const value = await this.dispatch.replans.Preflight(request);
 
@@ -286,7 +284,7 @@ export class AutoCollaboration
     if (this.closed || this.resuming.has(task.taskId))
       return Promise.reject(Object.assign(Error('业务重规划正在关闭或已有提交'), { code: 'COLLABORATION_STOPPED' }));
 
-    const pending = (async () => { if (task.mode !== 'chat' || task.agentId !== 'cbim:main' || task.taskId !== request.rootSessionId || task.workspaceId !== request.workspaceId || task.root !== this.owner.entry.path || task.goal !== request.input.message) fail('COLLABORATION_IDENTITY', '业务目标与主会话身份或明确输入不一致'); if (this.Busy(task.taskId)) fail('REPLAN_BUSY', '当前主会话还有未结束目标'); const accepted = await this.dispatch.replans.Accept(request, context); if (!accepted.fresh) fail('REPLAN_REPLAY', '业务目标意图已受理，请查询原回执，不重复启动'); if (!('executionModel' in accepted.replan.source.proof)) this.cycles.set(task.taskId, { task: structuredClone(task), scopeId: accepted.scope.scopeId, collaborationMode: accepted.scope.executionPolicy?.mode ?? 'team', tasks: new Set(), operations: new Set(), mainRuns: new Set([context.runId]), workRequested: true, stopped: false }); })().catch(async error =>
+    const pending = (async () => { if (task.mode !== 'chat' || task.agentId !== 'cbim:main' || task.taskId !== request.rootSessionId || task.workspaceId !== request.workspaceId || task.root !== this.owner.entry.path || task.goal !== request.input.message) throw new Error('业务目标与主会话身份或明确输入不一致'); if (this.Busy(task.taskId)) throw new Error('当前主会话还有未结束目标'); const accepted = await this.dispatch.replans.Accept(request, context); if (!accepted.fresh) throw new Error('业务目标意图已受理，请查询原回执，不重复启动'); if (!('executionModel' in accepted.replan.source.proof)) this.cycles.set(task.taskId, { task: structuredClone(task), scopeId: accepted.scope.scopeId, collaborationMode: accepted.scope.executionPolicy?.mode ?? 'team', tasks: new Set(), operations: new Set(), mainRuns: new Set([context.runId]), workRequested: true, stopped: false }); })().catch(async error =>
     {
       // 仅收束这次运行的已落盘意图。旧命令的幂等回执不能被一次迟到请求关闭或重新执行。
       try
@@ -313,10 +311,10 @@ export class AutoCollaboration
   private async RecoveryPreflight(request: RecoveryRequest)
   {
     if (this.closed)
-      fail('COLLABORATION_STOPPED', '协作调度正在关闭');
+      throw new Error('协作调度正在关闭');
 
     if (this.Busy(request.rootSessionId) || this.resuming.has(request.rootSessionId))
-      fail('RECOVERY_BUSY', '当前主会话还有未结束目标');
+      throw new Error('当前主会话还有未结束目标');
 
     const source = await this.dispatch.recoveries.Preflight(request);
 
@@ -332,15 +330,15 @@ export class AutoCollaboration
     const pending = (async () =>
     {
       if (task.mode !== 'chat' || task.agentId !== 'cbim:main' || task.taskId !== request.rootSessionId || task.workspaceId !== request.workspaceId)
-        fail('COLLABORATION_IDENTITY', '核实目标与主会话身份不一致');
+        throw new Error('核实目标与主会话身份不一致');
 
       if (this.Busy(task.taskId))
-        fail('RECOVERY_BUSY', '当前主会话还有未结束目标');
+        throw new Error('当前主会话还有未结束目标');
 
       const accepted = await this.dispatch.recoveries.Accept(request, context);
 
       if (!accepted.fresh)
-        fail('RECOVERY_REPLAY', '核实意图已受理，请查询原记录，不重复启动');
+        throw new Error('核实意图已受理，请查询原记录，不重复启动');
 
       // 递归核实由新根生命周期拥有运行与收尾；旧协调器只提交可信核实意图。
       if ('executionModel' in accepted.recovery.source)
@@ -374,12 +372,12 @@ export class AutoCollaboration
   private async InterruptTopic(request: TopicInterruptionRequest, stopMain: () => Promise<RunSummary>)
   {
     if (this.closed)
-      fail('COLLABORATION_STOPPED', '协作调度正在关闭');
+      throw new Error('协作调度正在关闭');
 
     const cycle = this.cycles.get(request.rootSessionId);
 
     if (cycle && cycle.scopeId !== request.scopeId)
-      fail('TOPIC_IDENTITY', '当前活动话题与补充目标不同');
+      throw new Error('当前活动话题与补充目标不同');
 
     if (cycle?.closing)
       await cycle.closing;
@@ -412,7 +410,7 @@ export class AutoCollaboration
     }
 
     if (scope.status !== 'active' || !cycle || this.cycles.get(request.rootSessionId) !== cycle)
-      fail('TOPIC_NOT_ACTIVE', '补充已保存，但原执行已结束，请核实话题记录');
+      throw new Error('补充已保存，但原执行已结束，请核实话题记录');
 
     cycle.interrupting = true;
 
@@ -447,7 +445,7 @@ export class AutoCollaboration
     const summary = await main;
 
     if (cycle.cancelRequested || this.closed)
-      fail('COLLABORATION_STOPPED', '补充排空期间已收到取消请求');
+      throw new Error('补充排空期间已收到取消请求');
 
     const parked = await this.dispatch.interruptions.Park(request, summary);
 
@@ -466,21 +464,21 @@ export class AutoCollaboration
   private async ContinuationCheckpoint(request: GoalContinuationRequest, mainLeaseHeld = false)
   {
     if (this.closed)
-      fail('COLLABORATION_STOPPED', '协作调度正在关闭');
+      throw new Error('协作调度正在关闭');
 
     const parked = this.waitingSlots.get(request.rootSessionId);
 
     if (!parked || parked.scopeId !== request.scopeId)
-      fail('GOAL_WAIT_CONFLICT', '当前会话没有匹配的等待目标');
+      throw new Error('当前会话没有匹配的等待目标');
 
     const scope = await this.dispatch.goals.Inspect({ workspaceId: request.workspaceId, rootSessionId: request.rootSessionId }, request.scopeId);
 
     if (scope.status !== 'waiting' || !scope.wait || scope.wait.waitId !== request.waitId || scope.goal?.revision !== request.expectedGoalRevision || (scope.goal?.inputRevision ?? 1) !== request.expectedInputRevision)
-      fail('GOAL_WAIT_CONFLICT', '等待目标或输入版本已变化，请刷新后核实');
+      throw new Error('等待目标或输入版本已变化，请刷新后核实');
 
     // beforeRun 已持有主运行租约；成员原记录由 accept 的同一快照和最终事务重新核验。
     if (scope.wait.memberPause && !mainLeaseHeld)
-      await this.dispatch.memberPauses.Preflight(request, () => { if (this.closed) fail('COLLABORATION_STOPPED', '协作调度正在关闭') });
+      await this.dispatch.memberPauses.Preflight(request, () => { if (this.closed) throw new Error('协作调度正在关闭') });
 
     return structuredClone(scope.wait);
   }
@@ -503,19 +501,19 @@ export class AutoCollaboration
       trusted.signal?.throwIfAborted();
 
       if (task.mode !== 'chat' || task.agentId !== 'cbim:main' || task.taskId !== request.rootSessionId || task.workspaceId !== request.workspaceId)
-        fail('COLLABORATION_IDENTITY', '补充目标与主会话身份不一致');
+        throw new Error('补充目标与主会话身份不一致');
 
       const graph = await this.dispatch.Snapshot({ workspaceId: request.workspaceId, rootSessionId: request.rootSessionId });
 
       if (this.closed)
-        fail('COLLABORATION_STOPPED', '协作调度正在关闭');
+        throw new Error('协作调度正在关闭');
 
       trusted.signal?.throwIfAborted();
 
       const accepted = await this.dispatch.continuations.Accept(request, runId, trusted);
 
       if (!accepted.fresh)
-        fail('GOAL_CONTINUATION_REPLAY', '补充意图已受理，请查询原运行，不重复启动');
+        throw new Error('补充意图已受理，请查询原运行，不重复启动');
 
       const cycle: Cycle = { task: structuredClone(task), scopeId: accepted.scope.scopeId, collaborationMode: accepted.scope.executionPolicy?.mode ?? 'team', tasks: new Set(graph.tasks.filter(node => node.scopeId === request.scopeId).map(node => node.taskId)), operations: new Set(), mainRuns: new Set([...accepted.continuation.wait.mainRunIds, runId]), workRequested: true, stopped: false, readOnly: !!accepted.scope.recovery };
 
@@ -554,12 +552,12 @@ export class AutoCollaboration
   async Initialize()
   {
     if (this.closed)
-      fail('COLLABORATION_STOPPED', '协作调度正在关闭');
+      throw new Error('协作调度正在关闭');
 
     for (const scope of await this.dispatch.WaitingScopes())
     {
       if (this.cycles.has(scope.rootSessionId))
-        fail('COLLABORATION_BUSY', '不能在活动执行期间恢复等待记录');
+        throw new Error('不能在活动执行期间恢复等待记录');
 
       this.waitingSlots.set(scope.rootSessionId, scope);
 
@@ -581,7 +579,7 @@ export class AutoCollaboration
         const { record, summary, graph, repairs } = restored;
 
         if (this.closed || this.cycles.has(scope.rootSessionId))
-          fail('COLLABORATION_STOPPED', '自动接收期间工作区关闭或已有活动周期');
+          throw new Error('自动接收期间工作区关闭或已有活动周期');
 
         const cycle: Cycle = { task: summary.task, scopeId: scope.scopeId, collaborationMode: record.options.collaborationMode, tasks: new Set(graph.tasks.filter(task => task.scopeId === scope.scopeId).map(task => task.taskId)), operations: new Set(), mainRuns: new Set(scope.runTracking!.mainRunIds), workRequested: true, stopped: false, options: record.options, repairs };
 
@@ -611,27 +609,27 @@ export class AutoCollaboration
       return;
 
     if (this.closed)
-      fail('COLLABORATION_STOPPED', '协作调度正在关闭');
+      throw new Error('协作调度正在关闭');
 
     if (source?.kind === 'user-continuation' || source?.kind === 'human_decisions')
     {
       const waiting = this.waitingSlots.get(task.taskId);
 
       if (!waiting || waiting.scopeId !== source.scopeId || waiting.wait?.waitId !== source.waitId)
-        fail('GOAL_WAIT_CONFLICT', '目标补充未匹配当前安全等待');
+        throw new Error('目标补充未匹配当前安全等待');
 
       return; // 这里仅准备；运行时 beforeRun 的持久事务才有权消费等待。
     }
 
     if (this.waitingSlots.has(task.taskId))
-      fail('GOAL_WAITING', '当前目标处于持久等待，请先处理或取消等待目标');
+      throw new Error('当前目标处于持久等待，请先处理或取消等待目标');
 
     const existing = this.cycles.get(task.taskId);
 
     if (source)
     {
       if (!existing || existing.stopped)
-        fail('COLLABORATION_STOPPED', '原任务调度周期已结束，不能继续自动回注');
+        throw new Error('原任务调度周期已结束，不能继续自动回注');
 
       if (runId)
       {
@@ -650,7 +648,7 @@ export class AutoCollaboration
     }
 
     if (existing)
-      fail('COLLABORATION_BUSY', '当前用户任务尚未可靠关闭，请将新消息加入队列');
+      throw new Error('当前用户任务尚未可靠关闭，请将新消息加入队列');
 
     const cycle: Cycle = { task: structuredClone(task), scopeId: queuedTopicId ?? randomUUID(), collaborationMode: options.collaborationMode ?? 'team', tasks: new Set(), operations: new Set(), mainRuns: new Set(), workRequested: false, stopped: false };
 
@@ -662,7 +660,7 @@ export class AutoCollaboration
     {
       await this.FinishCycle(cycle, 'cancelled');
 
-      fail('COLLABORATION_STOPPED', '协作调度已关闭')
+      throw new Error('协作调度已关闭')
     }
   }
 
@@ -713,7 +711,7 @@ export class AutoCollaboration
       return;
 
     return {
-      binding: Object.freeze(this.ToolBinding(batch)), AssertCurrent: signal => { this.AssertLive(batch, signal); if (this.batches.get(runId) !== batch) fail('COLLABORATION_STOPPED', '原主运行已退役，不能提交新的责任变更'); }, Track: operation => this.Track(batch.cycle, Promise.resolve().then(operation))
+      binding: Object.freeze(this.ToolBinding(batch)), AssertCurrent: signal => { this.AssertLive(batch, signal); if (this.batches.get(runId) !== batch) throw new Error('原主运行已退役，不能提交新的责任变更'); }, Track: operation => this.Track(batch.cycle, Promise.resolve().then(operation))
     };
   }
 
@@ -722,12 +720,12 @@ export class AutoCollaboration
   {
     const cycle = this.cycles.get(task.taskId);
 
-    const alive = () => { signal.throwIfAborted(); this.owner.Assert(); if (this.closed || !cycle || cycle.stopped || this.cycles.get(task.taskId) !== cycle || this.batches.has(runId)) fail('COLLABORATION_STOPPED', '首轮任务准备已停止或运行已开始') };
+    const alive = () => { signal.throwIfAborted(); this.owner.Assert(); if (this.closed || !cycle || cycle.stopped || this.cycles.get(task.taskId) !== cycle || this.batches.has(runId)) throw new Error('首轮任务准备已停止或运行已开始') };
 
     alive();
 
     if (!cycle)
-      fail('COLLABORATION_STOPPED', '首轮周期不存在');
+      throw new Error('首轮周期不存在');
 
     cycle.workRequested = true;
 
@@ -761,21 +759,21 @@ export class AutoCollaboration
       return undefined;
 
     if (task.workspaceId !== this.owner.entry.id || task.root !== this.owner.entry.path)
-      fail('COLLABORATION_IDENTITY', '协作运行不属于当前工作区');
+      throw new Error('协作运行不属于当前工作区');
 
     const permission = options.permission ?? (options.allowNativeExecution ? 'execute' : 'read');
 
     const cycle = this.cycles.get(task.taskId);
 
     if (!cycle || cycle.stopped)
-      fail('COLLABORATION_STOPPED', '主轮没有活动的用户任务调度周期');
+      throw new Error('主轮没有活动的用户任务调度周期');
 
     if (cycle.readOnly && permission !== 'read')
-      fail('RECOVERY_READ_ONLY', '只读核实周期不能提升主运行权限');
+      throw new Error('只读核实周期不能提升主运行权限');
 
     // 按实际创建的主 run 计数，暂时占用导致的启动重试不扣额度；模型不能调大限制。
     if (!cycle.mainRuns.has(runId) && cycle.mainRuns.size >= 32)
-      fail('GOAL_CYCLE_LIMIT', '本次目标已达到 32 次主调度运行，已停止自动续跑');
+      throw new Error('本次目标已达到 32 次主调度运行，已停止自动续跑');
 
     cycle.mainRuns.add(runId);
 
@@ -943,7 +941,7 @@ export class AutoCollaboration
             }
           }
         }));
-      }, Resume: (input, call) => { this.AssertLive(batch, call.signal); cycle.workRequested = true; const commandId = mainToolCommandId('cbim_dispatch_resume', binding, call.toolCallId)!; return this.Track(cycle, this.members.RequestResume(this.Identity(batch), cycle.scopeId, batch.runId, commandId, input, () => this.AssertLive(batch, call.signal)).then(receipt => { const ids = receipt?.trackedTaskIds; if (Array.isArray(ids) && ids.every(id => typeof id === 'string')) for (const taskId of ids) { if (!batch.tasks.includes(taskId)) batch.tasks.push(taskId); cycle.tasks.add(taskId) } return receipt; })); }, Inspect: async taskId => { const graph = await this.dispatch.Snapshot(this.Identity(batch)); if (!taskId) return graph; const task = graph.tasks.find(t => t.taskId === taskId); if (!task) fail('TASK_NOT_FOUND', '任务不属于当前主会话'); return task; }
+      }, Resume: (input, call) => { this.AssertLive(batch, call.signal); cycle.workRequested = true; const commandId = mainToolCommandId('cbim_dispatch_resume', binding, call.toolCallId)!; return this.Track(cycle, this.members.RequestResume(this.Identity(batch), cycle.scopeId, batch.runId, commandId, input, () => this.AssertLive(batch, call.signal)).then(receipt => { const ids = receipt?.trackedTaskIds; if (Array.isArray(ids) && ids.every(id => typeof id === 'string')) for (const taskId of ids) { if (!batch.tasks.includes(taskId)) batch.tasks.push(taskId); cycle.tasks.add(taskId) } return receipt; })); }, Inspect: async taskId => { const graph = await this.dispatch.Snapshot(this.Identity(batch)); if (!taskId) return graph; const task = graph.tasks.find(t => t.taskId === taskId); if (!task) throw new Error('任务不属于当前主会话'); return task; }
     }, goals, new CandidateReviewTools(binding, (input, id, signal) => { this.AssertLive(batch, signal); cycle.workRequested = true; return this.Track(cycle, this.dispatch.goals.ReviewCandidate(this.Identity(batch), cycle.scopeId, runId, 'candidate-review-' + hash(json({ runId, id })), input, () => this.AssertLive(batch, signal))) }), new OfficeHistoryTools(this.Identity(batch), (query, signal) => { this.AssertLive(batch, signal); return this.Track(cycle, this.dispatch.history.Read(this.Identity(batch), query, signal)) }));
   }
 
@@ -994,7 +992,7 @@ export class AutoCollaboration
     this.owner.Assert();
 
     if (this.closed || batch.cycle.stopped || batch.stopped || batch.settled || signal.aborted)
-      fail('COLLABORATION_STOPPED', '当前主轮已停止接收委派')
+      throw new Error('当前主轮已停止接收委派')
   }
 
   private async Assign(batch: Batch, input: DispatchTaskInput['task'], toolCallId: string, signal: AbortSignal)
@@ -1004,7 +1002,7 @@ export class AutoCollaboration
     batch.cycle.workRequested = true;
 
     if (!batch.calls.has(toolCallId) && batch.calls.size >= 100)
-      fail('COLLABORATION_LIMIT', '单轮最多登记 100 次委派，请先处理已有结果');
+      throw new Error('单轮最多登记 100 次委派，请先处理已有结果');
 
     batch.calls.add(toolCallId);
 
@@ -1201,7 +1199,7 @@ export class AutoCollaboration
       const scope = await this.dispatch.goals.Inspect(this.Identity(batch), batch.cycle.scopeId);
 
       if (!await this.dispatch.automaticReturns.Inspect(scope))
-        fail('AUTO_RETURN_UNSAFE', '原待回传批次已变化，不启动恢复');
+        throw new Error('原待回传批次已变化，不启动恢复');
     }
 
     const identity = this.Identity(batch),
@@ -1211,7 +1209,7 @@ export class AutoCollaboration
     if (this.closed || batch.stopped || batch.cycle.ending || await this.MemberFailuresBlocked(batch, graph))
       return;
 
-    const tasks = batch.tasks.map(id => { const task = graph.tasks.find(t => t.taskId === id); if (!task) fail('TASK_NOT_FOUND', '自动委派任务记录缺失'); return task });
+    const tasks = batch.tasks.map(id => { const task = graph.tasks.find(t => t.taskId === id); if (!task) throw new Error('自动委派任务记录缺失'); return task });
 
     let waitingForMember = false;
 
@@ -1361,18 +1359,18 @@ export class AutoCollaboration
             const reason = memberFailureStopReason(await this.dispatch.Snapshot(this.Identity(cycle)), cycle.scopeId);
 
             if (reason && !cycle.cancelRequested && !this.closed)
-              fail('GOAL_MEMBER_FAILURE_LIMIT', reason)
+              throw new Error(reason)
           }
 
           if (cycle.workRequested && !scope.goal?.plan)
-            fail('GOAL_REVIEW_REQUIRED', '业务规划或派发未能建立有效目标计划，请核实缺口后继续');
+            throw new Error('业务规划或派发未能建立有效目标计划，请核实缺口后继续');
 
           if (cycle.cancelRequested || this.closed)
             finalOutcome = 'cancelled';
           else if (scope.goal?.review?.decision === 'awaiting_user')
           {
             if (!cycle.completionSummary)
-              fail('GOAL_MAIN_UNSETTLED', '等待检查点缺少完整的主运行终态');
+              throw new Error('等待检查点缺少完整的主运行终态');
 
             const waiting = await this.dispatch.ParkScope(this.Identity(cycle), cycle.scopeId, cycle.completionSummary, [...cycle.mainRuns]);
 

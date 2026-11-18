@@ -6,9 +6,7 @@
  */
 import { z } from 'zod';
 
-import { hash, json } from '../../../core/platform/node/serialization';
-
-import { fail } from '../../../core/errors';
+import { hash, json } from '../../../core/io/serialization';
 
 import type { GraphIdentity } from '../rules/graph-types';
 
@@ -95,7 +93,7 @@ export function restoreMainCommand(name: VerifiableMainToolName, binding: MainTo
       { agentId, ...task } = parsed;
 
     if (agentId === 'cbim:main')
-      fail('COMMAND_INPUT_UNSUPPORTED', '原派发角色不能是主调度');
+      throw new Error('原派发角色不能是主调度');
 
     if (parentRevision === undefined)
       return { commandId, input: parsed };

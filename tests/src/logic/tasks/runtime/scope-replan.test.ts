@@ -7,7 +7,7 @@ import {randomUUID} from 'node:crypto';
 import {fixture} from '../../application/support/helpers';
 import {request} from '../../knowledge/rules/data/knowledge';
 import {seedTeam} from '../../knowledge/service/support/team-fixture';
-import {json} from '../../../../../src/core/platform/node/serialization';
+import {json} from '../../../../../src/core/io/serialization';
 import {jsonToolResult} from '../../../../../src/logic/tools/rules/results';
 import {replanRequestSchema,replanReceiptSchema,type ReplanRequest} from '../../../../../src/logic/tasks/rules/scope-replan';
 import {FileDispatchStore} from '../../../../../src/logic/dispatch/storage/dispatch-store';

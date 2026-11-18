@@ -13,11 +13,9 @@ import type { KnowledgeFile } from '../rules/types';
 
 import type { StoragePaths } from '../../workspace/ports/paths';
 
-import { atomic } from '../../../core/platform/node/files';
+import { atomic } from '../../../core/io/text-files';
 
-import { json } from '../../../core/platform/node/serialization';
-
-import { fail } from '../../../core/errors';
+import { json } from '../../../core/io/serialization';
 
 /** owner 只提供工程身份和路径端口，不依赖 Workspace 生命周期实现。 */
 export class FileObjectStorage implements ObjectStorage
@@ -32,7 +30,7 @@ export class FileObjectStorage implements ObjectStorage
     {
       await fs.lstat(path.join(this.owner.entry.path, id));
 
-      fail('EXISTS', '目标目录已存在，请先查询并核实')
+      throw new Error('目标目录已存在，请先查询并核实')
     }
     catch (e: any)
     {
@@ -50,12 +48,12 @@ export class FileObjectStorage implements ObjectStorage
         const p = id + '/' + e.name;
 
         if (e.isSymbolicLink())
-          fail('PATH', '对象含链接');
+          throw new Error('对象含链接');
 
         if (e.isDirectory())
           await this.AssertKnowledgeOnly(p, files);
         else if (!files.some(f => f.path === p))
-          fail('OBJECT_ASSETS', '对象含非知识资源，当前事务不支持删除这些资源')
+          throw new Error('对象含非知识资源，当前事务不支持删除这些资源')
       }
     }
     catch (e: any)
@@ -68,7 +66,7 @@ export class FileObjectStorage implements ObjectStorage
   private PlanPath(id: string)
   {
     if (!/^[0-9a-f-]{36}$/.test(id))
-      fail('PLAN', '无效预览标识');
+      throw new Error('无效预览标识');
 
     return path.join(this.owner.paths.Local(this.owner.entry.id, 'cache'), 'object-plans', id + '.json')
   }
@@ -86,7 +84,7 @@ export class FileObjectStorage implements ObjectStorage
     }
     catch
     {
-      fail('PLAN', '预览不存在，请重新预览')
+      throw new Error('预览不存在，请重新预览')
     }
   }
 

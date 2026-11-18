@@ -3,8 +3,6 @@
  * 设计原因：先验证完整 capture 与精确消费者，再给旧单域门禁一个窄许可；有 sourceChanges 字段本身不构成授权。
  * 职责边界：prepare/resolve 不混其他领域写入，capture 只许一条同来源采纳，不触碰执行图、实例或原知识正文。
  */
-import { fail } from '../../../core/errors';
-
 import { workspaceMemberChangeSchema } from '../../team/rules/workspace-member';
 
 import { workspaceMemberCapabilityHash } from '../../team/rules/workspace-member-rules';
@@ -32,7 +30,7 @@ const equal = (a: unknown, b: unknown) => knowledgeSourceCanonical(a) === knowle
 function check(value: unknown, message: string, code = 'SOURCE_AUDIT'): asserts value
 {
   if (!value)
-    fail(code, message)
+    throw new Error(message)
 }
 
 /** 验证单条来源事件及所有来源消费者；不读取知识或反向等待 Store。 */

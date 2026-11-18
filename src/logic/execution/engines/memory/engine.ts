@@ -6,7 +6,7 @@
  */
 import { randomUUID } from 'node:crypto';
 
-import { JsonUtils } from '../../../../core/utility';
+import { JsonUtils } from '../../../../core/io';
 
 import type { AgentEngine, EngineContext, EngineEvent } from '../../rules/types';
 

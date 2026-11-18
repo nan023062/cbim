@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import {Rules,revision} from '../../../../../../src/logic/knowledge/rules/knowledge';
-import {hash,json} from '../../../../../../src/core/platform/node/serialization';
+import {hash,json} from '../../../../../../src/core/io/serialization';
 import type {KnowledgeFile,Snapshot} from '../../../../../../src/logic/knowledge/rules/types';
 import {moduleFiles,summary} from './knowledge-data';
 

@@ -4,8 +4,6 @@
  * 设计原因：通用Store不能只信服务或事件名称；从旧快照重新计算完整闭包，历史审计不可修改或借用。
  * 职责边界：纯状态校验不执行 IO；许可仅在同一提交校验内传递，不来自模型或持久回执。
  */
-import { fail } from '../../../core/errors';
-
 import type { DispatchState, DispatchMutation, DispatchCommand } from '../../dispatch/rules/dispatch-storage';
 
 import type { TaskNode, GraphChange } from './graph-types';
@@ -19,7 +17,7 @@ import { queuedDependencyRevisionSelection } from './queued-dependency-revision-
 function valid(v: unknown, message: string): asserts v
 {
   if (!v)
-    fail('GRAPH_INPUT_INVALID', message)
+    throw new Error(message)
 }
 
 /** 每批一个目标的一次原子修订；无新审计返回空许可，已有审计仍逐项检查不可变。 */

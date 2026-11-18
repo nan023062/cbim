@@ -9,8 +9,6 @@ import { automaticExecutionBindingMatches } from '../../team/rules/automatic-exe
 
 import { safeId } from '../ports/identity';
 
-import { fail } from '../../../core/errors';
-
 import type { TaskSpec } from '../../tasks/rules/types';
 
 import { ownerExecutionBindingMatches } from '../../team/rules/member-execution-binding';
@@ -68,7 +66,7 @@ export interface MemberRunLaunch
 export function checkedMemberRunBinding(value: unknown, task: TaskSpec, runId?: string): MemberRunBinding
 {
   if (!value || typeof value !== 'object' || Array.isArray(value))
-    fail('MEMBER_RUN_IDENTITY', '成员运行缺少固定身份');
+    throw new Error('成员运行缺少固定身份');
 
   const binding = value as Record<string, unknown>;
 
@@ -77,38 +75,38 @@ export function checkedMemberRunBinding(value: unknown, task: TaskSpec, runId?: 
   const allowed = [...identifiers, 'teamId', 'agentId', 'leaseEpoch', 'planRevision'];
 
   if (Object.keys(binding).some(key => !allowed.includes(key)))
-    fail('MEMBER_RUN_IDENTITY', '成员运行身份包含未知字段');
+    throw new Error('成员运行身份包含未知字段');
 
   for (const key of identifiers)
   {
     if (typeof binding[key] !== 'string')
-      fail('MEMBER_RUN_IDENTITY', '成员运行标识必须为字符串');
+      throw new Error('成员运行标识必须为字符串');
 
     // 文件路径标识沿用运行日志限制；逻辑通道/根会话不作目录片段，长度与派发协议一致。
     if (['workspaceId', 'taskId', 'runId'].includes(key))
       safeId(binding[key] as string);
     else if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/.test(binding[key] as string))
-      fail('MEMBER_RUN_IDENTITY', '成员通道标识无效');
+      throw new Error('成员通道标识无效');
   }
 
   for (const key of ['teamId', 'agentId'])
     if (typeof binding[key] !== 'string' || !(binding[key] as string).trim() || (binding[key] as string).length > 512)
-      fail('MEMBER_RUN_IDENTITY', '成员角色身份无效');
+      throw new Error('成员角色身份无效');
 
   if (!Number.isSafeInteger(binding.leaseEpoch) || (binding.leaseEpoch as number) < 0 || !Number.isSafeInteger(binding.planRevision) || (binding.planRevision as number) < 1)
-    fail('MEMBER_RUN_IDENTITY', '成员租约或计划版本无效');
+    throw new Error('成员租约或计划版本无效');
 
   if (binding.workspaceId !== task.workspaceId || binding.taskId !== task.taskId || binding.agentId !== task.agentId || runId !== undefined && binding.runId !== runId)
-    fail('MEMBER_RUN_IDENTITY', '成员运行绑定与任务或轮次不一致');
+    throw new Error('成员运行绑定与任务或轮次不一致');
 
   if (task.mode === 'chat' || !task.moduleIds.length)
-    fail('MEMBER_RUN_IDENTITY', '成员业务运行需要明确的模块任务，不能借用普通对话身份');
+    throw new Error('成员业务运行需要明确的模块任务，不能借用普通对话身份');
 
   if (task.fallbackBinding && (task.ownerBinding || !automaticExecutionBindingMatches(task.fallbackBinding, task.workspaceId, task.fallbackBinding.scopeId, binding.agentId as string, task.moduleIds) || task.fallbackBinding.teamId !== binding.teamId))
-    fail('MEMBER_RUN_IDENTITY', '自动执行绑定与本轮角色或模块不一致');
+    throw new Error('自动执行绑定与本轮角色或模块不一致');
 
   if (task.ownerBinding && (!ownerExecutionBindingMatches(task.ownerBinding, task.workspaceId, binding.agentId as string, task.moduleIds) || task.ownerBinding.capability.teamId !== binding.teamId))
-    fail('MEMBER_RUN_IDENTITY', '成员任务的岗位绑定与本轮角色、模块不一致');
+    throw new Error('成员任务的岗位绑定与本轮角色、模块不一致');
 
   return structuredClone(value) as MemberRunBinding;
 }
@@ -119,12 +117,12 @@ export function checkedMemberRunLaunch(value: MemberRunLaunch, task: TaskSpec): 
   const binding = checkedMemberRunBinding(value?.binding, task);
 
   if (!value.session || typeof value.session.nativeSessionId !== 'string')
-    fail('MEMBER_RUN_IDENTITY', '成员运行缺少原生会话身份');
+    throw new Error('成员运行缺少原生会话身份');
 
   safeId(value.session.nativeSessionId);
 
   if (value.session.sessionFile !== undefined && (typeof value.session.sessionFile !== 'string' || !value.session.sessionFile.trim()))
-    fail('MEMBER_RUN_IDENTITY', '成员原生会话路径无效');
+    throw new Error('成员原生会话路径无效');
 
   return { binding, session: { nativeSessionId: value.session.nativeSessionId, ...(value.session.sessionFile ? { sessionFile: value.session.sessionFile } : {}) } };
 }

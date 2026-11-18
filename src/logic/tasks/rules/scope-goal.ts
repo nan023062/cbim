@@ -7,15 +7,13 @@
  * 机制边界：对象递归排序由 utility 提供，本模块保留历史比较器、字段省略和业务指纹规则。
  * 算法入口：通过 Core JsonUtils 静态方法复用机制，本文件继续拥有原业务策略。
  */
-import { JsonUtils } from '../../../core/utility';
+import { JsonUtils } from '../../../core/io';
 
 import { automaticExecutionBindingSchema, automaticExecutionBindingMatches } from '../../team/rules/automatic-execution';
 
 import { z } from 'zod';
 
 import { workflowSelectionsSchema, validateWorkflowSelections, type WorkflowSelection } from './workflow-selection';
-
-import { fail } from '../../../core/errors';
 
 import { ownerExecutionSelectionSchema, ownerExecutionBindingSchema, ownerExecutionSelectionMatches } from '../../team/rules/member-execution-binding';
 
@@ -202,7 +200,7 @@ export const sameGoalValue = (a: unknown, b: unknown) => JSON.stringify(ordered(
 function valid(condition: unknown, message: string): asserts condition
 {
   if (!condition)
-    fail('GRAPH_INPUT_INVALID', message)
+    throw new Error(message)
 }
 
 /** 提交与重放共用；supplement 来自已核实等待消费，activeSupplement 仅在 validateScopeActiveInputs 匹配真实 pending→accepted 时传入，二者互斥，不能作为普通决策提升输入版本的豁免。 */

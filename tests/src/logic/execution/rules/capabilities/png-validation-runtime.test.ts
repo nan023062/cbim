@@ -9,7 +9,7 @@ import {validationTool} from '../../../../../../src/logic/evidence/rules/validat
 import type {ValidationInput,ValidationResult} from '../../../../../../src/logic/evidence/rules/validation';
 import {verifyValidationRecords} from '../../../../../../src/logic/evidence/rules/validation-evidence';
 import {selectWorkflowValidations} from '../../../../../../src/logic/evidence/rules/workflow-evidence';
-import {hash} from '../../../../../../src/core/platform/node/serialization';
+import {hash} from '../../../../../../src/core/io/serialization';
 import {jsonToolResult} from '../../../../../../src/logic/tools/rules/results';
 import {artifactRuntimeFixture,artifactBinding,seedProgress,invoke,captureInput,deferred} from './support/artifact-runtime-fixture';
 import {rejected} from './support/complete-output-fixture';

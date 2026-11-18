@@ -3,6 +3,8 @@
  * 设计原因：知识操作委托 KnowledgeStore 保持事务边界；工作区统一打开关闭顺序，供应用内部执行和调度使用。维护任务按实例隔离，取消不存在的任务明确报错，不能把对话任务误报为已取消。
  * 回执边界：当前实例可只读核实旧请求的原 journal；同一 DispatchStore 在持工程锁、核路径并完成可信历史初始化阶段后加载，再核来源 journal 与治理。关闭先排空知识和来源结算再关闭 Store，不恢复旧实施意图。
  */
+import { appendDiagnosticRecord } from '../../../core/debug/node';
+
 import fs from 'node:fs/promises';
 
 import { FileObjectStorage } from '../../knowledge/storage/object-storage';
@@ -15,13 +17,13 @@ import { randomUUID } from 'node:crypto';
 
 import { Paths } from './paths';
 
-import { atomic, exists, readJson } from '../../../core/platform/node/files';
+import { atomic, exists, readJson } from '../../../core/io/text-files';
 
-import { json } from '../../../core/platform/node/serialization';
+import { json } from '../../../core/io/serialization';
 
-import { fail } from '../../../core/errors';
+import type { KernelLock } from '../../../core/io/locking';
 
-import { KernelLock } from '../../../core/platform/node/locking';
+import { acquireLock } from '../../io-errors/locking';
 
 import { Rules } from '../../knowledge/rules/knowledge';
 
@@ -98,23 +100,23 @@ export class Workspace implements KnowledgeWorkspace
   Assert(identity?: { workspaceId: string; instanceId: string })
   {
     if (this.state !== 'running')
-      fail('NOT_RUNNING', `工作区当前状态：${this.state}`);
+      throw new Error(`工作区当前状态：${this.state}`);
 
     if (identity && identity.workspaceId !== this.entry.id)
-      fail('STALE_INSTANCE', '工程身份不匹配。请用 cbim_workspace_identity 核对当前 workspaceId，再选择正确工程；不能把其他工程的请求改绑到这里。');
+      throw new Error('工程身份不匹配。请用 cbim_workspace_identity 核对当前 workspaceId，再选择正确工程；不能把其他工程的请求改绑到这里。');
 
     if (identity && identity.instanceId !== this.instanceId)
-      fail('STALE_INSTANCE', `运行实例已变化，可能已重启。请调用 cbim_workspace_identity，使用新 instanceId（当前为 ${this.instanceId}）重新读取与预览。未知提交先核实原回执，不自动重放。`);
+      throw new Error(`运行实例已变化，可能已重启。请调用 cbim_workspace_identity，使用新 instanceId（当前为 ${this.instanceId}）重新读取与预览。未知提交先核实原回执，不自动重放。`);
   }
 
   /** Application 可在 open 前注入带监控器的唯一 Store；此时不读取磁盘。 */
   AttachDispatchStore(store: FileDispatchStore)
   {
     if (this.sharedDispatch && this.sharedDispatch !== store)
-      fail('SOURCE_UNAVAILABLE', '工作区已有派发存储');
+      throw new Error('工作区已有派发存储');
 
     if (store.workspaceId !== this.entry.id)
-      fail('SOURCE_UNAVAILABLE', '派发存储工作区不匹配');
+      throw new Error('派发存储工作区不匹配');
 
     this.sharedDispatch = store;
 
@@ -126,7 +128,7 @@ export class Workspace implements KnowledgeWorkspace
   get dispatchStore()
   {
     if (!this.sharedDispatch)
-      fail('SOURCE_UNAVAILABLE', '工作区来源存储尚未打开');
+      throw new Error('工作区来源存储尚未打开');
 
     return this.sharedDispatch
   }
@@ -148,9 +150,9 @@ export class Workspace implements KnowledgeWorkspace
       const identity = await this.paths.Identity(this.entry.path);
 
       if (identity.id !== this.entry.id)
-        fail('IDENTITY', '工程真实路径已变化，需要重新定位');
+        throw new Error('工程真实路径已变化，需要重新定位');
 
-      this.lock = new KernelLock(identity.path, identity.id);
+      this.lock = acquireLock(identity.path, identity.id);
 
       if (!this.sharedDispatch)
         this.AttachDispatchStore(new FileDispatchStore(path.join(this.paths.Project(this.entry.id), 'dispatch'), this.entry.id));
@@ -158,7 +160,7 @@ export class Workspace implements KnowledgeWorkspace
       const mapping = path.join(this.paths.Project(identity.id), 'identity.json');
 
       if (await exists(mapping) && (await readJson(mapping)).path !== identity.path)
-        fail('IDENTITY', '本地历史记录绑定的工程不匹配');
+        throw new Error('本地历史记录绑定的工程不匹配');
 
       await atomic(mapping, json(identity));
 
@@ -275,7 +277,7 @@ export class Workspace implements KnowledgeWorkspace
 
     this.tasks.set(id, task);
 
-    void (async () => { try { await new Promise(r => setTimeout(r, 0)); if (controller.signal.aborted) fail('CANCELLED', '任务已取消'); const snap = await this.Snapshot(); if (controller.signal.aborted) fail('CANCELLED', '任务已取消'); if (name === 'reindex') { task.progress = '提交索引；此阶段等待完成后关闭'; task.result = await this.Commit({ workspaceId: this.entry.id, instanceId: this.instanceId, revision: snap.revision, requestId: id, changes: [] }) } else task.result = snap.validation; task.state = 'completed'; task.progress = '检查结束：架构判断仍需团队 review' } catch (e: any) { task.state = e.code === 'CANCELLED' ? 'cancelled' : 'failed'; task.error = e.message } finally { this.controllers.delete(id); await atomic(path.join(this.paths.Local(this.entry.id, 'task-records'), id + '.json'), json(task)).catch(() => { }) } })();
+    void (async () => { try { await new Promise(r => setTimeout(r, 0)); if (controller.signal.aborted) throw new Error('任务已取消'); const snap = await this.Snapshot(); if (controller.signal.aborted) throw new Error('任务已取消'); if (name === 'reindex') { task.progress = '提交索引；此阶段等待完成后关闭'; task.result = await this.Commit({ workspaceId: this.entry.id, instanceId: this.instanceId, revision: snap.revision, requestId: id, changes: [] }) } else task.result = snap.validation; task.state = 'completed'; task.progress = '检查结束：架构判断仍需团队 review' } catch (e: any) { task.state = controller.signal.aborted ? 'cancelled' : 'failed'; task.error = e.message } finally { this.controllers.delete(id); await atomic(path.join(this.paths.Local(this.entry.id, 'task-records'), id + '.json'), json(task)).catch(() => { }) } })();
 
     return task;
   }
@@ -291,7 +293,7 @@ export class Workspace implements KnowledgeWorkspace
     const task = this.tasks.get(id);
 
     if (!task || task.workspaceId !== this.entry.id)
-      fail('TASK_NOT_FOUND', '当前工作区实例中不存在该维护任务；此接口仅支持知识检查或索引维护任务，不接受对话或成员派发任务 ID');
+      throw new Error('当前工作区实例中不存在该维护任务；此接口仅支持知识检查或索引维护任务，不接受对话或成员派发任务 ID');
 
     if (task.state === 'running')
       this.controllers.get(id)?.abort();
@@ -314,7 +316,7 @@ export class Workspace implements KnowledgeWorkspace
 
     await fs.mkdir(directory, { recursive: true });
 
-    await fs.appendFile(path.join(directory, 'events.ndjson'), JSON.stringify({ time: new Date().toISOString(), workspaceId: this.entry.id, instanceId: this.instanceId, event, ...details }) + '\n', { mode: 0o600 }).catch(() => { })
+    await appendDiagnosticRecord(path.join(directory, 'events.ndjson'), { time: new Date().toISOString(), workspaceId: this.entry.id, instanceId: this.instanceId, event, ...details }).catch(() => { })
   }
 
   /** 停止监听与任务，等待正在提交的事务，再释放本实例持有的锁。 */

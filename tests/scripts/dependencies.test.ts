@@ -71,10 +71,10 @@ test.each(['src/backend/core/unused.ts','src/frontend/unused.ts','src/foundation
 test.each([
   ['src/logic/workspace/service/workspace.ts','src/logic/application/application.ts',false],
   ['src/logic/application/application.ts','src/bridge/server/ipc/dispatch.ts',false],
-  ['src/logic/application/application.ts','src/core/platform/electron/secrets.ts',false],
+  ['src/logic/application/application.ts','src/core/io/electron.ts',false],
   ['src/bridge/server/bootstrap/desktop.ts','src/logic/workspace/service/workspace.ts',false],
   ['src/bridge/server/application.ts','src/logic/application/application.ts',true],
-  ['src/bridge/server/main.ts','src/core/platform/electron/secrets.ts',true],
+  ['src/bridge/server/main.ts','src/core/io/electron.ts',true],
 ] as const)('service migration preserves lifecycle and host boundaries: %s -> %s',(from,to,allowed)=>{
   const spec=path.posix.relative(path.posix.dirname(from),to);
   const result=audit({[from]:`import type {Value} from '${spec.startsWith('.')?spec:'./'+spec}';`,[to]:'export type Value=string;'});
@@ -84,7 +84,7 @@ test.each([
 test.each([
   ['src/logic/tasks/rules/graph.ts','src/logic/models/service/index.ts',false],
   ['src/logic/tasks/rules/graph.ts','src/logic/workspace/service/workspace.ts',false],
-  ['src/core/json.ts','src/logic/knowledge/rules/types.ts',false],
+  ['src/core/io/json.ts','src/logic/knowledge/rules/types.ts',false],
   ['src/logic/application/application.ts','src/logic/tasks/rules/unregistered.ts',false],
   ['src/logic/tasks/rules/graph.ts','src/logic/models/index.ts',true],
   ['src/logic/tasks/rules/scope-view.ts','src/logic/team/rules/team-session.ts',true],
@@ -101,7 +101,7 @@ test.each([
 
 test.each([
   ['src/logic/application/application.ts','src/logic/resources/service/index.ts',true],
-  ['src/logic/resources/service/resource-store.ts','src/core/platform/node/locking.ts',true],
+  ['src/logic/resources/service/resource-store.ts','src/core/io/locking.ts',true],
   ['src/logic/resources/service/resource-repository.ts','src/logic/workspace/service/paths.ts',false],
   ['src/logic/resources/service/resource-store.ts','src/bridge/contracts/resources.ts',false],
   ['src/logic/tools/runtime/repository-tools.ts','src/logic/resources/service/index.ts',false],
@@ -122,14 +122,14 @@ test.each([
   ['src/logic/application/application.ts','src/logic/feedback/service/github-feedback.ts',false],
   ['src/logic/feedback/contracts.ts','src/logic/tools/rules/scope-schema.ts',false],
   ['src/logic/feedback/index.ts','src/logic/feedback/service/index.ts',false],
-  ['src/logic/feedback/service/github-feedback.ts','src/core/platform/node/locking.ts',true],
-  ['src/logic/feedback/service/github-feedback.ts','src/core/contracts/secrets.ts',true],
+  ['src/logic/feedback/service/github-feedback.ts','src/core/io/locking.ts',true],
+  ['src/logic/feedback/service/github-feedback.ts','src/core/io/electron.ts',true],
   ['src/logic/feedback/service/github-feedback.ts','src/logic/execution/platform/locking.ts',false],
   ['src/logic/feedback/service/github-feedback.ts','src/logic/models/index.ts',false],
   ['src/bridge/contracts/other.ts','src/logic/feedback/index.ts',false],
   ['src/view/settings/feedback.ts','src/logic/feedback/index.ts',false],
   ['src/bridge/client/feedback.ts','src/logic/feedback/service/index.ts',false],
-  ['src/core/platform/node/locking.ts','src/logic/feedback/index.ts',false],
+  ['src/core/io/locking.ts','src/logic/feedback/index.ts',false],
 ] as const)('反馈迁移边界 %s → %s = %s',(from,to,allowed)=>{
   const relative=path.posix.relative(path.posix.dirname(from),to),spec=relative.startsWith('.')?relative:'./'+relative;
   const result=audit({[from]:`import type {Value} from '${spec}';`,[to]:'export type Value=string;'});
@@ -146,18 +146,18 @@ test('反馈桥仅公开连接设置，纯入口拒绝平台依赖',()=>{
 
 const temporary:string[]=[];
 test.each([
-  ['src/logic/web/service/web-service.ts','src/core/platform/node/web/index.ts',true],
-  ['src/logic/web/service/web-settings.ts','src/core/contracts/secrets.ts',true],
+  ['src/logic/web/service/web-service.ts','src/core/web/node.ts',true],
+  ['src/logic/web/service/web-settings.ts','src/core/io/electron.ts',true],
   ['src/logic/application/application.ts','src/logic/web/service/index.ts',true],
-  ['src/bridge/server/main.ts','src/core/platform/electron/web-reader.ts',true],
-  ['src/bridge/server/other.ts','src/core/platform/electron/web-reader.ts',false],
+  ['src/bridge/server/main.ts','src/core/web/electron.ts',true],
+  ['src/bridge/server/other.ts','src/core/web/electron.ts',false],
   ['src/logic/tools/runtime/web-tools.ts','src/logic/web/index.ts',true],
   ['src/logic/tools/runtime/web-tools.ts','src/logic/web/service/index.ts',false],
-  ['src/logic/tools/runtime/web-tools.ts','src/core/platform/node/web/index.ts',false],
+  ['src/logic/tools/runtime/web-tools.ts','src/core/web/node.ts',false],
   ['src/logic/web/index.ts','src/logic/web/service/index.ts',false],
-  ['src/logic/web/service/web-service.ts','src/core/platform/electron/web-reader.ts',false],
-  ['src/core/web/index.ts','src/core/platform/node/web/index.ts',false],
-  ['src/core/platform/node/web/index.ts','src/core/platform/electron/web-reader.ts',false],
+  ['src/logic/web/service/web-service.ts','src/core/web/electron.ts',false],
+  ['src/core/web/index.ts','src/core/web/node.ts',false],
+  ['src/core/web/node.ts','src/core/web/electron.ts',false],
   ['src/view/settings/web.ts','src/logic/web/index.ts',false],
   ['src/bridge/client/web.ts','src/logic/web/service/index.ts',false],
   ['src/bridge/contracts/other.ts','src/logic/web/index.ts',false],
@@ -167,6 +167,11 @@ test.each([
   const result=audit({[from]:`import type {Value} from '${spec}';`,[to]:'export type Value=string;'});
   expect(result.unresolved).toEqual([]);expect(result.ok).toBe(allowed);
 });
+test('网页服务不能加载桌面凭据实现',()=>{
+  const result=audit({'src/logic/web/service/web-settings.ts':"import {systemSecretCipher} from '../../../core/io/electron';",'src/core/io/electron.ts':'export const systemSecretCipher={};'});
+  expect(result.ok).toBe(false);
+});
+
 test('Web 桥仅公开设置协议，便携入口禁止加载平台或网络实现',()=>{
   const entry='src/logic/web/index.ts';
   expect(audit({[entry]:'export type WebSettingsView={};','src/bridge/contracts/web.ts':"export type {WebSettingsView} from '../../logic/web';"}).ok).toBe(true);
@@ -189,7 +194,7 @@ test.each([
   ['src/logic/application/assembly/app.ts','src/logic/models/config.ts',false],
   ['src/logic/application/assembly/app.ts','src/logic/tasks/index.ts',false],
   ['src/logic/models/index.ts','src/logic/models/service/index.ts',false],
-  ['src/logic/models/config.ts','src/core/errors.ts',false],
+  ['src/logic/models/config.ts','src/core/debug/index.ts',false],
   ['src/logic/models/service/llm-profiles.ts','src/bridge/contracts/models.ts',false],
 ] as const)('模型迁移入口 %s → %s 许可为 %s',(from,to,allowed)=>{
   const relative=path.posix.relative(path.posix.dirname(from),to);
@@ -205,12 +210,12 @@ test.each(["export * from '../../logic/models';","export type {ResolvedLlm} from
   expect(result.unresolved).toEqual([]);
   expect(result.logicalViolations).toContainEqual(expect.objectContaining({rule:'model-bridge-export'}));
 });
-const foundationFile=(target:string)=>target==='utility/node.ts'?'src/core/platform/node/digest.ts':target.startsWith('utility/')?'src/core/'+target:/^(files|web)\//.test(target)?'src/core/platform/node/'+target:'src/logic/fixtures/foundation/'+target;
+const foundationFile=(target:string)=>target==='web/index.ts'?'src/core/web/node.ts':target.startsWith('web/')?'src/core/'+target:target==='files/index.ts'?'src/core/io/text-files.ts':target==='utility/node.ts'?'src/core/io/digest.ts':(target.startsWith('utility/')||target.startsWith('io/'))?'src/core/'+target:/^(files|web)\//.test(target)?'src/core/platform/node/'+target:'src/logic/fixtures/foundation/'+target;
 test.each([
   ['src/view/example/model.ts','src/core/utility/index.ts',true],
   ['src/view/foundations/utility/json.ts','src/core/utility/index.ts',true],
   ['src/logic/tasks/service.ts','src/core/utility/index.ts',true],
-  ['src/logic/tasks/service.ts','src/core/platform/node/digest.ts',true],
+  ['src/logic/tasks/service.ts','src/core/io/digest.ts',true],
   ['src/bridge/contracts/example.ts','src/core/utility/index.ts',true],
   ['src/bridge/client/call.ts','src/bridge/contracts/example.ts',true],
   ['src/view/example/model.ts','src/bridge/client/call.ts',true],
@@ -219,9 +224,9 @@ test.each([
   ['src/core/utility/index.ts','src/logic/tasks/index.ts',false],
   ['src/core/utility/index.ts','src/bridge/contracts/example.ts',false],
   ['src/core/utility/index.ts','src/view/example/model.ts',false],
-  ['src/core/utility/index.ts','src/core/errors.ts',false],
-  ['src/view/example/model.ts','src/core/platform/node/digest.ts',false],
-  ['src/bridge/client/call.ts','src/core/platform/node/digest.ts',false],
+  ['src/core/utility/index.ts','src/core/debug/index.ts',false],
+  ['src/view/example/model.ts','src/core/io/digest.ts',false],
+  ['src/bridge/client/call.ts','src/core/io/digest.ts',false],
   ['src/logic/tasks/service.ts','src/bridge/contracts/example.ts',false],
   ['src/logic/tasks/service.ts','src/view/example/model.ts',false],
   ['src/view/example/model.ts','src/logic/tasks/index.ts',false],
@@ -257,28 +262,28 @@ test('调度器仅可组合 portable utility 公开入口',()=>{
   }
 });
 test('foundations is independent even for type dependencies; Main consumes only public web entries',()=>{
-  const foundation='src/core/platform/node/web/index.ts';
-  expect(audit({[foundation]:'export const value=1;', 'src/bridge/server/a.ts':"import {value} from '../../core/platform/node/web';"}).ok).toBe(true);
+  const foundation='src/core/web/node.ts';
+  expect(audit({[foundation]:'export const value=1;', 'src/bridge/server/a.ts':"import {value} from '../../core/web/node';"}).ok).toBe(true);
   for(const target of ['logic/knowledge/rules','logic/application','logic/execution/engines','view','bridge/contracts']){
     const relative=path.posix.relative(path.posix.dirname(foundation),`src/${target}/a.ts`);
     const result=audit({[foundation]:`import type {Value} from '${relative}';`,[`src/${target}/a.ts`]:'export interface Value {}'});
     expect(result.unresolved).toEqual([]);
     expect(result.ok).toBe(false);expect(result.violations).not.toEqual([]);
   }
-  const privateEntry=audit({'src/core/platform/node/web/page-reader.ts':'export class WebPageReader {}','src/bridge/server/a.ts':"import {WebPageReader} from '../../core/platform/node/web/page-reader';"});
+  const privateEntry=audit({'src/core/web/page-reader.ts':'export class WebPageReader {}','src/bridge/server/a.ts':"import {WebPageReader} from '../../core/web/page-reader';"});
   expect(privateEntry.logicalViolations).toContainEqual(expect.objectContaining({rule:'private-entry',boundary:'web-node'}));
 });
 afterEach(()=>{for(const root of temporary.splice(0))fs.rmSync(root,{recursive:true,force:true})});
 test.each(['utility','files','web'])('合并后的 %s 子库仍不能反向依赖父层约定或业务',(capability)=>{
   const from=foundationFile(`${capability}/index.ts`);
-  for(const to of ['src/core/errors.ts','src/logic/execution/ports/identity.ts','src/logic/workspace/ports/paths.ts','src/logic/fixtures/tasks/example.ts']){
+  for(const to of ['src/core/debug/index.ts','src/logic/execution/ports/identity.ts','src/logic/workspace/ports/paths.ts','src/logic/fixtures/tasks/example.ts']){
     const relative=path.posix.relative(path.posix.dirname(from),to);
     const result=audit({[from]:`export type {Value} from '${relative}';`,[to]:'export type Value=string;'});
     expect(result.unresolved).toEqual([]);expect([...result.violations,...result.logicalViolations]).not.toEqual([]);expect(result.ok).toBe(false);
   }
 });
 test('Updater 与 Bridge 不因目录合并取得额外 Core 或基础库访问权',()=>{
-  for(const [from,to] of [['src/logic/updates/service/example.ts','src/core/errors.ts'],['src/bridge/contracts/example.ts','src/core/platform/node/digest.ts']]){
+  for(const [from,to] of [['src/logic/updates/service/example.ts','src/core/debug/index.ts'],['src/bridge/contracts/example.ts','src/core/io/digest.ts']]){
     const relative=path.posix.relative(path.posix.dirname(from),to);
     const result=audit({[from]:`import type {Value} from '${relative}';`,[to]:'export type Value=string;'});
     expect(result.unresolved).toEqual([]);expect(result.violations).not.toEqual([]);
@@ -296,16 +301,16 @@ test('前端工具库仅向前端公开，私有实现与跨域依赖被拒绝',
 });
 test('前端工具库不能反向引用页面、通信契约或后端工具，包含类型与第三方依赖',()=>{
   const inner='src/view/foundations/utility/json.ts';
-  for(const target of ['src/view/team/a.ts','src/bridge/contracts/a.ts','src/core/platform/node/digest.ts']){
+  for(const target of ['src/view/team/a.ts','src/bridge/contracts/a.ts','src/core/io/digest.ts']){
     const relative=path.posix.relative(path.posix.dirname(inner),target);
     expect(audit({[inner]:`import type {Value} from '${relative}';`,[target]:'export type Value=string;'}).ok).toBe(false);
   }
   const external=audit({[inner]:"import {useState} from 'react';"});
   expect(external.logicalViolations).toContainEqual(expect.objectContaining({rule:'external-dependency',boundary:'frontend-utility'}));
-  const crossDomain=audit({'src/view/tasks/a.ts':"export {value} from '../../core/platform/node/digest';",'src/core/platform/node/digest.ts':'export const value=1;'});
+  const crossDomain=audit({'src/view/tasks/a.ts':"export {value} from '../../core/io/digest';",'src/core/io/digest.ts':'export const value=1;'});
   expect(crossDomain.unresolved).toEqual([]);expect(crossDomain.ok).toBe(false);
 });
-test.each([['files','text-files','file-foundations'],['utility','async','utility-foundations']])('Core 可组合 %s 公开入口，基础库不能反向引用业务或暴露私有实现',(capability,implementation,boundary)=>{
+test.each([['io','bytes','io'],['utility','async','utility-foundations']])('Core 可组合 %s 公开入口，基础库不能反向引用业务或暴露私有实现',(capability,implementation,boundary)=>{
   const entry=foundationFile(`${capability}/index.ts`),inner=foundationFile(`${capability}/${implementation}.ts`);
   const from='src/logic/fixtures/example.ts',main='src/bridge/server/example.ts';
   expect(audit({[entry]:'export const value=1;',[from]:`import {value} from '${path.posix.relative(path.posix.dirname(from),entry)}';`}).ok).toBe(true);
@@ -322,7 +327,7 @@ function audit(files:Record<string,string>){
 }
 
 test('utility 通用入口禁止通过重导出连带装载 Node 入口',()=>{
-  const result=audit({'src/core/utility/index.ts':"export {sha256} from '../platform/node/digest';",'src/core/platform/node/digest.ts':"export const sha256=()=>'';"});
+  const result=audit({'src/core/utility/index.ts':"export {sha256} from '../io/digest';",'src/core/io/digest.ts':"export const sha256=()=>'';"});
   expect(result.unresolved).toEqual([]);
   expect(result.violations).not.toEqual([]);
   const direct=audit({'src/core/utility/json.ts':"import {createHash} from 'node:crypto';"});
@@ -413,11 +418,11 @@ test('test data rejects Application imports and private helper reexports',()=>{
 });
 test('a shared pure helper cannot hide an indirect filesystem or SDK dependency',()=>{
   const indirect=audit({
-    'tests/src/logic/knowledge/rules/data/knowledge.ts':"import {hash} from '../../../../../../src/core/platform/node/serialization';",
-    'src/core/platform/node/serialization.ts':"import {write} from './files'; export const hash=write;",
-    'src/core/platform/node/files.ts':'export const write=()=>{};',
+    'tests/src/logic/knowledge/rules/data/knowledge.ts':"import {hash} from '../../../../../../src/core/io/serialization';",
+    'src/core/io/serialization.ts':"import {write} from './text-files'; export const hash=write;",
+    'src/core/io/text-files.ts':'export const write=()=>{};',
   });
-  expect(indirect.logicalViolations).toContainEqual(expect.objectContaining({rule:'logical-direction',boundary:'pure-foundation'}));expect(indirect.ok).toBe(false);
+  expect(indirect.logicalViolations).toContainEqual(expect.objectContaining({rule:'logical-direction',boundary:'io-serialization'}));expect(indirect.ok).toBe(false);
   for(const spec of ['node:fs/promises','@anthropic-ai/claude-agent-sdk']){
     const result=audit({'src/logic/knowledge/rules/read-models/snapshot.ts':`import type * as External from '${spec}';`});
     expect(result.logicalViolations).toContainEqual(expect.objectContaining({rule:'external-dependency',boundary:'knowledge-read-models'}));expect(result.ok).toBe(false);
@@ -478,7 +483,7 @@ test('snapshot contracts and domain views reject reverse or private dependencies
   const query='src/logic/knowledge/rules/knowledge-queries.ts';
   const denied=[
     [contracts,snapshot],[snapshot,team],[team,workspace],[workspace,team],
-    [team,port],[query,port],['src/core/json.ts',contracts],
+    [team,port],[query,port],['src/core/io/json.ts',contracts],
     ['tests/src/logic/knowledge/rules/support/knowledge-data.ts','tests/src/logic/application/support/helpers.ts'],
     ['tests/src/logic/knowledge/rules/support/knowledge-fixture.ts','src/logic/application/application.ts'],
     ['src/logic/budget/rules/model-request-budget-storage.ts','src/logic/dispatch/rules/dispatch-storage.ts'],
@@ -572,9 +577,14 @@ test('concrete engines depend on domain contracts; only execution assembly may s
   }
 });
 test('记忆包仅私有存储实现可用原子文件机制，不能扩散到其它适配器',()=>{
-  const target='src/core/platform/node/files/index.ts';
+  const target='src/core/io/text-files.ts';
   for(const from of ['src/logic/execution/engines/memory/storage.ts','src/logic/execution/engines/memory/engine.ts','src/logic/execution/engines/pi/engine.ts']){
     const spec=path.posix.relative(path.posix.dirname(from),target),result=audit({[from]:`import {atomic} from '${spec}';`,[target]:'export const atomic=()=>{};'});
     expect(result.ok).toBe(from.endsWith('/memory/storage.ts'));
   }
+});
+
+test.each(["import type { Value } from '../io/bytes';","export { value } from '../io/bytes';"])('Core 一级子模块禁止单向引用 %s',source=>{
+  const result=audit({'src/core/web/contracts.ts':source,'src/core/io/bytes.ts':'export type Value=string;export const value=1;'});
+  expect(result.violations).toContainEqual(expect.objectContaining({from:'src/core/web/contracts.ts',to:'src/core/io/bytes.ts'}));
 });

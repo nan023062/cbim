@@ -15,8 +15,6 @@ import type { ArtifactBaselineRef } from './artifact-baseline';
 
 import { checkedJsonToolResult } from '../../tools/rules/results';
 
-import { fail } from '../../../core/errors';
-
 import { assertWorkflowPlan, evaluateWorkflowDelivery, selectWorkflowValidations, type WorkflowProgressContext } from './workflow-evidence';
 
 import type { ProgressValidationPort } from './validation';
@@ -88,7 +86,7 @@ export class TaskProgressTools
     this.identity = structuredClone(ports.identity);
 
     if (!progressToolIdentitySchema.safeParse(this.identity).success)
-      fail('TASK_PROGRESS_IDENTITY', '执行进度必须绑定真实工作区、任务与运行')
+      throw new Error('执行进度必须绑定真实工作区、任务与运行')
   }
 
   /** 只返回当前计划副本；可信采集端口用它核实版本，不允许工具或调用方直接修改计划。 */
@@ -132,7 +130,7 @@ export class TaskProgressTools
   /** 新轮次或任何写入/命令放行前使证据失效；失败/取消也不能假设产物未改变。 */
   Invalidate(reason: string, expectedPlanVersion?: number)
   {
-    return this.Serial(async () => { if (expectedPlanVersion !== undefined && this.state?.version !== expectedPlanVersion) fail('WORKFLOW_PLAN_STALE', '审批期间执行计划已变化，请基于当前计划重新发起此操作'); this.generation++; this.evidence.clear(); if (!this.state) return; await this.Persist({ ...this.state, version: this.state.version + 1, state: 'executing', reason, delivery: undefined, steps: this.state.steps.map(s => ({ ...s, state: s.state === 'reported_done' ? 'pending' : s.state, evidence: [] })) }); })
+    return this.Serial(async () => { if (expectedPlanVersion !== undefined && this.state?.version !== expectedPlanVersion) throw new Error('审批期间执行计划已变化，请基于当前计划重新发起此操作'); this.generation++; this.evidence.clear(); if (!this.state) return; await this.Persist({ ...this.state, version: this.state.version + 1, state: 'executing', reason, delivery: undefined, steps: this.state.steps.map(s => ({ ...s, state: s.state === 'reported_done' ? 'pending' : s.state, evidence: [] })) }); })
   }
 
   /** 只接收运行时生成的业务回执；外部仓库资料、任务记录、派发、目标审阅与候选工具不能替代实际业务交付证据。 */
@@ -237,12 +235,12 @@ export class TaskProgressTools
             next.delivery = { summary: draft.summary, limitations: draft.limitations };
 
             if (draft.manifestId && !completeOutputRequired(this.workflow?.bindings ?? []))
-              fail('MANIFEST_UNDECLARED', '本轮未声明完整交付要求，不能把观察引用作为出口');
+              throw new Error('本轮未声明完整交付要求，不能把观察引用作为出口');
 
             if (this.workflow?.bindings.length)
             {
               if (!this.planEstablished || next.goal !== this.workflow.task.goal || JSON.stringify(next.acceptance) !== JSON.stringify(this.workflow.task.acceptance))
-                fail('WORKFLOW_PLAN_REQUIRED', 'Workflow 交付要求本轮保存与原任务一致的计划');
+                throw new Error('Workflow 交付要求本轮保存与原任务一致的计划');
 
               const selected = [...new Set(next.steps.flatMap(step => step.evidence))].map(id => this.evidence.get(id)!);
 
@@ -251,7 +249,7 @@ export class TaskProgressTools
               const complete = completeOutputRequired(this.workflow.bindings);
 
               if (complete && (!draft.manifestId || !this.ports.manifests))
-                fail('MANIFEST_REQUIRED', '完整交付必须明确选择原清单并装配真实复核端口');
+                throw new Error('完整交付必须明确选择原清单并装配真实复核端口');
 
               const manifest = complete ? this.ports.manifests!.Select(draft.manifestId!, draft.expectedVersion) : undefined;
 
@@ -264,7 +262,7 @@ export class TaskProgressTools
               if (validations.length)
               {
                 if (!this.ports.validations)
-                  fail('WORKFLOW_VALIDATION_UNAVAILABLE', '本轮没有可信文件验证端口');
+                  throw new Error('本轮没有可信文件验证端口');
 
                 await this.ports.validations.VerifyCurrent(validations);
 

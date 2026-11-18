@@ -14,9 +14,7 @@ import { createHash, randomUUID } from 'node:crypto';
 
 import { isDeepStrictEqual as equal } from 'node:util';
 
-import { fail } from '../../../core/errors';
-
-import { hash } from '../../../core/platform/node/serialization';
+import { hash } from '../../../core/io/serialization';
 
 import type { Workspace } from '../../workspace/service/workspace';
 
@@ -50,7 +48,7 @@ const content = (v: ControlledFileContentFact): ControlledFileContentFact => ({ 
 
 const code = (e: unknown) => { const value = (e as { code?: unknown })?.code; return typeof value === 'string' && /^[A-Z0-9_]{1,80}$/.test(value) ? value : 'CONTROLLED_IO_FAILED' };
 
-const publicValue = <T>(value: T): T => { if (Buffer.byteLength(JSON.stringify(value), 'utf8') > controlledFileLimits.outputBytes) fail('CONTROLLED_OUTPUT_LIMIT', '回包超过有界上限'); return value };
+const publicValue = <T>(value: T): T => { if (Buffer.byteLength(JSON.stringify(value), 'utf8') > controlledFileLimits.outputBytes) throw new Error('回包超过有界上限'); return value };
 
 /** 仅 Main 实际装配实例；没有 utility 传输时查询历史仍可用，新写和补偿明确拒绝。 */
 export class ControlledFiles
@@ -75,13 +73,13 @@ export class ControlledFiles
     this.owner.Assert(identity);
 
     if (this.closed || !this.isCurrent())
-      fail('CONTROLLED_UNAVAILABLE', '工作区正在关闭，不能开始文件操作')
+      throw new Error('工作区正在关闭，不能开始文件操作')
   }
 
   private Platform()
   {
     if (!this.transport)
-      fail('CONTROLLED_PLATFORM_UNSUPPORTED', '当前宿主没有受控文件 utility 传输');
+      throw new Error('当前宿主没有受控文件 utility 传输');
 
     return this.transport
   }
@@ -130,7 +128,7 @@ export class ControlledFiles
     const frozen = controlledFileWriteInputSchema.parse(structuredClone(input)),
       origin = controlledFileOriginSchema.parse({ kind: 'member_tool', workspaceInstanceId: this.owner.instanceId, scopeId, binding: run.binding, ownerBindingHash: controlledFileOwnerBindingHash((run.prepared.memberContext?.binding ?? run.prepared.fallbackBinding)!), knowledgeRevision: run.prepared.knowledgeRevision, toolName: controlledFileWriteToolName, ...authorization, permission: run.permission });
 
-    return this.Tracked(signal, async active => { const operationId = controlledFileOperationId(origin.binding, origin.toolCallId), request = { relativePath: frozen.path, expectedBefore: frozen.expectedBefore, after: fact(Buffer.from(frozen.content, 'utf8')) }, fingerprint = controlledFileRequestFingerprint(origin, request), prior = controlledFileOperation(await this.store.Read(), operationId); if (prior) { if (prior.intent.kind !== 'member_write' || prior.intent.requestFingerprint !== fingerprint) fail('CONTROLLED_COMMAND_CONFLICT', '原调用已经绑定不同请求'); return controlledFileWriteApplied(prior) } const alive = () => { active.throwIfAborted(); this.Assert(); assertCurrent() }; alive(); return this.Platform().WithExclusiveExisting(this.owner.entry.path, frozen.path, this.ProtectedRoots(), active, async file => { const before = await file.ReadBefore(); alive(); if (!equal(before.fact, request.expectedBefore)) fail('CONTROLLED_BEFORE_CHANGED', '当前文件已经偏离 expectedBefore，未写入'); const pair = await this.blobs.SavePair(operationId, before.bytes, Buffer.from(frozen.content, 'utf8')); alive(); const at = now(), intent: ControlledWritePrepared = { version: 1, kind: 'member_write', operationId, origin, request, requestFingerprint: fingerprint, fileIdentity: before.identity, ...pair, preparedAt: at }; await this.Phase({ version: 1, operationId, phase: 'prepared', revision: 1, previousRevision: 0, intent, recordedAt: at }, alive); const head = await this.Execute(intent, file, Buffer.from(frozen.content, 'utf8'), alive); return controlledFileWriteApplied(head); }); });
+    return this.Tracked(signal, async active => { const operationId = controlledFileOperationId(origin.binding, origin.toolCallId), request = { relativePath: frozen.path, expectedBefore: frozen.expectedBefore, after: fact(Buffer.from(frozen.content, 'utf8')) }, fingerprint = controlledFileRequestFingerprint(origin, request), prior = controlledFileOperation(await this.store.Read(), operationId); if (prior) { if (prior.intent.kind !== 'member_write' || prior.intent.requestFingerprint !== fingerprint) throw new Error('原调用已经绑定不同请求'); return controlledFileWriteApplied(prior) } const alive = () => { active.throwIfAborted(); this.Assert(); assertCurrent() }; alive(); return this.Platform().WithExclusiveExisting(this.owner.entry.path, frozen.path, this.ProtectedRoots(), active, async file => { const before = await file.ReadBefore(); alive(); if (!equal(before.fact, request.expectedBefore)) throw new Error('当前文件已经偏离 expectedBefore，未写入'); const pair = await this.blobs.SavePair(operationId, before.bytes, Buffer.from(frozen.content, 'utf8')); alive(); const at = now(), intent: ControlledWritePrepared = { version: 1, kind: 'member_write', operationId, origin, request, requestFingerprint: fingerprint, fileIdentity: before.identity, ...pair, preparedAt: at }; await this.Phase({ version: 1, operationId, phase: 'prepared', revision: 1, previousRevision: 0, intent, recordedAt: at }, alive); const head = await this.Execute(intent, file, Buffer.from(frozen.content, 'utf8'), alive); return controlledFileWriteApplied(head); }); });
   }
 
   private async Phase(change: ControlledFileChange, assertCurrent?: () => void)
@@ -157,7 +155,7 @@ export class ControlledFiles
       alive();
 
       if (!equal(checked.identity, intent.fileIdentity) || !equal(checked.fact, content(intent.before)))
-        fail('CONTROLLED_BEFORE_CHANGED', '写入前文件身份或字节发生变化')
+        throw new Error('写入前文件身份或字节发生变化')
     }
     catch (error)
     {
@@ -197,7 +195,7 @@ export class ControlledFiles
     const value = controlledFileOperation(state, id);
 
     if (!value || value.intent.kind !== 'member_write' || value.intent.origin.binding.workspaceId !== identity.workspaceId || value.intent.origin.binding.rootSessionId !== identity.rootSessionId)
-      fail('CONTROLLED_FILE_NOT_FOUND', '没有当前会话的原受控写入');
+      throw new Error('没有当前会话的原受控写入');
 
     return value as ControlledFileOperation &
     {
@@ -227,7 +225,7 @@ export class ControlledFiles
     this.owner.Assert();
 
     if (input.workspaceId !== this.owner.entry.id)
-      fail('CONTROLLED_FILE_IDENTITY', '工作区身份不一致');
+      throw new Error('工作区身份不一致');
 
     const state = await this.store.Read(),
       run = [...(state.runs ?? []), ...(state.agentBusinessRuns ?? [])].find(r => r.binding.runId === input.runId && r.binding.taskId === input.taskId && r.binding.rootSessionId === input.rootSessionId && r.binding.workspaceId === input.workspaceId);
@@ -319,13 +317,13 @@ export class ControlledFiles
     try
     {
       if (!this.Available(state, original))
-        fail('FILE_COMPENSATION_SOURCE', '原操作不符合补偿条件');
+        throw new Error('原操作不符合补偿条件');
 
       await this.blobs.Read(original.intent.before);
 
       await this.blobs.Read(original.intent.intendedAfter);
 
-      await this.Platform().WithExclusiveExisting(this.owner.entry.path, source.relativePath, this.ProtectedRoots(), signal, async file => { const current = await file.ReadBefore(); observed = { state: equal(current.identity, original.intent.fileIdentity) && equal(current.fact, source.intendedAfter) ? 'matches' : 'changed', fact: current.fact }; this.Assert(input); signal.throwIfAborted(); const latest = await this.store.Read(); if (!equal(original, this.Original(latest, input.operationId, input)) || fileCompensationRevision(latest, input.operationId) !== compensationRevision || !this.Available(latest, original)) fail('FILE_COMPENSATION_CHANGED', '预览期间原事实变化'); if (observed.state === 'matches') basis = fileCompensationBasis({ original, compensationRevision, fileIdentity: current.identity, observedBefore: current.fact }) });
+      await this.Platform().WithExclusiveExisting(this.owner.entry.path, source.relativePath, this.ProtectedRoots(), signal, async file => { const current = await file.ReadBefore(); observed = { state: equal(current.identity, original.intent.fileIdentity) && equal(current.fact, source.intendedAfter) ? 'matches' : 'changed', fact: current.fact }; this.Assert(input); signal.throwIfAborted(); const latest = await this.store.Read(); if (!equal(original, this.Original(latest, input.operationId, input)) || fileCompensationRevision(latest, input.operationId) !== compensationRevision || !this.Available(latest, original)) throw new Error('预览期间原事实变化'); if (observed.state === 'matches') basis = fileCompensationBasis({ original, compensationRevision, fileIdentity: current.identity, observedBefore: current.fact }) });
     }
     catch (error)
     {
@@ -351,12 +349,12 @@ export class ControlledFiles
     const parsed = fileCompensationInputSchema.safeParse(raw);
 
     if (!parsed.success)
-      fail('FILE_COMPENSATION_PRE_ACCEPT_INPUT', '补偿请求结构无效');
+      throw new Error('补偿请求结构无效');
 
     const input = structuredClone(parsed.data),
       actor = { kind: 'local_desktop' as const, interaction: 'explicit_submit' as const, instanceId: input.instanceId };
 
-    return this.Tracked(undefined, async signal => { const operationId = fileCompensationId(input), fingerprint = fileCompensationRequestFingerprint(input, actor), state = await this.store.Read(), prior = controlledFileOperation(state, operationId); if (prior) { if (prior.intent.kind !== 'desktop_compensation' || prior.intent.requestFingerprint !== fingerprint) fail('FILE_COMPENSATION_COMMAND_CONFLICT', '原补偿命令绑定不同请求'); return publicValue(fileCompensationReceiptSchema.parse(fileCompensationReceipt(prior))) } let release: (() => void) | undefined, submitted = false; try { this.Assert(input); signal.throwIfAborted(); const original = this.Original(state, input.operationId, input); if (!this.Available(state, original)) fail('FILE_COMPENSATION_SOURCE', '原操作尚未可靠完成、已补偿或仍在途'); if (original.revision !== input.expectedOperationRevision || fileCompensationRevision(state, input.operationId) !== input.expectedCompensationRevision) fail('FILE_COMPENSATION_CHANGED', '补偿依据已变化'); release = this.lease.Acquire('file-compensation:' + operationId, 'execute'); this.heldReleases.add(release); const bytes = await this.blobs.Read(original.intent.before); await this.blobs.Read(original.intent.intendedAfter); return await this.Platform().WithExclusiveExisting(this.owner.entry.path, original.intent.request.relativePath, this.ProtectedRoots(), signal, async file => { const current = await file.ReadBefore(), basis = fileCompensationBasis({ original, compensationRevision: input.expectedCompensationRevision, fileIdentity: current.identity, observedBefore: current.fact }); if (!equal(current.identity, original.intent.fileIdentity) || !equal(current.fact, content(original.intent.intendedAfter)) || basis !== input.expectedBasis) fail('FILE_COMPENSATION_CHANGED', '当前文件不再等于预览的原 after'); const at = now(), intent: FileCompensationPrepared = { version: 1, kind: 'desktop_compensation', operationId, request: input, actor, requestFingerprint: fingerprint, original: { operationId: original.intent.operationId, intentHash: controlledFileIntentHash(original.intent), appliedRevision: 3, appliedEventHash: controlledFileChangeHash(original.change) }, compensationRevision: input.expectedCompensationRevision + 1, previewBasis: basis, relativePath: original.intent.request.relativePath, fileIdentity: current.identity, observedBefore: current.fact, before: original.intent.intendedAfter, intendedAfter: original.intent.before, preparedAt: at }; const alive = () => { signal.throwIfAborted(); this.Assert(input) }; alive(); submitted = true; await this.Phase({ version: 1, operationId, phase: 'prepared', revision: 1, previousRevision: 0, intent, recordedAt: at }, alive); const head = await this.Execute(intent, file, bytes, alive); return publicValue(fileCompensationReceiptSchema.parse(fileCompensationReceipt(head))); }); } catch (error) { if (!submitted && code(error) !== 'CONTROLLED_FILE_DRAIN_PENDING') { const known = ['STALE_INSTANCE', 'CONTROLLED_UNAVAILABLE', 'CONTROLLED_FILE_NOT_FOUND', 'FILE_COMPENSATION_SOURCE', 'FILE_COMPENSATION_CHANGED', 'WORKSPACE_EXECUTION_BUSY', 'CONTROLLED_BEFORE_CHANGED', 'CONTROLLED_PLATFORM_UNSUPPORTED', 'CONTROLLED_BLOB_INVALID', 'CONTROLLED_BLOB_PATH']; if (known.includes(code(error))) fail('FILE_COMPENSATION_PRE_ACCEPT_REJECTED', '尚未保存补偿意图，当前身份、文件或来源不符合条件') } throw error } finally { if (release) { await this.transport?.Drain(this.owner.entry.path); release(); this.heldReleases.delete(release) } } })
+    return this.Tracked(undefined, async signal => { const operationId = fileCompensationId(input), fingerprint = fileCompensationRequestFingerprint(input, actor), state = await this.store.Read(), prior = controlledFileOperation(state, operationId); if (prior) { if (prior.intent.kind !== 'desktop_compensation' || prior.intent.requestFingerprint !== fingerprint) throw new Error('原补偿命令绑定不同请求'); return publicValue(fileCompensationReceiptSchema.parse(fileCompensationReceipt(prior))) } let release: (() => void) | undefined, submitted = false; try { this.Assert(input); signal.throwIfAborted(); const original = this.Original(state, input.operationId, input); if (!this.Available(state, original)) throw new Error('原操作尚未可靠完成、已补偿或仍在途'); if (original.revision !== input.expectedOperationRevision || fileCompensationRevision(state, input.operationId) !== input.expectedCompensationRevision) throw new Error('补偿依据已变化'); release = this.lease.Acquire('file-compensation:' + operationId, 'execute'); this.heldReleases.add(release); const bytes = await this.blobs.Read(original.intent.before); await this.blobs.Read(original.intent.intendedAfter); return await this.Platform().WithExclusiveExisting(this.owner.entry.path, original.intent.request.relativePath, this.ProtectedRoots(), signal, async file => { const current = await file.ReadBefore(), basis = fileCompensationBasis({ original, compensationRevision: input.expectedCompensationRevision, fileIdentity: current.identity, observedBefore: current.fact }); if (!equal(current.identity, original.intent.fileIdentity) || !equal(current.fact, content(original.intent.intendedAfter)) || basis !== input.expectedBasis) throw new Error('当前文件不再等于预览的原 after'); const at = now(), intent: FileCompensationPrepared = { version: 1, kind: 'desktop_compensation', operationId, request: input, actor, requestFingerprint: fingerprint, original: { operationId: original.intent.operationId, intentHash: controlledFileIntentHash(original.intent), appliedRevision: 3, appliedEventHash: controlledFileChangeHash(original.change) }, compensationRevision: input.expectedCompensationRevision + 1, previewBasis: basis, relativePath: original.intent.request.relativePath, fileIdentity: current.identity, observedBefore: current.fact, before: original.intent.intendedAfter, intendedAfter: original.intent.before, preparedAt: at }; const alive = () => { signal.throwIfAborted(); this.Assert(input) }; alive(); submitted = true; await this.Phase({ version: 1, operationId, phase: 'prepared', revision: 1, previousRevision: 0, intent, recordedAt: at }, alive); const head = await this.Execute(intent, file, bytes, alive); return publicValue(fileCompensationReceiptSchema.parse(fileCompensationReceipt(head))); }); } catch (error) { if (!submitted && code(error) !== 'CONTROLLED_FILE_DRAIN_PENDING') { const known = ['STALE_INSTANCE', 'CONTROLLED_UNAVAILABLE', 'CONTROLLED_FILE_NOT_FOUND', 'FILE_COMPENSATION_SOURCE', 'FILE_COMPENSATION_CHANGED', 'WORKSPACE_EXECUTION_BUSY', 'CONTROLLED_BEFORE_CHANGED', 'CONTROLLED_PLATFORM_UNSUPPORTED', 'CONTROLLED_BLOB_INVALID', 'CONTROLLED_BLOB_PATH']; if (known.includes(code(error))) throw new Error('尚未保存补偿意图，当前身份、文件或来源不符合条件') } throw error } finally { if (release) { await this.transport?.Drain(this.owner.entry.path); release(); this.heldReleases.delete(release) } } })
   }
 
   /** 按稳定本机 commandId 只读原阶段；缺记录不证明未执行，也不创建子进程、补偿或第二个命令。 */
@@ -367,7 +365,7 @@ export class ControlledFiles
     this.owner.Assert();
 
     if (input.workspaceId !== this.owner.entry.id)
-      fail('CONTROLLED_FILE_IDENTITY', '工作区身份不一致');
+      throw new Error('工作区身份不一致');
 
     const head = controlledFileOperation(await this.store.Read(), fileCompensationId(input));
 
@@ -375,7 +373,7 @@ export class ControlledFiles
       return undefined;
 
     if (head.intent.kind !== 'desktop_compensation' || head.intent.request.rootSessionId !== input.rootSessionId)
-      fail('CONTROLLED_FILE_IDENTITY', '原补偿不属于当前会话');
+      throw new Error('原补偿不属于当前会话');
 
     return publicValue(fileCompensationReceiptSchema.parse(fileCompensationReceipt(head)))
   }

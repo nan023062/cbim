@@ -5,8 +5,6 @@
  */
 import { z } from 'zod';
 
-import { fail } from '../../../core/errors';
-
 import { graphIdentityInput } from './dispatch-commands';
 
 import type { DispatchScope } from './dispatch-scope';
@@ -145,7 +143,7 @@ export const scopeViewHistoryLimit = 256;
 function valid(condition: unknown, message: string): asserts condition
 {
   if (!condition)
-    fail('SCOPE_VIEW_INVALID', message)
+    throw new Error(message)
 }
 
 const preview = (value: string) => value.replace(/\s+/g, ' ').trim().slice(0, 240);
@@ -225,11 +223,11 @@ export function applyScopeBatch(previous: ScopeSnapshot, event: ScopeEventBatch)
     if (sameGoalValue(history?.get(event.seq), event))
       return previous;
 
-    fail('SCOPE_EVENT_CONFLICT', '周期序号重复但缺少一致的重放证明')
+    throw new Error('周期序号重复但缺少一致的重放证明')
   }
 
   if (event.seq !== previous.cursor.seq + 1)
-    fail('SCOPE_SEQUENCE_GAP', '周期序号断档，需要补读');
+    throw new Error('周期序号断档，需要补读');
 
   const values = new Map(previous.scopes.map(item => [item.scopeId, item]));
 
@@ -312,7 +310,7 @@ export function readScopeDetail(snapshot: ScopeSnapshot, scopes: readonly Dispat
   if (!selected)
   {
     if (selectedScopeId)
-      fail('DISPATCH_SCOPE_IDENTITY', '选中周期不属于当前主会话');
+      throw new Error('选中周期不属于当前主会话');
 
     return { mode: 'empty' }
   }

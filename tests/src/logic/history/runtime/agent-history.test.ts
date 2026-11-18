@@ -8,7 +8,7 @@ import {moduleOwnershipDetailSchema,moduleOwnershipPreviewSchema} from '../../..
 import {fixture} from '../../application/support/helpers';
 import {request,summary} from '../../knowledge/rules/data/knowledge';
 import {seedTeam} from '../../knowledge/service/support/team-fixture';
-import {json} from '../../../../../src/core/platform/node/serialization';
+import {json} from '../../../../../src/core/io/serialization';
 import {RunJournal} from '../../../../../src/logic/execution/storage/run-journal';
 import {FileDispatchStore} from '../../../../../src/logic/dispatch/storage/dispatch-store';
 import type {TaskSpec,StoredEvent} from '../../../../../src/logic/execution/rules/types';

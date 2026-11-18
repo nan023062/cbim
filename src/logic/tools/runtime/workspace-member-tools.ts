@@ -11,8 +11,6 @@ import { zodToJsonSchema } from 'zod-to-json-schema';
 
 import { isDeepStrictEqual } from 'node:util';
 
-import { fail, Fault } from '../../../core/errors';
-
 import { checkedJsonToolResult } from '../rules/results';
 
 import type { RunToolDescriptor } from '../rules/policy/tool-policy';
@@ -47,7 +45,7 @@ export class WorkspaceMemberTools
   Describe(name: string, raw: unknown): RunToolDescriptor
   {
     if (!this.Has(name))
-      fail('MEMBER_TOOL_UNKNOWN', '本轮未提供此岗位工具');
+      throw new Error('本轮未提供此岗位工具');
 
     memberToolInputs[name].parse(raw);
 
@@ -57,7 +55,7 @@ export class WorkspaceMemberTools
   async Call(name: string, raw: unknown, signal: AbortSignal, toolCallId?: string)
   {
     if (!this.Has(name))
-      fail('MEMBER_TOOL_UNKNOWN', '本轮未提供此岗位工具');
+      throw new Error('本轮未提供此岗位工具');
 
     signal.throwIfAborted();
 
@@ -68,7 +66,7 @@ export class WorkspaceMemberTools
     if (name === 'cbim_member_change_commit')
     {
       if (!toolCallId)
-        fail('MEMBER_ACTOR', '岗位提交缺少真实调用身份');
+        throw new Error('岗位提交缺少真实调用身份');
 
       const { workspaceId, instanceId: _, ...source } = this.binding;
 
@@ -88,14 +86,14 @@ export class WorkspaceMemberTools
       const result = checkedJsonToolResult(name, output, schema);
 
       if (Buffer.byteLength(result.content[0].text, 'utf8') > 128 * 1024)
-        fail('TOOL_OUTPUT_INVALID', '岗位工具输出过大，请缩小查询范围');
+        throw new Error('岗位工具输出过大，请缩小查询范围');
 
       return result;
     }
     catch (error)
     {
       if (commandId)
-        throw withToolReconciliation(new Fault(error instanceof Fault ? error.code : 'MEMBER_UNKNOWN', `岗位提交结果未能交付；原 commandId=${commandId}。请用 cbim_member_receipt 核实，不能自动重试。`), { tool: 'cbim_receipt_inspect', args: { target: 'member', input: { commandId } } });
+        throw withToolReconciliation(new Error(`岗位提交结果未能交付；原 commandId=${commandId}。请用 cbim_member_receipt 核实，不能自动重试。`), { tool: 'cbim_receipt_inspect', args: { target: 'member', input: { commandId } } });
 
       throw error;
     }

@@ -7,7 +7,7 @@ import fs from 'node:fs/promises';
 
 import { z } from 'zod';
 
-import { atomic } from '../../../core/platform/node/files';
+import { atomic } from '../../../core/io/text-files';
 
 import { SerialQueue } from '../../../core/utility';
 

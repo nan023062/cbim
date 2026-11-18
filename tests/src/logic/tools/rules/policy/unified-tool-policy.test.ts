@@ -5,7 +5,7 @@ import {fixture} from '../../../application/support/helpers';
 import {request} from '../../../knowledge/rules/data/knowledge';
 import {seedTeam} from '../../../knowledge/service/support/team-fixture';
 import {registerExplicitFixtureOwner} from '../../../team/service/support/explicit-owner-fixture';
-import {json} from '../../../../../../src/core/platform/node/serialization';
+import {json} from '../../../../../../src/core/io/serialization';
 import {FileRunStorage} from '../../../../../../src/logic/execution/storage/run-storage';
 import path from 'node:path';
 import http from 'node:http';

@@ -6,9 +6,7 @@
  */
 import { automaticExecutionBindingSchema, type AutomaticExecutionBinding } from '../../team/rules/automatic-execution';
 
-import { hash, json } from '../../../core/platform/node/serialization';
-
-import { fail } from '../../../core/errors';
+import { hash, json } from '../../../core/io/serialization';
 
 import { ownerExecutionBindingSchema, type OwnerExecutionBinding } from '../../team/rules/member-execution-binding';
 
@@ -75,7 +73,7 @@ export function controlledFileOperation(state: State, operationId: string): Cont
     change = changes.at(-1)!;
 
   if (first.phase !== 'prepared')
-    fail('CONTROLLED_FILE_AUDIT', '原操作缺少 prepared 意图');
+    throw new Error('原操作缺少 prepared 意图');
 
   return { intent: structuredClone(first.intent), phase: change.phase, revision: change.revision, updatedAt: change.recordedAt, change: structuredClone(change) }
 }
@@ -101,7 +99,7 @@ export function fileCompensationBasis(input: { original: ControlledFileOperation
   const { original } = input;
 
   if (original.intent.kind !== 'member_write' || original.phase !== 'applied' || original.change.phase !== 'applied')
-    fail('FILE_COMPENSATION_SOURCE', '只有原可靠 applied 写入可形成补偿依据');
+    throw new Error('只有原可靠 applied 写入可形成补偿依据');
 
   return hash(json({ version: 1, operationId: original.intent.operationId, intentHash: controlledFileIntentHash(original.intent), appliedEventHash: controlledFileChangeHash(original.change), operationRevision: original.revision, compensationRevision: input.compensationRevision, fileIdentity: controlledFileIdentitySchema.parse(input.fileIdentity), observedBefore: controlledFileContentFactSchema.parse(input.observedBefore), restore: { byteLength: original.intent.before.byteLength, sha256: original.intent.before.sha256 } }));
 }
@@ -116,7 +114,7 @@ export function summarizeControlledFileOperation(operation: ControlledFileOperat
   const i = operation.intent;
 
   if (i.kind !== 'member_write')
-    fail('CONTROLLED_FILE_SOURCE', '原操作报告不能把补偿当成员工具');
+    throw new Error('原操作报告不能把补偿当成员工具');
 
   return { operationId: i.operationId, scopeId: i.origin.scopeId, binding: structuredClone(i.origin.binding), toolCallId: i.origin.toolCallId, revision: operation.revision, phase: operation.phase, relativePath: i.request.relativePath, before: fact(i.before), intendedAfter: fact(i.intendedAfter), preparedAt: i.preparedAt, updatedAt: operation.updatedAt, ...issue(operation) }
 }
@@ -126,7 +124,7 @@ export function controlledFileWriteApplied(operation: ControlledFileOperation): 
   const i = operation.intent;
 
   if (i.kind !== 'member_write' || operation.change.phase !== 'applied')
-    fail('CONTROLLED_FILE_NOT_APPLIED', '原写尚无可靠 applied 事实');
+    throw new Error('原写尚无可靠 applied 事实');
 
   return { version: 1, state: 'applied', operationId: i.operationId, revision: 3, scopeId: i.origin.scopeId, binding: structuredClone(i.origin.binding), toolCallId: i.origin.toolCallId, inputHash: i.origin.inputHash, relativePath: i.request.relativePath, before: fact(i.before), after: fact(i.intendedAfter), appliedAt: operation.updatedAt, coverage: 'single_file_default_stream', acceptance: 'not_evaluated' }
 }
@@ -136,7 +134,7 @@ export function summarizeFileCompensation(operation: ControlledFileOperation): F
   const i = operation.intent;
 
   if (i.kind !== 'desktop_compensation')
-    fail('FILE_COMPENSATION_SOURCE', '没有原补偿意图');
+    throw new Error('没有原补偿意图');
 
   return { compensationId: i.operationId, commandId: i.request.commandId, revision: operation.revision, phase: operation.phase, preparedAt: i.preparedAt, updatedAt: operation.updatedAt, ...issue(operation) }
 }
@@ -146,7 +144,7 @@ export function fileCompensationReceipt(operation: ControlledFileOperation): Fil
   const i = operation.intent;
 
   if (i.kind !== 'desktop_compensation')
-    fail('FILE_COMPENSATION_SOURCE', '没有原补偿意图');
+    throw new Error('没有原补偿意图');
 
   return { version: 1, workspaceId: i.request.workspaceId, rootSessionId: i.request.rootSessionId, commandId: i.request.commandId, compensationId: i.operationId, operationId: i.original.operationId, request: structuredClone(i.request), actor: structuredClone(i.actor), revision: operation.revision, phase: operation.phase, preparedAt: i.preparedAt, updatedAt: operation.updatedAt, relativePath: i.relativePath, before: fact(i.before), after: fact(i.intendedAfter), ...issue(operation), acceptance: 'not_evaluated' }
 }

@@ -5,7 +5,7 @@ import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {FileDispatchStore} from '../../../../../src/logic/dispatch/storage/dispatch-store';
 import {effectDispositionCommand,effectDispositionReceipt} from '../../../../../src/logic/tasks/rules/effect-observation-rules';
-import {hash} from '../../../../../src/core/platform/node/serialization';
+import {hash} from '../../../../../src/core/io/serialization';
 import {effectIdentity,effectRootMutation,effectScope,effectRecord,effectTime} from '../../evidence/rules/support/effect-core-fixture';
 import type {DispatchScope} from '../../../../../src/logic/tasks/rules/dispatch-scope';
 

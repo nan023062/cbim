@@ -10,9 +10,7 @@ import { randomUUID } from 'node:crypto';
 
 import { z } from 'zod';
 
-import { fail } from '../../../core/errors';
-
-import { hash, json } from '../../../core/platform/node/serialization';
+import { hash, json } from '../../../core/io/serialization';
 
 import { contextualMainCommand } from './main-command-request';
 
@@ -51,16 +49,16 @@ export class QueuedDependencyAdditionService
       context = contextSchema.safeParse({ ...identity, scopeId, runId, commandId });
 
     if (!parsed.success || !context.success)
-      fail('DEPENDENCY_INPUT_INVALID', '前置追加参数或主调度运行身份无效');
+      throw new Error('前置追加参数或主调度运行身份无效');
 
     const input = parsed.data,
       fixed = context.data,
-      alive = () => { this.owner.Assert(); assertCurrent?.(); if (fixed.workspaceId !== this.owner.entry.id) fail('GRAPH_IDENTITY_MISMATCH', '前置追加不属于当前工作区') };
+      alive = () => { this.owner.Assert(); assertCurrent?.(); if (fixed.workspaceId !== this.owner.entry.id) throw new Error('前置追加不属于当前工作区') };
 
     const command = contextualMainCommand('dispatch.addDependency', fixed, input);
 
     if (!this.owners)
-      fail('OWNER_EXECUTION_UNAVAILABLE', '未装配岗位前置核验');
+      throw new Error('未装配岗位前置核验');
 
     const old = await this.owners.Replay<AddQueuedDependencyReceipt>(command);
 
@@ -78,7 +76,7 @@ export class QueuedDependencyAdditionService
       const knowledgeRevision = scope.goal!.plan!.knowledgeRevision;
 
       if ((await this.owner.Read()).revision !== knowledgeRevision)
-        fail('DEPENDENCY_KNOWLEDGE_STALE', '知识基线已变化，不能给旧待办追加前置');
+        throw new Error('知识基线已变化，不能给旧待办追加前置');
 
       alive();
 
@@ -99,11 +97,11 @@ export class QueuedDependencyAdditionService
         alive();
 
         if (latest.knowledgeRevision !== knowledgeRevision || latest.agent.teamId !== members.find(member => member.agentInstanceId === task.assignee.agentInstanceId)!.teamId)
-          fail('DEPENDENCY_KNOWLEDGE_STALE', '待办角色、模块或 Workflow 已经变化');
+          throw new Error('待办角色、模块或 Workflow 已经变化');
       }
 
       if (!latest)
-        fail('DEPENDENCY_INPUT_INVALID', '前置追加缺少完整待办范围');
+        throw new Error('前置追加缺少完整待办范围');
 
       // 所有准备均要求同一全局知识版本；最后读取屏障也覆盖前面任务准备后的并发治理。
       await recheckDispatchExecutionContext(this.owner, latest);

@@ -3,7 +3,7 @@
  * 设计原因：身份和哈希由运行时生成，模型返回的 approved、receipt 或验收结论不能替代执行事实。
  * 职责边界：未知结果不能当成失败重试；结果哈希也不证明业务产物已经验收。
  */
-import { hash } from '../../../core/platform/node/serialization';
+import { hash } from '../../../core/io/serialization';
 
 import type { ToolCall, ToolDecision, ToolReceipt } from './types';
 

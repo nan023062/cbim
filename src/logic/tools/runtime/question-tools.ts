@@ -13,8 +13,6 @@ import type { ToolCancellation, ToolRecovery } from '../rules/contracts';
 
 import type { RunToolDescriptor } from '../rules/policy/tool-policy';
 
-import { fail } from '../../../core/errors';
-
 /** 仅描述现有交互；等待可取消，已消费的答案及既有运行记录不会回滚。 */
 export const questionTool = { name: questionToolName, version: 1, effects: ['read'] as const, description: '需要用户在方案、方向或偏好之间选择时使用。提供2至6个选项，界面自动提供其它补充输入。等待答复后继续，不要仅在正文列出选项。回答或取消只表示交互事实，不授予执行权限，不是业务完成或人工验收证据；回包异常先核实已有记录，不自动重问。', inputSchema: zodToJsonSchema(questionInput) as Record<string, unknown>, outputSchema: zodToJsonSchema(questionResultSchema) as Record<string, unknown>, cancellation: { mode: 'during_wait', description: '停止、关闭或调用取消会结束尚未完成的等待；回答与取消先发生者生效，已消费答案不回滚。' } satisfies ToolCancellation, recovery: { mode: 'inspect_before_retry', description: '先核实原会话的问题与工具记录。输出失败可能发生在用户回答已消费之后，不自动重新弹题；重启不恢复旧等待。' } satisfies ToolRecovery, };
 
@@ -38,12 +36,12 @@ export class QuestionTools
   private Parse(name: string, raw: unknown)
   {
     if (!this.Has(name))
-      fail('QUESTION_TOOL_UNKNOWN', '当前运行没有该提问工具');
+      throw new Error('当前运行没有该提问工具');
 
     const parsed = questionInput.safeParse(raw);
 
     if (!parsed.success)
-      fail('QUESTION_INPUT_INVALID', '问题参数无效，请提供1至3个问题及各2至6个选项，不接受身份或授权字段');
+      throw new Error('问题参数无效，请提供1至3个问题及各2至6个选项，不接受身份或授权字段');
 
     return parsed.data;
   }

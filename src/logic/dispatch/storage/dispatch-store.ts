@@ -5,15 +5,15 @@
  * 职责边界：应用须先持有工作区唯一写入锁；本类不打开业务文件或执行补偿，文件阶段通过同一严格投影重放，原记录不自动推进。
  * 请求预算复用同一 fsync 屏障，阶段单独追加且重放复核；旧缺省保留，未知或未决请求不因加载而释放。
  */
+import { appendDurableRecord } from '../../../core/debug/node';
+
 import fs from 'node:fs/promises';
 
 import { projectAgentBusinessRuns } from '../../execution/rules/business-run-invariants';
 
 import path from 'node:path';
 
-import { fail } from '../../../core/errors';
-
-import { hash } from '../../../core/platform/node/serialization';
+import { hash } from '../../../core/io/serialization';
 
 import { applyGraphBatch, readGraphDelta } from '../../tasks/rules/graph-reducer';
 
@@ -83,7 +83,7 @@ function text(value: unknown): value is string
 function valid(condition: unknown, message: string): asserts condition
 {
   if (!condition)
-    fail('GRAPH_INPUT_INVALID', message)
+    throw new Error(message)
 }
 
 function unique<T>(items: T[], key: (item: T) => string, label: string)
@@ -160,7 +160,7 @@ export class FileDispatchStore implements DispatchStore
   private Available()
   {
     if (this.closing)
-      fail('GRAPH_STORE_CLOSED', '任务派发存储正在关闭或已关闭');
+      throw new Error('任务派发存储正在关闭或已关闭');
 
     if (this.storageFailure)
       throw this.storageFailure;
@@ -199,7 +199,7 @@ export class FileDispatchStore implements DispatchStore
   private CheckIdentity(identity: GraphIdentity)
   {
     if (!identity || identity.workspaceId !== this.workspaceId)
-      fail('GRAPH_IDENTITY_MISMATCH', '任务图不属于此工作区');
+      throw new Error('任务图不属于此工作区');
 
     valid(text(identity.rootSessionId), '缺少主会话身份');
   }
@@ -211,7 +211,7 @@ export class FileDispatchStore implements DispatchStore
     const graph = this.state.graphs.find(g => sameGraph(g.identity, identity));
 
     if (!graph)
-      fail('GRAPH_NOT_FOUND', '当前主会话尚未创建任务派发图');
+      throw new Error('当前主会话尚未创建任务派发图');
 
     return graph;
   }
@@ -257,7 +257,7 @@ export class FileDispatchStore implements DispatchStore
     valid(text(commandId), '查询需要原命令身份');
 
     if (!this.initialization)
-      fail('GRAPH_STORE_NOT_READY', '工作区尚未初始化，不能通过原命令查询触发恢复');
+      throw new Error('工作区尚未初始化，不能通过原命令查询触发恢复');
 
     await this.initialization;
 
@@ -357,7 +357,7 @@ export class FileDispatchStore implements DispatchStore
       if (committed)
       {
         if (committed.fingerprint !== fixedCommand.fingerprint)
-          fail('COMMAND_ID_CONFLICT', '相同命令 ID 已用于不同请求');
+          throw new Error('相同命令 ID 已用于不同请求');
 
         return clone(committed.receipt) as T;
       }
@@ -379,7 +379,7 @@ export class FileDispatchStore implements DispatchStore
       }
       catch
       {
-        fail('GRAPH_INPUT_INVALID', '事务必须是可序列化 JSON')
+        throw new Error('事务必须是可序列化 JSON')
       }
 
       const next = this.Project(mutation, fixedCommand, 'module_owner_v1');
@@ -392,24 +392,13 @@ export class FileDispatchStore implements DispatchStore
       {
         await fs.mkdir(this.directory, { recursive: true });
 
-        const file = await fs.open(this.file, 'a', 0o600);
-
-        try
-        {
-          await file.writeFile(JSON.stringify({ body, checksum }) + '\n');
-
-          await file.sync()
-        }
-        finally
-        {
-          await file.close()
-        }
+        await appendDurableRecord(this.file, { body, checksum });
       }
       catch
       {
         try
         {
-          fail('GRAPH_STORAGE_FAILED', '任务派发记录未能确认可靠保存；请重新打开工作区核实')
+          throw new Error('任务派发记录未能确认可靠保存；请重新打开工作区核实')
         }
         catch (error)
         {
@@ -699,9 +688,9 @@ export class FileDispatchStore implements DispatchStore
         if (body?.version !== 1)
         {
           if (Number.isInteger(body?.version))
-            fail('GRAPH_VERSION_UNSUPPORTED', '不支持此派发日志版本');
+            throw new Error('不支持此派发日志版本');
 
-          fail('GRAPH_LOG_CORRUPT', '派发日志缺少协议版本');
+          throw new Error('派发日志缺少协议版本');
         }
 
         valid(body.workspaceId === this.workspaceId && body.transactionSeq === this.transactionSeq + 1 && body.previousHash === this.lastHash, '日志身份、序号或前序哈希不一致');
@@ -725,7 +714,7 @@ export class FileDispatchStore implements DispatchStore
         if (error.code === 'GRAPH_VERSION_UNSUPPORTED')
           throw error;
 
-        fail('GRAPH_LOG_CORRUPT', '任务派发日志损坏或不满足引用约束，不能继续派发');
+        throw new Error('任务派发日志损坏或不满足引用约束，不能继续派发');
       }
     }
 

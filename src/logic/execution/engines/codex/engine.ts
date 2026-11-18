@@ -8,7 +8,7 @@
  * Codex EXE 与宿主 Pi 工具库分别接收固定包，保持账号/原生历史目录及原 RPC 进程收尾。
  * 算法入口：通过 Core StringUtils 静态方法复用机制，本文件继续拥有原业务策略。
  */
-import { StringUtils } from '../../../../core/utility';
+import { StringUtils } from '../../../../core/io';
 
 import fs from 'node:fs/promises';
 

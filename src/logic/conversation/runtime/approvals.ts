@@ -4,8 +4,6 @@
  */
 import { randomUUID } from 'node:crypto';
 
-import { fail } from '../../../core/errors';
-
 import type { ChatApproval } from '../../tools/rules/policy/types';
 
 import type { ToolCall, ToolDecision } from '../../tools/rules/types';
@@ -41,12 +39,12 @@ export class ApprovalQueue
     const pending = this.approvals.get(id);
 
     if (!pending || pending.view.taskId !== taskId)
-      fail('APPROVAL_EXPIRED', '审批已结束，请刷新对话');
+      throw new Error('审批已结束，请刷新对话');
 
     if (allowAll)
     {
       if (allow !== true)
-        fail('APPROVAL', '全部通过必须由用户明确允许');
+        throw new Error('全部通过必须由用户明确允许');
 
       this.approvedRuns.add(taskId);
 
@@ -62,7 +60,7 @@ export class ApprovalQueue
     }
 
     if (this.approvals.get(id) !== pending)
-      fail('APPROVAL_EXPIRED', '审批已结束，请刷新对话');
+      throw new Error('审批已结束，请刷新对话');
 
     this.approvals.delete(id);
 

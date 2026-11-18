@@ -3,8 +3,6 @@
  * 设计原因：复用原采集证据规则与受限文件端口；不重新采集、不生成证明、不把单文件集合称为完整业务验收。
  * 实现形式：无状态静态工具类，调用方负责原日志身份与工作区生命周期。
  */
-import { fail } from '../../../core/errors';
-
 import { verifyArtifactBaselines, type ArtifactEvidenceEvent } from '../rules/artifact-evidence';
 
 import { artifactFileCheckSchema, type ArtifactBaselineStaged, type ArtifactFileFact, type ArtifactFileCheck } from '../rules/artifact-baseline';
@@ -27,12 +25,12 @@ export class AgentArtifactVerification
     const evidence = verifyArtifactBaselines(events, binding, knowledgeRevision, normalizePath);
 
     if (evidence.issues.some(issue => ['ARTIFACT_LOG_INVALID', 'ARTIFACT_BASELINE_INVALID', 'ARTIFACT_LIMIT'].includes(issue.code)))
-      fail('ARTIFACT_EVIDENCE_INVALID', '原文件采集没有完整可信证据');
+      throw new Error('原文件采集没有完整可信证据');
 
     const active = new Set(evidence.refs.filter(ref => !ref.invalidated).map(ref => ref.baselineId));
 
     if (!active.size)
-      fail('ARTIFACT_BASELINE_STALE', '原采集已失效，不能接受历史文件证明');
+      throw new Error('原采集已失效，不能接受历史文件证明');
 
     const files = new Map<string, ArtifactFileFact>();
 
@@ -49,7 +47,7 @@ export class AgentArtifactVerification
           previous = files.get(key);
 
         if (previous && (previous.sha256 !== file.sha256 || previous.byteLength !== file.byteLength))
-          fail('ARTIFACT_BASELINE_STALE', '同一文件存在不一致的当前采集证明');
+          throw new Error('同一文件存在不一致的当前采集证明');
 
         files.set(key, file);
       }
@@ -61,7 +59,7 @@ export class AgentArtifactVerification
     signal.throwIfAborted();
 
     if (!Array.isArray(checks) || checks.length !== expected.length)
-      fail('ARTIFACT_BASELINE_STALE', '文件复核没有返回完整结果');
+      throw new Error('文件复核没有返回完整结果');
 
     for (let index = 0; index < expected.length; index++)
     {
@@ -71,7 +69,7 @@ export class AgentArtifactVerification
       if (!parsed.success || parsed.data.relativePath !== file.relativePath || parsed.data.state !== 'matches' ||
         parsed.data.expected.sha256 !== file.sha256 || parsed.data.expected.byteLength !== file.byteLength ||
         parsed.data.observed?.sha256 !== file.sha256 || parsed.data.observed?.byteLength !== file.byteLength)
-        fail('ARTIFACT_BASELINE_STALE', '原交付文件已变化、缺失或无法核实');
+        throw new Error('原交付文件已变化、缺失或无法核实');
     }
 
     return expected;

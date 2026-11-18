@@ -6,8 +6,6 @@
  */
 import { checkedAgentCallReference } from '../../agents/contracts';
 
-import { fail } from '../../../core/errors';
-
 import type { RunSummary, StoredEvent, TaskSpec } from '../../execution/rules/types';
 
 import { checkedConversationAgentBinding } from '../../execution/rules/conversation-binding';
@@ -132,10 +130,10 @@ export class AgentHistoryService
   private Check(id: string)
   {
     if (id !== this.workspaceId)
-      fail('AGENT_HISTORY_IDENTITY', '历史查询属于其他工作区');
+      throw new Error('历史查询属于其他工作区');
 
     if (this.closed)
-      fail('AGENT_HISTORY_CLOSED', '工作区历史服务已关闭')
+      throw new Error('工作区历史服务已关闭')
   }
 
   private Notices()
@@ -499,7 +497,7 @@ export class AgentHistoryService
       }
       catch
       {
-        fail('AGENT_HISTORY_CURSOR', '分页游标不属于当前 Agent 会话查询')
+        throw new Error('分页游标不属于当前 Agent 会话查询')
       }
     }
 
@@ -567,7 +565,7 @@ export class AgentHistoryService
     const matches = [...this.records.values()].map(r => r.view).filter(v => v.agentId === input.agentId && v.sessionId === input.sessionId);
 
     if (!matches.length)
-      fail('AGENT_HISTORY_NOT_FOUND', '当前 Agent 没有此历史会话');
+      throw new Error('当前 Agent 没有此历史会话');
 
     return this.Page(matches, JSON.stringify(['runs', this.workspaceId, input.agentId, input.sessionId]), input.cursor, input.limit, r => runKey(r.taskId, r.runId), r => r.startedAt);
   }
@@ -644,7 +642,7 @@ export class AgentHistoryService
 
       this.Issue('details:' + runKey(record.view.taskId, record.view.runId), '部分运行详情无法读取或身份不一致，原记录需要核实');
 
-      fail('AGENT_HISTORY_UNREADABLE', '运行详情无法读取或身份不一致，请核实本机运行记录');
+      throw new Error('运行详情无法读取或身份不一致，请核实本机运行记录');
     }
   }
 
@@ -658,16 +656,16 @@ export class AgentHistoryService
     await this.Initialize();
 
     if (input.cursor && input.cursor.runId !== input.runId)
-      fail('AGENT_HISTORY_CURSOR', '事件游标属于其他运行');
+      throw new Error('事件游标属于其他运行');
 
     const key = runKey(input.taskId, input.runId),
       record = this.records.get(key);
 
     if (!record || record.view.agentId !== input.agentId || record.view.sessionId !== input.sessionId)
-      fail('AGENT_HISTORY_NOT_FOUND', '当前 Agent 会话没有此运行');
+      throw new Error('当前 Agent 会话没有此运行');
 
     if (this.brokenStreams.has(key))
-      fail('AGENT_HISTORY_UNREADABLE', '运行事件存在身份或序号冲突，请重新打开工作区核实原始记录');
+      throw new Error('运行事件存在身份或序号冲突，请重新打开工作区核实原始记录');
 
     let stream = this.streams.get(key);
 
@@ -708,7 +706,7 @@ export class AgentHistoryService
     }
 
     if (stream.failure || stream.pending.size)
-      fail('AGENT_HISTORY_UNREADABLE', '运行事件不连续，请核实历史记录');
+      throw new Error('运行事件不连续，请核实历史记录');
 
     this.Check(input.workspaceId);
 

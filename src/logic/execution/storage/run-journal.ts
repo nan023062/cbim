@@ -3,6 +3,8 @@
  * 作用定位：本机事件日志顺序追加并 fsync，按真实可选的原生路径重建摘要和未确认工具。
  * 设计原因：先持久化后发布；线程 ID 与尚未落盘的原生文件分开处理，不将缺失路径字符串化。读取保留尾行完整性；损坏仅返回稳定错误码，不截断或修复历史。
  */
+import { appendDurableRecord } from '../../../core/debug/node';
+
 import fs from 'node:fs/promises';
 
 import path from 'node:path';
@@ -16,8 +18,6 @@ import { checkedMemberRunBinding } from '../rules/member-run';
 import { checkedRunInputSource } from '../rules/input-source';
 
 import { checkedConversationAgentBinding } from '../rules/conversation-binding';
-
-import { Fault, fail } from '../../../core/errors';
 
 /** 只追加的运行事实来源；事件可靠落盘后才返回，观察者由上层运行时通知。 */
 export class RunJournal
@@ -43,7 +43,7 @@ export class RunJournal
   /** 顺序追加并 fsync 后返回；一旦写失败，此日志队列后续写入继续失败以阻止无证据执行。 */
   Append(event: EngineEvent): Promise<StoredEvent>
   {
-    const write = this.tail.then(async () => { const record: StoredEvent = { ...event, version: 1, seq: this.events.length + 1, taskId: this.task.taskId, workspaceId: this.task.workspaceId, runId: this.runId, time: new Date().toISOString() }; const file = await fs.open(path.join(this.directory, 'events.jsonl'), 'a', 0o600); try { await file.writeFile(JSON.stringify(record) + '\n'); await file.sync() } finally { await file.close() } this.events.push(record); return record; });
+    const write = this.tail.then(async () => { const record: StoredEvent = { ...event, version: 1, seq: this.events.length + 1, taskId: this.task.taskId, workspaceId: this.task.workspaceId, runId: this.runId, time: new Date().toISOString() }; await appendDurableRecord(path.join(this.directory, 'events.jsonl'), record); this.events.push(record); return record; });
 
     // 失败保留在队列上，后续事件不能跳过缺失证据继续追加。
     this.tail = write;
@@ -65,7 +65,7 @@ export class RunJournal
     const text = await fs.readFile(path.join(directory, 'events.jsonl'), 'utf8');
 
     if (text.length === 0)
-      fail('RUN_LOG_EMPTY', '运行记录尚无首条完整事件');
+      throw new Error('运行记录尚无首条完整事件');
 
     try
     {
@@ -153,10 +153,10 @@ export class RunJournal
     }
     catch (cause)
     {
-      if (cause instanceof Fault)
+      if (cause instanceof Error)
         throw cause;
 
-      fail('RUN_LOG_INVALID', '运行记录损坏或身份不一致，无法核实完整执行事实')
+      throw new Error('运行记录损坏或身份不一致，无法核实完整执行事实')
     }
   }
 }

@@ -2,8 +2,6 @@
  * 作用定位：从同一派发快照选择可明确终止的检查点，或核实已放弃来源供后继换边。
  * 设计原因：处置和换边不授予旧任务执行资格，不读取今日知识、模型或产物；完整历史日志由服务核实，这里裁决身份、版本、原信封和领取竞争。
  */
-import { fail } from '../../../core/errors';
-
 import type { DispatchState } from '../../dispatch/rules/dispatch-storage';
 
 import type { GraphIdentity, TaskNode } from './graph-types';
@@ -21,7 +19,7 @@ import { scopeHasUnresolvedActiveInput } from './scope-active-input';
 function check(value: unknown, code: string, message: string): asserts value
 {
   if (!value)
-    fail(code, message)
+    throw new Error(message)
 }
 
 /**

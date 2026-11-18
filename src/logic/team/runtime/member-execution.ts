@@ -33,9 +33,7 @@ import { isDeepStrictEqual } from 'node:util';
 
 import { z } from 'zod';
 
-import { fail } from '../../../core/errors';
-
-import { hash, json } from '../../../core/platform/node/serialization';
+import { hash, json } from '../../../core/io/serialization';
 
 import type { KnowledgeWorkspace } from '../../knowledge/rules/ports';
 
@@ -228,7 +226,7 @@ export class MemberExecutionManager
     this.owner.Assert();
 
     if (!this.ports.artifacts)
-      fail('ARTIFACT_UNAVAILABLE', '文件基线复核服务未装配');
+      throw new Error('文件基线复核服务未装配');
 
     return new ArtifactReportService(this.owner, this.store, { ...this.ports.artifacts, Inspect: run => this.ports.Inspect(run) }).Read(raw)
   }
@@ -239,7 +237,7 @@ export class MemberExecutionManager
     this.owner.Assert();
 
     if (!this.ports.manifests)
-      fail('MANIFEST_UNAVAILABLE', '完整产物复核服务未装配');
+      throw new Error('完整产物复核服务未装配');
 
     return new OutputManifestReportService(this.owner, this.store, { ...this.ports.manifests, Inspect: run => this.ports.Inspect(run) }).Read(raw)
   }
@@ -247,7 +245,7 @@ export class MemberExecutionManager
   private CheckpointPorts(): MemberCheckpointVerificationPorts
   {
     if (!this.ports.artifacts || !this.ports.checkpoints)
-      fail('MEMBER_CHECKPOINT_UNAVAILABLE', '本工作区未装配成员检查点核实能力');
+      throw new Error('本工作区未装配成员检查点核实能力');
 
     return { ...this.ports.artifacts, ...this.ports.checkpoints, Inspect: run => this.ports.Inspect(run) }
   }
@@ -261,12 +259,12 @@ export class MemberExecutionManager
   private Check(workspaceId: string)
   {
     if (this.closing)
-      fail('MEMBER_EXECUTION_CLOSED', '成员执行服务正在关闭');
+      throw new Error('成员执行服务正在关闭');
 
     this.owner.Assert();
 
     if (workspaceId !== this.owner.entry.id)
-      fail('GRAPH_IDENTITY_MISMATCH', '成员任务不属于当前工作区');
+      throw new Error('成员任务不属于当前工作区');
   }
 
   private Parse<S extends z.ZodTypeAny>(schema: S, input: unknown, checkCurrent = true): z.output<S>
@@ -274,10 +272,10 @@ export class MemberExecutionManager
     const result = schema.safeParse(input);
 
     if (!result.success)
-      fail('MEMBER_INPUT_INVALID', '成员执行参数无效：' + result.error.issues[0]?.path.join('.'));
+      throw new Error('成员执行参数无效：' + result.error.issues[0]?.path.join('.'));
 
     if (result.data.workspaceId !== this.owner.entry.id)
-      fail('GRAPH_IDENTITY_MISMATCH', '成员任务不属于当前工作区');
+      throw new Error('成员任务不属于当前工作区');
 
     if (checkCurrent)
       this.Check(result.data.workspaceId);
@@ -330,7 +328,7 @@ export class MemberExecutionManager
     if (old)
     {
       if (old.fingerprint !== this.Command('member.start', input).fingerprint)
-        fail('COMMAND_ID_CONFLICT', '原领取命令参数已变化');
+        throw new Error('原领取命令参数已变化');
 
       if ('budgetRejected' in (old.receipt as object))
         rejectBudget(old.receipt as ScopeBudgetRejected);
@@ -365,7 +363,7 @@ export class MemberExecutionManager
     if (old)
     {
       if (old.fingerprint !== this.Command('member.resume', input).fingerprint)
-        fail('COMMAND_ID_CONFLICT', '原续执行命令参数已变化');
+        throw new Error('原续执行命令参数已变化');
 
       if ('budgetRejected' in (old.receipt as object))
         rejectBudget(old.receipt as ScopeBudgetRejected);
@@ -407,21 +405,21 @@ export class MemberExecutionManager
 
     const isCurrent = () => !this.closing && !pending.stopping && !this.ports.signal?.aborted && this.ports.IsCurrent?.() !== false && (!wait || wait.IsCurrent());
 
-    const assertCurrent = () => { if (!isCurrent()) fail('COLLABORATION_STOPPED', '成员启动所属工作区或协作批次已停止') };
+    const assertCurrent = () => { if (!isCurrent()) throw new Error('成员启动所属工作区或协作批次已停止') };
 
     try
     {
       if (!this.ports.owners || !this.ports.WithEngineConfiguration)
-        fail('OWNER_EXECUTION_UNAVAILABLE', '未装配受控岗位领取端口');
+        throw new Error('未装配受控岗位领取端口');
 
       // 在等待知识/模型短锁前登记停止屏障；并发请求不能覆盖原 token。
       const initial = memberTask(await this.store.Read(), input.rootSessionId, input.taskId).task;
 
       if (!initial.ownerBinding && !initial.fallbackBinding)
-        fail('OWNER_BINDING_REQUIRED', '旧任务没有负责岗位绑定，请重新规划派发');
+        throw new Error('旧任务没有负责岗位绑定，请重新规划派发');
 
       if (this.pendingStarts.has(input.taskId))
-        fail('MEMBER_BUSY', '该成员任务正在准备领取');
+        throw new Error('该成员任务正在准备领取');
 
       this.pendingStarts.set(input.taskId, pending);
 
@@ -432,7 +430,7 @@ export class MemberExecutionManager
         const hinted = memberTask(hint, input.rootSessionId, input.taskId).task;
 
         if (!hinted.ownerBinding && !hinted.fallbackBinding)
-          fail('OWNER_BINDING_REQUIRED', '旧任务没有负责岗位绑定');
+          throw new Error('旧任务没有负责岗位绑定');
 
         const bindingModel = (hinted.ownerBinding ?? hinted.fallbackBinding)!.model;
 
@@ -442,12 +440,12 @@ export class MemberExecutionManager
         const model = { ...bindingModel, engine: policy ? workspaceMemberEngine(policy) : hinted.fallbackBinding?.model.engine, ...((policy?.modelRoles ?? hinted.fallbackBinding?.model.modelRoles) === undefined ? {} : { modelRoles: policy?.modelRoles ?? hinted.fallbackBinding?.model.modelRoles }) };
 
         if (input.options.profileId && input.options.profileId !== model.profileId || input.options.model && input.options.model !== model.modelId)
-          fail('OWNER_MODEL_MISMATCH', '成员模型只能来自原岗位绑定，不能由主会话选型覆盖');
+          throw new Error('成员模型只能来自原岗位绑定，不能由主会话选型覆盖');
 
         const prior = resuming ? hint.runs?.find(run => run.binding.runId === currentMemberResumeRequest(hinted)?.runId) : undefined;
 
         if (resuming && !prior)
-          fail('MEMBER_RESUME_NOT_ALLOWED', '续执行原运行不存在');
+          throw new Error('续执行原运行不存在');
 
         // 续执行沿原权限和超时准备工具能力；调用方不能用新 options 改变已冻结的运行约束。
         const engineOptions: MemberStartOptions = resuming ? { profileId: model.profileId, model: model.modelId, permission: prior!.permission, turnTimeoutMs: prior!.turnTimeoutMs } : input.options;
@@ -459,48 +457,48 @@ export class MemberExecutionManager
           const { graph, task, member, session } = memberTask(state, input.rootSessionId, input.taskId);
 
           if (state.scopes?.some(scope => scope.rootSessionId === input.rootSessionId && scope.status === 'waiting'))
-            fail('GOAL_WAITING', '当前主会话目标处于安全等待，不能从历史任务启动执行');
+            throw new Error('当前主会话目标处于安全等待，不能从历史任务启动执行');
 
           if (state.scopes?.some(scope => scope.rootSessionId === input.rootSessionId && scope.status === 'active' && pendingTopicInterruption(scope)))
-            fail('TOPIC_PAUSING', '当前话题正在等待补充排空，不能启动新成员运行');
+            throw new Error('当前话题正在等待补充排空，不能启动新成员运行');
 
           // 主 Agent 通过原主会话工作；旧 self 任务不能绕过主会话身份另建执行通道。
           if (member.agentId === 'cbim:main')
-            fail('AGENT_NOT_EXECUTABLE', '主 Agent 应在原主会话执行，不能创建独立成员通道');
+            throw new Error('主 Agent 应在原主会话执行，不能创建独立成员通道');
 
           if (member.lifecycle === 'released')
-            fail('MEMBER_RELEASED', '执行实例已随调度周期释放，不能再次启动');
+            throw new Error('执行实例已随调度周期释放，不能再次启动');
 
           if (task.scopeId && !state.scopes?.some(scope => scope.scopeId === task.scopeId && scope.workspaceId === input.workspaceId && scope.rootSessionId === input.rootSessionId && scope.status === 'active'))
-            fail('DISPATCH_SCOPE_CLOSED', '任务调度周期已结束，不能启动执行实例');
+            throw new Error('任务调度周期已结束，不能启动执行实例');
 
           if (state.scopes?.some(scope => scope.scopeId === task.scopeId && scope.recovery) && input.options.permission !== 'read')
-            fail('RECOVERY_READONLY', '只读核实周期的成员不能提升权限执行业务写入、知识写入或命令');
+            throw new Error('只读核实周期的成员不能提升权限执行业务写入、知识写入或命令');
 
           if (task.revision !== input.expectedRevision)
-            fail('GRAPH_REVISION_CONFLICT', '任务版本已变化，请刷新后启动');
+            throw new Error('任务版本已变化，请刷新后启动');
 
           if (task.activeRunId || !['queued', 'waiting'].includes(task.status) || (!resuming && task.runIds.length))
-            fail('TASK_NOT_STARTABLE', '当前任务不能重新执行，请核实已有运行后重新派发');
+            throw new Error('当前任务不能重新执行，请核实已有运行后重新派发');
 
           const resumeRequest = currentMemberResumeRequest(task);
 
           if (resuming && (!resumeRequest || !validMemberCheckpointChain(task) || task.runIds.length !== task.checkpoints?.length || task.help || task.result))
-            fail('MEMBER_RESUME_NOT_ALLOWED', '当前任务没有唯一尚未消费的续执行预约');
+            throw new Error('当前任务没有唯一尚未消费的续执行预约');
 
           if (!dependenciesReady(graph, task))
-            fail('TASK_DEPENDENCY_PENDING', '前置任务尚未交付当前候选，或尚未通过主 Agent 审阅');
+            throw new Error('前置任务尚未交付当前候选，或尚未通过主 Agent 审阅');
 
           if (member.activeRunId)
-            fail('MEMBER_BUSY', '该成员正在处理另一项任务');
+            throw new Error('该成员正在处理另一项任务');
 
           if (teamSessionBusy(state.teamSessions ?? [], state.runs ?? [], { workspaceId: input.workspaceId, rootSessionId: input.rootSessionId, agentId: member.agentId }))
-            fail('TEAM_SESSION_BUSY', '该办公室的 Agent 正在处理另一项任务，本项等待其完成');
+            throw new Error('该办公室的 Agent 正在处理另一项任务，本项等待其完成');
 
           const assignment = state.outbox.find(m => m.kind === 'assignment' && m.taskId === task.taskId && m.identity.rootSessionId === input.rootSessionId && m.delivery === 'pending' && !!m.resumeFrom === resuming);
 
           if (!assignment)
-            fail('ASSIGNMENT_UNAVAILABLE', '任务缺少可领取的派发信封');
+            throw new Error('任务缺少可领取的派发信封');
 
           const context = { snapshot, profiles: [locked.model] };
 
@@ -511,45 +509,45 @@ export class MemberExecutionManager
           const previous = (state.runs ?? []).filter(r => r.binding.agentSessionId === session.agentSessionId).at(-1);
 
           if (resuming && (!previous || !previous.checkpointProof || assignment.kind !== 'assignment' || assignment.resumeFrom?.runId !== previous.binding.runId || assignment.resumeFrom.checkpointId !== previous.checkpointProof.checkpoint.checkpointId || assignment.messageId !== resumeRequest!.requestId || session.lastRunId !== previous.binding.runId))
-            fail('MEMBER_RESUME_NOT_ALLOWED', '续执行预约、检查点或原生通道已经失效');
+            throw new Error('续执行预约、检查点或原生通道已经失效');
 
           if (previous)
           {
             if (previous.binding.taskId !== task.taskId || graph.tasks.find(value => value.taskId === previous.binding.taskId)?.scopeId !== task.scopeId)
-              fail('MEMBER_TOPIC_CONTEXT_IDENTITY', '原生成员上下文不能跨任务或话题复用');
+              throw new Error('原生成员上下文不能跨任务或话题复用');
 
             if (previous.status !== 'completed')
-              fail('MEMBER_SESSION_REVIEW_REQUIRED', '该成员通道上次运行未安全结束，请先核实；本阶段不自动续接异常通道');
+              throw new Error('该成员通道上次运行未安全结束，请先核实；本阶段不自动续接异常通道');
 
             const summary = await this.ports.Inspect(previous);
 
             if (summary.status !== 'completed' || summary.unresolvedTools.length || !summary.sessionFile || json(summary.memberBinding) !== json(previous.binding) || !isDeepStrictEqual(summary.task.fallbackBinding, previous.prepared.fallbackBinding) || !isDeepStrictEqual(summary.task.ownerBinding, previous.prepared.memberContext?.binding) || summary.task.workspaceId !== input.workspaceId || summary.task.root !== this.owner.entry.path || summary.task.taskId !== previous.binding.taskId || summary.task.agentId !== previous.binding.agentId || summary.runId !== previous.binding.runId || summary.sessionFile !== previous.session.sessionFile)
-              fail('MEMBER_SESSION_REVIEW_REQUIRED', '成员通道历史未通过核实，不能自动续接');
+              throw new Error('成员通道历史未通过核实，不能自动续接');
           }
 
           // 等待只由仍活动的自动协作批次授权；公开手动启动缺少该回调，容量不足明确拒绝而不假排队。
           assertCurrent();
 
           if (wait && wait.scopeId !== task.scopeId)
-            fail('COLLABORATION_STOPPED', '成员启动所属协作批次周期不匹配');
+            throw new Error('成员启动所属协作批次周期不匹配');
 
           const runId = randomUUID(),
             scope = state.scopes?.find(value => value.scopeId === task.scopeId);
 
           if (scope && scopeHasUnresolvedActiveInput(scope))
-            fail('GOAL_ACTIVE_INPUT_UNRESOLVED', '运行中补充尚未核实，不能领取旧计划成员任务');
+            throw new Error('运行中补充尚未核实，不能领取旧计划成员任务');
 
           if (scope?.goal && goalNeedsReplan(scope.goal))
-            fail('GOAL_REPLAN_REQUIRED', '新输入尚未重新规划，不能领取旧计划成员任务');
+            throw new Error('新输入尚未重新规划，不能领取旧计划成员任务');
 
           if (!scope?.goal?.plan || scope.goal.review || scope.goal.blocked || !scope.goal.plan.assignments.some(assignment => assignment.agentId === task.assignee.agentId && task.modules.every(module => assignment.moduleIds.includes(module.moduleId)) && sameWorkflowSelectionsForModules(assignment.workflowSelections, task.workflowSelections, task.modules.map(module => module.moduleId)) && sameAutomaticExecutionForModules(assignment.fallbackBinding, task.fallbackBinding, task.modules.map(module => module.moduleId)) && sameOwnerExecutionForModules(assignment.ownerBinding, task.ownerBinding, task.modules.map(module => module.moduleId))))
-            fail('OWNER_PLAN_STALE', '当前计划不再保留原任务岗位、模块或 Workflow，请重新规划派发');
+            throw new Error('当前计划不再保留原任务岗位、模块或 Workflow，请重新规划派发');
 
           if (resuming && (!scope?.goal || scope.goal.revision !== resumeRequest!.goalRevision || scope.goal.review || scope.goal.blocked || goalNeedsReplan(scope.goal)))
-            fail('MEMBER_RESUME_STALE', '预约后的目标计划已变化，不能消费原续执行请求');
+            throw new Error('预约后的目标计划已变化，不能消费原续执行请求');
 
           if (resuming && (!scope?.goal?.plan || scope.goal.plan.knowledgeRevision !== previous!.prepared.knowledgeRevision || !scope.goal.plan.assignments.some(assignment => assignment.agentId === task.assignee.agentId && task.modules.every(module => assignment.moduleIds.includes(module.moduleId)) && sameWorkflowSelectionsForModules(assignment.workflowSelections, task.workflowSelections, task.modules.map(module => module.moduleId)) && sameAutomaticExecutionForModules(assignment.fallbackBinding, task.fallbackBinding, task.modules.map(module => module.moduleId)) && sameOwnerExecutionForModules(assignment.ownerBinding, task.ownerBinding, task.modules.map(module => module.moduleId)))))
-            fail('MEMBER_RESUME_STALE', '当前计划不再保留原岗位、模块、Workflow 选择或知识基线');
+            throw new Error('当前计划不再保留原岗位、模块、Workflow 选择或知识基线');
 
           const admitted = scope ? await this.ports.budgets?.Admit(state, scope, { kind: 'member', taskId: task.taskId, runId, model: locked.model }) : undefined;
 
@@ -575,21 +573,21 @@ export class MemberExecutionManager
           assertWorkflowCapabilities(preparedWorkflowContracts(prepared), { ...engine, artifacts: !!this.ports.artifacts });
 
           if (member.configurationRevision !== prepared.knowledgeRevision)
-            fail('DISPATCH_CONTEXT_CHANGED', '成员配置版本已变化，请重新登记派发');
+            throw new Error('成员配置版本已变化，请重新登记派发');
 
-          const prerequisites = graph.edges.filter(edge => edge.enabled && edge.kind === 'dependency' && edge.toNodeId === task.nodeId).map(edge => { const source = graph.tasks.find(t => t.nodeId === edge.fromNodeId)!; if (source.scopeId !== task.scopeId) fail('MEMBER_TOPIC_CONTEXT_IDENTITY', '成员前置候选必须来自当前话题'); return { taskId: source.taskId, planRevision: source.planRevision, result: structuredClone(source.result!) }; });
+          const prerequisites = graph.edges.filter(edge => edge.enabled && edge.kind === 'dependency' && edge.toNodeId === task.nodeId).map(edge => { const source = graph.tasks.find(t => t.nodeId === edge.fromNodeId)!; if (source.scopeId !== task.scopeId) throw new Error('成员前置候选必须来自当前话题'); return { taskId: source.taskId, planRevision: source.planRevision, result: structuredClone(source.result!) }; });
 
           if (resuming)
           {
             // 模型解析保留显式 undefined 可选项，磁盘 JSON 会省略它们；比较实际可持久化快照，不能把缺省字段当配置变化。
             if (!isDeepStrictEqual(JSON.parse(json(engine.model)), previous!.model))
-              fail('MEMBER_RESUME_CHANGED', '原模型配置已经变化，不能沿旧上下文续执行');
+              throw new Error('原模型配置已经变化，不能沿旧上下文续执行');
 
             if (!isDeepStrictEqual(prepared, previous!.prepared))
-              fail('MEMBER_RESUME_CHANGED', '原知识工作流已经变化，不能沿旧上下文续执行');
+              throw new Error('原知识工作流已经变化，不能沿旧上下文续执行');
 
             if (!isDeepStrictEqual(prerequisites, previous!.prerequisites ?? []))
-              fail('MEMBER_RESUME_CHANGED', '原前置候选已经变化，不能沿旧上下文续执行');
+              throw new Error('原前置候选已经变化，不能沿旧上下文续执行');
 
             await verifyMemberCheckpointProof(this.owner, task, previous!, this.CheckpointPorts(), assertCurrent, previous!.checkpointProof, state.runs);
 
@@ -711,7 +709,7 @@ export class MemberExecutionManager
       const previous = run.resumeFrom ? (await this.store.Read()).runs?.find(old => old.binding.runId === run.resumeFrom!.runId) : undefined;
 
       if (run.resumeFrom && !previous?.checkpointProof)
-        fail('MEMBER_CHECKPOINT_INVALID', '续执行原检查点证明丢失');
+        throw new Error('续执行原检查点证明丢失');
 
       const started = run.resumeFrom ? await handle.runtime.ResumeMember(spec, '继续原任务；原检查点不是交付证据。本轮只允许新验证产生交付，请先读取当前任务计划。\n' + task.goal, { binding: run.binding, session: run.session }, { ...run.resumeFrom, logHash: previous!.checkpointProof!.logHash }, { signal: handle.controller.signal }) : await handle.runtime.StartMember(spec, task.goal, { binding: run.binding, session: run.session }, { signal: handle.controller.signal });
 
@@ -766,7 +764,7 @@ export class MemberExecutionManager
       catch
       {
         // 保留占用直到应用关闭；下一次启动从持久化的 starting/running 恢复为 interrupted。
-        fail('MEMBER_SETTLEMENT_FAILED', '成员执行结束但状态提交失败，请关闭并重新打开应用后核实任务');
+        throw new Error('成员执行结束但状态提交失败，请关闭并重新打开应用后核实任务');
       }
     }
   }
@@ -775,12 +773,12 @@ export class MemberExecutionManager
   private async Ready(original: DispatchRun, sessionFile?: string, nativeSessionId?: string)
   {
     if (!sessionFile && (!['claude-code', 'codex'].includes(original.model.engine ?? 'pi') || original.resumeFrom || original.session.sessionFile))
-      fail('MEMBER_SESSION_INVALID', '引擎没有提供可核实的原生会话');
+      throw new Error('引擎没有提供可核实的原生会话');
 
     const initialCodex = original.model.engine === 'codex' && !original.session.sessionFile && !original.resumeFrom && original.session.nativeSessionId === original.binding.agentSessionId;
 
     if (initialCodex && !nativeSessionId || !initialCodex && nativeSessionId && nativeSessionId !== original.session.nativeSessionId)
-      fail('MEMBER_SESSION_INVALID', '引擎原生身份与已绑定通道不一致');
+      throw new Error('引擎原生身份与已绑定通道不一致');
 
     const native = initialCodex ? nativeSessionId! : original.session.nativeSessionId;
 
@@ -797,7 +795,7 @@ export class MemberExecutionManager
     const member = state.members.find(m => m.agentInstanceId === original.binding.agentInstanceId);
 
     if (!run || !activeRun(run) || member?.activeRunId !== run.binding.runId || member.leaseEpoch !== run.binding.leaseEpoch)
-      fail('STALE_MEMBER_RUN', '成员执行租约已失效');
+      throw new Error('成员执行租约已失效');
 
     return run;
   }
@@ -814,7 +812,7 @@ export class MemberExecutionManager
       const { graph, task, member, session } = memberTask(state, run.binding.rootSessionId, run.binding.taskId);
 
       if (summary && (json(summary.memberBinding) !== json(run.binding) || summary.task.taskId !== task.taskId || summary.runId !== run.binding.runId))
-        fail('MEMBER_RUN_MISMATCH', '执行摘要身份不一致');
+        throw new Error('执行摘要身份不一致');
 
       if (!error && summary && (status === 'failed' || status === 'interrupted'))
       {
@@ -830,7 +828,7 @@ export class MemberExecutionManager
         const bindings = summary.events.filter(event => event.type === 'session.bound');
 
         if (!bindings.some(event => event.data.sessionFile === summary.sessionFile) || bindings.some(event => event.data.sessionId !== run.session.nativeSessionId || event.data.sessionFile !== undefined && event.data.sessionFile !== summary.sessionFile))
-          fail('MEMBER_SESSION_INVALID', '原生绑定与成员身份不一致');
+          throw new Error('原生绑定与成员身份不一致');
 
         run = { ...run, session: { ...run.session, sessionFile: summary.sessionFile } };
       }
@@ -865,9 +863,9 @@ export class MemberExecutionManager
         try
         {
           if ((task.checkpoints?.length ?? 0) >= memberCheckpointLimit || task.runIds.at(-1) !== run.binding.runId || !task.scopeId || !state.scopes?.some(scope => scope.scopeId === task.scopeId && scope.status === 'active'))
-            fail('MEMBER_CHECKPOINT_LIMIT', '任务已达到检查点上限或本段不属于当前活动周期');
+            throw new Error('任务已达到检查点上限或本段不属于当前活动周期');
 
-          checkpointProof = await verifyMemberCheckpointProof(this.owner, task, run, this.CheckpointPorts(), () => { if (this.handles.get(task.taskId)?.stopping || this.ports.IsCurrent?.() === false || this.ports.signal?.aborted) fail('COLLABORATION_STOPPED', '检查点交接已停止') }, undefined, state.runs);
+          checkpointProof = await verifyMemberCheckpointProof(this.owner, task, run, this.CheckpointPorts(), () => { if (this.handles.get(task.taskId)?.stopping || this.ports.IsCurrent?.() === false || this.ports.signal?.aborted) throw new Error('检查点交接已停止') }, undefined, state.runs);
 
           checkpoint = checkpointProof.checkpoint;
         }
@@ -961,7 +959,7 @@ export class MemberExecutionManager
       if (pending)
       {
         if (pending.workspaceId !== input.workspaceId || pending.rootSessionId !== input.rootSessionId)
-          fail('TASK_NOT_FOUND', '当前主会话没有此派发任务');
+          throw new Error('当前主会话没有此派发任务');
 
         pending.stopping = true;
 
@@ -975,7 +973,7 @@ export class MemberExecutionManager
 
     // 活动绑定已由领取事务冻结；先验证本请求再标记停止，避免被正在重读 canonical 的结算事务挡住。
     if (handle.binding.workspaceId !== input.workspaceId || handle.binding.rootSessionId !== input.rootSessionId)
-      fail('TASK_NOT_FOUND', '当前主会话没有此派发任务');
+      throw new Error('当前主会话没有此派发任务');
 
     handle.stopping = true;
 
@@ -1022,10 +1020,10 @@ export class MemberExecutionManager
     const run = state.runs?.find(run => run.binding.runId === input.runId && run.binding.taskId === input.taskId && run.binding.rootSessionId === input.rootSessionId && run.binding.workspaceId === input.workspaceId);
 
     if (!run || !task.runIds.includes(input.runId))
-      fail('MEMBER_RUN_NOT_FOUND', '当前任务没有此成员运行');
+      throw new Error('当前任务没有此成员运行');
 
     if (input.cursor && input.cursor.runId !== input.runId)
-      fail('MEMBER_EVENT_IDENTITY_MISMATCH', '事件游标属于其他成员运行');
+      throw new Error('事件游标属于其他成员运行');
 
     const result = await this.eventStreams.Read(run, memberPublicTask(task, this.owner.entry.path), input.cursor, input.limit);
 
@@ -1048,7 +1046,7 @@ export class MemberExecutionManager
   private AssertRecipient(state: DispatchState, rootSessionId: string, agentSessionId: string)
   {
     if (!state.sessions.some(s => s.agentSessionId === agentSessionId && s.rootSessionId === rootSessionId))
-      fail('MESSAGE_RECIPIENT_INVALID', '收件人不属于当前主会话')
+      throw new Error('收件人不属于当前主会话')
   }
 
   /** 显式收件确认只消费 result/help，不领取任务、不恢复旧成员，也不签发业务验收或用户批准。 */
@@ -1056,7 +1054,7 @@ export class MemberExecutionManager
   {
     const input = this.Parse(memberAcknowledgeInput, raw);
 
-    return this.store.Transact(this.Command('member.ack', input), async state => { this.AssertRecipient(state, input.rootSessionId, input.agentSessionId); const message = state.outbox.find(m => m.messageId === input.messageId && m.identity.rootSessionId === input.rootSessionId && m.to.agentSessionId === input.agentSessionId); if (!message || message.kind === 'assignment') fail('MESSAGE_NOT_FOUND', '当前收件人没有此结果或求助信封'); return { messages: message.delivery === 'processed' ? [] : [{ ...message, delivery: 'processed' as const }], receipt: { messageId: message.messageId, delivery: 'processed' as const } }; })
+    return this.store.Transact(this.Command('member.ack', input), async state => { this.AssertRecipient(state, input.rootSessionId, input.agentSessionId); const message = state.outbox.find(m => m.messageId === input.messageId && m.identity.rootSessionId === input.rootSessionId && m.to.agentSessionId === input.agentSessionId); if (!message || message.kind === 'assignment') throw new Error('当前收件人没有此结果或求助信封'); return { messages: message.delivery === 'processed' ? [] : [{ ...message, delivery: 'processed' as const }], receipt: { messageId: message.messageId, delivery: 'processed' as const } }; })
   }
 
   private async Interaction(raw: unknown)

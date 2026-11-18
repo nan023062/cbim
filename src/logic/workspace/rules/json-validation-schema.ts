@@ -5,9 +5,7 @@
  */
 import { z } from 'zod';
 
-import { parseJson } from '../../../core/json';
-
-import { fail } from '../../../core/errors';
+import { parseJson } from '../../io-errors/json';
 
 export const jsonValidationLimits = { fileBytes: 1024 * 1024, schemaBytes: 32 * 1024, schemaDepth: 16, schemaNodes: 512, dataDepth: 64, dataNodes: 100000, properties: 64, enumValues: 64, issues: 32, records: 16 } as const;
 
@@ -163,10 +161,10 @@ const escape = (value: string) => value.replaceAll('~', '~0').replaceAll('/', '~
 export function validateJsonArtifact(schema: BoundedJsonSchema, bytes: Uint8Array): JsonValidationOutcome
 {
   if (!isBoundedJsonSchema(schema))
-    fail('VALIDATION_SCHEMA_INVALID', 'JSON 验证声明不受支持或超过边界');
+    throw new Error('JSON 验证声明不受支持或超过边界');
 
   if (!(bytes instanceof Uint8Array) || bytes.byteLength > jsonValidationLimits.fileBytes)
-    fail('VALIDATION_LIMIT', 'JSON 产物超过 1 MiB 的验证上限');
+    throw new Error('JSON 产物超过 1 MiB 的验证上限');
 
   let value: unknown;
 

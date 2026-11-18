@@ -77,7 +77,7 @@ describe('静态 Agent 持久化历史索引',()=>{
     const first=await writeLog(f.root,a,[next(a,2,'run.settled',{status:'completed'})]);
     f.history.RestoreRun(first.summary,'loop');f.history.ObserveRun(b,'loop');await f.history.Close();
     const loaded=await f.store.Load();expect(loaded.records).toHaveLength(2);
-    const {hash}=await import('../../../../../src/core/platform/node/serialization');
+    const {hash}=await import('../../../../../src/core/io/serialization');
     const file=path.join(f.directory,hash('cbim:main'),'sessions',hash('session-one'),hash(JSON.stringify([a.taskId,a.runId]))+'.json');await fs.writeFile(file,'{broken');
     const reopened=new AgentHistoryService(workspaceId,f.root,{store:f.store,Read:f.read});await reopened.Initialize();
     expect((await reopened.Roles({workspaceId})).roles[0].runCount).toBe(1);expect((await reopened.Roles({workspaceId})).diagnostics).not.toHaveLength(0);

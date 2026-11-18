@@ -5,8 +5,6 @@
  */
 import { zodToJsonSchema } from 'zod-to-json-schema';
 
-import { fail } from '../../../../core/errors';
-
 import { codeCheckLimits } from '../../../workspace/rules/code-check';
 
 import { preparedArtifactScopes } from '../../../workspace/rules/artifact-scope';
@@ -38,13 +36,13 @@ export function prepareCodeChecks(bindings: readonly CodeCheckBinding[], port?: 
   if (checks.length)
   {
     if (!port)
-      fail('CODE_CHECK_UNAVAILABLE', '冻结的代码检查缺少真实进程执行端口');
+      throw new Error('冻结的代码检查缺少真实进程执行端口');
 
     if (checks.length > codeCheckLimits.checks)
-      fail('CODE_CHECK_LIMIT', '一轮代码检查最多八项');
+      throw new Error('一轮代码检查最多八项');
 
     if (bindings.some(binding => binding.contract.executionScope || !binding.contract.artifactScope || !binding.contract.delivery?.requireCompleteManifest))
-      fail('CODE_CHECK_SCOPE', '代码检查要求全部模块使用完整清单，不能混入隔离范围模式');
+      throw new Error('代码检查要求全部模块使用完整清单，不能混入隔离范围模式');
 
     preparedArtifactScopes(bindings);
   }
@@ -122,14 +120,14 @@ export class RunCodeCheck
     codeCheckInputSchema.parse(input);
 
     if (name !== codeCheckToolName || this.reserved?.id !== id || this.reserved.consumed)
-      fail('CODE_CHECK_CALL', '代码检查必须来自本轮唯一授权调用');
+      throw new Error('代码检查必须来自本轮唯一授权调用');
 
     this.reserved.consumed = true;
 
     const generation = this.context.Generation(),
       version = this.context.CurrentVersion();
 
-    const alive = () => { this.controller.signal.throwIfAborted(); this.context.AssertReady(id); if (this.context.Generation() !== generation || this.context.CurrentVersion() !== version) fail('CODE_CHECK_STALE', '代码检查期间计划或副作用代次已经变化') };
+    const alive = () => { this.controller.signal.throwIfAborted(); this.context.AssertReady(id); if (this.context.Generation() !== generation || this.context.CurrentVersion() !== version) throw new Error('代码检查期间计划或副作用代次已经变化') };
 
     alive();
 

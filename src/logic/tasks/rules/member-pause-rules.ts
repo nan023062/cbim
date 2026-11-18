@@ -3,8 +3,6 @@
  * 作用定位：在同一派发快照中选择可持久等待的原检查点与未领取后继，供服务和 Store 重放独立裁决。
  * 设计原因：完整清单、原信封、成员代际和任务版本共同防止遗漏待办或复活旧终态；跨重启读取本规则不启动执行或刷新证明。
  */
-import { fail } from '../../../core/errors';
-
 import type { DispatchState } from '../../dispatch/rules/dispatch-storage';
 
 import type { DispatchScope } from './dispatch-scope';
@@ -24,7 +22,7 @@ import { scopeHasUnresolvedActiveInput } from './scope-active-input';
 function check(value: unknown, message: string): asserts value
 {
   if (!value)
-    fail('GOAL_MEMBER_PAUSE_INVALID', message)
+    throw new Error(message)
 }
 
 /** 原成员仍沿原权限；本次用户选择不能比原权限更低后又被恢复过程隐式扩大。 */
@@ -33,7 +31,7 @@ export function assertMemberPausePermission(checkpoints: readonly { run: Pick<Di
   const ranks = { read: 0, ask: 1, execute: 2 };
 
   if (checkpoints.some(({ run }) => ranks[run.permission] > ranks[permission]))
-    fail('GOAL_MEMBER_PAUSE_PERMISSION', '保留检查点的原权限高于本次选择；请明确选择允许原任务的权限，或停止等待后重新安排任务');
+    throw new Error('保留检查点的原权限高于本次选择；请明确选择允许原任务的权限，或停止等待后重新安排任务');
 }
 
 /** 只接受当前完整快照；文件、canonical 和 native 的真实性由调度端再次核实，不由模型清单证明。 */

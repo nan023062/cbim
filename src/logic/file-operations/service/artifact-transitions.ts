@@ -7,8 +7,6 @@
  */
 import { isDeepStrictEqual as equal } from 'node:util';
 
-import { fail } from '../../../core/errors';
-
 import type { ArtifactTransitionRunPort } from '../../execution/rules/capabilities/run-artifact-transition';
 
 import type { ControlledFileTransport, ControlledNamespaceChange } from '../platform/files/controlled-file-protocol';
@@ -26,9 +24,9 @@ export function createArtifactTransitionPort(owner: Workspace, transport: Contro
     workspaceId = owner.entry.id,
     protectedRoots = [owner.paths.userRoot, owner.paths.installRoot, ...(owner.paths.protectedRoots ?? [])];
 
-  const check = () => { owner.Assert({ workspaceId, instanceId }); if (!isCurrent()) fail('ARTIFACT_TRANSITION_UNAVAILABLE', '工作区正在停止，不能发出删除/移动') };
+  const check = () => { owner.Assert({ workspaceId, instanceId }); if (!isCurrent()) throw new Error('工作区正在停止，不能发出删除/移动') };
 
   return {
-    WithExclusive: async (operation, signal, use) => { check(); signal.throwIfAborted(); const frozen = structuredClone(operation), source = frozen.kind === 'delete' ? frozen.path : frozen.from, transition: ControlledNamespaceChange = frozen.kind === 'delete' ? { kind: 'delete' } : { kind: 'move', targetRelativePath: frozen.to }; return transport.WithExclusiveTransition!(root, source, transition, protectedRoots, signal, async file => use({ ReadBefore: async () => { check(); signal.throwIfAborted(); const value = await file.ReadBefore(); return { identity: value.identity, fact: value.fact } }, Apply: async () => { check(); signal.throwIfAborted(); const result = await file.TransitionAndVerify(); if (!equal(result.transition, transition) || result.sourceMissing !== true) fail('ARTIFACT_TRANSITION_RESULT_INVALID', '平台返回了另一项删除/移动'); return { identity: result.identity, fact: result.fact, operation: frozen, sourceMissing: true }; } })); }, Drain: () => transport.Drain(root)
+    WithExclusive: async (operation, signal, use) => { check(); signal.throwIfAborted(); const frozen = structuredClone(operation), source = frozen.kind === 'delete' ? frozen.path : frozen.from, transition: ControlledNamespaceChange = frozen.kind === 'delete' ? { kind: 'delete' } : { kind: 'move', targetRelativePath: frozen.to }; return transport.WithExclusiveTransition!(root, source, transition, protectedRoots, signal, async file => use({ ReadBefore: async () => { check(); signal.throwIfAborted(); const value = await file.ReadBefore(); return { identity: value.identity, fact: value.fact } }, Apply: async () => { check(); signal.throwIfAborted(); const result = await file.TransitionAndVerify(); if (!equal(result.transition, transition) || result.sourceMissing !== true) throw new Error('平台返回了另一项删除/移动'); return { identity: result.identity, fact: result.fact, operation: frozen, sourceMissing: true }; } })); }, Drain: () => transport.Drain(root)
   };
 }

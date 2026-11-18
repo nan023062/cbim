@@ -4,9 +4,7 @@
  * 设计原因：模型调用成功不等于可交接；必须正常结束、没有未决工具且求助后没有新工作，才允许主调度另派新任务。
  * 外部写也算求助后的新工作；当前成员未装配反馈工具，历史核验仍按真实效果防守。
  */
-import { fail } from '../../../core/errors';
-
-import { json } from '../../../core/platform/node/serialization';
+import { json } from '../../../core/io/serialization';
 
 import type { RunSummary } from '../../execution/rules/types';
 
@@ -29,7 +27,7 @@ const equal = (a: unknown, b: unknown) => json(a) === json(b);
 function valid(value: unknown): asserts value
 {
   if (!value)
-    fail('MEMBER_HELP_INVALID', '求助记录未通过完整运行、授权回执和工具结束检查，请核实后重新安排任务')
+    throw new Error('求助记录未通过完整运行、授权回执和工具结束检查，请核实后重新安排任务')
 }
 
 /**

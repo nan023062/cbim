@@ -13,11 +13,9 @@ import type { KnowledgeFile } from '../rules/types';
 
 import { isKnowledge, excluded } from '../rules/knowledge';
 
-import { fail } from '../../../core/errors';
+import { hash } from '../../../core/io/serialization';
 
-import { hash } from '../../../core/platform/node/serialization';
-
-import { exists } from '../../../core/platform/node/files';
+import { exists } from '../../../core/io/text-files';
 
 export async function readKnowledge(paths: Paths, root: string)
 {
@@ -37,7 +35,7 @@ export async function readKnowledge(paths: Paths, root: string)
         continue;
 
       if (entry.isSymbolicLink())
-        fail('PATH', `知识目录包含链接：${p}`);
+        throw new Error(`知识目录包含链接：${p}`);
 
       if (entry.isDirectory())
       {
@@ -53,14 +51,14 @@ export async function readKnowledge(paths: Paths, root: string)
         const stat = await fs.stat(target);
 
         if (stat.size > 2 * 1024 * 1024)
-          fail('SIZE', `知识文件超过 2 MiB：${p}`);
+          throw new Error(`知识文件超过 2 MiB：${p}`);
 
         const text = await fs.readFile(target, 'utf8');
 
         result.push({ path: p, text, hash: hash(text) });
 
         if (result.length > 20000)
-          fail('SIZE', '知识对象超过 20000 个')
+          throw new Error('知识对象超过 20000 个')
       }
     }
   }

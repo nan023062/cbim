@@ -6,17 +6,15 @@
  * 机制边界：对象递归排序由 utility 提供，本模块保留历史比较器、字段省略和业务指纹规则。
  * 算法入口：通过 Core JsonUtils 静态方法复用机制，本文件继续拥有原业务策略。
  */
-import { JsonUtils } from '../../../core/utility';
+import { JsonUtils } from '../../../core/io';
 
 import path from 'node:path';
 
 import { z } from 'zod';
 
-import { hash, json } from '../../../core/platform/node/serialization';
+import { hash, json } from '../../../core/io/serialization';
 
-import { parseJson } from '../../../core/json';
-
-import { fail } from '../../../core/errors';
+import { parseJson } from '../../io-errors/json';
 
 import { parseWorkflowContract } from '../../workspace/rules/workflow-contract';
 
@@ -114,7 +112,7 @@ const removed = ['不携带真人花名册、账号和凭据', '清除作者、�
 function check(condition: unknown, message: string): asserts condition
 {
   if (!condition)
-    fail('RESOURCE_PACKAGE', message)
+    throw new Error(message)
 }
 
 /** 保留本模块历史键排序与 undefined 规则；utility 只提供递归复制机制。 */
@@ -156,7 +154,7 @@ function localReference(owner: string, reference: string): string | undefined
     }
     catch
     {
-      fail('RESOURCE_PACKAGE', '正文包含无效链接')
+      throw new Error('正文包含无效链接')
     }
 
     check(['https:', 'http:'].includes(url.protocol) && !url.username && !url.password && !/[?&](?:api[_-]?key|token|access_token|secret|password)=/i.test(reference), '资源正文不能携带本机地址或凭据链接');
@@ -181,7 +179,7 @@ function exactObject(text: string, schema: z.ZodTypeAny)
   }
   catch
   {
-    fail('RESOURCE_PACKAGE', '资源包包含无效 JSON 定义')
+    throw new Error('资源包包含无效 JSON 定义')
   }
 
   const result = schema.safeParse(value);
@@ -204,7 +202,7 @@ export function parseWorkspacePackage(content: string, kind?: string): Workspace
   }
   catch
   {
-    fail('RESOURCE_PACKAGE', '该资源不是可导入的 CBIM 静态架构包')
+    throw new Error('该资源不是可导入的 CBIM 静态架构包')
   }
 
   const result = packageShape.safeParse(decoded);
@@ -320,7 +318,7 @@ export function parseWorkspacePackage(content: string, kind?: string): Workspace
         }
         catch
         {
-          fail('RESOURCE_PACKAGE', '资源包的 Workflow 执行约定无效')
+          throw new Error('资源包的 Workflow 执行约定无效')
         }
       }
 

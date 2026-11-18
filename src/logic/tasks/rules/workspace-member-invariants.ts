@@ -2,8 +2,6 @@
  * 作用定位：将岗位登记的单条审计规则接到工作区 DispatchStore 的提交与重放边界。
  * 设计原因：岗位仅可凭预先完整核验的许可附带其首次来源捕获；不能混入执行变化，退休须先解除责任，当前头只由审计派生；主工具必须绑定当时的活动周期、主实例与对话通道。
  */
-import { fail } from '../../../core/errors';
-
 import { applyWorkspaceMemberChange, workspaceMemberCanonical, workspaceMemberCommand, workspaceMemberReceipt } from '../../team/rules/workspace-member-rules';
 
 import type { WorkspaceMember, WorkspaceMemberChange, WorkspaceRegistryCursor } from '../../team/rules/workspace-member';
@@ -15,7 +13,7 @@ import type { KnowledgeSourceCapturePermit } from './knowledge-source-invariants
 /** 返回登记候选投影；调用方仍须先验证全部事务、可靠落盘后再发布。 */
 export function projectWorkspaceMemberMutation(previous: DispatchState, mutation: DispatchMutation, command: DispatchCommand, sourcePermit?: KnowledgeSourceCapturePermit): { workspaceMembers: WorkspaceMember[]; workspaceMemberChanges: WorkspaceMemberChange[]; registryCursor: WorkspaceRegistryCursor | null }
 {
-  const invalid = (condition: unknown, message: string) => { if (condition) fail('MEMBER_AUDIT', message) };
+  const invalid = (condition: unknown, message: string) => { if (condition) throw new Error(message) };
 
   invalid(Object.hasOwn(mutation, 'workspaceMembers') || Object.hasOwn(mutation, 'registryCursor'), '不能直接写入岗位头或登记游标');
 
@@ -54,7 +52,7 @@ export function projectWorkspaceMemberMutation(previous: DispatchState, mutation
     expected = workspaceMemberCommand(event.request, event.actor);
 
   if (event.next.state === 'retired' && (previous.moduleOwnerships ?? []).some(binding => binding.ownerMemberId === event.next.memberId))
-    fail('MEMBER_OWNERSHIP_ACTIVE', '岗位仍负责模块，请先明确解除或更换负责人');
+    throw new Error('岗位仍负责模块，请先明确解除或更换负责人');
 
   invalid(command.commandId !== expected.commandId || command.fingerprint !== expected.fingerprint, '岗位审计与原命令指纹不一致');
 

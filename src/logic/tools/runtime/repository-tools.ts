@@ -9,8 +9,6 @@ import { zodToJsonSchema } from 'zod-to-json-schema';
 
 import { isDeepStrictEqual } from 'node:util';
 
-import { fail } from '../../../core/errors';
-
 import { checkedJsonToolResult } from '../rules/results';
 
 import type { RunToolDescriptor } from '../rules/policy/tool-policy';
@@ -30,7 +28,7 @@ export class RepositoryTools
     const targets = port.targets.map(target => repositoryToolTargetSchema.parse(target));
 
     if (targets.some(target => target.workspaceId !== workspaceId) || new Set(targets.map(target => target.connectorId)).size !== targets.length)
-      fail('REPOSITORY_TOOL_BINDING', '本轮仓库端口身份不一致');
+      throw new Error('本轮仓库端口身份不一致');
 
     this.targets = new Map(targets.map(target => [target.connectorId, Object.freeze(target)]));
   }
@@ -61,7 +59,7 @@ export class RepositoryTools
     const parsed = schema.safeParse(input);
 
     if (!parsed.success)
-      fail('REPOSITORY_TOOL_INPUT', '仓库工具参数无效；只能提供链接器、资源及明确分页版本，不接受地址、凭据或授权字段');
+      throw new Error('仓库工具参数无效；只能提供链接器、资源及明确分页版本，不接受地址、凭据或授权字段');
 
     return parsed.data
   }
@@ -71,7 +69,7 @@ export class RepositoryTools
     const target = this.targets.get(id);
 
     if (!target)
-      fail('REPOSITORY_CONNECTION_NOT_GRANTED', '该链接器不属于本轮已捕获的只读授权');
+      throw new Error('该链接器不属于本轮已捕获的只读授权');
 
     return target
   }
@@ -87,7 +85,7 @@ export class RepositoryTools
   Describe(name: string, input: unknown): RunToolDescriptor
   {
     if (!this.Has(name))
-      fail('REPOSITORY_TOOL_UNKNOWN', '当前运行没有该仓库工具');
+      throw new Error('当前运行没有该仓库工具');
 
     const args = name === listName ? this.Parse(repositoryListInputSchema, input) : this.Parse(repositoryGetInputSchema, input);
 
@@ -121,6 +119,6 @@ export class RepositoryTools
       return checkedJsonToolResult(name, value, repositoryGetOutputSchema.refine(output => isDeepStrictEqual(output.scope, scope) && output.revision === args.expectedRevision && output.resource.id === args.resourceId && output.content.offset === (args.offset ?? 0) && Array.from(output.content.text).length <= (args.limit ?? 4096)));
     }
 
-    return fail('REPOSITORY_TOOL_UNKNOWN', '当前运行没有该仓库工具');
+    throw new Error('当前运行没有该仓库工具');
   }
 }

@@ -27,7 +27,7 @@ scripts/desktop-signing/     → tests/scripts/desktop-signing/
 pnpm test:module --list
 pnpm test:incremental --list
 pnpm test:incremental
-pnpm test:module --module core/platform/node/files
+pnpm test:module --module core/io
 pnpm test:module --module logic/web/service
 pnpm test:module --module logic/web/service --kind contract --list
 pnpm test:module --module project --kind integration --list

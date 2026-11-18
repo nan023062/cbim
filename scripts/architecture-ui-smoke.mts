@@ -1,3 +1,4 @@
+import { logDiagnostic } from '../src/core/debug/index';
 import {clickKnowledgeTreeAction,clickArchitectureAction} from './knowledge-tree-actions.mjs';
 import {_electron as electron,type ElectronApplication,type Locator,type Page} from 'playwright-core';
 import fs from 'node:fs/promises';
@@ -28,7 +29,7 @@ let desktop:ElectronApplication|undefined,page:Page|undefined,step='启动打包
 let fixture:Awaited<ReturnType<typeof desktopDispatchFixture>>|undefined;
 const startedAt=new Date().toISOString();
 const completed:string[]=[];
-function checkpoint(value:string){step=value;console.log('ARCHITECTURE_UI '+value)}
+function checkpoint(value:string){step=value;logDiagnostic('ARCHITECTURE_UI '+value)}
 async function poll<T>(read:()=>Promise<T>,accept:(value:T)=>boolean,label:string){
   const deadline=Date.now()+25000;let value=await read();
   while(!accept(value)&&Date.now()<deadline){await new Promise(resolve=>setTimeout(resolve,80));value=await read()}

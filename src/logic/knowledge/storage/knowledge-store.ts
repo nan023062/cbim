@@ -12,11 +12,9 @@ import path from 'node:path';
 
 import { randomUUID } from 'node:crypto';
 
-import { atomic, exists, readJson } from '../../../core/platform/node/files';
+import { atomic, exists, readJson } from '../../../core/io/text-files';
 
-import { hash, json } from '../../../core/platform/node/serialization';
-
-import { fail } from '../../../core/errors';
+import { hash, json } from '../../../core/io/serialization';
 
 import type { StoragePaths } from '../../workspace/ports/paths';
 
@@ -118,7 +116,7 @@ export class KnowledgeStore
   AttachSources(sources: KnowledgeSourceAuthority)
   {
     if (this.sources && this.sources !== sources)
-      fail('SOURCE_UNAVAILABLE', '来源协调器不可替换');
+      throw new Error('来源协调器不可替换');
 
     this.sources = sources
   }
@@ -149,7 +147,7 @@ export class KnowledgeStore
   private async JournalStatus(request: ChangeRequest): Promise<KnowledgeJournalStatus | undefined>
   {
     if (request.workspaceId !== this.owner.entry.id || !/^[A-Za-z0-9_-]{8,100}$/.test(request.requestId))
-      fail('IDENTITY', '知识回执查询身份不匹配');
+      throw new Error('知识回执查询身份不匹配');
 
     const file = path.join(this.owner.paths.Local(this.owner.entry.id, 'transactions'), request.requestId + '.json');
 
@@ -160,7 +158,7 @@ export class KnowledgeStore
       const stat = await fs.lstat(file);
 
       if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 16 * 1024 * 1024)
-        fail('RECOVERY', '知识事务记录不安全或过大');
+        throw new Error('知识事务记录不安全或过大');
 
       value = await readJson<Journal>(file)
     }
@@ -173,31 +171,31 @@ export class KnowledgeStore
     }
 
     if (value.version !== 1 || value.workspaceId !== request.workspaceId || value.requestId !== request.requestId || value.fingerprint !== hash(json(request)))
-      fail('IDEMPOTENCY', '原知识事务与请求不一致，请核实记录');
+      throw new Error('原知识事务与请求不一致，请核实记录');
 
     if (!['prepared', 'committing', 'committed', 'rolled_back', 'recovery_required'].includes(value.state))
-      fail('RECOVERY', '知识事务状态无效');
+      throw new Error('知识事务状态无效');
 
     if (value.governance && (!['intentId', 'protectionId', 'proposalId', 'decisionId'].every(key => typeof value.governance?.[key as keyof KnowledgeGovernanceBinding] === 'string') || Object.keys(value.governance).length !== 4))
-      fail('RECOVERY', '知识事务治理来源无效');
+      throw new Error('知识事务治理来源无效');
 
     const map = (item: unknown): item is Record<string, string | null> => !!item && typeof item === 'object' && !Array.isArray(item) && Object.entries(item).every(([key, text]) => isKnowledge(key) && (text === null || typeof text === 'string'));
 
     if (!map(value.before) || !map(value.after) || json(Object.keys(value.before).sort()) !== json(Object.keys(value.after).sort()) || request.changes.some(change => !Object.hasOwn(value.after, change.path) || value.after[change.path] !== change.text) || Object.keys(value.after).some(key => !request.changes.some(change => change.path === key) && !INDEXES.includes(key)))
-      fail('RECOVERY', '原知识事务前后正文与请求不一致');
+      throw new Error('原知识事务前后正文与请求不一致');
 
     if (value.source)
     {
       const source = checkedSourceJournal(value.source, value.before, value.after, request);
 
       if (!this.sources)
-        fail('SOURCE_UNAVAILABLE', '来源事务缺少协调器');
+        throw new Error('来源事务缺少协调器');
 
       await this.sources.Verify(source, value.state !== 'prepared' && value.state !== 'rolled_back')
     }
 
     if (!value.source && this.sources && (await this.sources.Transitions()).some(item => item.requestId === request.requestId))
-      fail('SOURCE_JOURNAL_INVALID', '原来源事务的 journal 标记缺失，不能降级为旧知识回执');
+      throw new Error('原来源事务的 journal 标记缺失，不能降级为旧知识回执');
 
     const status: KnowledgeJournalStatus = { state: value.state, before: structuredClone(value.before), after: structuredClone(value.after), ...(value.governance ? { governance: structuredClone(value.governance) } : {}) };
 
@@ -206,7 +204,7 @@ export class KnowledgeStore
       const result = value.result;
 
       if (!result || result.state !== 'committed' || result.workspaceId !== request.workspaceId || result.instanceId !== request.instanceId || result.requestId !== request.requestId || typeof result.revision !== 'string' || !Array.isArray(result.changed) || result.changed.some(item => typeof item !== 'string') || json([...result.changed].sort()) !== json(Object.keys(value.after).sort()))
-        fail('RECOVERY', '已提交知识事务缺少有效回执');
+        throw new Error('已提交知识事务缺少有效回执');
 
       status.result = structuredClone(result)
     }
@@ -219,7 +217,7 @@ export class KnowledgeStore
   /** 私有治理操作与所有知识提交共用一个队列；回调中的 apply 只解析已保存的真实意图。 */
   Governed<T>(operation: (transaction: KnowledgeGovernanceTransaction) => Promise<T>): Promise<T>
   {
-    return this.Serial(async () => { this.owner.Assert(); this.activeOperations++; try { return await operation({ Snapshot: () => this.Snapshot(), Preview: request => this.Draft(request), Journal: request => this.JournalStatus(request), Apply: async intentId => { if (!this.governance) fail('GOVERNANCE_UNAVAILABLE', '治理存储尚未装配'); const request = await this.governance.Request(intentId); return this.CommitInternal(request, intentId); } }) } finally { this.activeOperations-- } });
+    return this.Serial(async () => { this.owner.Assert(); this.activeOperations++; try { return await operation({ Snapshot: () => this.Snapshot(), Preview: request => this.Draft(request), Journal: request => this.JournalStatus(request), Apply: async intentId => { if (!this.governance) throw new Error('治理存储尚未装配'); const request = await this.governance.Request(intentId); return this.CommitInternal(request, intentId); } }) } finally { this.activeOperations-- } });
   }
 
   /** 仅证明原请求是否有任何事务记录；已回滚/未完成也算存在，不冒称从未受理。 */
@@ -228,7 +226,7 @@ export class KnowledgeStore
     this.owner.Assert();
 
     if (request.workspaceId !== this.owner.entry.id || !/^[A-Za-z0-9_-]{8,100}$/.test(request.requestId))
-      fail('IDENTITY', '知识回执查询身份不匹配');
+      throw new Error('知识回执查询身份不匹配');
 
     return this.Serial(async () => { this.owner.Assert(); try { await fs.lstat(path.join(this.owner.paths.Local(this.owner.entry.id, 'transactions'), request.requestId + '.json')); return true } catch (error: any) { if (error.code === 'ENOENT') return false; throw error } })
   }
@@ -248,12 +246,12 @@ export class KnowledgeStore
         const d = await readJson(manifest);
 
         if (d.formatVersion !== 1 || d.rulesVersion !== 1)
-          fail('INCOMPATIBLE', '知识版本不兼容；请备份并 review 迁移方案，程序不会自动重写')
+          throw new Error('知识版本不兼容；请备份并 review 迁移方案，程序不会自动重写')
       }
 
       for (const required of ['workspace', 'team', 'connectors'])
         if (!await exists(path.join(dir, required)))
-          fail('INCOMPATIBLE', `已有 .cbim 缺少 ${required}；请先补全或迁移，不覆盖现有内容`);
+          throw new Error(`已有 .cbim 缺少 ${required}；请先补全或迁移，不覆盖现有内容`);
 
       return;
     }
@@ -303,7 +301,7 @@ skills/、workflows/ 及其资料目录不属于组织或模块节点。
 `);
 
       if (await exists(dir))
-        fail('CONFLICT', '初始化期间出现 .cbim，请检查后重新打开');
+        throw new Error('初始化期间出现 .cbim，请检查后重新打开');
 
       await fs.rename(staging, dir);
     }
@@ -357,17 +355,17 @@ skills/、workflows/ 及其资料目录不属于组织或模块节点。
   private async Draft(request: ChangeRequest): Promise<Preview>
   {
     if (!plannedRequestSchema.safeParse(request).success)
-      fail('REQUEST_INVALID', '知识请求只接受原身份、版本和文件变更；来源证明只能来自私有计划');
+      throw new Error('知识请求只接受原身份、版本和文件变更；来源证明只能来自私有计划');
 
     this.owner.Assert(request);
 
     if (!/^[A-Za-z0-9_-]{8,100}$/.test(request.requestId))
-      fail('REQUEST_ID', '请求标识须为 8–100 位字母、数字、下划线或横线');
+      throw new Error('请求标识须为 8–100 位字母、数字、下划线或横线');
 
     const snapshot = await this.Read();
 
     if (snapshot.revision !== request.revision)
-      fail('CONFLICT', '知识已被外部修改，请重新读取并合并');
+      throw new Error('知识已被外部修改，请重新读取并合并');
 
     const map = new Map(snapshot.files.map(f => [f.path, f.text]));
 
@@ -378,15 +376,15 @@ skills/、workflows/ 及其资料目录不属于组织或模块节点。
       await this.owner.paths.Knowledge(this.owner.entry.path, change.path);
 
       if (!isKnowledge(change.path) || INDEXES.includes(change.path) || change.path === '.cbim/project.json')
-        fail('TYPE', '该路径不是可编辑的正式知识类型，索引与版本由程序维护');
+        throw new Error('该路径不是可编辑的正式知识类型，索引与版本由程序维护');
 
       if (seen.has(change.path.toLowerCase()))
-        fail('DUPLICATE', '一个事务不能重复修改同一文件');
+        throw new Error('一个事务不能重复修改同一文件');
 
       seen.add(change.path.toLowerCase());
 
       if (change.text !== null && Buffer.byteLength(change.text) > 2 * 1024 * 1024)
-        fail('SIZE', '单文件不能超过 2 MiB');
+        throw new Error('单文件不能超过 2 MiB');
 
       change.text === null ? map.delete(change.path) : map.set(change.path, change.text)
     }
@@ -430,7 +428,7 @@ skills/、workflows/ 及其资料目录不属于组织或模块节点。
   {
     const loaded = await readKnowledgePlan(this.owner, reference);
 
-    return this.Serial(async () => { this.owner.Assert(); const file = path.join(this.owner.paths.Local(this.owner.entry.id, 'transactions'), loaded.request.requestId + '.json'); if (await exists(file)) { const status = await this.JournalStatus(loaded.request); if (status?.state === 'committed' && status.result) return status.result; fail('RECOVERY', '原知识计划尚未核实，不允许重放') } if (!loaded.plan) fail('SOURCE_PLAN_INVALID', '旧计划缺少来源语义，请重新预览'); this.owner.Assert(loaded.request); this.activeOperations++; try { return await this.CommitInternal(loaded.request, undefined, loaded.plan) } finally { this.activeOperations-- } })
+    return this.Serial(async () => { this.owner.Assert(); const file = path.join(this.owner.paths.Local(this.owner.entry.id, 'transactions'), loaded.request.requestId + '.json'); if (await exists(file)) { const status = await this.JournalStatus(loaded.request); if (status?.state === 'committed' && status.result) return status.result; throw new Error('原知识计划尚未核实，不允许重放') } if (!loaded.plan) throw new Error('旧计划缺少来源语义，请重新预览'); this.owner.Assert(loaded.request); this.activeOperations++; try { return await this.CommitInternal(loaded.request, undefined, loaded.plan) } finally { this.activeOperations-- } })
   }
 
   /** 调用方已经持有 serial；开始后 close 必须 drain，不能把 closing 当成中途取消提交。 */
@@ -445,32 +443,32 @@ skills/、workflows/ 及其资料目录不属于组织或模块节点。
       const old = await this.JournalStatus(request);
 
       if (intentId && old?.governance?.intentId !== intentId)
-        fail('GOVERNANCE_DATA', '原知识事务缺少匹配的治理来源');
+        throw new Error('原知识事务缺少匹配的治理来源');
 
       if (old?.state === 'committed' && old.result)
         return old.result;
 
-      fail('RECOVERY', '此前请求未提交或已回滚，请重新读取后使用新请求标识')
+      throw new Error('此前请求未提交或已回滚，请重新读取后使用新请求标识')
     }
 
     const preview = await this.Draft(request);
 
     if (!preview.validation.structural)
-      fail('VALIDATION', preview.validation.issues.filter(x => x.severity === 'error').map(x => `${x.path}: ${x.message}`).join('\n'));
+      throw new Error(preview.validation.issues.filter(x => x.severity === 'error').map(x => `${x.path}: ${x.message}`).join('\n'));
 
     const current = await this.Read();
 
     if (current.revision !== request.revision)
-      fail('CONFLICT', '校验期间知识已变化');
+      throw new Error('校验期间知识已变化');
 
     const governance = await this.governance?.Verify(current, preview, request, value => this.JournalStatus(value), intentId);
 
     // 新调用仍在入口检查 running。此事务已持有 serial，关闭正在等待它；这里只复核身份，不能因进入 closing 丢弃已受理提交。
     if (request.workspaceId !== this.owner.entry.id || request.instanceId !== this.owner.instanceId)
-      fail('STALE_INSTANCE', '知识提交的工程或运行实例身份已变化');
+      throw new Error('知识提交的工程或运行实例身份已变化');
 
     if (intentId && !governance)
-      fail('GOVERNANCE_UNAVAILABLE', '治理提交缺少可信来源');
+      throw new Error('治理提交缺少可信来源');
 
     const before: Record<string, string | null> = {},
       after: Record<string, string | null> = {};
@@ -504,7 +502,7 @@ skills/、workflows/ 及其资料目录不属于组织或模块节点。
     const journal: Journal = { version: 1, workspaceId: this.owner.entry.id, requestId: request.requestId, fingerprint: preview.fingerprint, state: 'prepared', before, after, ...(governance ? { governance } : {}), ...(source ? { source } : {}) };
 
     if (Buffer.byteLength(json(journal)) > 16 * 1024 * 1024)
-      fail('SOURCE_LIMIT', '完整知识事务记录超过容量，未写入知识');
+      throw new Error('完整知识事务记录超过容量，未写入知识');
 
     try
     {
@@ -556,7 +554,7 @@ skills/、workflows/ 及其资料目录不属于组织或模块节点。
         const live = await this.Read();
 
         if (live.revision !== revision([...expected.values()]))
-          fail('CONFLICT', '提交期间检测到外部修改，正在安全回滚');
+          throw new Error('提交期间检测到外部修改，正在安全回滚');
 
         await this.Write(p, text);
 
@@ -571,7 +569,7 @@ skills/、workflows/ 及其资料目录不属于组织或模块节点。
       const final = await this.Read();
 
       if (final.revision !== revision([...expected.values()]))
-        fail('CONFLICT', '提交末尾出现外部修改');
+        throw new Error('提交末尾出现外部修改');
 
       const result = { state: 'committed', workspaceId: this.owner.entry.id, instanceId: this.owner.instanceId, requestId: request.requestId, revision: final.revision, changed: Object.keys(after) };
 
@@ -589,7 +587,7 @@ skills/、workflows/ 及其资料目录不属于组织或模块节点。
     {
       // committed 写盘可能已接受但确认失败，不能据异常覆盖原成功或开始回滚。
       if (journal.state === 'committed')
-        fail('SOURCE_UNKNOWN', '知识提交结果未确认，请保留原请求并重新打开核实');
+        throw new Error('知识提交结果未确认，请保留原请求并重新打开核实');
 
       await this.Rollback(journal, journalPath);
 
@@ -608,7 +606,7 @@ skills/、workflows/ 及其资料目录不属于组织或模块节点。
       }
       catch
       {
-        fail('SOURCE_FINAL_PENDING', '知识已提交，来源记录待核实；保留原请求，不能重做写入')
+        throw new Error('知识已提交，来源记录待核实；保留原请求，不能重做写入')
       }
     }
 
@@ -688,19 +686,19 @@ skills/、workflows/ 及其资料目录不属于组织或模块节点。
         stat = await fs.lstat(p);
 
       if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 16 * 1024 * 1024)
-        fail('RECOVERY', '知识事务文件无效');
+        throw new Error('知识事务文件无效');
 
       const journal = await readJson<Journal>(p);
 
       if (journal.workspaceId !== this.owner.entry.id)
-        fail('IDENTITY', '事务记录属于其他工程');
+        throw new Error('事务记录属于其他工程');
 
       const fileId = file.slice(0, -5);
 
       if (journal.source || sourceRecords.has(fileId))
       {
         if (!journal.source || !this.sources || fileId !== journal.requestId)
-          fail('SOURCE_JOURNAL_INVALID', '来源屏障缺少匹配的原知识日志');
+          throw new Error('来源屏障缺少匹配的原知识日志');
 
         await this.JournalStatus(journal.source.request);
 
@@ -710,12 +708,12 @@ skills/、workflows/ 及其资料目录不属于组织或模块节点。
       if (journal.governance || this.governance?.HasIntent(fileId))
       {
         if (!this.governance)
-          fail('GOVERNANCE_UNAVAILABLE', '治理日志缺少私有来源');
+          throw new Error('治理日志缺少私有来源');
 
         const request = await this.governance.Request(fileId);
 
         if (request.requestId !== journal.requestId)
-          fail('GOVERNANCE_DATA', '治理事务文件名与原意图不一致');
+          throw new Error('治理事务文件名与原意图不一致');
 
         await this.JournalStatus(request)
       }
@@ -730,7 +728,7 @@ skills/、workflows/ 及其资料目录不属于组织或模块节点。
           const live = await exists(target) ? await fs.readFile(target, 'utf8') : null;
 
           if (live !== before)
-            fail('SOURCE_RECOVERY_REQUIRED', '来源准备尚未获准写入，当前文件与原 before 不同；保留现场等待人工核实')
+            throw new Error('来源准备尚未获准写入，当前文件与原 before 不同；保留现场等待人工核实')
         }
 
         journal.state = 'rolled_back';
@@ -742,7 +740,7 @@ skills/、workflows/ 及其资料目录不属于组织或模块节点。
         await this.Rollback(journal, p);
 
         if (journal.state === 'recovery_required')
-          fail('RECOVERY', '未完成事务与外部修改冲突；请根据本地事务证据人工合并后重新打开');
+          throw new Error('未完成事务与外部修改冲突；请根据本地事务证据人工合并后重新打开');
       }
 
       if (journal.source && ['committed', 'rolled_back'].includes(journal.state))
@@ -750,7 +748,7 @@ skills/、workflows/ 及其资料目录不属于组织或模块节点。
     }
 
     if ([...sourceRecords.keys()].some(id => !seen.has(id)))
-      fail('SOURCE_JOURNAL_INVALID', '来源历史引用的原知识日志缺失，不能解除屏障');
+      throw new Error('来源历史引用的原知识日志缺失，不能解除屏障');
   }
 
   async PlanMove(snapshot: Snapshot, from: string, to: string | null): Promise<ChangeRequest>
@@ -767,7 +765,7 @@ skills/、workflows/ 及其资料目录不属于组织或模块节点。
     const moved = snapshot.files.filter(f => prefix(f.path));
 
     if (!moved.length)
-      fail('NOT_FOUND', '移动或删除对象不存在');
+      throw new Error('移动或删除对象不存在');
 
     const changes: Change[] = [];
 
@@ -778,7 +776,7 @@ skills/、workflows/ 及其资料目录不属于组织或模块节点。
       const newPath = mapPath(f.path);
 
       if (to && newPath !== f.path && snapshot.files.some(x => x.path === newPath))
-        fail('CONFLICT', '目标已存在');
+        throw new Error('目标已存在');
 
       let text = f.text;
 
@@ -787,7 +785,7 @@ skills/、workflows/ 及其资料目录不属于组织或模块节点。
         const owner = path.posix.dirname(f.path),
           newOwner = path.posix.dirname(newPath);
 
-        const rewrite = (value: any, key = ''): any => { if (typeof value === 'string') { if (['id', 'children'].includes(key) && prefix(value)) { if (!to) fail('REFERENCE', `仍被 ${f.path} 引用，请在事务中显式修正引用`); return mapPath(value) } if (['overview', 'reference', 'work_principles'].includes(key)) { const resolved = path.posix.normalize(path.posix.join(owner, value)); if (prefix(resolved) && !to && !prefix(f.path)) fail('REFERENCE', `仍被 ${f.path} 引用`); return path.posix.relative(newOwner, mapPath(resolved)) } return value } if (Array.isArray(value)) return value.map(v => rewrite(v, key)); if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, rewrite(v, k)])); return value };
+        const rewrite = (value: any, key = ''): any => { if (typeof value === 'string') { if (['id', 'children'].includes(key) && prefix(value)) { if (!to) throw new Error(`仍被 ${f.path} 引用，请在事务中显式修正引用`); return mapPath(value) } if (['overview', 'reference', 'work_principles'].includes(key)) { const resolved = path.posix.normalize(path.posix.join(owner, value)); if (prefix(resolved) && !to && !prefix(f.path)) throw new Error(`仍被 ${f.path} 引用`); return path.posix.relative(newOwner, mapPath(resolved)) } return value } if (Array.isArray(value)) return value.map(v => rewrite(v, key)); if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, rewrite(v, k)])); return value };
 
         if (!prefix(f.path) || to)
         {
@@ -800,7 +798,7 @@ skills/、workflows/ 及其资料目录不属于组织或模块节点。
         }
       }
       else if (f.path.endsWith('.md'))
-        text = text.replace(/\]\(([^)]+)\)/g, (match, link: string) => { if (/^[a-z]+:/i.test(link) || link.startsWith('#')) return match; const [location, anchor] = link.split('#'); const resolved = path.posix.normalize(path.posix.join(path.posix.dirname(f.path), location)); if (prefix(resolved) && !to && !prefix(f.path)) fail('REFERENCE', `仍被 ${f.path} 的 Markdown 链接引用`); const updated = path.posix.relative(path.posix.dirname(newPath), mapPath(resolved)); return `](${updated}${anchor ? '#' + anchor : ''})` });
+        text = text.replace(/\]\(([^)]+)\)/g, (match, link: string) => { if (/^[a-z]+:/i.test(link) || link.startsWith('#')) return match; const [location, anchor] = link.split('#'); const resolved = path.posix.normalize(path.posix.join(path.posix.dirname(f.path), location)); if (prefix(resolved) && !to && !prefix(f.path)) throw new Error(`仍被 ${f.path} 的 Markdown 链接引用`); const updated = path.posix.relative(path.posix.dirname(newPath), mapPath(resolved)); return `](${updated}${anchor ? '#' + anchor : ''})` });
 
       if (INDEXES.includes(f.path))
         continue;

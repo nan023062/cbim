@@ -2,8 +2,6 @@
  * 作用定位：按原身份、版本与请求 ID 刷新派生知识索引，独立于只读领域查询。
  * 设计原因：刷新需要可靠事务能力，不能透过查询对象隐式写入；只接收核身份、读快照、查原回执与提交四项端口，保留重复请求及未知结果语义。
  */
-import { fail } from '../../../core/errors';
-
 import { knowledgeRefreshRequest, type KnowledgeRefreshInput } from './knowledge-write-input';
 
 import type { ChangeRequest, KnowledgeCommit, KnowledgeSnapshotReader } from './types';
@@ -38,7 +36,7 @@ export class KnowledgeRefresh
     const s = await this.workspace.Snapshot();
 
     if (!previous && s.revision !== request.revision)
-      fail('CONFLICT', '知识已变化，请重新读取；不能将原刷新请求绑定到今日版本');
+      throw new Error('知识已变化，请重新读取；不能将原刷新请求绑定到今日版本');
 
     if (!previous && !s.validation!.structural)
       return { ...context(s), state: 'invalid', indexesUpdated: false, validation: s.validation };

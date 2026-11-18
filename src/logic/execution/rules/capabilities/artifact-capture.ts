@@ -6,8 +6,6 @@
  */
 import { randomUUID } from 'node:crypto';
 
-import { fail } from '../../../../core/errors';
-
 import { ArtifactTools, artifactCaptureToolName } from '../../../evidence/rules/artifact-tools';
 
 import { artifactCaptureInputSchema, artifactBaselineStagedSchema, artifactFileFactSchema, artifactLimits, type ArtifactCaptureInput, type ArtifactFileFact, type ArtifactCapturedFile, type ArtifactBaselineStaged, type ArtifactBaselineRef } from '../../../evidence/rules/artifact-baseline';
@@ -107,16 +105,16 @@ export class RunArtifactCapture
     const reserved = this.reserved;
 
     if (!reserved || reserved.id !== id || reserved.consumed || JSON.stringify(reserved.input) !== JSON.stringify(input))
-      fail('ARTIFACT_CALL', '文件采集必须来自已授权的一次性调用');
+      throw new Error('文件采集必须来自已授权的一次性调用');
 
     reserved.consumed = true;
 
-    const check = () => { this.controller.signal.throwIfAborted(); this.context.AssertReady(id); if (this.context.Current()?.version !== input.expectedTaskProgressVersion) fail('ARTIFACT_PROGRESS_CHANGED', '任务进度已变化，请重新读取后采集') };
+    const check = () => { this.controller.signal.throwIfAborted(); this.context.AssertReady(id); if (this.context.Current()?.version !== input.expectedTaskProgressVersion) throw new Error('任务进度已变化，请重新读取后采集') };
 
     check();
 
     if (this.Refs().length >= artifactLimits.baselines)
-      fail('ARTIFACT_LIMIT', '本轮最多保存 8 份成功文件基线');
+      throw new Error('本轮最多保存 8 份成功文件基线');
 
     const facts = artifactSources(this.events, this.binding, input.sourceToolCallIds),
       lastEffectSeq = facts.lastEffectSeq;
@@ -130,18 +128,18 @@ export class RunArtifactCapture
     check();
 
     if (returned.length !== facts.sources.length)
-      fail('ARTIFACT_FILES_INVALID', '文件端口未返回完整对应结果');
+      throw new Error('文件端口未返回完整对应结果');
 
     const files = new Map<string, ArtifactCapturedFile>();
 
-    returned.forEach((raw, index) => { const fact = artifactFileFactSchema.parse(raw), sourceId = facts.sources[index].toolCallId, old = files.get(fact.relativePath); if (this.port.NormalizePath(fact.relativePath) !== this.port.NormalizePath(facts.sources[index].path)) fail('ARTIFACT_FILES_INVALID', '文件端口返回了不属于原调用的路径'); if (old) { if (old.byteLength !== fact.byteLength || old.sha256 !== fact.sha256) fail('ARTIFACT_CHANGED', '重复文件在读取期间发生变化'); old.sourceToolCallIds.push(sourceId) } else files.set(fact.relativePath, { ...fact, sourceToolCallIds: [sourceId] }); });
+    returned.forEach((raw, index) => { const fact = artifactFileFactSchema.parse(raw), sourceId = facts.sources[index].toolCallId, old = files.get(fact.relativePath); if (this.port.NormalizePath(fact.relativePath) !== this.port.NormalizePath(facts.sources[index].path)) throw new Error('文件端口返回了不属于原调用的路径'); if (old) { if (old.byteLength !== fact.byteLength || old.sha256 !== fact.sha256) throw new Error('重复文件在读取期间发生变化'); old.sourceToolCallIds.push(sourceId) } else files.set(fact.relativePath, { ...fact, sourceToolCallIds: [sourceId] }); });
 
     await this.port.AssertCurrentKnowledge();
 
     check();
 
     if (artifactSources(this.events, this.binding, input.sourceToolCallIds).lastEffectSeq !== lastEffectSeq)
-      fail('ARTIFACT_EFFECT_CHANGED', '采集期间出现了新的副作用');
+      throw new Error('采集期间出现了新的副作用');
 
     const baseline = artifactBaselineStagedSchema.parse({ version: 1, baselineId: randomUUID(), captureToolCallId: id, binding: this.binding, knowledgeRevision: this.port.knowledgeRevision, progressVersion: input.expectedTaskProgressVersion, capturedAt: new Date().toISOString(), lastEffectSeq, sourceCalls: facts.sources.map(({ path: _path, ...source }) => source), files: [...files.values()] });
 

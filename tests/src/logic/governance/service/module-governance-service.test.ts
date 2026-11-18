@@ -10,7 +10,7 @@ import {seedModuleGovernance,moduleGovernanceFixture as data} from './support/mo
 import {WorkspacePackages} from '../../../../../src/logic/resources/packages/workspace-packages';
 import {ArchitectureService} from '../../../../../src/logic/workspace/service/architecture-service';
 import {moduleGovernanceReceiptSchema,type ModuleGovernanceReceipt} from '../../../../../src/logic/governance/rules/module-governance';
-import {json} from '../../../../../src/core/platform/node/serialization';
+import {json} from '../../../../../src/core/io/serialization';
 
 async function setup(){const f=await fixture();try{
   const seeded=await seedModuleGovernance(f.app,f.a),ws=f.app.Workspace(seeded.entry.id),identity=seeded.identity;

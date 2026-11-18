@@ -6,7 +6,7 @@ import {spawn} from 'node:child_process';
 import {fixture} from './src/logic/application/support/helpers';
 import {request} from './src/logic/knowledge/rules/data/knowledge';
 import {internalKnowledge} from './src/logic/tools/runtime/support/knowledge-tool-fixture';
-import {exists} from '../src/core/platform/node/files/index';
+import {exists} from '../src/core/io/text-files';
 function child(mode:string,root:string,user:string){return new Promise<{code:number|null;output:string}>((resolve,reject)=>{const p=spawn(process.execPath,['--import','tsx','tests/src/logic/workspace/service/support/process-child.ts',mode,root,user],{windowsHide:true});let output='';p.stdout.on('data',x=>output+=x);p.stderr.on('data',x=>output+=x);p.on('error',reject);p.on('exit',code=>resolve({code,output}))})}
 
 it('真正进程终止后恢复事务、释放内核锁和失效旧实例',async()=>{

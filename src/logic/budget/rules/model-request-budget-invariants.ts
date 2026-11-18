@@ -5,8 +5,6 @@
  */
 import { isDeepStrictEqual as equal } from 'node:util';
 
-import { fail } from '../../../core/errors';
-
 import { requestBudgetModelFor } from './model-request-configuration';
 
 import { workspaceMemberModelHash } from '../../team/rules/workspace-member-rules';
@@ -20,7 +18,7 @@ import { requestBudgetRecords, requestBudgetReport, requestBudgetDecision, reque
 function check(value: unknown, message: string): asserts value
 {
   if (!value)
-    fail('MODEL_REQUEST_BUDGET_AUDIT', message)
+    throw new Error(message)
 }
 
 /** 仅新预留和发送意图要求当前在途身份；既有请求终态不能被停止或后来配置变化抹掉。 */

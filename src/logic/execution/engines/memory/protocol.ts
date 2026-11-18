@@ -5,7 +5,7 @@
  */
 import { z } from 'zod';
 
-import { JsonUtils } from '../../../../core/utility';
+import { JsonUtils } from '../../../../core/io';
 
 const toolCall = z.object({ id: z.string().min(1).max(128), type: z.literal('function'), function: z.object({ name: z.string().regex(/^cbim_[a-z0-9_]+$/), arguments: z.string().max(262144) }).strict() }).strict();
 

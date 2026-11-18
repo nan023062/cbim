@@ -3,7 +3,7 @@ import {automaticReturnSchema,validateAutomaticReturns,type AutomaticReturn} fro
 import type {DispatchScope} from '../../../../../src/logic/tasks/rules/dispatch-scope';
 import type {GraphSnapshot} from '../../../../../src/logic/tasks/rules/graph-types';
 import {AutomaticReturnService} from '../../../../../src/logic/dispatch/runtime/automatic-return-service';
-import {hash,json} from '../../../../../src/core/platform/node/serialization';
+import {hash,json} from '../../../../../src/core/io/serialization';
 import {workspaceMemberModelHash} from '../../../../../src/logic/team/rules/workspace-member-rules';
 import type {WorkspaceMemberModelSnapshot} from '../../../../../src/logic/team/rules/workspace-member';
 import type {KnowledgeWorkspace} from '../../../../../src/logic/knowledge/rules/ports';

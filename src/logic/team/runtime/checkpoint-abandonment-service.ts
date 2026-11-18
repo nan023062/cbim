@@ -11,9 +11,7 @@ import { isDeepStrictEqual } from 'node:util';
 
 import { z } from 'zod';
 
-import { fail } from '../../../core/errors';
-
-import { hash, json } from '../../../core/platform/node/serialization';
+import { hash, json } from '../../../core/io/serialization';
 
 import { contextualMainCommand } from '../../tasks/runtime/main-command-request';
 
@@ -46,7 +44,7 @@ export class CheckpointAbandonmentService
       context = contextSchema.safeParse({ ...identity, scopeId, mainRunId, commandId });
 
     if (!parsed.success || !context.success)
-      fail('CHECKPOINT_HANDOFF_INPUT', '检查点放弃参数或主运行身份无效');
+      throw new Error('检查点放弃参数或主运行身份无效');
 
     const input = parsed.data,
       fixed = context.data,
@@ -62,7 +60,7 @@ export class CheckpointAbandonmentService
     if (prior)
     {
       if (prior.fingerprint !== command.fingerprint)
-        fail('COMMAND_ID_CONFLICT', '相同命令 ID 已用于不同请求');
+        throw new Error('相同命令 ID 已用于不同请求');
 
       return prior.receipt as AbandonCheckpointReceipt
     }
@@ -83,12 +81,12 @@ export class CheckpointAbandonmentService
     if (prior)
       return prior;
 
-    const check = () => { this.owner.Assert(); assertCurrent(); if (fixed.workspaceId !== this.owner.entry.id) fail('GRAPH_IDENTITY_MISMATCH', '检查点不属于当前工作区') };
+    const check = () => { this.owner.Assert(); assertCurrent(); if (fixed.workspaceId !== this.owner.entry.id) throw new Error('检查点不属于当前工作区') };
 
     check();
 
     if (!this.ports)
-      fail('CHECKPOINT_HANDOFF_UNAVAILABLE', '未装配检查点历史核实端口');
+      throw new Error('未装配检查点历史核实端口');
 
     const observed = structuredClone(checkpointAbandonmentSelection(await this.store.Read(), identity, scopeId, mainRunId, input));
 
@@ -106,7 +104,7 @@ export class CheckpointAbandonmentService
 
       // selector 不含原 checkpoint 结果信封，迟到的纯 ACK 不会冒充任务/运行变化，也不需要由本操作确认。
       if (!isDeepStrictEqual(selected, observed))
-        fail('CHECKPOINT_HANDOFF_STALE', '历史核实期间目标、任务、证明或原实例状态已经变化');
+        throw new Error('历史核实期间目标、任务、证明或原实例状态已经变化');
 
       const { graph, scope, task, member, run, checkpoint, resumeAssignment } = selected,
         now = new Date().toISOString();

@@ -6,7 +6,7 @@ import {spawn} from 'node:child_process';
 import {fixture} from '../../application/support/helpers';
 import {request} from '../../knowledge/rules/data/knowledge';
 import {internalKnowledge} from './support/knowledge-tool-fixture';
-import {exists} from '../../../../../src/core/platform/node/files/index';
+import {exists} from '../../../../../src/core/io/text-files';
 function child(mode:string,root:string,user:string){return new Promise<{code:number|null;output:string}>((resolve,reject)=>{const p=spawn(process.execPath,['--import','tsx','tests/src/logic/workspace/service/support/process-child.ts',mode,root,user],{windowsHide:true});let output='';p.stdout.on('data',x=>output+=x);p.stderr.on('data',x=>output+=x);p.on('error',reject);p.on('exit',code=>resolve({code,output}))})}
 it('内部知识服务隔离两个工作区，拒绝跨工作区身份和错误实例',async()=>{
   const f=await fixture();try{

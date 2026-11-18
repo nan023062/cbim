@@ -4,8 +4,6 @@
  */
 import { z } from 'zod';
 
-import { fail } from '../../../core/errors';
-
 const runId = z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/);
 
 export const scopeRunTrackingSchema = z.object({ version: z.literal(1), mainRunIds: z.array(runId).min(1).max(32).refine(ids => new Set(ids).size === ids.length) }).strict();
@@ -32,7 +30,7 @@ export function appendScopeMainRun<T extends TrackingScope>(scope: T, id: string
   const parsed = runId.safeParse(id);
 
   if (!parsed.success)
-    fail('GOAL_RUN_CONFLICT', '主运行身份无效');
+    throw new Error('主运行身份无效');
 
   if (!scope.runTracking)
     return scope;
@@ -40,16 +38,16 @@ export function appendScopeMainRun<T extends TrackingScope>(scope: T, id: string
   const tracking = scopeRunTrackingSchema.safeParse(scope.runTracking);
 
   if (!tracking.success)
-    fail('GOAL_RUN_CONFLICT', '周期主运行清单无效');
+    throw new Error('周期主运行清单无效');
 
   if (tracking.data.mainRunIds.includes(id))
     return scope;
 
   if (scope.status !== 'active')
-    fail('DISPATCH_SCOPE_CLOSED', '只有活动周期可以登记新主运行');
+    throw new Error('只有活动周期可以登记新主运行');
 
   if (tracking.data.mainRunIds.length >= 32)
-    fail('GOAL_CYCLE_LIMIT', '本次目标已达到 32 次主调度运行');
+    throw new Error('本次目标已达到 32 次主调度运行');
 
   return { ...scope, runTracking: { version: 1, mainRunIds: [...tracking.data.mainRunIds, id] } };
 }

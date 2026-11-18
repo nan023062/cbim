@@ -7,7 +7,7 @@ import {workspaceMemberSchema,workspaceMemberModelSnapshotSchema,workspaceMember
 import {workspaceMemberModelHash,workspaceMemberCapabilityHash,workspaceMemberHash,workspaceMemberCommand,workspaceMemberPreviewBasis,workspaceMemberProposed,workspaceMemberReceipt,workspaceMemberChangedFields,applyWorkspaceMemberChange} from '../../../../../src/logic/team/rules/workspace-member-rules';
 import {projectWorkspaceMemberMutation} from '../../../../../src/logic/tasks/rules/workspace-member-invariants';
 import {FileDispatchStore} from '../../../../../src/logic/dispatch/storage/dispatch-store';
-import {hash} from '../../../../../src/core/platform/node/serialization';
+import {hash} from '../../../../../src/core/io/serialization';
 import type {DispatchState,DispatchMutation} from '../../../../../src/logic/dispatch/rules/dispatch-storage';
 
 const workspaceId='_workspace',instanceId=randomUUID(),time='2026-11-07T12:00:00.000Z';

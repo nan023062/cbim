@@ -3,7 +3,7 @@
  * 设计原因：不复用运行时反馈服务或凭据；地址、GET、期限及字节上限由更新模块决定，仅组合 utility 的流消费机制。
  * 算法入口：通过 Core ByteUtils 静态方法复用机制，本文件继续拥有原业务策略。
  */
-import { ByteUtils, ByteLimitError } from '../../../core/utility';
+import { ByteUtils, ByteLimitError } from '../../../core/io';
 
 export type ReleaseRequest = (endpoint: string, options: { method: 'GET'; signal: AbortSignal }) => Promise<{ status: number; data: unknown }>;
 

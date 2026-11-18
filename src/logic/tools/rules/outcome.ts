@@ -1,10 +1,8 @@
 /**
- * TOOL_INPUT_INVALID 明确表示执行前参数拒绝；普通执行异常仍保留 unknown，不据错误文字断言无副作用。
+ * 调用方显式标记执行前拒绝；普通执行异常仍保留 unknown，不据错误文字断言无副作用。
  * 作用定位：引擎工具回包的统一结果与下一步说明；独立于具体业务账本。
  * 设计原因：异常不能证明未执行，所有失败默认禁止自动重放；仅可信适配器可提供原命令的只读核实入口。
  */
-import { Fault } from '../../../core/errors';
-
 import type { ToolResult } from './results';
 
 import { validateToolResult } from './results';
@@ -31,7 +29,7 @@ export interface ToolOutcome
   nextStep: string;
 }
 
-/** 保留原错误类型/码；只附加可信恢复地址，不改变原操作结果。 */
+/** 为异常附加可信的只读恢复地址，不改变原操作结果。 */
 export function withToolReconciliation<T extends Error>(error: T, reconciliation: ToolReconciliation): T
 {
   return Object.assign(error, { reconciliation: structuredClone(reconciliation) });
@@ -46,7 +44,7 @@ export function toolOutcome(status: ToolOutcome['status'], reconciliation?: Tool
 }
 
 /** 错误正文保留可诊断消息；失败结构同时进入模型文本与宿主 details。 */
-export function toolFailureResult(error: unknown, rejected = false): ToolResult
+export function toolFailureResult(error: unknown, rejected = false, code = 'TOOL_ERROR'): ToolResult
 {
   const candidate = error as
     {
@@ -55,9 +53,7 @@ export function toolFailureResult(error: unknown, rejected = false): ToolResult
 
   const reconciliation = candidate?.reconciliation;
 
-  const code = error instanceof Fault ? error.code : 'TOOL_ERROR';
-
-  const outcome = toolOutcome(rejected || code === 'FORBIDDEN' || code === 'TOOL_INPUT_INVALID' ? 'rejected' : 'unknown', reconciliation);
+  const outcome = toolOutcome(rejected ? 'rejected' : 'unknown', reconciliation);
 
   if (code === 'TOOL_INPUT_INVALID')
     outcome.nextStep = '本次尚未执行。请补齐列出的必填字段或修正格式；可选参数可省略，已声明默认值会自动使用。';

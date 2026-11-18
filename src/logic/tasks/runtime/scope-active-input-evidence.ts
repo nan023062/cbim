@@ -4,8 +4,6 @@
  * 作用定位：把目标补充的持久接收记录与原主运行的可信插入日志逐项核对。
  * 设计原因：Scope 与运行日志是两个真实存储，不能靠单边记录推断原生已经接收；未知不会被旧 review 或普通聊天完成例外洗白。
  */
-import { fail } from '../../../core/errors';
-
 import type { RunSummary } from '../../execution/rules/types';
 
 import type { DispatchScope } from '../rules/dispatch-scope';
@@ -25,7 +23,7 @@ export function validateScopeActiveInputLog(scope: DispatchScope, summary: RunSu
   if (!records.some(item => item.status === 'accepted') && !events.length)
     return;
 
-  const valid = (value: unknown, message: string) => { if (!value) fail('GOAL_ACTIVE_INPUT_PROOF', message) };
+  const valid = (value: unknown, message: string) => { if (!value) throw new Error(message) };
 
   valid(summary.task.workspaceId === scope.workspaceId && summary.task.taskId === scope.rootSessionId && summary.task.agentId === 'cbim:main' && summary.task.mode === 'chat' && summary.logIntegrity?.partialTail === false, '补充来源的主运行身份或日志完整性不匹配');
 

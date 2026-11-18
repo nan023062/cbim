@@ -12,11 +12,9 @@ import { randomUUID } from 'node:crypto';
 
 import { z } from 'zod';
 
-import { atomic } from '../../../../core/platform/node/files';
+import { atomic } from '../../../../core/io/text-files';
 
-import { hash, json } from '../../../../core/platform/node/serialization';
-
-import { fail } from '../../../../core/errors';
+import { hash, json } from '../../../../core/io/serialization';
 
 import { moduleGovernanceRegisterInputSchema, moduleGovernanceObserveInputSchema, moduleGovernanceProposeInputSchema, moduleGovernanceDecideInputSchema, moduleGovernanceApplyInputSchema, moduleGovernanceReceiptSchema, moduleGovernanceApplyIntentSchema, type ModuleGovernanceReceipt, type ModuleGovernanceApplyIntent, type ModuleGovernanceProtection, type ModuleGovernanceProposal, type ModuleGovernanceObservation, type ModuleGovernanceDecision } from '../../rules/module-governance';
 
@@ -51,7 +49,7 @@ const same = (a: unknown, b: unknown) => json(a) === json(b);
 function valid(value: unknown, message: string): asserts value
 {
   if (!value)
-    fail('GOVERNANCE_DATA', message)
+    throw new Error(message)
 }
 
 /** 文件是用户应用数据，不属于 .cbim；正文、决定和身份均通过完整链校验后才供门禁使用。 */
@@ -162,14 +160,14 @@ export class ModuleGovernanceStore
       if (error.code === 'GOVERNANCE_DATA')
         throw error;
 
-      fail('GOVERNANCE_DATA', '治理账本损坏，未解除已登记保护；请核实本地记录')
+      throw new Error('治理账本损坏，未解除已登记保护；请核实本地记录')
     }
   }
 
   private Current()
   {
     if (this.uncertain || !this.anchor)
-      fail('GOVERNANCE_DATA', '治理账本写入结果未知，请重开核实原记录；当前保护未解除')
+      throw new Error('治理账本写入结果未知，请重开核实原记录；当前保护未解除')
   }
 
   All(): readonly GovernanceCommand[]
@@ -199,7 +197,7 @@ export class ModuleGovernanceStore
     const encoded = json({ version: 1, workspaceId: this.workspaceId, ledgerId: this.anchor!.ledgerId, commands: next });
 
     if (Buffer.byteLength(encoded) > governanceLedgerLimit || next.length > 512)
-      fail('GOVERNANCE_LIMIT', '治理历史已达本机有界上限，未保存新命令');
+      throw new Error('治理历史已达本机有界上限，未保存新命令');
 
     const pending = { revision: next.length, hash: hash(encoded) },
       anchor = { ...this.anchor!, pending };

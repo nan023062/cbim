@@ -5,9 +5,7 @@
  */
 import { z } from 'zod';
 
-import { fail } from '../../../core/errors';
-
-import { hash as contentHash } from '../../../core/platform/node/serialization';
+import { hash as contentHash } from '../../../core/io/serialization';
 
 import { validateModuleGovernanceRecordOrigin } from './module-governance-rules';
 
@@ -145,7 +143,7 @@ function recent<T>(items: readonly T[])
 export function projectGovernanceBody(text: string, hash: string): GovernanceBodyView
 {
   if (contentHash(text) !== hash)
-    fail('GOVERNANCE_OUTPUT', '治理原正文与内容指纹不一致');
+    throw new Error('治理原正文与内容指纹不一致');
 
   const bytes = utf8(text);
 
@@ -159,7 +157,7 @@ export function projectGovernanceGet(raw: ModuleGovernanceList, rawIdentity: Gov
     identity = governanceToolIdentitySchema.parse(rawIdentity);
 
   if (value.identity.workspaceId !== identity.workspaceId)
-    fail('GOVERNANCE_IDENTITY', '治理读取不属于本轮工作区');
+    throw new Error('治理读取不属于本轮工作区');
 
   const observation = (item: ModuleGovernanceList['observations'][number]) => ({ observationId: item.observationId, protectionId: item.protectionId, protectionRevision: item.protectionRevision, knowledgeRevision: item.knowledgeRevision, overview: item.overview, statement: textPreview(item.statement), observedAt: item.observedAt, ...(item.origin ? { origin: item.origin } : {}) });
 
@@ -198,7 +196,7 @@ export function projectGovernanceGet(raw: ModuleGovernanceList, rawIdentity: Gov
     const group = groups.filter(item => item.items.length).sort((a, b) => b.items.length - a.items.length)[0];
 
     if (!group)
-      fail('GOVERNANCE_OUTPUT', '治理选定记录超过模型输出上限，请使用桌面完整处理');
+      throw new Error('治理选定记录超过模型输出上限，请使用桌面完整处理');
 
     group.items.shift();
 
@@ -219,7 +217,7 @@ export function projectGovernanceReceipt(raw: ModuleGovernanceReceipt | undefine
   const value = moduleGovernanceReceiptSchema.parse(raw);
 
   if (value.identity.workspaceId !== identity.workspaceId || value.commandId !== commandId || (value.action !== 'observe' && value.action !== 'propose') || value.record.origin?.kind !== 'main_agent' || value.record.origin.rootSessionId !== identity.rootSessionId)
-    fail('GOVERNANCE_IDENTITY', '治理回执不属于原主调用');
+    throw new Error('治理回执不属于原主调用');
 
   validateModuleGovernanceRecordOrigin(value.record);
 

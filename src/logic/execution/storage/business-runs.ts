@@ -4,8 +4,6 @@
  */
 import { isDeepStrictEqual as equal } from 'node:util';
 
-import { fail } from '../../../core/errors';
-
 import type { DispatchStore } from '../../dispatch/rules/dispatch-storage';
 
 import type { AgentBusinessRun } from '../rules/business-run';
@@ -35,13 +33,13 @@ export class AgentBusinessRuns
     while (true)
     {
       if (lineage.length >= 8 || lineage.some(item => item.runId === link.runId))
-        fail('AGENT_RUN_IDENTITY', '调用来源链超限或循环');
+        throw new Error('调用来源链超限或循环');
 
       const summary = await this.inspect(link.callerTaskId, link.callerRunId),
         started = summary.events[0];
 
       if (summary.task.workspaceId !== frozen.binding.workspaceId || summary.task.taskId !== link.callerTaskId || summary.runId !== link.callerRunId || summary.events.some(e => e.type === 'run.settled' || e.type === 'run.interrupted') || summary.logIntegrity?.partialTail !== false || started?.data.executionModel !== 'agent-tools-v1')
-        fail('AGENT_RUN_IDENTITY', '父调用日志无法核实');
+        throw new Error('父调用日志无法核实');
 
       // 等待与恢复可以重复报告同一引用；只有首次带 limits 的绑定事件创建运行。
       const updates = summary.events.filter(e => e.type === 'tool.updated' && e.data.id === link.toolCallId && e.data.agentCall);
@@ -49,10 +47,10 @@ export class AgentBusinessRuns
       const refs = updates.filter(e => e.data.limits && equal(e.data.agentCall, link));
 
       if (updates.some(e => !equal(e.data.agentCall, link)))
-        fail('AGENT_RUN_IDENTITY', '父工具引用发生换绑');
+        throw new Error('父工具引用发生换绑');
 
       if (refs.length !== 1 || !summary.events.some(e => e.type === 'tool.allowed' && e.data.id === link.toolCallId && e.data.name === 'cbim_agent_call'))
-        fail('AGENT_RUN_IDENTITY', '父调用缺少原工具授权及唯一引用');
+        throw new Error('父调用缺少原工具授权及唯一引用');
 
       lineage.push(structuredClone(link));
 
@@ -60,7 +58,7 @@ export class AgentBusinessRuns
         break;
 
       if (!started.data.agentCall)
-        fail('AGENT_RUN_IDENTITY', '父运行缺少根来源');
+        throw new Error('父运行缺少根来源');
 
       link = started.data.agentCall as AgentCallReference;
     }
@@ -79,7 +77,7 @@ export class AgentBusinessRuns
       return;
 
     if (!equal(old.binding, value.binding) || !equal(old.parent, value.parent) || old.scopeId !== value.scopeId)
-      fail('AGENT_RUN_IDENTITY', '业务运行关闭身份不一致');
+      throw new Error('业务运行关闭身份不一致');
 
     if (old.status === 'closed')
       return;

@@ -6,9 +6,7 @@
  * 机制边界：对象递归排序由 utility 提供，本模块保留历史比较器、字段省略和业务指纹规则。
  * 算法入口：通过 Core JsonUtils 静态方法复用机制，本文件继续拥有原业务策略。
  */
-import { JsonUtils } from '../../../core/utility';
-
-import { fail } from '../../../core/errors';
+import { JsonUtils } from '../../../core/io';
 
 import type { DispatchState, DispatchMutation, DispatchCommand } from '../../dispatch/rules/dispatch-storage';
 
@@ -26,7 +24,7 @@ const equal = (a: unknown, b: unknown) => JSON.stringify(ordered(a)) === JSON.st
 function valid(value: unknown, message: string): asserts value
 {
   if (!value)
-    fail('GRAPH_INPUT_INVALID', message)
+    throw new Error(message)
 }
 
 /** 替换审计须对应唯一四项图变更；新增/退役许可只由统一提交入口完整校验追加或多边修订后提供，不能来自请求或回执。 */

@@ -6,8 +6,6 @@
  */
 import { randomUUID } from 'node:crypto';
 
-import { fail } from '../../../core/errors';
-
 import type { AgentConfigurationSnapshot, AgentSessionBinding } from '../rules/agent-types';
 
 import type { DispatchState } from '../../dispatch/rules/dispatch-storage';
@@ -20,15 +18,15 @@ import type { TeamSession } from '../rules/team-session';
 export function prepareMember(state: DispatchState, configuration: AgentConfigurationSnapshot, rootSessionId: string, purpose: NonNullable<AgentSessionBinding['purpose']> = 'task', execution?: { scopeId: string; taskId: string })
 {
   if (state.workspaceId !== configuration.workspaceId)
-    fail('GRAPH_IDENTITY_MISMATCH', '角色不属于当前工作区');
+    throw new Error('角色不属于当前工作区');
 
   const main = configuration.agentId === 'cbim:main';
 
   if (main && execution)
-    fail('AGENT_NOT_EXECUTABLE', '主 Agent 管理知识与调度，不能创建业务执行实例');
+    throw new Error('主 Agent 管理知识与调度，不能创建业务执行实例');
 
   if (purpose === 'conversation' && !main)
-    fail('AGENT_IDENTITY_CONFLICT', '主对话通道只能绑定内置主角色');
+    throw new Error('主对话通道只能绑定内置主角色');
 
   const root = main ? state.graphs.find(g => g.identity.rootSessionId === rootSessionId)?.root : undefined;
 
@@ -37,19 +35,19 @@ export function prepareMember(state: DispatchState, configuration: AgentConfigur
     : state.members.find(m => m.agentId === configuration.agentId && (main ? m.mainRootSessionId === rootSessionId : execution ? m.executionScopeId === execution.scopeId && m.executionTaskId === execution.taskId : !m.executionScopeId && !m.executionTaskId));
 
   if (existing?.lifecycle === 'released')
-    fail('MEMBER_RELEASED', '执行实例已随调度周期释放，不能重新使用');
+    throw new Error('执行实例已随调度周期释放，不能重新使用');
 
   if (root && (!existing || existing.agentId !== configuration.agentId))
-    fail('AGENT_IDENTITY_CONFLICT', '任务图根的主实例不存在或角色不一致');
+    throw new Error('任务图根的主实例不存在或角色不一致');
 
   if (existing?.mainRootSessionId && existing.mainRootSessionId !== rootSessionId)
-    fail('AGENT_IDENTITY_CONFLICT', '主实例不能跨主会话复用');
+    throw new Error('主实例不能跨主会话复用');
 
   if (existing && existing.teamId !== configuration.teamId)
-    fail('AGENT_IDENTITY_CONFLICT', '成员的 Team 绑定已变化');
+    throw new Error('成员的 Team 绑定已变化');
 
   if (existing?.activeRunId && existing.configurationRevision !== configuration.knowledgeRevision)
-    fail('AGENT_BUSY', '成员正在运行，不能覆盖其固定配置');
+    throw new Error('成员正在运行，不能覆盖其固定配置');
 
   const member = existing ? structuredClone(existing) : {
     workspaceId: configuration.workspaceId, teamId: configuration.teamId, agentId: configuration.agentId,
@@ -75,7 +73,7 @@ export function prepareMember(state: DispatchState, configuration: AgentConfigur
   };
 
   if (teamSession.teamId !== configuration.teamId)
-    fail('TEAM_SESSION_CONFLICT', '团队对话的角色归属已经变化');
+    throw new Error('团队对话的角色归属已经变化');
 
   return { member, session: structuredClone(session), agent, teamSession: structuredClone(teamSession) };
 }

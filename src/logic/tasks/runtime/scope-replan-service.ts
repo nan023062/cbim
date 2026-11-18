@@ -6,9 +6,7 @@
  */
 import { z } from 'zod';
 
-import { fail } from '../../../core/errors';
-
-import { hash, json } from '../../../core/platform/node/serialization';
+import { hash, json } from '../../../core/io/serialization';
 
 import type { KnowledgeWorkspace, SourceSnapshotReader } from '../../knowledge/rules/ports';
 
@@ -63,7 +61,7 @@ export type AcceptedReplan =
 function check(condition: unknown, code: string, message: string): asserts condition
 {
   if (!condition)
-    fail(code, message)
+    throw new Error(message)
 }
 
 export class ScopeReplanService
@@ -77,7 +75,7 @@ export class ScopeReplanService
     const value = schema.safeParse(raw);
 
     if (!value.success)
-      fail('REPLAN_INPUT_INVALID', '业务重规划请求或启动参数无效');
+      throw new Error('业务重规划请求或启动参数无效');
 
     return value.data
   }

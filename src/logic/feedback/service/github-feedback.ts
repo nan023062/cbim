@@ -13,17 +13,15 @@ import { randomUUID } from 'node:crypto';
 
 import { z } from 'zod';
 
-import { atomic } from '../../../core/platform/node/files';
+import { atomic } from '../../../core/io/text-files';
 
-import { sha256 as hash } from '../../../core/platform/node/digest';
+import { sha256 as hash } from '../../../core/io/digest';
 
-import { fail } from '../../../core/errors';
-
-import type { SecretCipher } from '../../../core/contracts/secrets';
+import type { SecretCipher } from '../../../core/io/electron';
 
 import { feedbackInputSchema, feedbackIssue, type FeedbackToolsPort, type FeedbackScope, type FeedbackInput, type FeedbackResult } from '..';
 
-import { KernelLock } from '../../../core/platform/node/locking';
+import { acquireLock } from '../../io-errors/locking';
 
 import { GitHubFeedbackAuth, type GitHubFeedbackIdentity } from './github-feedback-auth';
 
@@ -47,7 +45,7 @@ type Binding =
 
 type Ledger = z.infer<typeof ledgerSchema>;
 
-const unknown = () => fail('GITHUB_SUBMISSION_UNKNOWN', 'GitHub 提交结果待核实，已阻止本工作区继续提交。请调用 cbim_feedback_receipt 核实原提交，不要重新发送');
+const unknown = () => { throw new Error('GitHub 提交结果待核实，已阻止本工作区继续提交。请调用 cbim_feedback_receipt 核实原提交，不要重新发送'); };
 
 /** 应用级唯一服务；跨进程内核锁保护同一本机账本，进程退出后 sending 仍保持未知。 */
 export class GitHubFeedback
@@ -64,7 +62,7 @@ export class GitHubFeedback
 
   private Serial<T>(work: () => Promise<T>)
   {
-    const next = this.queue.then(async () => { await fs.mkdir(this.directory, { recursive: true }); const lock = new KernelLock(this.directory, hash(path.resolve(this.directory).toLowerCase()), 'github-feedback'); try { return await work() } finally { lock.Close() } });
+    const next = this.queue.then(async () => { await fs.mkdir(this.directory, { recursive: true }); const lock = acquireLock(this.directory, hash(path.resolve(this.directory).toLowerCase()), 'github-feedback'); try { return await work() } finally { lock.Close() } });
 
     this.queue = next.catch(() => { });
 
@@ -92,7 +90,7 @@ export class GitHubFeedback
       if (error.code === 'ENOENT')
         return { version: 1, workspaceId: binding.workspaceId, entries: [] };
 
-      return fail('GITHUB_LEDGER', '原反馈提交记录无法读取，未发起新提交，请检查本机记录')
+      throw new Error('原反馈提交记录无法读取，未发起新提交，请检查本机记录')
     }
   }
 
@@ -133,7 +131,7 @@ export class GitHubFeedback
     const actual = await this.auth.VerifyIdentity(identity.config, identity.token, signal);
 
     if (actual.accountId !== identity.connection.accountId || actual.repositoryId !== identity.connection.repositoryId)
-      fail('GITHUB_IDENTITY_CHANGED', 'GitHub 账号或仓库身份已改变，未提交，请在设置中重新连接');
+      throw new Error('GitHub 账号或仓库身份已改变，未提交，请在设置中重新连接');
   }
 
   /** 串行、单次 POST；sending 是持久写屏障，任何不同调用 ID／正文都不能绕过未知结果。 */
@@ -148,12 +146,12 @@ export class GitHubFeedback
       const parsed = feedbackInputSchema.safeParse(raw);
 
       if (!parsed.success)
-        fail('GITHUB_FEEDBACK_INPUT', '请提供反馈类型和非空简述；补充字段可省略，内容需符合长度限制且不能包含保留标记或额外参数');
+        throw new Error('请提供反馈类型和非空简述；补充字段可省略，内容需符合长度限制且不能包含保留标记或额外参数');
 
       const issue = feedbackIssue(parsed.data);
 
       if (Buffer.byteLength(issue.body, 'utf8') > 48000)
-        fail('GITHUB_FEEDBACK_SIZE', '反馈正文过长，请缩短上下文后提交');
+        throw new Error('反馈正文过长，请缩短上下文后提交');
 
       const ledger = await this.Read(binding),
         fingerprint = hash(JSON.stringify(issue));
@@ -165,7 +163,7 @@ export class GitHubFeedback
         if (pending.fingerprint === fingerprint && pending.repositoryId === scope.repositoryId && pending.accountId === identity.connection.accountId)
           unknown();
 
-        fail('GITHUB_PENDING_OTHER', '本工作区有另一条待核实反馈，当前内容尚未提交。请先处理原提交，不能把原回执当成本条成功')
+        throw new Error('本工作区有另一条待核实反馈，当前内容尚未提交。请先处理原提交，不能把原回执当成本条成功')
       }
 
       const previous = ledger.entries.find(entry => entry.fingerprint === fingerprint && entry.repositoryId === scope.repositoryId && entry.accountId === identity.connection.accountId && entry.status === 'submitted');
@@ -174,7 +172,7 @@ export class GitHubFeedback
         return this.Result(previous);
 
       if (ledger.entries.length >= 1000)
-        fail('GITHUB_FEEDBACK_LIMIT', '本工作区反馈记录已达上限，未提交');
+        throw new Error('本工作区反馈记录已达上限，未提交');
 
       await this.Verify(identity, bounded);
 
@@ -220,7 +218,7 @@ export class GitHubFeedback
             unknown()
           }
 
-          fail('GITHUB_CANCELLED', '反馈已取消，尚未向 GitHub 发送')
+          throw new Error('反馈已取消，尚未向 GitHub 发送')
         }
 
         unknown();
@@ -239,7 +237,7 @@ export class GitHubFeedback
           unknown()
         }
 
-        fail('GITHUB_REJECTED', `GitHub 拒绝提交（HTTP ${reply!.status}），请检查登录、仓库权限或输入格式后再提交`);
+        throw new Error(`GitHub 拒绝提交（HTTP ${reply!.status}），请检查登录、仓库权限或输入格式后再提交`);
       }
 
       if (reply!.status !== 201)
@@ -298,16 +296,16 @@ export class GitHubFeedback
         entry = ledger.entries.find(entry => entry.status === 'sending') ?? ledger.entries.filter(entry => entry.rootSessionId === binding.rootSessionId).at(-1);
 
       if (!entry)
-        fail('GITHUB_RECEIPT_MISSING', '本会话没有已发起的反馈提交');
+        throw new Error('本会话没有已发起的反馈提交');
 
       if (entry.accountId !== identity.connection.accountId || entry.repositoryId !== scope.repositoryId || entry.owner !== scope.owner || entry.repo !== scope.repo)
-        fail('GITHUB_RECEIPT_TARGET', '请连接原账号和原仓库后核实，不能把原提交改投其它目标');
+        throw new Error('请连接原账号和原仓库后核实，不能把原提交改投其它目标');
 
       if (entry.status === 'submitted')
         return this.Result(entry);
 
       if (entry.status === 'rejected')
-        fail('GITHUB_REJECTED', '原反馈已被 GitHub 明确拒绝，尚未提交');
+        throw new Error('原反馈已被 GitHub 明确拒绝，尚未提交');
 
       await this.Verify(identity, bounded);
 

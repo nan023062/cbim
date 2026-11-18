@@ -5,7 +5,7 @@ import path from 'node:path';
 import {fixture} from '../../application/support/helpers';
 import {request} from '../rules/data/knowledge';
 import {internalKnowledge} from '../../tools/runtime/support/knowledge-tool-fixture';
-import {exists} from '../../../../../src/core/platform/node/files/index';
+import {exists} from '../../../../../src/core/io/text-files';
 import {Application} from '../../../../../src/bridge/server/application';
 
 it('遗留 entry 不再同步、备份、影响知识版本或通过内部知识工具返回，原字节保留',async()=>{

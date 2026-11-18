@@ -3,8 +3,6 @@
  * 设计原因：工具外壳与业务字段都需核验；固定唯一 JSON 快照，防缺字段、Schema 改写或重复序列化补造成功，同时拒绝会污染会话的缺失 text。
  * 职责边界：只检查返回协议，不重放工具；校验失败不代表工具的既有副作用已回滚。
  */
-import { fail } from '../../../core/errors';
-
 import { isDeepStrictEqual } from 'node:util';
 
 import type { z } from 'zod';
@@ -36,7 +34,7 @@ export interface ToolResult
 
 function invalid(name: string, reason: string): never
 {
-  fail('TOOL_RESULT_INVALID', `${name} 返回无效工具结果：${reason}。请核实已有操作，不自动重试。`);
+  throw new Error(`${name} 返回无效工具结果：${reason}。请核实已有操作，不自动重试。`);
 }
 
 /** 不回显结果正文或序列化异常，避免将私密数据带进错误消息。 */
@@ -76,7 +74,7 @@ export function checkedJsonToolResult(name: string, value: unknown, schema: z.Zo
     // record 的动态键可能含正文或凭据，位置仅保留层级和数组索引，不把 Zod message / keys 回显。
     const location = 'output' + path.map(part => typeof part === 'number' ? '[' + part + ']' : '.<field>').join('');
 
-    return fail('TOOL_OUTPUT_INVALID', `${name} 业务输出无效（位置 ${location}；类别 ${category}）。操作可能已经发生，请核实已有记录，不自动重试。`);
+    throw new Error(`${name} 业务输出无效（位置 ${location}；类别 ${category}）。操作可能已经发生，请核实已有记录，不自动重试。`);
   };
 
   const encoded = (() => { try { const encoded = JSON.stringify(value); return typeof encoded === 'string' ? encoded : reject('serialization') } catch { return reject('serialization') } })();

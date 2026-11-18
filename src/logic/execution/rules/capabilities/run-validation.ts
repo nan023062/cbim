@@ -11,8 +11,6 @@ import { randomUUID } from 'node:crypto';
 
 import { isDeepStrictEqual } from 'node:util';
 
-import { fail } from '../../../../core/errors';
-
 import { jsonValidationLimits, type BoundedJsonSchema, type JsonValidationOutcome } from '../../../workspace/rules/json-validation-schema';
 
 import type { CsvTableSchema, CsvValidationOutcome } from '../../../workspace/rules/csv-validation-schema';
@@ -86,16 +84,16 @@ export function prepareRunValidation(workflows: readonly WorkflowContractBinding
     validationRequired = validationCount > 0;
 
   if (validationCount > jsonValidationLimits.records)
-    fail('WORKFLOW_VALIDATION_LIMIT', '冻结的产物验证要求超过本轮 16 条记录上限，不能启动执行');
+    throw new Error('冻结的产物验证要求超过本轮 16 条记录上限，不能启动执行');
 
   if (validationRequired && (!member || !artifacts || !files))
-    fail('VALIDATION_UNAVAILABLE', '冻结的产物验证要求缺少正式成员文件验证端口');
+    throw new Error('冻结的产物验证要求缺少正式成员文件验证端口');
 
   if (workflows.some(item => item.contract.delivery?.requiredValidations?.some(rule => rule.validator === 'csv-table-v1')) && !files?.ValidateTable)
-    fail('VALIDATION_UNAVAILABLE', '冻结的CSV要求缺少真实表格验证端口，不能启动执行');
+    throw new Error('冻结的CSV要求缺少真实表格验证端口，不能启动执行');
 
   if (workflows.some(item => item.contract.delivery?.requiredValidations?.some(rule => rule.validator === 'png-raster-v1')) && !files?.ValidateImage)
-    fail('VALIDATION_UNAVAILABLE', '冻结的PNG要求缺少真实图片解码端口，不能启动执行');
+    throw new Error('冻结的PNG要求缺少真实图片解码端口，不能启动执行');
 
   return { required: validationRequired, Create: context => validationRequired ? new RunValidation(member!, workflows, artifacts!, files!, context) : undefined };
 }
@@ -197,7 +195,7 @@ export class RunValidation
     if (completeOutputRequired(this.bindings))
     {
       if (!input.manifestId || !this.context.VerifyManifest)
-        fail('MANIFEST_REQUIRED', '完整模式的产物验证须明确选择清单并提供真实全集合复核');
+        throw new Error('完整模式的产物验证须明确选择清单并提供真实全集合复核');
 
       const evidence = verifyOutputManifests(this.events, this.binding, this.artifacts.knowledgeRevision, preparedArtifactScopes(this.bindings));
 
@@ -206,13 +204,13 @@ export class RunValidation
       const file = manifest.manifest.snapshot.entries.find(entry => entry.kind === 'file' && this.artifacts.NormalizePath(entry.relativePath) === this.artifacts.NormalizePath(selected.requirement.artifactPath));
 
       if (!file || file.kind !== 'file')
-        fail('VALIDATION_BASELINE', '完整清单没有覆盖 Workflow 指定的必验文件');
+        throw new Error('完整清单没有覆盖 Workflow 指定的必验文件');
 
       return { selected, file: { relativePath: file.relativePath, byteLength: file.byteLength, sha256: file.sha256 }, manifest };
     }
 
     if (!input.baselineId)
-      fail('MANIFEST_UNDECLARED', '未声明完整交付的运行须选择原文件基线');
+      throw new Error('未声明完整交付的运行须选择原文件基线');
 
     const verified = verifyArtifactBaselines(this.events, this.binding, this.artifacts.knowledgeRevision, this.artifacts.NormalizePath, input.baselineId);
 
@@ -220,12 +218,12 @@ export class RunValidation
       ref = verified.refs.find(item => item.baselineId === input.baselineId);
 
     if (!record || !ref || ref.invalidated || record.baseline.progressVersion > input.expectedTaskProgressVersion)
-      fail('VALIDATION_BASELINE', '需要当前运行中已确认且未失效的明确文件基线');
+      throw new Error('需要当前运行中已确认且未失效的明确文件基线');
 
     const file = record.baseline.files.find(item => this.artifacts.NormalizePath(item.relativePath) === this.artifacts.NormalizePath(selected.requirement.artifactPath));
 
     if (!file)
-      fail('VALIDATION_BASELINE', '所选基线未覆盖 Workflow 指定的必验文件');
+      throw new Error('所选基线未覆盖 Workflow 指定的必验文件');
 
     return { selected, file: { relativePath: file.relativePath, byteLength: file.byteLength, sha256: file.sha256 } };
   }
@@ -235,7 +233,7 @@ export class RunValidation
     const reserved = this.reserved;
 
     if (!reserved || reserved.id !== id || reserved.consumed || !isDeepStrictEqual(reserved.input, input))
-      fail('VALIDATION_CALL', '产物验证必须来自本轮已授权的一次性调用');
+      throw new Error('产物验证必须来自本轮已授权的一次性调用');
 
     reserved.consumed = true;
 
@@ -243,12 +241,12 @@ export class RunValidation
       lastEffectSeq = this.LastEffectSeq(),
       signal = AbortSignal.any([this.controller.signal, AbortSignal.timeout(artifactScopeLimits.readMs)]);
 
-    const check = () => { signal.throwIfAborted(); this.context.AssertReady(id); if (this.context.Current()?.version !== input.expectedTaskProgressVersion || this.context.Generation() !== generation || this.LastEffectSeq() !== lastEffectSeq) fail('VALIDATION_PROGRESS_CHANGED', '验证期间计划或产物代次已经变化，请重新核实') };
+    const check = () => { signal.throwIfAborted(); this.context.AssertReady(id); if (this.context.Current()?.version !== input.expectedTaskProgressVersion || this.context.Generation() !== generation || this.LastEffectSeq() !== lastEffectSeq) throw new Error('验证期间计划或产物代次已经变化，请重新核实') };
 
     check();
 
     if (this.events.filter(event => event.type === 'validation.checked').length >= jsonValidationLimits.records)
-      fail('VALIDATION_LIMIT', '本轮产物验证记录已达到上限');
+      throw new Error('本轮产物验证记录已达到上限');
 
     const { selected, file, manifest } = this.Selected(input);
 
@@ -266,17 +264,17 @@ export class RunValidation
     const requirement = selected.requirement;
 
     if (requirement.validator === 'csv-table-v1' && !this.files.ValidateTable)
-      fail('VALIDATION_UNAVAILABLE', 'CSV要求缺少本轮真实表格验证端口');
+      throw new Error('CSV要求缺少本轮真实表格验证端口');
 
     if (requirement.validator === 'png-raster-v1' && !this.files.ValidateImage)
-      fail('VALIDATION_UNAVAILABLE', 'PNG要求缺少本轮真实图片解码端口');
+      throw new Error('PNG要求缺少本轮真实图片解码端口');
 
     const outcome = await (requirement.validator === 'png-raster-v1' ? this.files.ValidateImage!(structuredClone(file), structuredClone(requirement.schema), signal) : requirement.validator === 'csv-table-v1' ? this.files.ValidateTable!(structuredClone(file), structuredClone(requirement.schema), signal) : this.files.ValidateFile(structuredClone(file), structuredClone(requirement.schema), signal));
 
     check();
 
     if (!isDeepStrictEqual(outcome.artifact, file))
-      fail('VALIDATION_BASELINE_CHANGED', '验证文件与选中基线不一致，请重新采集');
+      throw new Error('验证文件与选中基线不一致，请重新采集');
 
     if (manifest)
     {
@@ -290,7 +288,7 @@ export class RunValidation
     check();
 
     if (!isDeepStrictEqual(this.Selected(input), { selected, file, ...(manifest ? { manifest } : {}) }))
-      fail('VALIDATION_BASELINE_CHANGED', '验证期间原产物依据已经变化');
+      throw new Error('验证期间原产物依据已经变化');
 
     const result = validationResultSchema.parse({ version: 1, validationId: randomUUID(), toolCallId: id, binding: this.binding, validator: requirement.validator, requirement: { moduleId: selected.binding.moduleId, workflowId: selected.binding.workflowId, workflowVersion: selected.binding.workflowVersion, requirementId: selected.requirement.id, schemaHash: selected.schemaHash }, knowledgeRevision: this.artifacts.knowledgeRevision, taskProgressVersion: input.expectedTaskProgressVersion, ...(manifest ? { manifest: outputManifestIdentity(manifest.manifest) } : { baselineId: input.baselineId }), artifact: file, lastEffectSeq, checkedAt: new Date().toISOString(), outcome: outcome.outcome, issues: outcome.issues });
 
@@ -305,7 +303,7 @@ export class RunValidation
   async VerifyCurrent(records: readonly ValidationRecord[]): Promise<void>
   {
     if (this.reserved || this.deliveryReading)
-      fail('VALIDATION_BUSY', '产物验证尚未结束，不能准备交付');
+      throw new Error('产物验证尚未结束，不能准备交付');
 
     this.context.AssertDeliveryReady();
 
@@ -314,7 +312,7 @@ export class RunValidation
     const generation = this.context.Generation(),
       version = this.context.Current()?.version;
 
-    const check = () => { this.controller.signal.throwIfAborted(); this.context.AssertDeliveryReady(); if (this.context.Generation() !== generation || this.context.Current()?.version !== version) fail('VALIDATION_PROGRESS_CHANGED', '交付核实期间计划或产物代次已变化') };
+    const check = () => { this.controller.signal.throwIfAborted(); this.context.AssertDeliveryReady(); if (this.context.Generation() !== generation || this.context.Current()?.version !== version) throw new Error('交付核实期间计划或产物代次已变化') };
 
     try
     {
@@ -323,7 +321,7 @@ export class RunValidation
       const current = this.Records();
 
       if (records.some(record => record.result.outcome !== 'passed' || !current.some(item => isDeepStrictEqual(item, record))))
-        fail('VALIDATION_RECORD', '交付必须引用本轮当前代次的真实通过记录');
+        throw new Error('交付必须引用本轮当前代次的真实通过记录');
 
       const files = new Map<string, ArtifactFileFact>();
 
@@ -333,7 +331,7 @@ export class RunValidation
           old = files.get(file.relativePath);
 
         if (old && !isDeepStrictEqual(old, file))
-          fail('VALIDATION_BASELINE_CHANGED', '同一必验文件存在不同验证指纹');
+          throw new Error('同一必验文件存在不同验证指纹');
 
         files.set(file.relativePath, file)
       }
@@ -349,7 +347,7 @@ export class RunValidation
         check();
 
         if (observed.length !== files.size || observed.some((item, index) => { const file = [...files.values()][index]; return item.relativePath !== file.relativePath || item.state !== 'matches' || !isDeepStrictEqual(item.expected, { byteLength: file.byteLength, sha256: file.sha256 }) || !isDeepStrictEqual(item.observed, { byteLength: file.byteLength, sha256: file.sha256 }) }))
-          fail('VALIDATION_ARTIFACT_CHANGED', '必验文件已偏离通过验证时的字节，请重新读取、采集和验证')
+          throw new Error('必验文件已偏离通过验证时的字节，请重新读取、采集和验证')
       }
 
       await this.artifacts.AssertCurrentKnowledge();
@@ -357,7 +355,7 @@ export class RunValidation
       check();
 
       if (records.some(record => !this.Records().some(item => isDeepStrictEqual(item, record))))
-        fail('VALIDATION_RECORD', '交付核实期间验证记录已失效');
+        throw new Error('交付核实期间验证记录已失效');
     }
     finally
     {

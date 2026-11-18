@@ -4,7 +4,7 @@
  */
 import { zodToJsonSchema } from 'zod-to-json-schema';
 
-import { hash, json } from '../../../core/platform/node/serialization';
+import { hash, json } from '../../../core/io/serialization';
 
 import { mainToolOutputSchema, mainToolOutputSchemas, type MainToolName, type MainToolOutputBinding } from '../../tasks/rules/main-tool-output';
 

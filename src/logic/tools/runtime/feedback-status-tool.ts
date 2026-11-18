@@ -4,8 +4,6 @@
  */
 import { zodToJsonSchema } from 'zod-to-json-schema';
 
-import { fail } from '../../../core/errors';
-
 import { checkedJsonToolResult } from '../rules/results';
 
 import type { RunToolDescriptor } from '../rules/policy/tool-policy';
@@ -44,7 +42,7 @@ export class FeedbackStatusTool
   private Parse(name: string, input: unknown)
   {
     if (!this.Has(name) || !feedbackReceiptInputSchema.safeParse(input).success)
-      fail('GITHUB_FEEDBACK_INPUT', '反馈状态查询不接受身份、仓库、凭据或授权参数')
+      throw new Error('反馈状态查询不接受身份、仓库、凭据或授权参数')
   }
 
   /** 精确只读分类，使用工作区范围，不借用或创建 GitHub 写授权。 */

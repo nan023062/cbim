@@ -8,7 +8,9 @@ import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 
 import { randomUUID } from 'node:crypto';
 
-import { PendingRequests, LineFramer } from '../../../../core/utility';
+import { PendingRequests } from '../../../../core/utility';
+
+import { LineFramer } from '../../../../core/io';
 
 import type { EngineProcess as PiCommand } from '../../rules/engine-adapter';
 

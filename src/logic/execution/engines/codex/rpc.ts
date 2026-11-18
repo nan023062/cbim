@@ -7,7 +7,9 @@
  */
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 
-import { PendingRequests, LineFramer, InFlightOperations } from '../../../../core/utility';
+import { PendingRequests, InFlightOperations } from '../../../../core/utility';
+
+import { LineFramer } from '../../../../core/io';
 
 export class CodexRpc
 {

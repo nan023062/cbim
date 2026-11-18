@@ -9,9 +9,7 @@ import { SerialQueue } from '../../../core/utility';
 
 import { z } from 'zod';
 
-import { atomic } from '../../../core/platform/node/files';
-
-import { fail } from '../../../core/errors';
+import { atomic } from '../../../core/io/text-files';
 
 import { admissionPolicySchema, type AdmissionPolicy } from '../rules/admission';
 
@@ -49,14 +47,14 @@ export class AdmissionSettings
   /** 在任何工作区开启前读取；缺文件沿用默认 4，损坏配置明确失败，不擅自覆盖用户设置。 */
   Init(): Promise<void>
   {
-    return this.Serial(async () => { if (this.initialized) return; let policy: AdmissionPolicy; try { policy = storedPolicy.parse(JSON.parse(await this.storage.Read(this.filename))).policy } catch (error) { if ((error as { code?: string })?.code !== 'ENOENT') fail('ADMISSION_SETTINGS_INVALID', '运行配额设置无法读取，请核实设置文件后重新启动'); policy = this.admission.Snapshot().policy } this.admission.RestorePolicy(policy); this.initialized = true; })
+    return this.Serial(async () => { if (this.initialized) return; let policy: AdmissionPolicy; try { policy = storedPolicy.parse(JSON.parse(await this.storage.Read(this.filename))).policy } catch (error) { if ((error as { code?: string })?.code !== 'ENOENT') throw new Error('运行配额设置无法读取，请核实设置文件后重新启动'); policy = this.admission.Snapshot().policy } this.admission.RestorePolicy(policy); this.initialized = true; })
   }
 
   /** 仅读取当前已生效策略，不扫描运行日志，不触发任务或恢复。 */
   Read(): AdmissionPolicy
   {
     if (!this.initialized)
-      fail('ADMISSION_NOT_READY', '运行配额设置尚未就绪');
+      throw new Error('运行配额设置尚未就绪');
 
     return { ...this.admission.Snapshot().policy }
   }
@@ -69,18 +67,18 @@ export class AdmissionSettings
       const parsed = admissionPolicySchema.safeParse(raw);
 
       if (!parsed.success)
-        fail('ADMISSION_SETTINGS_INPUT', '并发上限必须为 1～32 的整数，并携带当前设置版本');
+        throw new Error('并发上限必须为 1～32 的整数，并携带当前设置版本');
 
       const current = this.Read();
 
       if (parsed.data.revision !== current.revision)
-        fail('ADMISSION_SETTINGS_CONFLICT', '运行配额设置已在其他窗口更新，请刷新后再保存');
+        throw new Error('运行配额设置已在其他窗口更新，请刷新后再保存');
 
       if (parsed.data.maxConcurrentRuns === current.maxConcurrentRuns)
         return current;
 
       if (current.revision >= Number.MAX_SAFE_INTEGER)
-        fail('ADMISSION_SETTINGS_LIMIT', '运行配额设置版本已达到上限');
+        throw new Error('运行配额设置版本已达到上限');
 
       const next = { revision: current.revision + 1, maxConcurrentRuns: parsed.data.maxConcurrentRuns };
 
@@ -90,7 +88,7 @@ export class AdmissionSettings
       }
       catch
       {
-        fail('ADMISSION_SETTINGS_WRITE', '运行配额设置保存失败，原上限仍然有效，请检查目录权限后重试')
+        throw new Error('运行配额设置保存失败，原上限仍然有效，请检查目录权限后重试')
       }
 
       // 产品只有本服务修改策略，所有保存共用串行入口；无 await 的应用阶段紧接可靠写盘。

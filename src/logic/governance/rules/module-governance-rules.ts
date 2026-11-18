@@ -3,11 +3,9 @@
  * 设计原因：通用 CRUD 与受控实施必须比较同一真实前后快照，不能只凭工具名称、批准文字或当前正文相同认定获批；纯规则不反向依赖存储队列。
  * 职责边界：调用方负责可信文件读取、完整知识校验、私有记录及 journal 来源；此处不读文件、不签发身份、不执行事务或补造实施成功。
  */
-import { hash, json } from '../../../core/platform/node/serialization';
+import { hash, json } from '../../../core/io/serialization';
 
 import { createHash } from 'node:crypto';
-
-import { fail } from '../../../core/errors';
 
 import { moduleGovernanceProtectionSchema, moduleGovernanceProposalSchema, moduleGovernanceObservationSchema, moduleGovernanceDecisionSchema, moduleGovernanceApplyIntentSchema, moduleGovernanceKnowledgeReceiptSchema, moduleGovernanceMainOriginSchema, type ModuleGovernanceMainOrigin, type ModuleGovernanceProtection, type ModuleGovernanceProposal, type ModuleGovernanceObservation, type ModuleGovernanceDecision, type ModuleGovernanceApplyIntent, type ModuleGovernanceKnowledgeReceipt, } from './module-governance';
 
@@ -42,7 +40,7 @@ export interface ModuleGovernanceWriteRequest
 function check(condition: unknown, code: string, message: string): asserts condition
 {
   if (!condition)
-    fail(code, message)
+    throw new Error(message)
 }
 
 function fileMap(files: readonly ModuleGovernanceFile[])
@@ -146,7 +144,7 @@ export function moduleGovernanceBinding(moduleId: string, files: readonly Module
   }
   catch
   {
-    fail('GOVERNANCE_DRIFT', '受保护模块定义不是有效 JSON')
+    throw new Error('受保护模块定义不是有效 JSON')
   }
 
   check(value && typeof value === 'object' && !Array.isArray(value), 'GOVERNANCE_DRIFT', '受保护模块定义无效');

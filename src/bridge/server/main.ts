@@ -26,15 +26,15 @@ import { TerminalSessions } from '../../logic/terminal/service/terminal';
 
 import { Application } from './application';
 
-import { ElectronBrowserReader } from '../../core/platform/electron/web-reader';
+import { ElectronBrowserReader } from '../../core/web/electron';
 
 import { ChatInputs } from '../../logic/materials/service/chat-inputs';
 
-import { systemSecretCipher } from '../../core/platform/electron/secrets';
+import { systemSecretCipher } from '../../core/io/electron';
 
 import { Paths } from '../../logic/workspace/service/paths';
 
-import { json } from '../../core/platform/node/serialization';
+import { json } from '../../core/io/serialization';
 
 import { knowledgeTools } from '../../logic/tools/runtime/knowledge-tools';
 

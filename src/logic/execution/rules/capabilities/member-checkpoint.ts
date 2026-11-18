@@ -7,8 +7,6 @@ import { randomUUID } from 'node:crypto';
 
 import { isDeepStrictEqual } from 'node:util';
 
-import { fail } from '../../../../core/errors';
-
 import { MemberCheckpointTools, memberCheckpointToolName } from '../../../tasks/rules/member-checkpoint-tools';
 
 import { memberCheckpointInputSchema, memberCheckpointStagedSchema, type MemberCheckpointInput, type MemberCheckpointStaged } from '../../../tasks/rules/member-checkpoint';
@@ -90,11 +88,11 @@ export class RunMemberCheckpoint
   private async Stage(input: MemberCheckpointInput, id: string): Promise<MemberCheckpointStaged>
   {
     if (!this.reserved || this.reserved.id !== id || this.reserved.consumed || !isDeepStrictEqual(this.reserved.input, input))
-      fail('MEMBER_CHECKPOINT_CALL', '检查点必须来自本轮授权的一次性调用');
+      throw new Error('检查点必须来自本轮授权的一次性调用');
 
     this.reserved.consumed = true;
 
-    const check = () => { this.controller.signal.throwIfAborted(); this.context.AssertReady(id); if (this.context.Current()?.version !== input.expectedTaskProgressVersion) fail('MEMBER_CHECKPOINT_PROGRESS', '任务进度已变化，请重新核实') };
+    const check = () => { this.controller.signal.throwIfAborted(); this.context.AssertReady(id); if (this.context.Current()?.version !== input.expectedTaskProgressVersion) throw new Error('任务进度已变化，请重新核实') };
 
     check();
 
@@ -110,7 +108,7 @@ export class RunMemberCheckpoint
     check();
 
     if (files.length !== expected.length || files.some((file, index) => this.port.NormalizePath(file.relativePath) !== this.port.NormalizePath(expected[index].relativePath) || file.sha256 !== expected[index].sha256 || file.byteLength !== expected[index].byteLength))
-      fail('MEMBER_CHECKPOINT_ARTIFACT_CHANGED', '文件已偏离所选基线，不能建立检查点');
+      throw new Error('文件已偏离所选基线，不能建立检查点');
 
     await this.port.AssertCurrentKnowledge();
 

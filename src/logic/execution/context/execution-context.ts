@@ -8,13 +8,11 @@
  * 读取边界：冻结模块与正文时只消费 knowledge/read-models 的公开读取能力，不依赖领域模型的私有文件。
  * 算法入口：通过 Core JsonUtils 静态方法复用机制，本文件继续拥有原业务策略。
  */
-import { JsonUtils } from '../../../core/utility';
+import { JsonUtils } from '../../../core/io';
 
 import { resolveExecutionModules } from './automatic-context';
 
-import { hash } from '../../../core/platform/node/serialization';
-
-import { fail } from '../../../core/errors';
+import { hash } from '../../../core/io/serialization';
 
 import { data, BusinessWorkspace } from '../../knowledge/rules/read-models';
 
@@ -56,13 +54,13 @@ function sameBindings(task: TaskNode, prepared: PreparedDispatchKnowledge)
   validateTaskWorkflowSelections(task.workflowSelections, task.modules);
 
   if (task.identity.workspaceId !== prepared.workspaceId || task.assignee.agentId !== prepared.agent.agentId || canonical(task.modules) !== canonical(prepared.modules.map(module => module.binding)))
-    fail('DISPATCH_CONTEXT_CHANGED', '任务角色或模块绑定与冻结执行知识不一致，请重新核实派发基线');
+    throw new Error('任务角色或模块绑定与冻结执行知识不一致，请重新核实派发基线');
 }
 
 function body(value: { available: boolean; text?: unknown }, subject: string): string
 {
   if (!value.available || typeof value.text !== 'string' || !value.text.trim())
-    fail('KNOWLEDGE_INVALID', subject + '正文不可用');
+    throw new Error(subject + '正文不可用');
 
   return value.text;
 }
@@ -76,15 +74,15 @@ export async function prepareDispatchExecutionContext(workspace: DispatchKnowled
   workspace.Assert();
 
   if (task.identity.workspaceId !== workspace.entry.id)
-    fail('GRAPH_IDENTITY_MISMATCH', '成员任务不属于当前工作区');
+    throw new Error('成员任务不属于当前工作区');
 
   const snapshot = fixedSnapshot ?? await workspace.Snapshot();
 
   if (snapshot.workspaceId !== workspace.entry.id)
-    fail('GRAPH_IDENTITY_MISMATCH', '知识快照不属于当前工作区');
+    throw new Error('知识快照不属于当前工作区');
 
   if (!task.modules.length || task.modules.some(module => module.knowledgeRevision !== snapshot.revision))
-    fail('KNOWLEDGE_CHANGED', '派发后的知识版本已经变化，请核实后重新准备任务');
+    throw new Error('派发后的知识版本已经变化，请核实后重新准备任务');
 
   const agent = await resolveDispatchAgent(snapshot, task.assignee.agentId);
 
@@ -96,7 +94,7 @@ export async function prepareDispatchExecutionContext(workspace: DispatchKnowled
   const activeBindings = (bindings: TaskNode['modules']) => bindings.map(({ maintenanceBindingId, maintainerPersonIds, ...binding }) => binding);
 
   if (canonical(activeBindings(currentBindings)) !== canonical(activeBindings(task.modules)))
-    fail('DISPATCH_CONTEXT_CHANGED', '已派发的模块或 Workflow 绑定不一致');
+    throw new Error('已派发的模块或 Workflow 绑定不一致');
 
   const bindings = structuredClone(task.modules);
 
@@ -104,12 +102,12 @@ export async function prepareDispatchExecutionContext(workspace: DispatchKnowled
 
   const business = new BusinessWorkspace(snapshot);
 
-  const modules = await Promise.all(bindings.map(async binding => { if (task.fallbackBinding?.reason === 'no_modules') return { binding, definition: { id: binding.moduleId, name: binding.name, implicit: true }, overview: '自动模式临时以当前项目为范围，未创建正式业务模块或维护确认。遵守当前工作区边界、权限及用户验收要求。', workflowText: standards.find(s => s.id === 'business-execution')!.text }; const module = await business.Module(binding.moduleId), overview = body(module.overview, '模块'); let workflowText: string; if (binding.workflow.kind === 'module') { const workflow = module.workflows.find((item: { id: string }) => item.id === binding.workflow.id); if (!workflow) fail('WORKFLOW_UNAVAILABLE', '已派发的 Workflow 不属于当前模块'); workflowText = body(workflow.content, 'Workflow'); if (hash(workflowText) !== binding.workflow.version) fail('DISPATCH_CONTEXT_CHANGED', 'Workflow 正文与派发版本不一致'); } else workflowText = standards.find(standard => standard.id === 'business-execution')!.text; const workflowContract = parseWorkflowContract(workflowText); return { binding, definition: module.definition, overview, workflowText, ...(workflowContract ? { workflowContract } : {}) }; }));
+  const modules = await Promise.all(bindings.map(async binding => { if (task.fallbackBinding?.reason === 'no_modules') return { binding, definition: { id: binding.moduleId, name: binding.name, implicit: true }, overview: '自动模式临时以当前项目为范围，未创建正式业务模块或维护确认。遵守当前工作区边界、权限及用户验收要求。', workflowText: standards.find(s => s.id === 'business-execution')!.text }; const module = await business.Module(binding.moduleId), overview = body(module.overview, '模块'); let workflowText: string; if (binding.workflow.kind === 'module') { const workflow = module.workflows.find((item: { id: string }) => item.id === binding.workflow.id); if (!workflow) throw new Error('已派发的 Workflow 不属于当前模块'); workflowText = body(workflow.content, 'Workflow'); if (hash(workflowText) !== binding.workflow.version) throw new Error('Workflow 正文与派发版本不一致'); } else workflowText = standards.find(standard => standard.id === 'business-execution')!.text; const workflowContract = parseWorkflowContract(workflowText); return { binding, definition: module.definition, overview, workflowText, ...(workflowContract ? { workflowContract } : {}) }; }));
 
   const agentDefinition = data(snapshot, agent.agentId + '/agent.json');
 
   if (task.ownerBinding && (!member || member.memberId !== task.ownerBinding.memberId || member.revision !== task.ownerBinding.memberRevision))
-    fail('OWNER_BINDING_STALE', '准备执行知识缺少原岗位的精确登记');
+    throw new Error('准备执行知识缺少原岗位的精确登记');
 
   const content = {
     version: 1 as const, workspaceId: workspace.entry.id, knowledgeRevision: snapshot.revision, agent, agentDefinition, modules, standards, ...(task.fallbackBinding ? { fallbackBinding: structuredClone(task.fallbackBinding) } : {}),
@@ -131,16 +129,16 @@ export async function recheckDispatchExecutionContext(workspace: DispatchKnowled
   validatePreparedDispatchKnowledge(prepared);
 
   if (prepared.agent.agentId === mainAgentId)
-    fail('AGENT_ROLE_INVALID', '主 Agent 在原会话执行，不能恢复为独立成员');
+    throw new Error('主 Agent 在原会话执行，不能恢复为独立成员');
 
   // 旧默认执行者快照仍可读取，但升级不能自动延续已经退役的执行身份。
   if (prepared.agent.source === 'builtin')
-    fail('AGENT_RETIRED', '内置默认执行 Agent 已退役；请由主 Agent 核实历史后在当前会话继续');
+    throw new Error('内置默认执行 Agent 已退役；请由主 Agent 核实历史后在当前会话继续');
 
   if (prepared.workspaceId !== workspace.entry.id)
-    fail('GRAPH_IDENTITY_MISMATCH', '冻结执行知识不属于当前工作区');
+    throw new Error('冻结执行知识不属于当前工作区');
 
-  const check = async () => { const current = await workspace.Read(); if (current.workspaceId !== prepared.workspaceId || current.revision !== prepared.knowledgeRevision) fail('KNOWLEDGE_CHANGED', '执行知识版本已经变化，请核实后重新准备任务') };
+  const check = async () => { const current = await workspace.Read(); if (current.workspaceId !== prepared.workspaceId || current.revision !== prepared.knowledgeRevision) throw new Error('执行知识版本已经变化，请核实后重新准备任务') };
 
   await check();
 
@@ -149,7 +147,7 @@ export async function recheckDispatchExecutionContext(workspace: DispatchKnowled
     const current = await Builtins.Read(standard.id);
 
     if (current.version !== standard.version)
-      fail('KNOWLEDGE_CHANGED', '内置执行规范已经变化，请核实后重新准备任务')
+      throw new Error('内置执行规范已经变化，请核实后重新准备任务')
   }
 
   await check();
@@ -163,7 +161,7 @@ export function memberExecutionPrompt(prepared: PreparedDispatchKnowledge, task:
   sameBindings(task, prepared);
 
   if (task.assignee.agentId === mainAgentId)
-    fail('AGENT_ROLE_INVALID', '主 Agent 在原会话执行，不能构造独立成员指引');
+    throw new Error('主 Agent 在原会话执行，不能构造独立成员指引');
 
   return `你是 CBIM Team 中的虚拟成员。所有成员使用同一大脑内核，角色差异来自下面冻结的角色配置、原则和 Skill。
 你是拥有独立会话、运行状态和模型思考能力的执行 Agent，需要自主探索、判断、实现和验证，不只是转发或复述结果。当前主会话的主 Agent 是唯一调度 Agent，实际派工和状态由其背后的任务调度引擎管理。

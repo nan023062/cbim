@@ -7,8 +7,6 @@
  */
 import { randomUUID } from 'node:crypto';
 
-import { fail } from '../../../core/errors';
-
 import type { RequestBudgetStore, RequestBudgetState, RequestBudgetAdmission } from '../rules/model-request-budget-storage';
 
 import { requestBudgetBindingSchema, requestBudgetQuerySchema, requestBudgetUsageSchema, type RequestBudgetBinding, type RequestBudgetIntent, type ModelRequestBudgetChange } from '../rules/model-request-budget';
@@ -56,7 +54,7 @@ export class ModelRequestBudgetService
       return;
 
     if (!llm)
-      fail('MODEL_REQUEST_CONFIGURATION', '逐请求预算缺少已解析模型，原等待保留');
+      throw new Error('逐请求预算缺少已解析模型，原等待保留');
 
     this.budgets.PreflightRequest(state, scope, llm.profile);
   }
@@ -74,7 +72,7 @@ export class ModelRequestBudgetService
       return;
 
     if (!llm)
-      fail('MODEL_REQUEST_CONFIGURATION', '逐请求预算缺少已解析的可信模型，未启动模型请求');
+      throw new Error('逐请求预算缺少已解析的可信模型，未启动模型请求');
 
     const binding = requestBudgetBindingSchema.parse({ ...input, scopeId: scope.scopeId, workspaceId: this.owner.entry.id, ownerInstanceId: this.owner.instanceId });
 
@@ -83,7 +81,7 @@ export class ModelRequestBudgetService
     const policyRevision = scope.budget.policy.revision;
 
     return {
-      model: structuredClone(model), reserve: async request => { this.AssertLive(binding, assertCaller); if (this.stoppedScopes.has(binding.scopeId)) fail('MODEL_REQUEST_UNVERIFIED', '本周期请求结果待核实，未发送新的请求'); const intent: RequestBudgetIntent = { version: 1, requestId: randomUUID(), binding, policyRevision, model, requestHash: request.requestHash, maxOutputTokens: request.maxOutputTokens, ...requestBudgetReservation(model, request.maxOutputTokens), createdAt: new Date().toISOString() }; const initial: ModelRequestBudgetChange = { requestId: intent.requestId, revision: 1, recordedAt: intent.createdAt, phase: 'reserved', intent }; let denial = ''; const receipt = await this.store.TransactBudget(requestBudgetCommand(initial), async current => { this.AssertLive(binding, assertCaller); const currentScope = current.scopes?.find(s => s.scopeId === binding.scopeId); if (!currentScope?.budget) fail('MODEL_REQUEST_BUDGET_STALE', '请求所属周期或冻结预算已不存在'); const records = requestBudgetRecords(current.modelRequestBudgetChanges ?? []), report = this.Summary(current, binding), reason = requestBudgetDecision(currentScope.budget.policy, report, intent, records); const change: ModelRequestBudgetChange = reason ? { ...initial, phase: 'denied', reason } : initial; if (reason) { const limit = currentScope.budget.policy.limits; denial = reason === 'token_reserve' ? `本次请求需要预留 ${intent.tokens} Token，剩余 ${Math.max(0, (limit.tokens ?? 0) - report.tokens - report.reservedTokens)} Token` : reason === 'cost_reserve' ? `本次请求需预留约 $${intent.estimatedCostUsd}，剩余约 $${Math.max(0, (limit.estimatedCostUsd ?? 0) - report.estimatedCostUsd - report.reservedCostUsd)}` : reason === 'unpriced' ? '原模型价格缺失，无法核实美元预算' : reason === 'capacity' ? '请求审计容量已满' : '本周期存在未核实请求或超出原预留的报告'; } return { modelRequestBudgetChanges: [change], receipt: requestBudgetReceipt(change) }; }); if (receipt.phase === 'denied') fail('MODEL_REQUEST_BUDGET_DENIED', denial + '；已在发送前停止，原结果保留'); return this.Ticket(intent, assertCaller); }
+      model: structuredClone(model), reserve: async request => { this.AssertLive(binding, assertCaller); if (this.stoppedScopes.has(binding.scopeId)) throw new Error('本周期请求结果待核实，未发送新的请求'); const intent: RequestBudgetIntent = { version: 1, requestId: randomUUID(), binding, policyRevision, model, requestHash: request.requestHash, maxOutputTokens: request.maxOutputTokens, ...requestBudgetReservation(model, request.maxOutputTokens), createdAt: new Date().toISOString() }; const initial: ModelRequestBudgetChange = { requestId: intent.requestId, revision: 1, recordedAt: intent.createdAt, phase: 'reserved', intent }; let denial = ''; const receipt = await this.store.TransactBudget(requestBudgetCommand(initial), async current => { this.AssertLive(binding, assertCaller); const currentScope = current.scopes?.find(s => s.scopeId === binding.scopeId); if (!currentScope?.budget) throw new Error('请求所属周期或冻结预算已不存在'); const records = requestBudgetRecords(current.modelRequestBudgetChanges ?? []), report = this.Summary(current, binding), reason = requestBudgetDecision(currentScope.budget.policy, report, intent, records); const change: ModelRequestBudgetChange = reason ? { ...initial, phase: 'denied', reason } : initial; if (reason) { const limit = currentScope.budget.policy.limits; denial = reason === 'token_reserve' ? `本次请求需要预留 ${intent.tokens} Token，剩余 ${Math.max(0, (limit.tokens ?? 0) - report.tokens - report.reservedTokens)} Token` : reason === 'cost_reserve' ? `本次请求需预留约 $${intent.estimatedCostUsd}，剩余约 $${Math.max(0, (limit.estimatedCostUsd ?? 0) - report.estimatedCostUsd - report.reservedCostUsd)}` : reason === 'unpriced' ? '原模型价格缺失，无法核实美元预算' : reason === 'capacity' ? '请求审计容量已满' : '本周期存在未核实请求或超出原预留的报告'; } return { modelRequestBudgetChanges: [change], receipt: requestBudgetReceipt(change) }; }); if (receipt.phase === 'denied') throw new Error(denial + '；已在发送前停止，原结果保留'); return this.Ticket(intent, assertCaller); }
     };
   }
 
@@ -95,7 +93,7 @@ export class ModelRequestBudgetService
     const query = requestBudgetQuerySchema.parse(input);
 
     if (query.workspaceId !== this.owner.entry.id)
-      fail('MODEL_REQUEST_IDENTITY', '请求账本属于其它工作区');
+      throw new Error('请求账本属于其它工作区');
 
     return this.Summary(await this.store.ReadBudget(), query)
   }
@@ -105,7 +103,7 @@ export class ModelRequestBudgetService
     const scope = state.scopes?.find(s => s.scopeId === b.scopeId && s.rootSessionId === b.rootSessionId && s.workspaceId === b.workspaceId);
 
     if (!scope?.budget?.policy.enabled || scope.budget.policy.enforcement !== 'request')
-      fail('MODEL_REQUEST_NOT_ENABLED', '本周期没有启用逐请求预算');
+      throw new Error('本周期没有启用逐请求预算');
 
     return requestBudgetReport(requestBudgetRecords(state.modelRequestBudgetChanges ?? []), { workspaceId: b.workspaceId, rootSessionId: b.rootSessionId, scopeId: b.scopeId, policyRevision: scope.budget.policy.revision }, this.owner.instanceId);
   }
@@ -117,7 +115,7 @@ export class ModelRequestBudgetService
     assertCaller?.();
 
     if (binding.kind === 'main' && !this.budgets.IsMainLive(binding.runId))
-      fail('MODEL_REQUEST_RUN_STALE', '原主运行已结束，未发送新的模型请求')
+      throw new Error('原主运行已结束，未发送新的模型请求')
   }
 
   private Ticket(intent: RequestBudgetIntent, assertCaller?: () => void): RequestBudgetTicket
@@ -126,10 +124,10 @@ export class ModelRequestBudgetService
       phase: 'reserved' | 'issuing' | 'terminal' = 'reserved',
       busy = false;
 
-    const save = async (next: Omit<ModelRequestBudgetChange, 'requestId' | 'revision' | 'recordedAt'>) => { if (busy || phase === 'terminal') fail('MODEL_REQUEST_STAGE', '同一请求阶段不可并发或重新结算'); busy = true; const change = { ...next, requestId: intent.requestId, revision: revision + 1, recordedAt: new Date().toISOString() } as ModelRequestBudgetChange; try { await this.store.TransactBudget(requestBudgetCommand(change), async () => { if (change.phase === 'issuing') { this.AssertLive(intent.binding, assertCaller); if (this.stoppedScopes.has(intent.binding.scopeId)) fail('MODEL_REQUEST_UNVERIFIED', '本周期已有未核实请求') } return { modelRequestBudgetChanges: [change], receipt: requestBudgetReceipt(change) } }); revision++; phase = change.phase === 'issuing' ? 'issuing' : 'terminal' } catch (error) { if (phase === 'issuing' || change.phase === 'issuing') this.stoppedScopes.add(intent.binding.scopeId); throw error } finally { busy = false } };
+    const save = async (next: Omit<ModelRequestBudgetChange, 'requestId' | 'revision' | 'recordedAt'>) => { if (busy || phase === 'terminal') throw new Error('同一请求阶段不可并发或重新结算'); busy = true; const change = { ...next, requestId: intent.requestId, revision: revision + 1, recordedAt: new Date().toISOString() } as ModelRequestBudgetChange; try { await this.store.TransactBudget(requestBudgetCommand(change), async () => { if (change.phase === 'issuing') { this.AssertLive(intent.binding, assertCaller); if (this.stoppedScopes.has(intent.binding.scopeId)) throw new Error('本周期已有未核实请求') } return { modelRequestBudgetChanges: [change], receipt: requestBudgetReceipt(change) } }); revision++; phase = change.phase === 'issuing' ? 'issuing' : 'terminal' } catch (error) { if (phase === 'issuing' || change.phase === 'issuing') this.stoppedScopes.add(intent.binding.scopeId); throw error } finally { busy = false } };
 
     return {
-      requestId: intent.requestId, issue: () => save({ phase: 'issuing' }), assertSend: () => { this.AssertLive(intent.binding, assertCaller); if (phase !== 'issuing' || this.stoppedScopes.has(intent.binding.scopeId)) fail('MODEL_REQUEST_UNVERIFIED', '原请求已停止或有待核实消耗') }, report: usage => { const verified = requestBudgetUsageSchema.parse(usage); let cost: number | undefined; try { cost = requestBudgetCost(intent.model, verified) } catch (error) { this.stoppedScopes.add(intent.binding.scopeId); throw error } if (verified.input + verified.cacheRead + verified.cacheWrite > requestBudgetInputCapacity(intent.model) || verified.output > intent.maxOutputTokens) this.stoppedScopes.add(intent.binding.scopeId); return save({ phase: 'reported', usage: verified, estimatedCostUsd: cost } as ModelRequestBudgetChange) }, unknown: (reason: RequestUnknownReason) => { this.stoppedScopes.add(intent.binding.scopeId); return save({ phase: 'unknown', reason } as ModelRequestBudgetChange) }, notSent: reason => save({ phase: 'not_sent', reason } as ModelRequestBudgetChange)
+      requestId: intent.requestId, issue: () => save({ phase: 'issuing' }), assertSend: () => { this.AssertLive(intent.binding, assertCaller); if (phase !== 'issuing' || this.stoppedScopes.has(intent.binding.scopeId)) throw new Error('原请求已停止或有待核实消耗') }, report: usage => { const verified = requestBudgetUsageSchema.parse(usage); let cost: number | undefined; try { cost = requestBudgetCost(intent.model, verified) } catch (error) { this.stoppedScopes.add(intent.binding.scopeId); throw error } if (verified.input + verified.cacheRead + verified.cacheWrite > requestBudgetInputCapacity(intent.model) || verified.output > intent.maxOutputTokens) this.stoppedScopes.add(intent.binding.scopeId); return save({ phase: 'reported', usage: verified, estimatedCostUsd: cost } as ModelRequestBudgetChange) }, unknown: (reason: RequestUnknownReason) => { this.stoppedScopes.add(intent.binding.scopeId); return save({ phase: 'unknown', reason } as ModelRequestBudgetChange) }, notSent: reason => save({ phase: 'not_sent', reason } as ModelRequestBudgetChange)
     };
   }
 }

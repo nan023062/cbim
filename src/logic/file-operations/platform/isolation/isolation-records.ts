@@ -4,17 +4,17 @@
  * 设计原因：宿主崩溃后仍须区分原任务资源和同名临时目录；fsync 后才允许下一项外部操作。
  * 职责边界：工作区唯一锁由上层持有；读取不创建目录、修复尾部或重放程序，损坏日志保持不可核实。
  */
+import { appendDurableRecord } from '../../../../core/debug/node';
+
 import fs from 'node:fs/promises';
 
 import path from 'node:path';
 
 import { z } from 'zod';
 
-import { hash } from '../../../../core/platform/node/serialization';
+import { hash } from '../../../../core/io/serialization';
 
 import { safeId } from '../../../execution/ports/identity';
-
-import { fail } from '../../../../core/errors';
 
 import { isolationRecordSchema, isolationProcessSchema, type IsolationRecord } from './isolation-record';
 
@@ -64,7 +64,7 @@ export class FileIsolationRecords
     safeId(runId);
 
     if (!/^[a-f0-9]{64}$/.test(operationId))
-      fail('ISOLATION_RECORD_ID', '原调用标识无效');
+      throw new Error('原调用标识无效');
 
     return path.join(this.directory, runId, operationId + '.jsonl')
   }
@@ -74,7 +74,7 @@ export class FileIsolationRecords
     const stat = await fs.lstat(file);
 
     if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1 || stat.size > 256 * 1024)
-      fail('ISOLATION_RECORD_INVALID', '隔离记录不是有界普通文件')
+      throw new Error('隔离记录不是有界普通文件')
   }
 
   private Validate(changes: IsolationChange[])
@@ -82,7 +82,7 @@ export class FileIsolationRecords
     const first = changes[0];
 
     if (first?.kind !== 'prepared')
-      fail('ISOLATION_RECORD_INVALID', '缺少原隔离来源');
+      throw new Error('缺少原隔离来源');
 
     let phase: IsolationChange['kind'] = 'prepared',
       commandId: string | undefined;
@@ -92,7 +92,7 @@ export class FileIsolationRecords
       const allowed = change.kind === 'started' ? phase === 'prepared' : change.kind === 'settled' ? ['prepared', 'started'].includes(phase) : change.kind === 'cleaned' ? ['prepared', 'started', 'settled'].includes(phase) : change.kind === 'cleanup_requested' ? ['prepared', 'started', 'settled'].includes(phase) : change.kind === 'cleanup_complete' ? phase === 'cleanup_requested' && change.commandId === commandId : false;
 
       if (!allowed)
-        fail('ISOLATION_RECORD_INVALID', '隔离资源阶段顺序不一致');
+        throw new Error('隔离资源阶段顺序不一致');
 
       if (change.kind === 'cleanup_requested')
         commandId = change.commandId;
@@ -123,12 +123,12 @@ export class FileIsolationRecords
     const text = await fs.readFile(file, 'utf8');
 
     if (!text.endsWith('\n'))
-      fail('ISOLATION_RECORD_INVALID', '隔离记录尾部不完整');
+      throw new Error('隔离记录尾部不完整');
 
     const lines = text.trimEnd().split('\n');
 
     if (!lines.length || lines.length > 32)
-      fail('ISOLATION_RECORD_LIMIT', '隔离记录数量不合法');
+      throw new Error('隔离记录数量不合法');
 
     let previous = '';
 
@@ -140,7 +140,7 @@ export class FileIsolationRecords
         { checksum, ...body } = frame;
 
       if (body.sequence !== index + 1 || body.previous !== previous || hash(JSON.stringify(body)) !== checksum)
-        fail('ISOLATION_RECORD_INVALID', '隔离记录哈希链不一致');
+        throw new Error('隔离记录哈希链不一致');
 
       changes.push(body.change);
 
@@ -150,7 +150,7 @@ export class FileIsolationRecords
     const record = this.Validate(changes);
 
     if (record.origin.binding.runId !== runId || isolationOperationId(runId, record.origin.toolCallId) !== operationId)
-      fail('ISOLATION_RECORD_ID', '隔离记录不属于原调用');
+      throw new Error('隔离记录不属于原调用');
 
     return { record, changes, revision: changes.length, checksum: previous, phase: changes.at(-1)!.kind };
   }
@@ -166,7 +166,7 @@ export class FileIsolationRecords
       const stat = await fs.lstat(directory);
 
       if (!stat.isDirectory() || stat.isSymbolicLink())
-        fail('ISOLATION_RECORD_INVALID', '隔离记录目录被替换');
+        throw new Error('隔离记录目录被替换');
 
       names = await fs.readdir(directory)
     }
@@ -179,7 +179,7 @@ export class FileIsolationRecords
     }
 
     if (names.length > 256 || names.some(name => !/^([a-f0-9]{64})\.jsonl$/.test(name)))
-      fail('ISOLATION_RECORD_LIMIT', '隔离记录目录超限或包含未知文件');
+      throw new Error('隔离记录目录超限或包含未知文件');
 
     const results: MemoryEntry[] = [];
 
@@ -189,7 +189,7 @@ export class FileIsolationRecords
         head = await this.Read(runId, operationId);
 
       if (!head)
-        fail('ISOLATION_RECORD_CHANGED', '读取期间隔离记录消失');
+        throw new Error('读取期间隔离记录消失');
 
       results.push({ operationId, head })
     }
@@ -202,7 +202,7 @@ export class FileIsolationRecords
   {
     const fixed = changeSchema.parse(structuredClone(change));
 
-    const result = this.tail.then(async () => { if (this.failure) throw this.failure; const prior = await this.Read(runId, operationId); if ((prior?.revision ?? 0) !== expectedRevision) fail('ISOLATION_RECORD_CONFLICT', '隔离记录版本已变化'); const changes = [...prior?.changes ?? [], fixed]; const record = this.Validate(changes); if (record.origin.binding.runId !== runId || isolationOperationId(runId, record.origin.toolCallId) !== operationId) fail('ISOLATION_RECORD_ID', '隔离记录不属于原调用'); if (changes.length > 32) fail('ISOLATION_RECORD_LIMIT', '隔离记录已达上限'); const file = this.File(runId, operationId); await fs.mkdir(path.dirname(file), { recursive: true }); const body = { sequence: changes.length, previous: prior?.checksum ?? '', at: new Date().toISOString(), change: fixed }, checksum = hash(JSON.stringify(body)); try { const handle = await fs.open(file, prior ? 'a' : 'wx', 0o600); try { await handle.writeFile(JSON.stringify({ ...body, checksum }) + '\n'); await handle.sync() } finally { await handle.close() } } catch (error) { this.failure = Object.assign(Error('隔离资源阶段未确认可靠保存，请保留原记录并重新核实'), { code: 'ISOLATION_RECORD_SAVE_UNKNOWN', cause: error }); throw this.failure } return { record: changes[0].kind === 'prepared' ? changes[0].record : prior!.record, changes, revision: changes.length, checksum, phase: fixed.kind }; });
+    const result = this.tail.then(async () => { if (this.failure) throw this.failure; const prior = await this.Read(runId, operationId); if ((prior?.revision ?? 0) !== expectedRevision) throw new Error('隔离记录版本已变化'); const changes = [...prior?.changes ?? [], fixed]; const record = this.Validate(changes); if (record.origin.binding.runId !== runId || isolationOperationId(runId, record.origin.toolCallId) !== operationId) throw new Error('隔离记录不属于原调用'); if (changes.length > 32) throw new Error('隔离记录已达上限'); const file = this.File(runId, operationId); await fs.mkdir(path.dirname(file), { recursive: true }); const body = { sequence: changes.length, previous: prior?.checksum ?? '', at: new Date().toISOString(), change: fixed }, checksum = hash(JSON.stringify(body)); try { await appendDurableRecord(file, { ...body, checksum }, prior ? 'a' : 'wx') } catch (error) { this.failure = Object.assign(Error('隔离资源阶段未确认可靠保存，请保留原记录并重新核实'), { code: 'ISOLATION_RECORD_SAVE_UNKNOWN', cause: error }); throw this.failure } return { record: changes[0].kind === 'prepared' ? changes[0].record : prior!.record, changes, revision: changes.length, checksum, phase: fixed.kind }; });
 
     this.tail = result.then(() => { }, () => { });
 

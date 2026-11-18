@@ -7,7 +7,7 @@ import {ModelRequestBudgetService} from '../../../../../src/logic/budget/runtime
 import {requestBudgetStore} from '../../../../../src/logic/dispatch/storage/request-budget-store';
 import {requestBudgetCommand,requestBudgetReceipt,requestBudgetReservation,requestBudgetReport,requestBudgetRecords,requestBudgetDecision,requestBudgetCost} from '../../../../../src/logic/budget/rules/model-request-budget-rules';
 import type {ModelRequestBudgetChange} from '../../../../../src/logic/budget/rules/model-request-budget';
-import {hash} from '../../../../../src/core/platform/node/serialization';
+import {hash} from '../../../../../src/core/io/serialization';
 
 it('预算端口只暴露隔离的预算视图，阶段提交保留唯一事务及原命令重放',async()=>{
   const f=await requestBudgetFixture();try{

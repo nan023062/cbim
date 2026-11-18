@@ -7,11 +7,9 @@
  */
 import { z } from 'zod';
 
-import { fail } from '../../../core/errors';
-
 import { safeId } from '../../execution/ports/identity';
 
-import { hash, json } from '../../../core/platform/node/serialization';
+import { hash, json } from '../../../core/io/serialization';
 
 import type { KnowledgeWorkspace } from '../../knowledge/rules/ports';
 
@@ -42,7 +40,7 @@ type Owner = Pick<KnowledgeWorkspace, 'entry' | 'Assert'>;
 function check(condition: unknown, code: string, message: string): asserts condition
 {
   if (!condition)
-    fail(code, message)
+    throw new Error(message)
 }
 
 /** fresh 仅本次进程事务返回，绝不写入 durable receipt；即使为 true，调用方仍需复核停止与当前 scope 状态。 */
@@ -66,7 +64,7 @@ export class ScopeContinuationService
     const parsed = schema.safeParse(input);
 
     if (!parsed.success)
-      fail('GOAL_CONTINUATION_INPUT', parsed.error.issues.map(issue => issue.message).join('；'));
+      throw new Error(parsed.error.issues.map(issue => issue.message).join('；'));
 
     return parsed.data
   }
@@ -135,7 +133,7 @@ export class ScopeContinuationService
     alive();
 
     if (manifestCopyFailed)
-      fail('GOAL_ATTACHMENT_MANIFEST', '附件快照清单无法复制，尚未受理补充');
+      throw new Error('附件快照清单无法复制，尚未受理补充');
 
     assertContinuationAttachmentManifest(input.input, attachmentManifest);
 
@@ -213,7 +211,7 @@ export class ScopeContinuationService
 
     // 先查幂等历史，再取得知识→模型→Store；绝不能从上述事务内部反向取得岗位快照。
     if (observed.wait?.memberPause && !this.memberPauses)
-      fail('GOAL_MEMBER_PAUSE_UNAVAILABLE', '当前工作区未装配成员等待核实能力');
+      throw new Error('当前工作区未装配成员等待核实能力');
 
     let receipt: GoalContinuationReceipt | ScopeBudgetRejected;
 

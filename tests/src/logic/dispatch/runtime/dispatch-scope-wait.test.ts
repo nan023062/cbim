@@ -6,7 +6,7 @@ import {request} from '../../knowledge/rules/data/knowledge';
 import {seedTeam} from '../../knowledge/service/support/team-fixture';
 import {registerExplicitFixtureOwner} from '../../team/service/support/explicit-owner-fixture';
 import type {MemberExecutionPorts} from '../../../../../src/logic/team/runtime/member-execution';
-import {json,hash} from '../../../../../src/core/platform/node/serialization';
+import {json,hash} from '../../../../../src/core/io/serialization';
 import type {AgentEngine,EngineContext,RunSummary,TaskSpec} from '../../../../../src/logic/execution/rules/types';
 import type {GoalPlanInput,GoalReviewInput} from '../../../../../src/logic/tasks/rules/scope-goal';
 import {LoopRuntime} from '../../../../../src/logic/execution/rules/runtime/runtime';

@@ -8,7 +8,7 @@
  * 超时按 SDK 模型增量及工具 Hook 的进展续期；连续静默才关闭 Query，取消仍按显式停止处理。
  * 算法入口：通过 Core StringUtils 静态方法复用机制，本文件继续拥有原业务策略。
  */
-import { StringUtils } from '../../../../core/utility';
+import { StringUtils } from '../../../../core/io';
 
 import fs from 'node:fs/promises';
 

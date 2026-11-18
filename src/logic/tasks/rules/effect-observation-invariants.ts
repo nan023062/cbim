@@ -4,8 +4,6 @@
  */
 import { isDeepStrictEqual } from 'node:util';
 
-import { fail } from '../../../core/errors';
-
 import { effectDispositionRecordSchema, effectObservationLimits, sameEffectSubject, type EffectSubject, type EffectDispositionRecord } from './effect-observation';
 
 import { effectDispositionCommand, effectDispositionReceipt, effectDispositionRevision, effectObservationBasis } from './effect-observation-rules';
@@ -16,7 +14,7 @@ import type { DispatchScope } from './dispatch-scope';
 
 import { isMainRecoverySource } from './scope-recovery';
 
-const check = (v: unknown, message: string) => { if (!v) fail('EFFECT_DISPOSITION_AUDIT', message) };
+const check = (v: unknown, message: string) => { if (!v) throw new Error(message) };
 
 /** 原始位置必须能从持久归属确定；坏 canonical 可保留诊断，但不能借另一个任务/主运行签署。 */
 function validateSource(state: DispatchState, record: EffectDispositionRecord)
@@ -105,7 +103,7 @@ export function projectEffectDispositionMutation(previous: DispatchState, mutati
   const next = [...records, structuredClone(record)];
 
   if (next.length > effectObservationLimits.records || record.revision > effectObservationLimits.recordsPerRoot || new TextEncoder().encode(JSON.stringify(next)).length > effectObservationLimits.storedBytes)
-    fail('EFFECT_DISPOSITION_LIMIT', '处置历史达到保存上限，原记录不删除');
+    throw new Error('处置历史达到保存上限，原记录不删除');
 
   return { effectDispositions: next };
 }

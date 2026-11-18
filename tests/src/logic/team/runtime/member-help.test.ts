@@ -6,7 +6,7 @@ import {fixture} from '../../application/support/helpers';
 import {request} from '../../knowledge/rules/data/knowledge';
 import {seedTeam} from '../../knowledge/service/support/team-fixture';
 import {registerExplicitFixtureOwner} from '../service/support/explicit-owner-fixture';
-import {hash,json} from '../../../../../src/core/platform/node/serialization';
+import {hash,json} from '../../../../../src/core/io/serialization';
 import {jsonToolResult} from '../../../../../src/logic/tools/rules/results';
 import {memberHelpInputSchema} from '../../../../../src/logic/tasks/rules/member-help';
 import {FileDispatchStore} from '../../../../../src/logic/dispatch/storage/dispatch-store';

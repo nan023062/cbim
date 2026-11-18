@@ -5,8 +5,6 @@
  */
 import { z } from 'zod';
 
-import { fail } from '../../../core/errors';
-
 const id = z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/);
 
 export const teamSessionSchema = z.object({ workspaceId: id, rootSessionId: id, sessionId: id, teamId: z.string().trim().min(1).max(512), agentId: z.string().trim().min(1).max(512), createdAt: z.string().datetime(), }).strict();
@@ -50,7 +48,7 @@ export function appendTeamSessions(previous: readonly TeamSession[], updates: re
     const parsed = teamSessionSchema.safeParse(raw);
 
     if (!parsed.success || raw.workspaceId !== workspaceId || ids.has(raw.sessionId))
-      fail('TEAM_SESSION_INVALID', '团队对话身份无效、重复或不属于当前工作区');
+      throw new Error('团队对话身份无效、重复或不属于当前工作区');
 
     ids.add(raw.sessionId);
 
@@ -61,12 +59,12 @@ export function appendTeamSessions(previous: readonly TeamSession[], updates: re
     if (sameId)
     {
       if (Object.keys(parsed.data).some(key => sameId[key as keyof TeamSession] !== raw[key as keyof TeamSession]))
-        fail('TEAM_SESSION_CONFLICT', '已登记的团队对话不能更换办公室或 Agent');
+        throw new Error('已登记的团队对话不能更换办公室或 Agent');
     }
     else
     {
       if (sameRole)
-        fail('TEAM_SESSION_CONFLICT', '同一办公室的 Agent 已有独立对话');
+        throw new Error('同一办公室的 Agent 已有独立对话');
 
       next.push({ ...parsed.data });
     }

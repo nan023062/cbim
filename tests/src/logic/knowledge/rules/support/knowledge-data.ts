@@ -1,5 +1,5 @@
 /** 纯知识数据构造；不初始化 Application、工作区、存储或运行引擎。 */
-import {json,hash} from '../../../../../../src/core/platform/node/serialization';
+import {json,hash} from '../../../../../../src/core/io/serialization';
 import {randomUUID} from 'node:crypto';
 import type {Snapshot,Change,KnowledgeFile} from '../../../../../../src/logic/knowledge/rules/types';
 export const request=(snapshot:Snapshot,changes:Change[])=>({workspaceId:snapshot.workspaceId,instanceId:snapshot.instanceId,revision:snapshot.revision,requestId:randomUUID(),changes});

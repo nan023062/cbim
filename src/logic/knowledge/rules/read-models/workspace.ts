@@ -8,9 +8,7 @@ import path from 'node:path';
 
 import { context, data, content } from './snapshot';
 
-import { parseJson } from '../../../../core/json';
-
-import { fail } from '../../../../core/errors';
+import { parseJson } from '../../../io-errors/json';
 
 import type { Snapshot } from '../types';
 
@@ -39,7 +37,7 @@ export class BusinessWorkspace
       return { ...context(s), id, source: 'builtin' as const, definition: { ...projectRootModule, children: [...(s.validation?.tree.roots ?? [])], workflows: [] }, overview: { available: true as const, text: projectRootOverview }, workflows: [], workflowScope: 'own-only' as const };
 
     if (!Object.hasOwn(s.validation!.tree.nodes, id))
-      fail('OBJECT_NOT_FOUND', 'Module 不存在或定义未通过校验，请先查询模块注册表与问题清单');
+      throw new Error('Module 不存在或定义未通过校验，请先查询模块注册表与问题清单');
 
     const definition = data(s, id + '/module.json');
 

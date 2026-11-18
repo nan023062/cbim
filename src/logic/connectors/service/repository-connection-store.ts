@@ -8,11 +8,9 @@ import { z } from 'zod';
 
 import { isDeepStrictEqual } from 'node:util';
 
-import { atomic } from '../../../core/platform/node/files';
+import { atomic } from '../../../core/io/text-files';
 
-import { json } from '../../../core/platform/node/serialization';
-
-import { fail } from '../../../core/errors';
+import { json } from '../../../core/io/serialization';
 
 import { repositoryConnectionGrantSchema, repositoryConnectionReceiptSchema, type RepositoryConnectionGrant, type RepositoryConnectionReceipt } from '../rules/repository-connection';
 
@@ -42,7 +40,7 @@ export class RepositoryConnectionStore
       const stat = await fs.lstat(this.filename);
 
       if (!stat.isFile() || stat.isSymbolicLink() || stat.size > maxBytes)
-        fail('REPOSITORY_CONNECTION_DATA', '本机仓库授权文件不安全或超过限制');
+        throw new Error('本机仓库授权文件不安全或超过限制');
 
       text = await fs.readFile(this.filename, 'utf8')
     }
@@ -96,7 +94,7 @@ export class RepositoryConnectionStore
     }
     catch
     {
-      fail('REPOSITORY_CONNECTION_DATA', '本机仓库授权记录损坏，原文件已保留；不能猜测授权状态')
+      throw new Error('本机仓库授权记录损坏，原文件已保留；不能猜测授权状态')
     }
   }
 
@@ -131,7 +129,7 @@ export class RepositoryConnectionStore
       return undefined;
 
     if (command.workspaceId !== workspaceId || command.inputHash !== inputHash)
-      fail('REPOSITORY_CONNECTION_CONFLICT', '原命令已绑定其他请求，请查询原回执，不要更换命令重放');
+      throw new Error('原命令已绑定其他请求，请查询原回执，不要更换命令重放');
 
     return structuredClone(command.receipt)
   }
@@ -144,7 +142,7 @@ export class RepositoryConnectionStore
     const encoded = json(next);
 
     if (Buffer.byteLength(encoded) > maxBytes)
-      fail('REPOSITORY_CONNECTION_LIMIT', '本机仓库授权历史已达到容量上限，未保存新授权');
+      throw new Error('本机仓库授权历史已达到容量上限，未保存新授权');
 
     await atomic(this.filename, encoded);
 

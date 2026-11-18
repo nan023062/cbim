@@ -10,7 +10,7 @@ import {evaluateWorkflowDelivery,selectWorkflowValidations} from '../../../../..
 import {TaskProgressTools} from '../../../../../src/logic/evidence/rules/progress-tools';
 import type {WorkflowContractBinding} from '../../../../../src/logic/tasks/rules/execution-context';
 import type {TaskProgress} from '../../../../../src/logic/evidence/rules/progress';
-import {hash} from '../../../../../src/core/platform/node/serialization';
+import {hash} from '../../../../../src/core/io/serialization';
 import {jsonToolResult} from '../../../../../src/logic/tools/rules/results';
 import type {ToolReceipt} from '../../../../../src/logic/tools/rules/types';
 const bytes=(text:string)=>new TextEncoder().encode(text),stamp='2026-11-07T00:00:00.000Z';

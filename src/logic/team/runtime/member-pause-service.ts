@@ -4,8 +4,6 @@
  * 作用定位：核实持久等待的成员原记录，并在用户明确继续时重新检查岗位、知识、native 与文件。
  * 设计原因：重启只读登记等待，不触碰原生会话；继续先取业务读占用，再按知识→模型→Store 的顺序核实，失败不消费等待。预检结果不缓存为执行许可，预约及领取仍各自重核。
  */
-import { fail } from '../../../core/errors';
-
 import type { DispatchKnowledgeWorkspace } from '../../execution/context/execution-context';
 
 import type { DispatchState, DispatchStore } from '../../dispatch/rules/dispatch-storage';
@@ -39,7 +37,7 @@ export class MemberPauseService
   private Available()
   {
     if (!this.ports)
-      fail('GOAL_MEMBER_PAUSE_UNAVAILABLE', '当前工作区未装配成员持久等待核实能力');
+      throw new Error('当前工作区未装配成员持久等待核实能力');
 
     return this.ports
   }
@@ -49,7 +47,7 @@ export class MemberPauseService
     const scope = state.scopes?.find(s => s.workspaceId === request.workspaceId && s.rootSessionId === request.rootSessionId && s.scopeId === request.scopeId);
 
     if (state.workspaceId !== this.owner.entry.id || request.workspaceId !== this.owner.entry.id || scope?.status !== 'waiting' || !scope.wait?.memberPause || scope.wait.waitId !== request.waitId || scope.goal?.revision !== request.expectedGoalRevision || (scope.goal.inputRevision ?? 1) !== request.expectedInputRevision)
-      fail('GOAL_WAIT_CONFLICT', '成员等待或目标版本已变化，请刷新后核实');
+      throw new Error('成员等待或目标版本已变化，请刷新后核实');
 
     return scope;
   }
@@ -97,7 +95,7 @@ export class MemberPauseService
     assertMemberPausePermission(selected.checkpoints, request.options.permission);
 
     if (context.snapshot.revision !== scope.wait!.knowledgeRevision || scope.goal?.plan?.knowledgeRevision !== context.snapshot.revision)
-      fail('GOAL_KNOWLEDGE_CHANGED', '等待期间知识发生变化，原成员不能沿旧计划继续');
+      throw new Error('等待期间知识发生变化，原成员不能沿旧计划继续');
 
     for (const task of selected.tasks)
     {

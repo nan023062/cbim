@@ -19,9 +19,7 @@ import { taskSpec, taskLoop, baseTask, taskBaseline, businessExecution } from '.
 
 import { connectorSpec, connectorSchema } from '../../connectors/rules/standards';
 
-import { fail } from '../../../core/errors';
-
-import { hash } from '../../../core/platform/node/serialization';
+import { hash } from '../../../core/io/serialization';
 
 /** 产品内置流程清单；知识工具为每项注册只读 cbim_skill_* 别名，正文随所属业务模块编译。 */
 export const builtinSkills = [{ id: 'bug-feedback', title: 'BUG 反馈', description: '一句问题即可反馈 CBIM 缺陷，复现步骤、结果和环境自愿补充，不强制追问' }, { id: 'feature-wish', title: '需求许愿', description: '一句愿望即可提交 CBIM 需求，使用场景、困难和例子自愿补充，不强制追问' }, { id: 'knowledge-query', title: '知识查询', description: '定位权威知识、核实证据并回答，默认只读' }, { id: 'business-execution', title: '需求实现', description: '定位模块和 Agent，组织实现、验证与交付' }, { id: 'knowledge-governance', title: '知识治理', description: '检查事实、结构和引用，在授权内通过内部知识工具预览、提交和复核' }, { id: 'architecture-governance', title: '架构治理', description: '模式观察、架构评估、人工决定与渐进演进' }, { id: 'team-architecture-governance', title: '团队架构治理', description: '核实团队职责、能力与继承 Skill，在当前权限内预览、提交和复核团队知识' }, { id: 'business-architecture-governance', title: '业务架构治理', description: '按真实模块、代码和单向依赖渐进治理，校验知识结构并保留业务验收边界' }, { id: 'create-agent-skill', title: '创建 Agent/Team Skill', description: '为已有组织节点创建专业 Skill，维护清单并检查继承' }, { id: 'create-workflow', title: '创建模块 Workflow', description: '为已有模块创建独立流程并维护本模块清单' }, { id: 'core-check', title: 'Core 检查', description: '仅在用户明确要求时检查分层、文档职责与继承' },];
@@ -87,12 +85,12 @@ export class Builtins
     const entry = entries.find(e => e.id === id);
 
     if (!entry)
-      fail('BUILTIN_NOT_FOUND', '未知内置资料 ID，请先调用 cbim_builtin_catalog');
+      throw new Error('未知内置资料 ID，请先调用 cbim_builtin_catalog');
 
     const result = await this.Document(entry);
 
     if (expectedVersion && expectedVersion !== result.version)
-      fail('BUILTIN_VERSION_CHANGED', '内置资料版本已变化，请重新查询清单并核对');
+      throw new Error('内置资料版本已变化，请重新查询清单并核对');
 
     const prose = result.text.replace(/(`{3,}|~{3,})[^\n]*\n[\s\S]*?\1/g, '');
 

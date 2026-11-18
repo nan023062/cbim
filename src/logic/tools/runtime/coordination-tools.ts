@@ -2,8 +2,6 @@
  * 作用定位：主运行的统一状态与原回执读取入口，保留各领域实际校验和恢复语义。
  * 设计原因：只组合已装配的只读能力，嵌入参数时同步其本地引用根；领域校验和各自快照边界仍由原服务持有。
  */
-import { fail } from '../../../core/errors';
-
 import { coordinationVersions } from '../../tasks/rules/coordination-preview';
 
 import { mainToolOutputSchemas } from '../../tasks/rules/main-tool-output';
@@ -79,12 +77,12 @@ export class CoordinationTools
   private Resolve(name: string, raw: unknown)
   {
     if (!this.Has(name) || !raw || typeof raw !== 'object' || Array.isArray(raw))
-      fail('COORDINATION_INPUT', '只读查询参数无效');
+      throw new Error('只读查询参数无效');
 
     const value = raw as Record<string, unknown>;
 
     if (Object.keys(value).some(key => !['target', 'input'].includes(key)) || typeof value.target !== 'string' || !value.input || typeof value.input !== 'object' || Array.isArray(value.input))
-      fail('COORDINATION_INPUT', '只接受 target 与对应 input');
+      throw new Error('只接受 target 与对应 input');
 
     const definitions: Record<string, string> = name === 'cbim_state_inspect' ? inspectRoutes : receiptRoutes;
 
@@ -93,12 +91,12 @@ export class CoordinationTools
     const route = original ? this.routes.get(original) : undefined;
 
     if (!original || !route)
-      fail('TOOL_NOT_FOUND', '本轮未装配该只读目标');
+      throw new Error('本轮未装配该只读目标');
 
     const descriptor = route.port.Describe(original, value.input);
 
     if (descriptor.native || descriptor.effects.some(effect => effect !== 'read'))
-      fail('COORDINATION_READ_ONLY', '统一入口只能调用真实只读能力');
+      throw new Error('统一入口只能调用真实只读能力');
 
     return { original, route, input: value.input as Record<string, unknown> };
   }
@@ -124,7 +122,7 @@ export class CoordinationTools
       return result;
 
     if (result.content.length !== 1 || result.content[0].type !== 'text')
-      fail('TOOL_OUTPUT_INVALID', '状态读取缺少完整 JSON');
+      throw new Error('状态读取缺少完整 JSON');
 
     const value = mainToolOutputSchemas.cbim_goal_inspect.parse(JSON.parse(result.content[0].text));
 

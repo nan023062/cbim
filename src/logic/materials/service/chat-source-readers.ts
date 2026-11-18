@@ -6,11 +6,9 @@
  */
 import fs from 'node:fs/promises';
 
-import { ByteUtils, ByteLimitError } from '../../../core/utility';
+import { ByteUtils, ByteLimitError } from '../../../core/io';
 
-import { fail } from '../../../core/errors';
-
-import { hash } from '../../../core/platform/node/serialization';
+import { hash } from '../../../core/io/serialization';
 
 import { continuationSourceLimits, continuationSourceUrlSchema, type ContinuationSourceProof } from '../../tasks/rules/continuation-source-snapshot';
 
@@ -86,7 +84,7 @@ export async function readUrlSource(kind: 'link' | 'web', value: string, signal:
   const parsed = continuationSourceUrlSchema.safeParse(value);
 
   if (!parsed.success)
-    fail('ATTACHMENT_URL', '请输入不含凭据的 HTTP 或 HTTPS 链接');
+    throw new Error('请输入不含凭据的 HTTP 或 HTTPS 链接');
 
   const url = new URL(parsed.data);
 
@@ -111,17 +109,17 @@ export async function readUrlSource(kind: 'link' | 'web', value: string, signal:
     combined.throwIfAborted();
 
     if (!response.ok)
-      fail('ATTACHMENT_WEB_HTTP', '网页返回 HTTP ' + response.status);
+      throw new Error('网页返回 HTTP ' + response.status);
 
     const mediaType = (response.headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase();
 
     if (!/^(text\/[a-z0-9.+-]+|application\/json)$/.test(mediaType) || mediaType.length > 256)
-      fail('ATTACHMENT_WEB_TYPE', '此地址不是可读取的文本网页，请添加为链接');
+      throw new Error('此地址不是可读取的文本网页，请添加为链接');
 
     const declared = response.headers.get('content-length');
 
     if (declared && Number(declared) > continuationSourceLimits.webResponseBytes)
-      fail('ATTACHMENT_WEB_LIMIT', '网页响应超过 1 MiB，请改为添加链接');
+      throw new Error('网页响应超过 1 MiB，请改为添加链接');
 
     let raw: Uint8Array;
 
@@ -132,7 +130,7 @@ export async function readUrlSource(kind: 'link' | 'web', value: string, signal:
     catch (error)
     {
       if (error instanceof ByteLimitError)
-        fail('ATTACHMENT_WEB_LIMIT', '网页响应超过 1 MiB，请改为添加链接');
+        throw new Error('网页响应超过 1 MiB，请改为添加链接');
 
       throw error
     }
@@ -147,7 +145,7 @@ export async function readUrlSource(kind: 'link' | 'web', value: string, signal:
     }
     catch
     {
-      fail('ATTACHMENT_WEB_ENCODING', '网页不是有效 UTF-8 文本，请改为添加链接')
+      throw new Error('网页不是有效 UTF-8 文本，请改为添加链接')
     }
 
     const html = mediaType === 'text/html';
@@ -166,12 +164,12 @@ export async function readUrlSource(kind: 'link' | 'web', value: string, signal:
     signal.throwIfAborted();
 
     if (timeout.aborted)
-      fail('ATTACHMENT_WEB_TIMEOUT', '网页读取超时，未保存资料');
+      throw new Error('网页读取超时，未保存资料');
 
     if (error && typeof error === 'object' && 'code' in error)
       throw error;
 
-    fail('ATTACHMENT_WEB_FETCH', '网页读取失败或发生跳转，请改用最终地址或添加链接')
+    throw new Error('网页读取失败或发生跳转，请改用最终地址或添加链接')
   }
   // 错误发生于接管 reader 之前时仍请求关闭正文；底层取消不得把业务取消重新拖成无限等待。
   finally

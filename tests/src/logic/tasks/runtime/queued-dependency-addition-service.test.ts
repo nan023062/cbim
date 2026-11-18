@@ -4,7 +4,7 @@ import path from 'node:path';
 import {fixture} from '../../application/support/helpers';
 import {request} from '../../knowledge/rules/data/knowledge';
 import {seedTeam} from '../../knowledge/service/support/team-fixture';
-import {json} from '../../../../../src/core/platform/node/serialization';
+import {json} from '../../../../../src/core/io/serialization';
 import type {AddQueuedDependencyInput} from '../../../../../src/logic/tasks/rules/queued-dependency-addition';
 import type {DispatchMutation} from '../../../../../src/logic/dispatch/rules/dispatch-storage';
 import {FileDispatchStore} from '../../../../../src/logic/dispatch/storage/dispatch-store';

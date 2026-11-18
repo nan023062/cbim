@@ -6,11 +6,11 @@
  * 机制边界：对象递归排序由 utility 提供，本模块保留历史比较器、字段省略和业务指纹规则。
  * 算法入口：通过 Core JsonUtils 静态方法复用机制，本文件继续拥有原业务策略。
  */
-import { JsonUtils } from '../../../core/utility';
+import { JsonUtils } from '../../../core/io';
 
 import { isDeepStrictEqual as equal } from 'node:util';
 
-import { hash } from '../../../core/platform/node/serialization';
+import { hash } from '../../../core/io/serialization';
 
 import { artifactScopeBindingsSchema, type ArtifactScopeBinding } from '../../workspace/rules/artifact-scope';
 

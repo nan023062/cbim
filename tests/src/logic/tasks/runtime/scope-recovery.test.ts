@@ -6,7 +6,7 @@ import {randomUUID} from 'node:crypto';
 import {fixture} from '../../application/support/helpers';
 import {request} from '../../knowledge/rules/data/knowledge';
 import {seedTeam} from '../../knowledge/service/support/team-fixture';
-import {json} from '../../../../../src/core/platform/node/serialization';
+import {json} from '../../../../../src/core/io/serialization';
 import {recoveryRequestSchema,recoveryReceiptSchema,type RecoveryRequest} from '../../../../../src/logic/tasks/rules/scope-recovery';
 import {FileDispatchStore} from '../../../../../src/logic/dispatch/storage/dispatch-store';
 import {FileRunStorage} from '../../../../../src/logic/execution/storage/run-storage';

@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
-import {hash} from '../../../../../src/core/platform/node/serialization';
+import {hash} from '../../../../../src/core/io/serialization';
 import type {DispatchStore,DispatchCommand,DispatchMutation} from '../../../../../src/logic/dispatch/rules/dispatch-storage';
 import type {EffectDispositionInput} from '../../../../../src/logic/tasks/rules/effect-observation';
 import {projectEffectDispositionMutation} from '../../../../../src/logic/tasks/rules/effect-observation-invariants';

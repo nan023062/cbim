@@ -4,9 +4,7 @@
  * 机制边界：对象递归排序由 utility 提供，本模块保留历史比较器、字段省略和业务指纹规则。
  * 算法入口：通过 Core JsonUtils 静态方法复用机制，本文件继续拥有原业务策略。
  */
-import { JsonUtils } from '../../../core/utility';
-
-import { fail } from '../../../core/errors';
+import { JsonUtils } from '../../../core/io';
 
 import type { DispatchState, DispatchMutation, DispatchCommand } from '../../dispatch/rules/dispatch-storage';
 
@@ -19,7 +17,7 @@ import { queuedTaskCancellationSchema } from './queued-task-cancel';
 function check(value: unknown, code: string, message: string): asserts value
 {
   if (!value)
-    fail(code, message)
+    throw new Error(message)
 }
 
 const pending = (task: TaskNode) => ['planned', 'queued', 'waiting'].includes(task.status);

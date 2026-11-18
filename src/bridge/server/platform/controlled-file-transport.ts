@@ -13,8 +13,6 @@ import { createRequire } from 'node:module';
 
 import { randomBytes, createHash } from 'node:crypto';
 
-import { Fault, fail } from '../../../core/errors';
-
 import { controlledChildReplySchema, controlledPlatformBytes, type ControlledChildRequest, type ControlledChildReply, type ControlledFileTransport, type ExclusiveControlledFile, type ExclusiveControlledTransition, type ControlledNamespaceChange } from '../../../logic/file-operations/platform/files/controlled-file-protocol';
 
 const requireNative = createRequire(typeof __filename === 'string' ? __filename : import.meta.url);
@@ -37,7 +35,7 @@ function physicalWorkingDirectory(): string
   }
   catch
   {
-    fail('CONTROLLED_PLATFORM_UNSUPPORTED', '受控文件进程工作目录不可用')
+    throw new Error('受控文件进程工作目录不可用')
   }
 }
 
@@ -83,10 +81,10 @@ class UtilityControlledFiles implements ControlledFileTransport
     signal.throwIfAborted();
 
     if (this.closing || process.platform !== 'win32')
-      fail('CONTROLLED_PLATFORM_UNSUPPORTED', '当前平台未提供受控文件能力');
+      throw new Error('当前平台未提供受控文件能力');
 
     if (!fs.existsSync(this.entryPath) || !fs.existsSync(this.koffiPath))
-      fail('CONTROLLED_PLATFORM_UNSUPPORTED', '受控文件运行资源不可用');
+      throw new Error('受控文件运行资源不可用');
 
     // original-fs 绕过 ASAR 虚拟目录；失败在 fork 和任何文件/Store 写入之前拒绝。
     const cwd = physicalWorkingDirectory();
@@ -120,7 +118,7 @@ class UtilityControlledFiles implements ControlledFileTransport
     const results = await Promise.allSettled(sessions.map(session => session.Close()));
 
     if (results.some(r => r.status === 'rejected') || sessions.some(session => this.sessions.has(session)))
-      fail('CONTROLLED_FILE_DRAIN_PENDING', '文件进程尚未确认退出，保留工作区占用')
+      throw new Error('文件进程尚未确认退出，保留工作区占用')
   }
 
   async Close()
@@ -130,7 +128,7 @@ class UtilityControlledFiles implements ControlledFileTransport
     const results = await Promise.allSettled([...this.sessions.keys()].map(session => session.Close()));
 
     if (results.some(r => r.status === 'rejected') || this.sessions.size)
-      fail('CONTROLLED_FILE_DRAIN_PENDING', '文件进程尚未确认退出，保留工作区占用')
+      throw new Error('文件进程尚未确认退出，保留工作区占用')
   }
 }
 
@@ -173,9 +171,9 @@ class UtilityFileSession implements ExclusiveControlledFile, ExclusiveControlled
   {
     this.exited = new Promise(resolve => { this.resolveExit = resolve });
 
-    child.on('message', raw => { const parsed = controlledChildReplySchema.safeParse(raw), current = this.pending; if (!parsed.success || !current || parsed.data.token !== this.token || parsed.data.seq !== current.seq) { this.Reject(new Fault('CONTROLLED_PROTOCOL', '受控文件返回无法核实')); child.kill(); return } const reply = parsed.data; clearTimeout(current.timer); this.pending = undefined; if (reply.kind === 'error') current.reject(new Fault(reply.code, '受控文件操作未确认，请查询原记录')); else current.resolve(reply); });
+    child.on('message', raw => { const parsed = controlledChildReplySchema.safeParse(raw), current = this.pending; if (!parsed.success || !current || parsed.data.token !== this.token || parsed.data.seq !== current.seq) { this.Reject(new Error('受控文件返回无法核实')); child.kill(); return } const reply = parsed.data; clearTimeout(current.timer); this.pending = undefined; if (reply.kind === 'error') current.reject(new Error('受控文件操作未确认，请查询原记录')); else current.resolve(reply); });
 
-    child.once('exit', () => { this.dead = true; this.signal.removeEventListener('abort', this.abort); this.Reject(new Fault('CONTROLLED_PROCESS_EXIT', '文件进程已退出，结果须按原记录核实')); this.resolveExit() });
+    child.once('exit', () => { this.dead = true; this.signal.removeEventListener('abort', this.abort); this.Reject(new Error('文件进程已退出，结果须按原记录核实')); this.resolveExit() });
 
     signal.addEventListener('abort', this.abort, { once: true });
 
@@ -203,11 +201,11 @@ class UtilityFileSession implements ExclusiveControlledFile, ExclusiveControlled
   private Request(request: Request): Promise<ControlledChildReply>
   {
     if (this.dead || this.pending)
-      throw new Fault('CONTROLLED_SESSION', '文件会话已关闭或仍有操作未结束');
+      throw new Error('文件会话已关闭或仍有操作未结束');
 
     const seq = ++this.seq;
 
-    return new Promise((resolve, reject) => { const timer = setTimeout(() => { this.Reject(new Fault('CONTROLLED_TIMEOUT', '文件操作未确认，原请求不会自动重发')); this.child.kill() }, 30_000); this.pending = { seq, resolve, reject, timer }; try { this.child.postMessage({ ...request, token: this.token, seq }) } catch (e) { this.Reject(e); this.child.kill() } });
+    return new Promise((resolve, reject) => { const timer = setTimeout(() => { this.Reject(new Error('文件操作未确认，原请求不会自动重发')); this.child.kill() }, 30_000); this.pending = { seq, resolve, reject, timer }; try { this.child.postMessage({ ...request, token: this.token, seq }) } catch (e) { this.Reject(e); this.child.kill() } });
   }
 
   async Open(request: Extract<Request, { kind: 'open' }>)
@@ -215,7 +213,7 @@ class UtilityFileSession implements ExclusiveControlledFile, ExclusiveControlled
     const reply = await this.Request(request);
 
     if (reply.kind !== 'opened')
-      fail('CONTROLLED_PROTOCOL', '文件打开回包不匹配');
+      throw new Error('文件打开回包不匹配');
 
     this.before = reply
   }
@@ -223,7 +221,7 @@ class UtilityFileSession implements ExclusiveControlledFile, ExclusiveControlled
   async ReadBefore()
   {
     if (!this.before || this.dead)
-      fail('CONTROLLED_SESSION', '文件会话不可用');
+      throw new Error('文件会话不可用');
 
     return { identity: structuredClone(this.before.identity), fact: structuredClone(this.before.fact), bytes: Buffer.from(this.before.bytes, 'base64') }
   }
@@ -235,7 +233,7 @@ class UtilityFileSession implements ExclusiveControlledFile, ExclusiveControlled
     const reply = await this.Request({ kind: 'recheck' });
 
     if (reply.kind !== 'checked')
-      fail('CONTROLLED_PROTOCOL', '文件核实回包不匹配');
+      throw new Error('文件核实回包不匹配');
 
     return { identity: reply.identity, fact: reply.fact }
   }
@@ -245,19 +243,19 @@ class UtilityFileSession implements ExclusiveControlledFile, ExclusiveControlled
     this.signal.throwIfAborted();
 
     if (this.issued)
-      fail('CONTROLLED_SESSION_USED', '本次写入已经发送，不能重做');
+      throw new Error('本次写入已经发送，不能重做');
 
     const bytes = Buffer.from(value);
 
     if (bytes.length > controlledPlatformBytes)
-      fail('CONTROLLED_LIMIT', '文件内容超过上限');
+      throw new Error('文件内容超过上限');
 
     this.issued = true;
 
     const reply = await this.Request({ kind: 'apply', bytes: bytes.toString('base64'), expected: { byteLength: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') } });
 
     if (reply.kind !== 'applied')
-      fail('CONTROLLED_PROTOCOL', '文件写入回包不匹配');
+      throw new Error('文件写入回包不匹配');
 
     return { identity: reply.identity, fact: reply.fact };
   }
@@ -267,14 +265,14 @@ class UtilityFileSession implements ExclusiveControlledFile, ExclusiveControlled
     this.signal.throwIfAborted();
 
     if (this.issued)
-      fail('CONTROLLED_SESSION_USED', '本次文件操作已经发送，不能重做');
+      throw new Error('本次文件操作已经发送，不能重做');
 
     this.issued = true;
 
     const reply = await this.Request({ kind: 'transition' });
 
     if (reply.kind !== 'transitioned')
-      fail('CONTROLLED_PROTOCOL', '文件删除/移动回包不匹配');
+      throw new Error('文件删除/移动回包不匹配');
 
     return { identity: reply.identity, fact: reply.fact, transition: reply.transition, sourceMissing: reply.sourceMissing };
   }
@@ -284,7 +282,7 @@ class UtilityFileSession implements ExclusiveControlledFile, ExclusiveControlled
     if (this.closing)
       return this.closing;
 
-    const closing = (async () => { if (!this.dead) { if (this.pending) this.child.kill(); else try { await this.Request({ kind: 'close' }) } catch { this.child.kill() } } let timer: ReturnType<typeof setTimeout> | undefined; try { await Promise.race([this.exited, new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Fault('CONTROLLED_FILE_DRAIN_PENDING', '文件进程未确认退出，不能释放工作区占用')), 5000) })]) } finally { if (timer) clearTimeout(timer) } })();
+    const closing = (async () => { if (!this.dead) { if (this.pending) this.child.kill(); else try { await this.Request({ kind: 'close' }) } catch { this.child.kill() } } let timer: ReturnType<typeof setTimeout> | undefined; try { await Promise.race([this.exited, new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error('文件进程未确认退出，不能释放工作区占用')), 5000) })]) } finally { if (timer) clearTimeout(timer) } })();
 
     this.closing = closing;
 

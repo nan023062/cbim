@@ -13,7 +13,7 @@ import {ChatInputs} from '../../../../../src/logic/materials/service/chat-inputs
 import {LoopRuntime} from '../../../../../src/logic/execution/rules/runtime/runtime';
 import type {AgentEngine,TaskSpec} from '../../../../../src/logic/execution/rules/types';
 import type {GoalContinuationRequest} from '../../../../../src/logic/tasks/rules/scope-continuation';
-import {hash,json} from '../../../../../src/core/platform/node/serialization';
+import {hash,json} from '../../../../../src/core/io/serialization';
 
 const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aL1sAAAAASUVORK5CYII=','base64');
 const deferred=()=>{let resolve!:()=>void;const promise=new Promise<void>(done=>{resolve=done});return {promise,resolve}};

@@ -5,7 +5,7 @@ import os from 'node:os';
 import {GitHubFeedbackAuth,type GitHubRequest} from '../../../../../src/logic/feedback/service/index';
 import type {GitHubFeedbackConfig} from '../../../../../src/logic/feedback/index';
 // 授权单元只验证连接状态；真实内核锁由独立平台集成及提交契约覆盖。
-vi.mock('../../../../../src/core/platform/node/locking',()=>({KernelLock:class {Close(){}}}));
+vi.mock('../../../../../src/core/io/locking',()=>({KernelLock:class {Close(){}}}));
 const roots:string[]=[],services:GitHubFeedbackAuth[]=[];
 const config:GitHubFeedbackConfig={clientId:'testclient_123',owner:'test-owner',repo:'cbim',visibility:'public',autoSubmit:true};
 const binding={workspaceId:'workspace-id',rootSessionId:'root-session'};

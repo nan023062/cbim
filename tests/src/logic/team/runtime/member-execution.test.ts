@@ -5,7 +5,7 @@ import path from 'node:path';
 import {fixture} from '../../application/support/helpers';
 import {request} from '../../knowledge/rules/data/knowledge';
 import {seedTeam} from '../../knowledge/service/support/team-fixture';
-import {json} from '../../../../../src/core/platform/node/serialization';
+import {json} from '../../../../../src/core/io/serialization';
 import {FileDispatchStore} from '../../../../../src/logic/dispatch/storage/dispatch-store';
 import {FileRunStorage} from '../../../../../src/logic/execution/storage/run-storage';
 import {RunJournal} from '../../../../../src/logic/execution/storage/run-journal';

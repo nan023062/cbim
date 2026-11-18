@@ -4,8 +4,6 @@
  */
 import { z } from 'zod';
 
-import { fail, Fault } from '../../../core/errors';
-
 import type { DispatchState } from '../../dispatch/rules/dispatch-storage';
 
 import type { DispatchScope } from './dispatch-scope';
@@ -57,7 +55,7 @@ export function coordinationPreview(state: DispatchState, scope: DispatchScope, 
   {
     if (input)
     {
-      const nodes = new Set(input.targets.map(target => { const task = scoped.find(task => task.taskId === target.taskId); if (!task) fail('CANCEL_NOT_ALLOWED', '撤销目标不属于本周期：' + target.taskId); if (task.revision !== target.expectedRevision) fail('CANCEL_TASK_STALE', '任务版本已变化：' + target.taskId); return task.nodeId; })),
+      const nodes = new Set(input.targets.map(target => { const task = scoped.find(task => task.taskId === target.taskId); if (!task) throw new Error('撤销目标不属于本周期：' + target.taskId); if (task.revision !== target.expectedRevision) throw new Error('任务版本已变化：' + target.taskId); return task.nodeId; })),
         queue = [...nodes];
 
       for (let i = 0; i < queue.length; i++)
@@ -100,7 +98,7 @@ export function coordinationPreview(state: DispatchState, scope: DispatchScope, 
   }
   catch (error)
   {
-    result.issues.push({ code: error instanceof Fault ? error.code : 'CLOSURE_UNAVAILABLE', message: error instanceof Fault ? error.message : '当前集合不满足清单约束，请核实任务状态、数量及可靠检查点。' });
+    result.issues.push({ code: 'CLOSURE_UNAVAILABLE', message: error instanceof Error ? error.message : '当前集合不满足清单约束，请核实任务状态、数量及可靠检查点。' });
   }
 
   return coordinationPreviewSchema.parse(result);

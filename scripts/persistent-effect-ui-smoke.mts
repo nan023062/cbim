@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
-import {hash} from '../src/core/platform/node/serialization';
+import {hash} from '../src/core/io/serialization';
 import {effectObservationReportSchema,effectDispositionReceiptSchema} from '../src/logic/tasks/rules/effect-observation';
 import {preparePersistentEffect,type PersistentEffectMode} from '../tests/src/logic/evidence/runtime/support/persistent-effect-fixture';
 import {moduleGovernanceToolsLogBytes,moduleGovernanceToolsJournalBytes} from '../tests/src/logic/tools/runtime/support/module-governance-tools-fixture';

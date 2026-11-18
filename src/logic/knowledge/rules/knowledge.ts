@@ -19,9 +19,9 @@ import { connectorSchema } from '../../connectors/rules/standards';
 
 import ignore from 'ignore';
 
-import { hash, json } from '../../../core/platform/node/serialization';
+import { hash, json } from '../../../core/io/serialization';
 
-import { exists } from '../../../core/platform/node/files';
+import { exists } from '../../../core/io/text-files';
 
 import { parseWorkflowContract } from '../../workspace/rules/workflow-contract';
 
@@ -29,9 +29,9 @@ import { moduleSections, moduleBodyTemplate } from '../../workspace/rules/module
 
 import type { KnowledgeFile, Validation, Issue, ModuleNode } from './types';
 
-import { parseJson } from '../../../core/json';
+import { parseJson } from '../../io-errors/json';
 
-export { parseJson } from '../../../core/json';
+export { parseJson };
 
 const pp = path.posix;
 

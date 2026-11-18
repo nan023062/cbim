@@ -5,8 +5,6 @@
  */
 import { zodToJsonSchema } from 'zod-to-json-schema';
 
-import { fail } from '../../../core/errors';
-
 import { checkedJsonToolResult } from '../rules/results';
 
 import { githubFeedbackScopeSchema } from '../rules/scope-schema';
@@ -25,7 +23,7 @@ export class FeedbackTools
     this.scope = Object.freeze(githubFeedbackScopeSchema.parse(port.scope));
 
     if (this.scope.workspaceId !== workspaceId)
-      fail('GITHUB_FEEDBACK_BINDING', '反馈工具与本轮工作区不一致');
+      throw new Error('反馈工具与本轮工作区不一致');
   }
 
   Has(name: string)
@@ -44,12 +42,12 @@ export class FeedbackTools
   private Parse(name: string, input: unknown)
   {
     if (!this.Has(name))
-      fail('GITHUB_TOOL', '本轮没有该反馈工具');
+      throw new Error('本轮没有该反馈工具');
 
     const parsed = (name === 'cbim_feedback_submit' ? feedbackInputSchema : feedbackReceiptInputSchema).safeParse(input);
 
     if (!parsed.success)
-      fail('GITHUB_FEEDBACK_INPUT', '请提供反馈类型和非空简述；补充字段可省略，内容需符合长度限制，不接受保留标记、仓库、凭据或授权参数');
+      throw new Error('请提供反馈类型和非空简述；补充字段可省略，内容需符合长度限制，不接受保留标记、仓库、凭据或授权参数');
 
     return parsed.data;
   }

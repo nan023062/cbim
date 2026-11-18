@@ -18,8 +18,6 @@ import { candidateReviewSchema } from './candidate-review';
 
 import { queuedTaskCancellationSchema } from './queued-task-cancel';
 
-import { fail } from '../../../core/errors';
-
 import type { AgentRef, GraphEventBatch, GraphIdentity, GraphSnapshot, TaskNode } from './graph-types';
 
 import { memberHelpRecordSchema } from './member-help';
@@ -122,7 +120,7 @@ function shape(schema: z.ZodTypeAny, value: unknown)
   const result = schema.safeParse(value);
 
   if (!result.success)
-    fail('GRAPH_INPUT_INVALID', `任务图字段无效：${result.error.issues[0]?.path.join('.') ?? ''}`)
+    throw new Error(`任务图字段无效：${result.error.issues[0]?.path.join('.') ?? ''}`)
 }
 
 /** 严格校验公开身份，不允许空串、未知字段或隐式工作区切换。 */
@@ -135,7 +133,7 @@ export function validateGraphIdentity(value: GraphIdentity)
 export function validateGraphBatch(value: GraphEventBatch)
 {
   if (value?.version !== 1)
-    fail('GRAPH_VERSION_UNSUPPORTED', '不支持的任务图事件版本');
+    throw new Error('不支持的任务图事件版本');
 
   shape(batch, value);
 }
@@ -148,7 +146,7 @@ export function assertGraphIdentity(expected: GraphIdentity, actual: GraphIdenti
   validateGraphIdentity({ workspaceId: actual.workspaceId, rootSessionId: actual.rootSessionId });
 
   if (expected.workspaceId !== actual.workspaceId || expected.rootSessionId !== actual.rootSessionId)
-    fail('GRAPH_IDENTITY_MISMATCH', '任务图工作区或主会话身份不匹配');
+    throw new Error('任务图工作区或主会话身份不匹配');
 }
 
 /** 校验外部游标形状；seq=0 仅表示当前流的空前缀。 */
@@ -160,7 +158,7 @@ export function validateGraphCursor(value: unknown)
 function unique(values: string[], label: string)
 {
   if (new Set(values).size !== values.length)
-    fail('GRAPH_INPUT_INVALID', `${label}出现重复身份`)
+    throw new Error(`${label}出现重复身份`)
 }
 
 function sameMember(left: AgentRef, right: AgentRef)
@@ -171,7 +169,7 @@ function sameMember(left: AgentRef, right: AgentRef)
 function acyclic(nodes: string[], edges: [string, string][], code: string)
 {
   if (!GraphUtils.IsDirectedAcyclic(nodes, edges))
-    fail(code, code === 'GRAPH_WAIT_CYCLE' ? '任务等待关系形成互等' : '任务派发与依赖形成循环');
+    throw new Error(code === 'GRAPH_WAIT_CYCLE' ? '任务等待关系形成互等' : '任务派发与依赖形成循环');
 }
 
 /** 仅当前计划的真实候选可满足前置；有固定 resultId 时不能换用其它结果。 */
@@ -186,7 +184,7 @@ export function validateTaskNode(t: TaskNode): void
   shape(task, t);
 
   if (t.nodeId !== `task:${t.taskId}`)
-    fail('GRAPH_INPUT_INVALID', '任务 ID 与节点 ID 不一致');
+    throw new Error('任务 ID 与节点 ID 不一致');
 
   unique(t.modules.map(m => m.moduleId), '任务模块');
 
@@ -199,33 +197,33 @@ export function validateTaskNode(t: TaskNode): void
   validateTaskWorkflowSelections(t.workflowSelections, t.modules);
 
   if (t.ownerBinding && !ownerExecutionBindingMatches(t.ownerBinding, t.identity.workspaceId, t.assignee.agentId, t.modules.map(module => module.moduleId)))
-    fail('GRAPH_INPUT_INVALID', '任务的冻结负责人不属于其工作区、角色或模块');
+    throw new Error('任务的冻结负责人不属于其工作区、角色或模块');
 
   if (t.fallbackBinding && (t.ownerBinding || !automaticExecutionBindingMatches(t.fallbackBinding, t.identity.workspaceId, t.scopeId, t.assignee.agentId, t.modules.map(m => m.moduleId))))
-    fail('GRAPH_INPUT_INVALID', '自动执行任务身份或模块不一致');
+    throw new Error('自动执行任务身份或模块不一致');
 
   if (t.activeRunId && !t.runIds.includes(t.activeRunId))
-    fail('GRAPH_INPUT_INVALID', '活动轮次不属于该任务');
+    throw new Error('活动轮次不属于该任务');
 
   if (t.result && (t.result.planRevision !== t.planRevision || !t.runIds.includes(t.result.runId) || t.status !== 'result_ready'))
-    fail('GRAPH_INPUT_INVALID', '任务候选结果已失效或不属于该执行');
+    throw new Error('任务候选结果已失效或不属于该执行');
 
   if (t.candidateReview && (!t.result || t.activeRunId || t.candidateReview.resultId !== t.result.resultId || t.candidateReview.runId !== t.result.runId || t.candidateReview.planRevision !== t.planRevision || Date.parse(t.candidateReview.recordedAt) > Date.parse(t.updatedAt)))
-    fail('GRAPH_INPUT_INVALID', '审阅必须绑定当前已结束的原交付候选');
+    throw new Error('审阅必须绑定当前已结束的原交付候选');
 
   if (t.status === 'result_ready' && !t.result)
-    fail('GRAPH_INPUT_INVALID', '可交接任务缺少真实候选结果');
+    throw new Error('可交接任务缺少真实候选结果');
 
   if (t.help)
   {
     const binding = t.help.binding;
 
     if (t.result || t.status !== 'blocked' || t.activeRunId || !t.scopeId || binding.workspaceId !== t.identity.workspaceId || binding.rootSessionId !== t.identity.rootSessionId || binding.taskId !== t.taskId || binding.planRevision !== t.planRevision || !t.runIds.includes(binding.runId) || binding.agentId !== t.assignee.agentId || binding.agentInstanceId !== t.assignee.agentInstanceId || binding.agentSessionId !== t.assignee.agentSessionId)
-      fail('GRAPH_INPUT_INVALID', '成员求助必须绑定本周期已结束的执行任务，且不能作为成功候选')
+      throw new Error('成员求助必须绑定本周期已结束的执行任务，且不能作为成功候选')
   }
 
   if (!validMemberCheckpointChain(t))
-    fail('GRAPH_INPUT_INVALID', '检查点与预约必须形成有界、无重复且连续的原运行链');
+    throw new Error('检查点与预约必须形成有界、无重复且连续的原运行链');
 
   const checkpoint = t.checkpoints?.at(-1),
     request = currentMemberResumeRequest(t);
@@ -235,25 +233,25 @@ export function validateTaskNode(t: TaskNode): void
     const binding = record.binding;
 
     if (!t.scopeId || t.help?.binding.runId === binding.runId || t.cancelledBeforeStart || binding.workspaceId !== t.identity.workspaceId || binding.rootSessionId !== t.identity.rootSessionId || binding.taskId !== t.taskId || binding.planRevision !== t.planRevision || !sameMember(t.assignee, { ...binding, name: '' }) || t.result?.runId === binding.runId)
-      fail('GRAPH_INPUT_INVALID', '检查点必须保留同任务原实例，不能替代交付')
+      throw new Error('检查点必须保留同任务原实例，不能替代交付')
   }
 
   if (t.status === 'checkpointed' && (!checkpoint || t.runIds.at(-1) !== checkpoint.binding.runId || t.activeRunId || t.result || request))
-    fail('GRAPH_INPUT_INVALID', '当前检查点必须是尚未预约的最新完成段');
+    throw new Error('当前检查点必须是尚未预约的最新完成段');
 
   for (const reserved of memberResumeRequests(t))
     if (reserved.scopeId !== t.scopeId || reserved.previousTaskRevision >= t.revision || reserved.trackedTaskIds[0] !== t.taskId || Date.parse(reserved.requestedAt) > Date.parse(t.updatedAt))
-      fail('GRAPH_INPUT_INVALID', '续执行预约缺少固定任务或有效版本');
+      throw new Error('续执行预约缺少固定任务或有效版本');
 
   if (checkpoint && (t.activeRunId && t.activeRunId !== t.runIds.at(-1) || t.result && t.result.runId !== t.runIds.at(-1) || t.help && t.help.binding.runId !== t.runIds.at(-1)))
-    fail('GRAPH_INPUT_INVALID', '活动、交付或求助只能属于检查点链末段');
+    throw new Error('活动、交付或求助只能属于检查点链末段');
 
   if (t.checkpointAbandonment)
   {
     const record = t.checkpointAbandonment;
 
     if (t.status !== 'cancelled' || !checkpoint || t.runIds.at(-1) !== checkpoint.binding.runId || t.activeRunId || t.result || t.help || t.cancelledBeforeStart || t.awaitedChildren.length || record.scopeId !== t.scopeId || record.checkpointId !== checkpoint.checkpointId || record.sourceRunId !== checkpoint.binding.runId || record.resumeRequestId !== (request?.requestId ?? null) || record.planRevision !== t.planRevision || record.previousTaskRevision + 1 !== t.revision || record.previousLeaseEpoch !== checkpoint.binding.leaseEpoch || record.abandonedAt !== t.updatedAt || t.waitReason !== record.reason)
-      fail('GRAPH_INPUT_INVALID', '交接放弃必须保留最新检查点、任务版本和租约来源')
+      throw new Error('交接放弃必须保留最新检查点、任务版本和租约来源')
   }
 
   if (t.cancelledBeforeStart)
@@ -261,7 +259,7 @@ export function validateTaskNode(t: TaskNode): void
     const record = t.cancelledBeforeStart;
 
     if (t.status !== 'cancelled' || t.runIds.length || t.activeRunId || t.result || t.help || t.awaitedChildren.length || !t.scopeId || record.scopeId !== t.scopeId || record.previousRevision + 1 !== t.revision || record.cancelledAt !== t.updatedAt || t.waitReason !== record.reason)
-      fail('GRAPH_INPUT_INVALID', '未启动撤销记录与任务终态、版本不一致')
+      throw new Error('未启动撤销记录与任务终态、版本不一致')
   }
 
   const replacements = t.dependencyReplacements ?? [];
@@ -276,7 +274,7 @@ export function validateTaskNode(t: TaskNode): void
       prior = replacements[index - 1];
 
     if (record.scopeId !== t.scopeId || record.targetPlanRevision > t.planRevision || record.previousTaskRevision >= t.revision || record.trackedTaskIds[0] !== t.taskId || Date.parse(record.replacedAt) > Date.parse(t.updatedAt) || prior && (prior.previousTaskRevision >= record.previousTaskRevision || prior.graphCursor.seq >= record.graphCursor.seq))
-      fail('GRAPH_INPUT_INVALID', '前置替换历史与任务版本不一致');
+      throw new Error('前置替换历史与任务版本不一致');
   }
 
   const additions = t.dependencyAdditions ?? [];
@@ -293,7 +291,7 @@ export function validateTaskNode(t: TaskNode): void
       prior = additions[index - 1];
 
     if (record.scopeId !== t.scopeId || record.targetPlanRevision > t.planRevision || record.previousTaskRevision >= t.revision || record.dependency.sourceTaskId === t.taskId || !record.trackedTaskIds.includes(t.taskId) || !record.trackedTaskIds.includes(record.dependency.sourceTaskId) || Date.parse(record.addedAt) < Date.parse(t.createdAt) || Date.parse(record.addedAt) > Date.parse(t.updatedAt) || prior && (prior.previousTaskRevision >= record.previousTaskRevision || prior.graphCursor.seq >= record.graphCursor.seq))
-      fail('GRAPH_INPUT_INVALID', '前置追加历史与任务版本或闭包身份不一致');
+      throw new Error('前置追加历史与任务版本或闭包身份不一致');
   }
 
   const revisions = t.dependencyRevisions ?? [];
@@ -313,10 +311,10 @@ export function validateTaskNode(t: TaskNode): void
       p = revisions[i - 1];
 
     if (r.scopeId !== t.scopeId || q.target.taskId !== t.taskId || q.target.expectedRevision >= t.revision || q.target.expectedPlanRevision > t.planRevision || r.goalPlanRevision !== q.expectedGoalRevision || !r.trackedTaskIds.includes(t.taskId) || [...r.removed, ...r.added].some(e => e.sourceTaskId === t.taskId || !r.trackedTaskIds.includes(e.sourceTaskId)) || Date.parse(r.revisedAt) < Date.parse(t.createdAt) || Date.parse(r.revisedAt) > Date.parse(t.updatedAt) || p && (p.request.target.expectedRevision >= q.target.expectedRevision || p.request.expectedGraphCursor.seq >= q.expectedGraphCursor.seq))
-      fail('GRAPH_INPUT_INVALID', '前置修订历史与原任务或图版本不一致');
+      throw new Error('前置修订历史与原任务或图版本不一致');
 
     if (r.removed.length !== q.remove.length || r.added.length !== q.add.length || r.removed.some((e, i) => e.edgeId !== q.remove[i].edgeId || e.edgeRevision !== q.remove[i].expectedRevision) || r.added.some((e, i) => e.sourceTaskId !== q.add[i].taskId || e.sourceTaskRevision !== q.add[i].expectedRevision || e.sourcePlanRevision !== q.add[i].expectedPlanRevision))
-      fail('GRAPH_INPUT_INVALID', '修订审计与原增删请求不一致');
+      throw new Error('修订审计与原增删请求不一致');
   }
 }
 
@@ -327,7 +325,7 @@ export function validateTaskNode(t: TaskNode): void
 export function validateGraph(value: GraphSnapshot): void
 {
   if (value?.version !== 1)
-    fail('GRAPH_VERSION_UNSUPPORTED', '不支持的任务图版本');
+    throw new Error('不支持的任务图版本');
 
   shape(snapshot, value);
 
@@ -336,7 +334,7 @@ export function validateGraph(value: GraphSnapshot): void
   assertGraphIdentity(value.identity, value.root.identity);
 
   if (value.cursor.seq < 1 || value.root.nodeId !== `session:${value.identity.rootSessionId}` || value.root.agent.agentId !== 'cbim:main')
-    fail('GRAPH_INPUT_INVALID', '任务图必须具有主 Agent 会话根和已提交游标');
+    throw new Error('任务图必须具有主 Agent 会话根和已提交游标');
 
   unique(value.tasks.map(t => t.taskId), '任务');
 
@@ -359,7 +357,7 @@ export function validateGraph(value: GraphSnapshot): void
     activeLinks: string[] = [],
     waits: [string, string][] = [];
 
-  const checkAgent = (ref: AgentRef) => { if (agentViews.get(ref.agentInstanceId)?.agentId !== ref.agentId) fail('GRAPH_INPUT_INVALID', '任务引用了未注册或不一致的成员投影') };
+  const checkAgent = (ref: AgentRef) => { if (agentViews.get(ref.agentInstanceId)?.agentId !== ref.agentId) throw new Error('任务引用了未注册或不一致的成员投影') };
 
   checkAgent(value.root.agent);
 
@@ -376,21 +374,21 @@ export function validateGraph(value: GraphSnapshot): void
     const parent = t.parentTaskId ? tasks.get(t.parentTaskId) : undefined;
 
     if (t.parentTaskId && !parent)
-      fail('GRAPH_INPUT_INVALID', '派发父任务不存在');
+      throw new Error('派发父任务不存在');
 
     if (!sameMember(t.requester, parent?.assignee ?? value.root.agent))
-      fail('GRAPH_INPUT_INVALID', '任务请求人不是父节点的责任成员');
+      throw new Error('任务请求人不是父节点的责任成员');
 
     for (const request of memberResumeRequests(t))
       if (request.graphCursor.streamId !== value.cursor.streamId || request.graphCursor.seq >= value.cursor.seq || request.trackedTaskIds.some(id => tasks.get(id)?.scopeId !== t.scopeId))
-        fail('GRAPH_INPUT_INVALID', '续执行预约不属于当前图历史或后继集合');
+        throw new Error('续执行预约不属于当前图历史或后继集合');
 
     if (t.cancelledBeforeStart)
     {
       const record = t.cancelledBeforeStart;
 
       if (record.graphCursor.streamId !== value.cursor.streamId || record.graphCursor.seq >= value.cursor.seq)
-        fail('GRAPH_INPUT_INVALID', '未启动撤销记录与图基线不一致')
+        throw new Error('未启动撤销记录与图基线不一致')
     }
 
     if (t.checkpointAbandonment)
@@ -398,7 +396,7 @@ export function validateGraph(value: GraphSnapshot): void
       const record = t.checkpointAbandonment;
 
       if (record.graphCursor.streamId !== value.cursor.streamId || record.graphCursor.seq >= value.cursor.seq)
-        fail('GRAPH_INPUT_INVALID', '检查点放弃不属于当前图历史')
+        throw new Error('检查点放弃不属于当前图历史')
     }
 
     const replacements = t.dependencyReplacements ?? [];
@@ -410,13 +408,13 @@ export function validateGraph(value: GraphSnapshot): void
         fresh = value.edges.find(edge => edge.edgeId === record.replacement.edgeId);
 
       if (record.graphCursor.streamId !== value.cursor.streamId || record.graphCursor.seq >= value.cursor.seq || record.trackedTaskIds.some(id => tasks.get(id)?.scopeId !== t.scopeId))
-        fail('GRAPH_INPUT_INVALID', '前置替换历史与后继或图基线不一致');
+        throw new Error('前置替换历史与后继或图基线不一致');
 
       if (retired?.kind !== 'dependency' || retired.enabled || retired.revision !== record.retired.revision + 1 || retired.fromNodeId !== `task:${record.retired.sourceTaskId}` || retired.toNodeId !== t.nodeId || retired.condition.planRevision !== record.retired.sourcePlanRevision || retired.condition.resultId !== record.retired.resultId)
-        fail('GRAPH_INPUT_INVALID', '退役边与不可变替换审计不一致');
+        throw new Error('退役边与不可变替换审计不一致');
 
       if (fresh?.kind !== 'dependency' || fresh.fromNodeId !== `task:${record.replacement.sourceTaskId}` || fresh.toNodeId !== t.nodeId || fresh.condition.planRevision !== record.replacement.sourcePlanRevision || fresh.condition.resultId !== record.replacement.resultId)
-        fail('GRAPH_INPUT_INVALID', '替代边与固定候选审计不一致');
+        throw new Error('替代边与固定候选审计不一致');
     }
 
     for (const record of t.dependencyAdditions ?? [])
@@ -425,14 +423,14 @@ export function validateGraph(value: GraphSnapshot): void
         edge = value.edges.find(item => item.edgeId === record.dependency.edgeId);
 
       if (record.graphCursor.streamId !== value.cursor.streamId || record.graphCursor.seq >= value.cursor.seq || record.trackedTaskIds.some(id => tasks.get(id)?.scopeId !== t.scopeId) || !source || source.scopeId !== t.scopeId || source.revision < record.dependency.sourceTaskRevision || source.planRevision < record.dependency.sourcePlanRevision)
-        fail('GRAPH_INPUT_INVALID', '前置追加历史不属于当前图或原任务基线');
+        throw new Error('前置追加历史不属于当前图或原任务基线');
 
       if (edge?.kind !== 'dependency' || edge.fromNodeId !== source.nodeId || edge.toNodeId !== t.nodeId || edge.condition.planRevision !== record.dependency.sourcePlanRevision)
-        fail('GRAPH_INPUT_INVALID', '新增前置与不可变追加审计不一致');
+        throw new Error('新增前置与不可变追加审计不一致');
 
       // 首次领取可 pin 真结果，后续正式替换可退役；不能要求新增边永远未消费或始终启用。
       if (!edge.enabled && !replacements.some(item => item.retired.edgeId === edge.edgeId) && !t.dependencyRevisions?.some(r => r.removed.some(e => e.edgeId === edge.edgeId)))
-        fail('GRAPH_INPUT_INVALID', '追加的依赖缺少真实退役审计');
+        throw new Error('追加的依赖缺少真实退役审计');
     }
 
     for (const r of t.dependencyRevisions ?? [])
@@ -440,7 +438,7 @@ export function validateGraph(value: GraphSnapshot): void
       const cursor = r.request.expectedGraphCursor;
 
       if (cursor.streamId !== value.cursor.streamId || cursor.seq >= value.cursor.seq || r.trackedTaskIds.some(id => tasks.get(id)?.scopeId !== t.scopeId))
-        fail('GRAPH_INPUT_INVALID', '修订历史不属于当前图或原闭包');
+        throw new Error('修订历史不属于当前图或原闭包');
 
       for (const e of [...r.removed, ...r.added])
       {
@@ -448,15 +446,15 @@ export function validateGraph(value: GraphSnapshot): void
           source = tasks.get(e.sourceTaskId);
 
         if (!source || source.scopeId !== t.scopeId || source.revision < e.sourceTaskRevision || source.planRevision < e.sourcePlanRevision || edge?.kind !== 'dependency' || edge.fromNodeId !== source.nodeId || edge.toNodeId !== t.nodeId || edge.condition.planRevision !== e.sourcePlanRevision)
-          fail('GRAPH_INPUT_INVALID', '修订边不属于原来源或目标');
+          throw new Error('修订边不属于原来源或目标');
 
         if ('edgeRevision' in e)
         {
           if (typeof e.edgeRevision !== 'number' || edge.enabled || edge.revision !== e.edgeRevision + 1 || edge.condition.resultId)
-            fail('GRAPH_INPUT_INVALID', '修订退役边必须保持原未消费状态')
+            throw new Error('修订退役边必须保持原未消费状态')
         }
         else if (!edge.enabled && !replacements.some(item => item.retired.edgeId === edge.edgeId) && !t.dependencyRevisions?.some(later => later.request.target.expectedRevision > r.request.target.expectedRevision && later.removed.some(item => item.edgeId === edge.edgeId)))
-          fail('GRAPH_INPUT_INVALID', '修订新增边缺少后续退役审计');
+          throw new Error('修订新增边缺少后续退役审计');
       }
     }
 
@@ -465,7 +463,7 @@ export function validateGraph(value: GraphSnapshot): void
       const child = tasks.get(awaited.taskId);
 
       if (!child || child.parentTaskId !== t.taskId)
-        fail('GRAPH_INPUT_INVALID', '等待的不是当前任务直接派发的子任务');
+        throw new Error('等待的不是当前任务直接派发的子任务');
 
       if (!usableResult(child, awaited.planRevision))
         waits.push([t.nodeId, child.nodeId])
@@ -477,14 +475,14 @@ export function validateGraph(value: GraphSnapshot): void
     assertGraphIdentity(value.identity, e.identity);
 
     if (!nodes.includes(e.fromNodeId) || !nodes.includes(e.toNodeId) || e.fromNodeId === e.toNodeId)
-      fail('GRAPH_INPUT_INVALID', '连线端点缺失或指向自身');
+      throw new Error('连线端点缺失或指向自身');
 
     if (e.kind === 'dispatch')
     {
       const target = byNode.get(e.toNodeId);
 
       if (!target || !e.enabled || e.fromNodeId !== (target.parentTaskId ? `task:${target.parentTaskId}` : value.root.nodeId))
-        fail('GRAPH_INPUT_INVALID', '派发边与固定父任务不一致');
+        throw new Error('派发边与固定父任务不一致');
 
       dispatchCounts.set(target.taskId, (dispatchCounts.get(target.taskId) ?? 0) + 1);
     }
@@ -494,7 +492,7 @@ export function validateGraph(value: GraphSnapshot): void
         to = byNode.get(e.toNodeId);
 
       if (!from || !to)
-        fail('GRAPH_INPUT_INVALID', '前置依赖只能连接业务任务');
+        throw new Error('前置依赖只能连接业务任务');
 
       if (e.enabled && !usableResult(from, e.condition.planRevision, e.condition.resultId))
         waits.push([to.nodeId, from.nodeId]);
@@ -508,7 +506,7 @@ export function validateGraph(value: GraphSnapshot): void
 
   for (const t of value.tasks)
     if (dispatchCounts.get(t.taskId) !== 1)
-      fail('GRAPH_INPUT_INVALID', '每个任务必须恰有一条派发入边');
+      throw new Error('每个任务必须恰有一条派发入边');
 
   for (const a of value.agents)
   {
@@ -517,10 +515,10 @@ export function validateGraph(value: GraphSnapshot): void
     const owned = (taskId: string) => tasks.get(taskId)?.assignee.agentInstanceId === a.agentInstanceId;
 
     if (a.runningTaskId && (!owned(a.runningTaskId) || tasks.get(a.runningTaskId)?.status !== 'running'))
-      fail('GRAPH_INPUT_INVALID', '成员活动任务不属于当前图或不是执行中');
+      throw new Error('成员活动任务不属于当前图或不是执行中');
 
     if (a.waitingTaskIds.some(t => !owned(t) || tasks.get(t)?.status !== 'waiting'))
-      fail('GRAPH_INPUT_INVALID', '成员等待任务不属于当前图或不是等待中');
+      throw new Error('成员等待任务不属于当前图或不是等待中');
   }
 
   acyclic(nodes, value.edges.filter(e => e.enabled).map(e => [e.fromNodeId, e.toNodeId]), 'GRAPH_CYCLE');

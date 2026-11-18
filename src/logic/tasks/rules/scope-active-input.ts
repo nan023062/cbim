@@ -6,8 +6,6 @@
  */
 import { z } from 'zod';
 
-import { fail } from '../../../core/errors';
-
 import { continuationAttachmentManifestSchema } from './scope-continuation-attachments';
 
 /** 正文字符沿等待补充的累计额度；UTF-8 字节另有单次上限，尝试历史独立有界。 */
@@ -68,11 +66,11 @@ export function validateScopeInputHistory(scope: { goal?: { inputRevision?: numb
   const revisions = [...(scope.continuations ?? []).map(item => item.inputRevision), ...(scope.activeInputs ?? []).filter((item): item is AcceptedScopeActiveInput => item.status === 'accepted').map(item => item.inputRevision)].sort((a, b) => a - b);
 
   if (revisions.length >= scopeActiveInputLimits.inputs || revisions.some((revision, index) => revision !== index + 2) || revisions.length && !scope.goal || scope.goal && (scope.goal.inputRevision ?? 1) !== revisions.length + 1)
-    fail('GRAPH_INPUT_INVALID', '输入版本必须对应连续且有界的真实接收历史');
+    throw new Error('输入版本必须对应连续且有界的真实接收历史');
 
   for (let index = 1; index < (scope.continuations?.length ?? 0); index++)
     if (scope.continuations![index].inputRevision <= scope.continuations![index - 1].inputRevision)
-      fail('GRAPH_INPUT_INVALID', '等待接续输入版本不能倒退');
+      throw new Error('等待接续输入版本不能倒退');
 
   const active = scope.activeInputs ?? [];
 
@@ -81,9 +79,9 @@ export function validateScopeInputHistory(scope: { goal?: { inputRevision?: numb
     const prior = active[index - 1];
 
     if (prior && (item.baseInputRevision < (prior.status === 'accepted' ? prior.inputRevision : prior.baseInputRevision) || item.baseGoalRevision < (prior.status === 'accepted' ? prior.goalRevision : prior.baseGoalRevision)))
-      fail('GRAPH_INPUT_INVALID', '运行补充的准备版本不能倒退');
+      throw new Error('运行补充的准备版本不能倒退');
 
     if ((item.status === 'pending' || item.status === 'unknown') && (index !== active.length - 1 || item.baseInputRevision !== (scope.goal?.inputRevision ?? 1)))
-      fail('GRAPH_INPUT_INVALID', '未核实补充之后不能继续消费输入');
+      throw new Error('未核实补充之后不能继续消费输入');
   }
 }

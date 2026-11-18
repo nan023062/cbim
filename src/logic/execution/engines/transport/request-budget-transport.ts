@@ -16,8 +16,6 @@ import { RequestBudgetUsageStream } from './request-budget-usage';
 
 import { requestBudgetReservation, requestBudgetCost } from '../../../budget/rules/model-request-budget-rules';
 
-import { Fault } from '../../../../core/errors';
-
 import { workspaceMemberModelHash } from '../../../team/rules/workspace-member-rules';
 
 /** 所有引擎共用的实际 API 路径；不接受子进程指定目标或 HTTP 重定向。 */
@@ -233,7 +231,7 @@ export async function openRequestBudgetTransport(llm: ResolvedLlm, port: Request
     }
     catch (error)
     {
-      block(error instanceof Fault ? error.message : sent ? '模型请求未能可靠交付；已知用量保留，未决预留不释放' : error instanceof Error ? error.message : '模型请求未能发送');
+      block(error instanceof Error ? error.message : sent ? '模型请求未能可靠交付；已知用量保留，未决预留不释放' : error instanceof Error ? error.message : '模型请求未能发送');
 
       if (ticket && !terminal)
       {

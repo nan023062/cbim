@@ -6,7 +6,7 @@ import {expect,it,vi} from 'vitest';
 import {fixture} from '../../application/support/helpers';
 import {ChatInputs} from '../../../../../src/logic/materials/service/chat-inputs';
 import {RemoteRepository} from '../../../../../src/logic/resources/service/index';
-import {hash} from '../../../../../src/core/platform/node/serialization';
+import {hash} from '../../../../../src/core/io/serialization';
 import {continuationSourceSnapshotSchema} from '../../../../../src/logic/tasks/rules/continuation-source-snapshot';
 
 const signal=()=>new AbortController().signal;

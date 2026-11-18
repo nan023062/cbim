@@ -4,11 +4,9 @@
  * 机制边界：小清单组合 utility 的有界字节读取；大安装包继续流式写盘，不整包缓存在内存中。
  * 算法入口：通过 Core ByteUtils 静态方法复用机制，本文件继续拥有原业务策略。
  */
-import fs from 'node:fs/promises';
+import { ByteUtils, ByteLimitError } from '../../../core/io';
 
-import { createHash } from 'node:crypto';
-
-import { ByteUtils, ByteLimitError } from '../../../core/utility';
+import { FileIntegrityError, writeVerifiedFile } from '../../../core/io/node';
 
 import { runtimePackageUrl, type RuntimePackage } from './runtime-manifest';
 
@@ -57,7 +55,9 @@ export async function runtimeAssetResponse(url: string, signal: AbortSignal)
 /** 完整传输、长度与 SHA-256 全部通过才返回；失败文件不会作为缓存重用。 */
 export async function downloadRuntimePackage(pkg: RuntimePackage, file: string, signal: AbortSignal, onProgress: (percent: number) => void)
 {
-  const response = await runtimeAssetResponse(runtimePackageUrl(pkg), AbortSignal.any([signal, AbortSignal.timeout(30 * 60_000)]));
+  const combined = AbortSignal.any([signal, AbortSignal.timeout(30 * 60_000)]);
+
+  const response = await runtimeAssetResponse(runtimePackageUrl(pkg), combined);
 
   if (!response.body)
     throw Error('更新附件为空');
@@ -71,47 +71,16 @@ export async function downloadRuntimePackage(pkg: RuntimePackage, file: string, 
     throw Error('更新附件长度不符');
   }
 
-  const output = await fs.open(file, 'wx', 0o600),
-    reader = response.body.getReader(),
-    hash = createHash('sha256');
-
-  let bytes = 0;
-
   try
   {
-    for (; ;)
-    {
-      signal.throwIfAborted();
-
-      const chunk = await reader.read();
-
-      if (chunk.done)
-        break;
-
-      bytes += chunk.value.byteLength;
-
-      if (bytes > pkg.bytes)
-        throw Error('更新附件超过声明长度');
-
-      hash.update(chunk.value);
-
-      await output.writeFile(chunk.value);
-
-      onProgress(bytes / pkg.bytes * 100);
-    }
-
-    if (bytes !== pkg.bytes || hash.digest('hex') !== pkg.sha256)
-      throw Error('更新附件摘要不符');
-
-    await output.sync();
+    await writeVerifiedFile(response.body, file, pkg, combined, bytes => onProgress(bytes / pkg.bytes * 100));
   }
-  finally
+  catch (error)
   {
-    await reader.cancel().catch(() => { });
+    if (error instanceof FileIntegrityError)
+      throw Error(error.reason === 'overflow' ? '更新附件超过声明长度' : '更新附件摘要不符');
 
-    reader.releaseLock();
-
-    await output.close();
+    throw error;
   }
 }
 

@@ -9,8 +9,6 @@ import { ZodError } from 'zod';
 
 import { parseIpcRequest, type ApplicationIpcAction } from '../../contracts/ipc-call';
 
-import { fail } from '../../../core/errors';
-
 const shutdownMessages: Partial<Record<ApplicationIpcAction, string>> = {
   'source.list': 'CBIM 正在退出，无法读取源目录',
   'source.read': 'CBIM 正在退出，无法读取源文件',
@@ -56,7 +54,7 @@ export function parseApplicationRequest<A extends ApplicationIpcAction>(action: 
   const shutdown = shutdownMessages[action];
 
   if (stopping && shutdown)
-    fail('SHUTTING_DOWN', shutdown);
+    throw new Error(shutdown);
 
   try
   {
@@ -68,11 +66,11 @@ export function parseApplicationRequest<A extends ApplicationIpcAction>(action: 
       throw error;
 
     if (action === 'source.list' || action === 'source.read')
-      fail('SOURCE_INPUT', '源浏览请求缺少有效身份或路径，请刷新架构后重试');
+      throw new Error('源浏览请求缺少有效身份或路径，请刷新架构后重试');
 
     // 缺少原运行身份不能由路由补齐；提前拒绝仍保留队列“不发送、原消息保留”的公开错误语义。
     if (action === 'loop.queueInsert' && error.issues.every(issue => issue.path.length === 1 && issue.path[0] === 'expectedRunId'))
-      fail('QUEUE_INSERT_STALE', '缺少有效的原主运行标识，原消息仍保留在队列');
+      throw new Error('缺少有效的原主运行标识，原消息仍保留在队列');
 
     const code = inputCodes[action]
       ?? (action.startsWith('workspace.members.') ? 'MEMBER_INPUT_INVALID' : undefined)
@@ -86,7 +84,7 @@ export function parseApplicationRequest<A extends ApplicationIpcAction>(action: 
       ?? (['dispatch.open', 'dispatch.memberCreate', 'dispatch.task', 'dispatch.graphSnapshot', 'dispatch.graphDelta', 'dispatch.sessionRead'].includes(action) ? 'GRAPH_INPUT_INVALID' : undefined);
 
     if (code)
-      fail(code, error.issues.map(issue => issue.message).join('；'));
+      throw new Error(error.issues.map(issue => issue.message).join('；'));
 
     throw error;
   }

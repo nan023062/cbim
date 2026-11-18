@@ -8,15 +8,13 @@
  * 机制边界：对象递归排序由 utility 提供，本模块保留历史比较器、字段省略和业务指纹规则。
  * 算法入口：通过 Core JsonUtils 静态方法复用机制，本文件继续拥有原业务策略。
  */
-import { JsonUtils } from '../../../core/utility';
+import { JsonUtils } from '../../../core/io';
 
 import { automaticExecutionBindingSchema, automaticExecutionBindingMatches, type AutomaticExecutionBinding } from '../../team/rules/automatic-execution';
 
 import { z } from 'zod';
 
-import { hash } from '../../../core/platform/node/serialization';
-
-import { fail } from '../../../core/errors';
+import { hash } from '../../../core/io/serialization';
 
 import type { AgentConfigurationSnapshot } from '../../team/rules/agent-types';
 
@@ -157,11 +155,11 @@ export function validatePreparedDispatchKnowledge(value: unknown): asserts value
   const result = shape.safeParse(value);
 
   if (!result.success)
-    fail('EXECUTION_CONTEXT_INVALID', '成员执行知识快照结构无效：' + (result.error.issues[0]?.path.join('.') || 'root'));
+    throw new Error('成员执行知识快照结构无效：' + (result.error.issues[0]?.path.join('.') || 'root'));
 
   const prepared = value as PreparedDispatchKnowledge;
 
-  const invalid = (condition: boolean, reason: string) => { if (condition) fail('EXECUTION_CONTEXT_INVALID', reason) };
+  const invalid = (condition: boolean, reason: string) => { if (condition) throw new Error(reason) };
 
   invalid(prepared.agent.workspaceId !== prepared.workspaceId || prepared.agent.knowledgeRevision !== prepared.knowledgeRevision, '成员与执行知识基线不一致');
 
@@ -188,7 +186,7 @@ export function validatePreparedDispatchKnowledge(value: unknown): asserts value
   }
   catch
   {
-    fail('EXECUTION_CONTEXT_INVALID', '冻结模块的完整产物范围重叠、数量超限或无效')
+    throw new Error('冻结模块的完整产物范围重叠、数量超限或无效')
   }
 
   try
@@ -197,7 +195,7 @@ export function validatePreparedDispatchKnowledge(value: unknown): asserts value
   }
   catch
   {
-    fail('EXECUTION_CONTEXT_INVALID', '冻结模块的执行范围混合、冲突或超限')
+    throw new Error('冻结模块的执行范围混合、冲突或超限')
   }
 
   invalid(new Set(prepared.standards.map(standard => standard.id)).size !== prepared.standards.length, '内置规范不能重复');

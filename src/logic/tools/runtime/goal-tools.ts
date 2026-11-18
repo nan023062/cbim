@@ -16,8 +16,6 @@ import { coordinationPreviewSchema } from '../../tasks/rules/coordination-previe
 
 import { zodToJsonSchema } from 'zod-to-json-schema';
 
-import { fail } from '../../../core/errors';
-
 import { goalPlanInputSchema, goalReviewInputSchema } from '../../tasks/rules/scope-goal';
 
 import type { MainToolOutputBinding } from '../../tasks/rules/main-tool-output';
@@ -111,18 +109,18 @@ export class GoalTools
   private Parse(name: string, input: unknown)
   {
     if (!this.Has(name))
-      fail('TOOL_NOT_FOUND', '当前运行没有此目标规划工具');
+      throw new Error('当前运行没有此目标规划工具');
 
     const definition = this.Definition(name),
       parsed = definition.schema.safeParse(input);
 
     if (!parsed.success)
-      fail('GOAL_TOOL_INPUT_INVALID', '目标工具参数无效：' + parsed.error.issues.map(issue => issue.path.join('.') + ': ' + issue.message).join('；'));
+      throw new Error('目标工具参数无效：' + parsed.error.issues.map(issue => issue.path.join('.') + ': ' + issue.message).join('；'));
 
     const preview = name === 'cbim_goal_review' && pausePreviewInput.safeParse(input).success;
 
     if (preview && !this.port.PreviewPause)
-      fail('TOOL_NOT_FOUND', '当前运行未提供等待清单预览');
+      throw new Error('当前运行未提供等待清单预览');
 
     return { name, args: parsed.data, effects: preview ? ['preview'] as const : definition.effects };
   }
@@ -143,7 +141,7 @@ export class GoalTools
     const parsed = this.Parse(name, input);
 
     if (typeof toolCallId !== 'string' || !toolCallId.trim() || toolCallId.length > 512)
-      fail('GOAL_CALL_ID_REQUIRED', '目标工具缺少可信调用标识');
+      throw new Error('目标工具缺少可信调用标识');
 
     if (parsed.name === 'cbim_goal_review' && pausePreviewInput.safeParse(parsed.args).success)
     {

@@ -4,9 +4,7 @@
  * 设计原因：UI/Runtime 不能凭回包跳过持久 pending；接受后才增加输入版本，未知结果不能被普通聊天例外或新计划洗掉。
  * 职责边界：这里只核已保存结构及正文指纹，真实 queued/日志证据由调度服务核实；不启动模型，不重写旧运行。
  */
-import { fail } from '../../../core/errors';
-
-import { hash, json } from '../../../core/platform/node/serialization';
+import { hash, json } from '../../../core/io/serialization';
 
 import type { DispatchState, DispatchMutation } from '../../dispatch/rules/dispatch-storage';
 
@@ -27,7 +25,7 @@ export function scopedActiveInputHash(input: ScopeActiveInputPayload): string
 function valid(value: unknown, message: string): asserts value
 {
   if (!value)
-    fail('GRAPH_INPUT_INVALID', message)
+    throw new Error(message)
 }
 
 function fixed(value: ScopeActiveInput)

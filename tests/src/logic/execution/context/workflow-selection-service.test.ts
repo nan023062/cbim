@@ -6,7 +6,7 @@ import {expect,it} from 'vitest';
 import {fixture} from '../../application/support/helpers';
 import {request} from '../../knowledge/rules/data/knowledge';
 import {seedTeam} from '../../knowledge/service/support/team-fixture';
-import {hash,json} from '../../../../../src/core/platform/node/serialization';
+import {hash,json} from '../../../../../src/core/io/serialization';
 import type {WorkflowSelection} from '../../../../../src/logic/tasks/rules/workflow-selection';
 import {FileDispatchStore} from '../../../../../src/logic/dispatch/storage/dispatch-store';
 import {WorkspaceDispatchService} from '../../../../../src/logic/dispatch/runtime/dispatch-service';

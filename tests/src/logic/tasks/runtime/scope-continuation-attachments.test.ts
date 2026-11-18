@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {fixture} from '../../application/support/helpers';
-import {hash,json} from '../../../../../src/core/platform/node/serialization';
+import {hash,json} from '../../../../../src/core/io/serialization';
 import {checkedRunInputSource} from '../../../../../src/logic/execution/rules/input-source';
 import type {TaskSpec} from '../../../../../src/logic/execution/rules/types';
 import {continuationAttachmentManifestSchema,assertContinuationAttachmentManifest,continuationAttachmentLimits,type ContinuationAttachmentManifestV1} from '../../../../../src/logic/tasks/rules/scope-continuation-attachments';

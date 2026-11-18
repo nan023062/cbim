@@ -1,6 +1,6 @@
 import {describe,it,expect} from 'vitest';
 import {randomUUID} from 'node:crypto';
-import {hash,json} from '../../../../../src/core/platform/node/serialization';
+import {hash,json} from '../../../../../src/core/io/serialization';
 import {
   moduleGovernanceRegisterInputSchema,moduleGovernanceProposeInputSchema,moduleGovernanceDecideInputSchema,moduleGovernanceApplyInputSchema,moduleGovernanceApplicationSchema,moduleGovernanceUnacceptedSchema,
   type ModuleGovernanceProtection,type ModuleGovernanceObservation,type ModuleGovernanceProposal,type ModuleGovernanceDecision,type ModuleGovernanceApplyIntent,

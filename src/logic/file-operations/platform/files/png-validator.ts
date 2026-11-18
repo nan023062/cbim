@@ -6,8 +6,6 @@
  */
 import { inflateSync } from 'node:zlib';
 
-import { fail } from '../../../../core/errors';
-
 import { pngImageSchema, pngValidationLimits, type PngImageSchema, type PngValidationOutcome } from '../../../workspace/rules/png-validation-schema';
 
 const signature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
@@ -45,7 +43,7 @@ const paeth = (a: number, b: number, c: number) => { const p = a + b - c, pa = M
 export function decodePngRaster(bytes: Uint8Array): PngRasterResult
 {
   if (!(bytes instanceof Uint8Array) || bytes.byteLength > pngValidationLimits.fileBytes)
-    fail('VALIDATION_LIMIT', 'PNG产物超过1 MiB');
+    throw new Error('PNG产物超过1 MiB');
 
   const data = Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength);
 
@@ -66,7 +64,7 @@ export function decodePngRaster(bytes: Uint8Array): PngRasterResult
   while (offset < data.length)
   {
     if (++count > pngValidationLimits.chunks)
-      fail('VALIDATION_LIMIT', 'PNG块数超过1024');
+      throw new Error('PNG块数超过1024');
 
     if (data.length - offset < 12)
       return invalid('truncated', '/chunks');
@@ -105,7 +103,7 @@ export function decodePngRaster(bytes: Uint8Array): PngRasterResult
         return invalid('dimensions', '/IHDR');
 
       if (width > pngValidationLimits.dimension || height > pngValidationLimits.dimension || width * height > pngValidationLimits.pixels)
-        fail('VALIDATION_LIMIT', 'PNG尺寸或实际像素超过解码上限');
+        throw new Error('PNG尺寸或实际像素超过解码上限');
 
       if (body[8] !== 8 || ![2, 6].includes(body[9]) || body[10] !== 0 || body[11] !== 0 || body[12] !== 0)
         return invalid('profile', '/IHDR', 'png_unsupported');
@@ -207,7 +205,7 @@ export function validatePngArtifact(rawSchema: PngImageSchema, bytes: Uint8Array
   const parsed = pngImageSchema.safeParse(rawSchema);
 
   if (!parsed.success)
-    fail('VALIDATION_SCHEMA_INVALID', 'PNG验证声明不受支持或超过边界');
+    throw new Error('PNG验证声明不受支持或超过边界');
 
   const decoded = decodePngRaster(bytes);
 

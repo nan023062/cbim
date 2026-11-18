@@ -6,7 +6,7 @@
  */
 import { isDeepStrictEqual } from 'node:util';
 
-import { hash, json } from '../../../core/platform/node/serialization';
+import { hash, json } from '../../../core/io/serialization';
 
 import type { RunSummary } from '../../execution/rules/types';
 

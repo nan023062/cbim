@@ -5,7 +5,7 @@ import path from 'node:path';
 import {fixture} from '../../application/support/helpers';
 import {request} from '../../knowledge/rules/data/knowledge';
 import {seedTeam} from '../../knowledge/service/support/team-fixture';
-import {json,hash} from '../../../../../src/core/platform/node/serialization';
+import {json,hash} from '../../../../../src/core/io/serialization';
 import {toolReceipt} from '../../../../../src/logic/tools/rules/receipts';
 import {jsonToolResult} from '../../../../../src/logic/tools/rules/results';
 import type {ToolCall,ToolDecision} from '../../../../../src/logic/tools/rules/types';

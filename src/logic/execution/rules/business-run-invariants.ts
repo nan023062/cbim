@@ -5,9 +5,7 @@
  */
 import { isDeepStrictEqual as equal } from 'node:util';
 
-import { fail } from '../../../core/errors';
-
-import { hash, json } from '../../../core/platform/node/serialization';
+import { hash, json } from '../../../core/io/serialization';
 
 import { safeId } from '../ports/identity';
 
@@ -19,7 +17,7 @@ import type { AgentBusinessRun } from './business-run';
 
 import type { DispatchState, DispatchMutation, DispatchCommand } from '../../dispatch/rules/dispatch-storage';
 
-const check = (value: unknown, message: string) => { if (!value) fail('AGENT_RUN_AUDIT', message) };
+const check = (value: unknown, message: string) => { if (!value) throw new Error(message) };
 
 /** 固定幂等键和内容摘要；同一状态不能换绑原身份。 */
 export const agentBusinessRunCommand = (run: AgentBusinessRun) => ({ commandId: 'agent-business-run:' + run.binding.runId + ':' + run.status, fingerprint: hash(json(run)) });

@@ -11,7 +11,7 @@ import type {RunSummary} from '../../../../../src/logic/execution/rules/types';
 import {knowledgeContractProvider,knowledgeContractFixture as data} from '../../tools/runtime/support/knowledge-contract-provider';
 import {seedKnowledgeContract,knowledgeContractRecords,knowledgeContractLogBytes} from '../../tools/runtime/support/knowledge-contract-fixture';
 import {effectObservationReportSchema,effectDispositionReceiptSchema} from '../../../../../src/logic/tasks/rules/effect-observation';
-import {hash} from '../../../../../src/core/platform/node/serialization';
+import {hash} from '../../../../../src/core/io/serialization';
 import {knowledgeEffectObjectProvider} from './support/knowledge-effect-object-provider';
 
 it.each(['direct','object','refresh'] as const)('真实 Pi %s 已提交知识后坏输出：原调用仍失败，原事务可核实与明确处置，重开零写入重放',async kind=>{

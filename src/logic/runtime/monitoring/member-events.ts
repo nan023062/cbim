@@ -5,8 +5,6 @@
  * 设计原因：节点详情高频轮询不能反复扫描日志；首次恢复失败可重试，成功后与实时事件合并去重。仅可信新运行尚未启动的空日志窗口可等待实时首条事件，已开始或损坏日志不能冒充空记录；公开投影排除原生绑定、冻结知识及工具正文。
  * 职责边界：不签发图状态、不启动或恢复执行；工具只公开身份、状态、工作区内业务路径与可信回执。公开对话和计划文本仅限长，不保证识别其中的敏感内容。
  */
-import { fail } from '../../../core/errors';
-
 import type { RunSummary, StoredEvent, TaskSpec } from '../../execution/rules/types';
 
 import type { DispatchRun } from '../../tasks/rules/dispatch-execution';
@@ -101,7 +99,7 @@ export class MemberEventStreams
     const binding = stream.run.binding;
 
     if (event.version !== 1 || event.workspaceId !== binding.workspaceId || event.taskId !== binding.taskId || event.runId !== binding.runId || !Number.isSafeInteger(event.seq) || event.seq < 1)
-      fail('MEMBER_EVENT_STREAM_INVALID', '成员事件身份或序号无效');
+      throw new Error('成员事件身份或序号无效');
 
     const value = projectRunEvent(event, stream.run.binding, stream.task),
       old = stream.ordered[event.seq - 1] ?? stream.pending.get(event.seq);
@@ -109,7 +107,7 @@ export class MemberEventStreams
     if (old)
     {
       if (JSON.stringify(old) !== JSON.stringify(value))
-        fail('MEMBER_EVENT_STREAM_INVALID', '同一成员事件序号出现不同内容');
+        throw new Error('同一成员事件序号出现不同内容');
 
       return
     }
@@ -145,13 +143,13 @@ export class MemberEventStreams
         binding = stream.run.binding;
 
       if (summary.runId !== binding.runId || summary.task.workspaceId !== binding.workspaceId || summary.task.taskId !== binding.taskId || summary.task.agentId !== binding.agentId || summary.task.root !== stream.task.root || !summary.memberBinding || Object.entries(binding).some(([key, value]) => summary.memberBinding![key as keyof typeof binding] !== value))
-        fail('MEMBER_EVENT_STREAM_INVALID', '成员运行记录不属于请求身份');
+        throw new Error('成员运行记录不属于请求身份');
 
       for (const event of summary.events)
         this.Accept(stream, event);
 
       if (stream.pending.size)
-        fail('MEMBER_EVENT_STREAM_INVALID', '成员事件序号不连续，不能跳过缺失记录');
+        throw new Error('成员事件序号不连续，不能跳过缺失记录');
     }
     catch (error: any)
     {
@@ -196,7 +194,7 @@ export class MemberEventStreams
       throw stream.failure;
 
     if (stream.pending.size)
-      fail('MEMBER_EVENT_STREAM_INVALID', '成员事件序号不连续，不能跳过缺失记录');
+      throw new Error('成员事件序号不连续，不能跳过缺失记录');
 
     const view: MemberRunView = { task: stream.task, runId: run.binding.runId, status: run.status === 'starting' ? 'running' : run.status, acceptance: 'not_evaluated', unresolvedTools: [...stream.unresolved], ...(stream.progress ? { taskProgress: stream.progress } : {}) };
 

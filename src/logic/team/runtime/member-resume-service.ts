@@ -5,9 +5,7 @@
  */
 import { randomUUID } from 'node:crypto';
 
-import { fail } from '../../../core/errors';
-
-import { hash, json } from '../../../core/platform/node/serialization';
+import { hash, json } from '../../../core/io/serialization';
 
 import { memberResumeCommand } from '../../tasks/runtime/main-command-request';
 
@@ -43,23 +41,23 @@ export class MemberResumeService
     const parsed = resumeMemberInputSchema.safeParse(raw);
 
     if (!parsed.success)
-      fail('MEMBER_RESUME_INPUT', '续执行预约参数无效');
+      throw new Error('续执行预约参数无效');
 
     const input = parsed.data,
       command = memberResumeCommand(identity, scopeId, mainRunId, commandId, input);
 
     if (!this.owners)
-      fail('OWNER_EXECUTION_UNAVAILABLE', '未装配岗位检查点核验');
+      throw new Error('未装配岗位检查点核验');
 
     const old = await this.owners.Replay<ResumeMemberReceipt>(command);
 
     if (old)
       return old.receipt;
 
-    const check = () => { this.owner.Assert(); assertCurrent(); if (identity.workspaceId !== this.owner.entry.id) fail('GRAPH_IDENTITY_MISMATCH', '检查点不属于当前工作区') };
+    const check = () => { this.owner.Assert(); assertCurrent(); if (identity.workspaceId !== this.owner.entry.id) throw new Error('检查点不属于当前工作区') };
 
     check();
 
-    return this.owners.WithContext(state => this.owners!.Selections([memberResumeSelection(state, identity, scopeId, mainRunId, input).task]), context => this.store.Transact(command, async state => { check(); const selected = memberResumeSelection(state, identity, scopeId, mainRunId, input), { graph, scope, task, run, checkpoint, trackedTaskIds } = selected; if (scopeHasUnresolvedActiveInput(scope)) fail('GOAL_ACTIVE_INPUT_UNRESOLVED', '运行中补充尚未核实，不能预约成员续执行'); await this.owners!.VerifyTask(state, context, task); check(); await verifyMemberCheckpointProof(this.owner, task, run, this.ports, check, run.checkpointProof, state.runs); check(); const requestId = randomUUID(), now = new Date().toISOString(), resumeFrom = { checkpointId: checkpoint.checkpointId, runId: run.binding.runId }; const resumeRequest = { requestId, commandId, scopeId, mainRunId, ...resumeFrom, requestedAt: now, reason: input.reason, graphCursor: { streamId: graph.cursor.streamId, seq: graph.cursor.seq }, goalRevision: scope.goal!.revision, previousTaskRevision: task.revision, trackedTaskIds }; const history = memberResumeRequests(task), updated = { ...task, status: 'queued' as const, revision: task.revision + 1, updatedAt: now, waitReason: input.reason, ...(history.length ? { resumeHistory: [...history] } : {}), resumeRequest }; const batch = memberBatch(graph, commandId, 'task.resume_requested', [{ type: 'task.upserted', task: updated }]); check(); return { batch, messages: [{ kind: 'assignment' as const, messageId: requestId, commandId, identity: graph.identity, from: task.requester, to: task.assignee, taskId: task.taskId, planRevision: task.planRevision, createdAt: now, delivery: 'pending' as const, resumeFrom }], receipt: { taskId: task.taskId, checkpointId: checkpoint.checkpointId, requestId, trackedTaskIds, cursor: { ...identity, streamId: batch.streamId, seq: batch.seq } } }; }), check);
+    return this.owners.WithContext(state => this.owners!.Selections([memberResumeSelection(state, identity, scopeId, mainRunId, input).task]), context => this.store.Transact(command, async state => { check(); const selected = memberResumeSelection(state, identity, scopeId, mainRunId, input), { graph, scope, task, run, checkpoint, trackedTaskIds } = selected; if (scopeHasUnresolvedActiveInput(scope)) throw new Error('运行中补充尚未核实，不能预约成员续执行'); await this.owners!.VerifyTask(state, context, task); check(); await verifyMemberCheckpointProof(this.owner, task, run, this.ports, check, run.checkpointProof, state.runs); check(); const requestId = randomUUID(), now = new Date().toISOString(), resumeFrom = { checkpointId: checkpoint.checkpointId, runId: run.binding.runId }; const resumeRequest = { requestId, commandId, scopeId, mainRunId, ...resumeFrom, requestedAt: now, reason: input.reason, graphCursor: { streamId: graph.cursor.streamId, seq: graph.cursor.seq }, goalRevision: scope.goal!.revision, previousTaskRevision: task.revision, trackedTaskIds }; const history = memberResumeRequests(task), updated = { ...task, status: 'queued' as const, revision: task.revision + 1, updatedAt: now, waitReason: input.reason, ...(history.length ? { resumeHistory: [...history] } : {}), resumeRequest }; const batch = memberBatch(graph, commandId, 'task.resume_requested', [{ type: 'task.upserted', task: updated }]); check(); return { batch, messages: [{ kind: 'assignment' as const, messageId: requestId, commandId, identity: graph.identity, from: task.requester, to: task.assignee, taskId: task.taskId, planRevision: task.planRevision, createdAt: now, delivery: 'pending' as const, resumeFrom }], receipt: { taskId: task.taskId, checkpointId: checkpoint.checkpointId, requestId, trackedTaskIds, cursor: { ...identity, streamId: batch.streamId, seq: batch.seq } } }; }), check);
   }
 }

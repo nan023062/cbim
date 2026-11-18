@@ -5,7 +5,7 @@ import {fixture} from '../../application/support/helpers';
 import {request} from '../../knowledge/rules/data/knowledge';
 import {seedTeam} from '../../knowledge/service/support/team-fixture';
 import {registerExplicitFixtureOwner} from '../../team/service/support/explicit-owner-fixture';
-import {json} from '../../../../../src/core/platform/node/serialization';
+import {json} from '../../../../../src/core/io/serialization';
 import type {GraphDelta,GraphSnapshot} from '../../../../../src/logic/tasks/rules/graph-types';
 import type {OpenGraphReceipt,CreateMemberReceipt,DispatchReceipt} from '../../../../../src/logic/tasks/rules/dispatch-commands';
 

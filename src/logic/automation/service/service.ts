@@ -24,8 +24,6 @@ import { Team, BusinessWorkspace } from '../../knowledge/rules/read-models';
 
 import { builtinSkills, Builtins } from '../../knowledge/rules/builtins';
 
-import { fail } from '../../../core/errors';
-
 import type { OwnerExecutionSelection } from '../../team/rules/member-execution-binding';
 
 import { executionOptions } from '../../conversation/runtime/execution-manager';
@@ -112,12 +110,12 @@ export class WorkspaceAutomations
     const member = definition.executor.kind === 'member' ? catalog.agents.find(a => a.memberId === (definition.executor as { memberId: string }).memberId) : undefined;
 
     if (definition.executor.kind === 'member' && !member)
-      fail('AUTOMATION_AGENT', '所选团队岗位不存在或未启用，请编辑任务');
+      throw new Error('所选团队岗位不存在或未启用，请编辑任务');
 
     for (const id of definition.moduleIds)
     {
       if (!catalog.modules.some(m => m.id === id))
-        fail('AUTOMATION_MODULE', '所选模块已失效，请编辑任务');
+        throw new Error('所选模块已失效，请编辑任务');
 
       const module = await business.Module(id);
 
@@ -130,7 +128,7 @@ export class WorkspaceAutomations
         const workflow = module.workflows.find((w: { id: string }) => w.id === selected.workflowId);
 
         if (!workflow?.content.available)
-          fail('AUTOMATION_WORKFLOW', '所选 Workflow 已失效，请编辑任务');
+          throw new Error('所选 Workflow 已失效，请编辑任务');
 
         context.push('所选 Workflow ' + workflow.id + '：\n' + workflow.content.text)
       }
@@ -141,12 +139,12 @@ export class WorkspaceAutomations
       const choice = catalog.skills.find(s => s.id === id && s.agentIds.includes(member?.agentId ?? 'cbim:main'));
 
       if (!choice)
-        fail('AUTOMATION_SKILL', '所选 Skill 不属于执行 Agent 的有效能力，请编辑任务');
+        throw new Error('所选 Skill 不属于执行 Agent 的有效能力，请编辑任务');
 
       const text = id.startsWith('builtin:') ? (await Builtins.Read(id.slice(8))).text : snapshot.files.find(f => f.path === id + '/SKILL.md')?.text;
 
       if (!text)
-        fail('AUTOMATION_SKILL', '所选 Skill 正文不可用');
+        throw new Error('所选 Skill 正文不可用');
 
       context.push('所选 Skill ' + id + '：\n' + text);
     }
@@ -159,7 +157,7 @@ export class WorkspaceAutomations
         group = discovery.groups[0];
 
       if (discovery.groups.length !== 1 || group?.memberId !== member.memberId || !group.selection || group.issues.length)
-        fail('AUTOMATION_OWNER', '所选岗位与模块负责人或采纳的能力/模型不一致：' + discovery.groups.flatMap(g => g.issues.map(i => i.message)).join('；'));
+        throw new Error('所选岗位与模块负责人或采纳的能力/模型不一致：' + discovery.groups.flatMap(g => g.issues.map(i => i.message)).join('；'));
 
       selection = group.selection;
     }
@@ -168,7 +166,7 @@ export class WorkspaceAutomations
     const memberGoal = [definition.prompt, definition.skillIds.length ? '本次特别采用 Skill：' + definition.skillIds.join('、') : ''].filter(Boolean).join('\n');
 
     if (memberGoal.length > 16000 || context.join('\n').length > 400000)
-      fail('AUTOMATION_CONTEXT_SIZE', '提示或选定知识过长，请缩小范围');
+      throw new Error('提示或选定知识过长，请缩小范围');
 
     return { context, selection, agentId: member?.agentId, memberGoal };
   }

@@ -3,8 +3,6 @@
  * 设计原因：可靠失败/求助及明确放弃检查点可换入真实候选；不能扩大到普通取消、已领取任务、过期角色或其他周期，旧来源与后继身份保持。
  * 职责边界：只检查持久结构和基线，不读取 canonical 证据或知识正文；调度服务仍须在提交前复核这些事实。
  */
-import { fail } from '../../../core/errors';
-
 import type { DispatchState } from '../../dispatch/rules/dispatch-storage';
 
 import type { GraphIdentity, TaskNode } from './graph-types';
@@ -20,7 +18,7 @@ import { abandonedCheckpointSource } from './checkpoint-handoff-rules';
 function check(value: unknown, code: string, message: string): asserts value
 {
   if (!value)
-    fail(code, message)
+    throw new Error(message)
 }
 
 const sameSet = (a: string[], b: string[]) => a.length === b.length && a.every(value => b.includes(value));

@@ -13,11 +13,9 @@ import { isDeepStrictEqual } from 'node:util';
 
 import { z } from 'zod';
 
-import { atomic } from '../../../core/platform/node/files';
+import { atomic } from '../../../core/io/text-files';
 
-import { hash, json } from '../../../core/platform/node/serialization';
-
-import { fail } from '../../../core/errors';
+import { hash, json } from '../../../core/io/serialization';
 
 import { buildWorkspacePackage, parseWorkspacePackage, planWorkspacePackage } from '../../knowledge/rules/portable-package';
 
@@ -102,10 +100,10 @@ export class WorkspacePackages
     const snapshot = await this.repositories.Read();
 
     if (snapshot.repositoryId !== repositoryId)
-      fail('REPOSITORY_CHANGED', '当前仓库已切换，请重新读取资源');
+      throw new Error('当前仓库已切换，请重新读取资源');
 
     if (snapshot.revision !== repositoryRevision)
-      fail('CONFLICT', '源仓库已变化，请重新选择资源并预览');
+      throw new Error('源仓库已变化，请重新选择资源并预览');
 
     return snapshot;
   }
@@ -113,7 +111,7 @@ export class WorkspacePackages
   private PlanPath(id: string)
   {
     if (!z.string().uuid().safeParse(id).success)
-      fail('PLAN', '无效资源导入计划');
+      throw new Error('无效资源导入计划');
 
     return path.join(this.workspace.paths.Local(this.workspace.entry.id, 'cache'), 'resource-imports', id + '.json')
   }
@@ -134,32 +132,32 @@ export class WorkspacePackages
       const file = this.PlanPath(id);
 
       if ((await fs.lstat(file)).isSymbolicLink())
-        fail('PLAN', '资源导入计划不能是符号链接');
+        throw new Error('资源导入计划不能是符号链接');
 
       value = JSON.parse(await fs.readFile(file, 'utf8'))
     }
     catch
     {
-      fail('PLAN', '资源导入预览不存在或损坏，请重新预览')
+      throw new Error('资源导入预览不存在或损坏，请重新预览')
     }
 
     const parsed = planSchema.safeParse(value);
 
     if (!parsed.success)
-      fail('PLAN', '资源导入计划格式无效');
+      throw new Error('资源导入计划格式无效');
 
     // Schema 只验证，不重排原缓存：现有指纹绑定原 JSON 字段顺序，可变回执也不能替换不可变意图。
     const plan = value as ImportPlan;
 
     if (plan.request.requestId !== id || planFingerprint(plan) !== plan.fingerprint)
-      fail('PLAN', '资源导入计划内容已变化，请重新预览');
+      throw new Error('资源导入计划内容已变化，请重新预览');
 
     for (const result of [plan.result, plan.committed])
       if (result && (result.requestId !== id || result.workspaceId !== plan.request.workspaceId || result.instanceId !== plan.request.instanceId))
-        fail('PLAN', '资源导入回执身份不一致');
+        throw new Error('资源导入回执身份不一致');
 
     if (plan.reindexRequest && (!plan.committed || plan.reindexRequest.workspaceId !== plan.request.workspaceId || plan.reindexRequest.instanceId !== plan.request.instanceId || plan.reindexRequest.changes.length))
-      fail('PLAN', '资源导入索引计划身份不一致');
+      throw new Error('资源导入索引计划身份不一致');
 
     return plan;
   }
@@ -174,14 +172,14 @@ export class WorkspacePackages
     const snapshot = await this.workspace.Snapshot();
 
     if (snapshot.revision !== input.revision)
-      fail('CONFLICT', '源工作区知识已变化，请刷新后发布');
+      throw new Error('源工作区知识已变化，请刷新后发布');
 
     const built = buildWorkspacePackage(snapshot, input),
       content = json(built.package),
       repository = await this.repositories.Read();
 
     if (repository.repositoryId !== input.repositoryId)
-      fail('REPOSITORY_CHANGED', '当前仓库已切换，请重新发布');
+      throw new Error('当前仓库已切换，请重新发布');
 
     // 回执丢失后重新点击同一内容可以找到已经保存的资源；不能按名称覆盖别人的定义。
     const existing = repository.items.find(item => item.kind === input.kind && item.name === input.name && item.summary === input.summary && item.content === content);
@@ -190,17 +188,17 @@ export class WorkspacePackages
       return { repository, resourceId: existing.id, warnings: built.warnings, removedBindings: built.removedBindings };
 
     if (repository.revision !== input.repositoryRevision)
-      fail('CONFLICT', '目标仓库已变化，请刷新后发布');
+      throw new Error('目标仓库已变化，请刷新后发布');
 
     if ((await this.workspace.Read()).revision !== snapshot.revision)
-      fail('CONFLICT', '发布期间源知识已变化，请刷新后重试');
+      throw new Error('发布期间源知识已变化，请刷新后重试');
 
     const saved = await this.repositories.Save({ repositoryId: input.repositoryId, revision: input.repositoryRevision, item: { kind: input.kind, name: input.name, summary: input.summary, content } });
 
     const resource = saved.items.find(item => item.kind === input.kind && item.content === content);
 
     if (!resource)
-      fail('RESOURCE_DATA', '仓库未返回已保存资源，请刷新核实');
+      throw new Error('仓库未返回已保存资源，请刷新核实');
 
     return { repository: saved, resourceId: resource.id, warnings: built.warnings, removedBindings: built.removedBindings };
   }
@@ -216,16 +214,16 @@ export class WorkspacePackages
       resource = repository.items.find(item => item.id === input.resourceId);
 
     if (!resource)
-      fail('NOT_FOUND', '源资源不存在，请刷新仓库');
+      throw new Error('源资源不存在，请刷新仓库');
 
     if (!['team', 'agent', 'skill', 'architecture'].includes(resource.kind))
-      fail('RESOURCE_KIND', '此资源不支持应用；业务模板必须是完整业务架构包');
+      throw new Error('此资源不支持应用；业务模板必须是完整业务架构包');
 
     const pack = parseWorkspacePackage(resource.content, resource.kind),
       snapshot = await this.workspace.Snapshot();
 
     if (snapshot.revision !== input.revision)
-      fail('CONFLICT', '目标知识已变化，请刷新后重新预览');
+      throw new Error('目标知识已变化，请刷新后重新预览');
 
     const planned = planWorkspacePackage(snapshot, pack, input);
 
@@ -275,7 +273,7 @@ export class WorkspacePackages
     const original = await this.workspace.CommittedReceipt(plan.request);
 
     if (plan.committed && !isDeepStrictEqual(original, plan.committed) || plan.result && !original)
-      fail('SOURCE_PLAN_INVALID', '资源计划缓存没有匹配的原知识提交证明');
+      throw new Error('资源计划缓存没有匹配的原知识提交证明');
 
     if (plan.result)
     {
@@ -286,13 +284,13 @@ export class WorkspacePackages
         const indexed = await this.workspace.CommittedReceipt(plan.reindexRequest);
 
         if (!indexed)
-          fail('SOURCE_PLAN_INVALID', '资源计划最终缓存缺少原索引提交证明');
+          throw new Error('资源计划最终缓存缺少原索引提交证明');
 
         expected = { ...expected, revision: indexed.revision, changed: [...new Set([...expected.changed, ...indexed.changed])] }
       }
 
       if (!isDeepStrictEqual(expected, plan.result))
-        fail('SOURCE_PLAN_INVALID', '资源计划最终回执与原知识日志不一致');
+        throw new Error('资源计划最终回执与原知识日志不一致');
 
       return plan.result;
     }
@@ -310,7 +308,7 @@ export class WorkspacePackages
         resource = repository.items.find(item => item.id === plan.source.resourceId);
 
       if (!resource || hash(resource.content) !== plan.source.contentHash)
-        fail('CONFLICT', '源资源内容已变化，请重新预览');
+        throw new Error('源资源内容已变化，请重新预览');
 
       for (const root of plan.createdRoots)
         await this.workspace.objects.AssertAbsent(root);
@@ -375,7 +373,7 @@ export class WorkspacePackages
     }
     catch (error)
     {
-      fail('RESOURCE_IMPORT_APPLIED', `静态定义已应用，目录清理、索引刷新或回执保存尚未完成。请重试同一计划 ${input.planId}；不会重复写入包内容。原因：${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(`静态定义已应用，目录清理、索引刷新或回执保存尚未完成。请重试同一计划 ${input.planId}；不会重复写入包内容。原因：${error instanceof Error ? error.message : String(error)}`);
     }
   }
 }

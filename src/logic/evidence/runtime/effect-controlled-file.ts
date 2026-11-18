@@ -6,9 +6,7 @@
  */
 import { isDeepStrictEqual as equal } from 'node:util';
 
-import { hash } from '../../../core/platform/node/serialization';
-
-import { fail } from '../../../core/errors';
+import { hash } from '../../../core/io/serialization';
 
 import { controlledFileReportSchema, type ControlledFileReport, type ControlledFileReportInput, type ControlledFileWriteInput, type ControlledFileBinding } from '../../file-operations/rules/controlled-file-operation';
 
@@ -38,7 +36,7 @@ export async function observeControlledEffect(reference: ControlledEffectReferen
     alive();
 
     if (!equal(report.identity, reference.identity))
-      fail('EFFECT_CONTROLLED_IDENTITY', '受控报告不属于原调用');
+      throw new Error('受控报告不属于原调用');
 
     const ledger = report.ledger;
 
@@ -48,7 +46,7 @@ export async function observeControlledEffect(reference: ControlledEffectReferen
         input = reference.input;
 
       if (!equal(op.binding, reference.binding) || op.scopeId !== reference.scopeId || op.operationId !== controlledFileOperationId(reference.binding, reference.identity.toolCallId) || op.relativePath !== input.path || !equal(op.before, input.expectedBefore) || !equal(op.intendedAfter, { byteLength: Buffer.byteLength(input.content, 'utf8'), sha256: hash(Buffer.from(input.content, 'utf8')) }))
-        fail('EFFECT_CONTROLLED_IDENTITY', '受控原操作与成员身份或原参数不一致');
+        throw new Error('受控原操作与成员身份或原参数不一致');
     }
 
     return ledger;

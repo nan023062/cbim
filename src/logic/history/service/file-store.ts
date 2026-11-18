@@ -8,9 +8,9 @@ import fs from 'node:fs/promises';
 
 import path from 'node:path';
 
-import { hash } from '../../../core/platform/node/serialization';
+import { hash } from '../../../core/io/serialization';
 
-import { atomic } from '../../../core/platform/node/files';
+import { atomic } from '../../../core/io/text-files';
 
 import { checkedAgentHistoryRecord, type AgentHistoryRecord, type AgentHistoryStore } from '../../team/rules/session-history-storage';
 

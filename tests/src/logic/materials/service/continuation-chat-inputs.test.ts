@@ -4,7 +4,7 @@ import {randomUUID} from 'node:crypto';
 import {it,expect,vi} from 'vitest';
 import {fixture} from '../../application/support/helpers';
 import {ChatInputs} from '../../../../../src/logic/materials/service/chat-inputs';
-import {hash} from '../../../../../src/core/platform/node/serialization';
+import {hash} from '../../../../../src/core/io/serialization';
 import {continuationAttachmentLimits} from '../../../../../src/logic/tasks/rules/scope-continuation-attachments';
 
 const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aL1sAAAAASUVORK5CYII=','base64');

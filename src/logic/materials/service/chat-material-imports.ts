@@ -8,9 +8,7 @@ import { InFlightOperations } from '../../../core/utility';
 
 import { z } from 'zod';
 
-import { fail } from '../../../core/errors';
-
-import { hash } from '../../../core/platform/node/serialization';
+import { hash } from '../../../core/io/serialization';
 
 import type { KnowledgeWorkspace } from '../../knowledge/rules/ports';
 
@@ -44,7 +42,7 @@ function input<T>(schema: z.ZodType<T>, raw: unknown)
   const parsed = schema.safeParse(raw);
 
   if (!parsed.success)
-    fail('ATTACHMENT_IMPORT_INPUT', '资料导入字段无效，请重新选择');
+    throw new Error('资料导入字段无效，请重新选择');
 
   return parsed.data
 }
@@ -83,12 +81,12 @@ export class ChatMaterialImports
     signal?.throwIfAborted();
 
     if (this.closed)
-      fail('ATTACHMENT_IMPORT_CLOSED', '资料导入服务正在关闭');
+      throw new Error('资料导入服务正在关闭');
 
     owner.Assert();
 
     if (this.workspace(owner.entry.id) !== owner)
-      fail('ATTACHMENT_IMPORT_STALE', '工作区实例已变化，请重新选择资料')
+      throw new Error('工作区实例已变化，请重新选择资料')
   }
 
   private Operation(id: string, importId: string)
@@ -100,7 +98,7 @@ export class ChatMaterialImports
       return old;
 
     if (this.operations.size >= 4096)
-      fail('ATTACHMENT_IMPORT_LIMIT', '本次应用的资料导入记录已达上限，请正常重开应用后再导入');
+      throw new Error('本次应用的资料导入记录已达上限，请正常重开应用后再导入');
 
     const value = { workspaceId: id, controller: new AbortController(), started: false, finished: false };
 
@@ -127,7 +125,7 @@ export class ChatMaterialImports
     operation.controller.signal.throwIfAborted();
 
     if (operation.started)
-      fail('ATTACHMENT_IMPORT_REUSED', '原导入已经处理，请核实原结果；再次导入需要新的操作标识');
+      throw new Error('原导入已经处理，请核实原结果；再次导入需要新的操作标识');
 
     const owner = this.workspace(id);
 
@@ -181,10 +179,10 @@ export class ChatMaterialImports
     const target = port?.targets.find(item => item.connectorId === connectorId);
 
     if (!port || !target)
-      fail('REPOSITORY_CONNECTION_NOT_GRANTED', '当前工作区没有此已授权且共享就绪的资料连接');
+      throw new Error('当前工作区没有此已授权且共享就绪的资料连接');
 
     if (target.connectionId !== connectionId)
-      fail('REPOSITORY_CONNECTION_STALE', '资料连接已变化，请重新选择来源');
+      throw new Error('资料连接已变化，请重新选择来源');
 
     return port;
   }
@@ -194,7 +192,7 @@ export class ChatMaterialImports
   {
     const request = input(identitySchema.extend({ kind: z.enum(['file', 'folder']) }).strict(), raw);
 
-    return this.Run(request.id, request.importId, async (owner, signal) => { const files = await this.Selection(select, signal); this.Assert(owner, signal); if (files.length > 12) fail('ATTACHMENT_IMPORT_LIMIT', '最多选择12个附件，请减少选择后重试'); const inputs = new ChatInputs(owner), items = []; for (const file of files) { this.Assert(owner, signal); items.push(await inputs.Path(request.kind, file, signal)) } return items; })
+    return this.Run(request.id, request.importId, async (owner, signal) => { const files = await this.Selection(select, signal); this.Assert(owner, signal); if (files.length > 12) throw new Error('最多选择12个附件，请减少选择后重试'); const inputs = new ChatInputs(owner), items = []; for (const file of files) { this.Assert(owner, signal); items.push(await inputs.Path(request.kind, file, signal)) } return items; })
   }
 
   private Selection(select: () => Promise<string[]>, signal: AbortSignal): Promise<string[]>

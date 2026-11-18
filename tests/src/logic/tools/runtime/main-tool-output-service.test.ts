@@ -6,7 +6,7 @@ import {request} from '../../knowledge/rules/data/knowledge';
 import {seedTeam} from '../../knowledge/service/support/team-fixture';
 import {registerServiceOwner} from '../../team/service/support/owner-service-fixture';
 import type {OwnerExecutionSelection} from '../../../../../src/logic/team/rules/member-execution-binding';
-import {json} from '../../../../../src/core/platform/node/serialization';
+import {json} from '../../../../../src/core/io/serialization';
 import {projectMainScope} from '../../../../../src/logic/tasks/rules/main-tool-output';
 import type {GoalPlanInput} from '../../../../../src/logic/tasks/rules/scope-goal';
 import {FileDispatchStore} from '../../../../../src/logic/dispatch/storage/dispatch-store';

@@ -9,7 +9,7 @@ import {TaskProgressTools} from '../../../../../src/logic/evidence/rules/progres
 import {evaluateWorkflowDelivery} from '../../../../../src/logic/evidence/rules/workflow-evidence';
 import {artifactSucceededCall,artifactSources,verifyArtifactBaselines,type ArtifactEvidenceEvent} from '../../../../../src/logic/evidence/rules/artifact-evidence';
 import type {WorkflowContractBinding} from '../../../../../src/logic/tasks/rules/execution-context';
-import {hash} from '../../../../../src/core/platform/node/serialization';
+import {hash} from '../../../../../src/core/io/serialization';
 
 const connectorId='.cbim/connectors/resources',repositoryId='10000000-0000-0000-0000-000000000001',connectionId='20000000-0000-0000-0000-000000000001',resourceId='30000000-0000-0000-0000-000000000001';
 const identity={workspaceId:'workspace',taskId:'task',runId:'run'},revision='a'.repeat(64);

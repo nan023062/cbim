@@ -6,8 +6,6 @@
  */
 import { isDeepStrictEqual as equal } from 'node:util';
 
-import { fail } from '../../../core/errors';
-
 import { controlledFileLimits } from './controlled-file-operation';
 
 import { controlledFileChangeSchema, type ControlledFileChange, type ControlledFileIntent, type ControlledWritePrepared, type FileCompensationPrepared } from './controlled-file-event';
@@ -19,7 +17,7 @@ import type { DispatchState, DispatchMutation, DispatchCommand } from '../../dis
 function check(value: unknown, message: string): asserts value
 {
   if (!value)
-    fail('CONTROLLED_FILE_AUDIT', message)
+    throw new Error(message)
 }
 
 const sameFact = (a: { byteLength: number; sha256: string }, b: { byteLength: number; sha256: string }) => a.byteLength === b.byteLength && a.sha256 === b.sha256;
@@ -118,13 +116,13 @@ function capacity(changes: ControlledFileChange[], intent: ControlledFileIntent)
   const prepared = changes.filter(c => c.phase === 'prepared');
 
   if (prepared.length > controlledFileLimits.operations || prepared.filter(c => root(c.intent) === root(intent)).length > controlledFileLimits.operationsPerRoot || intent.kind === 'member_write' && prepared.filter(c => c.intent.kind === 'member_write' && c.intent.origin.binding.runId === intent.origin.binding.runId).length > controlledFileLimits.writesPerRun || intent.kind === 'desktop_compensation' && prepared.filter(c => c.intent.kind === 'desktop_compensation' && c.intent.original.operationId === intent.original.operationId).length > controlledFileLimits.compensations)
-    fail('CONTROLLED_FILE_LIMIT', '受控操作历史达到保存上限，原记录不会被淘汰');
+    throw new Error('受控操作历史达到保存上限，原记录不会被淘汰');
 
   // 为每条未结算链预留后续最大阶段空间；达到容量也不能留下无法保存终态的许可。
   const reserve = prepared.reduce((sum, c) => { const operation = controlledFileOperation({ controlledFileChanges: changes }, c.operationId)!; return sum + (operation.phase === 'prepared' ? 2 : operation.phase === 'executing' ? 1 : 0) * controlledFileLimits.terminalReserveBytes }, 0);
 
   if (new TextEncoder().encode(JSON.stringify(changes)).length + reserve > controlledFileLimits.storedBytes)
-    fail('CONTROLLED_FILE_LIMIT', '受控操作附录无法同时容纳新意图及终态预留空间');
+    throw new Error('受控操作附录无法同时容纳新意图及终态预留空间');
 }
 
 /** 无记录保留旧缺省；新阶段仅接受精确的一条附录和其原回执，禁止夹带任何领域变更。 */

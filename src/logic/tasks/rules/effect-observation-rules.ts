@@ -2,7 +2,7 @@
  * 作用定位：计算影响观察的事实依据与处置命令，并构造原不可变回执/摘要。
  * 设计原因：时钟和独立处置 CAS 不属于文件事实；hash 算法只有一个后端实现，前端仅消费叶子契约。
  */
-import { hash, json } from '../../../core/platform/node/serialization';
+import { hash, json } from '../../../core/io/serialization';
 
 import { effectObservationReportSchema, type EffectObservationReport, type EffectDispositionInput, type EffectDispositionRecord, type EffectDispositionReceipt, type EffectDispositionSummary } from './effect-observation';
 

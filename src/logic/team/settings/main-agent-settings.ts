@@ -9,9 +9,7 @@ import { SerialQueue } from '../../../core/utility';
 
 import { z } from 'zod';
 
-import { atomic } from '../../../core/platform/node/files';
-
-import { fail } from '../../../core/errors';
+import { atomic } from '../../../core/io/text-files';
 
 import { agentModelSelectionSchema } from '../rules/agent-runtime';
 
@@ -47,7 +45,7 @@ export class MainAgentSettings
         }).code === 'ENOENT')
         return { version: 1 as const, revision: 0, selection: null };
 
-      fail('AGENT_SETTINGS_READ', '主 Agent 配置读取失败，请检查配置文件后重试')
+      throw new Error('主 Agent 配置读取失败，请检查配置文件后重试')
     }
   }
 
@@ -70,6 +68,6 @@ export class MainAgentSettings
   {
     const input = mainAgentSettingsSchema.parse(raw);
 
-    return this.queue.Run(async () => { const { workspaceId, instanceId } = input, identity = { workspaceId, instanceId }; this.assertCurrent(identity); const current = await this.ReadStored(workspaceId); if (current.revision !== input.revision) fail('AGENT_SETTINGS_CONFLICT', '主 Agent 配置已在其他入口更新，请重新读取后保存'); if (JSON.stringify(current.selection) === JSON.stringify(input.selection)) return { ...identity, agentId: 'cbim:main' as const, revision: current.revision, selection: current.selection }; if (current.revision >= Number.MAX_SAFE_INTEGER) fail('AGENT_SETTINGS_LIMIT', '主 Agent 配置版本已达上限'); const next = { version: 1 as const, revision: current.revision + 1, selection: input.selection }; await this.models.WithConfigurations(input.selection ? [input.selection] : [], async () => { this.assertCurrent(identity); try { await atomic(this.filename(workspaceId), JSON.stringify(next, null, 2)) } catch { fail('AGENT_SETTINGS_WRITE', '主 Agent 配置保存失败，原配置仍然有效，请检查目录权限后重试') } }); return { ...identity, agentId: 'cbim:main' as const, revision: next.revision, selection: next.selection }; });
+    return this.queue.Run(async () => { const { workspaceId, instanceId } = input, identity = { workspaceId, instanceId }; this.assertCurrent(identity); const current = await this.ReadStored(workspaceId); if (current.revision !== input.revision) throw new Error('主 Agent 配置已在其他入口更新，请重新读取后保存'); if (JSON.stringify(current.selection) === JSON.stringify(input.selection)) return { ...identity, agentId: 'cbim:main' as const, revision: current.revision, selection: current.selection }; if (current.revision >= Number.MAX_SAFE_INTEGER) throw new Error('主 Agent 配置版本已达上限'); const next = { version: 1 as const, revision: current.revision + 1, selection: input.selection }; await this.models.WithConfigurations(input.selection ? [input.selection] : [], async () => { this.assertCurrent(identity); try { await atomic(this.filename(workspaceId), JSON.stringify(next, null, 2)) } catch { throw new Error('主 Agent 配置保存失败，原配置仍然有效，请检查目录权限后重试') } }); return { ...identity, agentId: 'cbim:main' as const, revision: next.revision, selection: next.selection }; });
   }
 }

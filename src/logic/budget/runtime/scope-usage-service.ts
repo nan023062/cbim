@@ -6,9 +6,7 @@
  */
 import { agentCallReferenceSchema, type AgentCallReference } from '../../agents/contracts';
 
-import { fail } from '../../../core/errors';
-
-import { hash, json } from '../../../core/platform/node/serialization';
+import { hash, json } from '../../../core/io/serialization';
 
 import type { KnowledgeWorkspace } from '../../knowledge/rules/ports';
 
@@ -101,7 +99,7 @@ export class ScopeUsageService
     }
 
     if (output.length > 532)
-      fail('SCOPE_USAGE_LIMIT', '本周期运行来源超过单次核实上限，未截断或显示不完整总数');
+      throw new Error('本周期运行来源超过单次核实上限，未截断或显示不完整总数');
 
     // 即使存储端口返回矛盾来源，也不能把同一运行重复计入总数。
     const counts = new Map<string, number>();
@@ -151,19 +149,19 @@ export class ScopeUsageService
     const parsed = scopeUsageInputSchema.safeParse(raw);
 
     if (!parsed.success)
-      fail('SCOPE_USAGE_INPUT', '周期消耗查询身份无效');
+      throw new Error('周期消耗查询身份无效');
 
     const input = parsed.data;
 
     this.owner.Assert();
 
     if (input.workspaceId !== this.owner.entry.id)
-      fail('SCOPE_USAGE_IDENTITY', '周期消耗不属于当前工作区');
+      throw new Error('周期消耗不属于当前工作区');
 
     const facts = this.Facts(state, input);
 
     if (state.workspaceId !== input.workspaceId || !facts.scope || !facts.root)
-      fail('SCOPE_USAGE_IDENTITY', '目标周期不属于当前主会话或缺少可信图根');
+      throw new Error('目标周期不属于当前主会话或缺少可信图根');
 
     const sources = this.Sources(facts, input),
       runs: ScopeUsageRun[] = [],
@@ -221,19 +219,19 @@ export class ScopeUsageService
                   ref = parsed.success ? parsed.data : undefined;
 
                 if (!ref || ref.workspaceId !== input.workspaceId || ref.callerTaskId !== source.taskId || ref.callerRunId !== source.runId || ref.toolCallId !== event.data.id || event.data.name !== 'cbim_agent_call' || !summary.events.some(e => e.seq < event.seq && e.type === 'tool.allowed' && e.data.id === ref.toolCallId && e.data.name === 'cbim_agent_call'))
-                  fail('SCOPE_USAGE_IDENTITY', '递归调用来源不一致');
+                  throw new Error('递归调用来源不一致');
 
                 if (summary.events.some(e => e.type === 'tool.updated' && e.data.id === ref.toolCallId && e.data.agentCall !== undefined && !matches(e.data.agentCall, ref)))
-                  fail('SCOPE_USAGE_IDENTITY', '递归调用关联冲突');
+                  throw new Error('递归调用关联冲突');
 
                 if ([...sources, ...discovered].some(item => item.runId === ref.runId))
-                  fail('SCOPE_USAGE_IDENTITY', '递归来源重复或循环');
+                  throw new Error('递归来源重复或循环');
 
                 discovered.push({ kind: 'member', taskId: ref.taskId, runId: ref.runId, agent: ref });
               }
 
               if (sources.length + discovered.length > 532)
-                fail('SCOPE_USAGE_LIMIT', '递归运行来源超过单次核实上限');
+                throw new Error('递归运行来源超过单次核实上限');
 
               sources.push(...discovered);
             }

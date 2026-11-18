@@ -34,9 +34,7 @@ import { scopeHasUnresolvedActiveInput } from '../rules/scope-active-input';
 
 import { validateScopeActiveInputLog } from './scope-active-input-evidence';
 
-import { fail } from '../../../core/errors';
-
-import { hash, json } from '../../../core/platform/node/serialization';
+import { hash, json } from '../../../core/io/serialization';
 
 import { goalCommand } from './main-command-request';
 
@@ -124,7 +122,7 @@ const identitySchema = z.object({ workspaceId: z.string().min(1).max(512), rootS
 function check(condition: unknown, code: string, message: string): asserts condition
 {
   if (!condition)
-    fail(code, message)
+    throw new Error(message)
 }
 
 function lastEffect(summary: RunSummary)
@@ -184,7 +182,7 @@ export class ScopeGoalService
     const result = schema.safeParse(value);
 
     if (!result.success)
-      fail('GOAL_INPUT_INVALID', result.error.issues.map(issue => issue.message).join('；'));
+      throw new Error(result.error.issues.map(issue => issue.message).join('；'));
 
     return result.data
   }
@@ -274,7 +272,7 @@ export class ScopeGoalService
     if (old)
     {
       if (old.fingerprint !== command.fingerprint)
-        fail('COMMAND_ID_CONFLICT', '相同命令 ID 已用于不同请求');
+        throw new Error('相同命令 ID 已用于不同请求');
 
       return old.receipt as DispatchScope
     }
@@ -286,7 +284,7 @@ export class ScopeGoalService
     const business = draft.assignments.filter(assignment => assignment.agentId !== 'cbim:main');
 
     if (business.length && !this.owners)
-      fail('OWNER_EXECUTION_UNAVAILABLE', '未装配岗位执行计划端口');
+      throw new Error('未装配岗位执行计划端口');
 
     const save = async (context: { snapshot: Awaited<ReturnType<Owner['Snapshot']>>; profiles: readonly import('../../team/rules/workspace-member').WorkspaceMemberModelSnapshot[] }) => this.store.Transact(command, async state => { alive(); const scope = this.Scope(state, identity, scopeId), goal = this.Editable(scope, draft.expectedRevision), graph = this.Graph(state, scope), snapshot = context.snapshot; check(snapshot.workspaceId === scope.workspaceId, 'GOAL_IDENTITY', '知识快照不属于目标工作区'); const criterionIds = draft.criteria.map(item => item.id); check((goal.plan?.criteria ?? []).filter(item => item.kind === 'human').every(item => draft.criteria.some(candidate => sameGoalValue(item, candidate))), 'GOAL_HUMAN_REQUIRED', '重新规划不能删除或降低既有人工验收项'); if (scope.replan) { const proof = scope.replan.source.proof, modules = proof.requiredModules.map(item => item.moduleId), planned = draft.assignments.flatMap(item => item.moduleIds); check(proof.inheritedHuman.every(({ id, text, kind }) => draft.criteria.some(item => sameGoalValue(item, { id, text, kind }))), 'GOAL_HUMAN_REQUIRED', '新业务计划必须保留来源业务的人工验收项'); check(planned.every(id => modules.includes(id)) && modules.every(id => planned.includes(id)), 'GOAL_MODULE_SCOPE', '新业务计划必须完整覆盖且不能超出已核实模块'); } check(new Set(criterionIds).size === criterionIds.length, 'GOAL_PLAN_INVALID', '验收项 ID 不能重复'); check(draft.assignments.every(item => item.criterionIds.every(id => criterionIds.includes(id))) && criterionIds.every(id => draft.assignments.some(item => item.criterionIds.includes(id))), 'GOAL_PLAN_INVALID', '每个验收项必须有负责角色，分配不能引用不存在的验收项'); const assignments = []; for (const assignment of draft.assignments) { check(assignment.agentId !== 'cbim:main' || assignment.workflowSelections === undefined, 'GOAL_PLAN_INVALID', '主会话直接工作不绑定成员专属 Workflow 执行契约'); validateWorkflowSelections(assignment.moduleIds, assignment.workflowSelections); const agent = assignment.agentId === 'cbim:main' ? resolveConversationAgent(snapshot) : await resolveDispatchAgent(snapshot, assignment.agentId); check(assignment.agentId === 'cbim:main' || assignment.moduleIds.length, 'GOAL_PLAN_INVALID', '业务执行角色必须明确目标模块'); const { ownerBinding, fallbackBinding } = assignment.agentId === 'cbim:main' ? {} : await this.owners!.ResolveExecution(state, context, scopeId, assignment.ownerSelection, assignment.moduleIds, assignment.agentId); const root = assignment.agentId === 'cbim:main' && assignment.moduleIds.includes('cbim:project'); const ids = root ? assignment.moduleIds.filter(id => id !== 'cbim:project') : assignment.moduleIds; const modules = [...(ids.length ? await resolveExecutionModules(snapshot, ids, assignment.workflowSelections, fallbackBinding) : []), ...(root ? [{ moduleId: 'cbim:project', name: '项目根模块' }] : [])]; const member = ownerBinding ? state.workspaceMembers!.find(member => member.memberId === ownerBinding.memberId) : undefined; assignments.push({ ...assignment, ...(ownerBinding ? { ownerBinding } : {}), ...(fallbackBinding ? { fallbackBinding } : {}), agentName: member?.name ?? agent.name, teamId: agent.teamId, moduleNames: assignment.moduleIds.map(id => modules.find(module => module.moduleId === id)!.name) }); } check((await this.owner.Read()).revision === snapshot.revision, 'GOAL_KNOWLEDGE_CHANGED', '规划期间知识已变化，请重新读取'); const { expectedRevision: _, ...body } = draft, newGoal: DispatchScopeGoal = { revision: goal.revision + 1, ...(goal.inputRevision === undefined ? {} : { inputRevision: goal.inputRevision }), input: goal.input, plan: { ...body, assignments, revision: goal.revision + 1, inputRevision: goalInputRevision(goal), runId, recordedAt: new Date().toISOString(), knowledgeRevision: snapshot.revision, graphCursor: cursor(graph) } }; const next = { ...scope, goal: newGoal }; alive(); return { scopes: [next], receipt: next }; });
 
@@ -302,7 +300,7 @@ export class ScopeGoalService
 
     // 旧无 goal 周期保持读取/运行兼容，不给历史记录补造计划。
     if (!scope.goal)
-      fail('GOAL_PLAN_REQUIRED', '新业务必须有当前主目标计划，旧周期不能补造执行许可');
+      throw new Error('新业务必须有当前主目标计划，旧周期不能补造执行许可');
 
     check(scope.status === 'active' && !scope.goal.blocked, 'GOAL_BLOCKED', '周期已经关闭或阻塞');
 
@@ -405,7 +403,7 @@ export class ScopeGoalService
     }
     catch (error)
     {
-      fail('GOAL_WORKFLOW_UNMET', error instanceof Error ? error.message : '成员 Workflow 程序条件无法核实')
+      throw new Error(error instanceof Error ? error.message : '成员 Workflow 程序条件无法核实')
     }
 
     return summary;
@@ -786,7 +784,7 @@ export class ScopeGoalService
     catch (error)
     {
       // 完成门禁保留 GOAL 命名空间，让协调器记录阻塞并收束；接受依据失效不能留下悬挂的活动周期。
-      fail('GOAL_HUMAN_STALE', error instanceof Error ? error.message : '人工接受的当前依据无法核实');
+      throw new Error(error instanceof Error ? error.message : '人工接受的当前依据无法核实');
     }
 
     if (draft.decision === 'complete')

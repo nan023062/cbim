@@ -1,5 +1,5 @@
 import {it,expect,vi} from 'vitest';
-import {hash,json} from '../../../../../src/core/platform/node/serialization';
+import {hash,json} from '../../../../../src/core/io/serialization';
 import {jsonToolResult} from '../../../../../src/logic/tools/rules/results';
 import type {ToolReceipt} from '../../../../../src/logic/tools/rules/types';
 import {toolReceipt} from '../../../../../src/logic/tools/rules/receipts';

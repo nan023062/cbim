@@ -1,5 +1,5 @@
 import {expect,it,vi} from 'vitest';
-import {hash} from '../../../../../src/core/platform/node/serialization';
+import {hash} from '../../../../../src/core/io/serialization';
 import {jsonToolResult} from '../../../../../src/logic/tools/rules/results';
 import type {ToolReceipt} from '../../../../../src/logic/tools/rules/types';
 import {artifactSources,verifyArtifactBaselines,type ArtifactEvidenceEvent} from '../../../../../src/logic/evidence/rules/artifact-evidence';

@@ -8,7 +8,7 @@ import {FileDispatchStore} from '../../../../../src/logic/dispatch/storage/dispa
 import {WorkspaceDispatchService} from '../../../../../src/logic/dispatch/runtime/dispatch-service';
 import {request} from '../../knowledge/rules/data/knowledge';
 import {commitWorkspaceMember} from '../service/support/workspace-member-fixture';
-import {hash} from '../../../../../src/core/platform/node/serialization';
+import {hash} from '../../../../../src/core/io/serialization';
 import {checkedMainToolResult} from '../../../../../src/logic/tools/runtime/main-tool-contracts';
 import {projectMainScope} from '../../../../../src/logic/tasks/rules/main-tool-scope';
 

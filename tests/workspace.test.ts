@@ -5,10 +5,10 @@ import path from 'node:path';
 import {fixture} from './src/logic/application/support/helpers';
 import {request,moduleFiles} from './src/logic/knowledge/rules/data/knowledge';
 import {internalKnowledge} from './src/logic/tools/runtime/support/knowledge-tool-fixture';
-import {exists,readJson} from '../src/core/platform/node/files/index';
-import {json} from '../src/core/platform/node/serialization';
+import {exists,readJson} from '../src/core/io/text-files';
+import {json} from '../src/core/io/serialization';
 import {Workspace} from '../src/logic/workspace/service/workspace';
-import {KernelLock} from '../src/core/platform/node/locking';
+import {KernelLock} from '../src/core/io/locking';
 import {spawn} from 'node:child_process';
 import {once} from 'node:events';
 

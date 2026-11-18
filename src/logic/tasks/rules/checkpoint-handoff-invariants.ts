@@ -3,8 +3,6 @@
  * 作用定位：核实检查点放弃的不可变历史和精确联合事务，返回仅供检查点状态机使用的任务许可。
  * 设计原因：事件名、取消状态或自报审计均不授权处置；原运行/原生通道及 checkpoint 信封不变，后续纯 ACK 和周期释放仍须合法。
  */
-import { fail } from '../../../core/errors';
-
 import type { DispatchState, DispatchMutation, DispatchCommand } from '../../dispatch/rules/dispatch-storage';
 
 import type { TaskNode } from './graph-types';
@@ -20,7 +18,7 @@ import { currentMemberResumeRequest } from './member-checkpoint-chain';
 function valid(value: unknown, message: string): asserts value
 {
   if (!value)
-    fail('GRAPH_INPUT_INVALID', message)
+    throw new Error(message)
 }
 
 /** 新增处置完整通过才返回许可；已核实的历史处置也保留取消许可，但其整个任务必须不变。 */

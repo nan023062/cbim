@@ -2,9 +2,7 @@
  * 作用定位：按主 Session → 原话题 → 内容引用读取现有调度及公开对话日志。
  * 设计原因：沿持久 mainRunIds、task.scopeId 和信封原身份归档，不按时间归属；不复制正文或创建第二份执行状态。主上下文可按需追溯，成员没有本入口。
  */
-import { fail } from '../../../core/errors';
-
-import { hash, json } from '../../../core/platform/node/serialization';
+import { hash, json } from '../../../core/io/serialization';
 
 import type { DispatchStore, DispatchState } from '../../dispatch/rules/dispatch-storage';
 
@@ -47,7 +45,7 @@ export class OfficeHistoryService
     const scope = state.scopes?.find(value => value.scopeId === scopeId && value.rootSessionId === identity.rootSessionId && value.workspaceId === identity.workspaceId);
 
     if (!scope)
-      fail('OFFICE_HISTORY_IDENTITY', '话题不属于当前办公室');
+      throw new Error('话题不属于当前办公室');
 
     const tasks = state.graphs.find(value => value.identity.rootSessionId === identity.rootSessionId)?.tasks.filter(task => task.scopeId === scopeId) ?? [];
 
@@ -55,7 +53,7 @@ export class OfficeHistoryService
 
     for (const runId of scope.runTracking?.mainRunIds ?? [])
       entries.push({
-        reference: { refId: 'main:' + runId, kind: 'main-run', actorId: 'cbim:main', taskId: identity.rootSessionId, runId }, read: async () => { if (!this.ports) fail('OFFICE_HISTORY_UNAVAILABLE', '原对话日志读取尚未装配'); return this.PublicRun(await this.ports.InspectMain(identity.rootSessionId, runId), identity, identity.rootSessionId, runId); }
+        reference: { refId: 'main:' + runId, kind: 'main-run', actorId: 'cbim:main', taskId: identity.rootSessionId, runId }, read: async () => { if (!this.ports) throw new Error('原对话日志读取尚未装配'); return this.PublicRun(await this.ports.InspectMain(identity.rootSessionId, runId), identity, identity.rootSessionId, runId); }
       });
 
     for (const task of tasks)
@@ -70,7 +68,7 @@ export class OfficeHistoryService
           continue; // 旧缺失归属不按最新任务推造。
 
         entries.push({
-          reference: { refId: 'member:' + task.taskId + ':' + runId, kind: 'member-run', actorId: task.assignee.agentId, taskId: task.taskId, runId, ...(run.topicContext ? { inputRevision: run.topicContext.inputRevision } : {}) }, read: async () => { if (!this.ports) fail('OFFICE_HISTORY_UNAVAILABLE', '原成员日志读取尚未装配'); return this.PublicRun(await this.ports.InspectMember(run), identity, task.taskId, runId); }
+          reference: { refId: 'member:' + task.taskId + ':' + runId, kind: 'member-run', actorId: task.assignee.agentId, taskId: task.taskId, runId, ...(run.topicContext ? { inputRevision: run.topicContext.inputRevision } : {}) }, read: async () => { if (!this.ports) throw new Error('原成员日志读取尚未装配'); return this.PublicRun(await this.ports.InspectMember(run), identity, task.taskId, runId); }
         });
       }
     }
@@ -86,7 +84,7 @@ export class OfficeHistoryService
   private PublicRun(run: RunSummary, identity: GraphIdentity, taskId: string, runId: string)
   {
     if (run.task.workspaceId !== identity.workspaceId || run.task.taskId !== taskId || run.runId !== runId || run.events.some(event => event.workspaceId !== identity.workspaceId || event.taskId !== taskId || event.runId !== runId))
-      fail('OFFICE_HISTORY_IDENTITY', '原日志身份与话题引用不一致');
+      throw new Error('原日志身份与话题引用不一致');
 
     const task = { taskId, workspaceId: identity.workspaceId, root: run.task.root, goal: run.task.goal, mode: run.task.mode, moduleIds: run.task.moduleIds, agentId: run.task.agentId, acceptance: run.task.acceptance };
 
@@ -113,7 +111,7 @@ export class OfficeHistoryService
     signal.throwIfAborted();
 
     if (identity.workspaceId !== this.workspaceId)
-      fail('OFFICE_HISTORY_IDENTITY', '归档不属于当前工作区');
+      throw new Error('归档不属于当前工作区');
 
     const query: OfficeHistoryQuery = officeHistoryQuerySchema.parse(raw),
       state = await this.store.Read();
@@ -121,7 +119,7 @@ export class OfficeHistoryService
     signal.throwIfAborted();
 
     if (state.workspaceId !== identity.workspaceId || !state.graphs.some(graph => graph.identity.workspaceId === identity.workspaceId && graph.identity.rootSessionId === identity.rootSessionId))
-      fail('OFFICE_HISTORY_IDENTITY', '办公室归档不存在');
+      throw new Error('办公室归档不存在');
 
     let payload: unknown;
 
@@ -138,7 +136,7 @@ export class OfficeHistoryService
         const entry = index.find(value => value.reference.refId === query.refId);
 
         if (!entry)
-          fail('OFFICE_HISTORY_REFERENCE', '内容引用不属于原话题');
+          throw new Error('内容引用不属于原话题');
 
         payload = json(await entry.read())
       }
@@ -149,13 +147,13 @@ export class OfficeHistoryService
     const version = hash(json(payload));
 
     if (query.offset > 0 && !query.version || query.version !== undefined && query.version !== version)
-      fail('OFFICE_HISTORY_CHANGED', '归档内容版本已变化，请从第一页重新读取');
+      throw new Error('归档内容版本已变化，请从第一页重新读取');
 
     const size = query.action === 'content' ? query.maxChars : query.limit,
       length = (payload as unknown[] | string).length;
 
     if (query.offset > length)
-      fail('OFFICE_HISTORY_OFFSET', '归档读取位置超出内容');
+      throw new Error('归档读取位置超出内容');
 
     const end = Math.min(length, query.offset + size),
       common = { ...identity, version, offset: query.offset, ...(end < length ? { nextOffset: end } : {}) };

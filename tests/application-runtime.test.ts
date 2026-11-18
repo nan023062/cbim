@@ -4,7 +4,7 @@ import {expect,it,vi} from 'vitest';
 import {fixture} from './src/logic/application/support/helpers';
 import {request} from './src/logic/knowledge/rules/data/knowledge';
 import {seedTeam} from './src/logic/knowledge/service/support/team-fixture';
-import {json} from '../src/core/platform/node/serialization';
+import {json} from '../src/core/io/serialization';
 import {LoopRuntime} from '../src/logic/execution/rules/runtime/runtime';
 import type {AgentEngine,EngineContext} from '../src/logic/execution/rules/types';
 import type {RuntimeSnapshot} from '../src/logic/runtime/rules/types';

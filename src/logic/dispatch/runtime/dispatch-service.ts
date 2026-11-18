@@ -20,9 +20,7 @@ import { randomUUID } from 'node:crypto';
 
 import { z } from 'zod';
 
-import { fail } from '../../../core/errors';
-
-import { hash, json } from '../../../core/platform/node/serialization';
+import { hash, json } from '../../../core/io/serialization';
 
 import { dispatchCommand } from '../../tasks/runtime/main-command-request';
 
@@ -307,27 +305,27 @@ export class WorkspaceDispatchService
 
     const runTracking = trustedRunId === undefined ? undefined : createScopeRunTracking(trustedRunId);
 
-    const verifyGoal = (scope: DispatchScope) => { if (scope.followupOf !== followupOf) fail('TOPIC_FOLLOWUP_CONFLICT', '新话题不能改绑历史来源'); if (json(scope.executionPolicy) !== json(executionPolicy)) fail('DISPATCH_SCOPE_MODE_CONFLICT', '当前目标不能更换协作模式或兜底模型'); if ((scope.goal === undefined) !== (goal === undefined) || scope.goal?.input.message !== goal?.input.message || JSON.stringify(scope.goal?.input.attachmentIds) !== JSON.stringify(goal?.input.attachmentIds)) fail('DISPATCH_SCOPE_INPUT_CONFLICT', '同一调度周期不能重新绑定用户正文或附件'); if ((scope.runTracking === undefined) !== (runTracking === undefined) || scope.runTracking?.mainRunIds[0] !== runTracking?.mainRunIds[0]) fail('DISPATCH_SCOPE_RUN_CONFLICT', '同一周期不能重新绑定首个主运行'); };
+    const verifyGoal = (scope: DispatchScope) => { if (scope.followupOf !== followupOf) throw new Error('新话题不能改绑历史来源'); if (json(scope.executionPolicy) !== json(executionPolicy)) throw new Error('当前目标不能更换协作模式或兜底模型'); if ((scope.goal === undefined) !== (goal === undefined) || scope.goal?.input.message !== goal?.input.message || JSON.stringify(scope.goal?.input.attachmentIds) !== JSON.stringify(goal?.input.attachmentIds)) throw new Error('同一调度周期不能重新绑定用户正文或附件'); if ((scope.runTracking === undefined) !== (runTracking === undefined) || scope.runTracking?.mainRunIds[0] !== runTracking?.mainRunIds[0]) throw new Error('同一周期不能重新绑定首个主运行'); };
 
     await this.OpenGraph({ ...identity, commandId: 'scope-root-' + hash(json(input)) });
 
     // 命令键保持身份稳定，输入进入指纹；无 goal 的旧调用保留原指纹以读取历史回执。
     const command = { ...input, ...(followupOf ? { followupOf } : {}), commandId: 'scope-open-' + hash(json(input)), ...(goal ? { goal } : {}), ...(runTracking ? { runTracking } : {}), ...(executionPolicy ? { executionPolicy } : {}) };
 
-    await this.store.Transact(this.Command('scope.open', command), async state => { this.Check(input.workspaceId); this.Graph(state, input.rootSessionId); const previous = state.scopes?.find(scope => scope.scopeId === scopeId); if (previous) { if (previous.rootSessionId !== input.rootSessionId) fail('DISPATCH_SCOPE_IDENTITY', '调度周期属于其他主会话'); verifyGoal(previous); if (previous.status === 'waiting') fail('DISPATCH_SCOPE_WAITING', '调度周期正在安全等待，必须通过显式补充入口继续'); if (previous.status !== 'active') fail('DISPATCH_SCOPE_CLOSED', '调度周期已结束'); return { receipt: previous } } if (state.scopes?.some(scope => scope.rootSessionId === input.rootSessionId && scope.status !== 'closed')) fail('DISPATCH_SCOPE_BUSY', '当前主会话还有未结束或等待中的用户任务周期'); if (followupOf !== undefined) { const origin = state.scopes?.find(value => value.scopeId === followupOf); if (!origin || origin.rootSessionId !== input.rootSessionId || origin.workspaceId !== input.workspaceId || origin.status !== 'closed' || origin.scopeId === scopeId) fail('TOPIC_FOLLOWUP_INVALID', '后续任务必须关联同一办公室已结束的话题') } let scope: DispatchScope = { ...input, ...(followupOf ? { followupOf } : {}), status: 'active', createdAt: new Date().toISOString(), ...(goal ? { goal } : {}), ...(runTracking ? { runTracking } : {}), ...(executionPolicy ? { executionPolicy } : {}) }; if (trustedRunId) scope = this.budgets.Initialize(scope, { kind: 'main', taskId: input.rootSessionId, runId: trustedRunId }); return { scopes: [scope], receipt: scope }; });
+    await this.store.Transact(this.Command('scope.open', command), async state => { this.Check(input.workspaceId); this.Graph(state, input.rootSessionId); const previous = state.scopes?.find(scope => scope.scopeId === scopeId); if (previous) { if (previous.rootSessionId !== input.rootSessionId) throw new Error('调度周期属于其他主会话'); verifyGoal(previous); if (previous.status === 'waiting') throw new Error('调度周期正在安全等待，必须通过显式补充入口继续'); if (previous.status !== 'active') throw new Error('调度周期已结束'); return { receipt: previous } } if (state.scopes?.some(scope => scope.rootSessionId === input.rootSessionId && scope.status !== 'closed')) throw new Error('当前主会话还有未结束或等待中的用户任务周期'); if (followupOf !== undefined) { const origin = state.scopes?.find(value => value.scopeId === followupOf); if (!origin || origin.rootSessionId !== input.rootSessionId || origin.workspaceId !== input.workspaceId || origin.status !== 'closed' || origin.scopeId === scopeId) throw new Error('后续任务必须关联同一办公室已结束的话题') } let scope: DispatchScope = { ...input, ...(followupOf ? { followupOf } : {}), status: 'active', createdAt: new Date().toISOString(), ...(goal ? { goal } : {}), ...(runTracking ? { runTracking } : {}), ...(executionPolicy ? { executionPolicy } : {}) }; if (trustedRunId) scope = this.budgets.Initialize(scope, { kind: 'main', taskId: input.rootSessionId, runId: trustedRunId }); return { scopes: [scope], receipt: scope }; });
 
     const scope = (await this.store.Read()).scopes?.find(value => value.scopeId === scopeId);
 
     if (!scope || scope.workspaceId !== input.workspaceId || scope.rootSessionId !== input.rootSessionId)
-      fail('DISPATCH_SCOPE_IDENTITY', '调度周期不属于当前主会话');
+      throw new Error('调度周期不属于当前主会话');
 
     verifyGoal(scope);
 
     if (scope.status === 'waiting')
-      fail('DISPATCH_SCOPE_WAITING', '调度周期正在安全等待，必须通过显式补充入口继续');
+      throw new Error('调度周期正在安全等待，必须通过显式补充入口继续');
 
     if (scope.status !== 'active')
-      fail('DISPATCH_SCOPE_CLOSED', '调度周期已结束，不能重新打开');
+      throw new Error('调度周期已结束，不能重新打开');
 
     return scope;
   }
@@ -342,7 +340,7 @@ export class WorkspaceDispatchService
 
     const command = { ...input, runId: checked, commandId: 'scope-main-' + hash(json({ ...input, runId: checked })) };
 
-    const receipt = await this.store.Transact<true | ScopeBudgetRejected>(this.Command('scope.main', command), async state => { this.Check(input.workspaceId); const scope = state.scopes?.find(value => value.scopeId === scopeId && value.rootSessionId === input.rootSessionId); if (!scope) fail('DISPATCH_SCOPE_IDENTITY', '主运行不属于当前目标周期'); if (scope.runTracking?.mainRunIds.includes(checked)) return { receipt: true }; const admitted = await this.budgets.Admit(state, scope, { kind: 'main', taskId: input.rootSessionId, runId: checked }); if (admitted.rejected) return { scopes: [admitted.scope], receipt: admitted.rejected }; const next = appendScopeMainRun(admitted.scope, checked); return { scopes: next === scope ? undefined : [next], receipt: true }; });
+    const receipt = await this.store.Transact<true | ScopeBudgetRejected>(this.Command('scope.main', command), async state => { this.Check(input.workspaceId); const scope = state.scopes?.find(value => value.scopeId === scopeId && value.rootSessionId === input.rootSessionId); if (!scope) throw new Error('主运行不属于当前目标周期'); if (scope.runTracking?.mainRunIds.includes(checked)) return { receipt: true }; const admitted = await this.budgets.Admit(state, scope, { kind: 'main', taskId: input.rootSessionId, runId: checked }); if (admitted.rejected) return { scopes: [admitted.scope], receipt: admitted.rejected }; const next = appendScopeMainRun(admitted.scope, checked); return { scopes: next === scope ? undefined : [next], receipt: true }; });
 
     if (receipt !== true)
       rejectBudget(receipt);
@@ -350,7 +348,7 @@ export class WorkspaceDispatchService
     const scope = (await this.store.Read()).scopes?.find(value => value.scopeId === scopeId && value.rootSessionId === input.rootSessionId);
 
     if (!scope)
-      fail('DISPATCH_SCOPE_IDENTITY', '主运行所属目标周期不可读');
+      throw new Error('主运行所属目标周期不可读');
 
     return scope;
   }
@@ -376,7 +374,7 @@ export class WorkspaceDispatchService
         scope = state.scopes?.find(value => value.scopeId === scopeId);
 
       if (!scope || scope.rootSessionId !== input.rootSessionId)
-        fail('DISPATCH_SCOPE_IDENTITY', '调度周期不属于当前主会话');
+        throw new Error('调度周期不属于当前主会话');
 
       if (scope.status === 'closed')
         return { receipt: scope };
@@ -386,7 +384,7 @@ export class WorkspaceDispatchService
         await this.goals.ValidateActiveInputs(scope, mainSummary);
 
       if (scope.status === 'waiting' && outcome === 'completed')
-        fail('GOAL_WAITING', '等待周期不能跳过目标完成复核，请保留或显式停止');
+        throw new Error('等待周期不能跳过目标完成复核，请保留或显式停止');
 
       const tasks = graph.tasks.filter(task => task.scopeId === scopeId),
         taskIds = new Set(tasks.map(task => task.taskId));
@@ -399,13 +397,13 @@ export class WorkspaceDispatchService
       if (outcome === 'completed' && scope.goal && (scope.goal.plan || tasks.length || recordedWork))
       {
         if (!mainSummary)
-          fail('GOAL_REVIEW_REQUIRED', '业务任务需要主调度的结构化目标审阅，不能直接标为完成');
+          throw new Error('业务任务需要主调度的结构化目标审阅，不能直接标为完成');
 
         await this.goals.ValidateCompletion(state, scope, mainSummary);
       }
 
       if (state.runs?.some(run => taskIds.has(run.binding.taskId) && ['starting', 'running'].includes(run.status)))
-        fail('DISPATCH_SCOPE_BUSY', '调度周期仍有未结算运行，请先停止并等待成员结束');
+        throw new Error('调度周期仍有未结算运行，请先停止并等待成员结束');
 
       const now = new Date().toISOString(),
         changes: GraphChange[] = [],
@@ -428,7 +426,7 @@ export class WorkspaceDispatchService
         if (member.executionScopeId === scopeId)
         {
           if (member.agentId === 'cbim:main' || member.activeRunId)
-            fail('DISPATCH_SCOPE_BUSY', '周期成员仍有活动占用或身份不一致');
+            throw new Error('周期成员仍有活动占用或身份不一致');
 
           const released: AgentInstance = { ...member, lifecycle: 'released', releasedAt: now, leaseEpoch: member.leaseEpoch + 1, activity: 'idle', activeTaskId: undefined, activeRunId: undefined, waitingTaskIds: [], communicatingMessageIds: [] };
 
@@ -462,13 +460,13 @@ export class WorkspaceDispatchService
     // 同周期可以多次显式补充后再等待；幂等键绑定真实主运行，避免第二个检查点撞上第一次的提交。
     const command = { ...input, runId: summary.runId, mainRunIds, commandId: 'scope-wait-' + hash(json({ ...input, runId: summary.runId })) };
 
-    await this.store.Transact(this.Command('scope.wait', command), async state => { this.Check(input.workspaceId); const scope = state.scopes?.find(value => value.scopeId === scopeId && value.rootSessionId === input.rootSessionId); if (!scope) fail('DISPATCH_SCOPE_IDENTITY', '调度周期不属于当前主会话'); if (scope.status !== 'active') fail(scope.status === 'waiting' ? 'DISPATCH_SCOPE_WAITING' : 'DISPATCH_SCOPE_CLOSED', '当前周期不能建立新的等待检查点'); await this.goals.ValidateWaiting(state, scope, summary, mainRunIds); const review = scope.goal!.review!; const parked: DispatchScope = { ...scope, status: 'waiting', wait: { waitId: randomUUID(), reason: review.reason, createdAt: new Date().toISOString(), runId: summary.runId, goalRevision: scope.goal!.revision, graphCursor: { ...review.graphCursor }, knowledgeRevision: review.knowledgeRevision, mainRunIds: [...mainRunIds], ...(review.memberPause ? { memberPause: structuredClone(review.memberPause) } : {}) } }; return { scopes: [parked], receipt: parked }; });
+    await this.store.Transact(this.Command('scope.wait', command), async state => { this.Check(input.workspaceId); const scope = state.scopes?.find(value => value.scopeId === scopeId && value.rootSessionId === input.rootSessionId); if (!scope) throw new Error('调度周期不属于当前主会话'); if (scope.status !== 'active') throw new Error('当前周期不能建立新的等待检查点'); await this.goals.ValidateWaiting(state, scope, summary, mainRunIds); const review = scope.goal!.review!; const parked: DispatchScope = { ...scope, status: 'waiting', wait: { waitId: randomUUID(), reason: review.reason, createdAt: new Date().toISOString(), runId: summary.runId, goalRevision: scope.goal!.revision, graphCursor: { ...review.graphCursor }, knowledgeRevision: review.knowledgeRevision, mainRunIds: [...mainRunIds], ...(review.memberPause ? { memberPause: structuredClone(review.memberPause) } : {}) } }; return { scopes: [parked], receipt: parked }; });
 
     // 去重回执可能早于后续停止；不把旧 waiting 快照作为已关闭周期的当前状态返回。
     const current = (await this.store.Read()).scopes?.find(scope => scope.scopeId === scopeId && scope.rootSessionId === input.rootSessionId);
 
     if (!current || current.status !== 'waiting')
-      fail('DISPATCH_SCOPE_CLOSED', '等待周期已经结束，不能重新停泊');
+      throw new Error('等待周期已经结束，不能重新停泊');
 
     return current;
   }
@@ -509,12 +507,12 @@ export class WorkspaceDispatchService
   private Check(workspaceId: string)
   {
     if (this.closed)
-      fail('DISPATCH_CLOSED', '成员调度服务已关闭');
+      throw new Error('成员调度服务已关闭');
 
     this.owner.Assert();
 
     if (workspaceId !== this.owner.entry.id)
-      fail('GRAPH_IDENTITY_MISMATCH', '派发目标不属于当前工作区');
+      throw new Error('派发目标不属于当前工作区');
   }
 
   private Parse<S extends z.ZodTypeAny>(schema: S, input: unknown): z.output<S>
@@ -522,7 +520,7 @@ export class WorkspaceDispatchService
     const parsed = schema.safeParse(input);
 
     if (!parsed.success)
-      fail('GRAPH_INPUT_INVALID', parsed.error.issues.map(i => i.message).join('；'));
+      throw new Error(parsed.error.issues.map(i => i.message).join('；'));
 
     return parsed.data;
   }
@@ -532,7 +530,7 @@ export class WorkspaceDispatchService
     const graph = state.graphs.find(g => g.identity.rootSessionId === rootSessionId);
 
     if (!graph)
-      fail('GRAPH_NOT_FOUND', '主会话尚未建立任务图');
+      throw new Error('主会话尚未建立任务图');
 
     return graph;
   }
@@ -559,7 +557,7 @@ export class WorkspaceDispatchService
     this.Check(snapshot.workspaceId);
 
     if ((await this.owner.Read()).revision !== snapshot.revision)
-      fail('KNOWLEDGE_REVISION_CONFLICT', '知识在派发准备期间变化，请重新读取后派发');
+      throw new Error('知识在派发准备期间变化，请重新读取后派发');
   }
 
   /** 创建主会话根及主成员通道；相同图的新请求复用根，重发原命令返回原回执。 */
@@ -579,7 +577,7 @@ export class WorkspaceDispatchService
   async ConversationBinding(task: TaskSpec): Promise<ConversationAgentBinding>
   {
     if (task?.mode !== 'chat' || task.agentId !== 'cbim:main' || task.root !== this.owner.entry.path)
-      fail('CONVERSATION_IDENTITY', '主对话绑定必须属于当前工作区的 cbim:main 普通对话');
+      throw new Error('主对话绑定必须属于当前工作区的 cbim:main 普通对话');
 
     const identity = this.Parse(graphIdentityInput, { workspaceId: task.workspaceId, rootSessionId: task.taskId });
 
@@ -591,7 +589,7 @@ export class WorkspaceDispatchService
 
     const input = { ...identity, commandId: 'conversation-binding-' + key };
 
-    return this.store.Transact(this.Command('conversation.bind', input), async state => { this.Check(identity.workspaceId); const graph = this.Graph(state, identity.rootSessionId); const snapshot = await this.owner.Snapshot(); const prepared = prepareMember(state, resolveConversationAgent(snapshot), identity.rootSessionId, 'conversation'); if (graph.root.agent.agentId !== prepared.agent.agentId || graph.root.agent.agentInstanceId !== prepared.agent.agentInstanceId) fail('CONVERSATION_IDENTITY', '主对话实例与任务图根不一致'); await this.Recheck(snapshot); const binding: ConversationAgentBinding = { ...identity, teamId: prepared.member.teamId, agentId: prepared.member.agentId, agentInstanceId: prepared.member.agentInstanceId, agentSessionId: prepared.session.agentSessionId }; return { teamSessions: [prepared.teamSession], members: [prepared.member], sessions: [prepared.session], receipt: binding }; });
+    return this.store.Transact(this.Command('conversation.bind', input), async state => { this.Check(identity.workspaceId); const graph = this.Graph(state, identity.rootSessionId); const snapshot = await this.owner.Snapshot(); const prepared = prepareMember(state, resolveConversationAgent(snapshot), identity.rootSessionId, 'conversation'); if (graph.root.agent.agentId !== prepared.agent.agentId || graph.root.agent.agentInstanceId !== prepared.agent.agentInstanceId) throw new Error('主对话实例与任务图根不一致'); await this.Recheck(snapshot); const binding: ConversationAgentBinding = { ...identity, teamId: prepared.member.teamId, agentId: prepared.member.agentId, agentInstanceId: prepared.member.agentInstanceId, agentSessionId: prepared.session.agentSessionId }; return { teamSessions: [prepared.teamSession], members: [prepared.member], sessions: [prepared.session], receipt: binding }; });
   }
 
   /** 为已建图注册角色与会话；只返回本次成员，不暴露其其他根会话通道。 */
@@ -645,13 +643,13 @@ export class WorkspaceDispatchService
     alive();
 
     if (!trustedScopeId)
-      fail('DISPATCH_SCOPE_REQUIRED', '新业务派发必须属于已有主调度周期，请重新规划后派发');
+      throw new Error('新业务派发必须属于已有主调度周期，请重新规划后派发');
 
     if (input.task.assigneeAgentId === 'cbim:main')
-      fail('AGENT_NOT_EXECUTABLE', '主 Agent 请在当前会话直接执行，不创建独立成员任务');
+      throw new Error('主 Agent 请在当前会话直接执行，不创建独立成员任务');
 
     if (new Set(input.task.moduleIds).size !== input.task.moduleIds.length || new Set(input.task.acceptance.map(a => a.id)).size !== input.task.acceptance.length || new Set(input.task.prerequisites.map(p => p.taskId)).size !== input.task.prerequisites.length)
-      fail('GRAPH_INPUT_INVALID', '模块、验收条目和前置任务不能重复');
+      throw new Error('模块、验收条目和前置任务不能重复');
 
     return this.owners.WithContext(state => [this.owners.Selection(state, trustedScopeId, input.task.ownerSelection)], context => this.store.Transact(command, async state =>
     {
@@ -662,28 +660,28 @@ export class WorkspaceDispatchService
       const graph = this.Graph(state, input.rootSessionId);
 
       if (state.scopes?.some(scope => scope.rootSessionId === input.rootSessionId && scope.status === 'waiting'))
-        fail('DISPATCH_SCOPE_WAITING', '当前主会话正在安全等待，不能派发新任务');
+        throw new Error('当前主会话正在安全等待，不能派发新任务');
 
       if (trustedScopeId !== undefined)
       {
         const scope = state.scopes?.find(value => value.scopeId === trustedScopeId);
 
         if (!scope || scope.rootSessionId !== input.rootSessionId)
-          fail('DISPATCH_SCOPE_IDENTITY', '任务调度周期不属于当前主会话');
+          throw new Error('任务调度周期不属于当前主会话');
 
         if (scope.status !== 'active')
-          fail('DISPATCH_SCOPE_CLOSED', '调度周期已结束，不能继续派发');
+          throw new Error('调度周期已结束，不能继续派发');
 
         if (pendingTopicInterruption(scope))
-          fail('TOPIC_PAUSING', '话题正在等待补充排空，不能继续派发');
+          throw new Error('话题正在等待补充排空，不能继续派发');
 
         // 关闭需在一个不超过 1000 变更的图批次里取消任务并释放实例；每任务最多两条关闭变更。
         if (graph.tasks.filter(task => task.scopeId === trustedScopeId).length >= 500)
-          fail('DISPATCH_SCOPE_LIMIT', '本次用户任务已达到 500 个派发节点，请结束本周期后继续');
+          throw new Error('本次用户任务已达到 500 个派发节点，请结束本周期后继续');
       }
 
       if (graph.root.revision !== input.expectedParentRevision)
-        fail('GRAPH_REVISION_CONFLICT', '主会话根版本已变化');
+        throw new Error('主会话根版本已变化');
 
       const snapshot = context.snapshot,
         { ownerBinding, fallbackBinding } = await this.owners.ResolveExecution(state, context, trustedScopeId, input.task.ownerSelection, input.task.moduleIds, input.task.assigneeAgentId);
@@ -717,13 +715,13 @@ export class WorkspaceDispatchService
         const source = graph.tasks.find(t => t.taskId === prerequisite.taskId);
 
         if (!source)
-          fail('GRAPH_REFERENCE_INVALID', '前置任务不在当前主会话图中');
+          throw new Error('前置任务不在当前主会话图中');
 
         if (trustedScopeId && source.scopeId !== trustedScopeId)
-          fail('MEMBER_TOPIC_CONTEXT_IDENTITY', '新派发的前置任务必须属于当前话题，不能混入其他话题上下文');
+          throw new Error('新派发的前置任务必须属于当前话题，不能混入其他话题上下文');
 
         if (source.planRevision !== prerequisite.expectedPlanRevision)
-          fail('GRAPH_REVISION_CONFLICT', '前置任务计划版本已变化');
+          throw new Error('前置任务计划版本已变化');
 
         const ready = source.status === 'result_ready' && source.result?.planRevision === source.planRevision;
 

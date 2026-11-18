@@ -7,7 +7,7 @@ import http from 'node:http';
 import {fixture} from './src/logic/application/support/helpers';
 import {request} from './src/logic/knowledge/rules/data/knowledge';
 import {seedTeam} from './src/logic/knowledge/service/support/team-fixture';
-import {json} from '../src/core/platform/node/serialization';
+import {json} from '../src/core/io/serialization';
 import {FileRunStorage} from '../src/logic/execution/storage/run-storage';
 import type {RunSummary} from '../src/logic/execution/rules/types';
 import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';

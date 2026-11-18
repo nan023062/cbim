@@ -9,8 +9,6 @@ import path from 'node:path';
 
 import { randomUUID, createHash } from 'node:crypto';
 
-import { fail } from '../../../../core/errors';
-
 import { controlledFileLimits } from '../../rules/controlled-file-operation';
 
 import { controlledFileBlobRefSchema, type ControlledFileBlobRef } from '../../rules/controlled-file-event';
@@ -57,14 +55,14 @@ export class ControlledFileBlobs
       }
 
       if (stat.isSymbolicLink() || !stat.isDirectory())
-        fail('CONTROLLED_BLOB_PATH', '备份目录不是可靠私有目录')
+        throw new Error('备份目录不是可靠私有目录')
     }
   }
 
   /** 同一工作区容量预留串行；写失败留下的临时字节不会被排除额度。 */
   SavePair(operationId: string, before: Uint8Array, after: Uint8Array): Promise<{ before: ControlledFileBlobRef; intendedAfter: ControlledFileBlobRef }>
   {
-    const run = this.tail.then(async () => { await this.CheckedDirectory(true); let bytes = 0; for (const name of await fs.readdir(this.directory)) { const stat = await fs.lstat(path.join(this.directory, name)); if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1) fail('CONTROLLED_BLOB_PATH', '备份目录存在无法核实的对象'); bytes += stat.size } if (before.length > controlledFileLimits.contentBytes || after.length > controlledFileLimits.contentBytes || bytes + before.length + after.length > controlledFileLimits.blobBytes) fail('CONTROLLED_BLOB_LIMIT', '备份容量已达上限，未写业务文件'); return { before: await this.Save(operationId, 'before', before), intendedAfter: await this.Save(operationId, 'intended_after', after) }; });
+    const run = this.tail.then(async () => { await this.CheckedDirectory(true); let bytes = 0; for (const name of await fs.readdir(this.directory)) { const stat = await fs.lstat(path.join(this.directory, name)); if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1) throw new Error('备份目录存在无法核实的对象'); bytes += stat.size } if (before.length > controlledFileLimits.contentBytes || after.length > controlledFileLimits.contentBytes || bytes + before.length + after.length > controlledFileLimits.blobBytes) throw new Error('备份容量已达上限，未写业务文件'); return { before: await this.Save(operationId, 'before', before), intendedAfter: await this.Save(operationId, 'intended_after', after) }; });
 
     this.tail = run.catch(() => { });
 
@@ -110,7 +108,7 @@ export class ControlledFileBlobs
       before = await fs.lstat(filename);
 
     if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1 || before.size !== ref.byteLength)
-      fail('CONTROLLED_BLOB_INVALID', '原备份文件不可核实');
+      throw new Error('原备份文件不可核实');
 
     const handle = await fs.open(filename, 'r');
 
@@ -119,7 +117,7 @@ export class ControlledFileBlobs
       const opened = await handle.stat();
 
       if (opened.ino !== before.ino || opened.dev !== before.dev || opened.size !== ref.byteLength || opened.nlink !== 1)
-        fail('CONTROLLED_BLOB_INVALID', '打开备份时身份变化');
+        throw new Error('打开备份时身份变化');
 
       // 多读一字节只为识别并发增长；绝不让私有文件的当前长度决定无界分配。
       const buffer = Buffer.alloc(ref.byteLength + 1);
@@ -141,7 +139,7 @@ export class ControlledFileBlobs
         current = await fs.lstat(filename);
 
       if (bytes.length !== ref.byteLength || after.size !== ref.byteLength || current.size !== ref.byteLength || fact(bytes).sha256 !== ref.sha256 || after.ino !== opened.ino || after.nlink !== 1 || after.mtimeMs !== opened.mtimeMs || after.ctimeMs !== opened.ctimeMs || current.ino !== opened.ino || current.nlink !== 1 || current.isSymbolicLink())
-        fail('CONTROLLED_BLOB_INVALID', '备份字节或身份变化');
+        throw new Error('备份字节或身份变化');
 
       return bytes
     }

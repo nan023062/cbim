@@ -1,7 +1,7 @@
 import {fixture} from '../../../application/support/helpers';
 import {request} from '../../../knowledge/rules/data/knowledge';
 import {seedTeam} from '../../../knowledge/service/support/team-fixture';
-import {json} from '../../../../../../src/core/platform/node/serialization';
+import {json} from '../../../../../../src/core/io/serialization';
 import type {ReviseQueuedDependenciesInput} from '../../../../../../src/logic/tasks/rules/queued-dependency-revision';
 import {WorkspaceDispatchService} from '../../../../../../src/logic/dispatch/runtime/dispatch-service';
 import {registerServiceOwner} from '../../../team/service/support/owner-service-fixture';

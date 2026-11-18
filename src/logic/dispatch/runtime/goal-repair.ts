@@ -2,7 +2,7 @@
  * 作用定位：调度层最终验收返工的分类、限次与系统反馈，复用原目标及主运行入口。
  * 设计原因：只有明确可修复的业务拒绝才重新唤醒主调度；权限、未知副作用、身份和日志异常保持停放。
  */
-import { hash, json } from '../../../core/platform/node/serialization';
+import { hash, json } from '../../../core/io/serialization';
 
 import type { GoalRepairSource } from '../../execution/rules/input-source';
 

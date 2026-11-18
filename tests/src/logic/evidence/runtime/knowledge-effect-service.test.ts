@@ -1,6 +1,6 @@
 import {expect,it,vi} from 'vitest';
 import {randomUUID} from 'node:crypto';
-import {hash,json} from '../../../../../src/core/platform/node/serialization';
+import {hash,json} from '../../../../../src/core/io/serialization';
 import type {DispatchStore} from '../../../../../src/logic/dispatch/rules/dispatch-storage';
 import {EffectObservationService} from '../../../../../src/logic/evidence/runtime/effect-observation-service';
 import type {KnowledgeTransactionObservation} from '../../../../../src/logic/knowledge/rules/knowledge-write-observation';

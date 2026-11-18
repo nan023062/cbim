@@ -10,7 +10,7 @@ import {seedTeam} from '../../knowledge/service/support/team-fixture';
 import type {GoalFixtureRequest} from '../../tasks/rules/support/goal-provider-fixture';
 import {mainToolValue} from './support/main-tool-contract-provider';
 import {FileRunStorage} from '../../../../../src/logic/execution/storage/run-storage';
-import {json} from '../../../../../src/core/platform/node/serialization';
+import {json} from '../../../../../src/core/io/serialization';
 import type {DispatchScope} from '../../../../../src/logic/tasks/rules/dispatch-scope';
 import type {GraphSnapshot} from '../../../../../src/logic/tasks/rules/graph-types';
 

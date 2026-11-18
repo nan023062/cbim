@@ -44,7 +44,7 @@ import { memberCheckpointLimit } from '../../../tasks/rules/member-checkpoint';
 
 import { verifyMemberCheckpoint } from '../../../tasks/rules/member-checkpoint-evidence';
 
-import { hash, json } from '../../../../core/platform/node/serialization';
+import { hash, json } from '../../../../core/io/serialization';
 
 import { isDeepStrictEqual } from 'node:util';
 
@@ -101,8 +101,6 @@ import type { RunToolDescriptor } from '../../../tools/rules/policy/tool-policy'
 import type { WorkflowContractBinding } from '../../../tasks/rules/execution-context';
 
 import { workflowHasEffects } from '../../../evidence/rules/workflow-evidence';
-
-import { fail } from '../../../../core/errors';
 
 import type { AgentCallReference, AgentToolContext, AgentToolsBinding } from '../../../agents/contracts';
 
@@ -367,7 +365,7 @@ export class LoopRuntime
     const workflows = structuredClone(this.options.workflowContracts ?? []);
 
     if (workflows.length && (!member || !this.options.DescribeTool))
-      fail('WORKFLOW_GATE_UNAVAILABLE', '带执行约定的 Workflow 必须通过正式成员及可信工具分类门禁');
+      throw new Error('带执行约定的 Workflow 必须通过正式成员及可信工具分类门禁');
 
     const preparedValidation = prepareRunValidation(workflows, member?.binding, this.options.artifacts, this.options.validations),
       validationRequired = preparedValidation.required;
@@ -375,17 +373,17 @@ export class LoopRuntime
     const executionScope = preparedExecutionScope(workflows);
 
     if (executionScope && (!member || !this.options.scopedExecution || task.moduleIds.some(id => !workflows.some(binding => binding.moduleId === id))))
-      fail('EXECUTION_SCOPE_UNAVAILABLE', '范围任务缺少完整模块声明或实际平台端口');
+      throw new Error('范围任务缺少完整模块声明或实际平台端口');
 
     const codeChecksRequired = prepareCodeChecks(workflows, this.options.codeChecks);
 
     const manifestScopes = preparedArtifactScopes(workflows);
 
     if (manifestScopes.length && (!member || !this.options.manifests))
-      fail('MANIFEST_UNAVAILABLE', '声明的完整产物范围缺少正式成员枚举端口');
+      throw new Error('声明的完整产物范围缺少正式成员枚举端口');
 
     if (preparedArtifactTransitions(manifestScopes).length && (!member || !this.options.artifactTransitions))
-      fail('ARTIFACT_TRANSITION_UNAVAILABLE', '冻结的删除/移动要求缺少真实受控平台端口');
+      throw new Error('冻结的删除/移动要求缺少真实受控平台端口');
 
     const conversationBinding = this.options.conversationBinding === undefined ? undefined : checkedConversationAgentBinding(this.options.conversationBinding, task);
 
@@ -485,7 +483,7 @@ export class LoopRuntime
           throw Error('恢复必须使用原任务定义与工作区');
 
         if (previous.unresolvedTools.length)
-          fail('RECOVERY_INSPECTION_REQUIRED', '原运行存在未确认工具结果，请显式创建新的只读核实；勾选调用 ID 不能续接原生上下文');
+          throw new Error('原运行存在未确认工具结果，请显式创建新的只读核实；勾选调用 ID 不能续接原生上下文');
         // 目标引擎文件及 ID 由 selectEngineSession 一起核实；只有完整无交互的启动失败可转交输入后新建。
         // 成功历史缺少文件、损坏身份和未决工具不会因此降级；旧 Pi 文件缺少原生 ID 仍由适配器拒绝。
       }
@@ -549,7 +547,7 @@ export class LoopRuntime
       // 仅声明 Workflow 的运行启用：重叠读取仍记录真实回执，但不能证明副作用结束后的产物。
       const effectsInFlight = new Set<string>();
 
-      const assertDeliveryReady = () => { controlledFile?.AssertVerified(); artifactTransition?.AssertVerified(); if (effectsInFlight.size) fail('WORKFLOW_EFFECT_PENDING', '仍有未结束的副作用，不能准备交付；结束后须重新读取并验证') };
+      const assertDeliveryReady = () => { controlledFile?.AssertVerified(); artifactTransition?.AssertVerified(); if (effectsInFlight.size) throw new Error('仍有未结束的副作用，不能准备交付；结束后须重新读取并验证') };
 
       const identity = { workspaceId: task.workspaceId, taskId: task.taskId, runId };
 
@@ -572,11 +570,11 @@ export class LoopRuntime
       const taskTools = new TaskProgressTools(previous?.taskProgress, async state => { await emit({ type: 'task.updated', data: { progress: state } }) }, {
         identity, AssertDeliveryReady: assertDeliveryReady, codeChecks: { Records: () => codeChecks?.Records() ?? [] }, Artifacts: () => artifactCapture?.Refs() ?? [], ...(completeOutputRequired(workflows) ? {
           manifests: {
-            Select: (id, version) => { if (!manifestCapture) fail('MANIFEST_UNAVAILABLE', '本轮完整产物端口尚未就绪'); return manifestCapture.Select(id, version) }, VerifyCurrent: async record => { if (!manifestCapture) fail('MANIFEST_UNAVAILABLE', '本轮完整产物端口尚未就绪'); await manifestCapture.VerifyCurrent(record, 'cbim_delivery_prepare') }
+            Select: (id, version) => { if (!manifestCapture) throw new Error('本轮完整产物端口尚未就绪'); return manifestCapture.Select(id, version) }, VerifyCurrent: async record => { if (!manifestCapture) throw new Error('本轮完整产物端口尚未就绪'); await manifestCapture.VerifyCurrent(record, 'cbim_delivery_prepare') }
           }
         } : {}), ...(validationRequired ? {
           validations: {
-            Records: () => validation?.Records() ?? [], VerifyCurrent: async records => { if (!validation) fail('VALIDATION_UNAVAILABLE', '本轮验证端口尚未就绪'); await validation.VerifyCurrent(records) }
+            Records: () => validation?.Records() ?? [], VerifyCurrent: async records => { if (!validation) throw new Error('本轮验证端口尚未就绪'); await validation.VerifyCurrent(records) }
           }
         } : {}), ...(workflows.length ? { workflow: { bindings: workflows, task: { goal: task.goal, acceptance: task.acceptance }, identity } } : {})
       });
@@ -584,7 +582,7 @@ export class LoopRuntime
       const emit = async (event: EngineEvent, trustedArtifact = false) =>
       {
         if (!trustedArtifact && event.type === 'tool.updated' && event.data.agentCall !== undefined)
-          fail('AGENT_CALL_IDENTITY', 'Agent 调用引用只能由可信调度器保存');
+          throw new Error('Agent 调用引用只能由可信调度器保存');
 
         // 契约版本来自真实描述和授权；模型/引擎事件不能给旧调用补造新协议来源。
         if (!trustedArtifact && event.data.contractVersion !== undefined)
@@ -595,7 +593,7 @@ export class LoopRuntime
         }
 
         if (event.type === 'tool.allowed' && [controlledFileWriteToolName, artifactTransitionToolName, scopedReadToolName, scopedNodeToolName].includes(String(event.data.name)) && !trustedArtifact)
-          fail('CONTROLLED_FILE_AUTHORIZATION', '受控文件授权只能由本轮策略可靠保存');
+          throw new Error('受控文件授权只能由本轮策略可靠保存');
 
         if (event.type === 'engine.status' && event.data.activeInput !== undefined && !trustedArtifact)
           throw Error('目标补充身份只能由可信插入端口保存');
@@ -705,7 +703,7 @@ export class LoopRuntime
       let stopFailure: unknown;
 
       const agentTools = this.options.AgentTools?.({
-        task, runId, Emit: async event => { await emit(event, true) }, AssertQuestionWait: () => { const ids = [...pendingTools]; if (stopping || ids.length !== 1 || calls.get(ids[0])?.call.name !== 'cbim_ask_user_question' || [...activeCalls].some(id => id !== ids[0])) fail('AGENT_QUESTION_BUSY', '必须等待其他工具完成后才能向调用方求助'); }, AssertExclusive: id => { if (stopping || calls.get(id)?.decision.allow !== true || !pendingTools.has(id) || [...activeCalls].some(other => other !== id) || [...pendingTools].some(other => other !== id)) fail('AGENT_CALL_BUSY', '存在其他在途工具或审批，不能交接 Agent 调用'); }
+        task, runId, Emit: async event => { await emit(event, true) }, AssertQuestionWait: () => { const ids = [...pendingTools]; if (stopping || ids.length !== 1 || calls.get(ids[0])?.call.name !== 'cbim_ask_user_question' || [...activeCalls].some(id => id !== ids[0])) throw new Error('必须等待其他工具完成后才能向调用方求助'); }, AssertExclusive: id => { if (stopping || calls.get(id)?.decision.allow !== true || !pendingTools.has(id) || [...activeCalls].some(other => other !== id) || [...pendingTools].some(other => other !== id)) throw new Error('存在其他在途工具或审批，不能交接 Agent 调用'); }
       });
 
       // 递归调用使用同调用求助；旧终止交接/检查点仅供历史执行链。
@@ -728,8 +726,8 @@ export class LoopRuntime
         manifestCapture = new RunOutputManifestCapture(member.binding, manifestScopes, this.options.manifests, {
           bindings: workflows,
           Current: () => taskTools.Current(),
-          AssertReady: id => { if (stopping || calls.get(id)?.decision.allow !== true || !pendingTools.has(id) || [...activeCalls].some(other => other !== id) || [...pendingTools].some(other => other !== id)) fail('MANIFEST_CALL', '完整产物采集已停止、未获准或仍有其它在途工具'); },
-          AssertReadingReady: name => { const ids = [...activeCalls]; if (stopping || ids.length !== 1 || pendingTools.size !== 1 || !pendingTools.has(ids[0]) || calls.get(ids[0])?.decision.allow !== true || calls.get(ids[0])?.call.name !== name) fail('MANIFEST_CALL', '完整产物复核已停止、未获准或仍有其它在途工具'); controlledFile?.AssertVerified(); artifactTransition?.AssertVerified(); },
+          AssertReady: id => { if (stopping || calls.get(id)?.decision.allow !== true || !pendingTools.has(id) || [...activeCalls].some(other => other !== id) || [...pendingTools].some(other => other !== id)) throw new Error('完整产物采集已停止、未获准或仍有其它在途工具'); },
+          AssertReadingReady: name => { const ids = [...activeCalls]; if (stopping || ids.length !== 1 || pendingTools.size !== 1 || !pendingTools.has(ids[0]) || calls.get(ids[0])?.decision.allow !== true || calls.get(ids[0])?.call.name !== name) throw new Error('完整产物复核已停止、未获准或仍有其它在途工具'); controlledFile?.AssertVerified(); artifactTransition?.AssertVerified(); },
           Save: async manifest => { await emit({ type: 'artifact.manifest_captured', data: { manifest } }, true) },
         });
       }
@@ -750,7 +748,7 @@ export class LoopRuntime
       {
         codeChecks = new RunCodeCheck(workflows, identity, this.options.manifests.knowledgeRevision, this.options.codeChecks, {
           CurrentVersion: () => taskTools.Current()?.version, Generation: () => taskTools.generation,
-          AssertReady: id => { if (stopping || calls.get(id)?.decision.allow !== true || !pendingTools.has(id) || [...activeCalls].some(other => other !== id) || [...pendingTools].some(other => other !== id)) fail('CODE_CHECK_CALL', '检查未授权或有其它在途工具') },
+          AssertReady: id => { if (stopping || calls.get(id)?.decision.allow !== true || !pendingTools.has(id) || [...activeCalls].some(other => other !== id) || [...pendingTools].some(other => other !== id)) throw new Error('检查未授权或有其它在途工具') },
           AssertKnowledge: () => this.options.manifests!.AssertCurrentKnowledge(),
           Save: async codeCheck => { await emit({ type: 'code.validation_checked', data: { codeCheck } }, true) },
         });
@@ -758,25 +756,25 @@ export class LoopRuntime
 
       validation = preparedValidation.Create({
         Current: () => taskTools.Current(), Generation: () => taskTools.generation,
-        AssertReady: id => { if (stopping || calls.get(id)?.decision.allow !== true || !pendingTools.has(id) || [...activeCalls].some(other => other !== id) || [...pendingTools].some(other => other !== id)) fail('VALIDATION_CALL', '产物验证已停止、未获准或仍有其他在途操作') },
-        AssertDeliveryReady: () => { if (stopping || [...activeCalls].some(id => calls.get(id)?.call.name !== 'cbim_delivery_prepare') || [...pendingTools].some(id => calls.get(id)?.call.name !== 'cbim_delivery_prepare') || activeCalls.size > 1) fail('VALIDATION_BUSY', '仍有其他工具或审批未结束，不能读取 JSON 交付证据'); assertDeliveryReady() },
-        VerifyManifest: async (record, signal) => { if (!manifestCapture) fail('MANIFEST_UNAVAILABLE', '本轮完整产物端口尚未就绪'); await manifestCapture.VerifyCurrent(record, 'cbim_validation_run', signal) },
+        AssertReady: id => { if (stopping || calls.get(id)?.decision.allow !== true || !pendingTools.has(id) || [...activeCalls].some(other => other !== id) || [...pendingTools].some(other => other !== id)) throw new Error('产物验证已停止、未获准或仍有其他在途操作') },
+        AssertDeliveryReady: () => { if (stopping || [...activeCalls].some(id => calls.get(id)?.call.name !== 'cbim_delivery_prepare') || [...pendingTools].some(id => calls.get(id)?.call.name !== 'cbim_delivery_prepare') || activeCalls.size > 1) throw new Error('仍有其他工具或审批未结束，不能读取 JSON 交付证据'); assertDeliveryReady() },
+        VerifyManifest: async (record, signal) => { if (!manifestCapture) throw new Error('本轮完整产物端口尚未就绪'); await manifestCapture.VerifyCurrent(record, 'cbim_validation_run', signal) },
         Save: async value => { await emit({ type: 'validation.checked', data: { validation: value } }, true) },
       });
 
       if (executionScope && this.options.scopedExecution)
-        scopedExecution = new RunScopedExecution(executionScope, this.options.scopedExecution, id => { if (stopping || calls.get(id)?.decision.allow !== true || !pendingTools.has(id) || [...activeCalls].some(other => other !== id) || [...pendingTools].some(other => other !== id)) fail('EXECUTION_SCOPE_CALL', '范围调用已停止、未获准或仍有其它工具'); });
+        scopedExecution = new RunScopedExecution(executionScope, this.options.scopedExecution, id => { if (stopping || calls.get(id)?.decision.allow !== true || !pendingTools.has(id) || [...activeCalls].some(other => other !== id) || [...pendingTools].some(other => other !== id)) throw new Error('范围调用已停止、未获准或仍有其它工具'); });
 
       let finishing = false;
 
       if (member && this.options.controlledFiles)
-        controlledFile = new RunControlledFile(member.binding, this.options.controlledFiles, id => { if (stopping || calls.get(id)?.decision.allow !== true || !pendingTools.has(id) || [...activeCalls].some(other => other !== id) || [...pendingTools].some(other => other !== id)) fail('CONTROLLED_FILE_CALL', '受控写已停止、未获准或有其他在途工具'); });
+        controlledFile = new RunControlledFile(member.binding, this.options.controlledFiles, id => { if (stopping || calls.get(id)?.decision.allow !== true || !pendingTools.has(id) || [...activeCalls].some(other => other !== id) || [...pendingTools].some(other => other !== id)) throw new Error('受控写已停止、未获准或有其他在途工具'); });
 
       if (member && preparedArtifactTransitions(manifestScopes).length && this.options.manifests && this.options.artifactTransitions)
       {
         artifactTransition = new RunArtifactTransition(member.binding, manifestScopes, this.options.manifests, this.options.artifactTransitions, {
           Version: () => taskTools.Current()?.version,
-          AssertReady: id => { if (stopping || calls.get(id)?.decision.allow !== true || !pendingTools.has(id) || [...activeCalls].some(other => other !== id) || [...pendingTools].some(other => other !== id)) fail('ARTIFACT_TRANSITION_CALL', '删除/移动已停止、未获准或仍有其它调用'); controlledFile?.AssertVerified() },
+          AssertReady: id => { if (stopping || calls.get(id)?.decision.allow !== true || !pendingTools.has(id) || [...activeCalls].some(other => other !== id) || [...pendingTools].some(other => other !== id)) throw new Error('删除/移动已停止、未获准或仍有其它调用'); controlledFile?.AssertVerified() },
           Save: event => emit(event, true),
         });
       }
@@ -784,14 +782,14 @@ export class LoopRuntime
       const injection = {
         runId, pending: new Set<Promise<ScopeActiveInputSendReceipt | undefined>>(), send: async (message: string, images: import('../types').InputImage[], signal: AbortSignal, activeInput?: RunSteerControl['activeInput']) =>
         {
-          const assertReady = () => { if (stopping || this.closing || signal.aborted) fail('QUEUE_INSERT_STOPPED', '当前运行已停止插入，原消息仍保留在队列'); if (finishing || task.mode !== 'chat' || task.agentId !== 'cbim:main' || !engine.steer) fail('QUEUE_INSERT_STALE', '原主运行已结束或不支持插入，原消息仍保留在队列'); };
+          const assertReady = () => { if (stopping || this.closing || signal.aborted) throw new Error('当前运行已停止插入，原消息仍保留在队列'); if (finishing || task.mode !== 'chat' || task.agentId !== 'cbim:main' || !engine.steer) throw new Error('原主运行已结束或不支持插入，原消息仍保留在队列'); };
 
           assertReady();
 
           const token = activeInput ? scopeActiveInputTokenSchema.parse(structuredClone(activeInput.token)) : undefined;
 
           if (token && (token.runId !== runId || token.inputHash !== scopedActiveInputHash({ message, ...(activeInput?.attachmentIds ? { attachmentIds: activeInput.attachmentIds } : {}), ...(activeInput?.attachmentManifest ? { attachmentManifest: activeInput.attachmentManifest } : {}) })))
-            fail('QUEUE_INSERT_STALE', '原插入快照与准备记录不一致，原消息仍保留在队列');
+            throw new Error('原插入快照与准备记录不一致，原消息仍保留在队列');
 
           const requested = await emit({ type: 'engine.status', data: { metric: 'insertion', state: 'requested', message, ...(token ? { activeInput: token } : {}), label: '正在插入用户补充' } }, true);
 
@@ -823,13 +821,13 @@ export class LoopRuntime
             }
             catch
             {
-              fail('QUEUE_INSERT_UNKNOWN', '插入结果未确认，请先核实原运行记录，勿重复发送')
+              throw new Error('插入结果未确认，请先核实原运行记录，勿重复发送')
             }
 
             if (rejected)
               throw error;
 
-            fail('QUEUE_INSERT_UNKNOWN', '插入结果未确认，请先核实原运行记录，勿重复发送');
+            throw new Error('插入结果未确认，请先核实原运行记录，勿重复发送');
           }
         }
       };
@@ -1047,7 +1045,7 @@ export class LoopRuntime
                 if (!decision.allow)
                 {
                   decision = {
-                    ...decision, reason: (toolFailureResult(inputFailure ?? decision.reason ?? '未获授权', true).content[0] as
+                    ...decision, reason: (toolFailureResult(inputFailure ?? decision.reason ?? '未获授权', true, inputFailure ? 'TOOL_INPUT_INVALID' : 'FORBIDDEN').content[0] as
                       {
                         text: string
                       }).text
@@ -1097,7 +1095,7 @@ export class LoopRuntime
           result = stopping ? { status: 'cancelled' as const } : await engine.run(message);
 
           if (!stopping && agentTools?.Active())
-            fail('AGENT_REPLY_REQUIRED', '仍有未答复的子调用，已停止原子树；不能报告本轮完成');
+            throw new Error('仍有未答复的子调用，已停止原子树；不能报告本轮完成');
         }
         catch (error)
         {
@@ -1232,12 +1230,12 @@ export class LoopRuntime
   async Steer(taskId: string, message: string, images: import('../types').InputImage[], control: RunSteerControl)
   {
     if (this.closing || control?.signal?.aborted)
-      fail('QUEUE_INSERT_STOPPED', '当前运行已停止插入，原消息仍保留在队列');
+      throw new Error('当前运行已停止插入，原消息仍保留在队列');
 
     const inject = this.injections.get(taskId);
 
     if (!control?.signal || !control.expectedRunId || this.active.get(taskId)?.runId !== control.expectedRunId || inject?.runId !== control.expectedRunId)
-      fail('QUEUE_INSERT_STALE', '原主运行已变化，原消息仍保留在队列');
+      throw new Error('原主运行已变化，原消息仍保留在队列');
 
     const pending = inject.send(message, images, control.signal, control.activeInput ? structuredClone(control.activeInput) : undefined);
 

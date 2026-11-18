@@ -20,8 +20,6 @@ import { coordinationPreviewSchema } from '../../tasks/rules/coordination-previe
 
 import { zodToJsonSchema } from 'zod-to-json-schema';
 
-import { fail } from '../../../core/errors';
-
 import { dispatchTaskFields, type DispatchTaskInput, type DispatchReceipt } from '../../tasks/rules/dispatch-commands';
 
 import { validateWorkflowSelections } from '../../tasks/rules/workflow-selection';
@@ -191,18 +189,18 @@ export class DispatchTools
   private Parse(name: string, input: unknown)
   {
     if (!Object.hasOwn(definitions, name) || !this.Available(name))
-      fail('TOOL_NOT_FOUND', '当前运行没有此成员派发工具');
+      throw new Error('当前运行没有此成员派发工具');
 
     const definition = this.Definition(name as DispatchToolName),
       parsed = definition.schema.safeParse(input);
 
     if (!parsed.success)
-      fail('DISPATCH_TOOL_INPUT_INVALID', '成员工具参数无效：' + parsed.error.issues.map(issue => issue.path.join('.') + ': ' + issue.message).join('；'));
+      throw new Error('成员工具参数无效：' + parsed.error.issues.map(issue => issue.path.join('.') + ': ' + issue.message).join('；'));
 
     const preview = name === 'cbim_dispatch_cancel' && cancelPreviewInput.safeParse(input).success;
 
     if (preview && !this.port.PreviewCancel)
-      fail('TOOL_NOT_FOUND', '当前运行未提供撤销清单预览');
+      throw new Error('当前运行未提供撤销清单预览');
 
     return { name: name as DispatchToolName, args: parsed.data, effects: preview ? ['preview'] as const : definition.effects };
   }
@@ -241,7 +239,7 @@ export class DispatchTools
     const parsed = this.Parse(name, input);
 
     if (typeof toolCallId !== 'string' || !toolCallId.trim() || toolCallId.length > 512)
-      fail('DISPATCH_CALL_ID_REQUIRED', '成员工具缺少可信调用标识');
+      throw new Error('成员工具缺少可信调用标识');
 
     // 领域端口不得通过修改传入对象改变回包核验依据；在首次 await 前独立冻结本次原请求。
     const expectedInput = structuredClone(parsed.args);

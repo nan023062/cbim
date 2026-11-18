@@ -3,7 +3,7 @@
  * 作用定位：从不可变请求阶段计算预留、真实用量和后续请求的准入，供服务及 Store 独立核对。
  * 设计原因：所有在途预留共同占额度，跨实例遗留视为未知；按协议报告结算，不能根据模型文字或错误状态猜测免费。
  */
-import { hash, json } from '../../../core/platform/node/serialization';
+import { hash, json } from '../../../core/io/serialization';
 
 import type { ScopeBudgetPolicy } from './scope-budget';
 

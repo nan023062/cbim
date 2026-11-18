@@ -10,15 +10,15 @@ import { execFile } from 'node:child_process';
 
 import { promisify } from 'node:util';
 
-import { KernelLock } from '../../../core/platform/node/locking';
+import type { KernelLock } from '../../../core/io/locking';
+
+import { acquireLock } from '../../io-errors/locking';
 
 import { Paths } from './paths';
 
-import { atomic, exists, readJson } from '../../../core/platform/node/files';
+import { atomic, exists, readJson } from '../../../core/io/text-files';
 
-import { hash, json } from '../../../core/platform/node/serialization';
-
-import { fail } from '../../../core/errors';
+import { hash, json } from '../../../core/io/serialization';
 
 import type { Catalog as Data, WorkspaceEntry } from '../contracts';
 
@@ -87,7 +87,7 @@ export class Catalog
     {
       try
       {
-        lock = new KernelLock(canonical, key, 'catalog');
+        lock = acquireLock(canonical, key, 'catalog');
 
         break
       }
@@ -101,7 +101,7 @@ export class Catalog
     }
 
     if (!lock)
-      fail('BUSY', '工作区列表正在被其他窗口更新，请重试');
+      throw new Error('工作区列表正在被其他窗口更新，请重试');
 
     try
     {
@@ -135,7 +135,7 @@ export class Catalog
     if (await exists(mapping))
     {
       if ((await readJson(mapping)).path !== entry.path)
-        fail('IDENTITY', '项目标识与保存的路径不一致')
+        throw new Error('项目标识与保存的路径不一致')
     }
     else
       await atomic(mapping, json(identity));
@@ -147,11 +147,11 @@ export class Catalog
   async Rename(id: string, name: string)
   {
     if (typeof name !== 'string' || !name.trim() || name.trim().length > 80 || /[\r\n\x00-\x1f]/.test(name))
-      fail('NAME', '项目名称须为 1 至 80 个字符的单行文字');
+      throw new Error('项目名称须为 1 至 80 个字符的单行文字');
 
     let entry!: WorkspaceEntry;
 
-    await this.Update(data => { const found = data.entries.find(x => x.id === id); if (!found) fail('NOT_FOUND', '工作区不存在'); found.name = name.trim(); entry = { ...found } });
+    await this.Update(data => { const found = data.entries.find(x => x.id === id); if (!found) throw new Error('工作区不存在'); found.name = name.trim(); entry = { ...found } });
 
     return entry;
   }
@@ -164,7 +164,7 @@ export class Catalog
   async Relocate(id: string, newPath: string, confirm: boolean)
   {
     if (!confirm)
-      fail('CONFIRM', '重新定位需确认新路径；旧历史保留并通过 previousIds 关联，不合并或搬移');
+      throw new Error('重新定位需确认新路径；旧历史保留并通过 previousIds 关联，不合并或搬移');
 
     const identity = await this.paths.Identity(newPath);
 
@@ -173,10 +173,10 @@ export class Catalog
     const old = data.entries.find(x => x.id === id);
 
     if (!old)
-      fail('NOT_FOUND', '工作区不存在');
+      throw new Error('工作区不存在');
 
     if (await exists(old.path) && identity.id !== id)
-      fail('RELOCATE', '原项目仍存在，请将新目录作为独立工作区添加');
+      throw new Error('原项目仍存在，请将新目录作为独立工作区添加');
 
     const entry = await this.Add(newPath);
 

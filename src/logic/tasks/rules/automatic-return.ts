@@ -4,8 +4,6 @@
  */
 import { z } from 'zod';
 
-import { fail } from '../../../core/errors';
-
 import type { GraphSnapshot } from './graph-types';
 
 import { sameGoalValue } from './scope-goal';
@@ -39,7 +37,7 @@ export function validateAutomaticReturns(previous: ReturnScope | undefined, next
   const before = previous?.automaticReturns ?? [],
     after = next.automaticReturns ?? [];
 
-  const valid = (condition: unknown) => { if (!condition) fail('GRAPH_INPUT_INVALID', '自动回传批次必须保留原身份、选项和不可变历史') };
+  const valid = (condition: unknown) => { if (!condition) throw new Error('自动回传批次必须保留原身份、选项和不可变历史') };
 
   valid(after.length <= 32 && after.length >= before.length && after.length <= before.length + 1 && before.every((entry, index) => sameGoalValue(entry, after[index])));
 

@@ -9,8 +9,6 @@ import { assertAutomaticExecution } from './automatic-execution-rules';
 
 import { sameAutomaticExecutionForModules } from '../../team/rules/automatic-execution';
 
-import { fail } from '../../../core/errors';
-
 import { ownerExecutionBindingMatches, ownerExecutionSelectionMatches, sameOwnerExecutionForModules, type OwnerExecutionBinding } from '../../team/rules/member-execution-binding';
 
 import { assertCurrentOwnerExecutionBinding } from '../../team/rules/member-execution-rules';
@@ -37,7 +35,7 @@ const equal = (a: unknown, b: unknown) => workspaceMemberCanonical(a) === worksp
 function check(value: unknown, message: string, code = 'OWNER_BINDING_INVALID'): asserts value
 {
   if (!value)
-    fail(code, message)
+    throw new Error(message)
 }
 
 const taskAt = (state: DispatchState, task: Pick<TaskNode, 'identity' | 'taskId'>) => state.graphs.find(graph => graph.identity.rootSessionId === task.identity.rootSessionId)?.tasks.find(value => value.taskId === task.taskId);

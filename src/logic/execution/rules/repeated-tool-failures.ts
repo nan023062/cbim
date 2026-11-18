@@ -3,7 +3,7 @@
  * 作用定位：按本轮真实调用顺序识别同工具同参数的连续三次失败。
  * 设计原因：只保存参数规范哈希，不存正文；并发结果按提出顺序收束，重复结束事件不重复计数，熔断后不自动恢复。
  */
-import { hash } from '../../../core/platform/node/serialization';
+import { hash } from '../../../core/io/serialization';
 
 import type { ToolCall } from '../../tools/rules/types';
 

@@ -9,9 +9,7 @@ import { z } from 'zod';
 
 import { isDeepStrictEqual } from 'node:util';
 
-import { fail } from '../../../core/errors';
-
-import { hash, json } from '../../../core/platform/node/serialization';
+import { hash, json } from '../../../core/io/serialization';
 
 import type { KnowledgeWorkspace } from '../../knowledge/rules/ports';
 
@@ -85,7 +83,7 @@ type Owner = Pick<KnowledgeWorkspace, 'entry' | 'Assert'>;
 function check(value: unknown, code: string, message: string): asserts value
 {
   if (!value)
-    fail(code, message)
+    throw new Error(message)
 }
 
 export class EffectObservationService
@@ -99,7 +97,7 @@ export class EffectObservationService
     const value = schema.safeParse(raw);
 
     if (!value.success)
-      fail('EFFECT_INPUT_INVALID', '影响核实或处置请求无效');
+      throw new Error('影响核实或处置请求无效');
 
     return value.data
   }
@@ -607,7 +605,7 @@ export class EffectObservationService
         })?.code;
 
       if (code && ['EFFECT_INPUT_INVALID', 'EFFECT_IDENTITY', 'EFFECT_ACTOR', 'EFFECT_BASIS_STALE', 'EFFECT_REVISION_CONFLICT', 'EFFECT_SOURCE_NOT_CLOSED', 'EFFECT_LIMIT'].includes(code))
-        fail(code.replace('EFFECT_', 'EFFECT_PREACCEPT_'), '处置尚未提交：' + (error instanceof Error ? error.message : '请重新核实输入'));
+        throw new Error('处置尚未提交：' + (error instanceof Error ? error.message : '请重新核实输入'));
 
       throw error;
     }

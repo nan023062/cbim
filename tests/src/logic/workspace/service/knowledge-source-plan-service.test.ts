@@ -5,7 +5,7 @@ import {randomUUID} from 'node:crypto';
 import {fixture} from '../../application/support/helpers';
 import {summary,request} from '../../knowledge/rules/data/knowledge';
 import {ObjectCrud,type ObjectOperation} from '../../../../../src/logic/knowledge/rules/object-crud';
-import {hash,json} from '../../../../../src/core/platform/node/serialization';
+import {hash,json} from '../../../../../src/core/io/serialization';
 import {Application} from '../../../../../src/bridge/server/application';
 import {Paths} from '../../../../../src/logic/workspace/service/paths';
 import type {Workspace} from '../../../../../src/logic/workspace/service/workspace';

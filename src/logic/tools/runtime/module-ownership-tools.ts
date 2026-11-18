@@ -12,8 +12,6 @@ import { isDeepStrictEqual } from 'node:util';
 
 import { zodToJsonSchema } from 'zod-to-json-schema';
 
-import { fail, Fault } from '../../../core/errors';
-
 import { checkedJsonToolResult } from '../rules/results';
 
 import type { RunToolDescriptor } from '../rules/policy/tool-policy';
@@ -62,7 +60,7 @@ export class ModuleOwnershipTools
     const result = schema.safeParse(raw);
 
     if (!result.success)
-      fail('OWNERSHIP_INPUT', '负责人工具只接受业务选择与预览依据，不接收身份、命令、actor或权限');
+      throw new Error('负责人工具只接受业务选择与预览依据，不接收身份、命令、actor或权限');
 
     return result.data
   }
@@ -70,7 +68,7 @@ export class ModuleOwnershipTools
   Describe(name: string, input: unknown): RunToolDescriptor
   {
     if (!this.Has(name))
-      fail('OWNERSHIP_TOOL_UNKNOWN', '本轮未注册该负责人工具');
+      throw new Error('本轮未注册该负责人工具');
 
     this.Parse(inputs[name], input);
 
@@ -81,7 +79,7 @@ export class ModuleOwnershipTools
   async Call(name: string, raw: unknown, signal: AbortSignal, toolCallId?: string)
   {
     if (!this.Has(name))
-      fail('OWNERSHIP_TOOL_UNKNOWN', '本轮未注册该负责人工具');
+      throw new Error('本轮未注册该负责人工具');
 
     signal.throwIfAborted();
 
@@ -115,7 +113,7 @@ export class ModuleOwnershipTools
         const expected = this.Parse(moduleOwnerCommitInputSchema, raw);
 
         if (!toolCallId)
-          fail('OWNERSHIP_ACTOR', '责任提交缺少真实工具调用身份');
+          throw new Error('责任提交缺少真实工具调用身份');
 
         const { workspaceId, instanceId: _, ...identity } = this.binding,
           actor = { kind: 'main_agent' as const, ...identity, toolCallId, toolName: name };
@@ -140,14 +138,14 @@ export class ModuleOwnershipTools
       const result = checkedJsonToolResult(name, output, schema);
 
       if (Buffer.byteLength(result.content[0].text, 'utf8') > moduleOwnerToolOutputLimit)
-        fail('TOOL_OUTPUT_INVALID', '责任工具输出超过128KiB，未发送正文，请核实原记录');
+        throw new Error('责任工具输出超过128KiB，未发送正文，请核实原记录');
 
       return result;
     }
     catch (error)
     {
       if (commandId)
-        throw withToolReconciliation(new Fault(error instanceof Fault ? error.code : 'OWNERSHIP_UNKNOWN', `责任提交结果未能交付；原 commandId=${commandId}。操作可能已经保存，请只查询原回执，不自动重试。`), { tool: 'cbim_receipt_inspect', args: { target: 'owner', input: { commandId } } });
+        throw withToolReconciliation(new Error(`责任提交结果未能交付；原 commandId=${commandId}。操作可能已经保存，请只查询原回执，不自动重试。`), { tool: 'cbim_receipt_inspect', args: { target: 'owner', input: { commandId } } });
 
       throw error
     }

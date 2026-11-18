@@ -8,11 +8,9 @@ import type { AgentBusinessRun } from '../../execution/rules/business-run';
 
 import { recursiveEvidenceRun, recursiveEvidenceLogMatches } from './recursive-evidence-source';
 
-import { fail } from '../../../core/errors';
-
 import { isDeepStrictEqual } from 'node:util';
 
-import { hash, json } from '../../../core/platform/node/serialization';
+import { hash, json } from '../../../core/io/serialization';
 
 import { artifactReportInputSchema, artifactReportSchema, artifactFileCheckSchema, type ArtifactReport, type ArtifactFileFact, type ArtifactFileCheck } from '../rules/artifact-baseline';
 
@@ -55,14 +53,14 @@ export class ArtifactReportService
     const parsed = artifactReportInputSchema.safeParse(raw);
 
     if (!parsed.success)
-      fail('ARTIFACT_INPUT_INVALID', '文件基线核实参数无效');
+      throw new Error('文件基线核实参数无效');
 
     const input = parsed.data;
 
     this.owner.Assert();
 
     if (input.workspaceId !== this.owner.entry.id)
-      fail('GRAPH_IDENTITY_MISMATCH', '文件基线不属于当前工作区');
+      throw new Error('文件基线不属于当前工作区');
 
     const before = await this.store.Read(),
       facts = this.Facts(before, input.rootSessionId, input.taskId, input.runId),
@@ -306,7 +304,7 @@ export class ArtifactReportService
     if ('protocol' in run)
     {
       if (!this.ports.InspectAgent)
-        fail('EVIDENCE_SOURCE_UNAVAILABLE', '未装配递归运行只读日志入口');
+        throw new Error('未装配递归运行只读日志入口');
 
       return this.ports.InspectAgent(run)
     }
@@ -321,7 +319,7 @@ export class ArtifactReportService
       recursive = recursiveEvidenceRun(state, this.owner.entry.id, root, taskId, runId);
 
     if (state.workspaceId !== this.owner.entry.id || !graph || !task && !recursive)
-      fail('TASK_NOT_FOUND', '当前主会话没有此任务');
+      throw new Error('当前主会话没有此任务');
 
     const run = recursive ?? state.runs?.find(r => r.binding.workspaceId === this.owner.entry.id && r.binding.rootSessionId === root && r.binding.taskId === taskId && r.binding.runId === runId),
       scope = state.scopes?.find(s => s.workspaceId === this.owner.entry.id && s.rootSessionId === root && s.scopeId === (recursive?.scopeId ?? task?.scopeId));

@@ -7,7 +7,7 @@ import type { ResolvedEngineModel } from '../../engines';
 
 import { workspaceMemberModelHash, workspaceMemberCanonical } from '../../team/rules/workspace-member-rules';
 
-import { hash } from '../../../core/platform/node/serialization';
+import { hash } from '../../../core/io/serialization';
 
 import { requestBudgetModelSchema, type RequestBudgetModel } from './model-request-budget';
 

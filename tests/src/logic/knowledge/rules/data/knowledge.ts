@@ -1,4 +1,4 @@
-import {json,hash} from '../../../../../../src/core/platform/node/serialization';
+import {json,hash} from '../../../../../../src/core/io/serialization';
 import {randomUUID} from 'node:crypto';
 import type {Snapshot,Change,KnowledgeFile} from '../../../../../../src/logic/knowledge/rules/types';
 

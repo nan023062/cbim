@@ -17,7 +17,7 @@
  * 超时窗口按模型增量及工具实际进展续期；重试通知不续期，停止和关闭释放本轮计时器。
  * 算法入口：通过 Core StringUtils 静态方法复用机制，本文件继续拥有原业务策略。
  */
-import { StringUtils } from '../../../../core/utility';
+import { StringUtils } from '../../../../core/io';
 
 import type { EngineRuntimePackage } from '../../rules/engine-runtime';
 
@@ -42,8 +42,6 @@ import { modelStopError } from '../../rules/model-errors';
 import { buildPiRuntimeSettings, requestedThinkingLevel } from './runtime-config';
 
 import { nativeToolNames } from '../../../tools/rules/native-tools';
-
-import { fail } from '../../../../core/errors';
 
 import { pathToFileURL } from 'node:url';
 
@@ -506,7 +504,7 @@ export class PiEngine implements AgentEngine
   /** 发送前取消可明确拒绝；发送后只认原回复，停止不能把 queued 改写成未接收。 */
   async steer(message: string, images: import('../../rules/types').InputImage[], signal: AbortSignal)
   {
-    const assertReady = () => { if (signal.aborted || this.stopped || this.closing) fail('QUEUE_INSERT_STOPPED', '当前运行已停止插入，原消息仍保留在队列'); if (!this.rpc || !this.settlement) fail('QUEUE_INSERT_STALE', '原主运行已结束，原消息仍保留在队列'); };
+    const assertReady = () => { if (signal.aborted || this.stopped || this.closing) throw new Error('当前运行已停止插入，原消息仍保留在队列'); if (!this.rpc || !this.settlement) throw new Error('原主运行已结束，原消息仍保留在队列'); };
 
     assertReady();
 
@@ -517,7 +515,7 @@ export class PiEngine implements AgentEngine
     assertReady();
 
     if (!state.isStreaming)
-      fail('QUEUE_INSERT_STALE', '原主运行已结束，原消息仍保留在队列');
+      throw new Error('原主运行已结束，原消息仍保留在队列');
 
     if (images.length && !state.model?.input?.includes('image'))
       throw Error('当前运行的模型不支持图片，请保留在队列中由视觉模型执行');
@@ -531,7 +529,7 @@ export class PiEngine implements AgentEngine
     }
     catch
     {
-      fail('QUEUE_INSERT_UNKNOWN', '插入结果未确认，队列将保持暂停，请先核实原运行记录，勿重复发送')
+      throw new Error('插入结果未确认，队列将保持暂停，请先核实原运行记录，勿重复发送')
     }
   }
 

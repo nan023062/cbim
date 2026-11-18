@@ -5,8 +5,6 @@
  */
 import { isDeepStrictEqual } from 'node:util';
 
-import { fail } from '../../../core/errors';
-
 import type { DispatchScope } from './dispatch-scope';
 
 import { goalInputRevision } from './scope-goal';
@@ -23,7 +21,7 @@ export function projectCommandReceipt(name: VerifiableMainToolName, raw: unknown
   const parsed = mainToolOutputSchema(name, expected).safeParse(publicValue);
 
   if (!parsed.success || !isDeepStrictEqual(parsed.data, publicValue))
-    fail('COMMAND_RECEIPT_INVALID', '原命令回执无法按真实请求及归属核实');
+    throw new Error('原命令回执无法按真实请求及归属核实');
 
   const tasks = (ids: string[]) => ({ total: ids.length, taskIds: ids.slice(0, commandVerificationLimits.summaryItems), truncated: ids.length > commandVerificationLimits.summaryItems });
 

@@ -3,7 +3,7 @@ import type {DispatchState,DispatchCommandEvidence} from '../../../../../../src/
 import type {RunSummary,StoredEvent} from '../../../../../../src/logic/execution/rules/types';
 import type {GoalPlanInput,GoalReviewInput} from '../../../../../../src/logic/tasks/rules/scope-goal';
 import type {VerifiableMainToolName} from '../../../../../../src/logic/tasks/rules/command-verification';
-import {hash,json} from '../../../../../../src/core/platform/node/serialization';
+import {hash,json} from '../../../../../../src/core/io/serialization';
 import {toolReceipt} from '../../../../../../src/logic/tools/rules/receipts';
 import {jsonToolResult} from '../../../../../../src/logic/tools/rules/results';
 import {CommandVerificationService} from '../../../../../../src/logic/evidence/runtime/command-verification-service';

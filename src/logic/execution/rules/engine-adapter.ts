@@ -12,7 +12,7 @@ import type { EngineRuntimePackage } from './engine-runtime';
 
 import type { ResolvedEngineModel, EngineDescriptor } from '../../engines';
 
-import { JsonUtils } from '../../../core/utility';
+import { JsonUtils } from '../../../core/io';
 
 import type { RequestBudgetPort } from '../../budget/rules/request-budget';
 

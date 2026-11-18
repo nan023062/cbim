@@ -4,7 +4,7 @@
  * 职责边界：只比较值，不校验 Schema、不生成持久指纹、不读写状态或发起请求。
  * 算法入口：通过 Core JsonUtils 静态方法复用机制，本文件继续拥有原业务策略。
  */
-import { JsonUtils } from '../../../core/utility';
+import { JsonUtils } from '../../../core/io';
 
 /** 策略属于前端比较契约，不改变后端其他调用方的字典序或字段保留规则。 */
 const orderedJson = (value: unknown) => JsonUtils.OrderJsonValue(value, { compareKeys: (left, right) => left.localeCompare(right), omitUndefinedProperties: true });

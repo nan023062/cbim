@@ -4,8 +4,6 @@
  */
 import { isDeepStrictEqual as equal } from 'node:util';
 
-import { fail } from '../../../core/errors';
-
 import { checkedAgentCallReference } from '../../agents/contracts';
 
 import type { AgentBusinessRun } from '../../execution/rules/business-run';
@@ -27,7 +25,7 @@ export function recursiveEvidenceRun(state: DispatchState, workspaceId: string, 
   const run = matches[0];
 
   if (state.workspaceId !== workspaceId || matches.length !== 1 || state.runs?.some(r => r.binding.runId === runId) || state.graphs.some(g => g.tasks.some(t => t.taskId === taskId)) || (state.scopes?.filter(s => s.workspaceId === workspaceId && s.rootSessionId === rootSessionId && s.scopeId === run.scopeId).length ?? 0) !== 1)
-    fail('EVIDENCE_SOURCE_IDENTITY', '递归运行的登记、周期或来源不唯一');
+    throw new Error('递归运行的登记、周期或来源不唯一');
 
   return run;
 }

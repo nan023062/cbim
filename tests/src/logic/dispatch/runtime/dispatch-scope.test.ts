@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 import {fixture} from '../../application/support/helpers';
 import {request} from '../../knowledge/rules/data/knowledge';
 import {seedTeam} from '../../knowledge/service/support/team-fixture';
-import {hash,json} from '../../../../../src/core/platform/node/serialization';
+import {hash,json} from '../../../../../src/core/io/serialization';
 import {FileDispatchStore} from '../../../../../src/logic/dispatch/storage/dispatch-store';
 import {WorkspaceDispatchService} from '../../../../../src/logic/dispatch/runtime/dispatch-service';
 import {registerServiceOwner} from '../../team/service/support/owner-service-fixture';

@@ -2,8 +2,6 @@
  * 作用定位：从同一岗位、责任与来源登记快照核实执行选择，供调度和存储共用。
  * 设计原因：通用 mutation 也必须匹配当前登记；外部知识正文与公开模型配置仍由上层持锁读取，纯规则不伪造这些观察。
  */
-import { fail } from '../../../core/errors';
-
 import type { WorkspaceMember } from './workspace-member';
 
 import { workspaceMemberHash, workspaceMemberCapabilityHash, workspaceMemberModelHash, workspaceMemberCanonical } from './workspace-member-rules';
@@ -26,7 +24,7 @@ export interface OwnerExecutionRegistry extends KnowledgeSourceRegistry
 function check(value: unknown, code: string, message: string): asserts value
 {
   if (!value)
-    fail(code, message)
+    throw new Error(message)
 }
 
 const equal = (a: unknown, b: unknown) => workspaceMemberCanonical(a) === workspaceMemberCanonical(b);

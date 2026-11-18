@@ -5,8 +5,6 @@
  * 设计原因：工具成功不等于结构验证通过；canonical 核验包括本轮冻结岗位身份，原要求及当前文件共同约束出口。历史返工核实保留原证明，不能因文件已修改而抹掉过去的真实结果。
  * 职责边界：从完整canonical重建原集合身份，当前出口调用受限全集合或旧文件端口；不重入派发存储、不签署人工业务验收或承诺跨文件原子快照。
  */
-import { fail } from '../../../core/errors';
-
 import { sameGoalValue } from '../../tasks/rules/scope-goal';
 
 import { preparedWorkflowContracts, validatePreparedDispatchKnowledge } from '../../tasks/rules/execution-context';
@@ -73,12 +71,12 @@ function businessWorkflowEvidence(task: TaskSpec, run: Pick<DispatchRun, 'prepar
     progress = summary.events.filter(event => event.type === 'task.updated').at(-1)?.data.progress;
 
   if (summary.logIntegrity?.partialTail !== false || summary.status !== 'completed' || summary.unresolvedTools.length || summary.runId !== run.binding.runId || summary.conversationBinding || !sameGoalValue(summary.memberBinding, run.binding) || !sameGoalValue(summary.task, task) || !sameGoalValue(summary.taskProgress, progress) || head?.type !== 'run.started' || !sameGoalValue(head.data.task, summary.task) || !sameGoalValue(head.data.memberBinding, run.binding) || !run.session.sessionFile || summary.sessionFile !== run.session.sessionFile || !bounds.length || bounds.some(event => event.data.sessionId !== run.session.nativeSessionId || event.data.sessionFile !== run.session.sessionFile) || tail?.type !== 'run.settled' || tail.data.status !== 'completed')
-    fail('WORKFLOW_EVIDENCE_INVALID', 'Workflow 交付缺少完整的本轮日志、原生通道和可信成员身份');
+    throw new Error('Workflow 交付缺少完整的本轮日志、原生通道和可信成员身份');
 
   const required = bindings.some(binding => binding.contract.delivery?.requiredValidations?.length);
 
   if (required && !normalizePath)
-    fail('WORKFLOW_VALIDATION_UNAVAILABLE', '本次未装配验证文件路径核实端口');
+    throw new Error('本次未装配验证文件路径核实端口');
 
   const records = required ? verifyValidationRecords(summary.events, run.binding, run.prepared.knowledgeRevision, bindings, normalizePath!) : [];
 
@@ -89,7 +87,7 @@ function businessWorkflowEvidence(task: TaskSpec, run: Pick<DispatchRun, 'prepar
     const id = summary.taskProgress?.delivery?.workflow?.manifest?.manifestId;
 
     if (!id)
-      fail('MANIFEST_REQUIRED', '完整出口缺少原明确选择的清单身份');
+      throw new Error('完整出口缺少原明确选择的清单身份');
 
     manifest = selectCompleteOutput(verifyOutputManifests(summary.events, run.binding, run.prepared.knowledgeRevision, preparedArtifactScopes(bindings)), bindings, id, { ...run.binding, knowledgeRevision: run.prepared.knowledgeRevision, progressVersion: summary.taskProgress!.version });
   }
@@ -111,7 +109,7 @@ function businessWorkflowEvidence(task: TaskSpec, run: Pick<DispatchRun, 'prepar
       old = files.get(key);
 
     if (old && !sameGoalValue(old, result.artifact))
-      fail('WORKFLOW_VALIDATION_STALE', '同一文件的验证证明不一致');
+      throw new Error('同一文件的验证证明不一致');
 
     files.set(key, result.artifact)
   }
@@ -134,7 +132,7 @@ export async function validateBusinessWorkflow(task: TaskSpec, run: Pick<Dispatc
     return;
 
   if (!port)
-    fail('WORKFLOW_VALIDATION_UNAVAILABLE', '本次未装配验证文件复核能力');
+    throw new Error('本次未装配验证文件复核能力');
 
   const signal = AbortSignal.any([port.signal ?? new AbortController().signal, AbortSignal.timeout(artifactScopeLimits.readMs)]);
 
@@ -144,7 +142,7 @@ export async function validateBusinessWorkflow(task: TaskSpec, run: Pick<Dispatc
   if (manifest)
   {
     if (!port.CheckManifest)
-      fail('MANIFEST_UNAVAILABLE', '完整出口缺少真实全集合复核端口');
+      throw new Error('完整出口缺少真实全集合复核端口');
 
     const observed = await port.CheckManifest(manifest.manifest.snapshot, signal);
 
@@ -160,7 +158,7 @@ export async function validateBusinessWorkflow(task: TaskSpec, run: Pick<Dispatc
   signal.throwIfAborted();
 
   if (!Array.isArray(checks) || checks.length !== files.length)
-    fail('WORKFLOW_VALIDATION_STALE', '验证产物未返回完整文件复核结果');
+    throw new Error('验证产物未返回完整文件复核结果');
 
   for (let index = 0; index < files.length; index++)
   {
@@ -169,6 +167,6 @@ export async function validateBusinessWorkflow(task: TaskSpec, run: Pick<Dispatc
       expected = { byteLength: file.byteLength, sha256: file.sha256 };
 
     if (!parsed.success || parsed.data.relativePath !== file.relativePath || parsed.data.state !== 'matches' || !sameGoalValue(parsed.data.expected, expected) || !sameGoalValue(parsed.data.observed, expected))
-      fail('WORKFLOW_VALIDATION_STALE', '验证后的文件已变化、缺失或无法核实，请重新执行验证');
+      throw new Error('验证后的文件已变化、缺失或无法核实，请重新执行验证');
   }
 }

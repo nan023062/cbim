@@ -9,7 +9,7 @@ import {effectObservationReportSchema,effectDispositionReceiptSchema} from '../.
 import {originalPersistentWrite,persistentWriteIdentity} from '../../../../../src/logic/tasks/rules/persistent-write-input';
 import {observePersistentWrite} from '../../../../../src/logic/evidence/service/persistent-effect-reader';
 import {preparePersistentEffect,verifyPersistentEffectOriginal} from './support/persistent-effect-fixture';
-import {hash} from '../../../../../src/core/platform/node/serialization';
+import {hash} from '../../../../../src/core/io/serialization';
 
 it.each(['observe','propose','ownership'] as const)('真实 Pi %s 保存后丢回包：原失败保留、原命令可核实，处置和重开不重放',async mode=>{
  const f=await fixture();let app=f.app,source:Awaited<ReturnType<typeof preparePersistentEffect>>|undefined;

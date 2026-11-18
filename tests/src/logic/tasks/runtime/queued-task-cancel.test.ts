@@ -4,7 +4,7 @@ import path from 'node:path';
 import {fixture} from '../../application/support/helpers';
 import {request} from '../../knowledge/rules/data/knowledge';
 import {seedTeam} from '../../knowledge/service/support/team-fixture';
-import {json} from '../../../../../src/core/platform/node/serialization';
+import {json} from '../../../../../src/core/io/serialization';
 import {cancelQueuedTasksInputSchema} from '../../../../../src/logic/tasks/rules/queued-task-cancel';
 import {queuedCancellationSelection} from '../../../../../src/logic/tasks/rules/queued-task-cancel-rules';
 import {FileDispatchStore} from '../../../../../src/logic/dispatch/storage/dispatch-store';

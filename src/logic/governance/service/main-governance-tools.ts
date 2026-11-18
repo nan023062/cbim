@@ -9,8 +9,6 @@ import { checkedConversationAgentBinding, type ConversationAgentBinding } from '
 
 import { safeId } from '../../execution/ports/identity';
 
-import { fail, Fault } from '../../../core/errors';
-
 import { moduleGovernanceMainOriginSchema } from '../rules/module-governance';
 
 import { moduleGovernanceMainCommandId } from '../rules/module-governance-rules';
@@ -28,7 +26,7 @@ export function mainGovernanceTools(workspace: Workspace, task: TaskSpec, runId:
     publicIdentity = { workspaceId: identity.workspaceId, rootSessionId: main.rootSessionId };
 
   if (main.workspaceId !== identity.workspaceId || task.root !== workspace.entry.path)
-    fail('GOVERNANCE_IDENTITY', '治理工具与实际主运行工作区不一致');
+    throw new Error('治理工具与实际主运行工作区不一致');
 
   const current = (signal: AbortSignal) => { signal.throwIfAborted(); workspace.Assert(identity) };
 
@@ -56,15 +54,15 @@ export function mainGovernanceTools(workspace: Workspace, task: TaskSpec, runId:
       const receipt = projectGovernanceReceipt(result, publicIdentity, commandId);
 
       if (receipt.status !== 'recorded')
-        fail('GOVERNANCE_UNKNOWN', '治理写入未得到可核实回执');
+        throw new Error('治理写入未得到可核实回执');
 
       return receipt;
     }
     catch (error)
     {
-      const code = error instanceof Fault ? error.code : signal.aborted ? 'GOVERNANCE_CANCELLED' : 'GOVERNANCE_UNKNOWN';
+      const code = signal.aborted ? 'GOVERNANCE_CANCELLED' : 'GOVERNANCE_UNKNOWN';
 
-      fail(code, `治理${action === 'observe' ? '观察' : '提案'}未交付可核实结果；原 commandId=${commandId}。操作可能已保存，只查询原回执，不自动重试或新建命令。`);
+      throw new Error(`治理${action === 'observe' ? '观察' : '提案'}未交付可核实结果；原 commandId=${commandId}。操作可能已保存，只查询原回执，不自动重试或新建命令。`);
     }
   };
 

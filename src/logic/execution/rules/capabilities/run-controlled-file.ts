@@ -11,9 +11,7 @@ import { isDeepStrictEqual as equal } from 'node:util';
 
 import { zodToJsonSchema } from 'zod-to-json-schema';
 
-import { hash } from '../../../../core/platform/node/serialization';
-
-import { fail } from '../../../../core/errors';
+import { hash } from '../../../../core/io/serialization';
 
 import { checkedJsonToolResult } from '../../../tools/rules/results';
 
@@ -161,7 +159,7 @@ export class RunControlledFile
   AssertVerified()
   {
     if (this.unverified.size)
-      fail('CONTROLLED_FILE_REVIEW_REQUIRED', '原受控写结果待核实，本轮不能提交交付或安全交接')
+      throw new Error('原受控写结果待核实，本轮不能提交交付或安全交接')
   }
 
   Stop()
@@ -180,7 +178,7 @@ export class RunControlledFile
     }
     catch
     {
-      fail('CONTROLLED_FILE_DRAIN_PENDING', '文件进程尚未确认退出，请保留工作区并核实原操作')
+      throw new Error('文件进程尚未确认退出，请保留工作区并核实原操作')
     }
   }
 
@@ -192,13 +190,13 @@ export class RunControlledFile
   async Call(name: string, raw: unknown, id?: string, signal?: AbortSignal)
   {
     if (name !== controlledFileWriteToolName || !id)
-      fail('CONTROLLED_FILE_CALL', '受控写入缺少真实调用身份');
+      throw new Error('受控写入缺少真实调用身份');
 
     const input = controlledFileWriteInputSchema.parse(raw),
       reservation = this.reserved;
 
     if (!reservation || reservation.id !== id || reservation.consumed || !reservation.allowedSeq || !equal(input, reservation.input) || hash(JSON.stringify(raw)) !== reservation.inputHash)
-      fail('CONTROLLED_FILE_AUTHORIZATION', '受控写入没有本轮一次性可靠授权');
+      throw new Error('受控写入没有本轮一次性可靠授权');
 
     reservation.consumed = true;
 

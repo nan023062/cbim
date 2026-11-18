@@ -3,13 +3,11 @@
  * 设计原因：引擎策略不进入模型配置服务；复用该服务唯一设置队列、配置捕获与延迟解密，避免新增锁或再次读取造成快照漂移。
  * 职责边界：不保存模型、不管理引擎安装、不自动重试；缺省 engine 保持缺省，历史快照及其哈希不改写。
  */
-import { Fault, fail } from '../../../core/errors';
-
 import type { ResolvedLlm, ResolvedModelOperation } from '../../models';
 
 import type { LlmProfiles, ModelOperationReference } from '../../models/service';
 
-import { modelRoleSnapshotSchema, engineLabel, engineDescriptor, engineModelRequirement, additionalRoleOperations, type LoopEngine, type ResolvedEngineModel, type ModelRolesSelection, type ModelRolesSnapshot } from '../index';
+import { modelRoleSnapshotSchema, engineDescriptor, engineModelRequirement, additionalRoleOperations, type LoopEngine, type ResolvedEngineModel, type ModelRolesSelection, type ModelRolesSnapshot } from '../index';
 
 /** 明确供应商与模型身份；engine 缺省沿用旧 Pi 选型规则，但快照不补写该字段。 */
 export interface EngineModelReference
@@ -46,7 +44,7 @@ function operations(ref: EngineModelReference)
   }
   catch (error)
   {
-    fail('LLM_MODEL_ROLE', error instanceof Error ? error.message : '模型角色配置无效')
+    throw new Error(error instanceof Error ? error.message : '模型角色配置无效')
   }
 }
 
@@ -61,7 +59,7 @@ function snapshot(ref: EngineModelReference, profiles: readonly ResolvedModelOpe
   const primary = profiles[0];
 
   if (!primary || 'kind' in primary)
-    fail('LLM_MODEL_ROLE', '主模型必须支持生成操作');
+    throw new Error('主模型必须支持生成操作');
 
   const profile = profileForEngine(structuredClone(primary), ref.engine);
 
@@ -77,22 +75,6 @@ function snapshot(ref: EngineModelReference, profiles: readonly ResolvedModelOpe
   return profile;
 }
 
-/** 只翻译本层引擎接口错误，其他模型、存储、凭据和事务错误原样传播。 */
-async function selecting<T>(engine: LoopEngine | undefined, use: () => Promise<T>): Promise<T>
-{
-  try
-  {
-    return await use()
-  }
-  catch (error)
-  {
-    if (error instanceof Fault && error.code === 'LLM_CONNECTION_API')
-      fail('LLM_ENGINE_API', (engine === undefined ? '所选引擎' : engineLabel(engine)) + ' 没有可用的兼容接口，请在模型设置中配置该供应商的兼容接口');
-
-    throw error;
-  }
-}
-
 export class EngineModelProfiles
 {
   constructor(private readonly models: Pick<LlmProfiles, 'List' | 'Resolve' | 'Configuration' | 'WithModelOperations' | 'Test'>)
@@ -106,9 +88,12 @@ export class EngineModelProfiles
   }
 
   /** 执行准备时选择协议并取凭据；无显式模型时允许模型服务使用当前默认值，不保存该选择。 */
-  Resolve(id?: string, modelId?: string, engine?: LoopEngine, modelRoles?: ModelRolesSelection): Promise<ResolvedEngineModel>
+  async Resolve(id?: string, modelId?: string, engine?: LoopEngine, modelRoles?: ModelRolesSelection): Promise<ResolvedEngineModel>
   {
-    return selecting(engine ?? 'pi', async () => { if (modelRoles !== undefined) { if (!id || !modelId) fail('LLM_REQUIRED', '多模型执行必须明确指定主模型'); return this.WithRuntimeConfiguration({ profileId: id, modelId, engine, modelRoles }, async locked => locked.Resolve()) } operations({ profileId: id ?? '', modelId: modelId ?? '', engine }); const resolved = await this.models.Resolve(id, modelId, requirement(engine)); return { ...resolved, profile: profileForEngine(resolved.profile, engine) }; });
+    if (modelRoles !== undefined) { if (!id || !modelId) throw new Error('多模型执行必须明确指定主模型'); return this.WithRuntimeConfiguration({ profileId: id, modelId, engine, modelRoles }, async locked => locked.Resolve()) }
+    operations({ profileId: id ?? '', modelId: modelId ?? '', engine });
+    const resolved = await this.models.Resolve(id, modelId, requirement(engine));
+    return { ...resolved, profile: profileForEngine(resolved.profile, engine) };
   }
 
   /** 岗位登记读取明确模型的公开快照；不解密、不联网，也不保证运行时凭据有效。 */
@@ -122,7 +107,8 @@ export class EngineModelProfiles
   {
     const fixed = structuredClone(refs);
 
-    return selecting(undefined, () => { const grouped = fixed.map(references); return this.models.WithModelOperations(grouped.flat(), async locked => { let offset = 0; const profiles = fixed.map((ref, index) => { const values = locked.profiles.slice(offset, offset + grouped[index].length); offset += grouped[index].length; return snapshot(ref, values) }); return use(profiles) }); });
+    const grouped = fixed.map(references);
+    return this.models.WithModelOperations(grouped.flat(), async locked => { let offset = 0; const profiles = fixed.map((ref, index) => { const values = locked.profiles.slice(offset, offset + grouped[index].length); offset += grouped[index].length; return snapshot(ref, values) }); return use(profiles) });
   }
 
   /** 领取事务中的引擎投影；延迟凭据解析只在 use 回调内有效，启动引擎应等事务与锁释放。 */
@@ -130,7 +116,7 @@ export class EngineModelProfiles
   {
     const fixed = structuredClone(ref);
 
-    return selecting(fixed.engine ?? 'pi', () => this.models.WithModelOperations(references(fixed), async locked =>
+    return this.models.WithModelOperations(references(fixed), async locked =>
     {
       let resolved: ResolvedEngineModel | undefined;
 
@@ -148,12 +134,12 @@ export class EngineModelProfiles
           return resolved = { profile: snapshot(fixed, [primary.profile, ...extra.map(role => role.value.profile)]), apiKey: primary.apiKey, ...(fixed.modelRoles === undefined ? {} : { modelRoles: Object.fromEntries(extra.map(role => [role.slot, role.value])) }) };
         }
       });
-    }));
+    });
   }
 
   /** 保留现有按引擎诊断接口；HTTP 请求、凭据和响应校验仍由模型服务负责。 */
-  Test(id: string, modelId?: string, engine: LoopEngine = 'pi')
+  async Test(id: string, modelId?: string, engine: LoopEngine = 'pi')
   {
-    return selecting(engine, async () => ({ ...await this.models.Test(id, modelId, requirement(engine)), engine }));
+    return ({ ...await this.models.Test(id, modelId, requirement(engine)), engine });
   }
 }

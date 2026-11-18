@@ -3,8 +3,6 @@
  * 设计原因：任务创建顺序不代表依赖顺序；只允许收紧尚未执行任务的等待条件，并保持原角色、模块和 Workflow 基线。
  * 职责边界：纯规则不读知识或模型日志；服务在同一派发事务内另行准备并复核知识和停止状态。
  */
-import { fail } from '../../../core/errors';
-
 import type { DispatchState } from '../../dispatch/rules/dispatch-storage';
 
 import type { GraphIdentity } from './graph-types';
@@ -20,7 +18,7 @@ import { sameWorkflowSelectionsForModules } from './workflow-selection';
 function check(value: unknown, code: string, message: string): asserts value
 {
   if (!value)
-    fail(code, message)
+    throw new Error(message)
 }
 
 const sameSet = (a: string[], b: string[]) => a.length === b.length && a.every(value => b.includes(value));

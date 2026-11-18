@@ -1,12 +1,14 @@
 import {expect,it} from 'vitest';
-import {parseJson} from '../../../src/core/json';
-import {Fault} from '../../../src/core/errors';
-import {JsonUtils} from '../../../src/core/utility/index';
+import {parseJson} from '../../../src/logic/io-errors/json';
+import {JsonUtils} from '../../../src/core/io';
 
-it('Core 保留 JSON Fault 的 code、name 和原提示，不泄漏 utility 错误类型',()=>{
+it('严格 JSON 解析失败保留具体原因，并抛出原生 Error',()=>{
   for(const [text,message] of [['{','JSON 格式无效'],['{"a":1,"a":2}','重复 JSON 字段：a']]){
     try{parseJson(text);throw Error('expected parsing failure')}catch(error){
-      expect(error).toBeInstanceOf(Fault);expect(error).toMatchObject({code:'JSON',name:'JSON',message});
+      expect(Object.getPrototypeOf(error)).toBe(Error.prototype);
+      expect(error).toMatchObject({message});
+      expect(error).not.toHaveProperty('code');
+      expect(Object.hasOwn(error as Error,'name')).toBe(false);
     }
   }
   const text='{"list":[0,false,null,{"a":1}]}';expect(parseJson(text)).toEqual(JsonUtils.ParseStrictJson(text));

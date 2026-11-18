@@ -5,11 +5,9 @@
  * 职责边界：不读取文件或知识队列，不能自行证明 journal；调用者须在知识串行区提供真实事实。
  * 算法入口：通过 Core JsonUtils 静态方法复用机制，本文件继续拥有原业务策略。
  */
-import { JsonUtils } from '../../../core/utility';
+import { JsonUtils } from '../../../core/io';
 
-import { hash } from '../../../core/platform/node/serialization';
-
-import { fail } from '../../../core/errors';
+import { hash } from '../../../core/io/serialization';
 
 import { knowledgeSourceChangeSchema, knowledgeSourceLimits, knowledgeSourceKey, sameKnowledgeSourceKey, type KnowledgeSourceKey, type KnowledgeSourceRef, type KnowledgeSourceGeneration, type KnowledgeSourceChange, type KnowledgeSourceTransition, type KnowledgeSourceCursor, type KnowledgeSourceObservation, type SourceSelection, type KnowledgeSourceReceipt, type KnowledgeSourceCapture, type KnowledgeSourceReadState, type CapabilitySourceRef } from './knowledge-source';
 
@@ -41,7 +39,7 @@ const bytes = (value: unknown) => new TextEncoder().encode(JSON.stringify(value)
 function check(value: unknown, message: string, code = 'SOURCE_AUDIT'): asserts value
 {
   if (!value)
-    fail(code, message)
+    throw new Error(message)
 }
 
 /** 只返回身份，不把当前退休状态或捕获时钟复制进消费者固定引用。 */

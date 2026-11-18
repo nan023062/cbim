@@ -12,9 +12,7 @@ import { isDeepStrictEqual as equal } from 'node:util';
 
 import { zodToJsonSchema } from 'zod-to-json-schema';
 
-import { hash } from '../../../../core/platform/node/serialization';
-
-import { fail } from '../../../../core/errors';
+import { hash } from '../../../../core/io/serialization';
 
 import { checkedJsonToolResult } from '../../../tools/rules/results';
 
@@ -71,7 +69,7 @@ export class RunScopedExecution
     this.scope = structuredClone(scope);
 
     if (!equal(scope, port.scope))
-      fail('EXECUTION_SCOPE_PORT', '平台与原冻结范围不一致')
+      throw new Error('平台与原冻结范围不一致')
   }
 
   Guard(name: string, id: string, input: unknown, active: readonly string[]): string | undefined
@@ -157,7 +155,7 @@ export class RunScopedExecution
     }
     catch
     {
-      fail('EXECUTION_SCOPE_DRAIN_PENDING', '原隔离资源尚未确认退出与清理，请保留运行占用并核实')
+      throw new Error('原隔离资源尚未确认退出与清理，请保留运行占用并核实')
     }
   }
 
@@ -176,7 +174,7 @@ export class RunScopedExecution
     const r = this.reserved;
 
     if (!id || !r || r.id !== id || r.name !== name || r.consumed || !r.allowedSeq || !equal(input, r.input) || hash(JSON.stringify(input)) !== r.hash)
-      fail('EXECUTION_SCOPE_AUTHORIZATION', '范围工具缺少原调用的一次可靠授权');
+      throw new Error('范围工具缺少原调用的一次可靠授权');
 
     r.consumed = true;
 

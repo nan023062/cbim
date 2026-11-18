@@ -45,8 +45,6 @@ import { knowledgeTools } from '../../tools/runtime/knowledge-tools';
 
 import { assertLegacyWorkflowCompatible, loopInstructions } from '../context/team-workflow';
 
-import { fail } from '../../../core/errors';
-
 import { mainInstructions, collaborationInstructions, agentToolInstructions } from '../../conversation/runtime/main-agent';
 
 import { agentCallToolName, agentListToolName, agentReplyToolName, type Agent, type AgentToolContext, type AgentToolsBinding, type AgentCallReference } from '../../agents';
@@ -402,14 +400,14 @@ export async function createWorkspaceLoop(paths: Paths, owner: KnowledgeWorkspac
     if (call.name.startsWith('cbim_scoped_'))
     {
       if (!services.member || !executionScope || !services.scopedExecution)
-        fail('EXECUTION_SCOPE_UNAVAILABLE', '本轮未装配范围工具');
+        throw new Error('本轮未装配范围工具');
 
       if (call.name === scopedReadToolName)
       {
         const input = scopedReadInputSchema.parse(call.input);
 
         if (!executionScopeCovers(executionScope.read, input.path))
-          fail('EXECUTION_SCOPE_DENIED', '读取超出冻结范围');
+          throw new Error('读取超出冻结范围');
 
         return { effects: ['read'], native: false, contractVersion: 1 }
       }
@@ -419,26 +417,26 @@ export async function createWorkspaceLoop(paths: Paths, owner: KnowledgeWorkspac
         const input = scopedNodeInputSchema.parse(call.input);
 
         if (!executionScope.node || input.files.some(file => !executionScopeCovers(executionScope.read, file)))
-          fail('EXECUTION_SCOPE_DENIED', '执行超出冻结范围');
+          throw new Error('执行超出冻结范围');
 
         return { effects: ['command'], native: false, contractVersion: 1 }
       }
 
-      fail('EXECUTION_SCOPE_UNAVAILABLE', '未注册的范围工具')
+      throw new Error('未注册的范围工具')
     }
 
     if (executionScope && nativeToolDescriptor(call.name))
-      fail('EXECUTION_SCOPE_NATIVE', '范围模式禁止原生文件与命令工具');
+      throw new Error('范围模式禁止原生文件与命令工具');
 
     if (call.name === controlledFileWriteToolName)
     {
       if (!services.member || !services.controlledFiles)
-        fail('CONTROLLED_PLATFORM_UNSUPPORTED', '本轮未装配受控写入');
+        throw new Error('本轮未装配受控写入');
 
       const input = controlledFileWriteInputSchema.parse(call.input);
 
       if (executionScope && !executionScopeCovers(executionScope.write, input.path))
-        fail('EXECUTION_SCOPE_DENIED', '写入超出冻结范围');
+        throw new Error('写入超出冻结范围');
 
       return { effects: ['business-write'], native: false, scope: { kind: 'workspace', workspaceId: workspace.id } }
     }
@@ -446,7 +444,7 @@ export async function createWorkspaceLoop(paths: Paths, owner: KnowledgeWorkspac
     if (call.name === artifactTransitionToolName)
     {
       if (!services.member || !services.artifactTransitions)
-        fail('ARTIFACT_TRANSITION_UNAVAILABLE', '本轮未装配真实删除/移动');
+        throw new Error('本轮未装配真实删除/移动');
 
       artifactTransitionInputSchema.parse(call.input);
 
@@ -573,7 +571,7 @@ export async function createWorkspaceLoop(paths: Paths, owner: KnowledgeWorkspac
     NormalizeToolInput: call => service.Has(call.name) ? service.NormalizeInput(call.name, call.input) : call.input,
     storage: services.storage,
     directory: path.join(directory, 'tasks'),
-    AcquireLease: async task => { if (!services.member && task.mode !== 'chat') fail('OWNER_DISPATCH_REQUIRED', '业务执行必须由主调度按模块负责人正式派发'); if (task.workspaceId !== workspace.id || task.root !== workspace.path) throw Error('任务与工作区身份不匹配'); if (!services.member) assertLegacyWorkflowCompatible(task); return services.AcquireLease(task); },
+    AcquireLease: async task => { if (!services.member && task.mode !== 'chat') throw new Error('业务执行必须由主调度按模块负责人正式派发'); if (task.workspaceId !== workspace.id || task.root !== workspace.path) throw Error('任务与工作区身份不匹配'); if (!services.member) assertLegacyWorkflowCompatible(task); return services.AcquireLease(task); },
     CreateEngine: context =>
     {
       dispatch = services.member || services.AgentTools ? undefined : services.DispatchTools?.(context);

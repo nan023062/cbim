@@ -3,8 +3,6 @@
  * 作用定位：同一已打开工作区内，主会话与独立成员共享的执行占用协调器。
  * 设计原因：主调度与执行成员是独立实例，各实例串行；不同实例只读可并行，写入或可能获批写入的运行独占工作区。同一主运行内部的证据核实可派生读占用，不能误与自身独占冲突；跨进程排他由工作区内核锁负责。
  */
-import { fail } from '../../../core/errors';
-
 import type { ChatPermission } from '../../tools/rules/policy/types';
 
 /** 由工作区装配方共享的进程内协调器；只控制已接入运行，不限制外部程序对文件的访问。 */
@@ -46,10 +44,10 @@ export class WorkspaceExecutionLease
     const reason = this.CanAcquire(runKey, permission, agentInstanceId);
 
     if (reason === 'agent_busy')
-      fail('MEMBER_BUSY', '该成员实例正在执行其他任务，请等待当前运行结束');
+      throw new Error('该成员实例正在执行其他任务，请等待当前运行结束');
 
     if (reason === 'workspace_conflict')
-      fail('WORKSPACE_EXECUTION_BUSY', '工作区有冲突运行，请等待结束后启动；不同实例的只读任务可以并行');
+      throw new Error('工作区有冲突运行，请等待结束后启动；不同实例的只读任务可以并行');
 
     return this.Hold(runKey, permission, agentInstanceId);
   }
@@ -64,7 +62,7 @@ export class WorkspaceExecutionLease
       return this.Acquire(runKey, 'read');
 
     if (this.leases.has(runKey) || [...this.leases].some(([key, lease]) => key !== ownerKey && lease.permission !== 'read'))
-      fail('WORKSPACE_EXECUTION_BUSY', '证据核实与其他工作区运行冲突');
+      throw new Error('证据核实与其他工作区运行冲突');
 
     return this.Hold(runKey, 'read');
   }

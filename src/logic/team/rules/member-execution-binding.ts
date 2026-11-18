@@ -5,7 +5,7 @@
  * 职责边界：不读文件、模型或凭据，不声明来源当前有效；旧缺省仅用于历史读取，新许可由领域规则核实。
  * 算法入口：通过 Core JsonUtils 静态方法复用机制，本文件继续拥有原业务策略。
  */
-import { JsonUtils } from '../../../core/utility';
+import { JsonUtils } from '../../../core/io';
 
 import { z } from 'zod';
 

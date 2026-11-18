@@ -7,9 +7,7 @@ import { randomUUID } from 'node:crypto';
 
 import { z } from 'zod';
 
-import { fail } from '../../../core/errors';
-
-import { hash, json } from '../../../core/platform/node/serialization';
+import { hash, json } from '../../../core/io/serialization';
 
 import { contextualMainCommand } from './main-command-request';
 
@@ -44,7 +42,7 @@ export class QueuedTaskCancelService
       context = contextSchema.safeParse({ ...identity, scopeId, runId, commandId });
 
     if (!parsed.success || !context.success)
-      fail('CANCEL_INPUT_INVALID', '撤销参数或主调度运行身份无效');
+      throw new Error('撤销参数或主调度运行身份无效');
 
     const input = parsed.data,
       fixed = context.data;
@@ -52,7 +50,7 @@ export class QueuedTaskCancelService
     this.owner.Assert();
 
     if (fixed.workspaceId !== this.owner.entry.id)
-      fail('GRAPH_IDENTITY_MISMATCH', '撤销目标不属于当前工作区');
+      throw new Error('撤销目标不属于当前工作区');
 
     const command = contextualMainCommand('dispatch.cancelQueued', fixed, input);
 

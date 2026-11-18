@@ -1,6 +1,6 @@
 import {expect,it,vi,afterEach} from 'vitest';
 import fs from 'node:fs/promises';
-import {hash} from '../../../../../src/core/platform/node/serialization';
+import {hash} from '../../../../../src/core/io/serialization';
 import {controlledFileOperation,controlledFilePhaseCommand,controlledFilePhaseReceipt,controlledFileIntentHash,fileCompensationReceipt} from '../../../../../src/logic/file-operations/rules/controlled-file-rules';
 import type {ControlledFileChange} from '../../../../../src/logic/file-operations/rules/controlled-file-event';
 import {storeFixture,writeIntent,phases,mutation,compensationIntent} from '../../file-operations/rules/support/controlled-file-core-fixture';

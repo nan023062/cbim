@@ -8,7 +8,7 @@ import { z } from 'zod';
 
 import { isDeepStrictEqual as equal } from 'node:util';
 
-import { hash } from '../../../core/platform/node/serialization';
+import { hash } from '../../../core/io/serialization';
 
 import { preparedArtifactTransitions, artifactScopeLimits, type ArtifactScopeBinding, type ArtifactTransitionDefinition } from '../../workspace/rules/artifact-scope';
 

@@ -1360,42 +1360,26 @@
       },
       "directory": "src/view/foundations/utility"
     },
+    "core/io": {
+      "roots": ["src/core/io/"],
+      "tests": {"unit": ["tests/src/core/io/bounded-bytes.test.ts", "tests/src/core/io/json-order.test.ts", "tests/src/core/io/json-text.test.ts", "tests/src/core/io/line-framer.test.ts", "tests/src/core/io/redaction.test.ts", "tests/src/core/io/strict-json.test.ts", "tests/src/core/io/io.test.ts", "tests/src/core/io/text-files.test.ts", "tests/src/core/io/digest.test.ts"], "contract": ["tests/src/core/io/utility-serialization-contract.test.ts"], "integration": ["tests/src/core/io/kernel-lock.test.ts"]},
+      "directory": "src/core/io"
+    },
     "core/utility": {
       "roots": [
         "src/core/utility/"
       ],
       "tests": {
         "unit": [
-          "tests/src/core/utility/bounded-bytes.test.ts",
           "tests/src/core/utility/graphs.test.ts",
           "tests/src/core/utility/in-flight.test.ts",
-          "tests/src/core/utility/json-order.test.ts",
-          "tests/src/core/utility/json-text.test.ts",
-          "tests/src/core/utility/line-framer.test.ts",
           "tests/src/core/utility/pending-requests.test.ts",
-          "tests/src/core/utility/redaction.test.ts",
-          "tests/src/core/utility/serial-queue.test.ts",
-          "tests/src/core/utility/strict-json.test.ts"
+          "tests/src/core/utility/serial-queue.test.ts"
         ],
         "contract": [],
         "integration": []
       },
       "directory": "src/core/utility"
-    },
-    "core/platform/node": {
-      "roots": [
-        "src/core/platform/node/"
-      ],
-      "tests": {
-        "unit": [
-          "tests/src/core/platform/node/digest.test.ts"
-        ],
-        "contract": [
-          "tests/src/core/platform/node/utility-serialization-contract.test.ts"
-        ],
-        "integration": []
-      },
-      "directory": "src/core/platform/node"
     },
     "logic/models": {
       "roots": [
@@ -1435,32 +1419,6 @@
       },
       "directory": "src/logic/models/service"
     },
-    "core/platform/node/files": {
-      "roots": [
-        "src/core/platform/node/files/"
-      ],
-      "tests": {
-        "unit": [
-          "tests/src/core/platform/node/files/files.test.ts"
-        ],
-        "contract": [],
-        "integration": []
-      },
-      "directory": "src/core/platform/node/files"
-    },
-    "core/errors": {
-      "roots": [
-        "src/core/errors.ts"
-      ],
-      "tests": {
-        "unit": [
-          "tests/src/core/errors.test.ts"
-        ],
-        "contract": [],
-        "integration": []
-      },
-      "directory": "src/core"
-    },
     "logic/web/service": {
       "roots": [
         "src/logic/web/service/",
@@ -1484,29 +1442,17 @@
       ],
       "tests": {
         "unit": [
-          "tests/src/core/web/web-content.test.ts"
-        ],
-        "contract": [],
-        "integration": []
-      },
-      "directory": "src/core/web"
-    },
-    "core/platform/node/web": {
-      "roots": [
-        "src/core/platform/node/web/"
-      ],
-      "tests": {
-        "unit": [
-          "tests/src/core/platform/node/web/web-foundations.test.ts",
-          "tests/src/core/platform/node/web/web-page-reader.test.ts"
+          "tests/src/core/web/web-content.test.ts",
+          "tests/src/core/web/web-foundations.test.ts",
+          "tests/src/core/web/web-page-reader.test.ts"
         ],
         "contract": [],
         "integration": [
-          "tests/src/core/platform/node/web/web-browser-proxy.test.ts",
-          "tests/src/core/platform/node/web/web-http-transport.test.ts"
+          "tests/src/core/web/web-browser-proxy.test.ts",
+          "tests/src/core/web/web-http-transport.test.ts"
         ]
       },
-      "directory": "src/core/platform/node/web"
+      "directory": "src/core/web"
     },
     "logic/feedback": {
       "roots": [
@@ -1539,19 +1485,6 @@
         "integration": []
       },
       "directory": "src/logic/feedback/service"
-    },
-    "core/platform/node/locking": {
-      "roots": [
-        "src/core/platform/node/locking.ts"
-      ],
-      "tests": {
-        "unit": [],
-        "contract": [],
-        "integration": [
-          "tests/src/core/platform/node/kernel-lock.test.ts"
-        ]
-      },
-      "directory": "src/core/platform/node"
     },
     "logic/feedback/http": {
       "roots": [

@@ -6,8 +6,6 @@
  */
 import { safeId } from '../ports/identity';
 
-import { fail } from '../../../core/errors';
-
 import type { TaskSpec } from '../../tasks/rules/types';
 
 /** 主会话可信身份快照；不同主会话各有自己的主实例，角色名称相同不代表实例相同。 */
@@ -35,7 +33,7 @@ export interface ConversationAgentBinding
 export function checkedConversationAgentBinding(value: unknown, task: TaskSpec): ConversationAgentBinding
 {
   if (!value || typeof value !== 'object' || Array.isArray(value))
-    fail('CONVERSATION_IDENTITY', '主对话缺少固定实例身份');
+    throw new Error('主对话缺少固定实例身份');
 
   const binding = value as Record<string, unknown>;
 
@@ -44,28 +42,28 @@ export function checkedConversationAgentBinding(value: unknown, task: TaskSpec):
   const allowed = [...identifiers, 'teamId', 'agentId'];
 
   if (Object.keys(binding).some(key => !allowed.includes(key)))
-    fail('CONVERSATION_IDENTITY', '主对话实例身份包含未知字段');
+    throw new Error('主对话实例身份包含未知字段');
 
   for (const key of identifiers)
   {
     if (typeof binding[key] !== 'string')
-      fail('CONVERSATION_IDENTITY', '主对话实例标识必须为字符串');
+      throw new Error('主对话实例标识必须为字符串');
 
     // 根会话仍映射到旧聊天日志的 taskId 目录，沿用该目录标识限制。
     if (key === 'workspaceId' || key === 'rootSessionId')
       safeId(binding[key] as string);
     else if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/.test(binding[key] as string))
-      fail('CONVERSATION_IDENTITY', '主对话实例或通道标识无效');
+      throw new Error('主对话实例或通道标识无效');
   }
 
   if (typeof binding.teamId !== 'string' || !binding.teamId.trim() || binding.teamId.length > 512)
-    fail('CONVERSATION_IDENTITY', '主对话团队身份无效');
+    throw new Error('主对话团队身份无效');
 
   if (task.mode !== 'chat' || task.agentId !== 'cbim:main' || binding.agentId !== 'cbim:main')
-    fail('CONVERSATION_IDENTITY', '主对话实例绑定只适用于 cbim:main 普通对话');
+    throw new Error('主对话实例绑定只适用于 cbim:main 普通对话');
 
   if (binding.workspaceId !== task.workspaceId || binding.rootSessionId !== task.taskId)
-    fail('CONVERSATION_IDENTITY', '主对话实例绑定与工作区或根会话不一致');
+    throw new Error('主对话实例绑定与工作区或根会话不一致');
 
   return structuredClone(value) as ConversationAgentBinding;
 }

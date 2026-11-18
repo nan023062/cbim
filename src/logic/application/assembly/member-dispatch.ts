@@ -69,8 +69,6 @@ import { artifactTransitionPaths } from '../../workspace/rules/artifact-scope';
 
 import { safeId } from '../../execution/ports/identity';
 
-import { fail } from '../../../core/errors';
-
 import { admissionRequestId, acquireExecutionLease, type WorkspaceAdmission } from './execution-admission';
 
 import type { ScopeBudgetPolicy } from '../../budget/rules/scope-budget';
@@ -146,12 +144,12 @@ export function createMemberServices(workspace: Workspace, models: EngineModelPr
   const normalizeArtifact = (raw: string) => normalizeArtifactPath(workspace.entry.path, raw);
 
   /** 主/成员的权威运行日志只在后端读取；不能以公开摘要或模型传来的“成功”替代。 */
-  const inspectMember = async (run: BusinessRunSource) => { workspace.Assert(); const summary = await storage.Read(path.join(run.protocol === 'agent-tools-v1' ? path.join(workspace.paths.Project(workspace.entry.id), 'loop-engine') : runsDirectory, 'tasks', safeId(run.binding.taskId), safeId(run.binding.runId))); if (summary.task.workspaceId !== workspace.entry.id || summary.task.root !== workspace.entry.path) fail('MEMBER_LOG_IDENTITY', '成员运行记录属于其他工作区'); if (JSON.stringify(summary.memberBinding) !== JSON.stringify(run.binding)) fail('MEMBER_LOG_IDENTITY', '成员运行日志与已保存的执行绑定不一致'); return summary; };
+  const inspectMember = async (run: BusinessRunSource) => { workspace.Assert(); const summary = await storage.Read(path.join(run.protocol === 'agent-tools-v1' ? path.join(workspace.paths.Project(workspace.entry.id), 'loop-engine') : runsDirectory, 'tasks', safeId(run.binding.taskId), safeId(run.binding.runId))); if (summary.task.workspaceId !== workspace.entry.id || summary.task.root !== workspace.entry.path) throw new Error('成员运行记录属于其他工作区'); if (JSON.stringify(summary.memberBinding) !== JSON.stringify(run.binding)) throw new Error('成员运行日志与已保存的执行绑定不一致'); return summary; };
 
   const checkpointPorts = { Inspect: inspectMember, NormalizePath: normalizeArtifact, CheckFiles: artifactFiles.CheckFiles.bind(artifactFiles), NativeFingerprint: nativeFingerprint };
 
   // 递归身份只登记真实父调用，不加入旧派工图；源日志位置由协议固定。
-  const businessRuns = new AgentBusinessRuns(store, () => { workspace.Assert(); if (admission && !admission.IsCurrent()) fail('AGENT_RUN_STOPPED', '工作区正在停止') }, async (taskId, runId) => { workspace.Assert(); const summary = await storage.Read(path.join(workspace.paths.Project(workspace.entry.id), 'loop-engine', 'tasks', safeId(taskId), safeId(runId))); if (summary.task.workspaceId !== workspace.entry.id || summary.task.root !== workspace.entry.path) fail('AGENT_RUN_IDENTITY', '父调用日志属于其他工作区'); return summary; });
+  const businessRuns = new AgentBusinessRuns(store, () => { workspace.Assert(); if (admission && !admission.IsCurrent()) throw new Error('工作区正在停止') }, async (taskId, runId) => { workspace.Assert(); const summary = await storage.Read(path.join(workspace.paths.Project(workspace.entry.id), 'loop-engine', 'tasks', safeId(taskId), safeId(runId))); if (summary.task.workspaceId !== workspace.entry.id || summary.task.root !== workspace.entry.path) throw new Error('父调用日志属于其他工作区'); return summary; });
 
   const controlledFiles = new ControlledFiles(workspace, store, lease, controlledTransport, inspectMember, () => admission?.IsCurrent() ?? true);
 
@@ -159,13 +157,13 @@ export function createMemberServices(workspace: Workspace, models: EngineModelPr
 
   // 用量读取单独核对递归路径；父子来源归统计服务核实，不放宽主运行证据端口。
   const dispatch = new WorkspaceDispatchService(workspace, store, {
-    InspectMember: inspectMember, InspectAgent: async (taskId, runId) => { workspace.Assert(); const summary = await storage.Read(path.join(workspace.paths.Project(workspace.entry.id), 'loop-engine', 'tasks', safeId(taskId), safeId(runId))); if (summary.task.workspaceId !== workspace.entry.id || summary.task.root !== workspace.entry.path || summary.task.taskId !== taskId || summary.runId !== runId) fail('MEMBER_LOG_IDENTITY', '递归运行日志不属于当前工作区或调用'); return summary; }, NormalizeValidationPath: normalizeArtifact, CheckValidationFiles: (files, signal) => artifactFiles.CheckFiles(files, signal), CheckManifest: (snapshot, signal) => manifestFiles.Check(snapshot, signal), InspectMain: async (rootSessionId, runId) => { workspace.Assert(); const summary = await storage.Read(path.join(workspace.paths.Project(workspace.entry.id), 'loop-engine', 'tasks', safeId(rootSessionId), safeId(runId))); if (summary.task.workspaceId !== workspace.entry.id || summary.task.root !== workspace.entry.path || summary.task.taskId !== rootSessionId || summary.runId !== runId || summary.task.agentId !== 'cbim:main') throw Error('主调度证据不属于当前会话或运行'); return summary; }
+    InspectMember: inspectMember, InspectAgent: async (taskId, runId) => { workspace.Assert(); const summary = await storage.Read(path.join(workspace.paths.Project(workspace.entry.id), 'loop-engine', 'tasks', safeId(taskId), safeId(runId))); if (summary.task.workspaceId !== workspace.entry.id || summary.task.root !== workspace.entry.path || summary.task.taskId !== taskId || summary.runId !== runId) throw new Error('递归运行日志不属于当前工作区或调用'); return summary; }, NormalizeValidationPath: normalizeArtifact, CheckValidationFiles: (files, signal) => artifactFiles.CheckFiles(files, signal), CheckManifest: (snapshot, signal) => manifestFiles.Check(snapshot, signal), InspectMain: async (rootSessionId, runId) => { workspace.Assert(); const summary = await storage.Read(path.join(workspace.paths.Project(workspace.entry.id), 'loop-engine', 'tasks', safeId(rootSessionId), safeId(runId))); if (summary.task.workspaceId !== workspace.entry.id || summary.task.root !== workspace.entry.path || summary.task.taskId !== rootSessionId || summary.runId !== runId || summary.task.agentId !== 'cbim:main') throw Error('主调度证据不属于当前会话或运行'); return summary; }
   }, budgetPolicy, {
-    NormalizePath: normalizeArtifact, CheckFiles: (files, signal) => artifactFiles.CheckFiles(files, signal), CheckManifest: (snapshot, signal) => manifestFiles.Check(snapshot, signal), AcquireRead: () => { workspace.Assert(); return lease.Acquire('human-decision:' + randomUUID(), 'read') }, AcquireMainRead: rootSessionId => { workspace.Assert(); return lease.AcquireReadWithin('human-evidence:' + randomUUID(), 'conversation:' + safeId(rootSessionId)) }, AssertCurrent: () => { workspace.Assert(); if (admission && !admission.IsCurrent()) fail('HUMAN_UNAVAILABLE', '工作区正在停止，未保存新的人工决定') }
+    NormalizePath: normalizeArtifact, CheckFiles: (files, signal) => artifactFiles.CheckFiles(files, signal), CheckManifest: (snapshot, signal) => manifestFiles.Check(snapshot, signal), AcquireRead: () => { workspace.Assert(); return lease.Acquire('human-decision:' + randomUUID(), 'read') }, AcquireMainRead: rootSessionId => { workspace.Assert(); return lease.AcquireReadWithin('human-evidence:' + randomUUID(), 'conversation:' + safeId(rootSessionId)) }, AssertCurrent: () => { workspace.Assert(); if (admission && !admission.IsCurrent()) throw new Error('工作区正在停止，未保存新的人工决定') }
   }, models, { Inspect: inspectMember, NormalizePath: normalizeArtifact }, {
-    InspectMember: inspectMember, ObserveKnowledge: (reference, signal) => observeKnowledgeTransaction(workspace, reference, signal), ObservePersistent: (reference, signal) => observePersistentWrite(workspace, reference, signal), ObserveControlled: async (input, signal) => { signal?.throwIfAborted(); const value = await controlledFiles.Report(input); signal?.throwIfAborted(); return value }, NormalizePath: normalizeArtifact, ObserveFiles: (paths, signal) => artifactFiles.ObserveFiles(paths, signal), AcquireRead: () => { workspace.Assert(); return lease.Acquire('effect-observation:' + randomUUID(), 'read') }, AcquireMainRead: rootSessionId => { workspace.Assert(); return lease.AcquireReadWithin('effect-proof:' + randomUUID(), 'conversation:' + safeId(rootSessionId)) }, AssertCurrent: () => { workspace.Assert(); if (admission && !admission.IsCurrent()) fail('EFFECT_UNAVAILABLE', '工作区正在停止，未保存新的处置') }
+    InspectMember: inspectMember, ObserveKnowledge: (reference, signal) => observeKnowledgeTransaction(workspace, reference, signal), ObservePersistent: (reference, signal) => observePersistentWrite(workspace, reference, signal), ObserveControlled: async (input, signal) => { signal?.throwIfAborted(); const value = await controlledFiles.Report(input); signal?.throwIfAborted(); return value }, NormalizePath: normalizeArtifact, ObserveFiles: (paths, signal) => artifactFiles.ObserveFiles(paths, signal), AcquireRead: () => { workspace.Assert(); return lease.Acquire('effect-observation:' + randomUUID(), 'read') }, AcquireMainRead: rootSessionId => { workspace.Assert(); return lease.AcquireReadWithin('effect-proof:' + randomUUID(), 'conversation:' + safeId(rootSessionId)) }, AssertCurrent: () => { workspace.Assert(); if (admission && !admission.IsCurrent()) throw new Error('工作区正在停止，未保存新的处置') }
   }, {
-    ...checkpointPorts, AcquireRead: () => { workspace.Assert(); return lease.Acquire('member-pause:' + randomUUID(), 'read') }, AssertCurrent: () => { workspace.Assert(); if (admission && !admission.IsCurrent()) fail('GOAL_MEMBER_PAUSE_UNAVAILABLE', '工作区正在停止，原成员等待未消费') }
+    ...checkpointPorts, AcquireRead: () => { workspace.Assert(); return lease.Acquire('member-pause:' + randomUUID(), 'read') }, AssertCurrent: () => { workspace.Assert(); if (admission && !admission.IsCurrent()) throw new Error('工作区正在停止，原成员等待未消费') }
   });
 
   const requestBudgets = new ModelRequestBudgetService(workspace, requestBudgetStore(store), dispatch.budgets);
@@ -190,16 +188,16 @@ export function createMemberServices(workspace: Workspace, models: EngineModelPr
           topicGraph = checkpointState.graphs.find(graph => graph.identity.rootSessionId === run.binding.rootSessionId);
 
         if (run.topicContext && (!topic || !topicGraph))
-          fail('MEMBER_TOPIC_CONTEXT_IDENTITY', '原话题资料缺失，未启动成员');
+          throw new Error('原话题资料缺失，未启动成员');
 
         const topicContext = run.topicContext ? resolveMemberTopicContext(run.topicContext, task, topic!, topicGraph!) : undefined;
 
         if (run.resumeFrom && (!previous?.checkpointProof || previous.checkpointProof.checkpoint.checkpointId !== run.resumeFrom.checkpointId))
-          fail('MEMBER_CHECKPOINT_INVALID', '续执行缺少原检查点证明');
+          throw new Error('续执行缺少原检查点证明');
 
         const executionScope = preparedExecutionScope(run.prepared.modules.map(module => ({ contract: module.workflowContract })));
 
-        const scopedExecution = executionScope ? new ScopedExecutionFiles(workspace.entry.path, executionScope, () => { workspace.Assert(); if (admission && !admission.IsCurrent()) fail('EXECUTION_SCOPE_STOPPED', '工作区正在停止') }, [workspace.paths.userRoot, workspace.paths.installRoot, ...(workspace.paths.protectedRoots ?? [])], isolatedExecutions.ForRun(run, task.scopeId!, executionScope)) : undefined;
+        const scopedExecution = executionScope ? new ScopedExecutionFiles(workspace.entry.path, executionScope, () => { workspace.Assert(); if (admission && !admission.IsCurrent()) throw new Error('工作区正在停止') }, [workspace.paths.userRoot, workspace.paths.installRoot, ...(workspace.paths.protectedRoots ?? [])], isolatedExecutions.ForRun(run, task.scopeId!, executionScope)) : undefined;
 
         const runFiles = scopedExecution ? new ArtifactFiles(workspace.entry.path, () => workspace.Assert(), (file, signal) => scopedExecution.Snapshot(file, signal)) : artifactFiles;
 
@@ -209,7 +207,7 @@ export function createMemberServices(workspace: Workspace, models: EngineModelPr
 
         const transitions = createArtifactTransitionPort(workspace, controlledTransport, () => admission?.IsCurrent() ?? true);
 
-        const scopeWrite = (paths: string[]) => { if (executionScope && paths.some(file => !executionScopeCovers(executionScope.write, file))) fail('EXECUTION_SCOPE_DENIED', '写入超出原任务冻结范围') };
+        const scopeWrite = (paths: string[]) => { if (executionScope && paths.some(file => !executionScopeCovers(executionScope.write, file))) throw new Error('写入超出原任务冻结范围') };
 
         const runCheckpointPorts = { ...checkpointPorts, CheckFiles: runFiles.CheckFiles.bind(runFiles) };
 
@@ -259,10 +257,10 @@ export function createMemberServices(workspace: Workspace, models: EngineModelPr
     budgets: dispatch.budgets,
     IsCurrent: () => admission?.IsCurrent() ?? true,
     signal: admission?.signal,
-    Acquire: (key, permission, agentInstanceId, context) => { if (!context) { if (admission) fail('ADMISSION_IDENTITY', '成员准入缺少可信任务与命令身份'); return lease.Acquire('member:' + key, permission, agentInstanceId) } return acquireExecutionLease(lease, 'member:' + key, { workspaceId: workspace.entry.id, rootSessionId: context.task.identity.rootSessionId, taskId: context.task.taskId, scopeId: context.task.scopeId, requestId: admissionRequestId('member', context.commandId), agentInstanceId, source: context.wait ? 'member' : 'direct', workspacePermission: permission }, admission, context.wait); },
+    Acquire: (key, permission, agentInstanceId, context) => { if (!context) { if (admission) throw new Error('成员准入缺少可信任务与命令身份'); return lease.Acquire('member:' + key, permission, agentInstanceId) } return acquireExecutionLease(lease, 'member:' + key, { workspaceId: workspace.entry.id, rootSessionId: context.task.identity.rootSessionId, taskId: context.task.taskId, scopeId: context.task.scopeId, requestId: admissionRequestId('member', context.commandId), agentInstanceId, source: context.wait ? 'member' : 'direct', workspacePermission: permission }, admission, context.wait); },
     owners: dispatch.owners,
     Prepare: async options => prepareEngine(await models.Resolve(options.profileId, options.model), options),
-    WithEngineConfiguration: (model, options, use) => models.WithRuntimeConfiguration(model, async configuration => { workspace.Assert(); if (workspaceMemberModelHash(configuration.profile) !== model.configurationHash) fail('OWNER_MODEL_CHANGED', '岗位模型配置已变化，请明确采纳后重新规划'); return use({ model: configuration.profile, Prepare: () => prepareEngine(configuration.Resolve(), options) }); }),
+    WithEngineConfiguration: (model, options, use) => models.WithRuntimeConfiguration(model, async configuration => { workspace.Assert(); if (workspaceMemberModelHash(configuration.profile) !== model.configurationHash) throw new Error('岗位模型配置已变化，请明确采纳后重新规划'); return use({ model: configuration.profile, Prepare: () => prepareEngine(configuration.Resolve(), options) }); }),
     Inspect: inspectMember, InspectAgent: inspectMember,
   });
 

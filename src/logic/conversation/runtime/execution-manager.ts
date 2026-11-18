@@ -30,8 +30,6 @@ import { loopEngineSchema, modelRolesSelectionSchema } from '../../engines';
 
 import type { KnowledgeWorkspace } from '../../knowledge/rules/ports';
 
-import { fail, Fault } from '../../../core/errors';
-
 import { safeId } from '../../execution/ports/identity';
 
 import type { RunStorage } from '../../execution/rules/storage';
@@ -62,7 +60,7 @@ import { scopedActiveInputHash } from '../../tasks/rules/scope-active-input-rule
 
 import { sameGoalValue } from '../../tasks/rules/scope-goal';
 
-import { hash, json } from '../../../core/platform/node/serialization';
+import { hash, json } from '../../../core/io/serialization';
 
 import { assertContinuationAttachmentManifest, type ContinuationAttachmentManifest, type TrustedContinuationInput } from '../../tasks/rules/scope-continuation-attachments';
 
@@ -266,7 +264,7 @@ export class WorkspaceExecutionManager
 
   Enqueue(taskId: string, message: string, options: Options, followupOf?: string)
   {
-    return this.Serial(async () => { safeId(taskId); if (!message.trim()) throw Error('消息不能为空'); await this.Thread(taskId); if (followupOf !== undefined) { safeId(followupOf); if (!this.collaboration?.ValidateFollowup) fail('TOPIC_FOLLOWUP_UNAVAILABLE', '当前工作区未提供话题关联'); await this.collaboration.ValidateFollowup(taskId, followupOf) } const q = await this.Queue(); const parsed = executionOptions.parse(options); let manifest: ContinuationAttachmentManifest | undefined; if (parsed.attachmentIds?.length) { if (!this.prepareContinuationInput) fail('GOAL_ATTACHMENT_UNAVAILABLE', '当前宿主不能冻结排队附件'); const prepared = await this.prepareContinuationInput({ message, attachmentIds: parsed.attachmentIds }, new AbortController().signal); message = prepared.message; manifest = prepared.manifest } const entry = await q.Add(taskId, message, parsed, followupOf, manifest); await this.Pump(taskId); return entry })
+    return this.Serial(async () => { safeId(taskId); if (!message.trim()) throw Error('消息不能为空'); await this.Thread(taskId); if (followupOf !== undefined) { safeId(followupOf); if (!this.collaboration?.ValidateFollowup) throw new Error('当前工作区未提供话题关联'); await this.collaboration.ValidateFollowup(taskId, followupOf) } const q = await this.Queue(); const parsed = executionOptions.parse(options); let manifest: ContinuationAttachmentManifest | undefined; if (parsed.attachmentIds?.length) { if (!this.prepareContinuationInput) throw new Error('当前宿主不能冻结排队附件'); const prepared = await this.prepareContinuationInput({ message, attachmentIds: parsed.attachmentIds }, new AbortController().signal); message = prepared.message; manifest = prepared.manifest } const entry = await q.Add(taskId, message, parsed, followupOf, manifest); await this.Pump(taskId); return entry })
   }
 
   ChangeQueued(taskId: string, id: string, action: unknown)
@@ -305,7 +303,7 @@ export class WorkspaceExecutionManager
       }
       catch
       {
-        fail('QUEUE_INSERT_STALE', '缺少有效的原主运行标识，原消息仍保留在队列')
+        throw new Error('缺少有效的原主运行标识，原消息仍保留在队列')
       }
 
       const original = await this.collaboration?.ActiveInputReceipt?.(taskId, expectedRunId, id);
@@ -316,7 +314,7 @@ export class WorkspaceExecutionManager
           entry = queue.List(taskId).find(item => item.id === id);
 
         if (entry && scopedActiveInputHash({ message: entry.message, ...(entry.options.attachmentIds ? { attachmentIds: entry.options.attachmentIds } : {}), ...(entry.attachmentManifest ? { attachmentManifest: entry.attachmentManifest } : {}) }) !== original.inputHash)
-          fail('GOAL_ACTIVE_INPUT_CONFLICT', '原队列身份已绑定不同输入快照，不能重新发送');
+          throw new Error('原队列身份已绑定不同输入快照，不能重新发送');
 
         if (original.status === 'accepted')
         {
@@ -327,14 +325,14 @@ export class WorkspaceExecutionManager
         }
 
         if (original.status === 'rejected')
-          fail('QUEUE_INSERT_STOPPED', '原插入已明确未发送，消息仍保留在队列；请核实后编辑或另行发送');
+          throw new Error('原插入已明确未发送，消息仍保留在队列；请核实后编辑或另行发送');
 
-        fail('QUEUE_INSERT_UNKNOWN', '插入结果未确认，队列保持暂停，请先核实原运行记录，勿重复发送');
+        throw new Error('插入结果未确认，队列保持暂停，请先核实原运行记录，勿重复发送');
       }
 
       const active = this.active.get(taskId);
 
-      const assertCurrent = () => { if (this.closing || this.insertionsClosed || controller.signal.aborted || (this.stopVersions.get(taskId) ?? 0) !== stopVersion || this.resultContinuationStopped.has(taskId)) fail('QUEUE_INSERT_STOPPED', '当前运行已停止插入，原消息仍保留在队列'); this.workspace.Assert(); if (!active?.isMain || active.runId !== expectedRunId || this.active.get(taskId) !== active || this.collaboration?.Waiting?.(taskId)) fail('QUEUE_INSERT_STALE', '原主运行已结束或变化，原消息仍保留在队列'); };
+      const assertCurrent = () => { if (this.closing || this.insertionsClosed || controller.signal.aborted || (this.stopVersions.get(taskId) ?? 0) !== stopVersion || this.resultContinuationStopped.has(taskId)) throw new Error('当前运行已停止插入，原消息仍保留在队列'); this.workspace.Assert(); if (!active?.isMain || active.runId !== expectedRunId || this.active.get(taskId) !== active || this.collaboration?.Waiting?.(taskId)) throw new Error('原主运行已结束或变化，原消息仍保留在队列'); };
 
       assertCurrent();
 
@@ -343,7 +341,7 @@ export class WorkspaceExecutionManager
       assertCurrent();
 
       if (q.List(taskId).find(item => item.id === id)?.followupOf)
-        fail('TOPIC_FOLLOWUP_SEPARATE', '历史后续必须作为独立话题，不能插入原运行');
+        throw new Error('历史后续必须作为独立话题，不能插入原运行');
 
       let claimed = false,
         enteredRuntime = false;
@@ -396,12 +394,12 @@ export class WorkspaceExecutionManager
           }
           catch
           {
-            fail('QUEUE_INSERT_UNKNOWN', '插入或队列保存结果未确认，自动推进已停止，请先核实原运行记录，勿重复发送')
+            throw new Error('插入或队列保存结果未确认，自动推进已停止，请先核实原运行记录，勿重复发送')
           }
         }
 
         if (unknown)
-          fail('QUEUE_INSERT_UNKNOWN', '插入结果未确认，队列已暂停，请先核实原运行记录，勿重复发送');
+          throw new Error('插入结果未确认，队列已暂停，请先核实原运行记录，勿重复发送');
 
         throw error;
       }
@@ -417,19 +415,19 @@ export class WorkspaceExecutionManager
       return this.inputImages(entry.options.attachmentIds);
 
     if (!this.prepareContinuationInput)
-      fail('GOAL_ATTACHMENT_UNAVAILABLE', '当前宿主不能核实排队附件');
+      throw new Error('当前宿主不能核实排队附件');
 
     const prepared = await this.prepareContinuationInput({ message: '核实排队附件', attachmentIds: entry.options.attachmentIds }, signal);
 
     if (hash(json(prepared.manifest.items)) !== hash(json(entry.attachmentManifest.items)) || hash(entry.message) !== entry.attachmentManifest.expandedMessageHash || Buffer.byteLength(entry.message, 'utf8') !== entry.attachmentManifest.expandedMessageBytes)
-      fail('GOAL_ATTACHMENT_MANIFEST', '排队附件快照已变化，请重新添加');
+      throw new Error('排队附件快照已变化，请重新添加');
 
     return prepared.images;
   }
 
   ContinueQueue(taskId: string)
   {
-    return this.Serial(async () => { safeId(taskId); if (this.collaboration?.Waiting?.(taskId)) fail('GOAL_WAITING', '当前目标正在等待补充，继续队列不能恢复或验收该目标'); this.resultContinuationStopped.delete(taskId); await (await this.Queue()).Resume(taskId); this.queueAdvanceStopped.delete(taskId); await this.Pump(taskId) })
+    return this.Serial(async () => { safeId(taskId); if (this.collaboration?.Waiting?.(taskId)) throw new Error('当前目标正在等待补充，继续队列不能恢复或验收该目标'); this.resultContinuationStopped.delete(taskId); await (await this.Queue()).Resume(taskId); this.queueAdvanceStopped.delete(taskId); await this.Pump(taskId) })
   }
 
   /** 成功结束才自动续接；异常和未核实工具保留队列，等待用户显式处理。 */
@@ -595,7 +593,7 @@ export class WorkspaceExecutionManager
     const current = runs.filter(id => !excluded.has(id));
 
     if (context && !current.includes(context.initialRunId))
-      fail('MAIN_CONTEXT_INCOMPLETE', '新上下文启动记录缺失，请核实该周期，不能退回旧运行');
+      throw new Error('新上下文启动记录缺失，请核实该周期，不能退回旧运行');
 
     const summaries = await Promise.all(current.map(runId => this.Inspect(taskId, safeId(runId))));
 
@@ -606,22 +604,22 @@ export class WorkspaceExecutionManager
   private CheckedCurrentHistory(ids: string[], summaries: RunSummary[], context?: FreshContext)
   {
     if (ids.length !== summaries.length || new Set(ids).size !== ids.length)
-      fail('MAIN_CONTEXT_INCOMPLETE', '当前上下文存在无法读取的运行，不能回退');
+      throw new Error('当前上下文存在无法读取的运行，不能回退');
 
     if (context && !ids.includes(context.initialRunId))
-      fail('MAIN_CONTEXT_INCOMPLETE', '新上下文启动记录缺失，不能退回旧运行');
+      throw new Error('新上下文启动记录缺失，不能退回旧运行');
 
     for (const summary of summaries)
     {
       if (summary.logIntegrity?.partialTail)
-        fail('MAIN_CONTEXT_INCOMPLETE', '当前上下文存在不完整日志，不能续接或回退');
+        throw new Error('当前上下文存在不完整日志，不能续接或回退');
 
       if (context)
       {
         const native = summary.events.find(event => event.type === 'session.bound')?.data.sessionId;
 
         if (native !== undefined && native !== context.nativeSessionId)
-          fail('MAIN_CONTEXT_IDENTITY', '当前运行不属于已登记的新上下文');
+          throw new Error('当前运行不属于已登记的新上下文');
 
         if (summary.runId === context.initialRunId)
         {
@@ -633,7 +631,7 @@ export class WorkspaceExecutionManager
             } | undefined;
 
           if (!initial || initial.nativeSessionId !== context.nativeSessionId || !sameGoalValue(initial.excludedRunIds, context.excludedRunIds))
-            fail('MAIN_CONTEXT_IDENTITY', '新上下文初始运行与可靠意图不一致');
+            throw new Error('新上下文初始运行与可靠意图不一致');
         }
       }
     }
@@ -650,12 +648,12 @@ export class WorkspaceExecutionManager
         const successors = [...remaining].filter(run => run.events[0]?.data.resumeFrom === ordered.at(-1)!.runId);
 
         if (successors.length !== 1)
-          fail('MAIN_CONTEXT_IDENTITY', '新上下文运行链存在缺口或分叉，不能猜测续接头');
+          throw new Error('新上下文运行链存在缺口或分叉，不能猜测续接头');
 
         const next = successors[0];
 
         if (!sameGoalValue(next.task, first.task) || !sameGoalValue(next.conversationBinding, first.conversationBinding))
-          fail('MAIN_CONTEXT_IDENTITY', '新上下文运行链改变了主任务或实例绑定');
+          throw new Error('新上下文运行链改变了主任务或实例绑定');
 
         remaining.delete(next);
 
@@ -720,7 +718,7 @@ export class WorkspaceExecutionManager
   /** 新任务重新准备上下文，不接收调用方伪造的知识正文或任务身份。 */
   Start(_input: TeamTaskInput, _options: Options): Promise<{ workspaceId: string; taskId: string; runId: string }>
   {
-    return Promise.reject(new Fault('OWNER_DISPATCH_REQUIRED', '新业务必须由主调度按模块负责人正式派发；旧任务和历史记录保持可读'))
+    return Promise.reject(new Error('新业务必须由主调度按模块负责人正式派发；旧任务和历史记录保持可读'))
   }
 
   /** 普通对话由内置主 Agent 接待，不依赖团队注册表或知识结构通过校验。 */
@@ -733,18 +731,18 @@ export class WorkspaceExecutionManager
   private async Launch(task: TaskSpec, options: Options, message = task.goal, resume?: { runId: string; reconciledToolIds?: string[] }, source?: RunInputSource, automaticQueue: string | false = false, continuation?: GoalContinuationRequest, recovery?: RecoveryRequest, replan?: ReplanRequest, admissionWait?: ExecutionAdmissionWait, human?: HumanContinuationRequest, startup?: MainStartup, freshExecutionModel: 'agent-tools-v1' | 'legacy' = 'legacy')
   {
     if (task.mode !== 'chat')
-      fail('OWNER_DISPATCH_REQUIRED', '旧直接业务入口不能创建新执行轮，请由主调度重新规划派发');
+      throw new Error('旧直接业务入口不能创建新执行轮，请由主调度重新规划派发');
 
     if (recovery && replan)
-      fail('FRESH_MAIN_CONFLICT', '同一启动不能混合只读核实和业务重规划');
+      throw new Error('同一启动不能混合只读核实和业务重规划');
 
     const fresh = Boolean(recovery || replan);
 
     if (this.active.has(task.taskId))
-      fail('TASK_RUNNING', '任务正在执行');
+      throw new Error('任务正在执行');
 
     if (((source?.kind === 'member-results' || source?.kind === 'goal-repair') || automaticQueue) && this.resultContinuationStopped.has(task.taskId))
-      fail('COLLABORATION_STOPPED', '本会话已停止自动协作，请显式继续对话');
+      throw new Error('本会话已停止自动协作，请显式继续对话');
 
     const stopVersion = this.stopVersions.get(task.taskId) ?? 0;
 
@@ -776,7 +774,7 @@ export class WorkspaceExecutionManager
       if (continuation?.input.attachmentIds?.length)
       {
         if (!this.prepareContinuationInput)
-          fail('GOAL_ATTACHMENT_UNAVAILABLE', '当前运行未装配附件补充，请保留原请求并使用支持的工作区入口');
+          throw new Error('当前运行未装配附件补充，请保留原请求并使用支持的工作区入口');
 
         preparedInput = structuredClone(await this.prepareContinuationInput(structuredClone(continuation.input), controller.signal));
 
@@ -785,7 +783,7 @@ export class WorkspaceExecutionManager
         assertContinuationAttachmentManifest(continuation.input, preparedInput.manifest);
 
         if (typeof preparedInput.message !== 'string' || hash(preparedInput.message) !== preparedInput.manifest.expandedMessageHash || Buffer.byteLength(preparedInput.message, 'utf8') !== preparedInput.manifest.expandedMessageBytes || source?.kind !== 'user-continuation')
-          fail('GOAL_ATTACHMENT_MANIFEST', '附件正文与准备清单不一致，未消费等待');
+          throw new Error('附件正文与准备清单不一致，未消费等待');
 
         message = preparedInput.message;
 
@@ -795,7 +793,7 @@ export class WorkspaceExecutionManager
       controller.signal.throwIfAborted();
 
       if ((this.stopVersions.get(task.taskId) ?? 0) !== stopVersion)
-        fail('COLLABORATION_STOPPED', '附件准备期间已收到停止请求');
+        throw new Error('附件准备期间已收到停止请求');
 
       // 新用户对话与可信递归来源的 fresh 核实使用统一调用系统；旧日志及旧协议接续保持原所有者。
       const previousModel = resume ? (await this.Inspect(task.taskId, resume.runId)).events[0]?.data.executionModel : undefined;
@@ -807,31 +805,31 @@ export class WorkspaceExecutionManager
       }, structuredClone(task), { executionModel, requestId: source?.kind === 'member-results' || source?.kind === 'goal-repair' ? source.continuationId : randomUUID(), scopeId: admissionWait?.scopeId ?? human?.scopeId ?? continuation?.scopeId ?? recovery?.commandId ?? replan?.commandId, wait: admissionWait, signal: controller.signal, ...(preparedInput ? { preparedInputImages: preparedInput.images } : queuedImages ? { preparedInputImages: queuedImages } : {}) });
 
       if (loop.unifiedAgentTools && (executionModel !== 'agent-tools-v1' || !loop.agentLifecycle))
-        fail('AGENT_LIFECYCLE_UNAVAILABLE', '统一 Agent 调用缺少可信生命周期，未开始执行');
+        throw new Error('统一 Agent 调用缺少可信生命周期，未开始执行');
 
       controller.signal.throwIfAborted();
 
       if ((this.stopVersions.get(task.taskId) ?? 0) !== stopVersion)
-        fail('COLLABORATION_STOPPED', '启动期间已收到停止请求');
+        throw new Error('启动期间已收到停止请求');
 
       if (((source?.kind === 'member-results' || source?.kind === 'goal-repair') || automaticQueue) && this.resultContinuationStopped.has(task.taskId))
-        fail('COLLABORATION_STOPPED', '本会话已停止自动协作，请显式继续对话');
+        throw new Error('本会话已停止自动协作，请显式继续对话');
 
       if (automaticQueue && this.queueAdvanceStopped.has(task.taskId))
-        fail('QUEUE_INSERT_UNKNOWN', '旧队列插入或保存结果未确认，请先核实原运行记录，勿自动重发');
+        throw new Error('旧队列插入或保存结果未确认，请先核实原运行记录，勿自动重发');
 
       if (!source && !automaticQueue && !fresh)
         this.resultContinuationStopped.delete(task.taskId);
 
       if (this.closing || (this.stopVersions.get(task.taskId) ?? 0) !== stopVersion)
-        fail('COLLABORATION_STOPPED', '启动期间已收到停止请求');
+        throw new Error('启动期间已收到停止请求');
 
       const startOrdinary = (beforeRun: (context: { runId: string }) => Promise<void>) =>
       {
         const prepared = loop!;
 
         if (prepared.unifiedAgentTools && !prepared.agent)
-          fail('AGENT_OBJECT_UNAVAILABLE', '统一执行缺少已冻结 Agent 对象');
+          throw new Error('统一执行缺少已冻结 Agent 对象');
 
         // 主与子运行都直接使用 Runtime 的启动、取消和收尾，不另设循环生命周期。
         return prepared.runtime.Start(task, message, resume, source, { signal: controller.signal, BeforeRun: beforeRun });
@@ -848,14 +846,14 @@ export class WorkspaceExecutionManager
           if (recovery)
           {
             if (!this.collaboration?.AcceptRecovery)
-              fail('RECOVERY_UNAVAILABLE', '当前工作区未装配新核实周期');
+              throw new Error('当前工作区未装配新核实周期');
 
             await this.collaboration.AcceptRecovery(recovery, task, { ...context, signal: controller.signal });
           }
           else
           {
             if (!replan || !this.collaboration?.AcceptReplan)
-              fail('REPLAN_UNAVAILABLE', '当前工作区未装配正式业务重规划');
+              throw new Error('当前工作区未装配正式业务重规划');
 
             await this.collaboration.AcceptReplan(replan, task, { ...context, signal: controller.signal });
           }
@@ -915,7 +913,7 @@ export class WorkspaceExecutionManager
           controller.signal.throwIfAborted();
 
           if (!this.collaboration?.AcceptHumanContinuation)
-            fail('HUMAN_CONTINUATION_UNAVAILABLE', '当前工作区未装配人工决定接续');
+            throw new Error('当前工作区未装配人工决定接续');
 
           await this.collaboration.AcceptHumanContinuation(human, task, runId, controller.signal);
 
@@ -933,7 +931,7 @@ export class WorkspaceExecutionManager
           controller.signal.throwIfAborted();
 
           if (!this.collaboration?.AcceptContinuation)
-            fail('GOAL_CONTINUATION_UNAVAILABLE', '当前工作区未装配目标恢复');
+            throw new Error('当前工作区未装配目标恢复');
 
           await this.collaboration.AcceptContinuation(continuation, task, runId, { signal: controller.signal, ...(preparedInput ? { attachmentManifest: structuredClone(preparedInput.manifest) } : {}) });
 
@@ -1036,9 +1034,9 @@ export class WorkspaceExecutionManager
     // 在排队之前捕获，不让“请求已进入队列但尚未开始预检”的停止被当成下一次用户授权。
     const requestedAtStopVersion = this.stopVersions.get(request.rootSessionId) ?? 0;
 
-    const assertRequested = () => { if (this.closing || (this.stopVersions.get(request.rootSessionId) ?? 0) !== requestedAtStopVersion) fail('COLLABORATION_STOPPED', '核实请求准备期间已收到停止或关闭请求') };
+    const assertRequested = () => { if (this.closing || (this.stopVersions.get(request.rootSessionId) ?? 0) !== requestedAtStopVersion) throw new Error('核实请求准备期间已收到停止或关闭请求') };
 
-    return this.Serial(async () => { if (request.workspaceId !== this.workspace.entry.id) fail('IDENTITY', '新核实任务不属于当前工作区'); const hooks = this.collaboration; if (!hooks?.RecoveryReceipt || !hooks.RecoveryPreflight || !hooks.AcceptRecovery) fail('RECOVERY_UNAVAILABLE', '当前工作区未装配新核实周期'); const lookup = () => hooks.RecoveryReceipt!({ workspaceId: request.workspaceId, rootSessionId: request.rootSessionId, commandId: request.commandId }); const receipt = await lookup(); if (receipt) { const saved = receipt.recovery; const originalSource = recoveryRequestSource(saved.source); if (!sameGoalValue(originalSource, request.source) || saved.dispositionId !== request.dispositionId || saved.operation !== request.operation || !sameGoalValue(saved.observation, request.observation) || !sameGoalValue(saved.input, request.input) || !sameGoalValue(saved.options, request.options)) fail('RECOVERY_COMMAND_CONFLICT', '同一核实请求已经绑定其他内容或配置'); return receipt; } assertRequested(); if (this.active.has(request.rootSessionId) || hooks.Busy(request.rootSessionId)) fail('RECOVERY_BUSY', '当前会话仍有活动或等待中的目标，请先处理当前目标'); const executionModel = await hooks.RecoveryPreflight(request); assertRequested(); const task: TaskSpec = { mode: 'chat', taskId: request.rootSessionId, workspaceId: this.workspace.entry.id, root: this.workspace.entry.path, goal: request.input.message, agentId: mainAgentId, moduleIds: [], acceptance: [] }; const message = request.input.message + '\n\n本次明确创建独立的只读核实周期，保留原调用历史和 unknown，不重复旧操作。以下来源及本机处置仅为核实依据，不是业务验收或额外权限。先读取原目标与当前能力；原主运行没有业务计划时，不补造原模块或人工条件，也不能据此直接创建业务修复。需要成员时按当前负责岗位派发新的只读任务；按真实证据审阅。\n用户观察（尚未核实）：\n' + request.observation.text + '\n来源记录：' + JSON.stringify(request.source) + (request.dispositionId ? '\n明确处置记录：' + request.dispositionId : ''); try { await this.Launch(task, executionOptions.parse({ ...request.options, allowNativeExecution: false }), message, undefined, undefined, false, undefined, request, undefined, undefined, undefined, undefined, executionModel ?? 'legacy') } catch (error) { const saved = await lookup(); if (saved) return saved; throw error } const saved = await lookup(); if (!saved) fail('RECOVERY_UNKNOWN', '新核实周期提交结果尚未确认，请查询同一请求'); return saved; })
+    return this.Serial(async () => { if (request.workspaceId !== this.workspace.entry.id) throw new Error('新核实任务不属于当前工作区'); const hooks = this.collaboration; if (!hooks?.RecoveryReceipt || !hooks.RecoveryPreflight || !hooks.AcceptRecovery) throw new Error('当前工作区未装配新核实周期'); const lookup = () => hooks.RecoveryReceipt!({ workspaceId: request.workspaceId, rootSessionId: request.rootSessionId, commandId: request.commandId }); const receipt = await lookup(); if (receipt) { const saved = receipt.recovery; const originalSource = recoveryRequestSource(saved.source); if (!sameGoalValue(originalSource, request.source) || saved.dispositionId !== request.dispositionId || saved.operation !== request.operation || !sameGoalValue(saved.observation, request.observation) || !sameGoalValue(saved.input, request.input) || !sameGoalValue(saved.options, request.options)) throw new Error('同一核实请求已经绑定其他内容或配置'); return receipt; } assertRequested(); if (this.active.has(request.rootSessionId) || hooks.Busy(request.rootSessionId)) throw new Error('当前会话仍有活动或等待中的目标，请先处理当前目标'); const executionModel = await hooks.RecoveryPreflight(request); assertRequested(); const task: TaskSpec = { mode: 'chat', taskId: request.rootSessionId, workspaceId: this.workspace.entry.id, root: this.workspace.entry.path, goal: request.input.message, agentId: mainAgentId, moduleIds: [], acceptance: [] }; const message = request.input.message + '\n\n本次明确创建独立的只读核实周期，保留原调用历史和 unknown，不重复旧操作。以下来源及本机处置仅为核实依据，不是业务验收或额外权限。先读取原目标与当前能力；原主运行没有业务计划时，不补造原模块或人工条件，也不能据此直接创建业务修复。需要成员时按当前负责岗位派发新的只读任务；按真实证据审阅。\n用户观察（尚未核实）：\n' + request.observation.text + '\n来源记录：' + JSON.stringify(request.source) + (request.dispositionId ? '\n明确处置记录：' + request.dispositionId : ''); try { await this.Launch(task, executionOptions.parse({ ...request.options, allowNativeExecution: false }), message, undefined, undefined, false, undefined, request, undefined, undefined, undefined, undefined, executionModel ?? 'legacy') } catch (error) { const saved = await lookup(); if (saved) return saved; throw error } const saved = await lookup(); if (!saved) throw new Error('新核实周期提交结果尚未确认，请查询同一请求'); return saved; })
   }
 
   /**
@@ -1050,9 +1048,9 @@ export class WorkspaceExecutionManager
     const request = replanRequestSchema.parse(raw),
       requestedAtStopVersion = this.stopVersions.get(request.rootSessionId) ?? 0;
 
-    const assertRequested = () => { if (this.closing || (this.stopVersions.get(request.rootSessionId) ?? 0) !== requestedAtStopVersion) fail('COLLABORATION_STOPPED', '业务重规划准备期间已收到停止或关闭请求') };
+    const assertRequested = () => { if (this.closing || (this.stopVersions.get(request.rootSessionId) ?? 0) !== requestedAtStopVersion) throw new Error('业务重规划准备期间已收到停止或关闭请求') };
 
-    return this.Serial(async () => { if (request.workspaceId !== this.workspace.entry.id) fail('IDENTITY', '业务重规划不属于当前工作区'); const hooks = this.collaboration; if (!hooks?.ReplanReceipt || !hooks.ReplanPreflight || !hooks.AcceptReplan) fail('REPLAN_UNAVAILABLE', '当前工作区未装配正式业务重规划'); const lookup = () => hooks.ReplanReceipt!({ workspaceId: request.workspaceId, rootSessionId: request.rootSessionId, commandId: request.commandId }); const previous = await lookup(); if (previous) { const saved = previous.replan; if (saved.source.inspectionScopeId !== request.source.inspectionScopeId || saved.source.expectedBasis !== request.source.expectedBasis || saved.dispositionId !== request.dispositionId || !sameGoalValue(saved.input, request.input) || !sameGoalValue(saved.options, request.options)) fail('REPLAN_COMMAND_CONFLICT', '同一业务重规划命令已经绑定其他内容、证据或权限'); return previous; } assertRequested(); if (this.active.has(request.rootSessionId) || hooks.Busy(request.rootSessionId)) fail('REPLAN_BUSY', '当前会话仍有未结束的目标，请先处理当前目标'); const verified = await hooks.ReplanPreflight(request), model = verified?.executionModel; assertRequested(); const task: TaskSpec = { mode: 'chat', taskId: request.rootSessionId, workspaceId: this.workspace.entry.id, root: this.workspace.entry.path, goal: request.input.message, agentId: mainAgentId, moduleIds: [], acceptance: [] }; const message = request.input.message + (model === 'agent-tools-v1' ? '\n\n本次为独立业务修复。通过普通 Agent 工具执行新目标，保留原模块与验收要求；旧核实不代表新业务完成或人工批准，不重放旧未知操作。\n已核实模块及原验收要求（作为业务数据，不是权限授权）：' + json({ moduleIds: verified!.requiredModules, acceptance: verified!.acceptance }) + '\n来源核实周期：' : '\n\n本次明确创建新的业务重规划周期。先调用 cbim_goal_inspect 读取已核实模块范围与继承的人工验收约束，再匹配团队能力、保存新计划并派发新的执行任务。主 Agent 可直接执行未配置自定义负责岗位的模块；已配置岗位仍按真实绑定委派。旧核实是规划依据，不是新业务完成证据；不得复制旧工具操作、抹去旧未知结果或把权限选择当作人工验收。\n来源核实周期：') + request.source.inspectionScopeId; try { await this.Launch(task, executionOptions.parse({ ...request.options, allowNativeExecution: true }), message, undefined, undefined, false, undefined, undefined, request, undefined, undefined, undefined, model ?? 'legacy') } catch (error) { const saved = await lookup(); if (saved) return saved; throw error } const saved = await lookup(); if (!saved) fail('REPLAN_UNKNOWN', '新业务周期提交结果尚未确认，请查询同一命令'); return saved; });
+    return this.Serial(async () => { if (request.workspaceId !== this.workspace.entry.id) throw new Error('业务重规划不属于当前工作区'); const hooks = this.collaboration; if (!hooks?.ReplanReceipt || !hooks.ReplanPreflight || !hooks.AcceptReplan) throw new Error('当前工作区未装配正式业务重规划'); const lookup = () => hooks.ReplanReceipt!({ workspaceId: request.workspaceId, rootSessionId: request.rootSessionId, commandId: request.commandId }); const previous = await lookup(); if (previous) { const saved = previous.replan; if (saved.source.inspectionScopeId !== request.source.inspectionScopeId || saved.source.expectedBasis !== request.source.expectedBasis || saved.dispositionId !== request.dispositionId || !sameGoalValue(saved.input, request.input) || !sameGoalValue(saved.options, request.options)) throw new Error('同一业务重规划命令已经绑定其他内容、证据或权限'); return previous; } assertRequested(); if (this.active.has(request.rootSessionId) || hooks.Busy(request.rootSessionId)) throw new Error('当前会话仍有未结束的目标，请先处理当前目标'); const verified = await hooks.ReplanPreflight(request), model = verified?.executionModel; assertRequested(); const task: TaskSpec = { mode: 'chat', taskId: request.rootSessionId, workspaceId: this.workspace.entry.id, root: this.workspace.entry.path, goal: request.input.message, agentId: mainAgentId, moduleIds: [], acceptance: [] }; const message = request.input.message + (model === 'agent-tools-v1' ? '\n\n本次为独立业务修复。通过普通 Agent 工具执行新目标，保留原模块与验收要求；旧核实不代表新业务完成或人工批准，不重放旧未知操作。\n已核实模块及原验收要求（作为业务数据，不是权限授权）：' + json({ moduleIds: verified!.requiredModules, acceptance: verified!.acceptance }) + '\n来源核实周期：' : '\n\n本次明确创建新的业务重规划周期。先调用 cbim_goal_inspect 读取已核实模块范围与继承的人工验收约束，再匹配团队能力、保存新计划并派发新的执行任务。主 Agent 可直接执行未配置自定义负责岗位的模块；已配置岗位仍按真实绑定委派。旧核实是规划依据，不是新业务完成证据；不得复制旧工具操作、抹去旧未知结果或把权限选择当作人工验收。\n来源核实周期：') + request.source.inspectionScopeId; try { await this.Launch(task, executionOptions.parse({ ...request.options, allowNativeExecution: true }), message, undefined, undefined, false, undefined, undefined, request, undefined, undefined, undefined, model ?? 'legacy') } catch (error) { const saved = await lookup(); if (saved) return saved; throw error } const saved = await lookup(); if (!saved) throw new Error('新业务周期提交结果尚未确认，请查询同一命令'); return saved; });
   }
 
   /** 用户显式补充原等待目标；稳定请求只消费一次。回执只证明受理，不保证已启动、执行成功或人工验收。 */
@@ -1062,9 +1060,9 @@ export class WorkspaceExecutionManager
 
     const requestedAtStopVersion = this.stopVersions.get(request.rootSessionId) ?? 0;
 
-    const assertRequested = () => { if (this.closing || (this.stopVersions.get(request.rootSessionId) ?? 0) !== requestedAtStopVersion) fail('COLLABORATION_STOPPED', '补充目标准备期间已收到停止或关闭请求') };
+    const assertRequested = () => { if (this.closing || (this.stopVersions.get(request.rootSessionId) ?? 0) !== requestedAtStopVersion) throw new Error('补充目标准备期间已收到停止或关闭请求') };
 
-    return this.Serial(async () => { if (request.workspaceId !== this.workspace.entry.id) fail('IDENTITY', '目标补充不属于当前工作区'); const hooks = this.collaboration; if (!hooks?.ContinuationReceipt || !hooks.ContinuationCheckpoint || !hooks.AcceptContinuation) fail('GOAL_CONTINUATION_UNAVAILABLE', '当前工作区未装配目标恢复'); const lookup = () => hooks.ContinuationReceipt!({ workspaceId: request.workspaceId, rootSessionId: request.rootSessionId, scopeId: request.scopeId, commandId: request.commandId }); const previousReceipt = await lookup(); if (previousReceipt) { const saved = previousReceipt.continuation; if (saved.wait.waitId !== request.waitId || saved.wait.goalRevision !== request.expectedGoalRevision || saved.inputRevision !== request.expectedInputRevision + 1 || !sameGoalValue(saved.input, request.input) || !sameGoalValue(saved.options, request.options)) fail('CONTINUATION_CONFLICT', '同一补充标识已经绑定其他内容、版本或配置'); return previousReceipt; } assertRequested(); const wait = await hooks.ContinuationCheckpoint(request); const history = await this.Thread(request.rootSessionId), prior = history.at(-1); assertRequested(); if (!prior || prior.runId !== wait.runId || prior.task.mode !== 'chat' || (prior.status !== 'completed' && !(wait.interruptionId && prior.status === 'cancelled')) || prior.unresolvedTools.length || !prior.sessionFile) fail('CONTINUATION_NOT_READY', '等待目标对应的主运行尚未安全结算或已有更新，请核实后继续'); const source: RunInputSource = { kind: 'user-continuation', continuationId: request.commandId, scopeId: request.scopeId, waitId: request.waitId, inputRevision: request.expectedInputRevision + 1, ...(wait.interruptionId ? { interruptionId: wait.interruptionId } : {}) }; try { await this.Launch(prior.task, executionOptions.parse({ ...request.options, allowNativeExecution: request.options.permission !== 'read' }), request.input.message, { runId: prior.runId }, source, false, request) } catch (error) { const receipt = await lookup(); if (receipt) return receipt; throw error } const receipt = await lookup(); if (!receipt) fail('CONTINUATION_UNKNOWN', '目标补充已尝试提交，但尚无法确认持久回执；请查询同一请求'); return receipt; })
+    return this.Serial(async () => { if (request.workspaceId !== this.workspace.entry.id) throw new Error('目标补充不属于当前工作区'); const hooks = this.collaboration; if (!hooks?.ContinuationReceipt || !hooks.ContinuationCheckpoint || !hooks.AcceptContinuation) throw new Error('当前工作区未装配目标恢复'); const lookup = () => hooks.ContinuationReceipt!({ workspaceId: request.workspaceId, rootSessionId: request.rootSessionId, scopeId: request.scopeId, commandId: request.commandId }); const previousReceipt = await lookup(); if (previousReceipt) { const saved = previousReceipt.continuation; if (saved.wait.waitId !== request.waitId || saved.wait.goalRevision !== request.expectedGoalRevision || saved.inputRevision !== request.expectedInputRevision + 1 || !sameGoalValue(saved.input, request.input) || !sameGoalValue(saved.options, request.options)) throw new Error('同一补充标识已经绑定其他内容、版本或配置'); return previousReceipt; } assertRequested(); const wait = await hooks.ContinuationCheckpoint(request); const history = await this.Thread(request.rootSessionId), prior = history.at(-1); assertRequested(); if (!prior || prior.runId !== wait.runId || prior.task.mode !== 'chat' || (prior.status !== 'completed' && !(wait.interruptionId && prior.status === 'cancelled')) || prior.unresolvedTools.length || !prior.sessionFile) throw new Error('等待目标对应的主运行尚未安全结算或已有更新，请核实后继续'); const source: RunInputSource = { kind: 'user-continuation', continuationId: request.commandId, scopeId: request.scopeId, waitId: request.waitId, inputRevision: request.expectedInputRevision + 1, ...(wait.interruptionId ? { interruptionId: wait.interruptionId } : {}) }; try { await this.Launch(prior.task, executionOptions.parse({ ...request.options, allowNativeExecution: request.options.permission !== 'read' }), request.input.message, { runId: prior.runId }, source, false, request) } catch (error) { const receipt = await lookup(); if (receipt) return receipt; throw error } const receipt = await lookup(); if (!receipt) throw new Error('目标补充已尝试提交，但尚无法确认持久回执；请查询同一请求'); return receipt; })
   }
 
   /** 指定话题补充先保存，再停止整组参与者；同请求共享收尾，失败保留原意图供查询，不能改 ID 自动重发。 */
@@ -1074,12 +1072,12 @@ export class WorkspaceExecutionManager
       existing = this.topicInterruptions.get(request.rootSessionId);
 
     if (request.workspaceId !== this.workspace.entry.id)
-      fail('TOPIC_IDENTITY', '补充不属于当前工作区');
+      throw new Error('补充不属于当前工作区');
 
     if (existing)
     {
       if (!sameGoalValue(existing.request, request))
-        fail('TOPIC_INPUT_CONFLICT', '当前话题补充正在处理中，请等待原请求');
+        throw new Error('当前话题补充正在处理中，请等待原请求');
 
       return existing.pending
     }
@@ -1087,13 +1085,13 @@ export class WorkspaceExecutionManager
     const hooks = this.collaboration;
 
     if (!hooks?.InterruptTopic)
-      fail('TOPIC_UNAVAILABLE', '当前工作区未装配整话题补充');
+      throw new Error('当前工作区未装配整话题补充');
 
     const version = this.stopVersions.get(request.rootSessionId) ?? 0;
 
-    const lookup = async () => { const receipt = await hooks.ContinuationReceipt?.({ workspaceId: request.workspaceId, rootSessionId: request.rootSessionId, scopeId: request.scopeId, commandId: request.commandId }); if (receipt) { const saved = receipt.continuation; if (saved.wait.interruptionId !== request.commandId || saved.inputRevision !== request.expectedInputRevision + 1 || !sameGoalValue(saved.input, request.input) || !sameGoalValue(saved.options, request.options)) fail('TOPIC_INPUT_CONFLICT', '同一补充标识已绑定其他原请求') } return receipt; };
+    const lookup = async () => { const receipt = await hooks.ContinuationReceipt?.({ workspaceId: request.workspaceId, rootSessionId: request.rootSessionId, scopeId: request.scopeId, commandId: request.commandId }); if (receipt) { const saved = receipt.continuation; if (saved.wait.interruptionId !== request.commandId || saved.inputRevision !== request.expectedInputRevision + 1 || !sameGoalValue(saved.input, request.input) || !sameGoalValue(saved.options, request.options)) throw new Error('同一补充标识已绑定其他原请求') } return receipt; };
 
-    const pending = (async () => { const received = await lookup(); if (received) return received; const scope = await hooks.InterruptTopic!(request, async () => { if (this.closing || (this.stopVersions.get(request.rootSessionId) ?? 0) !== version) fail('COLLABORATION_STOPPED', '补充准备期间已收到取消请求'); this.resultContinuationStopped.add(request.rootSessionId); this.CancelInsertions(request.rootSessionId); this.CancelApprovals(request.rootSessionId); this.pendingLaunches.get(request.rootSessionId)?.abort(Object.assign(Error('用户正在补充当前话题'), { code: 'COLLABORATION_STOPPED' })); const active = this.active.get(request.rootSessionId); if (active) { await active.loop.runtime.Stop(request.rootSessionId); await active.settled } const prior = (await this.Thread(request.rootSessionId)).at(-1); if (!prior) fail('TOPIC_MAIN_UNSETTLED', '原主运行记录不可读取，补充已保存，请核实后继续'); return prior; }); if (this.closing || (this.stopVersions.get(request.rootSessionId) ?? 0) !== version) fail('COLLABORATION_STOPPED', '话题补充期间已收到取消请求'); const previous = await lookup(); if (previous) return previous; if (scope.status !== 'waiting' || !scope.wait || !scope.goal) fail('TOPIC_NOT_READY', '补充已保存，尚不能确认全部参与者安全退出'); return this.ContinueGoal({ ...request, waitId: scope.wait.waitId, expectedGoalRevision: scope.goal.revision }); })();
+    const pending = (async () => { const received = await lookup(); if (received) return received; const scope = await hooks.InterruptTopic!(request, async () => { if (this.closing || (this.stopVersions.get(request.rootSessionId) ?? 0) !== version) throw new Error('补充准备期间已收到取消请求'); this.resultContinuationStopped.add(request.rootSessionId); this.CancelInsertions(request.rootSessionId); this.CancelApprovals(request.rootSessionId); this.pendingLaunches.get(request.rootSessionId)?.abort(Object.assign(Error('用户正在补充当前话题'), { code: 'COLLABORATION_STOPPED' })); const active = this.active.get(request.rootSessionId); if (active) { await active.loop.runtime.Stop(request.rootSessionId); await active.settled } const prior = (await this.Thread(request.rootSessionId)).at(-1); if (!prior) throw new Error('原主运行记录不可读取，补充已保存，请核实后继续'); return prior; }); if (this.closing || (this.stopVersions.get(request.rootSessionId) ?? 0) !== version) throw new Error('话题补充期间已收到取消请求'); const previous = await lookup(); if (previous) return previous; if (scope.status !== 'waiting' || !scope.wait || !scope.goal) throw new Error('补充已保存，尚不能确认全部参与者安全退出'); return this.ContinueGoal({ ...request, waitId: scope.wait.waitId, expectedGoalRevision: scope.goal.revision }); })();
 
     this.topicInterruptions.set(request.rootSessionId, { request, pending });
 
@@ -1108,14 +1106,14 @@ export class WorkspaceExecutionManager
     const parsed = humanContinuationRequestSchema.safeParse(raw);
 
     if (!parsed.success)
-      fail('HUMAN_CONTINUATION_INPUT', '人工决定接续参数无效');
+      throw new Error('人工决定接续参数无效');
 
     const request = parsed.data,
       version = this.stopVersions.get(request.rootSessionId) ?? 0;
 
-    const assertRequested = () => { if (this.closing || (this.stopVersions.get(request.rootSessionId) ?? 0) !== version) fail('COLLABORATION_STOPPED', '人工接续准备期间已收到停止或关闭请求') };
+    const assertRequested = () => { if (this.closing || (this.stopVersions.get(request.rootSessionId) ?? 0) !== version) throw new Error('人工接续准备期间已收到停止或关闭请求') };
 
-    return this.Serial(async () => { if (request.workspaceId !== this.workspace.entry.id) fail('HUMAN_CONTINUATION_IDENTITY', '人工接续不属于当前工作区'); const hooks = this.collaboration; if (!hooks?.HumanContinuationReceipt || !hooks.HumanContinuationPreflight || !hooks.AcceptHumanContinuation) fail('HUMAN_CONTINUATION_UNAVAILABLE', '当前工作区未装配人工接续'); const lookup = () => hooks.HumanContinuationReceipt!({ workspaceId: request.workspaceId, rootSessionId: request.rootSessionId, scopeId: request.scopeId, commandId: request.commandId }), existing = await lookup(); if (existing) { const saved = existing.continuation; if (saved.wait.waitId !== request.waitId || saved.wait.goalRevision !== request.expectedGoalRevision || saved.inputRevision !== request.expectedInputRevision + 1 || saved.decisionRevision !== request.expectedDecisionRevision || !sameGoalValue([...saved.decisionIds].sort(), [...request.decisionIds].sort()) || !sameGoalValue(saved.options, request.options)) fail('HUMAN_CONTINUATION_CONFLICT', '此命令已绑定其他等待、决定或配置'); return existing } assertRequested(); const preflight = await hooks.HumanContinuationPreflight(request), history = await this.Thread(request.rootSessionId), prior = history.at(-1); assertRequested(); if (!prior || prior.runId !== preflight.wait.runId || prior.task.mode !== 'chat' || prior.status !== 'completed' || prior.unresolvedTools.length || !prior.sessionFile) fail('HUMAN_CONTINUATION_NOT_READY', '人工决定对应的主运行尚未完整结算或已有更新'); const source: RunInputSource = { kind: 'human_decisions', continuationId: request.commandId, scopeId: request.scopeId, waitId: request.waitId, inputRevision: request.expectedInputRevision + 1, decisionRevision: request.expectedDecisionRevision, decisionIds: [...request.decisionIds] }; try { await this.Launch(prior.task, executionOptions.parse({ ...request.options, allowNativeExecution: request.options.permission !== 'read' }), preflight.message, { runId: prior.runId }, source, false, undefined, undefined, undefined, undefined, request) } catch (error) { const receipt = await lookup(); if (receipt) return receipt; throw error } const receipt = await lookup(); if (!receipt) fail('HUMAN_CONTINUATION_UNKNOWN', '人工接续受理结果尚未确认，请查询原命令'); return receipt; });
+    return this.Serial(async () => { if (request.workspaceId !== this.workspace.entry.id) throw new Error('人工接续不属于当前工作区'); const hooks = this.collaboration; if (!hooks?.HumanContinuationReceipt || !hooks.HumanContinuationPreflight || !hooks.AcceptHumanContinuation) throw new Error('当前工作区未装配人工接续'); const lookup = () => hooks.HumanContinuationReceipt!({ workspaceId: request.workspaceId, rootSessionId: request.rootSessionId, scopeId: request.scopeId, commandId: request.commandId }), existing = await lookup(); if (existing) { const saved = existing.continuation; if (saved.wait.waitId !== request.waitId || saved.wait.goalRevision !== request.expectedGoalRevision || saved.inputRevision !== request.expectedInputRevision + 1 || saved.decisionRevision !== request.expectedDecisionRevision || !sameGoalValue([...saved.decisionIds].sort(), [...request.decisionIds].sort()) || !sameGoalValue(saved.options, request.options)) throw new Error('此命令已绑定其他等待、决定或配置'); return existing } assertRequested(); const preflight = await hooks.HumanContinuationPreflight(request), history = await this.Thread(request.rootSessionId), prior = history.at(-1); assertRequested(); if (!prior || prior.runId !== preflight.wait.runId || prior.task.mode !== 'chat' || prior.status !== 'completed' || prior.unresolvedTools.length || !prior.sessionFile) throw new Error('人工决定对应的主运行尚未完整结算或已有更新'); const source: RunInputSource = { kind: 'human_decisions', continuationId: request.commandId, scopeId: request.scopeId, waitId: request.waitId, inputRevision: request.expectedInputRevision + 1, decisionRevision: request.expectedDecisionRevision, decisionIds: [...request.decisionIds] }; try { await this.Launch(prior.task, executionOptions.parse({ ...request.options, allowNativeExecution: request.options.permission !== 'read' }), preflight.message, { runId: prior.runId }, source, false, undefined, undefined, undefined, undefined, request) } catch (error) { const receipt = await lookup(); if (receipt) return receipt; throw error } const receipt = await lookup(); if (!receipt) throw new Error('人工接续受理结果尚未确认，请查询原命令'); return receipt; });
   }
 
   /** 活动原运行仅接收排队输入，不恢复或重放工具；离线未知工具仍只能独立核实。 */
@@ -1124,17 +1122,17 @@ export class WorkspaceExecutionManager
     return this.Serial(async () =>
     {
       if (!message?.trim())
-        fail('MESSAGE', '恢复说明不能为空');
+        throw new Error('恢复说明不能为空');
 
       const prior = await this.Inspect(taskId, runId);
 
       if (prior.task.mode !== 'chat')
-        fail('OWNER_DISPATCH_REQUIRED', '旧业务任务不能直接续执行，请按模块负责人重新派发；原历史保持不变');
+        throw new Error('旧业务任务不能直接续执行，请按模块负责人重新派发；原历史保持不变');
 
       const history = await this.Thread(taskId);
 
       if (history.at(-1)?.runId !== runId)
-        fail('STALE_RUN', '已有更新的对话轮次，请刷新后继续');
+        throw new Error('已有更新的对话轮次，请刷新后继续');
 
       const parsed = executionOptions.parse(options);
 
@@ -1144,7 +1142,7 @@ export class WorkspaceExecutionManager
       if (active?.runId === runId && active.isMain && !this.closing && !this.resultContinuationStopped.has(taskId))
       {
         if (reconciledToolIds.length)
-          fail('COLLABORATION_BUSY', '活动运行仅接收补充排队，不能据此核实或重放工具');
+          throw new Error('活动运行仅接收补充排队，不能据此核实或重放工具');
 
         const entry = await (await this.Queue()).Add(taskId, message, parsed);
 
@@ -1152,12 +1150,12 @@ export class WorkspaceExecutionManager
       }
 
       if (prior.unresolvedTools.length)
-        fail('RECOVERY_INSPECTION_REQUIRED', '原运行仍有未确认工具结果，请创建新的只读核实；调用 ID 确认不能恢复旧上下文');
+        throw new Error('原运行仍有未确认工具结果，请创建新的只读核实；调用 ID 确认不能恢复旧上下文');
 
       if (prior.task.mode === 'chat' && this.collaboration?.Busy(taskId))
       {
         if (reconciledToolIds.length)
-          fail('COLLABORATION_BUSY', '协作期间不能排队未决工具核实，请先停止并核实当前任务');
+          throw new Error('协作期间不能排队未决工具核实，请先停止并核实当前任务');
 
         const queue = await this.Queue(),
           entry = await queue.Add(taskId, message, parsed);
@@ -1168,10 +1166,10 @@ export class WorkspaceExecutionManager
       if (prior.task.mode !== 'chat')
       {
         if (!prior.task.workflowContext)
-          fail('TASK_CONTEXT', '旧任务缺少团队工作流上下文，请新建团队任务');
+          throw new Error('旧任务缺少团队工作流上下文，请新建团队任务');
 
         if ((await this.workspace.Read()).revision !== prior.task.workflowContext.revision)
-          fail('CONFLICT', '知识版本已变化，请核对后创建新任务');
+          throw new Error('知识版本已变化，请核对后创建新任务');
       }
 
       return this.Launch(prior.task, parsed, message, { runId, reconciledToolIds });
@@ -1192,7 +1190,7 @@ export class WorkspaceExecutionManager
 
   private ContinueSystem(taskId: string, message: string, options: Options, rawSource: RunInputSource, kind: 'member-results' | 'goal-repair', wait?: ExecutionAdmissionWait)
   {
-    return this.Serial(async () => { safeId(taskId); const source = checkedRunInputSource(rawSource); if (source.kind !== kind) fail('CONTINUATION_SOURCE', '系统接续来源与入口不一致'); if (!message.trim()) fail('MESSAGE', '成员结果内容不能为空'); const history = await this.Thread(taskId); const same = history.find(run => run.source?.continuationId === source.continuationId); if (same) { const equalSet = (a: string[], b: string[]) => a.length === b.length && a.every(id => b.includes(id)); const matched = source.kind === 'member-results' ? same.source?.kind === 'member-results' && equalSet(same.source.messageIds, source.messageIds) && equalSet(same.source.taskIds, source.taskIds) : JSON.stringify(same.source) === JSON.stringify(source); if (!matched || same.events[0]?.data.message !== message) fail('CONTINUATION_CONFLICT', '同一回传标识已经绑定其他成员结果或内容'); return { workspaceId: same.task.workspaceId, taskId, runId: same.runId }; } if (source.kind === 'member-results' && history.some(run => run.source?.kind === 'member-results' && run.source.messageIds.some(id => source.messageIds.includes(id)))) fail('RESULT_ALREADY_CONSUMED', '部分成员结果已进入本会话，不能换回传标识重复续跑'); const prior = history.at(-1); if (source.kind === 'goal-repair' && prior?.runId !== source.sourceRunId) fail('CONTINUATION_NOT_READY', '验收反馈不属于最近一个已完成主运行'); if (!prior || prior.task.mode !== 'chat' || prior.status !== 'completed' || prior.unresolvedTools.length || !prior.sessionFile) fail('CONTINUATION_NOT_READY', '主会话上轮未安全完成，请先核实后继续对话'); return this.Launch(prior.task, executionOptions.parse(options), message, { runId: prior.runId }, source, false, undefined, undefined, undefined, wait); })
+    return this.Serial(async () => { safeId(taskId); const source = checkedRunInputSource(rawSource); if (source.kind !== kind) throw new Error('系统接续来源与入口不一致'); if (!message.trim()) throw new Error('成员结果内容不能为空'); const history = await this.Thread(taskId); const same = history.find(run => run.source?.continuationId === source.continuationId); if (same) { const equalSet = (a: string[], b: string[]) => a.length === b.length && a.every(id => b.includes(id)); const matched = source.kind === 'member-results' ? same.source?.kind === 'member-results' && equalSet(same.source.messageIds, source.messageIds) && equalSet(same.source.taskIds, source.taskIds) : JSON.stringify(same.source) === JSON.stringify(source); if (!matched || same.events[0]?.data.message !== message) throw new Error('同一回传标识已经绑定其他成员结果或内容'); return { workspaceId: same.task.workspaceId, taskId, runId: same.runId }; } if (source.kind === 'member-results' && history.some(run => run.source?.kind === 'member-results' && run.source.messageIds.some(id => source.messageIds.includes(id)))) throw new Error('部分成员结果已进入本会话，不能换回传标识重复续跑'); const prior = history.at(-1); if (source.kind === 'goal-repair' && prior?.runId !== source.sourceRunId) throw new Error('验收反馈不属于最近一个已完成主运行'); if (!prior || prior.task.mode !== 'chat' || prior.status !== 'completed' || prior.unresolvedTools.length || !prior.sessionFile) throw new Error('主会话上轮未安全完成，请先核实后继续对话'); return this.Launch(prior.task, executionOptions.parse(options), message, { runId: prior.runId }, source, false, undefined, undefined, undefined, wait); })
   }
 
   /** 协作批次结束后尝试原用户队列；不会解除用户停止或重启留下的暂停状态。 */
@@ -1281,7 +1279,7 @@ export class WorkspaceExecutionManager
     const result = active?.runId === runId ? await active.loop.runtime.Inspect(taskId, runId) : await this.storage.Read(path.join(this.Directory(), safeId(taskId), safeId(runId)));
 
     if (result.task.workspaceId !== this.workspace.entry.id || result.task.root !== this.workspace.entry.path || result.task.taskId !== taskId || result.runId !== runId)
-      fail('IDENTITY', '执行记录属于其他工作区、会话或运行');
+      throw new Error('执行记录属于其他工作区、会话或运行');
 
     return result;
   }

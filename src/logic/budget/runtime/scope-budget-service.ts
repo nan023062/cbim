@@ -4,9 +4,7 @@
  * 设计原因：公开统计与启动授权分离；可信主启动占位覆盖登记后尚未落日志的窗口，退出后缺失记录仍是未知，不据此自动恢复。
  * 职责边界：只限制下一次运行；逐请求预检仅消费预算视图，不要求完整调度状态。不中断已接收运行、不消费安全等待或改写目标验收。
  */
-import { fail } from '../../../core/errors';
-
-import { hash, json } from '../../../core/platform/node/serialization';
+import { hash, json } from '../../../core/io/serialization';
 
 import { summarizeScopeUsage } from '../../execution/rules/scope-usage';
 
@@ -45,7 +43,7 @@ export function rejectBudget(result: ScopeBudgetRejected): never
 {
   const reason = result.budgetRejected.reason;
 
-  fail(reason === 'usage_unverifiable' ? 'SCOPE_BUDGET_UNVERIFIABLE' : 'SCOPE_BUDGET_EXCEEDED', reason === 'usage_unverifiable' ? '当前周期所需用量无法可靠核实，未启动新的运行；请核实记录或结束后另建目标' : '当前周期已达到冻结的软限额，未启动新的运行；现有结果和等待检查点保留');
+  throw new Error(reason === 'usage_unverifiable' ? '当前周期所需用量无法可靠核实，未启动新的运行；请核实记录或结束后另建目标' : '当前周期已达到冻结的软限额，未启动新的运行；现有结果和等待检查点保留');
 }
 
 export class ScopeBudgetService
@@ -60,7 +58,7 @@ export class ScopeBudgetService
   HoldMain(runId: string): () => void
   {
     if (this.liveMain.has(runId))
-      fail('SCOPE_BUDGET_RUN_CONFLICT', '主运行启动身份已被占用');
+      throw new Error('主运行启动身份已被占用');
 
     this.liveMain.add(runId);
 
@@ -101,14 +99,14 @@ export class ScopeBudgetService
     const live = [...(scope.runTracking?.mainRunIds ?? []).filter(id => this.liveMain.has(id)), ...(state.runs ?? []).filter(run => taskIds.has(run.binding.taskId) && ['starting', 'running'].includes(run.status)).map(run => run.binding.runId)];
 
     if (live.length)
-      fail('SCOPE_BUDGET_WAITING', '本周期上一运行尚未可靠结算，等待释放后再核实软限额');
+      throw new Error('本周期上一运行尚未可靠结算，等待释放后再核实软限额');
 
     const observation = budget.policy.enforcement === 'request' ? this.RequestObservation(state, scope) : await this.LegacyObservation(state, scope);
 
     const decision = evaluateScopeBudget(budget.policy, observation);
 
     if (decision.kind === 'wait')
-      fail('SCOPE_BUDGET_WAITING', '本周期上一运行尚未可靠结算');
+      throw new Error('本周期上一运行尚未可靠结算');
 
     if (decision.kind === 'deny')
     {
@@ -139,7 +137,7 @@ export class ScopeBudgetService
       reason = requestBudgetDecision(policy, report, reservation, records);
 
     if (reason)
-      fail('MODEL_REQUEST_PREFLIGHT', reason === 'token_reserve' ? `下一请求需预留 ${reservation.tokens} Token，剩余 ${Math.max(0, (policy.limits.tokens ?? 0) - report.tokens - report.reservedTokens)} Token；原等待或待领取任务保留` : reason === 'cost_reserve' ? `下一请求需预留约 $${reservation.estimatedCostUsd}，剩余约 $${Math.max(0, (policy.limits.estimatedCostUsd ?? 0) - report.estimatedCostUsd - report.reservedCostUsd)}；原等待或待领取任务保留` : '下一请求预算无法可靠核实；原等待或待领取任务保留');
+      throw new Error(reason === 'token_reserve' ? `下一请求需预留 ${reservation.tokens} Token，剩余 ${Math.max(0, (policy.limits.tokens ?? 0) - report.tokens - report.reservedTokens)} Token；原等待或待领取任务保留` : reason === 'cost_reserve' ? `下一请求需预留约 $${reservation.estimatedCostUsd}，剩余约 $${Math.max(0, (policy.limits.estimatedCostUsd ?? 0) - report.estimatedCostUsd - report.reservedCostUsd)}；原等待或待领取任务保留` : '下一请求预算无法可靠核实；原等待或待领取任务保留');
   }
 
   /** 已无真实在途运行时，所有未决请求均阻止下一轮；没有请求事实的旧运行也不凭空当零。 */

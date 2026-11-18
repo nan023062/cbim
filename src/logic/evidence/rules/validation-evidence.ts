@@ -7,11 +7,9 @@
  * 机制边界：对象递归排序由 utility 提供，本模块保留历史比较器、字段省略和业务指纹规则。
  * 算法入口：通过 Core JsonUtils 静态方法复用机制，本文件继续拥有原业务策略。
  */
-import { JsonUtils } from '../../../core/utility';
+import { JsonUtils } from '../../../core/io';
 
-import { fail } from '../../../core/errors';
-
-import { hash } from '../../../core/platform/node/serialization';
+import { hash } from '../../../core/io/serialization';
 
 import { workflowContractSchema, type WorkflowContract } from '../../workspace/rules/workflow-contract';
 
@@ -43,7 +41,7 @@ export interface ValidationWorkflowBinding
 function valid(value: unknown, message: string): asserts value
 {
   if (!value)
-    fail('VALIDATION_EVIDENCE_INVALID', message)
+    throw new Error(message)
 }
 
 /** 保留本模块历史键排序与 undefined 规则；utility 只提供递归复制机制。 */

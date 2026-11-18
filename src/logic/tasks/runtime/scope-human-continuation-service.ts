@@ -7,9 +7,7 @@
  */
 import { z } from 'zod';
 
-import { fail } from '../../../core/errors';
-
-import { hash, json } from '../../../core/platform/node/serialization';
+import { hash, json } from '../../../core/io/serialization';
 
 import { safeId } from '../../execution/ports/identity';
 
@@ -40,7 +38,7 @@ import { humanEvidenceStateStamp } from '../../evidence/runtime/human-evidence-s
 function check(value: unknown, code: string, message: string): asserts value
 {
   if (!value)
-    fail(code, message)
+    throw new Error(message)
 }
 
 /** fresh 仅用于当前受理调用，不进入持久回执；不能因重试看到旧意图而再次启动。 */
@@ -64,7 +62,7 @@ export class ScopeHumanContinuationService
     const parsed = schema.safeParse(raw);
 
     if (!parsed.success)
-      fail('HUMAN_CONTINUATION_INPUT', '按人工决定继续的请求无效');
+      throw new Error('按人工决定继续的请求无效');
 
     return parsed.data
   }

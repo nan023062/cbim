@@ -3,8 +3,6 @@
  * 设计原因：有 accept 历史不等于当前输入已获批准；普通补充不能伪造人工接续，返工必须创建受理后新任务。
  * 职责边界：这里只核实持久关系；canonical、知识与文件时效仍由调度服务在审阅和结束时分别核实。
  */
-import { fail } from '../../../core/errors';
-
 import type { DispatchState, DispatchMutation, DispatchCommand } from '../../dispatch/rules/dispatch-storage';
 
 import { isHumanContinuation } from './scope-continuation-record';
@@ -18,7 +16,7 @@ import { sameGoalValue, goalInputRevision } from './scope-goal';
 function valid(value: unknown, message: string): asserts value
 {
   if (!value)
-    fail('GRAPH_INPUT_INVALID', message)
+    throw new Error(message)
 }
 
 const sameSet = (a: string[], b: string[]) => a.length === b.length && new Set(a).size === a.length && a.every(id => b.includes(id));

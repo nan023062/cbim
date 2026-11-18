@@ -2,7 +2,7 @@ import {expect,it,vi} from 'vitest';
 import {fixture} from '../../application/support/helpers';
 import {request} from '../../knowledge/rules/data/knowledge';
 import {seedTeam} from '../../knowledge/service/support/team-fixture';
-import {json,hash} from '../../../../../src/core/platform/node/serialization';
+import {json,hash} from '../../../../../src/core/io/serialization';
 import {Builtins} from '../../../../../src/logic/knowledge/rules/builtins';
 import type {TaskNode} from '../../../../../src/logic/tasks/rules/graph-types';
 import {dispatchKnowledgeFingerprint,validatePreparedDispatchKnowledge,preparedWorkflowContracts} from '../../../../../src/logic/tasks/rules/execution-context';

@@ -12,8 +12,6 @@ import { ModuleSourceBrowser } from '../../../logic/workspace/service/source-bro
 
 import { ArchitectureService } from '../../../logic/workspace/service/architecture-service';
 
-import { fail } from '../../../core/errors';
-
 /** 仅装配本业务组；每项实际实现都受对应请求／响应约束。 */
 export function workspaceIpcHandlers(app: ApplicationServices): IpcHandlers<keyof WorkspaceIpcResponses>
 {
@@ -32,8 +30,8 @@ export function workspaceIpcHandlers(app: ApplicationServices): IpcHandlers<keyo
     'preview': async args => { return app.Workspace(args.workspaceId).Preview(args); },
     'commit': async args => { return app.Workspace(args.workspaceId).Commit(args); },
     'movePreview': async args => { const ws = app.Workspace(args.id); return ws.Preview(await ws.PlanMove(await ws.Read(), args.from, args.to)) },
-    'task': async args => { if (!['validate', 'reindex'].includes(args.name)) fail('TOOL', '不支持的工具'); return app.Workspace(args.id).StartTask(args.name); },
+    'task': async args => { if (!['validate', 'reindex'].includes(args.name)) throw new Error('不支持的工具'); return app.Workspace(args.id).StartTask(args.name); },
     'cancelTask': async args => { return app.Workspace(args.id).CancelTask(args.taskId); },
-    'local': async args => { if (!['memory', 'task-records', 'logs'].includes(args.kind)) fail('TYPE', '未知本地数据类型'); return app.Workspace(args.id).LocalData(args.kind); },
+    'local': async args => { if (!['memory', 'task-records', 'logs'].includes(args.kind)) throw new Error('未知本地数据类型'); return app.Workspace(args.id).LocalData(args.kind); },
   };
 }

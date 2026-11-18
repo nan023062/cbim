@@ -3,7 +3,7 @@ import {randomUUID} from 'node:crypto';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import {hash} from '../../../../../src/core/platform/node/serialization';
+import {hash} from '../../../../../src/core/io/serialization';
 import {knowledgeSourceChangeSchema,knowledgeSourceLimits,sourceSelectionSchema,sourceReadStateMatches,type KnowledgeSourceKey,type KnowledgeSourcePrepared,type KnowledgeSourceResolved,type KnowledgeSourceChange,type SourceSelection} from '../../../../../src/logic/workspace/rules/knowledge-source';
 import {applyKnowledgeSourceChange,currentKnowledgeSource,knowledgeSourceRef,knowledgeSourceSelection,nextKnowledgeSourceCursor,knowledgeSourceCommand,knowledgeSourceReceipt,knowledgeSourceStatus,createKnowledgeSourceCapture} from '../../../../../src/logic/workspace/rules/knowledge-source-rules';
 import {workspaceMemberDetailSchema,workspaceMemberCommitInputSchema,summarizeWorkspaceMember,type WorkspaceMember,type WorkspaceMemberChange,type WorkspaceMemberChangeInput,type WorkspaceMemberModelSnapshot} from '../../../../../src/logic/team/rules/workspace-member';

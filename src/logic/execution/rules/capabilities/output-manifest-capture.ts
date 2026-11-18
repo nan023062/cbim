@@ -7,8 +7,6 @@
  */
 import { randomUUID } from 'node:crypto';
 
-import { fail } from '../../../../core/errors';
-
 import { isDeepStrictEqual as equal } from 'node:util';
 
 import { artifactScopeLimits, artifactScopeBindingsSchema, type ArtifactScopeBinding } from '../../../workspace/rules/artifact-scope';
@@ -145,12 +143,12 @@ export class RunOutputManifestCapture
   async VerifyCurrent(record: OutputManifestRecord, name: 'cbim_delivery_prepare' | 'cbim_validation_run', signal: AbortSignal = new AbortController().signal): Promise<void>
   {
     if (this.reserved || this.reading || name === 'cbim_validation_run' && this.deliveryOwner || name === 'cbim_delivery_prepare' && !this.deliveryOwner)
-      fail('MANIFEST_BUSY', '完整产物复核尚未就绪或存在其它调用');
+      throw new Error('完整产物复核尚未就绪或存在其它调用');
 
     const version = this.context.Current()?.version,
       limited = AbortSignal.any([this.controller.signal, signal, AbortSignal.timeout(artifactScopeLimits.readMs)]);
 
-    const check = () => { limited.throwIfAborted(); this.context.AssertReadingReady(name); if (this.context.Current()?.version !== version || version === undefined || !equal(this.Select(record.manifest.manifestId, version), record)) fail('MANIFEST_PROGRESS_CHANGED', '完整复核期间进度或原清单发生变化') };
+    const check = () => { limited.throwIfAborted(); this.context.AssertReadingReady(name); if (this.context.Current()?.version !== version || version === undefined || !equal(this.Select(record.manifest.manifestId, version), record)) throw new Error('完整复核期间进度或原清单发生变化') };
 
     this.reading = true;
 
@@ -186,16 +184,16 @@ export class RunOutputManifestCapture
     const reserved = this.reserved;
 
     if (!reserved || reserved.id !== id || reserved.consumed || !equal(reserved.input, input))
-      fail('MANIFEST_CALL', '完整采集必须来自已授权的一次性调用');
+      throw new Error('完整采集必须来自已授权的一次性调用');
 
     reserved.consumed = true;
 
-    const check = () => { this.controller.signal.throwIfAborted(); this.context.AssertReady(id); if (this.context.Current()?.version !== input.expectedTaskProgressVersion) fail('MANIFEST_PROGRESS_CHANGED', '执行计划已变化，请重新读取后采集') };
+    const check = () => { this.controller.signal.throwIfAborted(); this.context.AssertReady(id); if (this.context.Current()?.version !== input.expectedTaskProgressVersion) throw new Error('执行计划已变化，请重新读取后采集') };
 
     check();
 
     if (this.events.filter(event => event.type === 'artifact.manifest_captured').length >= artifactScopeLimits.captures)
-      fail('MANIFEST_LIMIT', '本轮最多保存8份完整清单，失败暂存也占用历史容量');
+      throw new Error('本轮最多保存8份完整清单，失败暂存也占用历史容量');
 
     const lastEffectSeq = this.events.reduce((seq, event) => artifactEventChangesFiles(event) ? event.seq : seq, 0);
 
@@ -208,14 +206,14 @@ export class RunOutputManifestCapture
     check();
 
     if (!equal(snapshot.scopes, this.scopes))
-      fail('MANIFEST_SCOPE_CHANGED', '文件端口未完整返回原冻结范围');
+      throw new Error('文件端口未完整返回原冻结范围');
 
     await this.port.AssertCurrentKnowledge();
 
     check();
 
     if (lastEffectSeq !== this.events.reduce((seq, event) => artifactEventChangesFiles(event) ? event.seq : seq, 0))
-      fail('MANIFEST_EFFECT_CHANGED', '采集期间出现新的副作用');
+      throw new Error('采集期间出现新的副作用');
 
     const operations = currentArtifactTransitions(this.events, verifyArtifactTransitions(this.events, this.binding, this.port.knowledgeRevision, this.scopes, this.Inspect().records), snapshot);
 

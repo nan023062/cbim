@@ -11,15 +11,13 @@ import { randomUUID } from 'node:crypto';
 
 import { z } from 'zod';
 
-import { KernelLock } from '../../../core/platform/node/locking';
+import { KernelLock, KernelLockError } from '../../../core/io/locking';
 
-import { atomic } from '../../../core/platform/node/files';
+import { atomic } from '../../../core/io/text-files';
 
-import { fail } from '../../../core/errors';
+import { sha256 as hash } from '../../../core/io/digest';
 
-import { sha256 as hash } from '../../../core/platform/node/digest';
-
-import { JsonUtils } from '../../../core/utility';
+import { JsonUtils } from '../../../core/io';
 
 import type { ResourceLibrarySnapshot } from '..';
 
@@ -36,6 +34,10 @@ const diskSchema = z.object({ version: z.literal(1), repositoryId: z.string().uu
 export const saveSchema = z.object({ repositoryId: z.string().uuid(), revision: z.string(), id: z.string().uuid().optional(), item: resourceFields }).strict();
 
 export const removeSchema = z.object({ repositoryId: z.string().uuid(), revision: z.string(), id: z.string().uuid() }).strict();
+
+export type RepositoryIssue = 'busy' | 'unsafePath' | 'oversize' | 'missing' | 'invalidData' | 'identityChanged' | 'revisionChanged';
+
+type ReportIssue = (issue: RepositoryIssue) => void;
 
 /** 本地和 HTTP 仓库共用接口；save/remove 校验身份及版本并返回更新后的完整快照。 */
 export interface RepositoryStore
@@ -58,7 +60,7 @@ export class LocalRepository implements RepositoryStore
     return path.join(this.root, 'cbim-resources.json')
   }
 
-  private async Lock()
+  private async Lock(report?: ReportIssue)
   {
     const key = hash(process.platform === 'win32' ? this.root.replaceAll('\\', '/').toLowerCase() : this.root);
 
@@ -70,22 +72,22 @@ export class LocalRepository implements RepositoryStore
       }
       catch (e: any)
       {
-        if (e.code !== 'LOCKED')
+        if (!(e instanceof KernelLockError) || e.reason !== 'busy')
           throw e;
 
         await new Promise(r => setTimeout(r, 30))
       }
     }
 
-    return fail('BUSY', '仓库正由其他请求更新，请稍后重试')
+    { report?.('busy'); throw new Error('仓库正由其他请求更新，请稍后重试') }
   }
 
-  private async CheckFile()
+  private async CheckFile(report?: ReportIssue)
   {
     try
     {
       if ((await fs.lstat(this.file)).isSymbolicLink())
-        fail('PATH', '仓库数据文件不能是符号链接')
+        { report?.('unsafePath'); throw new Error('仓库数据文件不能是符号链接') }
     }
     catch (e: any)
     {
@@ -122,9 +124,9 @@ export class LocalRepository implements RepositoryStore
     }
   }
 
-  async Read(): Promise<ResourceLibrarySnapshot>
+  async Read(report?: ReportIssue): Promise<ResourceLibrarySnapshot>
   {
-    await this.CheckFile();
+    await this.CheckFile(report);
 
     let text: string;
 
@@ -133,14 +135,14 @@ export class LocalRepository implements RepositoryStore
       const stat = await fs.stat(this.file);
 
       if (stat.size > MAX_BYTES)
-        fail('SIZE', '资源仓库超过 8 MiB 限制');
+        { report?.('oversize'); throw new Error('资源仓库超过 8 MiB 限制') };
 
       text = await fs.readFile(this.file, 'utf8')
     }
     catch (e: any)
     {
       if (e.code === 'ENOENT')
-        fail('NOT_FOUND', '仓库文件不存在，请重新选择仓库');
+        { report?.('missing'); throw new Error('仓库文件不存在，请重新选择仓库') };
 
       throw e
     }
@@ -156,44 +158,44 @@ export class LocalRepository implements RepositoryStore
     }
     catch
     {
-      fail('RESOURCE_DATA', '仓库内容格式无效，原文件已保留，请修复后重试')
+      { report?.('invalidData'); throw new Error('仓库内容格式无效，原文件已保留，请修复后重试') }
     }
   }
 
-  async Save(args: unknown)
+  async Save(args: unknown, report?: ReportIssue)
   {
     const r = saveSchema.parse(args);
 
-    return this.Update(r, data => { const index = r.id ? data.items.findIndex(i => i.id === r.id) : -1; if (r.id && index < 0) fail('NOT_FOUND', '资源已被删除，请刷新'); const item = { ...r.item, id: r.id || randomUUID(), updatedAt: new Date().toISOString() }; if (index < 0) data.items.push(item); else data.items[index] = item })
+    return this.Update(r, report, data => { const index = r.id ? data.items.findIndex(i => i.id === r.id) : -1; if (r.id && index < 0) { report?.('missing'); throw new Error('资源已被删除，请刷新') }; const item = { ...r.item, id: r.id || randomUUID(), updatedAt: new Date().toISOString() }; if (index < 0) data.items.push(item); else data.items[index] = item })
   }
 
-  async Remove(args: unknown)
+  async Remove(args: unknown, report?: ReportIssue)
   {
     const r = removeSchema.parse(args);
 
-    return this.Update(r, data => { if (!data.items.some(i => i.id === r.id)) fail('NOT_FOUND', '资源已被删除，请刷新'); data.items = data.items.filter(i => i.id !== r.id) })
+    return this.Update(r, report, data => { if (!data.items.some(i => i.id === r.id)) { report?.('missing'); throw new Error('资源已被删除，请刷新') }; data.items = data.items.filter(i => i.id !== r.id) })
   }
 
-  private async Update(request: { repositoryId: string; revision: string }, edit: (data: ResourceLibrarySnapshot) => void)
+  private async Update(request: { repositoryId: string; revision: string }, report: ReportIssue | undefined, edit: (data: ResourceLibrarySnapshot) => void)
   {
-    const lock = await this.Lock();
+    const lock = await this.Lock(report);
 
     try
     {
-      const current = await this.Read();
+      const current = await this.Read(report);
 
       if (current.repositoryId !== request.repositoryId)
-        fail('IDENTITY', '仓库身份已变化，请重新连接');
+        { report?.('identityChanged'); throw new Error('仓库身份已变化，请重新连接') };
 
       if (current.revision !== request.revision)
-        fail('CONFLICT', '仓库已被修改，请刷新后重新编辑');
+        { report?.('revisionChanged'); throw new Error('仓库已被修改，请刷新后重新编辑') };
 
       edit(current);
 
       const text = JsonUtils.FormatJson(diskSchema.parse({ version: 1, repositoryId: current.repositoryId, items: current.items }));
 
       if (Buffer.byteLength(text) > MAX_BYTES)
-        fail('SIZE', '资源仓库超过 8 MiB 限制');
+        { report?.('oversize'); throw new Error('资源仓库超过 8 MiB 限制') };
 
       await atomic(this.file, text);
 

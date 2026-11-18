@@ -4,7 +4,7 @@ import {expect,it,vi} from 'vitest';
 import {fixture} from '../../application/support/helpers';
 import {request,moduleFiles} from '../../knowledge/rules/data/knowledge';
 import {seedTeam} from '../../knowledge/service/support/team-fixture';
-import {json} from '../../../../../src/core/platform/node/serialization';
+import {json} from '../../../../../src/core/io/serialization';
 import {buildWorkspacePackage,parseWorkspacePackage,workspacePackageFingerprint,type WorkspacePackage} from '../../../../../src/logic/knowledge/rules/portable-package';
 import {WorkspacePackages} from '../../../../../src/logic/resources/packages/workspace-packages';
 import {Application} from '../../../../../src/bridge/server/application';

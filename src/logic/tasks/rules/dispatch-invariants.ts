@@ -9,15 +9,13 @@
  * 机制边界：对象递归排序由 utility 提供，本模块保留历史比较器、字段省略和业务指纹规则。
  * 算法入口：通过 Core JsonUtils 静态方法复用机制，本文件继续拥有原业务策略。
  */
-import { JsonUtils } from '../../../core/utility';
+import { JsonUtils } from '../../../core/io';
 
 import { z } from 'zod';
 
 import { candidateAccepted } from './candidate-review';
 
-import { hash, json } from '../../../core/platform/node/serialization';
-
-import { fail } from '../../../core/errors';
+import { hash, json } from '../../../core/io/serialization';
 
 import { connectionSchema, modelSchema } from '../../models';
 
@@ -103,7 +101,7 @@ const equal = (a: unknown, b: unknown) => JSON.stringify(ordered(a)) === JSON.st
 function valid(condition: unknown, message: string): asserts condition
 {
   if (!condition)
-    fail('GRAPH_INPUT_INVALID', message)
+    throw new Error(message)
 }
 
 function lookupTask(state: DispatchState, ref: GraphIdentity, taskId: string)
@@ -285,7 +283,7 @@ function validateMessage(previous: DispatchMessage | undefined, message: Dispatc
   valid(messageShape.safeParse(message).success, '派发消息结构无效');
 
   if (message.identity.workspaceId !== state.workspaceId)
-    fail('GRAPH_IDENTITY_MISMATCH', '消息不属于当前工作区');
+    throw new Error('消息不属于当前工作区');
 
   const task = lookupTask(state, message.identity, message.taskId);
 

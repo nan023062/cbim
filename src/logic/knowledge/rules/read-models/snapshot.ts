@@ -6,9 +6,7 @@
  */
 import path from 'node:path';
 
-import { fail } from '../../../../core/errors';
-
-import { parseJson } from '../../../../core/json';
+import { parseJson } from '../../../io-errors/json';
 
 import type { Snapshot } from '../types';
 
@@ -22,7 +20,7 @@ export function data(s: Snapshot, p: string)
   const f = s.files.find(f => f.path === p);
 
   if (!f)
-    fail('OBJECT_NOT_FOUND', '知识对象不存在，请重新查询注册表');
+    throw new Error('知识对象不存在，请重新查询注册表');
 
   return parseJson(f.text)
 }

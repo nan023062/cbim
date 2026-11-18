@@ -18,8 +18,6 @@ import { parseApplicationRequest } from './request';
 
 import type { ApplicationServices } from './services';
 
-import { fail } from '../../../core/errors';
-
 import { isIpcAction, type IpcHandlers, type ApplicationIpcAction, type IpcAction, type IpcResponse } from '../../contracts/ipc-call';
 
 import { desktopIpcRequests } from '../../contracts/ipc-desktop';
@@ -73,10 +71,10 @@ export function dispatchApplication(app: ApplicationServices, action: string, in
 export async function dispatchApplication(app: ApplicationServices, action: string, input: unknown = {})
 {
   if (!isApplicationAction(action))
-    fail('ACTION', '未知操作');
+    throw new Error('未知操作');
 
   if (action === 'loop.start')
-    fail('OWNER_DISPATCH_REQUIRED', '业务执行必须通过当前目标计划和负责岗位派发；旧任务历史仍可读取');
+    throw new Error('业务执行必须通过当前目标计划和负责岗位派发；旧任务历史仍可读取');
 
   return invoke(app, action, input);
 }

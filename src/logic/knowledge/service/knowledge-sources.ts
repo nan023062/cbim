@@ -8,11 +8,9 @@ import { randomUUID } from 'node:crypto';
 
 import { isDeepStrictEqual } from 'node:util';
 
-import { hash, json } from '../../../core/platform/node/serialization';
+import { hash, json } from '../../../core/io/serialization';
 
-import { parseJson } from '../../../core/json';
-
-import { fail } from '../../../core/errors';
+import { parseJson } from '../../io-errors/json';
 
 import type { DispatchState, DispatchStore } from '../../dispatch/rules/dispatch-storage';
 
@@ -40,7 +38,7 @@ export interface KnowledgeSourceWorkspace extends KnowledgeWorkspace
 export function sourceObservations(snapshot: Snapshot)
 {
   if (!snapshot.validation)
-    fail('SOURCE_INVALID', '来源观察缺少知识校验');
+    throw new Error('来源观察缺少知识校验');
 
   const result = new Map<string,
     {
@@ -49,18 +47,18 @@ export function sourceObservations(snapshot: Snapshot)
       observation: KnowledgeSourceObservation
     }>();
 
-  const add = (kind: 'agent' | 'module', sourceId: string) => { const file = snapshot.files.find(f => f.path === sourceId + (kind === 'agent' ? '/agent.json' : '/module.json')); if (!file || file.hash !== hash(file.text)) fail('SOURCE_INVALID', '来源定义字节不完整'); const source = { kind, sourceId }; result.set(knowledgeSourceKey(source), { source, observation: { knowledgeRevision: snapshot.revision, definitionHash: file.hash, visible: true } }) };
+  const add = (kind: 'agent' | 'module', sourceId: string) => { const file = snapshot.files.find(f => f.path === sourceId + (kind === 'agent' ? '/agent.json' : '/module.json')); if (!file || file.hash !== hash(file.text)) throw new Error('来源定义字节不完整'); const source = { kind, sourceId }; result.set(knowledgeSourceKey(source), { source, observation: { knowledgeRevision: snapshot.revision, definitionHash: file.hash, visible: true } }) };
 
   const team = parseJson(snapshot.validation.indexes['.cbim/team/registry.json']),
     modules = parseJson(snapshot.validation.indexes['.cbim/workspace/registry.json']);
 
   if (!Array.isArray(team.groups) || !Array.isArray(modules.modules))
-    fail('SOURCE_INVALID', '来源注册表无效');
+    throw new Error('来源注册表无效');
 
   for (const group of team.groups)
   {
     if (!Array.isArray(group.agents))
-      fail('SOURCE_INVALID', '角色注册表无效');
+      throw new Error('角色注册表无效');
 
     for (const agent of group.agents)
       add('agent', agent.id)
@@ -148,7 +146,7 @@ export class KnowledgeSources implements KnowledgeSourceAuthority
     const state = await this.store.Read(),
       event = { version: 1 as const, kind: 'prepared' as const, changeId: randomUUID(), workspaceId: this.workspaceId, sourceCursor: nextKnowledgeSourceCursor(state, randomUUID()), recordedAt: source.transition.preparedAt, transition: source.transition };
 
-    await this.store.Transact(knowledgeSourceCommand(event), async current => { if (!isDeepStrictEqual(current.sourceCursor ?? null, source.transition.expectedSourceCursor)) fail('SOURCE_STALE', '来源登记已变化，未写入知识'); return { knowledgeSourceChanges: [event], receipt: knowledgeSourceReceipt(event) } });
+    await this.store.Transact(knowledgeSourceCommand(event), async current => { if (!isDeepStrictEqual(current.sourceCursor ?? null, source.transition.expectedSourceCursor)) throw new Error('来源登记已变化，未写入知识'); return { knowledgeSourceChanges: [event], receipt: knowledgeSourceReceipt(event) } });
   }
 
   /** 只按原 journal 事实结算；不得在调用方的知识 rollback catch 内执行。 */
@@ -162,13 +160,13 @@ export class KnowledgeSources implements KnowledgeSourceAuthority
       if (outcome === 'rolled_back')
         return;
 
-      fail('SOURCE_JOURNAL_INVALID', '知识成功缺少原来源屏障')
+      throw new Error('知识成功缺少原来源屏障')
     }
 
     if (transition.state !== 'pending')
     {
       if (transition.state !== outcome || transition.resolved?.journalProofHash !== proofHash)
-        fail('SOURCE_JOURNAL_INVALID', '来源结算与原日志不同');
+        throw new Error('来源结算与原日志不同');
 
       return
     }
@@ -188,7 +186,7 @@ export class KnowledgeSources implements KnowledgeSourceAuthority
     if (!saved)
     {
       if (required)
-        fail('SOURCE_JOURNAL_INVALID', '来源事务缺少持久屏障');
+        throw new Error('来源事务缺少持久屏障');
 
       return
     }
@@ -196,7 +194,7 @@ export class KnowledgeSources implements KnowledgeSourceAuthority
     const { resolved: _, ...original } = saved;
 
     if (!isDeepStrictEqual({ ...original, state: 'pending' }, source.transition))
-      fail('SOURCE_JOURNAL_INVALID', '来源屏障与原知识事务不一致')
+      throw new Error('来源屏障与原知识事务不一致')
   }
 
   async Pending()
@@ -212,7 +210,7 @@ export class KnowledgeSources implements KnowledgeSourceAuthority
   AssertAvailable(state: DispatchState)
   {
     if (knowledgeSourcePending(state))
-      fail('SOURCE_PENDING', '来源事务尚未核实，暂不能采纳或建立新责任')
+      throw new Error('来源事务尚未核实，暂不能采纳或建立新责任')
   }
 
   Selection(state: DispatchState, snapshot: Snapshot, source: KnowledgeSourceKey): SourceSelection
@@ -220,12 +218,12 @@ export class KnowledgeSources implements KnowledgeSourceAuthority
     this.AssertAvailable(state);
 
     if (!snapshot.validation?.structural)
-      fail('SOURCE_INVALID', '来源知识结构尚未通过校验');
+      throw new Error('来源知识结构尚未通过校验');
 
     const observation = sourceObservations(snapshot).get(knowledgeSourceKey(source));
 
     if (!observation)
-      fail('SOURCE_MISSING', '当前来源缺失或不可见');
+      throw new Error('当前来源缺失或不可见');
 
     return knowledgeSourceSelection(state, source, observation.observation)
   }
@@ -243,13 +241,13 @@ export class KnowledgeSources implements KnowledgeSourceAuthority
     if (current)
     {
       if (!isDeepStrictEqual(selection.expectedRef, knowledgeSourceRef(current)))
-        fail('SOURCE_STALE', '来源代次已变化');
+        throw new Error('来源代次已变化');
 
       return { ref: knowledgeSourceRef(current) }
     }
 
     if (selection.expectedRef)
-      fail('SOURCE_STALE', '原来源代次已退役');
+      throw new Error('原来源代次已退役');
 
     const event = createKnowledgeSourceCapture(state, selection, { changeId: randomUUID(), generationId: randomUUID(), streamId: randomUUID(), recordedAt: at, consumer });
 

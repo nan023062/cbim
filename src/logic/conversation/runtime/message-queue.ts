@@ -13,7 +13,7 @@ import { randomUUID } from 'node:crypto';
 
 import { z } from 'zod';
 
-import { hash } from '../../../core/platform/node/serialization';
+import { hash } from '../../../core/io/serialization';
 
 import { queuedMessageSchema as item, type QueuedMessage, type QueueDelta } from '../../tasks/rules/queue';
 

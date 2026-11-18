@@ -8,13 +8,11 @@
  * 机制边界：对象递归排序由 utility 提供，本模块保留历史比较器、字段省略和业务指纹规则。
  * 算法入口：通过 Core JsonUtils 静态方法复用机制，本文件继续拥有原业务策略。
  */
-import { JsonUtils } from '../../../core/utility';
+import { JsonUtils } from '../../../core/io';
 
 import { collaborationPolicySchema } from '../../team/rules/automatic-execution';
 
 import { z } from 'zod';
-
-import { fail } from '../../../core/errors';
 
 import type { DispatchMutation, DispatchState } from '../../dispatch/rules/dispatch-storage';
 
@@ -69,7 +67,7 @@ const shape = z.object({ scopeId: id, workspaceId: id, rootSessionId: id, status
 function valid(condition: unknown, message: string): asserts condition
 {
   if (!condition)
-    fail('GRAPH_INPUT_INVALID', message)
+    throw new Error(message)
 }
 
 /** 保留本模块历史键排序与 undefined 规则；utility 只提供递归复制机制。 */

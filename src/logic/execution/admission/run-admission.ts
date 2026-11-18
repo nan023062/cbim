@@ -5,8 +5,6 @@
  */
 import { randomUUID } from 'node:crypto';
 
-import { fail } from '../../../core/errors';
-
 import { admissionIdentitySchema, admissionRequestSchema, admissionPolicySchema, admissionConfigureSchema, admissionCursorSchema, type AdmissionIdentity, type AdmissionRequest, type AdmissionWaitReason, type AdmissionDenialReason, type AdmissionTicket, type AdmissionOccupant, type AdmissionPolicy, type AdmissionCursor, type AdmissionSnapshot, type AdmissionRead } from '../../runtime/rules/admission';
 
 /** 本地端口必须同步；canAcquire/isCurrent 只查询，acquire 原子取得本地租约，通知不能直接绕过 attempt 执行。 */
@@ -239,14 +237,14 @@ export class GlobalRunAdmission
   Attempt(raw: AdmissionRequest, port: LocalAdmissionPort): AdmissionAttempt
   {
     if (this.inAttempt)
-      fail('ADMISSION_REENTRANT', '准入的同步本地检查不能重入领取');
+      throw new Error('准入的同步本地检查不能重入领取');
 
     this.attempted = true;
 
     const parsed = admissionRequestSchema.safeParse(raw);
 
     if (!parsed.success)
-      fail('ADMISSION_INPUT_INVALID', '执行准入身份或参数无效');
+      throw new Error('执行准入身份或参数无效');
 
     const request = parsed.data,
       id = key(request),
@@ -254,7 +252,7 @@ export class GlobalRunAdmission
       active = this.occupied.get(id);
 
     if ((old && !same(old.request, request)) || (active && !same(active.request, request)))
-      fail('ADMISSION_REQUEST_CONFLICT', '同一执行准入请求不能改变身份、来源或权限');
+      throw new Error('同一执行准入请求不能改变身份、来源或权限');
 
     if (active)
       return { kind: 'denied', reason: 'already_running' };
@@ -411,7 +409,7 @@ export class GlobalRunAdmission
     const parsed = admissionIdentitySchema.safeParse(raw);
 
     if (!parsed.success)
-      fail('ADMISSION_INPUT_INVALID', '撤票身份无效');
+      throw new Error('撤票身份无效');
 
     const identity = parsed.data,
       id = key(identity),
@@ -421,7 +419,7 @@ export class GlobalRunAdmission
       return false;
 
     if (Object.entries(identity).some(([field, value]) => (item.request as Record<string, unknown>)[field] !== value))
-      fail('ADMISSION_REQUEST_CONFLICT', '撤票身份与原执行请求不一致');
+      throw new Error('撤票身份与原执行请求不一致');
 
     this.waiting.delete(id);
 
@@ -438,7 +436,7 @@ export class GlobalRunAdmission
     const parsed = admissionIdentitySchema.pick({ workspaceId: true, ownerEpoch: true }).safeParse({ workspaceId, ownerEpoch });
 
     if (!parsed.success)
-      fail('ADMISSION_INPUT_INVALID', '工作区准入代际无效');
+      throw new Error('工作区准入代际无效');
 
     this.retired.add(ownerKey(workspaceId, ownerEpoch));
 
@@ -473,12 +471,12 @@ export class GlobalRunAdmission
   RestorePolicy(raw: AdmissionPolicy): void
   {
     if (this.attempted || this.configured || this.policyRestored || this.occupied.size || this.waiting.size || this.inAttempt)
-      fail('ADMISSION_RESTORE_FORBIDDEN', '运行准入已经开始，不能覆盖恢复策略');
+      throw new Error('运行准入已经开始，不能覆盖恢复策略');
 
     const parsed = admissionPolicySchema.safeParse(raw);
 
     if (!parsed.success)
-      fail('ADMISSION_POLICY_INVALID', '执行并发策略无效');
+      throw new Error('执行并发策略无效');
 
     this.policyRestored = true;
 
@@ -494,15 +492,15 @@ export class GlobalRunAdmission
   Configure(raw: AdmissionPolicy): AdmissionPolicy
   {
     if (this.inAttempt)
-      fail('ADMISSION_REENTRANT', '准入领取期间不能重入修改策略');
+      throw new Error('准入领取期间不能重入修改策略');
 
     const parsed = admissionConfigureSchema.safeParse(raw);
 
     if (!parsed.success)
-      fail('ADMISSION_POLICY_INVALID', '执行并发上限必须为 1 至 32');
+      throw new Error('执行并发上限必须为 1 至 32');
 
     if (parsed.data.revision !== this.policy.revision || this.policy.revision === Number.MAX_SAFE_INTEGER)
-      fail('ADMISSION_POLICY_CONFLICT', '执行并发策略版本已变化，请重新读取');
+      throw new Error('执行并发策略版本已变化，请重新读取');
 
     this.configured = true;
 
@@ -524,7 +522,7 @@ export class GlobalRunAdmission
   Read(cursor?: AdmissionCursor): AdmissionRead
   {
     if (cursor !== undefined && !admissionCursorSchema.safeParse(cursor).success)
-      fail('ADMISSION_CURSOR_INVALID', '运行准入游标无效');
+      throw new Error('运行准入游标无效');
 
     if (cursor?.streamId === this.streamId && cursor.revision === this.revision)
       return { kind: 'noop', cursor: { ...cursor } };

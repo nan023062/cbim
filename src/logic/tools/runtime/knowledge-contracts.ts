@@ -4,8 +4,6 @@
  */
 import type { z } from 'zod';
 
-import { fail } from '../../../core/errors';
-
 import { builtinSkills } from '../../knowledge/rules/builtins';
 
 import { workspaceIdentityOutputSchema, knowledgeSnapshotOutputSchema, knowledgeSearchOutputSchema } from '../../knowledge/rules/tool-output-base';
@@ -52,7 +50,7 @@ export function knowledgeToolContract(name: string)
   const outputSchema = Object.hasOwn(outputs, name) ? outputs[name] : undefined;
 
   if (!outputSchema)
-    fail('TOOL_CONTRACT', '知识工具缺少业务输出契约');
+    throw new Error('知识工具缺少业务输出契约');
 
   return { outputSchema, cancellation: structuredClone(cancellation), recovery: structuredClone(recovery[name] ?? read) };
 }

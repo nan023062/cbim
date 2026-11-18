@@ -6,9 +6,7 @@
  */
 import { isDeepStrictEqual } from 'node:util';
 
-import { hash, json } from '../../../core/platform/node/serialization';
-
-import { fail } from '../../../core/errors';
+import { hash, json } from '../../../core/io/serialization';
 
 import { persistentWriteObservationSchema, type PersistentWriteObservation } from '../../tasks/rules/persistent-write-observation';
 
@@ -47,7 +45,7 @@ interface PersistentEffectOwner
 function check(value: unknown): asserts value
 {
   if (!value)
-    fail('EFFECT_RECORD_INVALID', '原保存记录与调用来源或请求不一致')
+    throw new Error('原保存记录与调用来源或请求不一致')
 }
 
 /** 已保存原实例随请求保留，重开读取不换实例重放；停止或存储不可用不能降级为 absent。 */

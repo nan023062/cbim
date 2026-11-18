@@ -5,9 +5,7 @@
  * 设计原因：人的历史意见不等于当前产物未变；独立端口避免目标服务与人工服务相互引用，全部接受项的选定基线及冻结产物验证文件共享一次有界读取。
  * 职责边界：只读可信 canonical 与业务字节，不消费等待、不复制签署身份，也不恢复未知操作。
  */
-import { fail } from '../../../core/errors';
-
-import { hash, json } from '../../../core/platform/node/serialization';
+import { hash, json } from '../../../core/io/serialization';
 
 import type { KnowledgeWorkspace } from '../../knowledge/rules/ports';
 
@@ -70,7 +68,7 @@ export type HumanCandidateValidator = (state: DispatchState, scope: DispatchScop
 function check(value: unknown, code: string, message: string): asserts value
 {
   if (!value)
-    fail(code, message)
+    throw new Error(message)
 }
 
 /** 仅当前输入版本已实际消费的人工意图生效；不能任选历史接受或穿越后续文本补充。 */
@@ -245,7 +243,7 @@ export async function validateHumanAcceptances(owner: Pick<KnowledgeWorkspace, '
       }
       catch
       {
-        fail('HUMAN_CONTINUATION_STALE', '已接受的完整产物集合已变化或无法核实；原意见保留，请重新安排验证')
+        throw new Error('已接受的完整产物集合已变化或无法核实；原意见保留，请重新安排验证')
       }
     }
 

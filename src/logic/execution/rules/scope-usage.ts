@@ -8,8 +8,6 @@ import type { RunSummary, StoredEvent } from './types';
 
 import type { ScopeRunUsage, ScopeUsageTokens, ScopeUsageRun, ScopeUsageTotals, ScopeUsageIssue } from '../../budget/rules/scope-usage';
 
-import { fail } from '../../../core/errors';
-
 const tokenKeys = ['input', 'output', 'cacheRead', 'cacheWrite'] as const;
 
 const number = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value) && value >= 0;
@@ -243,7 +241,7 @@ export function summarizeScopeUsage(runs: readonly ScopeUsageRun[], coverage: 't
   for (const run of runs)
   {
     if (seen.has(run.runId))
-      fail('SCOPE_USAGE_DUPLICATE', '运行归属重复，不能重复累计消耗');
+      throw new Error('运行归属重复，不能重复累计消耗');
 
     seen.add(run.runId);
 
@@ -286,7 +284,7 @@ export function summarizeScopeUsage(runs: readonly ScopeUsageRun[], coverage: 't
     delete totals.estimatedCostUsd;
 
   if (!Object.values(totals.tokens).every(token) || !number(totals.estimatedCostUsd ?? 0))
-    fail('SCOPE_USAGE_LIMIT', '累计消耗超过可可靠表示的范围，不能返回零或不精确总数');
+    throw new Error('累计消耗超过可可靠表示的范围，不能返回零或不精确总数');
 
   return totals;
 }

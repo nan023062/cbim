@@ -5,8 +5,6 @@
  */
 import { sameAutomaticExecutionForModules } from '../../team/rules/automatic-execution';
 
-import { fail } from '../../../core/errors';
-
 import { completedCheckpointLedger } from './member-checkpoint-ledger';
 
 import type { DispatchState } from '../../dispatch/rules/dispatch-storage';
@@ -26,7 +24,7 @@ import { validMemberCheckpointChain, currentMemberResumeRequest } from './member
 function check(value: unknown, code: string, message: string): asserts value
 {
   if (!value)
-    fail(code, message)
+    throw new Error(message)
 }
 
 /** 不修改状态、不访问文件；返回的闭包只供调度跟踪，不能作为运行许可。 */

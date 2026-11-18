@@ -14,11 +14,9 @@ import { networkInterfaces } from 'node:os';
 
 import { z } from 'zod';
 
-import { atomic } from '../../../core/platform/node/files';
+import { atomic } from '../../../core/io/text-files';
 
-import { fail } from '../../../core/errors';
-
-import { JsonUtils } from '../../../core/utility';
+import { JsonUtils } from '../../../core/io';
 
 import { LocalRepository, type RepositoryStore, saveSchema, removeSchema } from './resource-store';
 
@@ -132,7 +130,7 @@ export class ResourceRepositories
   private Store(): RepositoryStore
   {
     if (!this.config)
-      fail('NOT_CONFIGURED', this.session.state === 'signedIn' ? '账号服务器仓库尚未就绪，不能使用本地仓库代替' : '请先设置本地仓库目录');
+      throw new Error(this.session.state === 'signedIn' ? '账号服务器仓库尚未就绪，不能使用本地仓库代替' : '请先设置本地仓库目录');
 
     return this.config.mode === 'local' ? new LocalRepository(this.config.location) : new RemoteRepository(this.config.location, this.config.token, this.config.repositoryId)
   }
@@ -140,7 +138,7 @@ export class ResourceRepositories
   private Identity(id: string)
   {
     if (!this.config || this.config.repositoryId !== id)
-      fail('REPOSITORY_CHANGED', '当前仓库已切换，请刷新后重新操作')
+      throw new Error('当前仓库已切换，请刷新后重新操作')
   }
 
   /** 先退役代际再等待 HTTP 关闭，旧读取不能趁收尾返回可用结果。 */
@@ -172,12 +170,12 @@ export class ResourceRepositories
       binding = this.readSharing;
 
     if (!sharing || !binding)
-      fail('REPOSITORY_CONNECTION_NOT_SHARED', '请先在设置中明确启动本机仓库共享');
+      throw new Error('请先在设置中明确启动本机仓库共享');
 
     if (binding.repositoryId !== repositoryId)
-      fail('REPOSITORY_CONNECTION_STALE', '当前共享仓库与连接定义不一致');
+      throw new Error('当前共享仓库与连接定义不一致');
 
-    const assertCurrent = () => { if (this.readSharing !== binding || this.sharing !== sharing || binding.controller.signal.aborted || this.config?.repositoryId !== repositoryId) fail('REPOSITORY_CONNECTION_STALE', '仓库共享代际已失效，请重新核实连接') };
+    const assertCurrent = () => { if (this.readSharing !== binding || this.sharing !== sharing || binding.controller.signal.aborted || this.config?.repositoryId !== repositoryId) throw new Error('仓库共享代际已失效，请重新核实连接') };
 
     const remote = new RemoteRepository(sharing.url, binding.token, repositoryId);
 
@@ -190,7 +188,7 @@ export class ResourceRepositories
   {
     const request = configureSchema.parse(args);
 
-    return this.Serial(async () => { if (request.mode !== 'local') fail('SESSION_REQUIRED', '服务器仓库由账号登录后自动连接，不支持手动配置'); if (this.session.state === 'signedIn') fail('ACCOUNT_REPOSITORY', '已登录时使用账号服务器仓库，不能切换本地目录'); return this.ApplyConfig(request) })
+    return this.Serial(async () => { if (request.mode !== 'local') throw new Error('服务器仓库由账号登录后自动连接，不支持手动配置'); if (this.session.state === 'signedIn') throw new Error('已登录时使用账号服务器仓库，不能切换本地目录'); return this.ApplyConfig(request) })
   }
 
   // Internal integration point for a future verified main-process account service.
@@ -209,7 +207,7 @@ export class ResourceRepositories
       const root = await fs.realpath(request.location);
 
       if (!(await fs.stat(root)).isDirectory())
-        fail('PATH', '请选择已有文件夹');
+        throw new Error('请选择已有文件夹');
 
       const install = await fs.realpath(this.paths.installRoot),
         user = await fs.realpath(this.paths.userRoot);
@@ -219,11 +217,11 @@ export class ResourceRepositories
         const rel = path.relative(blocked, root);
 
         if (!rel || (!path.isAbsolute(rel) && rel !== '..' && !rel.startsWith('..' + path.sep)))
-          fail('PATH', '请将资源仓库放在程序安装、更新缓存和用户运行数据目录之外')
+          throw new Error('请将资源仓库放在程序安装、更新缓存和用户运行数据目录之外')
       }
 
       if (root.split(/[\\/]/).some(part => part.toLowerCase() === '.cbim'))
-        fail('PATH', '资源仓库不能放在项目 .cbim 正式知识目录中');
+        throw new Error('资源仓库不能放在项目 .cbim 正式知识目录中');
 
       const repo = new LocalRepository(root),
         snapshot = await repo.Initialize();
@@ -237,7 +235,7 @@ export class ResourceRepositories
         ownHosts = new Set(['localhost', '127.0.0.1', '[::1]', ...Object.values(networkInterfaces()).flatMap(list => list?.map(n => n.address) || [])]);
 
       if (this.sharing && Number(target.port) === this.sharing.port && ownHosts.has(target.hostname))
-        fail('SELF_CONNECTION', '此地址属于本窗口正在共享的仓库，请继续使用本地模式；可用另一个客户端连接');
+        throw new Error('此地址属于本窗口正在共享的仓库，请继续使用本地模式；可用另一个客户端连接');
 
       const snapshot = await new RemoteRepository(url, request.token).Read();
 
@@ -285,13 +283,13 @@ export class ResourceRepositories
   {
     const options = z.object({ lan: z.boolean(), port: z.number().int().min(0).max(65535) }).strict().parse(args);
 
-    return this.Serial(async () => { if (this.config?.mode !== 'local') fail('MODE', '仅本地仓库可以启动共享服务'); if (this.sharing) return this.Status(); const store = this.Store(), repositoryId = (await store.Read()).repositoryId; this.Identity(repositoryId); const token = randomBytes(32).toString('hex'), readToken = randomBytes(32).toString('hex'); this.sharing = await serveRepository(store, token, { host: options.lan ? '0.0.0.0' : '127.0.0.1', port: options.port, readOnlyToken: readToken }); this.shareToken = token; this.readSharing = { connectionId: randomUUID(), repositoryId, token: readToken, controller: new AbortController() }; return this.Status() })
+    return this.Serial(async () => { if (this.config?.mode !== 'local') throw new Error('仅本地仓库可以启动共享服务'); if (this.sharing) return this.Status(); const store = this.Store(), repositoryId = (await store.Read()).repositoryId; this.Identity(repositoryId); const token = randomBytes(32).toString('hex'), readToken = randomBytes(32).toString('hex'); this.sharing = await serveRepository(store, token, { host: options.lan ? '0.0.0.0' : '127.0.0.1', port: options.port, readOnlyToken: readToken }); this.shareToken = token; this.readSharing = { connectionId: randomUUID(), repositoryId, token: readToken, controller: new AbortController() }; return this.Status() })
   }
 
   Connection()
   {
     if (!this.sharing || !this.shareToken)
-      fail('NOT_RUNNING', '仓库共享服务未启动');
+      throw new Error('仓库共享服务未启动');
 
     return { url: this.sharing.url, host: this.sharing.host, port: this.sharing.port, token: this.shareToken }
   }

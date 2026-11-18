@@ -5,9 +5,7 @@
  * 设计原因：发送前先占用输入额度，确认后才提升目标版本；原生发送与磁盘事务不冒称原子，失败保留原尝试且不重放。
  * 职责边界：input.message 是实际发送的队列快照，可能含附件展开资料；不重建用户原文、不改变原始 goal.input 或模型权限。
  */
-import { fail } from '../../../core/errors';
-
-import { hash, json } from '../../../core/platform/node/serialization';
+import { hash, json } from '../../../core/io/serialization';
 
 import type { KnowledgeWorkspace } from '../../knowledge/rules/ports';
 
@@ -30,7 +28,7 @@ type Owner = Pick<KnowledgeWorkspace, 'entry' | 'Assert'>;
 function check(value: unknown, code: string, message: string): asserts value
 {
   if (!value)
-    fail(code, message)
+    throw new Error(message)
 }
 
 /** token 只能由本服务创建；fresh 不持久化，重查绝不重新取得发送权。 */
@@ -56,7 +54,7 @@ export class ScopeActiveInputService
       if (prepared.record.status === 'accepted')
         return;
 
-      fail('QUEUE_INSERT_UNKNOWN', '原插入已有记录，请核实原运行，不能再次发送')
+      throw new Error('原插入已有记录，请核实原运行，不能再次发送')
     }
 
     let receipt: ScopeActiveInputSendReceipt | undefined;
@@ -78,14 +76,14 @@ export class ScopeActiveInputService
       }
       catch
       {
-        fail('QUEUE_INSERT_UNKNOWN', '插入结算记录未能确认，原尝试保留，请核实后处理')
+        throw new Error('插入结算记录未能确认，原尝试保留，请核实后处理')
       }
 
       throw error;
     }
 
     if (!receipt)
-      fail('QUEUE_INSERT_UNKNOWN', '原生接收缺少可信日志依据，原尝试保留待核实');
+      throw new Error('原生接收缺少可信日志依据，原尝试保留待核实');
 
     try
     {
@@ -93,7 +91,7 @@ export class ScopeActiveInputService
     }
     catch
     {
-      fail('QUEUE_INSERT_UNKNOWN', '原生已确认接收，但目标记录未能确认；请查询原记录，勿重复发送')
+      throw new Error('原生已确认接收，但目标记录未能确认；请查询原记录，勿重复发送')
     }
   }
 
@@ -158,7 +156,7 @@ export class ScopeActiveInputService
     const messageBytes = Buffer.byteLength(input.message, 'utf8'),
       messageCharacters = input.message.length;
 
-    const alive = () => { this.owner.Assert(); if (signal.aborted) fail('QUEUE_INSERT_STOPPED', '当前运行已停止插入，原消息仍保留在队列') };
+    const alive = () => { this.owner.Assert(); if (signal.aborted) throw new Error('当前运行已停止插入，原消息仍保留在队列') };
 
     let fresh = false;
 

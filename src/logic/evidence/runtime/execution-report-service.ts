@@ -8,11 +8,9 @@ import type { AgentBusinessRun } from '../../execution/rules/business-run';
 
 import { recursiveEvidenceRun, recursiveEvidenceLogMatches } from './recursive-evidence-source';
 
-import { fail } from '../../../core/errors';
-
 import { isDeepStrictEqual } from 'node:util';
 
-import { hash, json } from '../../../core/platform/node/serialization';
+import { hash, json } from '../../../core/io/serialization';
 
 import { executionReportInputSchema, executionReportSchema, type ExecutionReport } from '../../tasks/rules/execution-report';
 
@@ -45,14 +43,14 @@ export class ExecutionReportService
     const parsed = executionReportInputSchema.safeParse(raw);
 
     if (!parsed.success)
-      fail('MEMBER_INPUT_INVALID', '执行核实参数无效');
+      throw new Error('执行核实参数无效');
 
     const input = parsed.data;
 
     this.owner.Assert();
 
     if (input.workspaceId !== this.owner.entry.id)
-      fail('GRAPH_IDENTITY_MISMATCH', '执行核实不属于当前工作区');
+      throw new Error('执行核实不属于当前工作区');
 
     const before = await this.store.Read();
 
@@ -234,7 +232,7 @@ export class ExecutionReportService
   /** 新调用没有图任务版本；仅解释原登记、原日志和工具回执，不创造旧交付候选或恢复资格。 */
   private async ReadRecursive(input: ReturnType<typeof executionReportInputSchema.parse>, before: DispatchState): Promise<ExecutionReport>
   {
-    const select = (state: DispatchState) => { const graph = state.graphs.find(g => g.identity.workspaceId === input.workspaceId && g.identity.rootSessionId === input.rootSessionId); const records = state.agentBusinessRuns?.filter(r => r.binding.workspaceId === input.workspaceId && r.binding.rootSessionId === input.rootSessionId && r.binding.taskId === input.taskId) ?? []; if (state.workspaceId !== input.workspaceId || !graph || !records.length || new Set(records.map(r => r.scopeId)).size !== 1) fail('TASK_NOT_FOUND', '当前主会话没有此递归调用'); const run = input.runId ? recursiveEvidenceRun(state, input.workspaceId, input.rootSessionId, input.taskId, input.runId) : undefined; const scope = state.scopes?.find(s => s.workspaceId === input.workspaceId && s.rootSessionId === input.rootSessionId && s.scopeId === records[0].scopeId); if (!scope) fail('EVIDENCE_SOURCE_IDENTITY', '原调用缺少所属周期'); return { graph, records, run, scope }; };
+    const select = (state: DispatchState) => { const graph = state.graphs.find(g => g.identity.workspaceId === input.workspaceId && g.identity.rootSessionId === input.rootSessionId); const records = state.agentBusinessRuns?.filter(r => r.binding.workspaceId === input.workspaceId && r.binding.rootSessionId === input.rootSessionId && r.binding.taskId === input.taskId) ?? []; if (state.workspaceId !== input.workspaceId || !graph || !records.length || new Set(records.map(r => r.scopeId)).size !== 1) throw new Error('当前主会话没有此递归调用'); const run = input.runId ? recursiveEvidenceRun(state, input.workspaceId, input.rootSessionId, input.taskId, input.runId) : undefined; const scope = state.scopes?.find(s => s.workspaceId === input.workspaceId && s.rootSessionId === input.rootSessionId && s.scopeId === records[0].scopeId); if (!scope) throw new Error('原调用缺少所属周期'); return { graph, records, run, scope }; };
 
     const facts = select(before),
       { graph, run, scope } = facts;
@@ -261,7 +259,7 @@ export class ExecutionReportService
       try
       {
         if (!this.inspectAgent)
-          fail('EVIDENCE_SOURCE_UNAVAILABLE', '未装配递归日志入口');
+          throw new Error('未装配递归日志入口');
 
         summary = await this.inspectAgent(structuredClone(run))
       }
@@ -396,7 +394,7 @@ export class ExecutionReportService
       task = graph?.tasks.find(t => t.taskId === taskId);
 
     if (state.workspaceId !== this.owner.entry.id || !graph || !task)
-      fail('TASK_NOT_FOUND', '当前主会话没有此派发任务');
+      throw new Error('当前主会话没有此派发任务');
 
     const run = runId ? state.runs?.find(r => r.binding.runId === runId && r.binding.taskId === taskId && r.binding.rootSessionId === rootSessionId && r.binding.workspaceId === this.owner.entry.id) : undefined;
 

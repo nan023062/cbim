@@ -2,7 +2,7 @@ import {expect,it} from 'vitest';
 import {csvTableSchema,validateCsvArtifact,csvValidationLimits,type CsvTableSchema} from '../../../../../src/logic/workspace/rules/csv-validation-schema';
 import {workflowContractSchema,parseWorkflowContract} from '../../../../../src/logic/workspace/rules/workflow-contract';
 import {validationRequirement} from '../../../../../src/logic/evidence/rules/validation-evidence';
-import {hash} from '../../../../../src/core/platform/node/serialization';
+import {hash} from '../../../../../src/core/io/serialization';
 
 export const inventorySchema:CsvTableSchema={columns:[{name:'sku',type:'string',minLength:1,maxLength:32},{name:'quantity',type:'integer',minimum:0,maximum:100000},{name:'location',type:'string',minLength:1,maxLength:100}],minRows:1,maxRows:100,uniqueBy:['sku']};
 const bytes=(text:string)=>new TextEncoder().encode(text),check=(text:string,schema:CsvTableSchema=inventorySchema)=>validateCsvArtifact(schema,bytes(text));

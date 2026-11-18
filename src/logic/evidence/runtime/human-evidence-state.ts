@@ -4,7 +4,7 @@
  * 设计原因：文件、原生日志和知识检查在任务事务之外执行；提交只核原周期、图和运行是否仍与取证时一致，避免反向取得知识锁。
  * 职责边界：这是乐观并发依据，不是业务验收或执行许可；不读文件、不修改状态。
  */
-import { hash, json } from '../../../core/platform/node/serialization';
+import { hash, json } from '../../../core/io/serialization';
 
 import type { DispatchState } from '../../dispatch/rules/dispatch-storage';
 

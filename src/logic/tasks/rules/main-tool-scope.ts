@@ -8,7 +8,7 @@ import { automaticExecutionBindingMatches } from '../../team/rules/automatic-exe
 
 import { z } from 'zod';
 
-import { hash, json } from '../../../core/platform/node/serialization';
+import { hash, json } from '../../../core/io/serialization';
 
 import { goalNeedsReplan, sameGoalValue } from './scope-goal';
 

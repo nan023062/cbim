@@ -11,8 +11,6 @@ import { ToolRegistry, type ToolDefinition } from '../rules/registry';
 
 import type { KnowledgeWorkspace } from '../../knowledge/rules/ports';
 
-import { fail } from '../../../core/errors';
-
 import { Builtins, builtinSkills } from '../../knowledge/rules/builtins';
 
 import { KnowledgeQueries } from '../../knowledge/rules/knowledge-queries';
@@ -77,19 +75,19 @@ export class KnowledgeTools
 
     register('cbim_agent_registry', { description: '查询团队分组与自定义 Agent 注册表。未配置自定义负责 Agent 的模块由主 Agent 在当前会话直接执行；builtinAgents 保留空数组，不再提供默认执行员。', inputSchema: { ...identity, query: z.string().max(200).optional() } }, wrap(async args => ({ ...await queries.Agents(args.query), builtinAgents: [] })));
 
-    register('cbim_agent_get', { description: '按自定义 Agent ID 返回定义、原则和有效 Skill；继承冲突显式返回。主 Agent 是隐式默认执行者，无需登记；旧 cbim:executor 已退役。', inputSchema: { ...identity, id: z.string() } }, wrap(args => { if (args.id === 'cbim:executor') fail('AGENT_RETIRED', '内置默认执行 Agent 已退役；未配置自定义 Agent 的模块由主 Agent 直接执行'); return queries.Agent(args.id); }));
+    register('cbim_agent_get', { description: '按自定义 Agent ID 返回定义、原则和有效 Skill；继承冲突显式返回。主 Agent 是隐式默认执行者，无需登记；旧 cbim:executor 已退役。', inputSchema: { ...identity, id: z.string() } }, wrap(args => { if (args.id === 'cbim:executor') throw new Error('内置默认执行 Agent 已退役；未配置自定义 Agent 的模块由主 Agent 直接执行'); return queries.Agent(args.id); }));
 
     register('cbim_knowledge_refresh', { version: 2, effects: ['knowledge-write'], description: '按已读取的 revision 和明确 requestId 校验知识并刷新派生索引，不修改正文。需本轮知识写入授权；同ID只查询/复用完全相同原请求，结果未知不得换ID重试。结构无效返回问题清单，修正后重新读取。', inputSchema: knowledgeRefreshInputSchema.shape }, wrap(args => refresh.Refresh(args)));
 
     register('cbim_object_preview', { version: 2, effects: ['preview'], description: '预览 Agent/Module/Skill/Workflow 的创建、更新或删除。data 严格按 kind 区分：agent 不支持 purpose，module 不支持 name（name 固定为 slug，中文名写 body 的 H1）。创建传 parentId、slug、data、body；更新传 id 与需修改字段；删除传 id，包含子对象时需 cascade。服务规划路径、清单和父子引用，不写正式知识。返回 planId、变更及完整 validation.issues；structural:false 是校验未通过，不是执行异常，修正全部问题后重新预览。Module 根 parentId 为 .cbim/workspace（不是物理目录或 cbim:project）；同一 operations 可先建父再建子。summary 为 100–250 非空白字符单行，保留 slug、五章正文及直属内容虚拟节点约束见字段 Schema。', inputSchema: { ...identity, revision: z.string(), operations: z.array(objectOperation).min(1).max(100) } }, wrap(args => objects.Preview(args.revision, args.operations)));
 
-    register('cbim_object_commit', { effects: ['knowledge-write'], description: '提交 cbim_object_preview 返回的 planId。须取得本次运行的知识写入授权；核对原版本，事务写入知识及索引，同一计划幂等。', inputSchema: knowledgeObjectCommitInputSchema.shape }, wrap((args, write) => { if (!write) fail('FORBIDDEN', '当前调用未获得知识写入权限'); return objects.Commit(args.planId) }));
+    register('cbim_object_commit', { effects: ['knowledge-write'], description: '提交 cbim_object_preview 返回的 planId。须取得本次运行的知识写入授权；核对原版本，事务写入知识及索引，同一计划幂等。', inputSchema: knowledgeObjectCommitInputSchema.shape }, wrap((args, write) => { if (!write) throw new Error('当前调用未获得知识写入权限'); return objects.Commit(args.planId) }));
 
     const changeSchema = knowledgeCommitInputSchema.shape;
 
     register('cbim_knowledge_preview', { effects: ['preview'], description: '底层文件事务兼容入口；普通对象创建/更新/删除优先 cbim_object_preview/commit。仅在对象操作不能表达时使用。校验修改并预览影响，不写入。', inputSchema: changeSchema }, wrap(args => workspace.Preview(args)));
 
-    register('cbim_knowledge_commit', { effects: ['knowledge-write'], description: '底层文件事务兼容入口；普通对象维护优先 cbim_object_preview/commit。取得本次运行的知识写入授权后提交文件事务，核对读取版本与幂等请求标识。', inputSchema: changeSchema }, wrap((args, write) => { if (!write) fail('FORBIDDEN', '当前调用未获得知识写入权限'); return workspace.Commit(args) }));
+    register('cbim_knowledge_commit', { effects: ['knowledge-write'], description: '底层文件事务兼容入口；普通对象维护优先 cbim_object_preview/commit。取得本次运行的知识写入授权后提交文件事务，核对读取版本与幂等请求标识。', inputSchema: changeSchema }, wrap((args, write) => { if (!write) throw new Error('当前调用未获得知识写入权限'); return workspace.Commit(args) }));
 
     register('cbim_knowledge_move_preview', { effects: ['preview'], inputSchema: { ...identity, from: z.string(), to: z.string().nullable() } }, wrap(async args => workspace.Preview(await workspace.PlanMove(await workspace.Read(), args.from, args.to))));
 
@@ -146,7 +144,7 @@ export class KnowledgeTools
   async CallFromRun(name: string, input: unknown, write: boolean, signal?: AbortSignal)
   {
     if (!write && this.Describe(name, input).effects.includes('knowledge-write'))
-      fail('FORBIDDEN', '本轮未获得知识写入权限');
+      throw new Error('本轮未获得知识写入权限');
 
     return this.Invoke(name, input, write, signal);
   }

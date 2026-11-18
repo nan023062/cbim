@@ -3,7 +3,7 @@ import {it,expect} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {moduleFiles,summary} from './data/knowledge';
-import {json,hash} from '../../../../../src/core/platform/node/serialization';
+import {json,hash} from '../../../../../src/core/io/serialization';
 import {parseJson} from '../../../../../src/logic/knowledge/rules/knowledge';
 import {moduleSections,moduleBodyTemplate} from '../../../../../src/logic/workspace/rules/module-outline';
 

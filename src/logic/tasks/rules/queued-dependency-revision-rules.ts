@@ -3,8 +3,6 @@
  * 设计原因：先应用完整增删集合再判环，避免中间态误判；删除不能绕过已执行来源或把旧未知伪装成可领取。
  * 职责边界：纯快照规则不读取知识或启动成员，当前岗位和知识由服务在固定锁序内复核。
  */
-import { fail } from '../../../core/errors';
-
 import type { DispatchState } from '../../dispatch/rules/dispatch-storage';
 
 import type { GraphIdentity, GraphEdge } from './graph-types';
@@ -22,7 +20,7 @@ import { usableResult } from './graph-rules';
 function check(v: unknown, code: string, message: string): asserts v
 {
   if (!v)
-    fail(code, message)
+    throw new Error(message)
 }
 
 const sameSet = (a: string[], b: string[]) => a.length === b.length && a.every(x => b.includes(x));

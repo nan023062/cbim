@@ -6,7 +6,7 @@ import fs from 'node:fs/promises';
 
 import path from 'node:path';
 
-import { atomic } from '../../../core/platform/node/files';
+import { atomic } from '../../../core/io/text-files';
 
 import { SerialQueue } from '../../../core/utility';
 

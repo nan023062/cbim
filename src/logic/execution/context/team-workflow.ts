@@ -13,8 +13,6 @@ import { KnowledgeQueries } from '../../knowledge/rules/knowledge-queries';
 
 import { Builtins } from '../../knowledge/rules/builtins';
 
-import { fail } from '../../../core/errors';
-
 import type { KnowledgeWorkspace } from '../../knowledge/rules/ports';
 
 import type { TaskSpec } from '../rules';
@@ -37,7 +35,7 @@ export function assertLegacyWorkflowCompatible(task: TaskSpec): void
     } | undefined;
 
   if (typeof workflow?.content?.text === 'string' && parseWorkflowContract(workflow.content.text))
-    fail('WORKFLOW_MEMBER_REQUIRED', '声明了程序执行约定的 Workflow 必须通过主调度派发正式成员；旧单任务及其续聊入口不提供该门禁');
+    throw new Error('声明了程序执行约定的 Workflow 必须通过主调度派发正式成员；旧单任务及其续聊入口不提供该门禁');
 }
 
 /** 只读准备；所有正文必须来自同一知识版本，缺失和继承冲突拒绝启动。 */
@@ -50,26 +48,26 @@ export async function prepareTeamTask(workspace: KnowledgeWorkspace, input: Team
     agent = await queries.Agent(selection.agentId);
 
   if (!module.structural || !agent.structural)
-    fail('VALIDATION', '知识结构存在错误，请先完成知识治理');
+    throw new Error('知识结构存在错误，请先完成知识治理');
 
   if (!agent.skillSelectionValid)
-    fail('SKILL_CONFLICT', 'Agent 可用 Skill 存在继承冲突');
+    throw new Error('Agent 可用 Skill 存在继承冲突');
 
   if (!agent.principles.available || !module.overview.available || agent.skills.some(s => !s.content.available))
-    fail('MISSING_CONTENT', '模块知识、Agent 原则或 Skill 正文缺失');
+    throw new Error('模块知识、Agent 原则或 Skill 正文缺失');
 
   const workflow = module.workflows.find((w: any) => w.id === selection.workflowId);
 
   if (!workflow || !workflow.content.available)
-    fail('WORKFLOW_SCOPE', '只能选择当前模块登记且正文可用的 Workflow');
+    throw new Error('只能选择当前模块登记且正文可用的 Workflow');
 
   if (parseWorkflowContract(workflow.content.text))
-    fail('WORKFLOW_MEMBER_REQUIRED', '声明了程序执行约定的 Workflow 必须通过主调度派发正式成员；旧单任务入口不提供该门禁');
+    throw new Error('声明了程序执行约定的 Workflow 必须通过主调度派发正式成员；旧单任务入口不提供该门禁');
 
   const current = await workspace.Read();
 
   if ([agent.revision, current.revision].some(r => r !== module.revision))
-    fail('CONFLICT', '任务准备期间知识变化，请重新准备');
+    throw new Error('任务准备期间知识变化，请重新准备');
 
   const standards = await Promise.all(['business-execution', 'common-rules'].map(id => Builtins.Read(id)));
 

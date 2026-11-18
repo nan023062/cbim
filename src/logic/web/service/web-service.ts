@@ -8,7 +8,7 @@ import { z } from 'zod';
 
 import { webFetchInput, webSearchInput, type WebToolsPort } from '..';
 
-import { WebPageReader, PublicHttp, publicUrl, type BrowserReader } from '../../../core/platform/node/web';
+import { WebPageReader, PublicHttp, publicUrl, type BrowserReader } from '../../../core/web/node';
 
 import type { WebSettings } from './web-settings';
 

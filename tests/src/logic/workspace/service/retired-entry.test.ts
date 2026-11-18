@@ -5,7 +5,7 @@ import path from 'node:path';
 import {fixture} from '../../application/support/helpers';
 import {request} from '../../knowledge/rules/data/knowledge';
 import {internalKnowledge} from '../../tools/runtime/support/knowledge-tool-fixture';
-import {exists} from '../../../../../src/core/platform/node/files/index';
+import {exists} from '../../../../../src/core/io/text-files';
 import {Application} from '../../../../../src/bridge/server/application';
 
 it('初始化、应用启动与工作区重启不生成废弃入口或宿主指引',async()=>{

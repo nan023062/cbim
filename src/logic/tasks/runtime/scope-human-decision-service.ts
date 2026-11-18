@@ -7,9 +7,7 @@
  */
 import { z } from 'zod';
 
-import { fail } from '../../../core/errors';
-
-import { hash, json } from '../../../core/platform/node/serialization';
+import { hash, json } from '../../../core/io/serialization';
 
 import type { KnowledgeWorkspace, SourceSnapshotReader } from '../../knowledge/rules/ports';
 
@@ -46,7 +44,7 @@ type Owner = Pick<KnowledgeWorkspace, 'entry' | 'Assert' | 'Read'> & Partial<Sou
 function check(condition: unknown, code: string, message: string): asserts condition
 {
   if (!condition)
-    fail(code, message)
+    throw new Error(message)
 }
 
 const compare = (a: string, b: string) => a < b ? -1 : a > b ? 1 : 0;
@@ -62,7 +60,7 @@ export class ScopeHumanDecisionService
     const parsed = schema.safeParse(raw);
 
     if (!parsed.success)
-      fail('HUMAN_INPUT_INVALID', '人工决定参数无效；请重新选择验收项、文件基线与明确意见');
+      throw new Error('人工决定参数无效；请重新选择验收项、文件基线与明确意见');
 
     return parsed.data
   }
@@ -434,7 +432,7 @@ export class ScopeHumanDecisionService
           })?.code;
 
         if (code === 'WORKSPACE_EXECUTION_BUSY' || code === 'MEMBER_BUSY')
-          fail('HUMAN_UNAVAILABLE', '工作区当前有写入执行，未受理人工决定；请等待结束后重新核实');
+          throw new Error('工作区当前有写入执行，未受理人工决定；请等待结束后重新核实');
 
         throw error
       }
@@ -513,7 +511,7 @@ export class ScopeHumanDecisionService
 
     try
     {
-      return await this.Reading(!!input.baselines.length || !!input.manifests?.length, async () => { let preview: HumanDecisionPreview; try { preview = await this.Collect(before, { workspaceId: input.workspaceId, rootSessionId: input.rootSessionId, scopeId: input.scopeId, criterionId: input.criterionId, baselines: input.baselines, ...(input.manifests ? { manifests: input.manifests } : {}), ...(input.reconsidersDecisionId ? { reconsidersDecisionId: input.reconsidersDecisionId } : {}) }) } catch (error) { const code = (error as { code?: string })?.code; if (code?.startsWith('HUMAN_')) throw error; fail('HUMAN_EVIDENCE_INVALID', '当前日志、知识或文件依据无法核实，未保存人工决定') } return this.owner.WithSourceSnapshot!(snapshot => this.store.Transact(command, async state => { const scope = this.Scope(state, input), revision = scope.humanDecisions?.revision ?? 0; check(revision === input.expectedDecisionRevision, 'HUMAN_REVISION_CONFLICT', '人工决定记录已更新，请重新核实后提交'); check(revision < humanDecisionLimit, 'HUMAN_LIMIT', '本周期人工决定已达到 64 条上限'); check(stamp === this.StateStamp(state, input), 'HUMAN_STALE', '人工核实期间调度状态发生变化，请重新核实'); check(snapshot.revision === preview.source?.knowledgeRevision, 'HUMAN_KNOWLEDGE_CHANGED', '知识在人工核实期间变化，请重新安排核实'); check(!input.reconsidersDecisionId || preview.reconsideration?.canReconsider && scope.humanDecisions?.records.filter(record => record.criterionId === input.criterionId).at(-1)?.decisionId === input.reconsidersDecisionId, 'HUMAN_RECONSIDERATION_INVALID', '原意见已失效、来源无法核实或尚未进入新的等待；不能关联提交，请查看最新记录'); check(preview.basis === input.expectedBasis, 'HUMAN_STALE', '人工决定依据已经变化，请重新核实后提交'); check(preview.allowedDecisions.includes(input.decision), 'HUMAN_DECISION_UNAVAILABLE', '所选决定尚不满足当前候选与文件核实要求'); this.Current(); const records = scope.humanDecisions?.records ?? [], supersedes = records.filter(record => record.criterionId === input.criterionId && record.basis === input.expectedBasis).at(-1); const record = humanDecisionRecordSchema.parse({ decisionId: input.commandId, revision: revision + 1, recordedAt: new Date().toISOString(), actor, criterionId: input.criterionId, decision: input.decision, comment: input.comment, basis: input.expectedBasis, baselines: input.baselines, ...(input.manifests ? { manifests: input.manifests } : {}), ...(input.reconsidersDecisionId ? { reconsidersDecisionId: input.reconsidersDecisionId } : {}), proof: humanDecisionProof(preview), ...(supersedes ? { supersedesDecisionId: supersedes.decisionId } : {}) }), next = { ...scope, humanDecisions: { revision: revision + 1, records: [...records, record] } }; return { scopes: [next], receipt: this.Receipt(next, input.commandId)! }; })); })
+      return await this.Reading(!!input.baselines.length || !!input.manifests?.length, async () => { let preview: HumanDecisionPreview; try { preview = await this.Collect(before, { workspaceId: input.workspaceId, rootSessionId: input.rootSessionId, scopeId: input.scopeId, criterionId: input.criterionId, baselines: input.baselines, ...(input.manifests ? { manifests: input.manifests } : {}), ...(input.reconsidersDecisionId ? { reconsidersDecisionId: input.reconsidersDecisionId } : {}) }) } catch (error) { const code = (error as { code?: string })?.code; if (code?.startsWith('HUMAN_')) throw error; throw new Error('当前日志、知识或文件依据无法核实，未保存人工决定') } return this.owner.WithSourceSnapshot!(snapshot => this.store.Transact(command, async state => { const scope = this.Scope(state, input), revision = scope.humanDecisions?.revision ?? 0; check(revision === input.expectedDecisionRevision, 'HUMAN_REVISION_CONFLICT', '人工决定记录已更新，请重新核实后提交'); check(revision < humanDecisionLimit, 'HUMAN_LIMIT', '本周期人工决定已达到 64 条上限'); check(stamp === this.StateStamp(state, input), 'HUMAN_STALE', '人工核实期间调度状态发生变化，请重新核实'); check(snapshot.revision === preview.source?.knowledgeRevision, 'HUMAN_KNOWLEDGE_CHANGED', '知识在人工核实期间变化，请重新安排核实'); check(!input.reconsidersDecisionId || preview.reconsideration?.canReconsider && scope.humanDecisions?.records.filter(record => record.criterionId === input.criterionId).at(-1)?.decisionId === input.reconsidersDecisionId, 'HUMAN_RECONSIDERATION_INVALID', '原意见已失效、来源无法核实或尚未进入新的等待；不能关联提交，请查看最新记录'); check(preview.basis === input.expectedBasis, 'HUMAN_STALE', '人工决定依据已经变化，请重新核实后提交'); check(preview.allowedDecisions.includes(input.decision), 'HUMAN_DECISION_UNAVAILABLE', '所选决定尚不满足当前候选与文件核实要求'); this.Current(); const records = scope.humanDecisions?.records ?? [], supersedes = records.filter(record => record.criterionId === input.criterionId && record.basis === input.expectedBasis).at(-1); const record = humanDecisionRecordSchema.parse({ decisionId: input.commandId, revision: revision + 1, recordedAt: new Date().toISOString(), actor, criterionId: input.criterionId, decision: input.decision, comment: input.comment, basis: input.expectedBasis, baselines: input.baselines, ...(input.manifests ? { manifests: input.manifests } : {}), ...(input.reconsidersDecisionId ? { reconsidersDecisionId: input.reconsidersDecisionId } : {}), proof: humanDecisionProof(preview), ...(supersedes ? { supersedesDecisionId: supersedes.decisionId } : {}) }), next = { ...scope, humanDecisions: { revision: revision + 1, records: [...records, record] } }; return { scopes: [next], receipt: this.Receipt(next, input.commandId)! }; })); })
     }
     catch (error)
     {

@@ -4,7 +4,7 @@ import {fixture} from '../../application/support/helpers';
 import {request} from '../../knowledge/rules/data/knowledge';
 import {seedTeam} from '../../knowledge/service/support/team-fixture';
 import {registerServiceOwner} from '../service/support/owner-service-fixture';
-import {hash,json} from '../../../../../src/core/platform/node/serialization';
+import {hash,json} from '../../../../../src/core/io/serialization';
 import {WorkspaceDispatchService} from '../../../../../src/logic/dispatch/runtime/dispatch-service';
 import {prepareDispatchExecutionContext} from '../../../../../src/logic/execution/context/execution-context';
 import {applyGraphBatch} from '../../../../../src/logic/tasks/rules/graph-reducer';

@@ -12,9 +12,7 @@ import { isDeepStrictEqual as equal } from 'node:util';
 
 import { zodToJsonSchema } from 'zod-to-json-schema';
 
-import { hash } from '../../../../core/platform/node/serialization';
-
-import { fail } from '../../../../core/errors';
+import { hash } from '../../../../core/io/serialization';
 
 import { checkedJsonToolResult } from '../../../tools/rules/results';
 
@@ -224,7 +222,7 @@ export class RunArtifactTransition implements ArtifactTransitionToolPort
   AssertVerified()
   {
     if (this.unverified.size)
-      fail('ARTIFACT_TRANSITION_REVIEW_REQUIRED', '原删除/移动结果待核实，不能交付或安全交接')
+      throw new Error('原删除/移动结果待核实，不能交付或安全交接')
   }
 
   Stop()
@@ -250,7 +248,7 @@ export class RunArtifactTransition implements ArtifactTransitionToolPort
       current = this.reserved;
 
     if (name !== artifactTransitionToolName || !id || !current || current.id !== id || current.consumed || !current.allowedSeq || !equal(current.input, input) || current.inputHash !== hash(JSON.stringify(raw)))
-      fail('ARTIFACT_TRANSITION_AUTHORIZATION', '删除/移动缺少本轮原参数的一次性可靠授权');
+      throw new Error('删除/移动缺少本轮原参数的一次性可靠授权');
 
     current.consumed = true;
 
@@ -259,9 +257,9 @@ export class RunArtifactTransition implements ArtifactTransitionToolPort
     const active = AbortSignal.any([this.controller.signal, ...(signal ? [signal] : []), AbortSignal.timeout(60000)]),
       version = this.context.Version();
 
-    const check = () => { active.throwIfAborted(); this.context.AssertReady(id); if (this.context.Version() !== version) fail('ARTIFACT_TRANSITION_CHANGED', '删除/移动期间计划发生变化') };
+    const check = () => { active.throwIfAborted(); this.context.AssertReady(id); if (this.context.Version() !== version) throw new Error('删除/移动期间计划发生变化') };
 
-    const work = (async (): Promise<ArtifactTransitionApplied> => { check(); await this.manifests.AssertCurrentKnowledge(); check(); const before = await this.manifests.Capture(this.scopes, active); check(); if (!equal(before, current.before.manifest.snapshot)) fail('ARTIFACT_TRANSITION_BEFORE_CHANGED', '原写前完整集合已变化，请重新核实'); let prepared!: ArtifactTransitionPrepared, preparedSeq = 0, executingSeq = 0; await this.port.WithExclusive(current.operation, active, async file => { check(); const actual = await file.ReadBefore(); check(); const source = current.operation.kind === 'delete' ? current.operation.path : current.operation.from, entry = before.entries.find(item => item.relativePath === source); if (entry?.kind !== 'file' || entry.byteLength !== actual.fact.byteLength || entry.sha256 !== actual.fact.sha256) fail('ARTIFACT_TRANSITION_BEFORE_CHANGED', '原文件句柄字节与写前完整清单不一致'); prepared = artifactTransitionPreparedSchema.parse({ version: 1, operationId: artifactTransitionOperationId(this.binding, id), toolCallId: id, binding: this.binding, moduleId: input.moduleId, operationIndex: input.operationIndex, operation: current.operation, knowledgeRevision: this.manifests.knowledgeRevision, scopeHash: outputManifestScopeHash(this.scopes), beforeManifestId: input.beforeManifestId, beforeManifestHash: current.before.manifest.manifestHash, before: actual.fact, inputHash: current.inputHash, progressVersion: input.expectedTaskProgressVersion, allowedSeq: current.allowedSeq, fileIdentity: actual.identity, preparedAt: new Date().toISOString() }); preparedSeq = (await this.context.Save({ type: 'artifact.transition_prepared', data: { prepared } })).seq; check(); await this.manifests.AssertCurrentKnowledge(); check(); executingSeq = (await this.context.Save({ type: 'artifact.transition_executing', data: { operationId: prepared.operationId, preparedSeq } })).seq; check(); const result = await file.Apply(); if (!equal(result.identity, actual.identity) || !equal(result.fact, actual.fact) || !equal(result.operation, current.operation) || result.sourceMissing !== true) fail('ARTIFACT_TRANSITION_RESULT_INVALID', '原删除/移动的平台结果无法核实'); }); check(); const afterSnapshot = await this.manifests.Capture(this.scopes, active); check(); if (!equal(afterSnapshot, expectedArtifactTransitionSnapshot(before, current.operation))) fail('ARTIFACT_TRANSITION_AFTER_CHANGED', '操作后的完整集合或移动两端不符合原操作，保留阶段等待核实'); await this.manifests.AssertCurrentKnowledge(); check(); const after = { afterManifestHash: outputManifestHash(afterSnapshot), appliedAt: new Date().toISOString() }, appliedSeq = (await this.context.Save({ type: 'artifact.transition_applied', data: { operationId: prepared.operationId, executingSeq, afterSnapshot, ...after } })).seq; check(); return artifactTransitionAppliedValue(prepared, { preparedSeq, executingSeq, appliedSeq }, after); })();
+    const work = (async (): Promise<ArtifactTransitionApplied> => { check(); await this.manifests.AssertCurrentKnowledge(); check(); const before = await this.manifests.Capture(this.scopes, active); check(); if (!equal(before, current.before.manifest.snapshot)) throw new Error('原写前完整集合已变化，请重新核实'); let prepared!: ArtifactTransitionPrepared, preparedSeq = 0, executingSeq = 0; await this.port.WithExclusive(current.operation, active, async file => { check(); const actual = await file.ReadBefore(); check(); const source = current.operation.kind === 'delete' ? current.operation.path : current.operation.from, entry = before.entries.find(item => item.relativePath === source); if (entry?.kind !== 'file' || entry.byteLength !== actual.fact.byteLength || entry.sha256 !== actual.fact.sha256) throw new Error('原文件句柄字节与写前完整清单不一致'); prepared = artifactTransitionPreparedSchema.parse({ version: 1, operationId: artifactTransitionOperationId(this.binding, id), toolCallId: id, binding: this.binding, moduleId: input.moduleId, operationIndex: input.operationIndex, operation: current.operation, knowledgeRevision: this.manifests.knowledgeRevision, scopeHash: outputManifestScopeHash(this.scopes), beforeManifestId: input.beforeManifestId, beforeManifestHash: current.before.manifest.manifestHash, before: actual.fact, inputHash: current.inputHash, progressVersion: input.expectedTaskProgressVersion, allowedSeq: current.allowedSeq, fileIdentity: actual.identity, preparedAt: new Date().toISOString() }); preparedSeq = (await this.context.Save({ type: 'artifact.transition_prepared', data: { prepared } })).seq; check(); await this.manifests.AssertCurrentKnowledge(); check(); executingSeq = (await this.context.Save({ type: 'artifact.transition_executing', data: { operationId: prepared.operationId, preparedSeq } })).seq; check(); const result = await file.Apply(); if (!equal(result.identity, actual.identity) || !equal(result.fact, actual.fact) || !equal(result.operation, current.operation) || result.sourceMissing !== true) throw new Error('原删除/移动的平台结果无法核实'); }); check(); const afterSnapshot = await this.manifests.Capture(this.scopes, active); check(); if (!equal(afterSnapshot, expectedArtifactTransitionSnapshot(before, current.operation))) throw new Error('操作后的完整集合或移动两端不符合原操作，保留阶段等待核实'); await this.manifests.AssertCurrentKnowledge(); check(); const after = { afterManifestHash: outputManifestHash(afterSnapshot), appliedAt: new Date().toISOString() }, appliedSeq = (await this.context.Save({ type: 'artifact.transition_applied', data: { operationId: prepared.operationId, executingSeq, afterSnapshot, ...after } })).seq; check(); return artifactTransitionAppliedValue(prepared, { preparedSeq, executingSeq, appliedSeq }, after); })();
 
     this.pending.Track(work);
 

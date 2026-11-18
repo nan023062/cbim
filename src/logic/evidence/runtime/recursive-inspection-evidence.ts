@@ -3,9 +3,7 @@
  * 设计原因：新调用不使用旧目标计划和派工图；核证复用冻结 Workflow、文件和完整日志规则，不补造旧任务或审阅。
  * 职责边界：只读取已封存记录和当前文件，不启动模型、不修改旧事实、不授予写入或人工验收。
  */
-import { fail } from '../../../core/errors';
-
-import { hash, json } from '../../../core/platform/node/serialization';
+import { hash, json } from '../../../core/io/serialization';
 
 import type { DispatchState } from '../../dispatch/rules/dispatch-storage';
 
@@ -46,7 +44,7 @@ interface Ports
 function check(condition: unknown, message: string): asserts condition
 {
   if (!condition)
-    fail('REPLAN_PROOF_INVALID', message)
+    throw new Error(message)
 }
 
 /** 无状态核证器；证据稳定性由二次读取核实，不把文件检查描述成跨文件事务。 */

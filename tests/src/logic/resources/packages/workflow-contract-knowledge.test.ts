@@ -6,7 +6,7 @@ import {fixture} from '../../application/support/helpers';
 import {internalKnowledge} from '../../tools/runtime/support/knowledge-tool-fixture';
 import {moduleFiles,request} from '../../knowledge/rules/data/knowledge';
 import {buildWorkspacePackage,parseWorkspacePackage,planWorkspacePackage,workspacePackageFingerprint} from '../../../../../src/logic/knowledge/rules/portable-package';
-import {hash} from '../../../../../src/core/platform/node/serialization';
+import {hash} from '../../../../../src/core/io/serialization';
 import {parseWorkflowContract} from '../../../../../src/logic/workspace/rules/workflow-contract';
 
 const body='# 实施与验证\n按专业方法执行。\n```cbim-workflow\n{"version":1,"beforeEffects":{"requirePlan":true},"delivery":{"requiredToolEvidence":[{"id":"inspect-result","toolName":"read"}]}}\n```\n成果语义仍由审阅者判断。';

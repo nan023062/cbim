@@ -8,7 +8,7 @@ import {FileRunStorage} from '../../../../../../src/logic/execution/storage/run-
 import {controlledFileWriteToolName as tool,type ControlledFileWriteApplied} from '../../../../../../src/logic/file-operations/rules/controlled-file-operation';
 import {controlledFileOperationId} from '../../../../../../src/logic/file-operations/rules/controlled-file-rules';
 import {authorizeRunTool} from '../../../../../../src/logic/tools/rules/policy/tool-policy';
-import {hash} from '../../../../../../src/core/platform/node/serialization';
+import {hash} from '../../../../../../src/core/io/serialization';
 import {artifactBinding as binding,deferred} from '../capabilities/support/artifact-runtime-fixture';
 const input={path:'File.txt',expectedBefore:{byteLength:3,sha256:hash('old')},content:'new'};
 function applied(id='call',scopeId='scope'):ControlledFileWriteApplied{return {version:1,state:'applied',operationId:controlledFileOperationId(binding,id),revision:3,scopeId,binding,toolCallId:id,inputHash:hash(JSON.stringify(input)),relativePath:input.path,before:input.expectedBefore,after:{byteLength:3,sha256:hash('new')},appliedAt:new Date().toISOString(),coverage:'single_file_default_stream',acceptance:'not_evaluated'}}

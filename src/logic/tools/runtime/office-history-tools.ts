@@ -10,8 +10,6 @@ import type { GraphIdentity } from '../../tasks/rules/graph-types';
 
 import { checkedJsonToolResult } from '../rules/results';
 
-import { fail } from '../../../core/errors';
-
 export class OfficeHistoryTools
 {
   private readonly identity: GraphIdentity;
@@ -34,7 +32,7 @@ export class OfficeHistoryTools
   Describe(name: string, input: unknown)
   {
     if (!this.Has(name))
-      fail('TOOL_NOT_FOUND', '没有此归档工具');
+      throw new Error('没有此归档工具');
 
     officeHistoryQuerySchema.parse(input);
 

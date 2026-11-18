@@ -6,8 +6,6 @@
  */
 import { requestBudgetUsageSchema, type RequestBudgetUsage, type GenerationBudgetModel } from '../../../budget/rules/model-request-budget';
 
-import { fail } from '../../../../core/errors';
-
 const integer = (v: unknown): number => { if (typeof v !== 'number' || !Number.isSafeInteger(v) || v < 0) throw Error('请求用量缺失或不是安全非负整数'); return v };
 
 const optional = (v: unknown) => v === undefined ? 0 : integer(v);
@@ -192,16 +190,16 @@ export class RequestBudgetUsageStream
         const reason = value.response?.incomplete_details?.reason;
 
         if (reason === 'max_output_tokens')
-          fail('MODEL_OUTPUT_LIMIT', '模型输出达到本轮上限（max_output_tokens），请求未完整完成。请核实已有工具回执后继续；长文件可分段生成，或调整模型输出上限。未完整生成的工具参数不会执行，已完成操作不要重复。');
+          throw new Error('模型输出达到本轮上限（max_output_tokens），请求未完整完成。请核实已有工具回执后继续；长文件可分段生成，或调整模型输出上限。未完整生成的工具参数不会执行，已完成操作不要重复。');
 
         if (reason === 'content_filter')
-          fail('MODEL_CONTENT_FILTER', '供应商内容过滤导致请求未完整完成（content_filter）。请调整请求后继续；先核实已有工具回执，不重复已完成操作。');
+          throw new Error('供应商内容过滤导致请求未完整完成（content_filter）。请调整请求后继续；先核实已有工具回执，不重复已完成操作。');
 
-        fail('MODEL_RESPONSE_INCOMPLETE', '供应商返回未完成响应（response.incomplete），未提供可识别原因。请核实已有工具回执后继续，不自动重试。');
+        throw new Error('供应商返回未完成响应（response.incomplete），未提供可识别原因。请核实已有工具回执后继续，不自动重试。');
       }
 
       if (['response.failed', 'error'].includes(value.type))
-        fail('MODEL_RESPONSE_FAILED', '供应商返回失败响应，请求未完整完成。请核实已有工具回执后再决定是否继续，不自动重试。');
+        throw new Error('供应商返回失败响应，请求未完整完成。请核实已有工具回执后再决定是否继续，不自动重试。');
 
       if (value.type === 'response.completed')
       {

@@ -11,8 +11,6 @@ import { loopChoicesSchema, type LoopIpcResponses } from '../../contracts/ipc-lo
 
 import { ChatInputs } from '../../../logic/materials/service/chat-inputs';
 
-import { fail } from '../../../core/errors';
-
 /** 仅装配本业务组；每项实际实现都受对应请求／响应约束。 */
 export function loopIpcHandlers(app: ApplicationServices): IpcHandlers<keyof LoopIpcResponses>
 {
@@ -21,7 +19,7 @@ export function loopIpcHandlers(app: ApplicationServices): IpcHandlers<keyof Loo
     'loop.choices': async args => { return loopChoicesSchema.parse(await app.Execution(args.id).Choices()); },
     'loop.thread': async args => { return app.Execution(args.id).Thread(args.taskId); },
     'loop.threadView': async args => { return app.Execution(args.id).ThreadView(args.taskId); },
-    'loop.start': async args => { fail('OWNER_DISPATCH_REQUIRED', '业务执行必须通过当前目标计划和负责岗位派发；旧任务历史仍可读取'); },
+    'loop.start': async args => { throw new Error('业务执行必须通过当前目标计划和负责岗位派发；旧任务历史仍可读取'); },
     'loop.queue': async args => { return app.Execution(args.id).Queued(args.taskId); },
     'loop.queueDelta': async args => { return app.Execution(args.id).QueueDelta(args.taskId, args.cursor); },
     'loop.enqueue': async args => { return app.Execution(args.id).Enqueue(args.taskId, args.message, await app.ChatOptions(args.id, args.options, args.attachments), args.followupOf); },

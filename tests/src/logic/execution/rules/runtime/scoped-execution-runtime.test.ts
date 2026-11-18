@@ -6,7 +6,7 @@ import {RunScopedExecution,type ScopedExecutionPort} from '../../../../../../src
 import type {EngineContext,AgentEngine} from '../../../../../../src/logic/execution/rules/types';
 import {FileRunStorage} from '../../../../../../src/logic/execution/storage/run-storage';
 import {authorizeRunTool} from '../../../../../../src/logic/tools/rules/policy/tool-policy';
-import {hash} from '../../../../../../src/core/platform/node/serialization';
+import {hash} from '../../../../../../src/core/io/serialization';
 import {artifactBinding as binding,deferred} from '../capabilities/support/artifact-runtime-fixture';
 import type {ExecutionScope} from '../../../../../../src/logic/workspace/rules/execution-scope';
 const scope:ExecutionScope={version:1,profile:'windows-lpac-node-v1',read:[{path:'src',kind:'directory'}],write:[{path:'src/result.txt',kind:'file'}],node:{timeoutMs:1000,memoryMiB:512,processLimit:2}};

@@ -189,18 +189,22 @@ N_40cc50f98509 ..> N_f3f055d56704 : 依赖
 N_40cc50f98509 ..> N_e99b7cd6e11b : 依赖
 ```
 
-### 关系组 5：updates
+### 关系组 5：io-errors
 
 ```mermaid
 classDiagram
-class N_1a718763f256["updates"] {
+class N_5aaa8e9daf01["io-errors"] {
   <<virtual>>
 }
-click N_1a718763f256 href "updates/ARCHITECTURE.md"
+click N_5aaa8e9daf01 href "io-errors/ARCHITECTURE.md"
 class N_24afab7388cd["terminal"] {
   <<virtual>>
 }
 click N_24afab7388cd href "terminal/ARCHITECTURE.md"
+class N_1a718763f256["updates"] {
+  <<virtual>>
+}
+click N_1a718763f256 href "updates/ARCHITECTURE.md"
 ```
 
 ### 跨图协作
@@ -210,7 +214,7 @@ click N_24afab7388cd href "terminal/ARCHITECTURE.md"
 | 引用方 | 关系 | 目标 |
 | --- | --- | --- |
 | [agents](agents/ARCHITECTURE.md)（图 1） | 依赖 | [tasks](tasks/ARCHITECTURE.md)（图 2）、[tools](tools/ARCHITECTURE.md)（图 4） |
-| [application](application/ARCHITECTURE.md)（图 1） | 依赖 | [automation](automation/ARCHITECTURE.md)（图 3）、[connectors](connectors/ARCHITECTURE.md)（图 4）、[engines](engines/ARCHITECTURE.md)（图 3）、[evidence](evidence/ARCHITECTURE.md)（图 2）、[feedback](feedback/ARCHITECTURE.md)（图 4）、[file-operations](file-operations/ARCHITECTURE.md)（图 2）、[governance](governance/ARCHITECTURE.md)（图 2）、[history](history/ARCHITECTURE.md)（图 2）、[knowledge](knowledge/ARCHITECTURE.md)（图 2）、[materials](materials/ARCHITECTURE.md)（图 4）、[models](models/ARCHITECTURE.md)（图 3）、[resources](resources/ARCHITECTURE.md)（图 4）、[runtime](runtime/ARCHITECTURE.md)（图 3）、[tasks](tasks/ARCHITECTURE.md)（图 2）、[team](team/ARCHITECTURE.md)（图 3）、[tools](tools/ARCHITECTURE.md)（图 4）、[updates](updates/ARCHITECTURE.md)（图 5）、[web](web/ARCHITECTURE.md)（图 4）、[workspace](workspace/ARCHITECTURE.md)（图 3） |
+| [application](application/ARCHITECTURE.md)（图 1） | 依赖 | [automation](automation/ARCHITECTURE.md)（图 3）、[connectors](connectors/ARCHITECTURE.md)（图 4）、[engines](engines/ARCHITECTURE.md)（图 3）、[evidence](evidence/ARCHITECTURE.md)（图 2）、[feedback](feedback/ARCHITECTURE.md)（图 4）、[file-operations](file-operations/ARCHITECTURE.md)（图 2）、[governance](governance/ARCHITECTURE.md)（图 2）、[history](history/ARCHITECTURE.md)（图 2）、[io-errors](io-errors/ARCHITECTURE.md)（图 5）、[knowledge](knowledge/ARCHITECTURE.md)（图 2）、[materials](materials/ARCHITECTURE.md)（图 4）、[models](models/ARCHITECTURE.md)（图 3）、[resources](resources/ARCHITECTURE.md)（图 4）、[runtime](runtime/ARCHITECTURE.md)（图 3）、[tasks](tasks/ARCHITECTURE.md)（图 2）、[team](team/ARCHITECTURE.md)（图 3）、[tools](tools/ARCHITECTURE.md)（图 4）、[updates](updates/ARCHITECTURE.md)（图 5）、[web](web/ARCHITECTURE.md)（图 4）、[workspace](workspace/ARCHITECTURE.md)（图 3） |
 | [automation](automation/ARCHITECTURE.md)（图 3） | 依赖 | [conversation](conversation/ARCHITECTURE.md)（图 1）、[dispatch](dispatch/ARCHITECTURE.md)（图 1）、[knowledge](knowledge/ARCHITECTURE.md)（图 2） |
 | [budget](budget/ARCHITECTURE.md)（图 1） | 依赖 | [engines](engines/ARCHITECTURE.md)（图 3）、[knowledge](knowledge/ARCHITECTURE.md)（图 2）、[tasks](tasks/ARCHITECTURE.md)（图 2）、[team](team/ARCHITECTURE.md)（图 3） |
 | [connectors](connectors/ARCHITECTURE.md)（图 4） | 依赖 | [knowledge](knowledge/ARCHITECTURE.md)（图 2） |
@@ -219,17 +223,18 @@ click N_24afab7388cd href "terminal/ARCHITECTURE.md"
 | [engines](engines/ARCHITECTURE.md)（图 3） | 依赖 | [execution](execution/ARCHITECTURE.md)（图 1）、[updates](updates/ARCHITECTURE.md)（图 5） |
 | [evidence](evidence/ARCHITECTURE.md)（图 2） | 依赖 | [agents](agents/ARCHITECTURE.md)（图 1）、[dispatch](dispatch/ARCHITECTURE.md)（图 1）、[execution](execution/ARCHITECTURE.md)（图 1）、[runtime](runtime/ARCHITECTURE.md)（图 3）、[team](team/ARCHITECTURE.md)（图 3）、[tools](tools/ARCHITECTURE.md)（图 4）、[workspace](workspace/ARCHITECTURE.md)（图 3） |
 | [execution](execution/ARCHITECTURE.md)（图 1） | 依赖 | [connectors](connectors/ARCHITECTURE.md)（图 4）、[engines](engines/ARCHITECTURE.md)（图 3）、[evidence](evidence/ARCHITECTURE.md)（图 2）、[feedback](feedback/ARCHITECTURE.md)（图 4）、[file-operations](file-operations/ARCHITECTURE.md)（图 2）、[governance](governance/ARCHITECTURE.md)（图 2）、[knowledge](knowledge/ARCHITECTURE.md)（图 2）、[models](models/ARCHITECTURE.md)（图 3）、[runtime](runtime/ARCHITECTURE.md)（图 3）、[tasks](tasks/ARCHITECTURE.md)（图 2）、[team](team/ARCHITECTURE.md)（图 3）、[tools](tools/ARCHITECTURE.md)（图 4）、[web](web/ARCHITECTURE.md)（图 4）、[workspace](workspace/ARCHITECTURE.md)（图 3） |
+| [feedback](feedback/ARCHITECTURE.md)（图 4） | 依赖 | [io-errors](io-errors/ARCHITECTURE.md)（图 5） |
 | [file-operations](file-operations/ARCHITECTURE.md)（图 2） | 依赖 | [dispatch](dispatch/ARCHITECTURE.md)（图 1）、[execution](execution/ARCHITECTURE.md)（图 1）、[team](team/ARCHITECTURE.md)（图 3）、[workspace](workspace/ARCHITECTURE.md)（图 3） |
 | [governance](governance/ARCHITECTURE.md)（图 2） | 依赖 | [execution](execution/ARCHITECTURE.md)（图 1）、[workspace](workspace/ARCHITECTURE.md)（图 3） |
 | [history](history/ARCHITECTURE.md)（图 2） | 依赖 | [agents](agents/ARCHITECTURE.md)（图 1）、[dispatch](dispatch/ARCHITECTURE.md)（图 1）、[execution](execution/ARCHITECTURE.md)（图 1）、[runtime](runtime/ARCHITECTURE.md)（图 3）、[team](team/ARCHITECTURE.md)（图 3） |
-| [knowledge](knowledge/ARCHITECTURE.md)（图 2） | 依赖 | [connectors](connectors/ARCHITECTURE.md)（图 4）、[dispatch](dispatch/ARCHITECTURE.md)（图 1）、[feedback](feedback/ARCHITECTURE.md)（图 4）、[team](team/ARCHITECTURE.md)（图 3）、[workspace](workspace/ARCHITECTURE.md)（图 3） |
+| [knowledge](knowledge/ARCHITECTURE.md)（图 2） | 依赖 | [connectors](connectors/ARCHITECTURE.md)（图 4）、[dispatch](dispatch/ARCHITECTURE.md)（图 1）、[feedback](feedback/ARCHITECTURE.md)（图 4）、[io-errors](io-errors/ARCHITECTURE.md)（图 5）、[team](team/ARCHITECTURE.md)（图 3）、[workspace](workspace/ARCHITECTURE.md)（图 3） |
 | [materials](materials/ARCHITECTURE.md)（图 4） | 依赖 | [execution](execution/ARCHITECTURE.md)（图 1）、[knowledge](knowledge/ARCHITECTURE.md)（图 2）、[tasks](tasks/ARCHITECTURE.md)（图 2） |
-| [resources](resources/ARCHITECTURE.md)（图 4） | 依赖 | [knowledge](knowledge/ARCHITECTURE.md)（图 2） |
+| [resources](resources/ARCHITECTURE.md)（图 4） | 依赖 | [io-errors](io-errors/ARCHITECTURE.md)（图 5）、[knowledge](knowledge/ARCHITECTURE.md)（图 2） |
 | [runtime](runtime/ARCHITECTURE.md)（图 3） | 依赖 | [dispatch](dispatch/ARCHITECTURE.md)（图 1）、[evidence](evidence/ARCHITECTURE.md)（图 2）、[execution](execution/ARCHITECTURE.md)（图 1）、[tasks](tasks/ARCHITECTURE.md)（图 2）、[tools](tools/ARCHITECTURE.md)（图 4） |
 | [tasks](tasks/ARCHITECTURE.md)（图 2） | 依赖 | [budget](budget/ARCHITECTURE.md)（图 1）、[dispatch](dispatch/ARCHITECTURE.md)（图 1）、[engines](engines/ARCHITECTURE.md)（图 3）、[execution](execution/ARCHITECTURE.md)（图 1）、[models](models/ARCHITECTURE.md)（图 3）、[runtime](runtime/ARCHITECTURE.md)（图 3）、[team](team/ARCHITECTURE.md)（图 3）、[tools](tools/ARCHITECTURE.md)（图 4）、[workspace](workspace/ARCHITECTURE.md)（图 3） |
 | [team](team/ARCHITECTURE.md)（图 3） | 依赖 | [agents](agents/ARCHITECTURE.md)（图 1）、[budget](budget/ARCHITECTURE.md)（图 1）、[conversation](conversation/ARCHITECTURE.md)（图 1）、[dispatch](dispatch/ARCHITECTURE.md)（图 1）、[evidence](evidence/ARCHITECTURE.md)（图 2）、[execution](execution/ARCHITECTURE.md)（图 1）、[knowledge](knowledge/ARCHITECTURE.md)（图 2）、[tasks](tasks/ARCHITECTURE.md)（图 2） |
 | [tools](tools/ARCHITECTURE.md)（图 4） | 依赖 | [engines](engines/ARCHITECTURE.md)（图 3）、[execution](execution/ARCHITECTURE.md)（图 1）、[governance](governance/ARCHITECTURE.md)（图 2）、[knowledge](knowledge/ARCHITECTURE.md)（图 2）、[tasks](tasks/ARCHITECTURE.md)（图 2）、[team](team/ARCHITECTURE.md)（图 3）、[workspace](workspace/ARCHITECTURE.md)（图 3） |
-| [workspace](workspace/ARCHITECTURE.md)（图 3） | 依赖 | [dispatch](dispatch/ARCHITECTURE.md)（图 1）、[execution](execution/ARCHITECTURE.md)（图 1）、[governance](governance/ARCHITECTURE.md)（图 2）、[knowledge](knowledge/ARCHITECTURE.md)（图 2）、[tasks](tasks/ARCHITECTURE.md)（图 2）、[tools](tools/ARCHITECTURE.md)（图 4） |
+| [workspace](workspace/ARCHITECTURE.md)（图 3） | 依赖 | [dispatch](dispatch/ARCHITECTURE.md)（图 1）、[execution](execution/ARCHITECTURE.md)（图 1）、[governance](governance/ARCHITECTURE.md)（图 2）、[io-errors](io-errors/ARCHITECTURE.md)（图 5）、[knowledge](knowledge/ARCHITECTURE.md)（图 2）、[tasks](tasks/ARCHITECTURE.md)（图 2）、[tools](tools/ARCHITECTURE.md)（图 4） |
 
 ## 子模块
 
@@ -249,6 +254,7 @@ click N_24afab7388cd href "terminal/ARCHITECTURE.md"
 | [file-operations](file-operations/ARCHITECTURE.md) | 对有明确业务授权的文件写入、删除移动和隔离执行提供完整的可信操作边界。 |
 | [governance](governance/ARCHITECTURE.md) | 组织正式模块知识的观察、提案、人工决定与实施，防止建议直接变成权威知识。 |
 | [history](history/ARCHITECTURE.md) | 按静态角色和逻辑会话提供运行履历，保留实例退役之后仍可读取的历史事实。 |
+| [io-errors](io-errors/ARCHITECTURE.md) | Logic 按业务错误协议解释严格 JSON 解析与原生锁失败。JSON 与锁分别导入，解析数据时无需加载原生库。 |
 | [knowledge](knowledge/ARCHITECTURE.md) | 管理正式知识的快照、校验、查询与受控修改，使权威正文和派生读取各有责任边界。 |
 | [materials](materials/ARCHITECTURE.md) | 管理聊天与目标补充所引用资料的身份和采集快照，使输入正文具有可核对来源。 |
 | [models](models/ARCHITECTURE.md) | 管理供应商连接、生成与向量模型目录及公开快照，使模型能力独立于具体 Agent 引擎。 |

@@ -6,11 +6,9 @@
  * 职责边界：核对固定事实与合法迁移，来源选择进入 basis、新代次属于明确能力采纳；不读取知识/profile，不把启用当执行许可。独立引擎变化属于选型编辑，配置刷新仍须明确采纳；旧快照不补字段。
  * 算法入口：通过 Core JsonUtils 静态方法复用机制，本文件继续拥有原业务策略。
  */
-import { JsonUtils } from '../../../core/utility';
+import { JsonUtils } from '../../../core/io';
 
-import { hash } from '../../../core/platform/node/serialization';
-
-import { fail } from '../../../core/errors';
+import { hash } from '../../../core/io/serialization';
 
 import type { SourceSelection } from '../../workspace/rules/knowledge-source';
 
@@ -29,7 +27,7 @@ const equal = (a: unknown, b: unknown) => workspaceMemberCanonical(a) === worksp
 function valid(condition: unknown, message: string, code = 'MEMBER_AUDIT'): asserts condition
 {
   if (!condition)
-    fail(code, message)
+    throw new Error(message)
 }
 
 export const workspaceMemberModelHash = (snapshot: WorkspaceMemberModelSnapshot) => hash(workspaceMemberCanonical(snapshot));

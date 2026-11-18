@@ -6,9 +6,9 @@
  * 职责边界：纯函数不读取日志、不认证 actor；调用方必须先从可信来源重建事实，哈希本身不授予任何权限。
  * 算法入口：通过 Core JsonUtils 静态方法复用机制，本文件继续拥有原业务策略。
  */
-import { JsonUtils } from '../../../core/utility';
+import { JsonUtils } from '../../../core/io';
 
-import { hash } from '../../../core/platform/node/serialization';
+import { hash } from '../../../core/io/serialization';
 
 import { humanDecisionProofSchema, type HumanDecisionProof, type HumanDecisionPreview } from './human-decisions';
 

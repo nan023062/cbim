@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest';
 import {randomUUID} from 'node:crypto';
-import {hash,json} from '../../../../../src/core/platform/node/serialization';
+import {hash,json} from '../../../../../src/core/io/serialization';
 import {continuationSourceProofSchema,continuationSourceSnapshotSchema,continuationSourceLimits,type ContinuationSourceSnapshot} from '../../../../../src/logic/tasks/rules/continuation-source-snapshot';
 import {continuationAttachmentManifestSchema,continuationAttachmentManifestV1Schema,continuationAttachmentManifestV2Schema,continuationSourceItemFromSnapshot,continuationSourceItemSchema,assertContinuationAttachmentManifest,type ContinuationAttachmentManifest,type ContinuationAttachmentManifestV1,type ContinuationAttachmentManifestV2} from '../../../../../src/logic/tasks/rules/scope-continuation-attachments';
 import {scopeContinuationSchema,goalContinuationRequestSchema,goalContinuationReceiptSchema,type GoalContinuationRequest,type ScopeContinuation} from '../../../../../src/logic/tasks/rules/scope-continuation';

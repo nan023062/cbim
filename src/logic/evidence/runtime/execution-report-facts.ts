@@ -11,7 +11,7 @@ import type { RunSummary } from '../../execution/rules/types';
 
 import type { DispatchRun } from '../../tasks/rules/dispatch-execution';
 
-import { hash, json } from '../../../core/platform/node/serialization';
+import { hash, json } from '../../../core/io/serialization';
 
 import { z } from 'zod';
 

@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import {afterEach,expect,it,vi} from 'vitest';
 import {Builtins} from '../../../../../src/logic/knowledge/rules/builtins';
-import {hash} from '../../../../../src/core/platform/node/serialization';
+import {hash} from '../../../../../src/core/io/serialization';
 
 // 迁移前 Windows 正文的固定身份；规范有意改变时才更新，不随生成器自动刷新。
 const identities={

@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest';
 import {randomUUID} from 'node:crypto';
-import {hash,json} from '../../../../../src/core/platform/node/serialization';
+import {hash,json} from '../../../../../src/core/io/serialization';
 import type {DispatchState} from '../../../../../src/logic/dispatch/rules/dispatch-storage';
 import type {DispatchScope} from '../../../../../src/logic/tasks/rules/dispatch-scope';
 import {dispatchScopeGoalSchema,type DispatchScopeGoal} from '../../../../../src/logic/tasks/rules/scope-goal';

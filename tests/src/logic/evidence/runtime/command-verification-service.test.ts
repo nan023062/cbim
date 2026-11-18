@@ -1,6 +1,5 @@
 import {expect,test,vi} from 'vitest';
-import {hash,json} from '../../../../../src/core/platform/node/serialization';
-import {Fault} from '../../../../../src/core/errors';
+import {hash,json} from '../../../../../src/core/io/serialization';
 import {restoreMainCommand} from '../../../../../src/logic/tasks/runtime/main-command-request';
 import {DispatchTools} from '../../../../../src/logic/tools/runtime/dispatch-tools';
 import {authorizeRunTool} from '../../../../../src/logic/tools/rules/policy/tool-policy';
@@ -56,7 +55,7 @@ test('查无只报告absent；坏fp/缺派发前态/坏receipt明确未知，IO�
   const one=reportInputs()[2],r=restoreMainCommand(one.name,binding,identity.toolCallId,one.input,7);
   expect((await reportFixture(one.name,one.input).service.Read(identity)).command).toEqual({state:'absent',commandId:r.commandId});
   for(const [reason,mutate] of [['fingerprint_mismatch',(e:any)=>{e.fingerprint=hash('another')}],['missing_prestate',(e:any)=>{delete e.graph}],['receipt_invalid',(e:any)=>{e.receipt.cursor.rootSessionId='foreign'}],['receipt_invalid',(e:any)=>{e.receipt.cursor.seq=999}],['receipt_invalid',(e:any)=>{e.receipt.taskId='foreign'}],['receipt_invalid',(e:any)=>{e.receipt.messageId='foreign'}],['receipt_invalid',(e:any)=>{e.commit.transactionSeq=0}]] as const){const e=evidenceFor(one.name,r.input,r.commandId,r.fingerprint!);mutate(e);expect((await reportFixture(one.name,one.input,e).service.Read(identity)).command).toEqual({state:'unverifiable',reason})}
-  for(const [code,state] of [['ENOENT','missing'],['RUN_LOG_EMPTY','incomplete'],['RUN_LOG_INVALID','invalid'],['EIO','unavailable']] as const){const f=reportFixture(one.name,one.input);f.inspectMain.mockRejectedValue(new Fault(code,'private failed bytes'));const report=await f.service.Read(identity);expect(report.source.state).toBe(state);expect(report.command.state).toBe('unverifiable');expect(JSON.stringify(report)).not.toContain('private');expect(f.commandEvidence).not.toHaveBeenCalled()}
+  for(const [code,state] of [['ENOENT','missing'],['RUN_LOG_EMPTY','incomplete'],['RUN_LOG_INVALID','invalid'],['EIO','unavailable']] as const){const f=reportFixture(one.name,one.input);f.inspectMain.mockRejectedValue(new Error('private failed bytes'));const report=await f.service.Read(identity);expect(report.source.state).toBe(state);expect(report.command.state).toBe('unverifiable');expect(JSON.stringify(report)).not.toContain('private');expect(f.commandEvidence).not.toHaveBeenCalled()}
   const f=reportFixture(one.name,one.input);f.commandEvidence.mockRejectedValue(new Error('secret IO'));expect((await f.service.Read(identity)).command).toEqual({state:'unverifiable',reason:'store_unavailable'});
 });
 

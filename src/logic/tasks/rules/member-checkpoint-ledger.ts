@@ -2,8 +2,6 @@
  * 作用定位：从同一派发快照核实已完成且最新段未消费的检查点链，供等待、预约与交接共用。
  * 设计原因：仅检查最后一段会遗漏旧运行、权限或信封篡改；这里核全链原事实，不读取当前文件或签发执行许可。
  */
-import { fail } from '../../../core/errors';
-
 import type { DispatchState } from '../../dispatch/rules/dispatch-storage';
 
 import type { TaskNode } from './graph-types';
@@ -20,7 +18,7 @@ export function completedCheckpointLedger(state: DispatchState, task: TaskNode, 
   function check(value: unknown, message: string): asserts value
   {
     if (!value)
-      fail(code, message)
+      throw new Error(message)
   }
 
   check(validMemberCheckpointChain(task) && !!task.checkpoints?.length && task.runIds.length === task.checkpoints.length, '最新检查点必须尚未被运行消费，完整历史不能缺段');
@@ -32,7 +30,7 @@ export function completedCheckpointLedger(state: DispatchState, task: TaskNode, 
 
   check(allRuns.length === task.runIds.length, '检查点链存在多余或遗漏运行');
 
-  const runs = task.runIds.map(id => { const run = allRuns.find(r => r.binding.runId === id); if (!run) fail(code, '检查点链缺少原运行'); return run });
+  const runs = task.runIds.map(id => { const run = allRuns.find(r => r.binding.runId === id); if (!run) throw new Error('检查点链缺少原运行'); return run });
 
   const assignments = state.outbox.filter(m => m.kind === 'assignment' && m.taskId === task.taskId && m.identity.rootSessionId === task.identity.rootSessionId),
     messages = state.outbox.filter(m => m.kind === 'checkpoint' && m.taskId === task.taskId && m.identity.rootSessionId === task.identity.rootSessionId);

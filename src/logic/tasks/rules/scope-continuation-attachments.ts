@@ -5,8 +5,6 @@
  */
 import { z } from 'zod';
 
-import { fail } from '../../../core/errors';
-
 import { continuationSourceProofSchema, continuationSourceLimits, type ContinuationSourceSnapshot } from './continuation-source-snapshot';
 
 /** bytes 均为 UTF-8 文本或解码图片的字节数；旧原始补充正文另受原字符额度约束。 */
@@ -78,7 +76,7 @@ export function assertContinuationAttachmentManifest(input: { message: string; a
   if (input.attachmentIds === undefined)
   {
     if (manifest !== undefined)
-      fail('GOAL_ATTACHMENT_MANIFEST', '无附件补充不能携带附件清单');
+      throw new Error('无附件补充不能携带附件清单');
 
     return
   }
@@ -87,5 +85,5 @@ export function assertContinuationAttachmentManifest(input: { message: string; a
     parsed = continuationAttachmentManifestSchema.safeParse(manifest);
 
   if (!ids.success || !parsed.success || parsed.data.items.length !== ids.data.length || parsed.data.items.some((item, index) => item.attachmentId !== ids.data[index]) || parsed.data.expandedMessageBytes < new TextEncoder().encode(input.message).byteLength)
-    fail('GOAL_ATTACHMENT_MANIFEST', '附件清单缺失、无效或与原补充引用不一致');
+    throw new Error('附件清单缺失、无效或与原补充引用不一致');
 }

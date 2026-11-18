@@ -8,7 +8,7 @@ import {registerExplicitFixtureOwner} from '../../../../team/service/support/exp
 import {outputManifestData as d,type outputManifestProvider} from './output-manifest-provider';
 import {outputManifestReportSchema} from '../../../../../../../src/logic/evidence/rules/output-manifest';
 import {outputManifestHash} from '../../../../../../../src/logic/evidence/rules/output-manifest-evidence';
-import {hash} from '../../../../../../../src/core/platform/node/serialization';
+import {hash} from '../../../../../../../src/core/io/serialization';
 export {workflowConditionRecords as manifestRecords} from '../../../assembly/support/workflow-condition-fixture';
 import {reportFiles} from '../../../../evidence/runtime/support/execution-report-fixture';
 export const manifestLogFiles=(user:string,workspaceId:string,taskId:string,runId:string)=>reportFiles(user,workspaceId,taskId,runId,'agent-tools-v1');

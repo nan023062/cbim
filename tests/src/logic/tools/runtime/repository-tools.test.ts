@@ -6,7 +6,7 @@ import {fixture} from '../../application/support/helpers';
 import {RemoteRepository} from '../../../../../src/logic/resources/service/index';
 import {RepositoryTools} from '../../../../../src/logic/tools/runtime/repository-tools';
 import {repositoryGetOutputSchema,repositoryListOutputSchema} from '../../../../../src/logic/connectors/rules/repository-tools';
-import {hash} from '../../../../../src/core/platform/node/serialization';
+import {hash} from '../../../../../src/core/io/serialization';
 import {toolReceipt} from '../../../../../src/logic/tools/rules/receipts';
 import {executionToolFacts} from '../../../../../src/logic/evidence/runtime/execution-report-facts';
 import {projectRunEvent} from '../../../../../src/logic/runtime/monitoring/public-run-events';

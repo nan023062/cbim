@@ -10,7 +10,7 @@ import { randomUUID } from 'node:crypto';
 
 import { isDeepStrictEqual } from 'node:util';
 
-import { atomic } from '../../../../core/platform/node/files';
+import { atomic } from '../../../../core/io/text-files';
 
 import { safeId } from '../../ports/identity';
 

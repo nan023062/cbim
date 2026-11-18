@@ -12,7 +12,7 @@ import { WebSettings } from '../web/service';
 
 import { WebService } from '../web/service';
 
-import type { BrowserReader } from '../../core/platform/node/web';
+import type { BrowserReader } from '../../core/web/node';
 
 import { WorkspaceAutomations } from '../automation/service/service';
 
@@ -78,9 +78,7 @@ import { Catalog } from '../workspace/service/catalog';
 
 import { Paths } from '../workspace/service/paths';
 
-import { exists } from '../../core/platform/node/files';
-
-import { fail } from '../../core/errors';
+import { exists } from '../../core/io/text-files';
 
 import { Rules } from '../knowledge/rules/knowledge';
 
@@ -214,10 +212,10 @@ export class Application
   private AssertServiceAvailable(id: string)
   {
     if (this.stopping)
-      fail('SHUTTING_DOWN', 'CBIM 正在退出');
+      throw new Error('CBIM 正在退出');
 
     if (this.retiring.has(id))
-      fail('WORKSPACE_STOPPING', '工作区正在关闭或重启，请稍后重试');
+      throw new Error('工作区正在关闭或重启，请稍后重试');
   }
 
   /** 应用数据与工作区目录的可信定位器，保持调用方传入的同一实例。 */
@@ -341,7 +339,7 @@ export class Application
     const service = this.automationServices.get(id);
 
     if (!service)
-      fail('SERVICE_NOT_READY', '工作区自动化尚未就绪');
+      throw new Error('工作区自动化尚未就绪');
 
     return service;
   }
@@ -358,7 +356,7 @@ export class Application
     const service = this.dispatchers.get(id);
 
     if (!service)
-      fail('SERVICE_NOT_READY', '工作区成员服务尚未就绪');
+      throw new Error('工作区成员服务尚未就绪');
 
     return service;
   }
@@ -375,7 +373,7 @@ export class Application
     const service = this.memberRegistries.get(id);
 
     if (!service)
-      fail('SERVICE_NOT_READY', '工作区岗位登记尚未就绪');
+      throw new Error('工作区岗位登记尚未就绪');
 
     return service;
   }
@@ -392,7 +390,7 @@ export class Application
     const service = this.ownershipRegistries.get(id);
 
     if (!service)
-      fail('SERVICE_NOT_READY', '工作区模块责任尚未就绪');
+      throw new Error('工作区模块责任尚未就绪');
 
     return service;
   }
@@ -409,7 +407,7 @@ export class Application
     const service = this.memberExecutions.get(id);
 
     if (!service)
-      fail('SERVICE_NOT_READY', '工作区成员执行服务尚未就绪');
+      throw new Error('工作区成员执行服务尚未就绪');
 
     return service;
   }
@@ -426,7 +424,7 @@ export class Application
     const manager = this.executions.get(id);
 
     if (!manager)
-      fail('SERVICE_NOT_READY', '工作区执行服务尚未就绪');
+      throw new Error('工作区执行服务尚未就绪');
 
     return manager;
   }
@@ -443,7 +441,7 @@ export class Application
     const history = this.histories.get(id);
 
     if (!history)
-      fail('SERVICE_NOT_READY', '工作区 Agent 历史尚未就绪');
+      throw new Error('工作区 Agent 历史尚未就绪');
 
     return history;
   }
@@ -458,7 +456,7 @@ export class Application
     const service = this.requestBudgetServices.get(id);
 
     if (!service)
-      fail('SERVICE_NOT_READY', '请求预算服务尚未就绪');
+      throw new Error('请求预算服务尚未就绪');
 
     return service;
   }
@@ -473,7 +471,7 @@ export class Application
     const service = this.isolatedExecutionServices.get(id);
 
     if (!service)
-      fail('SERVICE_NOT_READY', '隔离资源服务尚未就绪');
+      throw new Error('隔离资源服务尚未就绪');
 
     return service;
   }
@@ -488,7 +486,7 @@ export class Application
     const service = this.controlledFileServices.get(id);
 
     if (!service)
-      fail('SERVICE_NOT_READY', '受控文件服务尚未就绪');
+      throw new Error('受控文件服务尚未就绪');
 
     return service;
   }
@@ -538,7 +536,7 @@ export class Application
     const ws = this.running.get(id);
 
     if (!ws)
-      fail('NOT_RUNNING', '工作区未运行，请由用户在桌面打开');
+      throw new Error('工作区未运行，请由用户在桌面打开');
 
     return ws;
   }
@@ -559,7 +557,7 @@ export class Application
   public async Open(id: string, restart = false)
   {
     if (this.stopping)
-      fail('SHUTTING_DOWN', 'CBIM 正在退出');
+      throw new Error('CBIM 正在退出');
 
     if (this.opening.has(id))
       return this.opening.get(id)!;
@@ -571,7 +569,7 @@ export class Application
       const entry = (await this.catalog.Read()).entries.find((x) => x.id === id);
 
       if (!entry)
-        fail('NOT_REGISTERED', '工作区未登记');
+        throw new Error('工作区未登记');
 
       let ws = this.running.get(id);
 

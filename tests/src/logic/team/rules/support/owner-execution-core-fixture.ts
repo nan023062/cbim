@@ -1,5 +1,5 @@
 import {randomUUID} from 'node:crypto';
-import {hash} from '../../../../../../src/core/platform/node/serialization';
+import {hash} from '../../../../../../src/core/io/serialization';
 import type {DispatchState,DispatchMutation,DispatchCommand,AssignmentMessage} from '../../../../../../src/logic/dispatch/rules/dispatch-storage';
 import type {DispatchScope} from '../../../../../../src/logic/tasks/rules/dispatch-scope';
 import type {DispatchRun} from '../../../../../../src/logic/tasks/rules/dispatch-execution';

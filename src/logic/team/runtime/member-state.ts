@@ -9,8 +9,6 @@ import { randomUUID } from 'node:crypto';
 
 import { candidateAccepted } from '../../tasks/rules/candidate-review';
 
-import { fail } from '../../../core/errors';
-
 import type { RunSummary } from '../../execution/rules/types';
 
 import type { DispatchState } from '../../dispatch/rules/dispatch-storage';
@@ -33,14 +31,14 @@ export function memberTask(state: DispatchState, rootSessionId: string, taskId: 
   const task = graph?.tasks.find(t => t.taskId === taskId);
 
   if (!graph || !task)
-    fail('TASK_NOT_FOUND', '当前主会话没有此派发任务');
+    throw new Error('当前主会话没有此派发任务');
 
   const member = state.members.find(m => m.agentInstanceId === task.assignee.agentInstanceId);
 
   const session = state.sessions.find(s => s.agentSessionId === task.assignee.agentSessionId);
 
   if (!member || !session)
-    fail('MEMBER_NOT_FOUND', '成员实例或通道缺失');
+    throw new Error('成员实例或通道缺失');
 
   return { graph, task, member, session };
 }

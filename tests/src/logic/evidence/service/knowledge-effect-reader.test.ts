@@ -8,7 +8,7 @@ import {internalKnowledge} from '../../tools/runtime/support/knowledge-tool-fixt
 import {knowledgeTransactionObservationSchema} from '../../../../../src/logic/knowledge/rules/knowledge-write-observation';
 import {originalKnowledgeWrite,originalKnowledgeIdentity,type KnowledgeWriteReference} from '../../../../../src/logic/knowledge/rules/knowledge-write-input';
 import {observeKnowledgeTransaction} from '../../../../../src/logic/evidence/service/knowledge-effect-reader';
-import {hash,json} from '../../../../../src/core/platform/node/serialization';
+import {hash,json} from '../../../../../src/core/io/serialization';
 import {Application} from '../../../../../src/bridge/server/application';
 import {Paths} from '../../../../../src/logic/workspace/service/paths';
 import type {KnowledgeGovernanceTransaction,KnowledgeJournalStatus} from '../../../../../src/logic/knowledge/storage/governance-port';

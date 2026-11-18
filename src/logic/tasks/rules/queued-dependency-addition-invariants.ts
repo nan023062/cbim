@@ -4,8 +4,6 @@
  * 设计原因：事件名称或审计字段存在都不能授权改边；必须从原快照重新选取闭包并逐项比较任务、成员和边的实际变化。
  * 职责边界：许可只在 Core 提交校验调用链内使用，不持久化、不来自模型，也不替代服务的知识/停止复核。
  */
-import { fail } from '../../../core/errors';
-
 import type { DispatchState, DispatchMutation, DispatchCommand } from '../../dispatch/rules/dispatch-storage';
 
 import type { TaskNode } from './graph-types';
@@ -19,7 +17,7 @@ import { queuedDependencyAdditionSelection } from './queued-dependency-addition-
 function valid(value: unknown, message: string): asserts value
 {
   if (!value)
-    fail('GRAPH_INPUT_INVALID', message)
+    throw new Error(message)
 }
 
 /** 仅完整合法的单次追加返回一个 edgeId；无追加返回空集合，失败不产生任何放行依据。 */

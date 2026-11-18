@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import {FileDispatchStore} from '../../../../../src/logic/dispatch/storage/dispatch-store';
-import {hash} from '../../../../../src/core/platform/node/serialization';
+import {hash} from '../../../../../src/core/io/serialization';
 import type {DispatchMutation,DispatchState} from '../../../../../src/logic/dispatch/rules/dispatch-storage';
 import type {AgentInstance, AgentSessionBinding} from '../../../../../src/logic/team/rules/agent-types';
 import type {AgentRef, GraphEventBatch, GraphIdentity, TaskNode} from '../../../../../src/logic/tasks/rules/graph-types';

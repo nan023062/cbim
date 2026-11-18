@@ -1,4 +1,4 @@
-import {hash,json} from '../../../../../../src/core/platform/node/serialization';
+import {hash,json} from '../../../../../../src/core/io/serialization';
 import type {KnowledgeFile,Snapshot,ModuleNode} from '../../../../../../src/logic/knowledge/rules/types';
 import {moduleFiles,summary} from './knowledge';
 

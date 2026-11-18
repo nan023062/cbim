@@ -9,9 +9,7 @@ import path from 'node:path';
 
 import { spawn, execFile } from 'node:child_process';
 
-import { hash } from '../../../../core/platform/node/serialization';
-
-import { fail } from '../../../../core/errors';
+import { hash } from '../../../../core/io/serialization';
 
 import { codeCheckLimits, codeTestSummarySchema } from '../../../workspace/rules/code-check';
 
@@ -49,7 +47,7 @@ export class CodeCheckRunner implements CodeCheckPort
         real = await fs.realpath(current);
 
       if (!stat.isDirectory() || stat.isSymbolicLink() || path.relative(real, current) !== '')
-        fail('CODE_CHECK_DIRECTORY', '检查目录包含链接、已改变或不是目录');
+        throw new Error('检查目录包含链接、已改变或不是目录');
 
       this.assertCurrent();
 
@@ -64,7 +62,7 @@ export class CodeCheckRunner implements CodeCheckPort
     const snapshot = await this.manifests.Capture(scopes, signal);
 
     if (snapshot.roots.some(root => root.state === 'missing') || !snapshot.entries.some(entry => entry.kind === 'file'))
-      fail('CODE_CHECK_INPUT', '代码检查范围必须存在并包含实际文件');
+      throw new Error('代码检查范围必须存在并包含实际文件');
 
     const commands: CodeCommandResult[] = [];
 

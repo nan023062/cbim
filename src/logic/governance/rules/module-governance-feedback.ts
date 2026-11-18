@@ -3,8 +3,6 @@
  * 设计原因：最新决定变化只能使当前依据失效，不能改写合法历史；同一套纯规则供保存、实施门禁和按命令顺序的账本重放使用。
  * 职责边界：不授予批准或执行权，不推断理解程度，不发起任务；current 必须消费调用方同串行边界内的真实来源。
  */
-import { fail } from '../../../core/errors';
-
 import { moduleGovernanceProposalSchema, moduleGovernanceDecisionSchema, moduleGovernanceDecisionIdsSchema, moduleGovernanceResponseRefsSchema, moduleGovernanceAssessmentsSchema, type ModuleGovernanceProposal, type ModuleGovernanceDecision, type ModuleGovernanceResponseRef, type ModuleGovernanceResponseAssessment, type ModuleGovernanceResponseState, } from './module-governance';
 
 import { moduleGovernanceProposalBasis, validateModuleGovernanceDecisionAppend } from './module-governance-rules';
@@ -29,7 +27,7 @@ export interface ModuleGovernanceResponseTarget
 function check(value: unknown, code: string, message: string): asserts value
 {
   if (!value)
-    fail(code, message)
+    throw new Error(message)
 }
 
 function checkedSource(target: ModuleGovernanceResponseTarget, decisionId: string, sources: readonly ModuleGovernanceResponseSource[])

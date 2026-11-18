@@ -11,8 +11,6 @@ import { withToolReconciliation } from '../rules/outcome';
 
 import { zodToJsonSchema } from 'zod-to-json-schema';
 
-import { fail, Fault } from '../../../core/errors';
-
 import { checkedJsonToolResult } from '../rules/results';
 
 import type { RunToolDescriptor } from '../rules/policy/tool-policy';
@@ -71,7 +69,7 @@ export class GovernanceTools
     const parsed = schema.safeParse(raw);
 
     if (!parsed.success)
-      fail('GOVERNANCE_INPUT', '治理工具只接受所列业务字段，不接收身份、权限、批准、命令ID或文件路径');
+      throw new Error('治理工具只接受所列业务字段，不接收身份、权限、批准、命令ID或文件路径');
 
     return parsed.data
   }
@@ -80,7 +78,7 @@ export class GovernanceTools
   Describe(name: string, input: unknown): RunToolDescriptor
   {
     if (!this.Has(name))
-      fail('GOVERNANCE_TOOL_UNKNOWN', '本轮未注册此治理工具');
+      throw new Error('本轮未注册此治理工具');
 
     this.Parse(inputs[name] as z.ZodTypeAny, input);
 
@@ -98,7 +96,7 @@ export class GovernanceTools
   async Call(name: string, raw: unknown, signal: AbortSignal, toolCallId?: string)
   {
     if (!this.Has(name))
-      fail('GOVERNANCE_TOOL_UNKNOWN', '本轮未注册此治理工具');
+      throw new Error('本轮未注册此治理工具');
 
     signal.throwIfAborted();
 
@@ -132,7 +130,7 @@ export class GovernanceTools
       else
       {
         if (!toolCallId)
-          fail('GOVERNANCE_IDENTITY', '治理写入缺少真实工具调用身份');
+          throw new Error('治理写入缺少真实工具调用身份');
 
         commandId = this.Command(name, toolCallId);
 
@@ -149,14 +147,14 @@ export class GovernanceTools
       const result = checkedJsonToolResult(name, output, schema);
 
       if (Buffer.byteLength(result.content[0].text, 'utf8') > governanceToolOutputLimit)
-        fail('TOOL_OUTPUT_INVALID', '治理业务输出超过128KiB，未向模型发送正文；请核实原记录，不自动重试');
+        throw new Error('治理业务输出超过128KiB，未向模型发送正文；请核实原记录，不自动重试');
 
       return result;
     }
     catch (error)
     {
       if (commandId)
-        throw withToolReconciliation(new Fault(error instanceof Fault ? error.code : signal.aborted ? 'GOVERNANCE_CANCELLED' : 'GOVERNANCE_UNKNOWN', `治理工具未交付可核实结果；原 commandId=${commandId}。操作可能已保存，请只查询原回执，不自动重试或另建命令。`), { tool: 'cbim_receipt_inspect', args: { target: 'governance', input: { commandId } } });
+        throw withToolReconciliation(new Error(`治理工具未交付可核实结果；原 commandId=${commandId}。操作可能已保存，请只查询原回执，不自动重试或另建命令。`), { tool: 'cbim_receipt_inspect', args: { target: 'governance', input: { commandId } } });
 
       throw error
     }

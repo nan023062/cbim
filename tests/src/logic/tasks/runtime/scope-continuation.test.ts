@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {fixture} from '../../application/support/helpers';
-import {hash} from '../../../../../src/core/platform/node/serialization';
+import {hash} from '../../../../../src/core/io/serialization';
 import type {TaskSpec} from '../../../../../src/logic/execution/rules/types';
 import type {GoalPlanInput,GoalReviewInput} from '../../../../../src/logic/tasks/rules/scope-goal';
 import {goalInputRevision,goalNeedsReplan} from '../../../../../src/logic/tasks/rules/scope-goal';

@@ -3,7 +3,7 @@
  * 设计原因：复用实际工具的严格参数与命令算法；身份由读取服务核实，模型和页面不能提供 actor 或 commandId。
  * 职责边界：只生成原引用，不写入、不补造原工作区实例；旧实例仅从匹配的持久命令核实。
  */
-import { hash, json } from '../../../core/platform/node/serialization';
+import { hash, json } from '../../../core/io/serialization';
 
 import { governanceObserveInputSchema, governanceProposeInputSchema, type GovernanceObserveInput, type GovernanceProposeInput } from '../../governance/rules/module-governance-tools';
 

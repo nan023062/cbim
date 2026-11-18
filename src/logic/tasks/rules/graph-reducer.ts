@@ -5,8 +5,6 @@
  * 设计原因：节点、边和成员状态必须一起可见；检查点及预约按不可变前缀逐段追加，依赖审计保留原计划与负责人，终止记录不可复活。
  * 职责边界：不落盘、不分配事件序号、不启动任务；调用方必须先可靠提交再发布结果。
  */
-import { fail } from '../../../core/errors';
-
 import { assertGraphIdentity, validateGraph, validateGraphBatch, validateGraphCursor } from './graph-rules';
 
 import type { GraphEventBatch, GraphSnapshot, GraphCursor, GraphDelta, GraphChange, TaskNode } from './graph-types';
@@ -51,44 +49,44 @@ function changeKey(change: GraphChange)
 function nextRevision(previous: { revision: number } | undefined, next: { revision: number })
 {
   if (next.revision !== (previous ? previous.revision + 1 : 1))
-    fail('GRAPH_REVISION_CONFLICT', '图对象版本必须从 1 开始并连续递增');
+    throw new Error('图对象版本必须从 1 开始并连续递增');
 }
 
 function taskRevision(previous: TaskNode, next: TaskNode)
 {
   if (previous.checkpointAbandonment)
-    fail('GRAPH_INPUT_INVALID', '为交接放弃的检查点任务已封存，不能改写或恢复');
+    throw new Error('为交接放弃的检查点任务已封存，不能改写或恢复');
 
   if (previous.cancelledBeforeStart)
-    fail('GRAPH_INPUT_INVALID', '已撤销的未启动任务已封存，不能再次改写或执行');
+    throw new Error('已撤销的未启动任务已封存，不能再次改写或执行');
 
   if (previous.scopeId !== next.scopeId || previous.parentTaskId !== next.parentTaskId || stable(previous.requester) !== stable(next.requester) || previous.createdAt !== next.createdAt)
-    fail('GRAPH_INPUT_INVALID', '任务调度周期、派发父关系、请求人和创建时间不能改写');
+    throw new Error('任务调度周期、派发父关系、请求人和创建时间不能改写');
 
   if (stable(previous.workflowSelections) !== stable(next.workflowSelections))
-    fail('GRAPH_INPUT_INVALID', '已有任务的 Workflow 选择不能增删或改写，请重新规划并派发新任务');
+    throw new Error('已有任务的 Workflow 选择不能增删或改写，请重新规划并派发新任务');
 
   if (stable(previous.fallbackBinding) !== stable(next.fallbackBinding) || stable(previous.ownerBinding) !== stable(next.ownerBinding))
-    fail('GRAPH_INPUT_INVALID', '已有任务的负责人绑定不可补造、移除或替换，请明确规划新任务');
+    throw new Error('已有任务的负责人绑定不可补造、移除或替换，请明确规划新任务');
 
   const plan = (t: TaskNode) => ({ goal: t.goal, acceptance: t.acceptance, modules: t.modules, assignee: t.assignee });
 
   const changed = stable(plan(previous)) !== stable(plan(next));
 
   if (next.planRevision !== previous.planRevision + (changed ? 1 : 0))
-    fail('GRAPH_REVISION_CONFLICT', '任务计划版本与范围修订不一致');
+    throw new Error('任务计划版本与范围修订不一致');
 
   if (previous.runIds.some((id, index) => next.runIds[index] !== id))
-    fail('GRAPH_INPUT_INVALID', '历史执行轮次不能删除或改写');
+    throw new Error('历史执行轮次不能删除或改写');
 
   if (previous.help && stable(previous.help) !== stable(next.help))
-    fail('GRAPH_INPUT_INVALID', '已经交接的成员求助不能删除或改写');
+    throw new Error('已经交接的成员求助不能删除或改写');
 
   if (previous.candidateReview && stable(previous.candidateReview) !== stable(next.candidateReview))
-    fail('GRAPH_INPUT_INVALID', '已保存的候选审阅不能删除或改写');
+    throw new Error('已保存的候选审阅不能删除或改写');
 
   if (next.candidateReview && (!next.result || next.status !== 'result_ready' || next.candidateReview.resultId !== next.result.resultId || next.candidateReview.runId !== next.result.runId || next.candidateReview.planRevision !== next.planRevision))
-    fail('GRAPH_INPUT_INVALID', '审阅必须绑定原交付候选');
+    throw new Error('审阅必须绑定原交付候选');
 
   const beforeCheckpoints = previous.checkpoints ?? [],
     checkpoints = next.checkpoints ?? [],
@@ -96,40 +94,40 @@ function taskRevision(previous: TaskNode, next: TaskNode)
     requests = memberResumeRequests(next);
 
   if (checkpoints.length < beforeCheckpoints.length || checkpoints.length > beforeCheckpoints.length + 1 || beforeCheckpoints.some((value, index) => stable(value) !== stable(checkpoints[index])))
-    fail('GRAPH_INPUT_INVALID', '检查点只能逐段追加，已交接历史不能删除或改写');
+    throw new Error('检查点只能逐段追加，已交接历史不能删除或改写');
 
   if (requests.length < beforeRequests.length || requests.length > beforeRequests.length + 1 || beforeRequests.some((value, index) => stable(value) !== stable(requests[index])))
-    fail('GRAPH_INPUT_INVALID', '续执行预约只能逐段追加，原历史不能删除或改写');
+    throw new Error('续执行预约只能逐段追加，原历史不能删除或改写');
 
   if ((previous.checkpoints || next.checkpoints) && changed)
-    fail('GRAPH_INPUT_INVALID', '检查点及续执行不能修改原任务目标、模块、责任或验收');
+    throw new Error('检查点及续执行不能修改原任务目标、模块、责任或验收');
 
   const oldHistory = previous.dependencyReplacements ?? [],
     history = next.dependencyReplacements ?? [];
 
   if (history.length < oldHistory.length || history.length > oldHistory.length + 1 || oldHistory.some((record, index) => stable(record) !== stable(history[index])))
-    fail('GRAPH_INPUT_INVALID', '前置替换审计只能逐次追加，不能改删历史');
+    throw new Error('前置替换审计只能逐次追加，不能改删历史');
 
   if (history.length > oldHistory.length && changed)
-    fail('GRAPH_INPUT_INVALID', '替换前置不能同时修改任务目标、范围、责任或验收');
+    throw new Error('替换前置不能同时修改任务目标、范围、责任或验收');
 
   const oldAdditions = previous.dependencyAdditions ?? [],
     additions = next.dependencyAdditions ?? [];
 
   if (additions.length < oldAdditions.length || additions.length > oldAdditions.length + 1 || oldAdditions.some((record, index) => stable(record) !== stable(additions[index])) || previous.dependencyAdditions && !next.dependencyAdditions)
-    fail('GRAPH_INPUT_INVALID', '前置追加审计只能逐次追加，不能改删历史');
+    throw new Error('前置追加审计只能逐次追加，不能改删历史');
 
   if (additions.length > oldAdditions.length && changed)
-    fail('GRAPH_INPUT_INVALID', '追加前置不能同时修改任务目标、范围、责任或验收');
+    throw new Error('追加前置不能同时修改任务目标、范围、责任或验收');
 
   const oldRevisions = previous.dependencyRevisions ?? [],
     revisions = next.dependencyRevisions ?? [];
 
   if (revisions.length < oldRevisions.length || revisions.length > oldRevisions.length + 1 || oldRevisions.some((record, index) => stable(record) !== stable(revisions[index])) || previous.dependencyRevisions && !next.dependencyRevisions)
-    fail('GRAPH_INPUT_INVALID', '前置修订审计只能追加，不能改删历史');
+    throw new Error('前置修订审计只能追加，不能改删历史');
 
   if (revisions.length > oldRevisions.length && changed)
-    fail('GRAPH_INPUT_INVALID', '修订前置不能同时修改任务目标、范围、责任或验收');
+    throw new Error('修订前置不能同时修改任务目标、范围、责任或验收');
 }
 
 /**
@@ -149,7 +147,7 @@ export function applyGraphBatch(previous: GraphSnapshot | undefined, event: Grap
     assertGraphIdentity(previous.identity, event.identity);
 
     if (event.streamId !== previous.cursor.streamId)
-      fail('GRAPH_STREAM_MISMATCH', '事件流已变化，必须读取新快照');
+      throw new Error('事件流已变化，必须读取新快照');
 
     if (event.seq <= previous.cursor.seq)
     {
@@ -158,25 +156,25 @@ export function applyGraphBatch(previous: GraphSnapshot | undefined, event: Grap
       if (known?.fingerprint === fingerprint)
         return previous;
 
-      fail('GRAPH_EVENT_CONFLICT', known ? '相同图事件序号携带不同内容' : '当前快照缺少旧事件的重放证明');
+      throw new Error(known ? '相同图事件序号携带不同内容' : '当前快照缺少旧事件的重放证明');
     }
 
     if (event.seq !== previous.cursor.seq + 1)
-      fail('GRAPH_SEQUENCE_GAP', '图事件序号断档，需要补读');
+      throw new Error('图事件序号断档，需要补读');
 
     if (event.cause === 'graph.created')
-      fail('GRAPH_INPUT_INVALID', '已经存在的图不能重复创建');
+      throw new Error('已经存在的图不能重复创建');
 
     if ([...seen?.values() ?? []].some(v => v.eventId === event.eventId || v.commandId === event.commandId))
-      fail('GRAPH_EVENT_CONFLICT', '事件或命令身份已用于另一提交');
+      throw new Error('事件或命令身份已用于另一提交');
   }
   else if (event.seq !== 1 || event.cause !== 'graph.created')
-    fail('GRAPH_SEQUENCE_GAP', '任务图必须从 graph.created 的第 1 批开始');
+    throw new Error('任务图必须从 graph.created 的第 1 批开始');
 
   const keys = event.changes.map(changeKey);
 
   if (new Set(keys).size !== keys.length)
-    fail('GRAPH_INPUT_INVALID', '同一批次不能多次更新同一对象');
+    throw new Error('同一批次不能多次更新同一对象');
 
   const tasks = new Map(previous?.tasks.map(t => [t.taskId, t]) ?? []),
     edges = new Map(previous?.edges.map(e => [e.edgeId, e]) ?? []),
@@ -193,7 +191,7 @@ export function applyGraphBatch(previous: GraphSnapshot | undefined, event: Grap
           nextRevision(root, change.root);
 
           if (root && (root.nodeId !== change.root.nodeId || root.createdAt !== change.root.createdAt || root.agent.agentId !== change.root.agent.agentId || root.agent.agentInstanceId !== change.root.agent.agentInstanceId || root.agent.agentSessionId !== change.root.agent.agentSessionId))
-            fail('GRAPH_INPUT_INVALID', '主会话根的绑定不能改写');
+            throw new Error('主会话根的绑定不能改写');
 
           root = structuredClone(change.root);
 
@@ -208,7 +206,7 @@ export function applyGraphBatch(previous: GraphSnapshot | undefined, event: Grap
           if (old)
             taskRevision(old, change.task);
           else if (change.task.planRevision !== 1 || !['planned', 'queued', 'waiting'].includes(change.task.status) || change.task.runIds.length || change.task.result || change.task.help || change.task.cancelledBeforeStart || change.task.dependencyReplacements || change.task.dependencyAdditions || change.task.dependencyRevisions || change.task.checkpoints || change.task.resumeRequest || change.task.resumeHistory || change.task.checkpointAbandonment)
-            fail('GRAPH_INPUT_INVALID', '新任务必须从尚未执行的计划版本 1 创建');
+            throw new Error('新任务必须从尚未执行的计划版本 1 创建');
 
           tasks.set(change.task.taskId, structuredClone(change.task));
 
@@ -221,13 +219,13 @@ export function applyGraphBatch(previous: GraphSnapshot | undefined, event: Grap
           nextRevision(old, change.edge);
 
           if (old && (old.kind !== change.edge.kind || old.fromNodeId !== change.edge.fromNodeId || old.toNodeId !== change.edge.toNodeId))
-            fail('GRAPH_INPUT_INVALID', '已有连线的类型和端点不能改写');
+            throw new Error('已有连线的类型和端点不能改写');
 
           if (old?.kind === 'dependency' && change.edge.kind === 'dependency' && old.condition.reviewRequired !== change.edge.condition.reviewRequired)
-            fail('GRAPH_INPUT_INVALID', '已有依赖的审阅要求不能改写');
+            throw new Error('已有依赖的审阅要求不能改写');
 
           if (old?.kind === 'dependency' && !old.enabled)
-            fail('GRAPH_INPUT_INVALID', '退役依赖不可重新启用或改写');
+            throw new Error('退役依赖不可重新启用或改写');
 
           edges.set(change.edge.edgeId, structuredClone(change.edge));
 
@@ -240,7 +238,7 @@ export function applyGraphBatch(previous: GraphSnapshot | undefined, event: Grap
           nextRevision(old, change.agent);
 
           if (old && old.agentId !== change.agent.agentId)
-            fail('GRAPH_INPUT_INVALID', '成员实例不能改为其他角色');
+            throw new Error('成员实例不能改为其他角色');
 
           agents.set(change.agent.agentInstanceId, structuredClone(change.agent));
 
@@ -250,7 +248,7 @@ export function applyGraphBatch(previous: GraphSnapshot | undefined, event: Grap
   }
 
   if (!root)
-    fail('GRAPH_INPUT_INVALID', '任务图缺少主会话根');
+    throw new Error('任务图缺少主会话根');
 
   const next: GraphSnapshot = { version: 1, identity: { ...event.identity }, cursor: { ...event.identity, streamId: event.streamId, seq: event.seq }, root, tasks: [...tasks.values()], edges: [...edges.values()], agents: [...agents.values()] };
 
@@ -272,7 +270,7 @@ export function applyGraphBatch(previous: GraphSnapshot | undefined, event: Grap
 export function readGraphDelta(snapshot: GraphSnapshot, batches: readonly GraphEventBatch[], cursor?: GraphCursor, limit = 100): GraphDelta
 {
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 500)
-    fail('GRAPH_INPUT_INVALID', '增量批次数必须为 1 至 500');
+    throw new Error('增量批次数必须为 1 至 500');
 
   const reset = (reason: 'initial' | 'stream_changed' | 'cursor_ahead' | 'history_compacted'): GraphDelta => ({ mode: 'reset', reason, snapshot, cursor: snapshot.cursor });
 
@@ -303,7 +301,7 @@ export function readGraphDelta(snapshot: GraphSnapshot, batches: readonly GraphE
   const selected = batches.slice(start, start + limit);
 
   if (!selected.length)
-    fail('GRAPH_LOG_CORRUPT', '图增量缺少已提交事件');
+    throw new Error('图增量缺少已提交事件');
 
   let expected = cursor.seq + 1;
 
@@ -314,13 +312,13 @@ export function readGraphDelta(snapshot: GraphSnapshot, batches: readonly GraphE
     assertGraphIdentity(snapshot.identity, event.identity);
 
     if (event.streamId !== snapshot.cursor.streamId || event.seq !== expected++ || event.seq > snapshot.cursor.seq)
-      fail('GRAPH_LOG_CORRUPT', '图增量事件流或序号不连续');
+      throw new Error('图增量事件流或序号不连续');
   }
 
   const last = selected.at(-1)!.seq;
 
   if (last < snapshot.cursor.seq && start + selected.length >= batches.length)
-    fail('GRAPH_LOG_CORRUPT', '图增量日志未到持久化头部');
+    throw new Error('图增量日志未到持久化头部');
 
   return { mode: 'delta', from: cursor, cursor: { ...snapshot.cursor, seq: last }, batches: selected, hasMore: last < snapshot.cursor.seq };
 }

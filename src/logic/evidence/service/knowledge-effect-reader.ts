@@ -4,9 +4,7 @@
  * 设计原因：完整 journal 校验复用唯一知识串行队列，原对象计划只从固定私有缓存加载；不把工具失败当作事务回滚，也不借当前实例补造历史请求。
  * 职责边界：不提交知识、不刷新索引、不修剪目录、不恢复事务或创建另一个 Store；前后正文仅参与私有摘要，不进入公开报告。
  */
-import { hash, json } from '../../../core/platform/node/serialization';
-
-import { fail } from '../../../core/errors';
+import { hash, json } from '../../../core/io/serialization';
 
 import type { StoragePaths } from '../../workspace/ports/paths';
 
@@ -44,7 +42,7 @@ export async function observeKnowledgeTransaction(owner: KnowledgeEffectOwner, r
   alive();
 
   if (identity.workspaceId !== owner.entry.id)
-    fail('EFFECT_IDENTITY', '原知识请求不属于当前工作区');
+    throw new Error('原知识请求不属于当前工作区');
 
   return owner.Governed(async transaction => { alive(); let request: ChangeRequest; if (reference.kind === 'request') request = reference.request; else { try { const loaded = await readKnowledgePlan(owner, { kind: 'object_plan', planId: reference.planId }); if (loaded.request.workspaceId !== identity.workspaceId || loaded.request.instanceId !== identity.instanceId || loaded.request.requestId !== identity.requestId) throw Error('Original knowledge plan identity mismatch'); request = loaded.request; } catch { alive(); return knowledgeTransactionObservationSchema.parse({ identity, state: 'unverifiable', reason: 'original_plan_unavailable' }) } } alive(); const requestHash = hash(json(request)); let observation: KnowledgeTransactionObservation; try { const status = await transaction.Journal(request); observation = knowledgeTransactionObservationSchema.parse(status ? { identity, state: status.state, requestHash, evidenceHash: hash(json(status)), ...(status.state === 'committed' ? { revision: status.result?.revision, changedCount: status.result?.changed.length } : {}) } : { identity, state: 'absent', requestHash }); } catch { observation = knowledgeTransactionObservationSchema.parse({ identity, state: 'unverifiable', requestHash, reason: 'original_record_unverifiable' }) } alive(); return observation; });
 }

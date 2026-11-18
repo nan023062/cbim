@@ -7,9 +7,7 @@
  */
 import { isDeepStrictEqual } from 'node:util';
 
-import { fail } from '../../../core/errors';
-
-import { hash, json } from '../../../core/platform/node/serialization';
+import { hash, json } from '../../../core/io/serialization';
 
 import type { KnowledgeWorkspace } from '../../knowledge/rules/ports';
 
@@ -76,11 +74,11 @@ export class CommandVerificationService
     const parsed = commandVerificationInputSchema.safeParse(raw);
 
     if (!parsed.success)
-      fail('COMMAND_REPORT_INPUT', '原命令查询身份无效');
+      throw new Error('原命令查询身份无效');
 
     const input = parsed.data;
 
-    const alive = () => { signal?.throwIfAborted(); this.owner.Assert(); if (input.workspaceId !== this.owner.entry.id) fail('COMMAND_REPORT_IDENTITY', '原命令查询不属于当前工作区') };
+    const alive = () => { signal?.throwIfAborted(); this.owner.Assert(); if (input.workspaceId !== this.owner.entry.id) throw new Error('原命令查询不属于当前工作区') };
 
     alive();
 

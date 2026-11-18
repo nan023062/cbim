@@ -5,8 +5,6 @@
  */
 import { z } from 'zod';
 
-import { fail } from '../../../core/errors';
-
 /** 文件大小单位为字节，字段长度按 Unicode 码点；行数不含必须存在的表头。 */
 export const csvValidationLimits = { fileBytes: 1024 * 1024, schemaBytes: 32 * 1024, rows: 10000, columns: 32, fieldChars: 4096, issues: 16 } as const;
 
@@ -51,11 +49,11 @@ function parseTable(text: string): string[][] | undefined
   let chars = 0,
     recordStarted = false;
 
-  const append = (value: string) => { field += value; if (++chars > csvValidationLimits.fieldChars) fail('VALIDATION_LIMIT', 'CSV 字段超过 4096 字符') };
+  const append = (value: string) => { field += value; if (++chars > csvValidationLimits.fieldChars) throw new Error('CSV 字段超过 4096 字符') };
 
-  const finishField = () => { row.push(field); if (row.length > csvValidationLimits.columns) fail('VALIDATION_LIMIT', 'CSV 超过 32 列'); field = ''; chars = 0; state = 'plain' };
+  const finishField = () => { row.push(field); if (row.length > csvValidationLimits.columns) throw new Error('CSV 超过 32 列'); field = ''; chars = 0; state = 'plain' };
 
-  const finishRow = () => { finishField(); rows.push(row); if (rows.length > csvValidationLimits.rows + 1) fail('VALIDATION_LIMIT', 'CSV 超过 10000 条数据行'); row = []; recordStarted = false };
+  const finishRow = () => { finishField(); rows.push(row); if (rows.length > csvValidationLimits.rows + 1) throw new Error('CSV 超过 10000 条数据行'); row = []; recordStarted = false };
 
   for (let index = 0; index < text.length; index++)
   {
@@ -156,10 +154,10 @@ export function validateCsvArtifact(rawSchema: CsvTableSchema, bytes: Uint8Array
   const parsed = csvTableSchema.safeParse(rawSchema);
 
   if (!parsed.success)
-    fail('VALIDATION_SCHEMA_INVALID', 'CSV 验证声明不受支持或超过边界');
+    throw new Error('CSV 验证声明不受支持或超过边界');
 
   if (!(bytes instanceof Uint8Array) || bytes.byteLength > csvValidationLimits.fileBytes)
-    fail('VALIDATION_LIMIT', 'CSV 产物超过 1 MiB');
+    throw new Error('CSV 产物超过 1 MiB');
 
   const schema = parsed.data,
     issues: CsvValidationOutcome['issues'] = [],

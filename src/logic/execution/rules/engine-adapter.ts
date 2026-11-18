@@ -10,13 +10,13 @@ import type { EngineToolsPort } from './engine-tools';
 
 import type { EngineRuntimePackage } from './engine-runtime';
 
-import type { ResolvedEngineModel, EngineDescriptor } from '../../engines';
+import type { ResolvedEngineModel } from '../../engines';
 
-import { JsonUtils } from '../../../core/io';
+import { checkedEngineAdapter as checkAdapter, type EngineAdapter as FrameworkAdapter } from '../../../framework/kernel';
 
 import type { RequestBudgetPort } from '../../budget/rules/request-budget';
 
-export const engineAdapterProtocol = 1 as const;
+export { engineAdapterProtocol } from '../../../framework/kernel';
 
 /** 可信开发/平台装配的进程启动信息，不来自模型或公开 IPC。 */
 export interface EngineProcess
@@ -60,53 +60,6 @@ export interface EngineAdapterOptions
   requestBudget?(role?: string): Promise<RequestBudgetPort | undefined>;
 }
 
-/** 发布包导出唯一 engineAdapter；create 名称属于 protocol=1。版本由适配器维护，不从 SDK 版本推断。 */
-export interface EngineAdapter
-{
-  readonly protocol: typeof engineAdapterProtocol;
+export type EngineAdapter = FrameworkAdapter<EngineAdapterOptions, AgentEngine>;
 
-  readonly id: string;
-
-  readonly version: string;
-
-  /** 此 E 版本编译时的能力声明；正式加载必须与 R 的选型规则匹配，不能将新规则套到旧实现。 */
-  readonly descriptor?: EngineDescriptor;
-
-  create(options: EngineAdapterOptions): AgentEngine;
-}
-
-/** 先核身份与协议再取工厂；正式加载传入 R 声明以拒绝不匹配的 E，不执行安装脚本、回退或重试。 */
-export function checkedEngineAdapter(value: unknown, expected: { id: string; version?: string; descriptor?: EngineDescriptor }): EngineAdapter
-{
-  const adapter = value as Partial<EngineAdapter> | null;
-
-  if (!adapter || adapter.protocol !== engineAdapterProtocol || adapter.id !== expected.id || typeof adapter.version !== 'string' || !/^\d+\.\d+\.\d+$/.test(adapter.version) || expected.version !== undefined && adapter.version !== expected.version || typeof adapter.create !== 'function')
-    throw Error('引擎包身份、版本或运行协议不兼容');
-
-  if (expected.descriptor)
-  {
-    let matches = false;
-
-    try
-    {
-      matches = !!adapter.descriptor && descriptorContract(adapter.descriptor) === descriptorContract(expected.descriptor)
-    }
-    catch
-    {
-      /* 损坏声明不是可执行包，不透传原对象或解析细节。 */
-    }
-
-    if (!matches)
-      throw Error('引擎包的模型或历史协议声明与当前应用不匹配，请更新匹配的引擎包；未启动或自动重试');
-  }
-
-  return adapter as EngineAdapter;
-}
-
-/** 仅比较执行语义；业务介绍、显示名与角色标签更新不强迫更换仍兼容的 E。 */
-function descriptorContract(value: EngineDescriptor)
-{
-  const policy = { id: value.id, storageDirectory: value.storageDirectory, nativeHistoryFormat: value.nativeHistoryFormat, supportedApis: value.supportedApis, fallbackApi: value.fallbackApi, packageDependencies: value.packageDependencies ?? [], additionalModelRoles: (value.additionalModelRoles ?? []).map(({ label: _label, ...role }) => role) };
-
-  return JSON.stringify(JsonUtils.OrderJsonValue(policy, { compareKeys: (a, b) => a < b ? -1 : a > b ? 1 : 0, omitUndefinedProperties: true }));
-}
+export const checkedEngineAdapter = checkAdapter<EngineAdapterOptions, AgentEngine>;

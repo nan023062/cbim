@@ -21,7 +21,8 @@ const layers = {
   'core/platform/node':['core/platform/node','core'],
   'core/platform/browser':['core/platform/browser','core'],
   'core/platform/electron':['core/platform/electron','core/platform/node','core'],
-  logic:['logic','core','core/platform/node'],
+  framework:['framework','core'],
+  logic:['logic','framework','core','core/platform/node'],
   view:['view','bridge/client','bridge/contracts','core','core/platform/browser'],
   'bridge/client':['bridge/client','bridge/contracts','core','core/platform/browser'],
   'bridge/server':['bridge/server','bridge/contracts','logic','core','core/platform/node','core/platform/electron'],
@@ -36,7 +37,7 @@ const layerOf = file => {
   if(['node','page-reader','public-http','browser-proxy'].some(name=>file==='src/core/web/'+name+'.ts'))return 'core/platform/node';
   if(file==='src/core/web/electron.ts')return 'core/platform/electron';
   if(file.startsWith('src/core/platform/'))return file.split('/').slice(1,4).join('/');
-  for(const layer of ['core','logic','view'])if(file.startsWith('src/'+layer+'/'))return layer;
+  for(const layer of ['core','framework','logic','view'])if(file.startsWith('src/'+layer+'/'))return layer;
   return file.split('/').slice(1,3).join('/');
 };
 
@@ -267,11 +268,12 @@ export function auditDependencies(root = process.cwd(), options = {}) {
     }
     if(e.from.startsWith('src/')&&e.to.startsWith('src/')){
       if(e.from.startsWith('src/core/')&&e.to.startsWith('src/core/')&&e.from.split('/')[2]!==e.to.split('/')[2])return true;
+      if(e.to.startsWith('src/framework/kernel/')&&!e.from.startsWith('src/framework/kernel/')&&e.to!=='src/framework/kernel/index.ts')return true;
       const a=layerOf(e.from),b=layerOf(e.to);
       if(e.to==='src/core/web/electron.ts'&&e.from!=='src/bridge/server/main.ts')return true;
       // 业务只消费桌面宿主注入的凭据类型；运行时引用仍受 Electron 分层限制。
       const cipherTypeAccess=e.kind==='type'&&e.to==='src/core/io/electron.ts'&&[
-        'src/logic/models/ports.ts',
+        'src/logic/models/index.ts',
         'src/logic/feedback/service/github-feedback.ts',
         'src/logic/feedback/service/github-feedback-auth.ts',
         'src/logic/web/service/web-settings.ts',

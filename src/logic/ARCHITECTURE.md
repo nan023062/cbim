@@ -229,7 +229,7 @@ click N_1a718763f256 href "updates/ARCHITECTURE.md"
 | [history](history/ARCHITECTURE.md)（图 2） | 依赖 | [agents](agents/ARCHITECTURE.md)（图 1）、[dispatch](dispatch/ARCHITECTURE.md)（图 1）、[execution](execution/ARCHITECTURE.md)（图 1）、[runtime](runtime/ARCHITECTURE.md)（图 3）、[team](team/ARCHITECTURE.md)（图 3） |
 | [knowledge](knowledge/ARCHITECTURE.md)（图 2） | 依赖 | [connectors](connectors/ARCHITECTURE.md)（图 4）、[dispatch](dispatch/ARCHITECTURE.md)（图 1）、[feedback](feedback/ARCHITECTURE.md)（图 4）、[io-errors](io-errors/ARCHITECTURE.md)（图 5）、[team](team/ARCHITECTURE.md)（图 3）、[workspace](workspace/ARCHITECTURE.md)（图 3） |
 | [materials](materials/ARCHITECTURE.md)（图 4） | 依赖 | [execution](execution/ARCHITECTURE.md)（图 1）、[knowledge](knowledge/ARCHITECTURE.md)（图 2）、[tasks](tasks/ARCHITECTURE.md)（图 2） |
-| [resources](resources/ARCHITECTURE.md)（图 4） | 依赖 | [io-errors](io-errors/ARCHITECTURE.md)（图 5）、[knowledge](knowledge/ARCHITECTURE.md)（图 2） |
+| [resources](resources/ARCHITECTURE.md)（图 4） | 依赖 | [knowledge](knowledge/ARCHITECTURE.md)（图 2） |
 | [runtime](runtime/ARCHITECTURE.md)（图 3） | 依赖 | [dispatch](dispatch/ARCHITECTURE.md)（图 1）、[evidence](evidence/ARCHITECTURE.md)（图 2）、[execution](execution/ARCHITECTURE.md)（图 1）、[tasks](tasks/ARCHITECTURE.md)（图 2）、[tools](tools/ARCHITECTURE.md)（图 4） |
 | [tasks](tasks/ARCHITECTURE.md)（图 2） | 依赖 | [budget](budget/ARCHITECTURE.md)（图 1）、[dispatch](dispatch/ARCHITECTURE.md)（图 1）、[engines](engines/ARCHITECTURE.md)（图 3）、[execution](execution/ARCHITECTURE.md)（图 1）、[models](models/ARCHITECTURE.md)（图 3）、[runtime](runtime/ARCHITECTURE.md)（图 3）、[team](team/ARCHITECTURE.md)（图 3）、[tools](tools/ARCHITECTURE.md)（图 4）、[workspace](workspace/ARCHITECTURE.md)（图 3） |
 | [team](team/ARCHITECTURE.md)（图 3） | 依赖 | [agents](agents/ARCHITECTURE.md)（图 1）、[budget](budget/ARCHITECTURE.md)（图 1）、[conversation](conversation/ARCHITECTURE.md)（图 1）、[dispatch](dispatch/ARCHITECTURE.md)（图 1）、[evidence](evidence/ARCHITECTURE.md)（图 2）、[execution](execution/ARCHITECTURE.md)（图 1）、[knowledge](knowledge/ARCHITECTURE.md)（图 2）、[tasks](tasks/ARCHITECTURE.md)（图 2） |
@@ -247,17 +247,17 @@ click N_1a718763f256 href "updates/ARCHITECTURE.md"
 | [connectors](connectors/ARCHITECTURE.md) | 把资源仓库连接的静态定义、工作区授权和真实读取分开，避免登记连接即获得访问权限。 |
 | [conversation](conversation/ARCHITECTURE.md) | 维护工作区主会话的交互与执行入口，把用户消息、审批和结构化提问连接到业务运行。 |
 | [dispatch](dispatch/ARCHITECTURE.md) | 协调工作区内的任务派发、执行绑定和成果回传，保持相关事实在共同事务边界内一致。 |
-| [engines](engines/ARCHITECTURE.md) | 管理官方引擎身份、能力声明、模型选型和本机包选择，使引擎目录不等于 SDK 加载或运行状态。 |
+| [engines](engines/ARCHITECTURE.md) | 装配引擎的模型配置、安装状态和本机运行包。 |
 | [evidence](evidence/ARCHITECTURE.md) | 组织执行证据的表达、可信采集与独立复核，区分已有记录、当前观察和业务验收。 |
 | [execution](execution/ARCHITECTURE.md) | 把已核实的 Agent 调用转化为真实执行，分离准入、上下文、循环机制、引擎适配与运行持久化。 |
 | [feedback](feedback/ARCHITECTURE.md) | 定义结构化反馈、可信目标与公开连接状态，把内置流程说明和真实外部提交分开。 |
 | [file-operations](file-operations/ARCHITECTURE.md) | 对有明确业务授权的文件写入、删除移动和隔离执行提供完整的可信操作边界。 |
 | [governance](governance/ARCHITECTURE.md) | 组织正式模块知识的观察、提案、人工决定与实施，防止建议直接变成权威知识。 |
 | [history](history/ARCHITECTURE.md) | 按静态角色和逻辑会话提供运行履历，保留实例退役之后仍可读取的历史事实。 |
-| [io-errors](io-errors/ARCHITECTURE.md) | Logic 按业务错误协议解释严格 JSON 解析与原生锁失败。JSON 与锁分别导入，解析数据时无需加载原生库。 |
+| [io-errors](io-errors/ARCHITECTURE.md) | Logic 将严格 JSON 解析与原生文件锁的已知失败转换为原生 Error，保留具体原因。JSON 与锁分别导入，解析数据时无需加载原生库。 |
 | [knowledge](knowledge/ARCHITECTURE.md) | 管理正式知识的快照、校验、查询与受控修改，使权威正文和派生读取各有责任边界。 |
 | [materials](materials/ARCHITECTURE.md) | 管理聊天与目标补充所引用资料的身份和采集快照，使输入正文具有可核对来源。 |
-| [models](models/ARCHITECTURE.md) | 管理供应商连接、生成与向量模型目录及公开快照，使模型能力独立于具体 Agent 引擎。 |
+| [models](models/ARCHITECTURE.md) | 管理模型配置持久化与凭据，按 Framework 模型协议解析运行配置。 |
 | [resources](resources/ARCHITECTURE.md) | 统一资源种类、仓库身份与静态包交换，隔离仓库管理和工作区知识应用。 |
 | [runtime](runtime/ARCHITECTURE.md) | 提供应用级运行事实的只读观察与并发策略配置，使监管不成为第二套调度系统。 |
 | [tasks](tasks/ARCHITECTURE.md) | 定义任务依赖、目标周期、等待与人工处置的业务语义，避免把模型运行状态当作任务完成。 |

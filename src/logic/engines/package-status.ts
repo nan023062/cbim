@@ -4,7 +4,7 @@
  */
 import type { EngineArtifact } from '../updates/engine-artifacts';
 
-import type { LoopEngine } from './catalog/supported-engines';
+import type { LoopEngine } from '../../framework/kernel';
 
 export interface EnginePackageStatus
 {

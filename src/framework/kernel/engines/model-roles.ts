@@ -5,7 +5,7 @@
  */
 import { z } from 'zod';
 
-import { generationSnapshotSchema, embeddingSnapshotSchema, type ModelConnectionRequirement } from '../models';
+import { generationSnapshotSchema, embeddingSnapshotSchema, type ModelConnectionRequirement } from '../models/index';
 
 const roleId = z.string().regex(/^[a-z][a-z0-9_-]{0,47}$/).refine(value => !['primary', 'constructor', 'prototype', '__proto__'].includes(value), '额外模型角色不能覆盖 primary 或使用保留名称');
 

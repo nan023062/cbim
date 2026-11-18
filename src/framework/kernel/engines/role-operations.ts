@@ -2,9 +2,9 @@
  * 作用定位：把官方模型角色声明与用户 V2 选型投影为有序操作引用。
  * 设计原因：保存、岗位采纳、执行准备共用同一必填/能力/型号规则；实际存储与凭据仍由模型服务负责。
  */
-import { modelRolesSelectionSchema, type ModelRolesSelection, type ModelRoleDescriptor } from '../model-roles';
+import { modelRolesSelectionSchema, type ModelRolesSelection, type ModelRoleDescriptor } from './model-roles';
 
-import type { ModelConnectionRequirement } from '../../models';
+import type { ModelConnectionRequirement } from '../models/index';
 
 export interface RoleOperation
 {

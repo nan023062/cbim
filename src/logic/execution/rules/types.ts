@@ -1,3 +1,5 @@
+import type { AgentEngine as FrameworkAgentEngine } from '../../../framework/kernel';
+
 /**
  * 目录归属：logic/execution/rules/execution；运行协议与计量。
 
@@ -107,27 +109,7 @@ export interface EngineContext
 }
 
 /** 已发布引擎包 protocol=1 的固定生命周期；close 必须释放进程/桥并排空事件，run 终态不表示业务验收通过。 */
-export interface AgentEngine
-{
-  readonly kind: string;
-
-  /** 准备进程、工具桥及原生会话；此阶段不发送本轮模型提示，失败后仍由调用方 close。 */
-  start(context: EngineContext): Promise<void>;
-
-  /** 发起本轮生成并等待引擎终态；异常交给运行时记录为中断，不能据异常自动重放工具。 */
-  run(message: string): Promise<{ status: 'completed' | 'cancelled' | 'failed'; error?: string }>;
-
-  /**
-       * 在当前工具批次完成后注入用户补充；不切换模型或授权。
-       * signal 只阻止尚未发送的插入；适配器在准备 await 后复验。原生已确认 queued 后不得因迟到取消改报未接收，发送后的无确认错误保持未知且不重发。
-       */
-  steer?(message: string, images: InputImage[], signal: AbortSignal): Promise<void>;
-
-  /** 请求停止；返回只表示停止请求已处理，不保证工具副作用已消除或日志已经结算。 */
-  stop(): Promise<void>;
-
-  close(): Promise<void>;
-}
+export type AgentEngine = FrameworkAgentEngine<EngineContext, InputImage>;
 
 /** 从执行事实恢复的摘要；未收到结果的已放行工具必须人工核实，不能自动重放。 */
 export interface RunSummary

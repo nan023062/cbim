@@ -1384,11 +1384,11 @@
     "logic/models": {
       "roots": [
         "src/logic/models/index.ts",
-        "src/logic/models/catalog.ts",
-        "src/logic/models/config.ts",
-        "src/logic/models/provider-connections.ts",
-        "src/logic/models/provider-presets.ts",
-        "src/logic/models/ports.ts"
+        "src/framework/kernel/models/catalog.ts",
+        "src/framework/kernel/models/config.ts",
+        "src/framework/kernel/models/provider-connections.ts",
+        "src/framework/kernel/models/provider-presets.ts",
+        "src/framework/kernel/models/ports.ts"
       ],
       "tests": {
         "unit": [

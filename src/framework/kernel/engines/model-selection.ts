@@ -5,9 +5,9 @@
  */
 import { z } from 'zod';
 
-import { selectProviderConnection, type ModelConnectionRequirement, type ProviderConnections } from '../../models';
+import { selectProviderConnection, type ModelConnectionRequirement, type ProviderConnections } from '../models/index';
 
-import { supportedEngines, type LoopEngine, type EngineDescriptor } from '../catalog/supported-engines';
+import { supportedEngines, type LoopEngine, type EngineDescriptor } from './supported-engines';
 
 /** 非空静态元组生成校验枚举，新增引擎不再修改第二份 ID 列表。 */
 export const loopEngineSchema = z.enum(supportedEngines.map(engine => engine.id) as [LoopEngine, ...LoopEngine[]]);

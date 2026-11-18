@@ -28,14 +28,18 @@
 
 ```mermaid
 classDiagram
-class N_22a9dc163407["bridge"] {
-  <<virtual>>
-}
-click N_22a9dc163407 href "bridge/ARCHITECTURE.md"
 class N_2ac6ecef0e06["core"] {
   <<virtual>>
 }
 click N_2ac6ecef0e06 href "core/ARCHITECTURE.md"
+class N_22a9dc163407["bridge"] {
+  <<virtual>>
+}
+click N_22a9dc163407 href "bridge/ARCHITECTURE.md"
+class N_2a213dc873da["framework"] {
+  <<virtual>>
+}
+click N_2a213dc873da href "framework/ARCHITECTURE.md"
 class N_8ad7653761f5["logic"] {
   <<virtual>>
 }
@@ -46,7 +50,9 @@ class N_eae847246398["view"] {
 click N_eae847246398 href "view/ARCHITECTURE.md"
 N_22a9dc163407 ..> N_2ac6ecef0e06 : 依赖
 N_22a9dc163407 ..> N_8ad7653761f5 : 依赖
+N_2a213dc873da ..> N_2ac6ecef0e06 : 依赖
 N_8ad7653761f5 ..> N_2ac6ecef0e06 : 依赖
+N_8ad7653761f5 ..> N_2a213dc873da : 依赖
 N_eae847246398 ..> N_22a9dc163407 : 依赖
 N_eae847246398 ..> N_2ac6ecef0e06 : 依赖
 ```
@@ -57,6 +63,7 @@ N_eae847246398 ..> N_2ac6ecef0e06 : 依赖
 | --- | --- |
 | [bridge](bridge/ARCHITECTURE.md) | 把桌面宿主与业务应用连接起来，同时限制页面可触达的能力。通信数据、安全桥和可信服务端分别封装，业务规则与权威状态留在 Logic。 |
 | [core](core/ARCHITECTURE.md) | 提供不认识工作区、Agent 或任务身份的技术机制，让业务在明确端口上组合算法、文件、网络和平台能力。 |
+| [framework](framework/ARCHITECTURE.md) | Framework 定义 CBIM 的模型能力与 Agent 引擎协议，供 Logic 装配。引擎按能力选择模型；模型目录独立于引擎。 |
 | [logic](logic/ARCHITECTURE.md) | 按领域组织业务事实、规则和运行服务，以统一应用生命周期连接各领域，使业务不依赖窗口、IPC 或 Electron。 |
 | [view](view/ARCHITECTURE.md) | 以页面、局部控制器和共享展示组件呈现业务事实，让界面变化与后端状态机保持独立。 |
 

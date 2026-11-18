@@ -2,15 +2,15 @@
  * 作用定位：将开发者声明的各模型角色投影为已配置、启用且兼容的选择列表。
  * 设计原因：Agent 编辑、主对话与引擎能力列表共用规则；纯预览不解密或联网，保存和启动仍由配置服务复核。
  */
-import { selectProviderConnection, type LlmSettings } from '../../models';
+import { selectProviderConnection, type LlmSettings } from '../models/index';
 
 import { engineDescriptor, providerSupportsEngine } from './model-selection';
 
-import type { LoopEngine } from '../catalog/supported-engines';
+import type { LoopEngine } from './supported-engines';
 
-import { additionalRoleOperations } from './model-roles';
+import { additionalRoleOperations } from './role-operations';
 
-import type { ModelRoleDescriptor, ModelRolesSelection } from '../model-roles';
+import type { ModelRoleDescriptor, ModelRolesSelection } from './model-roles';
 
 export interface ModelChoice
 {

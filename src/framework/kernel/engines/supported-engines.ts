@@ -3,9 +3,9 @@
  * 设计原因：身份、业务专长和模型协议声明集中维护；清单不加载具体 SDK，也不开放用户注册或配置文件覆盖。
  * 职责边界：协议兼容表示可以选择，不代表模型工具调用能力、凭据或运行环境已经验证；不属于冷启动框架。
  */
-import type { LlmApi } from '../../models';
+import type { LlmApi } from '../models/index';
 
-import type { ModelRoleDescriptor } from '../model-roles';
+import type { ModelRoleDescriptor } from './model-roles';
 
 /** 单引擎的便携能力声明；fallbackApi 只在主接口不兼容时使用，不转换模型 ID 或请求。 */
 interface EngineDeclaration

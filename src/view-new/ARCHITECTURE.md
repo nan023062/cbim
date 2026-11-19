@@ -38,32 +38,34 @@ class N_3581845b4caa["extension"] {
   <<virtual>>
 }
 click N_3581845b4caa href "extension/ARCHITECTURE.md"
+class N_3a7479c3194b["office"] {
+  <<virtual>>
+}
+click N_3a7479c3194b href "office/ARCHITECTURE.md"
 class N_d63ed31fde81["settings"] {
   <<virtual>>
 }
 click N_d63ed31fde81 href "settings/ARCHITECTURE.md"
+N_b08560c38277 ..> N_3b750e3edb60 : 依赖
+N_3b750e3edb60 ..> N_52575372bc39 : 依赖
+N_3b750e3edb60 ..> N_3581845b4caa : 依赖
+N_3b750e3edb60 ..> N_3a7479c3194b : 依赖
+N_3b750e3edb60 ..> N_d63ed31fde81 : 依赖
+```
+
+### 关系组 2：shared
+
+```mermaid
+classDiagram
 class N_a94f7ca21bb9["shared"] {
   <<virtual>>
 }
 click N_a94f7ca21bb9 href "shared/ARCHITECTURE.md"
-N_b08560c38277 ..> N_3b750e3edb60 : 依赖
-N_b08560c38277 ..> N_a94f7ca21bb9 : 依赖
-N_3b750e3edb60 ..> N_52575372bc39 : 依赖
-N_3b750e3edb60 ..> N_3581845b4caa : 依赖
-N_3b750e3edb60 ..> N_d63ed31fde81 : 依赖
-N_3b750e3edb60 ..> N_a94f7ca21bb9 : 依赖
-N_3581845b4caa ..> N_a94f7ca21bb9 : 依赖
-N_d63ed31fde81 ..> N_a94f7ca21bb9 : 依赖
-```
-
-### 关系组 2：monitor
-
-```mermaid
-classDiagram
 class N_c05d0a357d4a["monitor"] {
   <<virtual>>
 }
 click N_c05d0a357d4a href "monitor/ARCHITECTURE.md"
+N_c05d0a357d4a ..> N_a94f7ca21bb9 : 依赖
 ```
 
 ### 跨图协作
@@ -72,8 +74,11 @@ click N_c05d0a357d4a href "monitor/ARCHITECTURE.md"
 
 | 引用方 | 关系 | 目标 |
 | --- | --- | --- |
-| [入口](main.ts)（图 1） | 依赖 | [monitor](monitor/ARCHITECTURE.md)（图 2） |
-| [monitor](monitor/ARCHITECTURE.md)（图 2） | 依赖 | [shared](shared/ARCHITECTURE.md)（图 1） |
+| [入口](main.ts)（图 1） | 依赖 | [monitor](monitor/ARCHITECTURE.md)（图 2）、[shared](shared/ARCHITECTURE.md)（图 2） |
+| [desktop](desktop/ARCHITECTURE.md)（图 1） | 依赖 | [shared](shared/ARCHITECTURE.md)（图 2） |
+| [extension](extension/ARCHITECTURE.md)（图 1） | 依赖 | [shared](shared/ARCHITECTURE.md)（图 2） |
+| [office](office/ARCHITECTURE.md)（图 1） | 依赖 | [shared](shared/ARCHITECTURE.md)（图 2） |
+| [settings](settings/ARCHITECTURE.md)（图 1） | 依赖 | [shared](shared/ARCHITECTURE.md)（图 2） |
 
 ## 子模块
 
@@ -83,6 +88,7 @@ click N_c05d0a357d4a href "monitor/ARCHITECTURE.md"
 | [discovery](discovery/ARCHITECTURE.md) | 浏览和筛选资源分类。 |
 | [extension](extension/ARCHITECTURE.md) | 维护当前窗口的扩展标签。 |
 | [monitor](monitor/ARCHITECTURE.md) | 独立渲染 Agent 和进程的资源占用。 |
+| [office](office/ARCHITECTURE.md) | 让用户在项目内选择 Office 会话，查看记录并保存输入。 |
 | [settings](settings/ARCHITECTURE.md) | 在主窗口内提供独立的设置导航与分组内容。 |
 | [shared](shared/ARCHITECTURE.md) | 承载跨界面的图标、品牌及基础样式。 |
 

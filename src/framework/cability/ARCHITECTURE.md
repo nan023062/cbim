@@ -10,6 +10,7 @@
 | --- | --- |
 | [Team](team.ts) | 组合子团队和岗位。 |
 | [SkillScope](skills.ts) | 汇总岗位自身及上级团队声明的技能。 |
+| [AgentInstances](organization.ts) | Owns one Office agent registry and its engines. |
 | [Organization](organization.ts) | 作为组织树根节点，查询团队与岗位、替换组织结构，并管理 Agent 实例。实例身份分配与引擎激活分开。 |
 
 - [Agent](agent/ARCHITECTURE.md) 表达虚拟角色与运行配置。
@@ -28,14 +29,17 @@ class N_1e7eb579ff71["agent"] {
   <<virtual>>
 }
 click N_1e7eb579ff71 href "agent/ARCHITECTURE.md"
-class N_2abf3b515e27["Organization"]
-click N_2abf3b515e27 href "organization.ts"
+class N_269cef7e7730["AgentInstances"]
+click N_269cef7e7730 href "organization.ts"
 class N_1aa95976a21f["Team"]
 click N_1aa95976a21f href "team.ts"
+class N_2abf3b515e27["Organization"]
+click N_2abf3b515e27 href "organization.ts"
 class N_47d5ae9a1a34["SkillScope"]
 click N_47d5ae9a1a34 href "skills.ts"
+N_269cef7e7730 ..> N_1e7eb579ff71 : 依赖
+N_269cef7e7730 <|-- N_2abf3b515e27
 N_2abf3b515e27 ..> N_1aa95976a21f : 依赖
-N_2abf3b515e27 ..> N_1e7eb579ff71 : 依赖
 N_1e7eb579ff71 ..> N_1aa95976a21f : 依赖
 ```
 

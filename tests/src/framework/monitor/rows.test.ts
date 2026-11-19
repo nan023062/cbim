@@ -14,12 +14,14 @@ test('existing rows bootstrap once, then office and agent changes affect only th
   const stop = monitor.WatchRows(row => updates.push(row));
   expect(updates.splice(0)).toMatchObject([
     { kind: 'office', officeId: first.id },
+    { kind: 'agent', officeId: first.id, agentId: first.mainAgentId },
     { kind: 'agent', officeId: first.id, agentId: existing.id }
   ]);
   const second = runtime.OpenOffice('two', 'session');
   const agent = second.organization.Allocate();
   expect(updates.splice(0)).toMatchObject([
     { kind: 'office', officeId: second.id },
+    { kind: 'agent', officeId: second.id, agentId: second.mainAgentId },
     { kind: 'agent', officeId: second.id, agentId: agent.id }
   ]);
   await runtime.CloseWorkspace('two');

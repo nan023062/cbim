@@ -82,12 +82,12 @@ const allowsFeedbackAccess=(from,to)=>
   to===feedbackPublic&&(from.startsWith('src/logic/')||from==='src/bridge/contracts/github-feedback.ts')||
   to===feedbackService&&(from.startsWith('src/bridge/server/')||isService(from));
 const resourcePublic='src/resource/index.ts',resourceService='src/resource/service/index.ts';
-const allowsResourceAccess=(from,to)=>from==='src/logic-new/resource-management/index.ts'&&[resourcePublic,resourceService].includes(to)||from==='src/logic-new/application/index.ts'&&to===resourceService||from==='src/logic/models/service/llm-profiles.ts'&&to==='src/resource/models/local-profiles.ts'||to===resourcePublic&&(from.startsWith('src/logic/')||['src/bridge/contracts/resources.ts','src/bridge/contracts/ipc-resources.ts'].includes(from))||to===resourceService&&(from.startsWith('src/bridge/server/')||isService(from));
+const allowsResourceAccess=(from,to)=>from==='src/logic-new/projects/resources.ts'&&to==='src/resource/project-architecture.ts'||from==='src/logic-new/projects/offices.ts'&&to==='src/resource/office-history.ts'||from==='src/logic-new/resource-management/index.ts'&&[resourcePublic,resourceService].includes(to)||from==='src/logic-new/application/index.ts'&&to===resourceService||from==='src/logic/models/service/llm-profiles.ts'&&to==='src/resource/models/local-profiles.ts'||to===resourcePublic&&(from.startsWith('src/logic/')||['src/bridge/contracts/resources.ts','src/bridge/contracts/ipc-resources.ts'].includes(from))||to===resourceService&&(from.startsWith('src/bridge/server/')||isService(from));
 const agentQuestions='src/framework/cability/agent/questions.ts';
 const agentIdentity='src/framework/cability/agent/identity.ts';
 const moduleBoundaries=[
-  {sources:['src/view-new/desktop/'],allow:['src/view-new/desktop/','src/view-new/settings/','src/view-new/discovery/','src/view-new/extension/','src/view-new/shared/','src/bridge/contracts/']},
-  ...['discovery','extension','monitor','settings','shared'].map(name=>({sources:['src/view-new/'+name+'/'],allow:['src/view-new/'+name+'/','src/view-new/shared/','src/bridge/contracts/']})),
+  {sources:['src/view-new/desktop/'],allow:['src/view-new/desktop/','src/view-new/office/','src/view-new/settings/','src/view-new/discovery/','src/view-new/extension/','src/view-new/shared/','src/bridge/contracts/']},
+  ...['discovery','extension','monitor','office','settings','shared'].map(name=>({sources:['src/view-new/'+name+'/'],allow:['src/view-new/'+name+'/','src/view-new/shared/','src/bridge/contracts/']})),
   // 冷壳只持有更新状态和已验证业务入口，不直接装配普通业务服务。
   {sources:['src/bridge/server/bootstrap/'],allow:['src/bridge/server/bootstrap/','src/bridge/server/desktop/main.ts','src/logic/updates/service/']},
   // 视图专属适配可以组合共享 Core，但不反向依赖页面、通信契约或后端实现。

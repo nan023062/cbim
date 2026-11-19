@@ -14,13 +14,13 @@ export class RuntimeMonitor
   private readonly subscriptions = new Set<() => void>();
   private closed = false;
 
-  public constructor(private readonly runtime: CbimRuntime, private readonly sampleHost?: () => HostSample) {}
+  public constructor(private readonly runtime: Pick<CbimRuntime, 'ListOffices' | 'FindOffice' | 'Subscribe'>, private readonly sampleHost?: () => HostSample) {}
 
   public GetSnapshot()
   {
     const now = performance.now();
     const offices = this.runtime.ListOffices().map(office => {
-      const active = new Map(office.organization.ListActiveAgents().map(agent => [agent.id, agent]));
+      const active = new Map(office.ListActiveAgents().map(agent => [agent.id, agent]));
       const usage = office.GetTokenUsage(now);
       const agents = usage.agents.map(agent => {
         const running = active.get(agent.id);
@@ -71,7 +71,10 @@ export class RuntimeMonitor
       const office = this.runtime.FindOffice(officeId);
       if (!office) return;
       if (change !== 'opened' && change.type === 'agent') agentRow(office, change.change.agentId);
-      else officeRow(office);
+      else {
+        officeRow(office);
+        if (change === 'opened') agentRow(office, office.mainAgentId);
+      }
     });
     let previous: {cpu: number; time: number; pid: number} | undefined;
     const sample = () => {

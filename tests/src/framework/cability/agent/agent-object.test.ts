@@ -1,7 +1,29 @@
 import { Organization } from '../../../../../src/framework/cability/organization';
+import { CbimRuntime } from '../../../../../src/framework/cbim-runtime';
 import {it,expect,vi} from 'vitest';
 import {Team} from '../../../../../src/framework/cability/team';
 import {AgentRole,runAgentTask,type AgentTaskExecution} from '../../../../../src/framework/cability/agent';
+
+it('Office 内置负责人绑定主会话，并在关闭时释放其引擎', async () => {
+  const runtime = new CbimRuntime();
+  const office = runtime.OpenOffice('project', 'one');
+  const other = runtime.OpenOffice('project', 'two');
+  expect(runtime.OpenOffice('project', 'one').mainAgentId).toBe(office.mainAgentId);
+  expect(other.mainAgentId).not.toBe(office.mainAgentId);
+  expect(office.FindAgent(office.mainAgentId)).toBeDefined();
+  const close = vi.fn(async () => {});
+  const factory = { parameters: 0, CreateEngine: async (_: number, id: string, role: AgentRole) => {
+    expect(id).toBe(office.mainAgentId);
+    expect(role.conversation).toEqual({ workspaceId: 'project', taskId: 'one' });
+    expect(role.definition.position).toBe('Office 负责人、用户助手');
+    return { session: 'engine', Close: close };
+  } };
+  expect(await office.OpenMainAgent(factory)).toBe('engine');
+  await office.Close();
+  await expect(office.OpenMainAgent(factory)).rejects.toThrow('办公室已关闭');
+  expect(close).toHaveBeenCalledTimes(1);
+  await runtime.Close();
+});
 
 it('freezes identity and model selection without copying conversation messages',()=>{
   const model={engine:'pi',profileId:'profile',modelId:'model'},definition={id:'agent',name:'Agent',instructions:'role',model},conversation={workspaceId:'workspace',taskId:'task'};

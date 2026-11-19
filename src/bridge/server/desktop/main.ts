@@ -1,6 +1,7 @@
 /** 新桌面宿主负责窗口、应用生命周期和启动确认。 */
 import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 import path from 'node:path';
+import { z } from 'zod';
 import { Application } from '../../../logic-new/application';
 import { createMonitorOpener } from './monitor-window';
 import { updateUserRoot } from '../../../logic/updates/service/restart-profile';
@@ -65,6 +66,14 @@ export function startDesktop(host?: StartupHost)
         return run(value);
       });
     handle('menu:projects', async () => (await application.projects.Read()).entries);
+    handle('office:open', input => {
+      const { project, action, session } = z.object({ project: z.string(), action: z.enum(['latest','select','create']), session: z.string().uuid().optional() }).parse(input);
+      return application.offices.Open(project, action, session);
+    });
+    handle('office:send', input => {
+      const { project, session, text } = z.object({ project: z.string(), session: z.string().uuid(), text: z.string().max(32000) }).parse(input);
+      return application.offices.Send(project, session, text);
+    });
     handle('menu:add-project', async () => {
       const choice = await dialog.showOpenDialog(window!, { properties: ['openDirectory'], title: '选择项目目录' });
       if (choice.canceled || !choice.filePaths.length) return null;

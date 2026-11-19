@@ -1,12 +1,19 @@
 /** 应用级 AI 工作流运行时，按工作区和主会话拥有办公室。 */
-import type { WorkspaceInstanceFactory } from './business';
+import { Project, type WorkspaceTree, type WorkspaceInstanceFactory } from './business';
 
-import { Organization } from './cability/organization';
+import { AgentInstances, Organization } from './cability/organization';
 
 
 
 import { changeEvents } from './events';
 import { Office } from './office';
+
+export interface ProjectResources
+{
+  readonly projectId: string;
+  readonly organization: Parameters<Organization['ReplaceChildren']>[0];
+  readonly business: WorkspaceTree;
+}
 
 export class CbimRuntime
 {
@@ -17,7 +24,24 @@ export class CbimRuntime
 
   private _closed = false;
 
-  public constructor(private readonly _worktrees?: WorkspaceInstanceFactory) {}
+  public constructor(private readonly _worktrees?: WorkspaceInstanceFactory, private readonly resources?: ProjectResources)
+  {
+    if (resources) {
+      this.resources = structuredClone(resources);
+      this.organization = this.CreateOrganization(resources.projectId);
+      this.project = new Project(structuredClone(resources.business));
+    }
+  }
+
+  public readonly organization?: Organization;
+  public readonly project?: Project;
+
+  private CreateOrganization(id: string)
+  {
+    const organization = new Organization(id);
+    if (this.resources) organization.ReplaceChildren(this.resources.organization);
+    return organization;
+  }
 
   public ListOffices() { return [...this._workspaces.values()].flatMap(group => [...group.values()].filter(office => !office.closed)); }
   public FindOffice(id: string) { return this.ListOffices().find(office => office.id === id); }
@@ -31,6 +55,9 @@ export class CbimRuntime
     if (!workspaceId.trim() || !rootSessionId.trim())
       throw new Error('办公室需要工作区和主会话身份');
 
+    if (this.resources && workspaceId !== this.resources.projectId)
+      throw new Error('办公室不属于当前项目');
+
     let offices = this._workspaces.get(workspaceId);
 
     if (!offices)
@@ -43,7 +70,8 @@ export class CbimRuntime
 
     if (!office || office.closed)
     {
-      office = new Office(workspaceId, rootSessionId, new Organization(workspaceId), this._worktrees);
+      const organization = this.organization ?? new Organization(workspaceId);
+      office = new Office(workspaceId, rootSessionId, organization, this._worktrees, this.project, this.organization ? new AgentInstances() : organization);
       offices.set(rootSessionId, office);
       const officeId = office.id;
       const detach = office.Subscribe(change => { if (change.type === 'closed') detach(); this.changes.Emit({ officeId, change }); });

@@ -31,6 +31,17 @@
 #application-home .panel-switch { position: absolute; z-index: 6; inset: 8px 10px auto auto; width: 32px; height: 32px; padding: 0; border: 0; background: transparent; }
 #application-home .panel-switch:hover { background: var(--hover); }
 .resource-more { anchor-name: --resource-trigger; }
+.project-list-row { display: flex; align-items: center; gap: 2px; border-radius: 8px; }
+.project-list-row:hover, .project-list-row:focus-within { background: var(--hover); }
+.project-list-row button { border: 0; background: transparent; }
+.project-select { flex: 1; min-width: 0; justify-content: flex-start; }
+.project-select span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.project-action { padding: 4px; }
+@media (hover: hover) {
+  .project-list-row:not(:hover):not(:focus-within):not(:has(:popover-open)) .project-action { opacity: 0; }
+}
+.project-context { position: fixed; inset: auto; margin: 0; padding: 4px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--text); }
+#task-draft { width: min(92%, 560px); }
 .primary-nav:has(:popover-open) > .resource-more { background: var(--selected); }
 #resource-overflow {
   position: fixed;

@@ -1,5 +1,5 @@
 /** 单个办公室的团队快照与岗位实例绑定。 */
-import { Organization, type Agent, type AgentEngineFactory } from '../cability/organization';
+import { AgentInstances, Organization, type Agent, type AgentEngineFactory } from '../cability/organization';
 
 import type { AgentRole } from '../cability/agent';
 
@@ -11,7 +11,7 @@ export class OfficeMembers
 {
   private readonly _bindings = new Map<string, Worker>();
 
-  public constructor(public readonly organization: Organization) {}
+  public constructor(public readonly organization: Organization, private readonly agents: AgentInstances = organization) {}
 
   public SetMembers(children: TeamDescription['children']): void
   {
@@ -32,14 +32,14 @@ export class OfficeMembers
 
     if (!binding || binding.agentId !== member.agentId)
     {
-      binding = new Worker(memberId, member.agentId, this.organization.Allocate());
+      binding = new Worker(memberId, member.agentId, this.agents.Allocate());
       this._bindings.set(memberId, binding);
     }
 
     return binding;
   }
 
-  public ListAgents() { return this.organization.ListAgents(); }
+  public ListAgents() { return this.agents.ListAgents(); }
 
   /** 返回工作人员持有的 Agent 实例，供任务执行使用。 */
   public GetMember(memberId: string)

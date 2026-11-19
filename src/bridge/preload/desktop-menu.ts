@@ -3,6 +3,8 @@ import { contextBridge, ipcRenderer } from 'electron';
 import type { DesktopMenu, ProcessGroup } from '../contracts/discovery';
 
 const menu: DesktopMenu = {
+  openOffice: (project, action, session) => ipcRenderer.invoke('office:open', { project, action, session }),
+  sendOffice: (project, session, text) => ipcRenderer.invoke('office:send', { project, session, text }),
   openMonitor: () => ipcRenderer.invoke('menu:open-monitor'),
   projects: () => ipcRenderer.invoke('menu:projects'),
   addProject: () => ipcRenderer.invoke('menu:add-project'),

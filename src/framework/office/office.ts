@@ -4,7 +4,8 @@ import { Project, type WorkspaceInstance, type WorkspaceInstanceFactory } from '
 
 import { Workstation } from './workstation';
 
-import type { Organization } from '../cability/organization';
+import type { AgentInstances, AgentEngineFactory, Organization } from '../cability/organization';
+import { AgentRole } from '../cability/agent';
 
 import { OfficeMembers } from './members';
 
@@ -18,7 +19,7 @@ export class Office
 
   public readonly id = crypto.randomUUID();
 
-  public readonly project = new Project({ nodes: {}, roots: [] });
+
 
   private readonly _stations = new Map<string, Workstation>();
 
@@ -32,6 +33,21 @@ export class Office
   }
 
   private readonly _members: OfficeMembers;
+
+  /** 内置负责人跨轮持有唯一的 Agent 身份，岗位绑定到本 Office 的主会话。 */
+  private readonly principal: ReturnType<Organization['MainAgent']>;
+  public readonly mainRole: AgentRole;
+
+  public get mainAgentId(): string { return this.principal.id; }
+
+  /** 宿主选择执行引擎，Office 提供主会话身份及内置职责。 */
+  public async OpenMainAgent<P, E>(factory: AgentEngineFactory<P, E>)
+  {
+    if (this.closed) throw new Error('办公室已关闭');
+    return (await this.principal.Open(this.mainRole, factory)).engine;
+  }
+
+  public CloseMainEngine(): Promise<void> { return this.principal.Close(); }
 
   private _closed = false;
 
@@ -48,10 +64,15 @@ export class Office
     return this._members;
   }
 
-  public constructor(public readonly workspaceId: string, public readonly rootSessionId: string, public readonly organization: Organization, private readonly _worktrees?: WorkspaceInstanceFactory)
+  public constructor(public readonly workspaceId: string, public readonly rootSessionId: string, public readonly organization: Organization, private readonly _worktrees?: WorkspaceInstanceFactory, public readonly project = new Project({ nodes: {}, roots: [] }), private readonly agents: AgentInstances = organization)
   {
-    this._members = new OfficeMembers(organization);
-    this.detachAgents = organization.Subscribe(change => this.changes.Emit({ type: 'agent', change }));
+    this._members = new OfficeMembers(organization, agents);
+    this.principal = agents.MainAgent();
+    this.mainRole = new AgentRole({
+      id: 'main', name: '主 Agent', position: 'Office 负责人、用户助手',
+      instructions: '在本 Office 的主会话中协助用户澄清目标、回应问题。负责跟进任务，按需要通过 Office 协调成员，向用户说明进展、待确认事项和最终结果。',
+    }, { workspaceId, taskId: rootSessionId });
+    this.detachAgents = agents.Subscribe(change => this.changes.Emit({ type: 'agent', change }));
   }
 
   /** 在本办公室的工作副本中打开业务工位，调用方结束使用时关闭实例。 */
@@ -70,6 +91,7 @@ export class Office
     return opening;
   }
 
+  public ListActiveAgents() { return this.agents.ListActiveAgents(); }
   public ListAgents() { return this._members.ListAgents(); }
   public FindAgent(id: string) { return this.ListAgents().find(agent => agent.id === id); }
   public ListWorkspaces() {
@@ -80,10 +102,10 @@ export class Office
 
   public async Close(): Promise<void> {
     if (!this._closed) { this._closed = true; this.detachAgents(); this.changes.Emit({ type: 'closed' }); }
+    await this.CloseMainEngine();
     await Promise.allSettled(this._opening);
     await Promise.all(this.ListWorkspaces().map(instance => instance.Close()));
     this._stations.clear();
-    this._members.SetMembers([]);
-    this.organization.ClearAgents();
+    await this.agents.CloseInstances();
   }
 }

@@ -24,62 +24,9 @@ export interface AgentEngineFactory<Parameters, Engine>
   CreateEngine(parameters: Parameters, id: string, role: AgentRole, report: ReturnType<AgentTokenUsage["Begin"]>): Promise<{ session: Engine; Close(): Promise<void> }>;
 }
 
-/** 服务绑定在运行宿主上，关闭未成功时保留登记以便重试。 */
-export class Organization
+/** Owns agent instances, engine lifecycles and events for one Office. */
+export class AgentInstances
 {
-  public readonly kind = 'organization' as const;
-
-  private _children: readonly (Team | TeamMember)[] = Object.freeze([]);
-
-  public constructor(public readonly id: string = crypto.randomUUID()) {}
-
-  public get children() { return this._children; }
-
-  public ReplaceChildren(children: TeamDescription['children']): void
-  {
-    const seen = new Set<string>([this.id]);
-    const assignedAgents = new Set<string>();
-
-    function build(node: TeamDescription | TeamMember): Team | TeamMember
-    {
-      if (!node.id || seen.has(node.id))
-        throw new Error('组织节点身份为空或重复');
-
-      seen.add(node.id);
-
-      if (node.kind === 'team')
-        return new Team(node.id, node.children.map(build));
-
-      if (assignedAgents.has(node.agentId))
-        throw new Error('同一办公室的 Agent 只能绑定一个 Worker');
-
-      assignedAgents.add(node.agentId);
-      return Object.freeze({ ...node, model: Object.freeze({ ...node.model }) });
-    }
-
-    this._children = Object.freeze(children.map(build));
-  }
-
-  public FindMember(id: string): TeamMember | undefined
-  {
-    for (const child of this.children) {
-      const found = child.kind === 'team' ? child.FindMember(id) : child.id === id ? child : undefined;
-      if (found) return found;
-    }
-  }
-
-  public FindTeam(id: string): Team | undefined
-  {
-    function find(nodes: readonly (Team | TeamMember)[]): Team | undefined {
-      for (const node of nodes) {
-        if (node.kind !== 'team') continue;
-        const found = node.id === id ? node : find(node.children);
-        if (found) return found;
-      }
-    }
-    return find(this.children);
-  }
-
   private readonly changes = changeEvents<{ type: AgentChange | 'allocated' | 'engine-ready' | 'cleared'; agentId: string }>();
   public readonly Subscribe = this.changes.Subscribe;
 
@@ -101,10 +48,16 @@ export class Organization
 
   /** 为岗位分配唯一实例。每次激活使用当前任务的引擎上下文。 */
   private readonly _allocated = new Map<string, Agent<unknown>>();
-  private _primary?: ReturnType<Organization["Allocate"]>;
+  private _primary?: ReturnType<AgentInstances["Allocate"]>;
   public MainAgent() { return this._primary ??= this.Allocate(); }
   public ListAgents() { return [...new Map([...this._active, ...this._allocated]).values()]; }
   public ClearAgents() { const ids = [...this._allocated.keys()]; this._allocated.clear(); this._primary = undefined; for (const agentId of ids) this.changes.Emit({ type: 'cleared', agentId }); }
+
+  public async CloseInstances(): Promise<void>
+  {
+    await Promise.all([...this._instances.keys()].map(id => this.Destroy(id)));
+    this.ClearAgents();
+  }
 
   public Allocate()
   {
@@ -175,4 +128,62 @@ export class Organization
 
     return entry.closing ??= entry.ready.then(owned => owned.Close(), () => { }).then(() => { if (this._instances.get(id) === entry) { this._instances.delete(id); this._active.delete(id); entry.usage.End(); entry.unsubscribe(); } }).catch(error => { entry.closing = undefined; throw error; });
   }
+}
+
+/** 服务绑定在运行宿主上，关闭未成功时保留登记以便重试。 */
+export class Organization extends AgentInstances
+{
+  public readonly kind = 'organization' as const;
+
+  private _children: readonly (Team | TeamMember)[] = Object.freeze([]);
+
+  public constructor(public readonly id: string = crypto.randomUUID()) { super(); }
+
+  public get children() { return this._children; }
+
+  public ReplaceChildren(children: TeamDescription['children']): void
+  {
+    const seen = new Set<string>([this.id]);
+    const assignedAgents = new Set<string>();
+
+    function build(node: TeamDescription | TeamMember): Team | TeamMember
+    {
+      if (!node.id || seen.has(node.id))
+        throw new Error('组织节点身份为空或重复');
+
+      seen.add(node.id);
+
+      if (node.kind === 'team')
+        return new Team(node.id, node.children.map(build));
+
+      if (assignedAgents.has(node.agentId))
+        throw new Error('同一办公室的 Agent 只能绑定一个 Worker');
+
+      assignedAgents.add(node.agentId);
+      return Object.freeze({ ...node, model: Object.freeze({ ...node.model }) });
+    }
+
+    this._children = Object.freeze(children.map(build));
+  }
+
+  public FindMember(id: string): TeamMember | undefined
+  {
+    for (const child of this.children) {
+      const found = child.kind === 'team' ? child.FindMember(id) : child.id === id ? child : undefined;
+      if (found) return found;
+    }
+  }
+
+  public FindTeam(id: string): Team | undefined
+  {
+    function find(nodes: readonly (Team | TeamMember)[]): Team | undefined {
+      for (const node of nodes) {
+        if (node.kind !== 'team') continue;
+        const found = node.id === id ? node : find(node.children);
+        if (found) return found;
+      }
+    }
+    return find(this.children);
+  }
+
 }

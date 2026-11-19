@@ -18,6 +18,10 @@ Logic 读取模板、选择本机模型配置，并向 Framework 提供运行所
 
 | 组成 | 定位 |
 | --- | --- |
+| [OfficeHistory](office-history.ts) | 按项目及会话保存和加载 Office 对话记录。 |
+
+| 组成 | 定位 |
+| --- | --- |
 | [contracts](contracts.ts) | 定义资产种类、仓库身份和版本化快照。 |
 
 <!-- architecture:generated:start -->
@@ -36,6 +40,8 @@ class N_4266e8d9865a["service"] {
   <<virtual>>
 }
 click N_4266e8d9865a href "service/ARCHITECTURE.md"
+class N_d4a09f21afee["OfficeHistory"]
+click N_d4a09f21afee href "office-history.ts"
 class N_7c777722dd25["contracts"] {
   <<module>>
 }

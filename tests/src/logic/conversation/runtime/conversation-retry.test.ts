@@ -1,6 +1,6 @@
 import {expect,it,vi} from 'vitest';
 import {fixture} from '../../application/support/helpers';
-import {codexFixture} from '../../execution/engines/codex/support/codex-fixture';
+import {codexFixture} from '../../engines/adapters/codex/support/codex-fixture';
 
 it.each(['codex','pi'] as const)('真实 Codex 首次 HTTP 400 后可从同一对话显式重发到 %s',async engine=>{
   const f=await fixture(),provider=await codexFixture({failFirst:true});

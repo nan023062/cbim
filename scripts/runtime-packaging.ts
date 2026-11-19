@@ -6,7 +6,7 @@ import {createRequire} from 'node:module';
 import {pipeline} from 'node:stream/promises';
 import {execFileSync} from 'node:child_process';
 import {assertProductionTree} from './production-test-guard.mjs';
-import {validateRuntimeFiles,verifyRuntimeManifest,type ColdRuntime,type RuntimeFile,type RuntimePackage,type RuntimeManifest,type EnginePackage} from '../src/logic/updates/service/runtime-manifest';
+import {enginePackageSchema,validateEnginePackage,runtimeRelativePath,validateRuntimeFiles,verifyRuntimeManifest,type ColdRuntime,type RuntimeFile,type RuntimePackage,type RuntimeManifest,type EnginePackage} from '../src/logic/updates/service/runtime-manifest';
 
 const require=createRequire(import.meta.url),{ZipFile}=require('yazl');
 export async function fileHash(file:string){const hash=createHash('sha256');for await(const chunk of createReadStream(file))hash.update(chunk);return hash.digest('hex')}
@@ -81,6 +81,23 @@ export async function collectEngines(buildRoot:string,output:string,kinds:readon
   const codex=result.find(engine=>engine.kind==='codex'),pi=result.find(engine=>engine.kind==='pi');if(codex&&pi)codex.dependencies=[{kind:'pi',identity:pi.package.sha256}];
   return result;
 }
+export async function collectWorldClock(output:string):Promise<EnginePackage>{
+  const version='1.0.0',entry='product.cjs',kind='world-clock';
+  const pkg=await archiveDirectory(path.resolve('assets/connectors/world-clock'),output,'runtime-engines',kind+'-'+version);
+  return {kind,version,entry,adapter:{entry,version,protocol:1},package:pkg};
+}
+
+/** 从独立产品目录读取声明，不执行包内脚本。返回现有签名工具接受的制品描述。 */
+export async function collectDeclaredPlugin(root:string,output:string):Promise<EnginePackage>{
+  const manifest=enginePackageSchema.omit({package:true}).strict().parse(JSON.parse(await fs.readFile(path.join(root,'plugin.json'),'utf8')));
+  if(!manifest.plugin || !manifest.adapter)throw Error('插件清单需要 plugin 类型与版本化 adapter 入口');
+  runtimeRelativePath(manifest.entry);
+  runtimeRelativePath(manifest.adapter.entry);
+  const pkg=await archiveDirectory(root,output,'runtime-engines',manifest.kind+'-'+manifest.adapter.version);
+  const result={...manifest,package:pkg};
+  validateEnginePackage(result);
+  return result;
+}
 export async function signRuntimeManifest(manifest:RuntimeManifest,key:Awaited<ReturnType<typeof runtimeSigningKey>>,cold:ColdRuntime){
   if(createPublicKey(key).export({type:'spki',format:'pem'}).toString()!==cold.publicKey)throw Error('签名密钥与已安装冷基础不匹配');
   const payload=JSON.stringify(manifest),envelope={payload,signature:sign(null,Buffer.from(payload),key).toString('base64')};
@@ -95,6 +112,7 @@ export async function stageColdRuntime(appDirectory:string,buildRoot:string,vers
   await collectResources(path.join(appDirectory,'.vite'),resourceRoot);
   const resource=await archiveDirectory(resourceRoot,output,'runtime-c'+version,'resources-c'+version+'-r1-win32-x64');
   const engines=await collectEngines(buildRoot,output),createdAt=new Date().toISOString();
+  engines.push(await collectWorldClock(output));
   const manifest:RuntimeManifest={schema:1,codeVersion:version,resourceVersion:1,platform:'win32-x64',coldFingerprint:cold.coldFingerprint,sourceCommit:sourceCommit(),createdAt,expiresAt:new Date(Date.now()+90*86400000).toISOString(),notes,resource,engines};
   const signed=await signRuntimeManifest(manifest,key,cold);
   for(const [file,value] of [[path.join(appDirectory,'runtime-cold.json'),cold],[path.join(output,'runtime-cold.json'),cold],[path.join(buildRoot,'runtime-initial.json'),signed],[path.join(output,'latest.json'),signed]] as const)await fs.writeFile(file,JSON.stringify(value,null,2)+'\n',{flag:'wx'});

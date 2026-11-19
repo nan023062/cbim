@@ -1,3 +1,4 @@
+import { fixtureEngines } from '../../../../support/engine-instances';
 import {runtimeToolGroup} from '../../execution/rules/support/runtime-tool-group';
 import {it,expect,vi} from 'vitest';
 import fs from 'node:fs/promises';
@@ -251,7 +252,7 @@ it.each(['stale','rejected'] as const)('真实成员失败必须由后续成功�
           await invoke('cbim_task_step',{expectedVersion:1,id:'verify',state:'reported_done',evidenceIds:[evidence]});
           await invoke('cbim_delivery_prepare',{expectedVersion:2,summary:'已验证结果',limitations:[]});return {status:'completed'};
         }};
-        return new LoopRuntime({storage,directory:f.memberDirectory,CreateEngine:()=>engine,AcquireLease:async()=>()=>{},OnEngineReady:hooks.OnEngineReady,OnEvent:hooks.OnEvent,ToolPolicy:async call=>({allow:true,effects:[call.name==='read'?'read':'maintenance'],scope:{kind:'workspace',workspaceId:f.entry.id}})});
+        return new LoopRuntime({storage,directory:f.memberDirectory,engines:fixtureEngines(()=>engine),AcquireLease:async()=>()=>{},OnEngineReady:hooks.OnEngineReady,OnEvent:hooks.OnEvent,ToolPolicy:async call=>({allow:true,effects:[call.name==='read'?'read':'maintenance'],scope:{kind:'workspace',workspaceId:f.entry.id}})});
       }});
     members=new MemberExecutionManager(f.workspace,f.store,{Acquire:()=>()=>{},Inspect:run=>storage.Read(path.join(f.memberDirectory,run.binding.taskId,run.binding.runId)),Prepare:async()=>prepare(),owners:f.service.owners,WithEngineConfiguration:(reference,_options,use)=>f.app.engineModels.WithRuntimeConfiguration(reference,configuration=>use({model:configuration.profile,Prepare: prepare}))});await members.Initialize();
     const execute=async(commandId:string)=>{

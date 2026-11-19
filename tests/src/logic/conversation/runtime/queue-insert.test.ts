@@ -4,7 +4,7 @@ import path from 'node:path';
 import http from 'node:http';
 import {fixture} from '../../application/support/helpers';
 import {transcript} from '../../../../../src/view/execution-view/transcript';
-import {PiRpc} from '../../../../../src/logic/execution/engines/pi/rpc';
+import {PiRpc} from '../../../../../src/logic/engines/adapters/pi/rpc';
 import {usageScopes} from '../../budget/runtime/support/scope-usage-fixture';
 
 it('real Pi accepts queued steering without aborting the active request or losing the current tool',async()=>{

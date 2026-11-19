@@ -9,7 +9,7 @@ import type { AdmissionRequest } from '../../runtime/rules/admission';
 
 import type { GlobalRunAdmission } from '../../execution/admission/run-admission';
 
-import type { WorkspaceExecutionLease } from '../../execution/admission/workspace-lease';
+import { deferredAdmission, type WorkspaceExecutionLease } from '../../execution/admission/workspace-lease';
 
 import type { ExecutionAdmissionWait } from '../../execution/admission/admission-wait';
 
@@ -55,20 +55,20 @@ export function acquireExecutionLease(lease: WorkspaceExecutionLease, runKey: st
 
     wait?.RegisterWithdraw(request.requestId, () => { admission.manager.Withdraw(identity) });
 
-    throw new Error('当前执行名额或工作区占用暂不可用，已受理的协作任务等待后重新核实启动');
+    throw deferredAdmission('当前执行名额或工作区占用暂不可用，已受理的协作任务等待后重新核实启动');
   }
 
   if (attempt.reason === 'stale_request')
     throw new Error('当前启动所属工作区或调度批次已停止');
 
   if (attempt.reason === 'agent_busy')
-    throw new Error('该成员实例正在执行其他任务，请等待当前运行结束');
+    throw deferredAdmission('该成员实例正在执行其他任务，请等待当前运行结束');
 
   if (attempt.reason === 'workspace_conflict')
-    throw new Error('工作区有冲突运行，本次启动尚未受理');
+    throw deferredAdmission('工作区有冲突运行，本次启动尚未受理');
 
   if (attempt.reason === 'global_capacity' || attempt.reason === 'fairness')
-    throw new Error('当前运行名额暂不可用，本次启动尚未受理，请稍后重试');
+    throw deferredAdmission('当前运行名额暂不可用，本次启动尚未受理，请稍后重试');
 
   throw new Error('运行占用无法确认，未重新启动任务，请核实当前执行状态');
 }

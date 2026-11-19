@@ -9,6 +9,8 @@
  * 机制边界：对象递归排序由 utility 提供，本模块保留历史比较器、字段省略和业务指纹规则。
  * 算法入口：通过 Core JsonUtils 静态方法复用机制，本文件继续拥有原业务策略。
  */
+import { taskWorkerId } from './graph-types';
+
 import { JsonUtils } from '../../../core/io';
 
 import { z } from 'zod';
@@ -19,7 +21,7 @@ import { hash, json } from '../../../core/io/serialization';
 
 import { connectionSchema, modelSchema } from '../../models';
 
-import { teamSessionBusy } from '../../team/rules/team-session';
+import { officeMemberSessionBusy } from '../../../framework/office/session';
 
 import { memberTopicContextSchema } from './member-topic-context';
 
@@ -33,7 +35,7 @@ import type { DispatchCommand, DispatchMutation, DispatchState, DispatchMessage 
 
 import type { DispatchRun } from './dispatch-execution';
 
-import type { AgentRef, GraphIdentity } from './graph-types';
+import type { AgentRef, GraphIdentity, TaskNode } from './graph-types';
 
 import { validateQueuedTaskCancellation } from './queued-task-cancel-rules';
 
@@ -199,7 +201,7 @@ function validateRun(previous: DispatchRun | undefined, run: DispatchRun, state:
 
     valid(!state.scopes?.some(scope => scope.scopeId === task.scopeId && pendingTopicInterruption(scope)), '话题正在排空，不能绕过协调器领取成员运行');
 
-    valid(!teamSessionBusy(state.teamSessions ?? [], state.runs ?? [], binding, binding.runId), '同一办公室的同一 Agent 不能同时领取多个任务');
+    valid(!workerBusyForTask(state.teamSessions ?? [], state.runs ?? [], state.graphs, task, binding.runId), '同一办公室的同一 Agent 不能同时领取多个任务');
 
     valid(member.leaseEpoch === binding.leaseEpoch && member.configurationRevision === run.prepared.knowledgeRevision, '领取时的成员代际或知识基线已过期');
 
@@ -487,4 +489,14 @@ export function validateDispatchExecution(previous: DispatchState, next: Dispatc
         }
       }
     }
+}
+
+/** 从已派发任务的岗位快照投影运行占用，避免执行实例或模型配置充当岗位身份。 */
+export function workerBusyForTask(sessions: NonNullable<DispatchState['teamSessions']>, runs: NonNullable<DispatchState['runs']>, graphs: DispatchState['graphs'], task: TaskNode, excludeRunId?: string) {
+  const { workspaceId, rootSessionId: officeId } = task.identity;
+  const workerId = taskWorkerId(task);
+  const graph = graphs.find(g => g.identity.workspaceId === workspaceId && g.identity.rootSessionId === officeId);
+  const taskIds = new Set(graph?.tasks.filter(t => taskWorkerId(t) === workerId).map(t => t.taskId));
+  const matching = runs.filter(r => r.binding.workspaceId === workspaceId && r.binding.rootSessionId === officeId && taskIds.has(r.binding.taskId));
+  return officeMemberSessionBusy(sessions, matching.map(r => ({ binding: { workspaceId, officeId, workerId, runId: r.binding.runId }, status: r.status })), { workspaceId, officeId, workerId }, excludeRunId);
 }

@@ -96,7 +96,7 @@ N_1491fae3d5b9 ..> N_6e47b8d8476c : 依赖
 | 引用方 | 关系 | 目标 |
 | --- | --- | --- |
 | [capabilities](capabilities/ARCHITECTURE.md)（图 2） | 依赖 | [types](types.ts)（图 1）、[engine-tools](engine-tools.ts)（图 1） |
-| [runtime](runtime/ARCHITECTURE.md)（图 2） | 依赖 | [types](types.ts)（图 1）、[storage](storage.ts)（图 1）、[engine-session](engine-session.ts)（图 1） |
+| [runtime](runtime/ARCHITECTURE.md)（图 2） | 依赖 | [types](types.ts)（图 1）、[storage](storage.ts)（图 1）、[engine-tools](engine-tools.ts)（图 1）、[engine-session](engine-session.ts)（图 1） |
 
 ## 子模块
 

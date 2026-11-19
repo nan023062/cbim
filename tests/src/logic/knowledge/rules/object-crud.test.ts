@@ -62,15 +62,15 @@ it('内部知识服务真实对象 CRUD、父子模块、Skill 继承与仅本�
     let detail=await call('cbim_agent_get',{id:agent});expect(detail.skills.map((x:any)=>x.id)).toEqual([own,shared]);expect(detail.skills[1].inherited).toBe(true);expect(detail.skills.every((x:any)=>x.content.available)).toBe(true);
     const [module]=await mutate([{kind:'module',action:'create',parentId:(await call('cbim_workspace_registry')).workspaceRootId,slug:'game',data:{summary},body:moduleFiles('game')[1].text}]);
     const [child,flow]=await mutate([{kind:'module',action:'create',parentId:module,slug:'child',data:{summary},body:moduleFiles('game/child')[1].text},{kind:'workflow',action:'create',parentId:module,slug:'build',data:{name:'构建'},body:'# 构建\n验证。'}]);
-    expect((await call('cbim_workspace_get',{id:module})).definition.children).toEqual([child]);expect((await call('cbim_workspace_get',{id:module})).workflows[0].id).toBe(flow);expect((await call('cbim_workspace_get',{id:child})).workflows).toEqual([]);
+    expect((await call('cbim_workspace_get',{id:module})).definition.children).toEqual([child]);expect((await call('cbim_workspace_get',{id:module})).workflows[0].id).toBe(flow);expect((await call('cbim_workspace_get',{id:child})).workflows).toMatchObject([{id:flow,inherited:true}]);
     await mutate([{kind:'agent',action:'update',id:agent,data:{name:'客户端开发者'},body:'# 新原则'},{kind:'skill',action:'update',id:own,data:{purpose:'实现与验证'},body:'# Updated'},{kind:'workflow',action:'update',id:flow,data:{name:'构建验证'},body:'# Build'}]);
     detail=await call('cbim_agent_get',{id:agent});expect(detail.definition.name).toBe('客户端开发者');expect(detail.principles.text).toBe('# 新原则');expect(detail.skills[0].purpose).toBe('实现与验证');
-    const rev=(await call('cbim_knowledge_snapshot')).revision;await expect(call('cbim_object_preview',{revision:rev,operations:[{kind:'module',action:'delete',id:module}]})).rejects.toMatchObject({code:'HAS_CHILDREN'});
+    const rev=(await call('cbim_knowledge_snapshot')).revision;await expect(call('cbim_object_preview',{revision:rev,operations:[{kind:'module',action:'delete',id:module}]})).rejects.toThrow(/cascade/);
     await mutate([{kind:'module',action:'delete',id:child},{kind:'workflow',action:'delete',id:flow},{kind:'skill',action:'delete',id:own}]);
     expect((await call('cbim_workspace_get',{id:module})).definition.children).toEqual([]);
     await mutate([{kind:'agent',action:'delete',id:agent},{kind:'module',action:'delete',id:module},{kind:'skill',action:'delete',id:shared}]);
     expect((await call('cbim_workspace_registry')).modules).toEqual([]);await expect(call('cbim_people_list')).rejects.toThrow();
-    await expect(call('cbim_agent_get',{id:agent})).rejects.toMatchObject({code:'OBJECT_NOT_FOUND'});
+    await expect(call('cbim_agent_get',{id:agent})).rejects.toThrow(/不存在/);
   }finally{await f.cleanup()}
 });
 
@@ -91,15 +91,15 @@ it('对象事务拒绝越界、旧版本和未授权提交，校验失败不落�
     const e=await f.app.Dispatch('add',{path:f.a}),{call}=internalKnowledge(f.app.Workspace(e.id));
     const s=await call('cbim_knowledge_snapshot');
     const op={kind:'agent',action:'create',parentId:'.cbim/team',slug:'dev',data:{name:'Dev',summary,capabilities:['开发']},body:'# Principles'};
-    await expect(call('cbim_object_preview',{revision:s.revision,operations:[{...op,slug:'../escape'}]})).rejects.toMatchObject({code:'OBJECT_ID'});
+    await expect(call('cbim_object_preview',{revision:s.revision,operations:[{...op,slug:'../escape'}]})).rejects.toThrow(/parentId 和 slug/);
     const p=await call('cbim_object_preview',{revision:s.revision,operations:[op]});
-    await expect(call('cbim_object_commit',{planId:p.planId})).rejects.toMatchObject({code:'FORBIDDEN'});
+    await expect(call('cbim_object_commit',{planId:p.planId})).rejects.toThrow(/知识写入权限/);
     await fs.writeFile(path.join(f.a,'.cbim/README.md'),'# External');
-    await expect(call('cbim_object_commit',{planId:p.planId},true)).rejects.toMatchObject({code:'CONFLICT'});
+    await expect(call('cbim_object_commit',{planId:p.planId},true)).rejects.toThrow(/知识已被外部修改/);
     const fresh=await call('cbim_knowledge_snapshot');
     const invalid=await call('cbim_object_preview',{revision:fresh.revision,operations:[{...op,data:{...op.data,summary:'too short'}}]});expect(invalid.validation.structural).toBe(false);
-    await expect(call('cbim_object_commit',{planId:invalid.planId},true)).rejects.toMatchObject({code:'VALIDATION'});
+    await expect(call('cbim_object_commit',{planId:invalid.planId},true)).rejects.toThrow(/summary must NOT have fewer than 100 characters/);
     await expect(fs.access(path.join(f.a,'.cbim/team/dev/agent.json'))).rejects.toThrow();
-    await expect(call('cbim_workspace_get',{id:'../../outside'})).rejects.toMatchObject({code:'OBJECT_NOT_FOUND'});
+    await expect(call('cbim_workspace_get',{id:'../../outside'})).rejects.toThrow(/不存在/);
   }finally{await f.cleanup()}
 });

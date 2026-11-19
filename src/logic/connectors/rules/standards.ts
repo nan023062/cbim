@@ -45,6 +45,18 @@ const connectorSchema = `{
           {
             "type": "object",
             "additionalProperties": false,
+            "required": ["id", "name", "summary", "provider", "productId"],
+            "properties": {
+              "id": { "type": "string", "pattern": "^\\\\.cbim/connectors/[A-Za-z0-9_-]+$" },
+              "name": { "type": "string", "minLength": 1 },
+              "summary": { "type": "string", "minLength": 1 },
+              "provider": { "const": "managed_package" },
+              "productId": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,47}$" }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
             "required": [
               "id",
               "name",

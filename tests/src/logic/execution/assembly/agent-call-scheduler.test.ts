@@ -11,7 +11,7 @@ function result(value:any){return JSON.parse(value.content[0].text)}
 function prepared(id:string,body:()=>Promise<RunSummary>=async()=>summary(id)){
   const agent={definition:{id,name:id,instructions:'role',permission:'read' as const},conversation:{workspaceId:'workspace',taskId:id}};
   const release=vi.fn(),stop=vi.fn(async()=>{}),close=vi.fn(async()=>{});
-  const runtime:Awaited<ReturnType<AgentSchedulerPorts['Prepare']>>['runtime']={Start:async(t,_message,_resume,_source,control)=>{
+  const runtime:Exclude<Awaited<ReturnType<AgentSchedulerPorts['Prepare']>>, { rejection: unknown }>['runtime']={Start:async(t,_message,_resume,_source,control)=>{
     const abort=()=>{void stop()};control?.signal.addEventListener('abort',abort,{once:true});
     await control?.BeforeRun?.({task:t,runId:id+'-run'});
     return {runId:id+'-run',done:body().finally(()=>control?.signal.removeEventListener('abort',abort))};
@@ -235,4 +235,16 @@ it('does not start the child body when durable registration fails after publishi
  const scheduler=new AgentCallScheduler({maxDepth:2},{Prepare:async()=>({...child,BeforeRun: beforeRun})});
  const value=await scheduler.Bind(context('root',events)).capability.tools.call('cbim_agent_call',{agentId:'B',message:'work'},new AbortController().signal,'call');
  expect(result(value).error).toMatchObject({code:'AGENT_RUN_AUDIT',started:true});expect(body).not.toHaveBeenCalled();expect(events[0].data.agentCall).toMatchObject({runId:'B-run'});expect(child.close).toHaveBeenCalledTimes(1);expect(child.Release).toHaveBeenCalledTimes(1);
+});
+
+it('同名岗位技能和工作区 Workflow 按来源独立读取', async () => {
+  const scheduler = new AgentCallScheduler({ maxDepth: 1 }, { Prepare: async () => prepared('child') });
+  const agent = prepared('worker').agent;
+  const skill = { skillId: 'review', content: 'role instructions' };
+  const workflow = { workspaceId: 'design', skillId: 'review', content: 'workspace instructions' };
+  const binding = scheduler.Bind(context(), 0, { ...agent, definition: { ...agent.definition, effectiveSkills: [{ ...skill, ownerId: 'worker', inherited: false }] } }, [workflow]);
+  const read = (args: Record<string, unknown>) => binding.capability.tools.call('cbim_agent_skill_read', args, new AbortController().signal);
+  expect(result(await read({ skillId: 'review' })).skill.content).toBe(skill.content);
+  expect(result(await read({ skillId: 'review', workspaceId: 'design' })).workflow).toEqual(workflow);
+  await expect(read({ skillId: 'review', workspaceId: 'other' })).rejects.toThrow();
 });

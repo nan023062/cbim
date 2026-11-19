@@ -2,7 +2,7 @@
  * 作用定位：静态知识包发布和导入预览结果。
  * 设计原因：结果属于资源与知识协作，Bridge 仅转接；不加载包存储服务。
  */
-import type { ResourceLibrarySnapshot } from '..';
+import type { ResourceLibrarySnapshot } from '../../../resource';
 
 export interface PublishWorkspaceResult
 {

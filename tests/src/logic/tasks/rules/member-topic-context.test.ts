@@ -18,7 +18,7 @@ it('引用身份或原候选变化拒绝解析，不退回其他办公室或最�
   expect(()=>resolveMemberTopicContext({...reference,rootSessionId:'foreign'},task,scope,graph)).toThrow();
   expect(()=>resolveMemberTopicContext(reference,task,{...scope,goal:{...scope.goal!,inputRevision:2}},graph)).toThrow();
   expect(()=>resolveMemberTopicContext(reference,task,scope,officeGraph([{...prior,scopeId:'foreign'},task]))).toThrow();
-  expect(()=>createMemberTopicContext(task,scope,graph,{...officeSession(),agentId:'another'})).toThrow();
+  expect(()=>createMemberTopicContext(task,scope,graph,{...officeSession(),workerId:'another'})).toThrow();
 });
 it('同话题补充按输入版本进入资料，其他原生上下文没有读取入口',()=>{
   const task=officeTask('current'),graph=officeGraph([task]);

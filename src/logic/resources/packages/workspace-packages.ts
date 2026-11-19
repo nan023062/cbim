@@ -27,7 +27,7 @@ import { knowledgePlanHash, type PackagePlanV2 } from '../../knowledge/rules/pla
 
 import type { PublishWorkspaceResult, ImportWorkspacePreview } from './contracts';
 
-import type { ResourceRepositories } from '../service';
+import type { ResourceRepositories } from '../../../resource/service';
 
 const identity = { workspaceId: z.string().min(1).max(200), instanceId: z.string().uuid() };
 

@@ -7,9 +7,9 @@
 export type { GraphIdentity, GraphCursor, GraphSnapshot, GraphDelta, GraphEventBatch, GraphChange, TaskNode, GraphEdge, AgentGraphView } from '../../logic/tasks/rules/graph-types';
 
 /** 稳定对话登记与执行实例分离；纯校验不授予派发或模型执行权限。 */
-export { teamSessionSchema } from '../../logic/team/rules/team-session';
+export { officeMemberSessionSchema } from '../../logic/tasks/rules/scope-view';
 
-export type { TeamSession } from '../../logic/team/rules/team-session';
+export type { OfficeMemberSession } from '../../logic/tasks/rules/scope-view';
 
 export type { DependencyReplacement } from '../../logic/tasks/rules/queued-dependency-replacement';
 
@@ -91,3 +91,5 @@ export type { ScopeActiveInput } from '../../logic/tasks/rules/scope-active-inpu
 
 /** 已受理附件清单的纯公开契约；来源证明不授予重新联网或执行权。 */
 export type { ContinuationAttachmentManifest, ContinuationAttachmentItem } from '../../logic/tasks/rules/scope-continuation-attachments';
+
+export { taskWorkerId, defaultWorkerId } from '../../logic/tasks/rules/graph-types';

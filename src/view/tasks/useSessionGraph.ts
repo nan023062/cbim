@@ -6,7 +6,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import type { DispatchSessionRead, GraphSnapshot, ScopeSummary, PublicDispatchScope, TeamSession } from '../../bridge/contracts/dispatch';
+import type { DispatchSessionRead, GraphSnapshot, ScopeSummary, PublicDispatchScope, OfficeMemberSession } from '../../bridge/contracts/dispatch';
 
 import { SessionReadProjection, completeSessionRead, currentScope, scopeGoalView, type ScopeGoalState } from './scope-state';
 
@@ -28,7 +28,7 @@ export function useSessionGraph(workspaceId: string, rootSessionId?: string, act
 
       detail?: PublicDispatchScope;
 
-      teamSessions?: readonly TeamSession[];
+      teamSessions?: readonly OfficeMemberSession[];
 
       loading: boolean;
 

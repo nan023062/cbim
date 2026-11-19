@@ -1,5 +1,5 @@
 import {test,expect} from 'vitest';
-import {modelRoleChoices,engineSelectionAvailable} from '../../../../src/logic/engines/index';
+import {createModelAdapterRegistry, selectExecutionModelLoader, createModelLoader, modelRoleChoices,engineSelectionAvailable} from '../../../../src/logic/engines/index';
 import type {LlmSettings} from '../../../../src/logic/models/index';
 const models:LlmSettings={secureStorage:true,profiles:[{id:'11111111-1111-4111-8111-111111111111',name:'Provider',api:'openai-completions',baseUrl:'https://custom.example/v1',auth:'none',hasKey:false,defaultModel:'shared',models:[{id:'shared',name:'生成',enabled:true,contextWindow:4096,maxTokens:1024,reasoning:false}],embedding:{api:'openai-embeddings',baseUrl:'https://custom.example/v1',models:[{id:'shared',name:'向量',enabled:true,inputTokens:8192,dimensions:3},{id:'disabled',name:'停用',enabled:false,inputTokens:8192,dimensions:3}]}}]};
 test('同名生成/向量模型按角色分离，停用模型和未声明型号不进入选择',()=>{
@@ -20,4 +20,20 @@ test('记忆引擎必填向量角色，纯生成配置不可发送；额外角�
   expect(engineSelectionAvailable(value,models)).toBe(false);
   expect(engineSelectionAvailable({...value,modelRoles:{version:2,roles:{embedding:{kind:'embedding',profileId:value.profileId,modelId:'shared'}}}},models)).toBe(true);
   expect(engineSelectionAvailable({...value,modelRoles:{version:2,roles:{embedding:{kind:'generation',profileId:value.profileId,modelId:'shared'}}}},models)).toBe(false);
+});
+
+test('registered vendor loader wins, incompatibility fails closed and legacy handles unload', async () => {
+  const registry = createModelAdapterRegistry();
+  const config = { provider: 'custom', model: 'shared' };
+  const native = selectExecutionModelLoader(registry, config, ['openai-responses']);
+  const handle = await native.Load(config);
+  expect(handle.runtime).toEqual(config);
+  await native.Unload(handle);
+  expect(() => handle.runtime).toThrow();
+  const loader = createModelLoader();
+  const adapter = { id: 'custom', SelectLoader: (_: unknown, protocol: string) => protocol === 'openai-responses' ? loader : undefined };
+  registry.Register(adapter);
+  expect(() => registry.Register(adapter)).toThrow();
+  expect(selectExecutionModelLoader(registry, config, ['openai-completions', 'openai-responses'])).toBe(loader);
+  expect(() => selectExecutionModelLoader(registry, config, ['anthropic-messages'])).toThrow();
 });

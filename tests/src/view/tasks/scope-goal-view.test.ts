@@ -56,10 +56,10 @@ it('替代审阅只导航已同步的本周期节点，旧节点与新成果各�
 });
 
 it('联合投影只发布本办公室稳定对话，身份错误或改绑不污染既有状态',()=>{
-  const projection=new SessionReadProjection(identity),response=reset(),session={...identity,sessionId:'main-logical',teamId:'team',agentId:'cbim:main',createdAt:time};
+  const projection=new SessionReadProjection(identity),response=reset(),session={workspaceId:identity.workspaceId,officeId:identity.rootSessionId,sessionId:'main-logical',workerId:'role:cbim:main',createdAt:time};
   projection.Apply({...response,teamSessions:[session]});const previous=projection.teamSessions;
   projection.Apply({...response,teamSessions:[{...session}]});expect(projection.teamSessions).toBe(previous);
-  for(const teamSessions of [[{...session,rootSessionId:'other'}],[{...session,sessionId:'rebound'}],[session,session],[]])expect(()=>projection.Apply({...response,teamSessions})).toThrow();
+  for(const teamSessions of [[{...session,officeId:'other'}],[{...session,sessionId:'rebound'}],[session,session],[]])expect(()=>projection.Apply({...response,teamSessions})).toThrow();
   expect(projection.teamSessions).toBe(previous);expect(completeSessionRead(response,projection)!.teamSessions).toBe(previous);
 });
 

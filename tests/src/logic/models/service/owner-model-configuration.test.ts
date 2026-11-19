@@ -33,7 +33,7 @@ test('预算或停止在准备回调内拒绝时零解密并释放模型队列',
 
 test('显式模型缺失或禁用不回退默认供应商，原回调不会执行',async()=>{
   const f=await setup();let calls=0;const use=async()=>{calls++;return true};
-  await expect(f.service.WithRuntimeConfiguration({profileId:'',modelId:'model-a'},use)).rejects.toMatchObject({code:'LLM_REQUIRED'});
-  await expect(f.service.WithConfigurations([{...f.ref,modelId:'missing'}],use)).rejects.toMatchObject({code:'LLM_MODEL'});
-  await f.service.Remove(f.ref.profileId);await expect(f.service.WithRuntimeConfiguration(f.ref,use)).rejects.toMatchObject({code:'LLM_REQUIRED'});expect(calls).toBe(0);expect(f.decryptions).toBe(0);
+  await expect(f.service.WithRuntimeConfiguration({profileId:'',modelId:'model-a'},use)).rejects.toThrow('明确选择供应商与模型');
+  await expect(f.service.WithConfigurations([{...f.ref,modelId:'missing'}],use)).rejects.toThrow('模型不存在或已禁用');
+  await f.service.Remove(f.ref.profileId);await expect(f.service.WithRuntimeConfiguration(f.ref,use)).rejects.toThrow('请先在设置中配置默认大模型');expect(calls).toBe(0);expect(f.decryptions).toBe(0);
 });

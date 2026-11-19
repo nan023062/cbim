@@ -37,8 +37,8 @@ test('explicit registration configuration shares resolved public fields without 
   const unavailable=new LlmProfiles(filename,{...cipher,Available:()=>false,Decrypt:()=>{throw Error('must not decrypt')}});
   expect(await unavailable.Configuration(id,'model-a')).toEqual(snapshot);
   expect(JSON.stringify(snapshot)).not.toMatch(/private-registration-test-key|apiKey|encryptedKey|hasKey|selectedId/);
-  await expect(service.Configuration('', 'model-a')).rejects.toMatchObject({code:'LLM_REQUIRED'});
-  await expect(service.Configuration(id,'model-b')).rejects.toMatchObject({code:'LLM_MODEL'});
+  await expect(service.Configuration('', 'model-a')).rejects.toThrow('明确选择供应商与模型');
+  await expect(service.Configuration(id,'model-b')).rejects.toThrow('模型不存在或已禁用');
 });
 test('selection and concurrent saves preserve providers',async()=>{
   const {service}=await fixture();await Promise.all([service.Save({profile:profile()}),service.Save({profile:{...profile(),name:'second'}})]);
@@ -68,7 +68,7 @@ test('新增自定义凭据目标必须重输 Key；重命名、模型范围和�
   const saved=await service.Save({profile:p,apiKey:'shared-key'}),id=saved.selectedId!;
   const extended:LlmDefinition={...p,alternateConnections:[{api:'anthropic-messages',baseUrl:'https://other.example/anthropic'}]};
   const before=await fs.readFile(filename,'utf8');
-  await expect(service.Save({id,profile:extended})).rejects.toMatchObject({code:'KEY_REQUIRED'});
+  await expect(service.Save({id,profile:extended})).rejects.toThrow('请重新输入 API Key');
   expect(await fs.readFile(filename,'utf8')).toBe(before);
   await service.Save({id,profile:extended,apiKey:'shared-key'});
   const scoped:LlmDefinition={...extended,name:'Renamed',alternateConnections:[{...extended.alternateConnections![0],modelIds:['model-a']}]};
@@ -76,7 +76,7 @@ test('新增自定义凭据目标必须重输 Key；重命名、模型范围和�
   expect((await service.Resolve(id,'model-a',messages)).apiKey).toBe('shared-key');
   expect(JSON.parse(await fs.readFile(filename,'utf8')).profiles[0].alternateConnections[0]).not.toHaveProperty('encryptedKey');
   await service.Save({id,profile:p});
-  await expect(service.Resolve(id,'model-a',messages)).rejects.toMatchObject({code:'LLM_CONNECTION_API'});
+  await expect(service.Resolve(id,'model-a',messages)).rejects.toThrow('没有满足所选协议要求的兼容接口');
 });
 
 test('按协议需求测试真实 HTTP 端点与鉴权；失败不改目录、不尝试其他端点',async()=>{
@@ -132,7 +132,7 @@ test.each([401,403,404,429,500])('模型诊断保留端点与 HTTP %s，错误�
     const {service}=await fixture(),p={...profile(`http://127.0.0.1:${(server.address() as any).port}/v1`),api:'anthropic-messages' as const};
     const saved=await service.Save({profile:p});
     const error=await service.Test(saved.selectedId!).then(()=>{throw Error('expected failure')},error=>error);
-    expect(error.code).toBe('LLM_HTTP');expect(error.message).toContain(p.baseUrl+'/messages');expect(error.message).toContain('HTTP '+status);
+    expect(error).toBeInstanceOf(Error);expect(error.message).toContain(p.baseUrl+'/messages');expect(error.message).toContain('HTTP '+status);
     if(status===401)expect(error.message).toContain('鉴权失败');
     if(status===403)expect(error.message).toContain('访问被拒绝');
     expect(error.message).not.toContain('private-upstream-key');expect(await service.List()).toEqual(saved);

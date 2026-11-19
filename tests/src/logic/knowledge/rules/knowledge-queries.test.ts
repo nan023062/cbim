@@ -13,10 +13,10 @@ it('查询只取得快照端口，保持筛选、Skill 继承、本模块流程�
     expect((await queries.Agents('dev')).groups.flatMap((g:any)=>g.agents.map((a:any)=>a.id))).toEqual([teamIds.agent]);
     expect((await queries.Agent(teamIds.agent)).skills.map(s=>[s.id,s.inherited])).toEqual([[teamIds.own,false],[teamIds.shared,true]]);
     expect((await queries.Module(teamIds.module)).workflows.map((w:any)=>w.id)).toEqual([teamIds.workflow]);
-    expect((await queries.Module(teamIds.child)).workflows).toEqual([]);
+    expect((await queries.Module(teamIds.child)).workflows).toMatchObject([{id:teamIds.workflow,inherited:true}]);
     expect(await queries.Module('cbim:project')).toMatchObject({source:'builtin',id:'cbim:project',workflows:[]});
-    await expect(queries.Agent('missing')).rejects.toMatchObject({code:'OBJECT_NOT_FOUND'});
-    await expect(queries.Module('missing')).rejects.toMatchObject({code:'OBJECT_NOT_FOUND'});
+    await expect(queries.Agent('missing')).rejects.toThrow(/不存在/);
+    await expect(queries.Module('missing')).rejects.toThrow(/不存在/);
     expect(reader.Snapshot).toHaveBeenCalledTimes(8);
     expect(snapshot).toEqual(before);
   }finally{await f.cleanup()}
@@ -51,7 +51,7 @@ it('刷新先核身份及原回执，结构无效和陈旧版本不提交',async
   expect(await refreshKnowledgeIndexes(port,input)).toMatchObject({state:'invalid',indexesUpdated:false});
   expect(port.Commit).not.toHaveBeenCalled();
   snapshot.revision='newer';
-  await expect(refreshKnowledgeIndexes(port,input)).rejects.toMatchObject({code:'CONFLICT'});
+  await expect(refreshKnowledgeIndexes(port,input)).rejects.toThrow(/变化|版本|冲突/);
   expect(port.Commit).not.toHaveBeenCalled();
   port.Assert.mockImplementationOnce(()=>{throw Object.assign(Error('stale'),{code:'STALE_INSTANCE'})});
   port.CommittedReceipt.mockClear();port.Snapshot.mockClear();

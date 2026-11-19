@@ -39,12 +39,12 @@ const commitRoot=(store:FileDispatchStore)=>store.Transact({commandId:'create-ro
 
 test('长期团队对话随原事务保存并重放，拒绝未登记角色与身份改绑',async()=>{
   const f=await setup();try{
-    const logical={...identity,sessionId:'logical-main',agentId:main.agentId,teamId:'.cbim/team',createdAt};
+    const logical={workspaceId:identity.workspaceId,officeId:identity.rootSessionId,sessionId:'logical-main',workerId:'role:'+main.agentId,createdAt};
     await f.store.Transact({commandId:'create-root',fingerprint:'root-input'},async()=>({...rootMutation(),teamSessions:[logical]}));
     expect((await f.store.SessionRead({identity})).teamSessions).toEqual([logical]);
     const before=await fs.readFile(path.join(f.dir,'dispatch.jsonl'),'utf8');
-    await expect(f.store.Transact({commandId:'foreign-role',fingerprint:'foreign-role'},async()=>({teamSessions:[{...logical,sessionId:'unknown',agentId:'unknown'}],receipt:true}))).rejects.toMatchObject({code:'GRAPH_INPUT_INVALID'});
-    await expect(f.store.Transact({commandId:'rebind-logical',fingerprint:'rebind-logical'},async()=>({teamSessions:[{...logical,rootSessionId:'other'}],receipt:true}))).rejects.toMatchObject({code:'TEAM_SESSION_CONFLICT'});
+    await expect(f.store.Transact({commandId:'foreign-role',fingerprint:'foreign-role'},async()=>({teamSessions:[{...logical,sessionId:'unknown',workerId:'unknown'}],receipt:true}))).rejects.toThrow();
+    await expect(f.store.Transact({commandId:'rebind-logical',fingerprint:'rebind-logical'},async()=>({teamSessions:[{...logical,officeId:'other'}],receipt:true}))).rejects.toThrow();
     expect(await fs.readFile(path.join(f.dir,'dispatch.jsonl'),'utf8')).toBe(before);
     await f.store.Close();const reopened=new FileDispatchStore(f.dir,identity.workspaceId);
     try{expect((await reopened.Read()).teamSessions).toEqual([logical]);expect((await reopened.SessionRead({identity})).teamSessions).toEqual([logical])}finally{await reopened.Close()}

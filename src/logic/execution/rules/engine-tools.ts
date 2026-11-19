@@ -44,26 +44,37 @@ export function nativeToolsDisabled(context: EngineCapabilities): boolean
   return context.capabilities?.some(capability => capability.disableNativeTools === true) ?? false;
 }
 
-/** 启动时捕获一次工具路由；失败不会重试写操作，也不会注册未注入的成员能力。 */
-export async function runtimeEngineTools(context: EngineCapabilities, knowledge: EngineToolsPort): Promise<EngineToolsPort>
+/** 一个公开名称绑定一个端口和原始工具名；别名也参与同一目录的冲突检查。 */
+export async function collectToolRoutes(sources: readonly { port: EngineToolsPort; prefix?: string }[])
 {
-  const ports: EngineToolsPort[] = [knowledge, ...(context.capabilities ?? []).map(capability => capability.tools)];
-
-  const routes = new Map<string, EngineToolsPort>(),
-    catalog: EngineToolSchema[] = [];
-
-  for (const port of ports)
+  const routes = new Map<string, { name: string; port: EngineToolsPort; schema: EngineToolSchema }>();
+  for (const { port, prefix = '' } of sources)
+  {
     for (const tool of await port.list())
     {
-      if (!/^cbim_[a-z0-9_]+$/.test(tool.name) || routes.has(tool.name))
-        throw Error('运行工具名称无效或重复：' + tool.name);
-
-      routes.set(tool.name, port);
-
-      catalog.push(structuredClone(tool));
+      const name = prefix + tool.name;
+      if (!/^cbim_[a-z0-9_]+$/.test(name) || routes.has(name))
+        throw Error('运行工具名称无效或重复：' + name);
+      routes.set(name, { name: tool.name, port, schema: structuredClone(tool) });
     }
+  }
+  return routes;
+}
 
+/** 能力目录只读取一次；领域引擎可以限制知识工具，同时保留本轮注入的工具。 */
+export async function runtimeEngineTools(context: EngineCapabilities, knowledge: EngineToolsPort, includeKnowledge?: (name: string) => boolean): Promise<EngineToolsPort>
+{
+  const sources = [{ port: knowledge }, ...(context.capabilities ?? []).map(capability => ({ port: capability.tools }))];
+  const routes = await collectToolRoutes(sources);
+  if (includeKnowledge)
+    for (const [name, route] of routes)
+      if (route.port === knowledge && !includeKnowledge(name)) routes.delete(name);
   return {
-    list: async () => structuredClone(catalog), call: (name, args, signal, id) => { const port = routes.get(name); if (!port) throw Error('本轮未注册该工具'); return port.call(name, args, signal, id); }
+    list: async () => Array.from(routes.values(), route => structuredClone(route.schema)),
+    call: (name, args, signal, id) => {
+      const route = routes.get(name);
+      if (!route) throw Error('本轮未注册该工具');
+      return route.port.call(route.name, args, signal, id);
+    },
   };
 }

@@ -1,5 +1,5 @@
 // 编排与适配按领域归属；公开文件单独登记，规则不得依赖运行服务。
-export const engineRoot='src/logic/execution/engines/';
+export const engineRoot='src/logic/engines/adapters/';
 export const orchestrationRoots=[
   "src/logic/agents/exchange.ts",
   "src/logic/agents/index.ts",
@@ -53,11 +53,11 @@ export const runtimePublicEntries=new Set([
   "src/logic/execution/context/dispatch-context.ts",
   "src/logic/execution/context/execution-context.ts",
   "src/logic/execution/context/team-workflow.ts",
-  "src/logic/execution/engines/claude/engine.ts",
-  "src/logic/execution/engines/codex/engine.ts",
-  "src/logic/execution/engines/pi/engine.ts",
-  "src/logic/execution/engines/pi/rpc.ts",
-  "src/logic/execution/engines/runtime-binding.ts",
+  "src/logic/engines/adapters/claude/engine.ts",
+  "src/logic/engines/adapters/codex/engine.ts",
+  "src/logic/engines/adapters/pi/engine.ts",
+  "src/logic/engines/adapters/pi/rpc.ts",
+  "src/logic/engines/adapters/runtime-binding.ts",
   "src/logic/history/runtime/agent-history.ts",
   "src/logic/runtime/monitoring/global-runtime.ts",
   "src/logic/runtime/monitoring/member-events.ts",

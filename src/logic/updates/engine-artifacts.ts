@@ -10,6 +10,8 @@ export interface EngineArtifact
 
   version: string;
 
+  plugin?: { type: 'connector' } | { type: 'engine'; profile: 'pi' | 'claude-code' | 'codex' | 'memory'; label: string };
+
   nativeVersion: string;
 
   protocol: 1;

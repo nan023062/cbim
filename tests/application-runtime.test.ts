@@ -1,3 +1,4 @@
+import { fixtureEngines } from './support/engine-instances';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {expect,it,vi} from 'vitest';
@@ -69,7 +70,7 @@ it('实际Loop、日志及队列接入全局；用量只算一次，查询不回
       async close(){}
     }
     const workspace={id:owner.entry.id,path:owner.entry.path};
-    return {workspace,agentHome:'unused-test-home',NewTask:()=>{throw Error('not used')},runtime:new LoopRuntime({storage:services.storage,directory:path.join(paths.Project(workspace.id),'loop-engine','tasks'),AcquireLease:services.AcquireLease,ToolPolicy:async()=>({allow:false}),CreateEngine:()=>new Engine(),OnEvent:options.OnEvent})};
+    return {workspace,agentHome:'unused-test-home',NewTask:()=>{throw Error('not used')},runtime:new LoopRuntime({storage:services.storage,directory:path.join(paths.Project(workspace.id),'loop-engine','tasks'),AcquireLease:services.AcquireLease,ToolPolicy:async()=>({allow:false}),engines:fixtureEngines(()=>new Engine()),OnEvent:options.OnEvent})};
   });
   try{
     const entries=await Promise.all([f.app.Dispatch('add',{path:f.a}),f.app.Dispatch('add',{path:f.b})]);

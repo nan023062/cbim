@@ -36,6 +36,9 @@ import { BudgetSettings } from '../budget/settings/budget-settings';
 
 import { GitHubFeedback } from '../feedback/service';
 
+import { RuntimeMonitor } from '../../monitor';
+import { CbimRuntime } from '../../framework/cbim-runtime';
+
 import { createExecutionManager } from './assembly/execution';
 
 import { EnginePackages } from '../engines/packages';
@@ -76,6 +79,10 @@ import type { WorkspaceExecutionManager } from '../conversation/runtime/executio
 
 import { Catalog } from '../workspace/service/catalog';
 
+
+
+import { GitWorktrees } from '../workspace/service/git-worktrees';
+
 import { Paths } from '../workspace/service/paths';
 
 import { exists } from '../../core/io/text-files';
@@ -84,10 +91,12 @@ import { Rules } from '../knowledge/rules/knowledge';
 
 import { Workspace } from '../workspace/service/workspace';
 
-import { ResourceRepositories } from '../resources/service';
+import { ResourceRepositories } from '../../resource/service';
 
 import { RepositoryConnections } from '../connectors/service/repository-connections';
 
+import { bindConnectorPackages, managedConnectorPackages, type ConnectorPackages } from './assembly/connector-packages';
+import { connectorRegistrySchema } from '../../framework/connectors';
 import type { WorkspaceMembers } from '../team/service/workspace-members';
 
 import type { ModuleOwnerships } from '../workspace/service/module-ownerships';
@@ -100,6 +109,11 @@ interface ApplicationPlatform
 
   /** 源码或其它可信宿主提供的引擎解析器；已安装包管理器存在时优先使用后者。 */
   engineRuntimes?: EngineRuntimeResolver;
+  modelAdapters?: ReturnType<typeof import('../engines').createModelAdapterRegistry>;
+  connectorPackages?: ConnectorPackages;
+  connectorServers?: import('../execution/assembly/loop-engine').ExecutionServices['ConnectorServers'];
+
+  engineExtensions?: readonly import('../execution/rules/extensions').ExecutionExtension[];
 
   /** 正式冷宿主的制品端口，供应用建立唯一受管引擎包服务。 */
   engineArtifacts?: EngineArtifactsPort;
@@ -111,6 +125,12 @@ interface ApplicationPlatform
 /** 业务服务的唯一生命周期所有者；Bridge 子类只补充通信分发，不复制本类状态。 */
 export class Application
 {
+  private readonly _connectorProducts?: ReturnType<typeof bindConnectorPackages>;
+
+  public readonly connectorPackages?: ReturnType<typeof managedConnectorPackages>['manager'];
+
+  private readonly _runtime: CbimRuntime;
+
   /** 可信宿主注入的平台能力；普通对话选项不能替换文件传输或受管引擎解析。 */
   private readonly platform: ApplicationPlatform;
 
@@ -280,11 +300,48 @@ export class Application
   public constructor(paths: Paths, secretCipher?: SecretCipher, platform: ApplicationPlatform = {})
   {
     this.paths = paths;
+    this._connectorProducts = platform.connectorPackages && bindConnectorPackages(platform.connectorPackages);
+    this._runtime = new CbimRuntime(new GitWorktrees(path.join(paths.userRoot, 'worktrees')));
+    this.monitor = new RuntimeMonitor(this._runtime, () => { const cpu = process.cpuUsage(); return { pid: process.pid, rssBytes: process.memoryUsage.rss(), cpuMicros: cpu.user + cpu.system }; });
 
     this.platform = platform;
 
     if (platform.engineArtifacts)
     {
+      const products = managedConnectorPackages(path.join(paths.userRoot, 'connector-installations.json'), platform.engineArtifacts);
+      this.connectorPackages = products.manager;
+      const custom = this._connectorProducts;
+      this._connectorProducts = {
+        Open: async (context, agentId, moduleIds, signal, definitionId) => {
+          const snapshot = await this.Workspace(context.workspaceId).Read();
+          const definitions = new Set([(definitionId ?? agentId) + '/agent.json', ...moduleIds.map(id => id + '/module.json')]);
+          const refs = new Set<string>();
+          for (const file of snapshot.files.filter(file => definitions.has(file.path))) {
+            const ids = JSON.parse(file.text).connectors;
+            if (Array.isArray(ids)) for (const id of ids) refs.add(id);
+          }
+          const registry = snapshot.files.find(file => file.path === '.cbim/connectors/registry.json');
+          const ids = refs.size && registry ? connectorRegistrySchema.parse(JSON.parse(registry.text)).connectors.flatMap(entry => refs.has(entry.id) && 'productId' in entry ? [entry.productId] : []) : [];
+          const other = await custom?.Open(context, agentId, moduleIds, signal);
+          if (!ids.length) return other ?? { sessions: [], Release: async () => {} };
+          const leases = other ? [other] : [];
+          const release = async () => {
+            const results = await Promise.allSettled(leases.map(lease => lease.Release()));
+            const errors = results.flatMap(result => result.status === 'rejected' ? [result.reason] : []);
+            if (errors.length) throw new AggregateError(errors, '连接器释放失败');
+          };
+          try {
+            for (const id of [...new Set(ids)].sort()) leases.push(await products.Open(id, context, signal));
+            return {
+              sessions: leases.flatMap(lease => lease.sessions),
+              Release: release
+            };
+          } catch (error) {
+            await release();
+            throw error;
+          }
+        }
+      };
       this.enginePackages = new EnginePackages(
         path.join(paths.userRoot, 'engine-installations.json'),
         platform.engineArtifacts
@@ -531,6 +588,23 @@ export class Application
   }
 
   /** 仅取得已登记在运行集合中的实例；调用方继续按业务需要核实其就绪状态。 */
+  public readonly monitor: RuntimeMonitor;
+
+  public async OpenWorkspaceInstance(workspaceId: string, rootSessionId: string, nodeId: string, relativeDirectory: string)
+  {
+    this.AssertServiceAvailable(workspaceId);
+    const workspace = this.Workspace(workspaceId);
+    const office = this._runtime.OpenOffice(workspaceId, rootSessionId);
+    const snapshot = await workspace.Snapshot();
+    workspace.Assert();
+
+    if (!snapshot.validation?.structural)
+      throw new Error('打开工位需要有效业务树');
+
+    office.project.UpdateTree(snapshot.validation.tree);
+    return office.OpenWorkspace( nodeId, workspace.entry.path, relativeDirectory);
+  }
+
   public Workspace(id: string)
   {
     const ws = this.running.get(id);
@@ -597,6 +671,7 @@ export class Application
           await this.executions.get(id)?.Close();
 
           this.executions.delete(id);
+          await this._runtime.CloseWorkspace(id);
 
           await this.memberExecutions.get(id)?.Close();
 
@@ -674,9 +749,11 @@ export class Application
                 admission,
                 () => this.budgetSettings.Read(),
                 this.platform.controlledFiles,
-                this.enginePackages ?? this.platform.engineRuntimes
+                this.enginePackages ?? this.platform.engineRuntimes, this.platform.engineExtensions, this.platform.modelAdapters,
+                (rootSessionId, scopeId) => this.collaborations.get(id)?.MemberPermission(rootSessionId, scopeId)
               ),
               execution = createExecutionManager(
+                this._runtime,
                 ws,
                 this.engineModels,
                 lease,
@@ -690,7 +767,7 @@ export class Application
                 this.web,
                 this.enginePackages ?? this.platform.engineRuntimes,
                 this.platform.controlledFiles,
-                { runs: businessRuns, controlledFiles, isolatedExecutions }
+                { runs: businessRuns, controlledFiles, isolatedExecutions }, this.platform.engineExtensions, this.platform.modelAdapters, this.platform.connectorServers, this._connectorProducts
               );
 
             this.dispatchers.set(id, service);
@@ -801,6 +878,7 @@ export class Application
       await this.executions.get(id)?.Close();
 
       this.executions.delete(id);
+          await this._runtime.CloseWorkspace(id);
 
       await this.memberExecutions.get(id)?.Close();
 
@@ -888,7 +966,7 @@ export class Application
     for (const id of this.admissionOwners.keys())
       this.RetireAdmission(id);
 
-    this.shutdownPromise = (async () => { await this.githubFeedback.Close(); await this.chatMaterials.Close(); await this.repositoryConnections.Close(); await Promise.allSettled([...this.opening.values()]); for (const id of this.admissionOwners.keys()) this.RetireAdmission(id); await Promise.all([...this.automationServices.values()].map((x) => x.scheduler.Close())); this.automationServices.clear(); await Promise.all([...this.collaborations.values()].map((x) => x.Close())); this.collaborations.clear(); await Promise.all([...this.executions.values(), ...this.memberExecutions.values()].map((x) => x.Close())); this.executions.clear(); this.memberExecutions.clear(); await Promise.all([...this.controlledFileServices.values()].map((x) => x.Close())); this.controlledFileServices.clear(); await Promise.all([...this.isolatedExecutionServices.values()].map((x) => x.Close())); this.isolatedExecutionServices.clear(); await this.platform.controlledFiles?.Close(); await Promise.all([...this.running.values()].map((w) => w.PrepareClose())); await Promise.all([...this.dispatchers.values()].map((x) => x.Close())); this.dispatchers.clear(); this.memberRegistries.clear(); this.ownershipRegistries.clear(); for (const monitor of this.monitors.values()) monitor.Close(); await Promise.all([...this.histories.values()].map((x) => x.Close())); this.histories.clear(); this.monitors.clear(); const results = await Promise.allSettled([...this.running.values()].map((w) => w.Close())); await this.resources.Close(); this.running.clear(); const failed = results.find((r) => r.status === 'rejected'); if (failed?.status === 'rejected') throw failed.reason; })();
+    this.shutdownPromise = (async () => { await this.githubFeedback.Close(); await this.chatMaterials.Close(); await this.repositoryConnections.Close(); await Promise.allSettled([...this.opening.values()]); for (const id of this.admissionOwners.keys()) this.RetireAdmission(id); await Promise.all([...this.automationServices.values()].map((x) => x.scheduler.Close())); this.automationServices.clear(); await Promise.all([...this.collaborations.values()].map((x) => x.Close())); this.collaborations.clear(); await Promise.all([...this.executions.values(), ...this.memberExecutions.values()].map((x) => x.Close())); this.executions.clear(); this.monitor.Close(); await this._runtime.Close(); this.memberExecutions.clear(); await Promise.all([...this.controlledFileServices.values()].map((x) => x.Close())); this.controlledFileServices.clear(); await Promise.all([...this.isolatedExecutionServices.values()].map((x) => x.Close())); this.isolatedExecutionServices.clear(); await this.platform.controlledFiles?.Close(); await Promise.all([...this.running.values()].map((w) => w.PrepareClose())); await Promise.all([...this.dispatchers.values()].map((x) => x.Close())); this.dispatchers.clear(); this.memberRegistries.clear(); this.ownershipRegistries.clear(); for (const monitor of this.monitors.values()) monitor.Close(); await Promise.all([...this.histories.values()].map((x) => x.Close())); this.histories.clear(); this.monitors.clear(); const results = await Promise.allSettled([...this.running.values()].map((w) => w.Close())); await this.resources.Close(); this.running.clear(); const failed = results.find((r) => r.status === 'rejected'); if (failed?.status === 'rejected') throw failed.reason; })();
 
     void this.shutdownPromise.catch((error) => { if (['CONTROLLED_FILE_DRAIN_PENDING', 'EXECUTION_SCOPE_DRAIN_PENDING'].includes(error?.code)) this.shutdownPromise = undefined; });
 

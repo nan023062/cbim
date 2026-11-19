@@ -1,3 +1,4 @@
+import { fixtureEngines } from '../../../../../support/engine-instances';
 import {runtimeToolGroup} from '../support/runtime-tool-group';
 import {expect,it} from 'vitest';
 import fs from 'node:fs/promises';
@@ -16,7 +17,7 @@ async function fixture(work:(context:EngineContext)=>Promise<void>,policy:(name:
   const engine:AgentEngine={kind:'pi',start:async c=>{context=c;await c.emit({type:'session.bound',data:{sessionId:c.nativeSessionId,sessionFile:path.join(c.directory,'native.jsonl')}})},run:async()=>{await work(context);return {status:'completed'}},stop:async()=>{stops++},close:async()=>{closed=true}};
   const storage=new FileRunStorage(),create=storage.CreateJournal.bind(storage);
   if(beforeAppend)storage.CreateJournal=(...args)=>{const journal=create(...args),append=journal.Append.bind(journal);journal.Append=async event=>{await beforeAppend(event);return append(event)};return journal};
-  const runtime=new LoopRuntime({directory,storage,AcquireLease:async()=>{leases++;return()=>{leases--}},CreateEngine:()=>engine,ToolPolicy:call=>policy(call.name)});
+  const runtime=new LoopRuntime({directory,storage,AcquireLease:async()=>{leases++;return()=>{leases--}},engines:fixtureEngines(()=>engine),ToolPolicy:call=>policy(call.name)});
   const task:TaskSpec={taskId:binding.taskId,workspaceId:binding.workspaceId,root:directory,agentId:binding.agentId,goal:'处理目标模块',moduleIds:['.cbim/workspace/project/module'],acceptance:['核实目标']};
   const launch:MemberRunLaunch={binding,session:{nativeSessionId:'native-one'}};
   return {runtime,task,launch,get closed(){return closed},get leases(){return leases},get stops(){return stops},cleanup:async()=>{await runtime.Close();const target=path.resolve(directory);if(path.dirname(target)!==path.resolve(os.tmpdir())||!path.basename(target).startsWith('cbim-help-runtime-'))throw Error('Unexpected cleanup');await fs.rm(target,{recursive:true,force:true})}};
@@ -128,7 +129,7 @@ it('releases only an unconsumed policy-denied reservation and rejects unknown ru
 it('cancellation during engine close cannot commit a normal help terminal',async()=>{
   const closing=gate(),release=gate();const directory=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-help-runtime-'));let context!:EngineContext;
   const engine:AgentEngine={kind:'pi',start:async c=>{context=c},run:async()=>{await help(context);return {status:'completed'}},stop:async()=>{},close:async()=>{closing.resolve();await release.promise}};
-  const runtime=new LoopRuntime({directory,storage:new FileRunStorage(),AcquireLease:async()=>()=>{},CreateEngine:()=>engine,ToolPolicy:async()=>({allow:true,effects:['maintenance']})});
+  const runtime=new LoopRuntime({directory,storage:new FileRunStorage(),AcquireLease:async()=>()=>{},engines:fixtureEngines(()=>engine),ToolPolicy:async()=>({allow:true,effects:['maintenance']})});
   const task:TaskSpec={taskId:binding.taskId,workspaceId:binding.workspaceId,root:directory,agentId:binding.agentId,goal:'处理',moduleIds:['.cbim/workspace/module'],acceptance:['检查']};
   try{
     const run=await runtime.StartMember(task,'处理',{binding,session:{nativeSessionId:'native-one'}});await closing.promise;await runtime.Stop(task.taskId);release.resolve();

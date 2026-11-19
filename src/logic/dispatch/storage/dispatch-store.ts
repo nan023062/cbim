@@ -5,6 +5,8 @@
  * 职责边界：应用须先持有工作区唯一写入锁；本类不打开业务文件或执行补偿，文件阶段通过同一严格投影重放，原记录不自动推进。
  * 请求预算复用同一 fsync 屏障，阶段单独追加且重放复核；旧缺省保留，未知或未决请求不因加载而释放。
  */
+import { defaultWorkerId, taskWorkerId } from '../../tasks/rules/graph-types';
+
 import { appendDurableRecord } from '../../../core/debug/node';
 
 import fs from 'node:fs/promises';
@@ -43,7 +45,7 @@ import { projectKnowledgeSourceMutation } from '../../tasks/rules/knowledge-sour
 
 import { validateOwnerExecutionMutation, type DispatchExecutionProtocol } from '../../tasks/rules/owner-execution-invariants';
 
-import { appendTeamSessions } from '../../team/rules/team-session';
+import { appendOfficeMemberSessions } from '../../../framework/office/session';
 
 /** transactionSeq 是工作区日志序号，与单张图的 batch.seq 分开。 */
 interface TransactionBody
@@ -323,7 +325,7 @@ export class FileDispatchStore implements DispatchStore
 
     const scopes = this.scopeViews.get(root) ?? emptyScopeSnapshot(graph.identity, graph.cursor.streamId);
 
-    return clone({ graph: readGraphDelta(graph, this.events.get(root) ?? [], input.graphCursor, input.limit), scopes: readScopeDelta(scopes, this.scopeEvents.get(root) ?? [], input.scopeCursor, input.limit), detail: readScopeDetail(scopes, this.state.scopes ?? [], input.selectedScopeId, input.detailStamp), ...(this.state.teamSessions ? { teamSessions: this.state.teamSessions.filter(session => session.rootSessionId === root) } : {}) });
+    return clone({ graph: readGraphDelta(graph, this.events.get(root) ?? [], input.graphCursor, input.limit), scopes: readScopeDelta(scopes, this.scopeEvents.get(root) ?? [], input.scopeCursor, input.limit), detail: readScopeDetail(scopes, this.state.scopes ?? [], input.selectedScopeId, input.detailStamp), ...(this.state.teamSessions ? { teamSessions: this.state.teamSessions.filter(session => session.officeId === root) } : {}) });
   }
 
   /**
@@ -610,13 +612,13 @@ export class FileDispatchStore implements DispatchStore
     {
       valid(mutation.teamSessions === undefined || Array.isArray(mutation.teamSessions), '团队对话登记必须是数组');
 
-      next.teamSessions = appendTeamSessions(this.state.teamSessions ?? [], mutation.teamSessions ?? [], this.workspaceId);
+      next.teamSessions = appendOfficeMemberSessions(this.state.teamSessions ?? [], mutation.teamSessions ?? [], this.workspaceId);
 
       for (const session of next.teamSessions)
       {
-        const graph = next.graphs.find(item => item.identity.rootSessionId === session.rootSessionId);
+        const graph = next.graphs.find(item => item.identity.rootSessionId === session.officeId);
 
-        valid(graph?.agents.some(agent => agent.agentId === session.agentId && next.members.some(member => member.agentInstanceId === agent.agentInstanceId && member.teamId === session.teamId)), '团队对话必须属于已有主会话和已登记角色');
+        valid(graph && (graph.agents.some(agent => defaultWorkerId(agent.agentId) === session.workerId) || graph.tasks.some(task => taskWorkerId(task) === session.workerId && task.ownerBinding?.memberId === session.workerId)), '团队对话必须属于已有主会话和已登记角色');
       }
     }
 
@@ -705,7 +707,14 @@ export class FileDispatchStore implements DispatchStore
 
         valid(!this.ownerProtocolSeen || body.executionProtocol === 'module_owner_v1', '负责人执行协议开始后不能回退旧日志格式');
 
-        const next = this.Project(body.mutation, body.command, body.executionProtocol ?? 'legacy');
+        const mutation = body.mutation;
+        const sessions = mutation.teamSessions?.map(value => {
+          if ('officeId' in value) return value;
+          const old = value as { workspaceId: string; rootSessionId: string; sessionId: string; agentId: string; teamId: string; createdAt: string };
+          valid(typeof old.agentId === 'string' && typeof old.teamId === 'string', '旧会话身份不完整');
+          return { workspaceId: old.workspaceId, officeId: old.rootSessionId, workerId: defaultWorkerId(old.agentId), sessionId: old.sessionId, createdAt: old.createdAt };
+        });
+        const next = this.Project(sessions ? { ...mutation, teamSessions: sessions } : mutation, body.command, body.executionProtocol ?? 'legacy');
 
         this.Publish(body, record.checksum, next);
       }

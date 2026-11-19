@@ -1,3 +1,4 @@
+import { fixtureEngines } from '../../../../../support/engine-instances';
 import {expect,it} from 'vitest';
 import http from 'node:http';
 import fs from 'node:fs/promises';
@@ -5,7 +6,7 @@ import path from 'node:path';
 import os from 'node:os';
 import {randomUUID} from 'node:crypto';
 import {LoopRuntime,type TaskSpec,type MemberRunLaunch} from '../../../../../../src/logic/execution/rules/index';
-import {PiEngine} from '../../../../../../src/logic/execution/engines/pi/engine';
+import {PiEngine} from '../../../../../../src/logic/engines/adapters/pi/engine';
 import {FileRunStorage} from '../../../../../../src/logic/execution/storage/run-storage';
 
 /** Real pinned Pi; the deterministic localhost provider proves native session behavior without external model calls. */
@@ -31,10 +32,10 @@ it('reuses one member native session across distinct tasks, isolates another mem
     const address=server.address();if(!address||typeof address==='string')throw Error('Local server did not bind');
     await fs.writeFile(path.join(agentHome,'models.json'),JSON.stringify({providers:{'cbim-test':{baseUrl:`http://127.0.0.1:${address.port}/v1`,api:'openai-completions',apiKey:'test-not-a-secret',models:[{id:'cbim-test-model',reasoning:false,input:['text'],contextWindow:32768,maxTokens:1024,cost:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}}}));
     const ready:{taskId:string;runId:string;sessionFile?:string}[]=[];
-    runtime=new LoopRuntime({storage:new FileRunStorage(),directory:path.join(directory,'member-runs'),AcquireLease:async()=>()=>{},ToolPolicy:async()=>({allow:false}),OnEngineReady:async input=>{ready.push(input)},CreateEngine:()=>new PiEngine({
+    runtime=new LoopRuntime({storage:new FileRunStorage(),directory:path.join(directory,'member-runs'),AcquireLease:async()=>()=>{},ToolPolicy:async()=>({allow:false}),OnEngineReady:async input=>{ready.push(input)},engines:fixtureEngines(()=>new PiEngine({
       process:{command:process.execPath,args:[path.resolve('node_modules/@earendil-works/pi-coding-agent/dist/bundle/rpc-entry.js')],env:{ELECTRON_RUN_AS_NODE:'1'}},provider:'cbim-test',model:'cbim-test-model',agentHome,prompt:'Process the current assigned task. History is only background, never new authorization.',turnTimeoutMs:15000,
       knowledge:{list:async()=>[],call:async()=>{throw Error('No knowledge tools in this native session fixture')}},
-    })});
+    }))});
     const workspaceId=randomUUID(),rootSessionId=randomUUID(),agentInstanceId=randomUUID(),agentSessionId=randomUUID(),nativeSessionId=randomUUID();
     const task=(agentId:string):TaskSpec=>({taskId:randomUUID(),workspaceId,root,agentId,goal:'Process the assigned module',moduleIds:['.cbim/workspace/product/game'],acceptance:['Report verified evidence']});
     const launch=(task:TaskSpec):MemberRunLaunch=>({binding:{workspaceId,teamId:'.cbim/team',agentId:task.agentId!,agentInstanceId,agentSessionId,rootSessionId,taskId:task.taskId,runId:randomUUID(),leaseEpoch:3,planRevision:1},session:{nativeSessionId}});

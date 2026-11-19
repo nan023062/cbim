@@ -109,9 +109,9 @@ it('完整业务架构包含全部模块和 Workflow；非空目标须显式整�
 it('源仓库或目标版本变化、旧实例、被改计划、旧单模块资源都不能写入',async()=>{
   const f=await setup();try{
     const published=await f.publish('team'),plan=await f.preview(published.resourceId,{slug:'one'}),before=await f.target.Read(),repo=await f.app.resources.Read();
-    await f.app.resources.Save({repositoryId:repo.repositoryId,revision:repo.revision,item:{kind:'module',name:'旧模块',summary:'',content:'# old'}});
+    await f.app.resources.Save({repositoryId:repo.repositoryId,revision:repo.revision,item:{kind:'workspace_template',name:'工作区模板',summary:'',content:'# old'}});
     await expect(f.commit(plan.planId)).rejects.toMatchObject({code:'CONFLICT'});expect((await f.target.Read()).revision).toBe(before.revision);
-    const old=(await f.app.resources.Read()).items.find(item=>item.kind==='module')!;await expect(f.preview(old.id)).rejects.toMatchObject({code:'RESOURCE_KIND'});
+    const old=(await f.app.resources.Read()).items.find(item=>item.kind==='workspace_template')!;await expect(f.preview(old.id)).rejects.toMatchObject({code:'RESOURCE_KIND'});
     const targetPlan=await f.preview(published.resourceId,{slug:'two'}),snapshot=await f.target.Snapshot();await f.target.Commit(request(snapshot,[{path:'.cbim/team/README.md',text:'# 目标已修改'}]));
     await expect(f.commit(targetPlan.planId)).rejects.toMatchObject({code:'CONFLICT'});
     const fresh=await f.preview(published.resourceId,{slug:'three'});await expect(f.service().Commit({workspaceId:f.target.entry.id,instanceId:'11111111-1111-4111-8111-111111111111',planId:fresh.planId})).rejects.toThrow();

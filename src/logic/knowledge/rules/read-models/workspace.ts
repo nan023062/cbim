@@ -48,6 +48,7 @@ export class BusinessWorkspace
 
     const definition = data(s, workspace.id + '/module.json');
 
-    return { ...context(s), id, definition, definitionFile: s.files.find(f => f.path === id + '/module.json'), overview: content(s, id, definition.overview), workflows: definition.workflows.map((w: any) => ({ ...w, id: path.posix.dirname(path.posix.join(id, w.reference)), owner: id, inherited: false, content: content(s, id, w.reference) })), workflowScope: 'own-only' };
+    const workflows = this.project.ResolveWorkflows(id, owner => (owner === id ? definition : data(s, owner + '/module.json')).workflows);
+    return { ...context(s), id, definition, definitionFile: s.files.find(f => f.path === id + '/module.json'), overview: content(s, id, definition.overview), workflows: workflows.map(({ workflow, owner, inherited }) => ({ ...workflow, id: path.posix.dirname(path.posix.join(owner, workflow.reference)), owner, inherited, content: content(s, owner, workflow.reference) })), workflowScope: 'own-and-ancestors' as const };
   }
 }

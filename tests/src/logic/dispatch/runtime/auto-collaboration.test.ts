@@ -50,13 +50,13 @@ it('重查已消费的整话题补充不冻结正在执行的新主轮',async()=
   }finally{await f.coordinator.Close()}
 });
 
-async function setup(admission?:GlobalRunAdmission,engine?:'pi'|'claude-code'|'codex',queuedTopicId?:string){
+async function setup(admission?:GlobalRunAdmission,engine?:'pi'|'claude-code'|'codex',queuedTopicId?:string, live?: { ReadPermission(): 'read'|'ask'|'execute'; SetBatchPermission(mode: 'read'|'ask'|'execute'): void }){
   const task:TaskSpec={taskId:'conversation-1',workspaceId:'workspace-1',root:'C:/project',mode:'chat',goal:'原任务',agentId:'cbim:main',moduleIds:[],acceptance:[]};
   const identity={workspaceId:task.workspaceId,rootSessionId:task.taskId};
   const agent={agentId:'member',agentInstanceId:'instance',agentSessionId:'session',name:'成员'};
   const graph:GraphSnapshot={version:1,identity,cursor:{...identity,streamId:'stream',seq:1},root:{kind:'session-root',identity,nodeId:'root',agent:{...agent,agentId:'cbim:main',agentSessionId:'root-channel'},revision:1,createdAt:'2026-11-06'},tasks:[],edges:[],agents:[]};
   const lease=new WorkspaceExecutionLease(),done=deferred<void>();let release=()=>{},hooks!:ExecutionCollaboration;
-  const options={...(engine?{engine}:{}),provider:'provider',model:'model',profileId:'00000000-0000-4000-8000-000000000001',permission:'ask' as const,allowNativeExecution:true};
+  const options={...live,...(engine?{engine}:{}),provider:'provider',model:'model',profileId:'00000000-0000-4000-8000-000000000001',permission:'ask' as const,allowNativeExecution:true};
   const dispatch={automaticReturns:{Record:vi.fn(async()=>{}),Scopes:vi.fn(async()=>[]),Inspect:vi.fn()},
     AbandonCheckpoint:vi.fn<(...args:unknown[])=>Promise<AbandonCheckpointReceipt>>(),
     CheckpointAbandonmentReceipt:vi.fn<(...args:unknown[])=>Promise<AbandonCheckpointReceipt|undefined>>(async()=>undefined),
@@ -289,7 +289,7 @@ it('权威联合查询返回空值时由业务输出契约拒绝，不崩溃或�
     f.dispatch.Snapshot.mockClear();f.dispatch.goals.Inspect.mockClear();
     for(const value of [undefined,null]){
       f.dispatch.goals.InspectWithGraph.mockResolvedValueOnce(value);
-      await expect(f.tools.Call('cbim_goal_inspect',{},new AbortController().signal,'inspect-bad')).rejects.toMatchObject({code:'TOOL_OUTPUT_INVALID'});
+      await expect(f.tools.Call('cbim_goal_inspect',{},new AbortController().signal,'inspect-bad')).rejects.toThrow('业务输出无效');
     }
     expect(f.dispatch.goals.InspectWithGraph).toHaveBeenCalledTimes(2);expect(f.dispatch.Snapshot).not.toHaveBeenCalled();expect(f.dispatch.goals.Inspect).not.toHaveBeenCalled();expect(f.members.Start).not.toHaveBeenCalled();
   }finally{await f.coordinator.Close()}
@@ -317,7 +317,7 @@ it.each(['assign','cancel','replace','add','resume','abandon'] as const)('%s 的
       f.members.RequestResume.mockResolvedValueOnce({});
       invoke=()=>f.tools.Call('cbim_dispatch_resume',{expectedGraphCursor:{streamId:'stream',seq:1},expectedGoalRevision:2,taskId:'assigned-1',expectedRevision:1,checkpointId:'checkpoint-one',reason:'按原目标续执行'},signal,'resume-bad');calls=()=>f.members.RequestResume.mock.calls.length;
     }
-    await expect(invoke()).rejects.toMatchObject({code:'TOOL_OUTPUT_INVALID'});expect(calls()).toBe(1);
+    await expect(invoke()).rejects.toThrow('业务输出无效');expect(calls()).toBe(1);
     expect(f.members.Start).not.toHaveBeenCalled();expect(f.execution.ContinueFromResults).not.toHaveBeenCalled();
   }finally{await f.coordinator.Close()}
 });
@@ -348,7 +348,7 @@ it.each(['success','bad-wire','reply-lost'] as const)('放弃回包%s后按原�
     else f.dispatch.AbandonCheckpoint.mockResolvedValueOnce(mode==='bad-wire'?null as never:receipt);
     const pending=f.tools.Call('cbim_dispatch_abandon_checkpoint',abandonmentInput,new AbortController().signal,'abandon-call');
     if(mode==='reply-lost')await expect(pending).rejects.toThrow('saved response lost');
-    else if(mode==='bad-wire')await expect(pending).rejects.toMatchObject({code:'TOOL_OUTPUT_INVALID'});
+    else if(mode==='bad-wire')await expect(pending).rejects.toThrow('业务输出无效');
     else await pending;
     expect(batch.tasks).toEqual([]);expect(batch.cycle.tasks.has('assigned-1')).toBe(true);expect(withdraw).toHaveBeenCalledTimes(1);expect(other).not.toHaveBeenCalled();expect(batch.admissions.has('other-ticket')).toBe(true);
     expect(f.members.Acknowledge).not.toHaveBeenCalled();expect(f.members.Start).not.toHaveBeenCalled();
@@ -446,7 +446,7 @@ it('已结算的等待申请停泊并保留目标入口，关闭应用不取消�
     expect(f.dispatch.ParkScope.mock.calls[0][3]).toEqual(['parent-run']);
     await vi.waitFor(()=>expect(f.hooks().Waiting?.(f.task.taskId)).toBe(true));
     expect(f.coordinator.Busy(f.task.taskId)).toBe(true);expect(f.execution.ContinueFromResults).not.toHaveBeenCalled();
-    await expect(f.hooks().Starting!(f.task,f.options,undefined,'普通用户输入')).rejects.toMatchObject({code:'GOAL_WAITING'});
+    await expect(f.hooks().Starting!(f.task,f.options,undefined,'普通用户输入')).rejects.toThrow('当前目标处于持久等待');
     await f.coordinator.Close();expect(f.dispatch.CloseScope).not.toHaveBeenCalled();
   }finally{await f.coordinator.Close()}
 });
@@ -511,7 +511,7 @@ it('停止会话后迟到成员结果只保留事实，不回注或确认收件'
 
 it('主轮失败不启动已入队成员；模型不能查询别的主会话任务',async()=>{
   const f=await setup();try{
-    await f.assign();await expect(f.tools.Call('cbim_dispatch_inspect',{taskId:'foreign-task'},new AbortController().signal,'inspect-call')).rejects.toMatchObject({code:'TASK_NOT_FOUND'});
+    await f.assign();await expect(f.tools.Call('cbim_dispatch_inspect',{taskId:'foreign-task'},new AbortController().signal,'inspect-call')).rejects.toThrow('任务不属于当前主会话');
     f.settleParent('failed');await f.coordinator.Close();expect(f.members.Start).not.toHaveBeenCalled();expect(f.graph.tasks).toHaveLength(1);
     expect(f.coordinator.Tools({...f.task,mode:undefined},'member',f.options)).toBeUndefined();
     expect(f.coordinator.Tools({...f.task,agentId:'.cbim/team/executor'},'not-main',f.options)).toBeUndefined();
@@ -594,7 +594,7 @@ it('撤销失败不从待执行批次移除任务，停止后的主工具不能�
     await expect(f.tools.Call('cbim_dispatch_cancel',input,new AbortController().signal,'cancel-native-one')).rejects.toThrow('遗漏');
     f.settleParent();await vi.waitFor(()=>expect(f.graph.tasks[0].status).toBe('running'));
     await f.hooks().Stop(f.task.taskId);
-    await expect(f.tools.Call('cbim_dispatch_cancel',input,new AbortController().signal,'late-cancel')).rejects.toMatchObject({code:'COLLABORATION_STOPPED'});
+    await expect(f.tools.Call('cbim_dispatch_cancel',input,new AbortController().signal,'late-cancel')).rejects.toThrow('当前主轮已停止接收委派');
     expect(f.dispatch.CancelQueued).toHaveBeenCalledTimes(1);
   }finally{await f.coordinator.Close()}
 });
@@ -664,4 +664,19 @@ it('回注遇到同一主实例仍被占用时等待释放，不误报协作失�
     unblock();await vi.waitFor(()=>expect(f.members.Acknowledge).toHaveBeenCalledTimes(1));
     expect(f.issues).not.toHaveBeenCalled();expect(f.hooks().Busy(f.task.taskId)).toBe(false);
   }finally{unblock();await f.coordinator.Close()}
+});
+
+it('legacy Office batch passes the live permission reader to a member after its main turn settles', async () => {
+  let mode: 'read'|'ask'|'execute' = 'execute';
+  const f = await setup(undefined, undefined, undefined, { ReadPermission: () => mode, SetBatchPermission: next => { mode = next; } });
+  try {
+    await f.assign();
+    f.settleParent();
+    await vi.waitFor(() => expect(f.members.Start).toHaveBeenCalled());
+    const wait = f.members.Start.mock.calls[0][1]!;
+    expect(wait.ReadPermission?.()).toBe('execute');
+    expect(f.hooks().SetBatchPermission?.('another-office', 'parent-run', 'read')).toBe(false);
+    expect(f.hooks().SetBatchPermission?.(f.task.taskId, 'parent-run', 'read')).toBe(true);
+    expect(wait.ReadPermission?.()).toBe('read');
+  } finally { await f.coordinator.Close(); }
 });

@@ -9,7 +9,7 @@ it('一个逻辑子 Session 合并多个任务执行实例，并跨话题保留�
   expect(teamConversations([officeSession()],officeGraph())[0]).toMatchObject({name:'建模员',running:false,taskIds:[]});
 });
 it('跨办公室登记和任务不混入本子对话，缺登记不伪造旧 Session',()=>{
-  const foreign={...officeSession(),rootSessionId:'other'},task=officeTask('one');
+  const foreign={...officeSession(),officeId:'other'},task=officeTask('one');
   expect(teamConversations([foreign],officeGraph([task]))).toEqual([]);
   expect(memberConversationTasks(foreign,officeGraph([task]))).toEqual([]);
   expect(memberConversationTasks(officeSession(),officeGraph([{...task,identity:{...task.identity,rootSessionId:'other'}}]))).toEqual([]);

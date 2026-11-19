@@ -11,7 +11,7 @@ import type { DispatchScope } from './dispatch-scope';
 
 import type { GraphIdentity, GraphDelta } from './graph-types';
 
-import type { TeamSession } from '../../team/rules/team-session';
+import type { OfficeMemberSession } from '../../../framework/office/session';
 
 import { scopeRunTrackingSchema } from './scope-run-tracking';
 
@@ -134,7 +134,7 @@ export interface DispatchSessionRead
   detail: ScopeDetailRead;
 
   /** 本办公室已可靠登记的逻辑对话，无正文、原生路径或其它办公室身份；旧响应可缺省。 */
-  teamSessions?: TeamSession[];
+  teamSessions?: OfficeMemberSession[];
 }
 
 /** 摘要增量与重复批次证明最多保留 256 批；更旧游标读取当前快照，原事务日志仍完整保留。 */
@@ -328,3 +328,5 @@ export function readScopeDetail(snapshot: ScopeSnapshot, scopes: readonly Dispat
 
   return { mode: 'updated', stamp: selected.stamp, scope: structuredClone(projected) };
 }
+
+export { officeMemberSessionSchema, type OfficeMemberSession } from '../../../framework/office/session';

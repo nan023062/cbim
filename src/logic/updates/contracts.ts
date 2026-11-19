@@ -57,7 +57,7 @@ export interface DesktopUpdateStatus
 /** 引擎菜单的公开投影，不包含缓存路径、下载地址或凭据；版本由签名清单固定。 */
 export interface ManagedEngineStatus
 {
-  engine: 'pi' | 'claude-code' | 'codex' | 'memory';
+  engine: string;
 
   state: 'install' | 'update' | 'ready' | 'preparing' | 'failed' | 'unavailable' | 'bundled';
 

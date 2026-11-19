@@ -3,7 +3,7 @@ import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {expect,it,vi} from 'vitest';
 import {fixture} from '../../application/support/helpers';
-import {RemoteRepository} from '../../../../../src/logic/resources/service/index';
+import {RemoteRepository} from '../../../../../src/resource/service/index';
 import {RepositoryTools} from '../../../../../src/logic/tools/runtime/repository-tools';
 import {repositoryGetOutputSchema,repositoryListOutputSchema} from '../../../../../src/logic/connectors/rules/repository-tools';
 import {hash} from '../../../../../src/core/io/serialization';
@@ -42,10 +42,10 @@ it('严格参数先拒越权字段和无版本续页；坏领域输出只读一�
   const f=await connected(),reads=vi.spyOn(RemoteRepository.prototype,'Read');try{
     const port=(await f.app.repositoryConnections.PrepareTools(f.identity))!,tools=new RepositoryTools(port,f.identity.workspaceId);
     expect(()=>tools.Describe('cbim_repository_list',{connectorId:f.connectorId,token:'PRIVATE_TOKEN'})).toThrow();
-    await expect(tools.Call('cbim_repository_list',{connectorId:f.connectorId,offset:1},signal())).rejects.toMatchObject({code:'REPOSITORY_TOOL_INPUT'});
-    await expect(tools.Call('cbim_repository_list',{connectorId:'.cbim/connectors/not_granted'},signal())).rejects.toMatchObject({code:'REPOSITORY_CONNECTION_NOT_GRANTED'});expect(reads).not.toHaveBeenCalled();
+    await expect(tools.Call('cbim_repository_list',{connectorId:f.connectorId,offset:1},signal())).rejects.toMatchObject({message:expect.stringContaining('仓库工具参数无效')});
+    await expect(tools.Call('cbim_repository_list',{connectorId:'.cbim/connectors/not_granted'},signal())).rejects.toMatchObject({message:expect.stringContaining('本轮已捕获的只读授权')});expect(reads).not.toHaveBeenCalled();
     const broken=new RepositoryTools({...port,List:async(args,abort)=>{const result=await port.List(args,abort);return {...result,scope:{...result.scope,connectionId:randomUUID()}}}},f.identity.workspaceId);
-    await expect(broken.Call('cbim_repository_list',{connectorId:f.connectorId},signal())).rejects.toMatchObject({code:'TOOL_OUTPUT_INVALID'});expect(reads).toHaveBeenCalledTimes(1);
+    await expect(broken.Call('cbim_repository_list',{connectorId:f.connectorId},signal())).rejects.toMatchObject({message:expect.stringContaining('业务输出无效')});expect(reads).toHaveBeenCalledTimes(1);
     const controller=new AbortController();controller.abort();await expect(tools.Call('cbim_repository_list',{connectorId:f.connectorId},controller.signal)).rejects.toMatchObject({name:'AbortError'});expect(reads).toHaveBeenCalledTimes(1);
   }finally{reads.mockRestore();await f.cleanup()}
 });
@@ -56,9 +56,9 @@ it('撤销再授权与共享重启只影响新捕获，旧port失效且不发送
     await service.Revoke({...f.identity,connectorId:f.connectorId,expectedGrantRevision:1,commandId:randomUUID()});expect(await service.PrepareTools(f.identity)).toBeUndefined();
     await service.Grant({...f.identity,connectorId:f.connectorId,repositoryId:f.saved.repositoryId,definitionHash:f.preview.definitionHash,expectedGrantRevision:2,commandId:randomUUID()});
     const reads=vi.spyOn(RemoteRepository.prototype,'Read');try{
-      await expect(old.List(args,signal())).rejects.toMatchObject({code:'REPOSITORY_CONNECTION_STALE'});expect(reads).not.toHaveBeenCalled();
+      await expect(old.List(args,signal())).rejects.toMatchObject({message:expect.stringContaining('变化')});expect(reads).not.toHaveBeenCalled();
       const next=(await service.PrepareTools(f.identity))!;await next.List(args,signal());expect(reads).toHaveBeenCalledTimes(1);
-      await f.app.resources.StopSharing();await f.app.resources.StartSharing({lan:false,port:0});await expect(next.List(args,signal())).rejects.toMatchObject({code:'REPOSITORY_CONNECTION_STALE'});expect(reads).toHaveBeenCalledTimes(1);
+      await f.app.resources.StopSharing();await f.app.resources.StartSharing({lan:false,port:0});await expect(next.List(args,signal())).rejects.toMatchObject({message:expect.stringContaining('共享代际已失效')});expect(reads).toHaveBeenCalledTimes(1);
       const fresh=(await service.PrepareTools(f.identity))!;expect(fresh.targets[0].connectionId).not.toBe(next.targets[0].connectionId);await fresh.List(args,signal());expect(reads).toHaveBeenCalledTimes(2);
     }finally{reads.mockRestore()}
   }finally{await f.cleanup()}
@@ -78,7 +78,7 @@ it('真实读取已完成但回传前撤销仍拒迟到资料；坏注册表不�
 it('目录版本改变拒绝原正文页，核验失败不会替换期望版本再读取',async()=>{
   const f=await connected();try{const port=(await f.app.repositoryConnections.PrepareTools(f.identity))!,first=await port.List({connectorId:f.connectorId},signal());
     await f.app.resources.Save({repositoryId:f.saved.repositoryId,revision:f.saved.revision,id:f.saved.items[0].id,item:{kind:'skill',name:'资料',summary:'真实共享资源',content:'changed'}});
-    const reads=vi.spyOn(RemoteRepository.prototype,'Read');try{await expect(port.Get({connectorId:f.connectorId,expectedRevision:first.revision,resourceId:first.items[0].id},signal())).rejects.toMatchObject({code:'REPOSITORY_REVISION_CHANGED'});expect(reads).toHaveBeenCalledTimes(1)}finally{reads.mockRestore()}
+    const reads=vi.spyOn(RemoteRepository.prototype,'Read');try{await expect(port.Get({connectorId:f.connectorId,expectedRevision:first.revision,resourceId:first.items[0].id},signal())).rejects.toMatchObject({message:expect.stringContaining('仓库资料已变化')});expect(reads).toHaveBeenCalledTimes(1)}finally{reads.mockRestore()}
   }finally{await f.cleanup()}
 });
 

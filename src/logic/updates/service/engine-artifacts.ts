@@ -74,6 +74,11 @@ export class EngineArtifacts implements EngineArtifactsPort
       if (!pkg.adapter)
         continue;
 
+      for (const previous of target.values()) {
+        if (previous.kind !== pkg.kind) continue;
+        const type = (p: EnginePackage) => p.plugin?.type ?? (p.kind === 'world-clock' ? 'connector' : 'engine');
+        if (type(previous) !== type(pkg) || (previous.plugin?.type === 'engine' && pkg.plugin?.type === 'engine' && previous.plugin.profile !== pkg.plugin.profile)) throw Error('同一插件不能更改类型或兼容协议');
+      }
       const existing = [...target.values()].find(item => item.kind === pkg.kind && item.adapter?.version === pkg.adapter!.version);
 
       if (existing && JSON.stringify(existing) !== JSON.stringify(pkg))
@@ -183,7 +188,7 @@ export class EngineArtifacts implements EngineArtifactsPort
 
   private Summary(pkg: EnginePackage): EngineArtifact
   {
-    return { kind: pkg.kind, identity: pkg.package.sha256, version: pkg.adapter!.version, nativeVersion: pkg.version, protocol: pkg.adapter!.protocol, dependencies: structuredClone(pkg.dependencies ?? []) }
+    return { ...(pkg.plugin ? { plugin: pkg.plugin } : {}), kind: pkg.kind, identity: pkg.package.sha256, version: pkg.adapter!.version, nativeVersion: pkg.version, protocol: pkg.adapter!.protocol, dependencies: structuredClone(pkg.dependencies ?? []) }
   }
 
   List()

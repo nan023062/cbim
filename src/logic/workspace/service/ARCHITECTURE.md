@@ -15,6 +15,7 @@
 | [ArchitectureService](architecture-service.ts) | 将团队/业务架构表单接到受控知识事务，作为可信桌面的预览与手动提交入口。 |
 | [Catalog](catalog.ts) | 维护本机工作区清单及路径身份，串行处理登记、显示名称与重新定位。 |
 | [ModuleOwnerships](module-ownerships.ts) | 桌面与真实主工具共用的模块负责人服务，关系和岗位在唯一 DispatchStore 内裁决。 |
+| [GitWorktrees](git-worktrees.ts) | 按 Office 和仓库创建或恢复持久工作树，保持未提交修改。 |
 | [Paths](paths.ts) | 本机应用目录、工程身份和知识路径的实际解析。 |
 | [ModuleSourceBrowser](source-browser.ts) | 按正式模块的 sources 绑定提供只读目录枚举与文本预览，供可信桌面桥接调用。 |
 | [Workspace](workspace.ts) | 管理本机工作区的身份、独占锁、知识监听和维护任务。 |
@@ -49,17 +50,24 @@ N_558ebed9320a ..> N_53244d27e9ea : 依赖
 N_30b6867c95a0 <|.. N_558ebed9320a
 ```
 
-### 关系组 2：ModuleOwnerships
+### 关系组 2：GitWorktrees
 
 ```mermaid
 classDiagram
+class N_a73d4e4a3eb4["GitWorktrees"]
+click N_a73d4e4a3eb4 href "git-worktrees.ts"
+class N_c26b7944d23b["WorkspaceInstanceFactory"] {
+  <<boundary>>
+}
+click N_c26b7944d23b href "../../../framework/business/workspace-instance.ts"
 class N_5aa3c68b6802["ModuleOwnerships"]
 click N_5aa3c68b6802 href "module-ownerships.ts"
 class N_dd18ab6fca43["ModuleSourceBrowser"]
 click N_dd18ab6fca43 href "source-browser.ts"
+N_c26b7944d23b <|.. N_a73d4e4a3eb4
 ```
 
-外部继承／实现边界：[StoragePaths](../ports/paths.ts)、[KnowledgeWorkspace](../../knowledge/rules/ports.ts)。
+外部继承／实现边界：[WorkspaceInstanceFactory](../../../framework/business/workspace-instance.ts)、[StoragePaths](../ports/paths.ts)、[KnowledgeWorkspace](../../knowledge/rules/ports.ts)。
 
 [上层设计](../ARCHITECTURE.md)
 

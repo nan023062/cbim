@@ -15,17 +15,17 @@ it('默认执行员拒绝重新解析，自定义角色从真实知识版本继�
   const f=await fixture();
   try{
     const e=await f.app.Dispatch('add',{path:f.a}),w=f.app.Workspace(e.id);
-    await expect(resolveDispatchAgent(await w.Snapshot(),'cbim:executor')).rejects.toMatchObject({code:'AGENT_RETIRED'});
+    await expect(resolveDispatchAgent(await w.Snapshot(),'cbim:executor')).rejects.toThrow('内置默认执行 Agent 已退役');
     const seeded=await seedTeam(w),snapshot=await w.Snapshot();
     const custom=await resolveDispatchAgent(snapshot,seeded.input.agentId);
-    await expect(resolveDispatchAgent(snapshot,'cbim:executor')).rejects.toMatchObject({code:'AGENT_RETIRED'});
+    await expect(resolveDispatchAgent(snapshot,'cbim:executor')).rejects.toThrow('内置默认执行 Agent 已退役');
     expect(custom.effectiveSkills.find(skill=>skill.inherited)).toMatchObject({ownerId:'.cbim/team',inherited:true,content:'# 团队校验规则'});
-    await expect(resolveDispatchAgent(snapshot,'cbim:main')).rejects.toMatchObject({code:'AGENT_ROLE_INVALID'});
+    await expect(resolveDispatchAgent(snapshot,'cbim:main')).rejects.toThrow('主 Agent 请在当前会话直接执行');
     expect(custom.effectiveSkills.map(s=>[s.skillId,s.inherited])).toEqual([[seeded.own,false],[seeded.shared,true]]);
     expect(custom.principles).toContain('验证实际结果');
     expect(custom.knowledgeRevision).toBe(snapshot.revision);
-    await expect(resolveDispatchAgent(snapshot,'.cbim/team')).rejects.toMatchObject({code:'AGENT_MISSING'});
-    await expect(resolveDispatchAgent(snapshot,'.cbim/team/missing')).rejects.toMatchObject({code:'AGENT_MISSING'});
+    await expect(resolveDispatchAgent(snapshot,'.cbim/team')).rejects.toThrow('成员角色不存在');
+    await expect(resolveDispatchAgent(snapshot,'.cbim/team/missing')).rejects.toThrow('成员角色不存在');
   }finally{await f.cleanup()}
 });
 
@@ -54,15 +54,15 @@ it('废弃维护声明不阻塞旧数据，模块范围和真实知识校验继�
     module.maintenance={...maintenance('legacy'),confirmation:{recordId:'old',source:'local_user',confirmedAt:'旧历史时间'}};
     await w.Commit(request(snapshot,[{path:seeded.input.moduleId+'/module.json',text:json(module)}]));
     const saved=await w.Snapshot();expect(saved.validation!.structural).toBe(true);
-    await expect(resolveDispatchModules(snapshot,[])).rejects.toMatchObject({code:'MODULE_MISSING'});
-    await expect(resolveDispatchModules(snapshot,[seeded.child,seeded.child])).rejects.toMatchObject({code:'MODULE_MISSING'});
-    await expect(resolveDispatchModules(snapshot,['.cbim/workspace/missing'])).rejects.toMatchObject({code:'MODULE_MISSING'});
+    await expect(resolveDispatchModules(snapshot,[])).rejects.toThrow('不重复的真实模块 ID');
+    await expect(resolveDispatchModules(snapshot,[seeded.child,seeded.child])).rejects.toThrow('不重复的真实模块 ID');
+    await expect(resolveDispatchModules(snapshot,['.cbim/workspace/missing'])).rejects.toThrow('模块不存在');
     const invalid={...snapshot,validation:{...snapshot.validation!,structural:false}};
     expect(resolveConversationAgent(invalid)).toMatchObject({agentId:'cbim:main',workspaceId:e.id,knowledgeRevision:snapshot.revision,source:'builtin',effectiveSkills:[]});
-    expect(()=>resolveConversationAgent({...invalid,workspaceId:''})).toThrowError(expect.objectContaining({code:'KNOWLEDGE_INVALID'}));
-    expect(()=>resolveConversationAgent({...invalid,revision:''})).toThrowError(expect.objectContaining({code:'KNOWLEDGE_INVALID'}));
-    await expect(resolveDispatchAgent(invalid,'cbim:main')).rejects.toMatchObject({code:'KNOWLEDGE_INVALID'});
-    await expect(resolveDispatchModules(invalid,[seeded.child])).rejects.toMatchObject({code:'KNOWLEDGE_INVALID'});
+    expect(()=>resolveConversationAgent({...invalid,workspaceId:''})).toThrowError('主会话身份登记需要有效工作区和知识版本');
+    expect(()=>resolveConversationAgent({...invalid,revision:''})).toThrowError('主会话身份登记需要有效工作区和知识版本');
+    await expect(resolveDispatchAgent(invalid,'cbim:main')).rejects.toThrow('派发需要通过结构校验的知识快照');
+    await expect(resolveDispatchModules(invalid,[seeded.child])).rejects.toThrow('派发需要通过结构校验的知识快照');
     expect((await w.Snapshot()).revision).toBe(saved.revision);
   }finally{await f.cleanup()}
 });

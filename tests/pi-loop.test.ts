@@ -1,3 +1,4 @@
+import { fixtureEngines } from './support/engine-instances';
 // project: module-owned integration coverage; keep the original scenario and cleanup semantics.
 import {it,expect} from 'vitest';
 import http from 'node:http';
@@ -6,7 +7,7 @@ import path from 'node:path';
 import {fixture} from './src/logic/application/support/helpers';
 import {seedTeam} from './src/logic/knowledge/service/support/team-fixture';
 import {LoopRuntime} from '../src/logic/execution/rules/index';
-import {PiEngine} from '../src/logic/execution/engines/pi/engine';
+import {PiEngine} from '../src/logic/engines/adapters/pi/engine';
 import {FileRunStorage} from '../src/logic/execution/storage/run-storage';
 import {guard} from '../src/logic/execution/platform/tool-guard';
 import {authorizeRunTool} from '../src/logic/tools/rules/policy/tool-policy';
@@ -65,11 +66,11 @@ it('rejects the old Application business entry while trusted Core Pi gates tools
           const reason=guard({name:native.name==='find'?'Glob':native.name,input:native.input},f.a);return {allow:!reason,reason};
         }});
       },
-      CreateEngine:()=>new PiEngine({
+      engines:fixtureEngines(()=>new PiEngine({
         process:{command:process.execPath,args:[path.resolve('node_modules/@earendil-works/pi-coding-agent/dist/bundle/rpc-entry.js')],env:{ELECTRON_RUN_AS_NODE:'1'}},
         ...options,agentHome,prompt:loopInstructions,
         knowledge:{list:async()=>service.List(),call:(name,args,signal)=>service.CallFromRun(name,args,false,signal)},
-      }),
+      })),
     });
     const first=await runtime.Start(task),result=await first.done;
     expect(result.status,JSON.stringify(result.events.at(-1))).toBe('completed');expect(result.acceptance).toBe('not_evaluated');

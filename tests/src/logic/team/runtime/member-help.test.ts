@@ -1,3 +1,4 @@
+import { fixtureEngines } from '../../../../support/engine-instances';
 import {runtimeToolGroup} from '../../execution/rules/support/runtime-tool-group';
 import {it,expect,vi} from 'vitest';
 import fs from 'node:fs/promises';
@@ -31,7 +32,7 @@ async function setup(mode:'help'|'hold'|'failed'|'close-error'|'write-first'|'po
   let wake=()=>{},stagedResolve=()=>{},closed=0;const staged=new Promise<void>(resolve=>{stagedResolve=resolve});
   const inspect=vi.fn<MemberExecutionPorts['Inspect']>(run=>storage.Read(path.join(directory,'runs',run.binding.taskId,run.binding.runId)));
   const prepare=vi.fn<()=>Awaited<ReturnType<MemberExecutionPorts['Prepare']>>>(()=>({model,Create:async(_run,_task,hooks)=>{
-    let context:EngineContext;return new LoopRuntime({storage,directory:path.join(directory,'runs'),AcquireLease:async()=>()=>{},OnEngineReady:hooks.OnEngineReady,OnEvent:hooks.OnEvent,ToolPolicy:async call=>({allow:true,effects:[call.name==='read'?'read':call.name==='write'?'business-write':'maintenance'],scope:{kind:'workspace',workspaceId:entry.id}}),CreateEngine:()=>({kind:'help-fixture',start:async value=>{context=value;await context.emit({type:'session.bound',data:{sessionId:context.nativeSessionId,sessionFile:path.join(directory,'native-'+context.nativeSessionId+'.jsonl')}})},stop:async()=>wake(),close:async()=>{closed++;if(mode==='close-error')throw Error('close failed')},run:async()=>{
+    let context:EngineContext;return new LoopRuntime({storage,directory:path.join(directory,'runs'),AcquireLease:async()=>()=>{},OnEngineReady:hooks.OnEngineReady,OnEvent:hooks.OnEvent,ToolPolicy:async call=>({allow:true,effects:[call.name==='read'?'read':call.name==='write'?'business-write':'maintenance'],scope:{kind:'workspace',workspaceId:entry.id}}),engines:fixtureEngines(()=>({kind:'help-fixture',start:async value=>{context=value;await context.emit({type:'session.bound',data:{sessionId:context.nativeSessionId,sessionFile:path.join(directory,'native-'+context.nativeSessionId+'.jsonl')}})},stop:async()=>wake(),close:async()=>{closed++;if(mode==='close-error')throw Error('close failed')},run:async()=>{
       if(mode==='write-first'){expect((await context.beforeTool({id:'write-1',name:'write',input:{path:'marker.txt',content:'once'}})).allow).toBe(true);await fs.writeFile(path.join(f.a,'marker.txt'),'once');await context.emit({type:'tool.finished',data:{id:'write-1',name:'write',result:jsonToolResult('write',{written:true}),isError:false}})}
       const read={id:'read-1',name:'read',input:{path:'src/app.ts'}};expect((await context.beforeTool(read)).allow).toBe(true);await context.emit({type:'tool.finished',data:{id:read.id,name:read.name,result:jsonToolResult('read',{verified:true}),isError:false}});
       const call={id:'help-1',name:'cbim_task_help',input:{kind:'missing_input',reason:' 缺少输出格式 ',question:' 输出格式是什么？ ',attemptedToolCallIds:[read.id]}};
@@ -39,7 +40,7 @@ async function setup(mode:'help'|'hold'|'failed'|'close-error'|'write-first'|'po
       if(mode==='post-denial')expect((await context.beforeTool({id:'after-help',name:'write',input:{path:'forbidden.txt',content:'not executed'}})).allow).toBe(false);
       if(mode==='hold'){await new Promise<void>(resolve=>{wake=resolve});return {status:'cancelled'}}
       return {status:mode==='failed'?'failed':'completed'};
-    }})});
+    }}))});
   }}));
   const release=vi.fn(),members=new MemberExecutionManager(owner,store,{Acquire:()=>release,Prepare:async()=>prepare(),owners:service.owners,WithEngineConfiguration:(reference,_options,use)=>f.app.engineModels.WithRuntimeConfiguration(reference,configuration=>use({model:configuration.profile,Prepare: prepare})),Inspect: inspect});await members.Initialize();let index=0;
   const assign=()=>service.DispatchTask({...identity,commandId:'assign-'+(++index),expectedParentRevision:1,task:{assigneeAgentId:'.cbim/team/dev',moduleIds:[moduleId],ownerSelection,goal:'完成业务目标',acceptance:[{id:'artifact',text:'真实产物'}],prerequisites:[]}},'cycle');

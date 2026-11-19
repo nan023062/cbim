@@ -10,7 +10,7 @@ import type { RepositoryToolTarget, RepositoryListOutput } from '../../bridge/co
 
 import type { ScopeContinuationView } from './useScopeContinuation';
 
-const resourceLabels = { connector: '链接器', team: '团队', agent: 'Agent', skill: 'Skill', architecture: '业务架构', module: 'Module', workflow: 'Workflow' };
+const resourceLabels = { engine: '引擎插件', workspace_template: '工作区模板', connector: '链接器', team: '团队', agent: 'Agent', skill: 'Skill', architecture: '业务架构', module: 'Module', workflow: 'Workflow' };
 
 /** 只展示实际授权目标和同版本目录页；资源导入是静态资料引用，不安装、应用或执行。 */
 export function ContinuationSourceMenu({ state }: { state: ScopeContinuationView })

@@ -1,3 +1,4 @@
+import { fixtureEngines } from '../../../../../support/engine-instances';
 import {expect,it} from 'vitest';
 import http from 'node:http';
 import fs from 'node:fs/promises';
@@ -5,7 +6,7 @@ import path from 'node:path';
 import os from 'node:os';
 import {randomUUID} from 'node:crypto';
 import {LoopRuntime,type TaskSpec} from '../../../../../../src/logic/execution/rules/index';
-import {PiEngine} from '../../../../../../src/logic/execution/engines/pi/engine';
+import {PiEngine} from '../../../../../../src/logic/engines/adapters/pi/engine';
 import {FileRunStorage} from '../../../../../../src/logic/execution/storage/run-storage';
 
 /** Real pinned Pi subprocess; the local SSE provider never sends a request to an external model. */
@@ -45,14 +46,14 @@ it('rejects malformed internal tool output before Pi persists it and can resume 
     runtime=new LoopRuntime({
       storage:new FileRunStorage(),directory:path.join(directory,'runs'),AcquireLease:async()=>()=>{},
       ToolPolicy:async call=>({allow:call.name==='cbim_invalid_result',effects:['read']}),
-      CreateEngine:()=>new PiEngine({
+      engines:fixtureEngines(()=>new PiEngine({
         process:{command:process.execPath,args:[path.resolve('node_modules/@earendil-works/pi-coding-agent/dist/bundle/rpc-entry.js')],env:{ELECTRON_RUN_AS_NODE:'1'}},
         provider:'cbim-test',model:'cbim-test-model',agentHome,prompt:'Exercise the internal tool result boundary.',turnTimeoutMs:15000,
         knowledge:{
           list:async()=>[{name:'cbim_invalid_result',description:'Regression fixture returning a malformed text block.',inputSchema:{type:'object',properties:{},additionalProperties:false}}],
           call:async()=>{toolCalls++;return {content:[{type:'text'}]}},
         },
-      }),
+      })),
     });
     const task:TaskSpec={taskId:randomUUID(),workspaceId:randomUUID(),root,mode:'chat',goal:'Call the regression fixture and continue after its error.',moduleIds:[],acceptance:[]};
     const first=await runtime.Start(task),result=await first.done;

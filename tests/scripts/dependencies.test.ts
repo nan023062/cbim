@@ -47,7 +47,7 @@ test.each([
   ['src/logic/models/config.ts','src/logic/engines/index.ts',false],
   ['src/logic/models/service/llm-profiles.ts','src/logic/engines/service/index.ts',false],
   ['src/logic/engines/index.ts','src/logic/engines/service/index.ts',false],
-  ['src/logic/engines/catalog/supported-engines.ts','src/logic/execution/engines/pi/engine.ts',false],
+  ['src/logic/engines/catalog/supported-engines.ts','src/logic/engines/adapters/pi/engine.ts',false],
   ['src/bridge/server/bootstrap/desktop.ts','src/logic/engines/index.ts',false],
   ['src/logic/updates/service/runtime-manifest.ts','src/logic/engines/index.ts',false],
   ['src/logic/team/rules/agent-runtime.ts','src/logic/engines/service/index.ts',false],
@@ -87,27 +87,27 @@ test.each([
   ['src/core/io/json.ts','src/logic/knowledge/rules/types.ts',false],
   ['src/logic/application/application.ts','src/logic/tasks/rules/unregistered.ts',false],
   ['src/logic/tasks/rules/graph.ts','src/logic/models/index.ts',true],
-  ['src/logic/tasks/rules/scope-view.ts','src/logic/team/rules/team-session.ts',true],
+  ['src/logic/tasks/rules/scope-view.ts','src/framework/office/session.ts',true],
   ['src/logic/team/runtime/member-execution.ts','src/logic/tasks/rules/member-topic-context.ts',true],
   ['src/logic/team/runtime/member-execution.ts','src/logic/tasks/rules/topic-interruption.ts',true],
   ['src/logic/dispatch/runtime/dispatch-service.ts','src/logic/tasks/runtime/topic-interruption-service.ts',true],
   ['src/bridge/contracts/ipc-loop.ts','src/logic/tasks/rules/topic-interruption.ts',true],
   ['src/logic/team/runtime/member-execution.ts','src/logic/tasks/rules/member-topic-context-rules.ts',true],
-  ['src/logic/team/rules/team-session.ts','src/logic/team/runtime/agent-manager.ts',false],
+  ['src/framework/office/session.ts','src/logic/team/runtime/agent-manager.ts',false],
 ] as const)('domain migration preserves rule/service boundaries: %s -> %s',(from,to,allowed)=>{
   const spec=path.posix.relative(path.posix.dirname(from),to);
   expect(audit({[from]:`import type {Value} from '${spec.startsWith('.')?spec:'./'+spec}';`,[to]:'export type Value=string;'}).ok).toBe(allowed);
 });
 
 test.each([
-  ['src/logic/application/application.ts','src/logic/resources/service/index.ts',true],
-  ['src/logic/resources/service/resource-store.ts','src/core/io/locking.ts',true],
-  ['src/logic/resources/service/resource-repository.ts','src/logic/workspace/service/paths.ts',false],
-  ['src/logic/resources/service/resource-store.ts','src/bridge/contracts/resources.ts',false],
-  ['src/logic/tools/runtime/repository-tools.ts','src/logic/resources/service/index.ts',false],
-  ['src/logic/resources/index.ts','src/logic/resources/service/index.ts',false],
-  ['src/view/resources/example.ts','src/logic/resources/index.ts',false],
-  ['src/logic/application/application.ts','src/logic/resources/service/resource-store.ts',false],
+  ['src/logic/application/application.ts','src/resource/service/index.ts',true],
+  ['src/resource/service/resource-store.ts','src/core/io/locking.ts',true],
+  ['src/resource/service/resource-repository.ts','src/logic/workspace/service/paths.ts',false],
+  ['src/resource/service/resource-store.ts','src/bridge/contracts/resources.ts',false],
+  ['src/logic/tools/runtime/repository-tools.ts','src/resource/service/index.ts',false],
+  ['src/resource/index.ts','src/resource/service/index.ts',false],
+  ['src/view/resources/example.ts','src/resource/index.ts',false],
+  ['src/logic/application/application.ts','src/resource/service/resource-store.ts',false],
 ] as const)('资源迁移边界 %s → %s = %s',(from,to,allowed)=>{
   const spec=path.posix.relative(path.posix.dirname(from),to);
   expect(audit({[from]:`import type {Value} from '${spec.startsWith('.')?spec:'./'+spec}';`,[to]:'export type Value=string;'}).ok).toBe(allowed);
@@ -118,7 +118,7 @@ test.each([
   ['src/logic/tools/rules/scope-schema.ts','src/logic/feedback/index.ts',true],
   ['src/logic/tools/runtime/feedback-tools.ts','src/logic/feedback/index.ts',true],
   ['src/logic/tools/runtime/feedback-tools.ts','src/logic/feedback/service/index.ts',false],
-  ['src/logic/execution/engines/pi/engine.ts','src/logic/feedback/index.ts',false],
+  ['src/logic/engines/adapters/pi/engine.ts','src/logic/feedback/index.ts',false],
   ['src/logic/application/application.ts','src/logic/feedback/service/github-feedback.ts',false],
   ['src/logic/feedback/contracts.ts','src/logic/tools/rules/scope-schema.ts',false],
   ['src/logic/feedback/index.ts','src/logic/feedback/service/index.ts',false],
@@ -181,14 +181,14 @@ test('Web 桥仅公开设置协议，便携入口禁止加载平台或网络实�
 test.each([
   ['src/logic/application/assembly/app.ts','src/logic/models/service/index.ts',true],
   ['src/logic/fixtures/team/example.ts','src/logic/models/index.ts',true],
-  ['src/logic/execution/engines/example.ts','src/logic/models/index.ts',true],
+  ['src/logic/engines/adapters/example.ts','src/logic/models/index.ts',true],
   ['src/logic/execution/context/example.ts','src/logic/models/index.ts',true],
   ['src/bridge/contracts/models.ts','src/logic/models/index.ts',true],
   ['src/bridge/contracts/other.ts','src/logic/models/index.ts',false],
   ['src/bridge/contracts/models.ts','src/logic/models/service/index.ts',false],
   ['src/bridge/client/models.ts','src/logic/models/index.ts',false],
   ['src/view/settings/models.ts','src/logic/models/index.ts',false],
-  ['src/logic/execution/engines/example.ts','src/logic/models/service/index.ts',false],
+  ['src/logic/engines/adapters/example.ts','src/logic/models/service/index.ts',false],
   ['src/logic/execution/context/example.ts','src/logic/models/service/index.ts',false],
   ['src/logic/application/assembly/app.ts','src/logic/models/service/llm-profiles.ts',false],
   ['src/logic/application/assembly/app.ts','src/logic/models/config.ts',false],
@@ -264,7 +264,7 @@ test('调度器仅可组合 portable utility 公开入口',()=>{
 test('foundations is independent even for type dependencies; Main consumes only public web entries',()=>{
   const foundation='src/core/web/node.ts';
   expect(audit({[foundation]:'export const value=1;', 'src/bridge/server/a.ts':"import {value} from '../../core/web/node';"}).ok).toBe(true);
-  for(const target of ['logic/knowledge/rules','logic/application','logic/execution/engines','view','bridge/contracts']){
+  for(const target of ['logic/knowledge/rules','logic/application','logic/engines/adapters','view','bridge/contracts']){
     const relative=path.posix.relative(path.posix.dirname(foundation),`src/${target}/a.ts`);
     const result=audit({[foundation]:`import type {Value} from '${relative}';`,[`src/${target}/a.ts`]:'export interface Value {}'});
     expect(result.unresolved).toEqual([]);
@@ -489,7 +489,7 @@ test('snapshot contracts and domain views reject reverse or private dependencies
     ['src/logic/budget/rules/model-request-budget-storage.ts','src/logic/dispatch/rules/dispatch-storage.ts'],
     ['src/logic/budget/runtime/model-request-budget-service.ts','src/logic/dispatch/rules/dispatch-storage.ts'],
     ['src/logic/execution/rules/engine-tools.ts','src/logic/evidence/rules/progress-tools.ts'],
-    ['src/logic/execution/rules/index.ts','src/logic/execution/engines/pi/engine.ts'],
+    ['src/logic/execution/rules/index.ts','src/logic/engines/adapters/pi/engine.ts'],
     ['src/view/execution-view/WorkStatus.tsx','src/view/tasks/useExecutionRecovery.ts'],
     ['src/view/execution-view/ToolTimeline.tsx','src/view/conversation/Conversation.tsx'],
     ['src/view/tasks/MemberRunTranscript.tsx','src/view/conversation/ConversationTurn.tsx'],
@@ -556,7 +556,7 @@ test('P2 shared rendering, IPC contracts and history storage reject business con
 });
 
 test('engines may use portable utility but not other foundation capabilities',()=>{
-  const from='src/logic/execution/engines/pi/rpc.ts';
+  const from='src/logic/engines/adapters/pi/rpc.ts';
   for(const target of ['utility/index.ts','utility/node.ts','utility/strings.ts','utility/graphs.ts','files/index.ts','web/index.ts']){
     const to=foundationFile(target),relative=path.posix.relative(path.posix.dirname(from),to);
     expect(audit({[from]:`import type {T} from '${relative}';`,[to]:'export type T=string;'}).ok).toBe(target==='utility/index.ts');
@@ -564,11 +564,11 @@ test('engines may use portable utility but not other foundation capabilities',()
 });
 
 test('concrete engines depend on domain contracts; only execution assembly may select engines',()=>{
-  const engine='src/logic/execution/engines/pi/engine.ts',contract='src/logic/execution/rules/types.ts';
-  expect(audit({[engine]:"import type {T} from '../../rules/types';",[contract]:'export interface T {}'}).ok).toBe(true);
-  const reversed=audit({[contract]:"import type {T} from '../engines/pi/engine';",[engine]:'export interface T {}'});
+  const engine='src/logic/engines/adapters/pi/engine.ts',contract='src/logic/execution/rules/types.ts';
+  expect(audit({[engine]:"import type {T} from '../../../execution/rules/types';",[contract]:'export interface T {}'}).ok).toBe(true);
+  const reversed=audit({[contract]:"import type {T} from '../../engines/adapters/pi/engine';",[engine]:'export interface T {}'});
   expect(reversed.violations).toHaveLength(1);expect(reversed.ok).toBe(false);
-  const bypass=audit({'src/logic/application/assembly/entry.ts':"import type {T} from '../../../logic/execution/engines/pi/engine';",[engine]:'export interface T {}'});
+  const bypass=audit({'src/logic/application/assembly/entry.ts':"import type {T} from '../../../logic/engines/adapters/pi/engine';",[engine]:'export interface T {}'});
   expect(bypass.violations).toHaveLength(1);expect(bypass.ok).toBe(false);
   for(const directory of ['execution/assembly','team/runtime']){
     const from='src/logic/'+directory+'/entry.ts',spec=path.posix.relative(path.posix.dirname(from),engine);
@@ -578,7 +578,7 @@ test('concrete engines depend on domain contracts; only execution assembly may s
 });
 test('记忆包仅私有存储实现可用原子文件机制，不能扩散到其它适配器',()=>{
   const target='src/core/io/text-files.ts';
-  for(const from of ['src/logic/execution/engines/memory/storage.ts','src/logic/execution/engines/memory/engine.ts','src/logic/execution/engines/pi/engine.ts']){
+  for(const from of ['src/logic/engines/adapters/memory/storage.ts','src/logic/engines/adapters/memory/engine.ts','src/logic/engines/adapters/pi/engine.ts']){
     const spec=path.posix.relative(path.posix.dirname(from),target),result=audit({[from]:`import {atomic} from '${spec}';`,[target]:'export const atomic=()=>{};'});
     expect(result.ok).toBe(from.endsWith('/memory/storage.ts'));
   }

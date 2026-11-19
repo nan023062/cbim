@@ -1,7 +1,7 @@
 import {expect,it,vi} from 'vitest';
 import {runtimeEngineTools} from '../../../../../src/logic/execution/rules/engine-tools';
-import {claudeTools} from '../../../../../src/logic/execution/engines/claude/tools';
-import {codexTools} from '../../../../../src/logic/execution/engines/codex/tools';
+import {claudeTools} from '../../../../../src/logic/engines/adapters/claude/tools';
+import {codexTools} from '../../../../../src/logic/engines/adapters/codex/tools';
 import {engineInstructions} from '../../../../../src/logic/execution/rules/engine-instructions';
 import {memberToolCapabilities} from '../../../../../src/logic/execution/rules/capabilities/member-tool-capabilities';
 import type {EngineContext} from '../../../../../src/logic/execution/rules/types';
@@ -36,4 +36,18 @@ it('使用说明随可信业务能力装配，普通引擎上下文不获得不�
   const port={List:async()=>[],Call:async()=>({content:[{type:'text' as const,text:'{}'}]})};
   c.capabilities=memberToolCapabilities({memberHelpTools:port,memberCheckpointTools:port,validationTools:port});
   const text=engineInstructions(c,'prompt',false);expect(text).toContain('cbim_task_help');expect(text).toContain('cbim_task_checkpoint');expect(text).toContain('cbim_validation_run');
+});
+
+it('rejects a Codex native alias collision before either route executes', async () => {
+  const port = (name: string) => ({ ...empty, list: async () => [{ name, inputSchema: {} }] });
+  await expect(codexTools(context(), port('cbim_native_read'), port('read'), true, async () => {})).rejects.toThrow('重复');
+});
+
+it('captures injected tools once when filtering the knowledge catalog', async () => {
+  const list = vi.fn(async () => [{ name: 'cbim_injected', inputSchema: {} }]);
+  const knowledge = { ...empty, list: async () => [{ name: 'cbim_hidden', inputSchema: {} }] };
+  const tools = await runtimeEngineTools({ capabilities: [{ id: 'test', tools: { ...empty, list } }] }, knowledge, () => false);
+  expect((await tools.list()).map(tool => tool.name)).toEqual(['cbim_injected']);
+  expect(list).toHaveBeenCalledOnce();
+  expect(() => tools.call('cbim_hidden', {}, new AbortController().signal)).toThrow('未注册');
 });

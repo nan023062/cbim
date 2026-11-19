@@ -9,7 +9,7 @@ import type { AgentBusinessRun } from '../../execution/rules/business-run';
 
 import type { AgentInstance, AgentSessionBinding } from '../../team/rules/agent-types';
 
-import type { TeamSession } from '../../team/rules/team-session';
+import type { OfficeMemberSession } from '../../../framework/office/session';
 
 import type { AgentRef, GraphIdentity, GraphEventBatch, GraphSnapshot, GraphCursor, GraphDelta } from '../../tasks/rules/graph-types';
 
@@ -119,7 +119,7 @@ export interface DispatchState
   workspaceId: string;
 
   /** 办公室内的长期逻辑对话；主/子角色共用，独立于按任务冻结的原生执行通道。旧日志缺省不迁移。 */
-  teamSessions?: TeamSession[];
+  teamSessions?: OfficeMemberSession[];
 
   members: AgentInstance[];
 
@@ -223,7 +223,7 @@ export interface DispatchMutation<T = unknown>
   agentBusinessRuns?: AgentBusinessRun[];
 
   /** 与主根/成员登记或首次派发同事务建立长期身份；任务关闭不移除，不承载正文副本。 */
-  teamSessions?: TeamSession[];
+  teamSessions?: OfficeMemberSession[];
 
   /** 一次只保存一条预留/发送/结算事实，不与业务、权限或周期变更混写。 */
   modelRequestBudgetChanges?: ModelRequestBudgetChange[];

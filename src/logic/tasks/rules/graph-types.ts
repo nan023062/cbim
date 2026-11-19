@@ -118,6 +118,8 @@ export type TaskNode =
 
     assignee: AgentRef;
 
+    workerId?: string;
+
     modules: ModuleBinding[];
 
     /** 创建时的显式流程选择；缺省沿旧默认模式，不代表可任意换选，已有任务不可改写。 */
@@ -360,3 +362,12 @@ export type GraphDelta = |
 
   cursor: GraphCursor
 };
+
+/** 旧任务和无登记岗位的派发沿用办公室内的默认岗位。 */
+export function taskWorkerId(task: Pick<TaskNode, 'workerId' | 'assignee'>): string {
+  return task.workerId ?? defaultWorkerId(task.assignee.agentId);
+}
+
+export function defaultWorkerId(agentId: string): string {
+  return 'role:' + agentId;
+}

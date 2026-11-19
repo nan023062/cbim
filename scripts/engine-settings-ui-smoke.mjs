@@ -23,7 +23,7 @@ const {EngineSettings}=await import('/src/view/settings/EngineSettings.tsx');cre
 const server=await createServer({root,configFile:false,esbuild:{jsx:'automatic'},server:{host:'127.0.0.1',port:0},logLevel:'error'});let browser;
 try{
   await server.listen();browser=await chromium.launch({channel:'msedge',headless:true});const page=await browser.newPage({viewport:{width:390,height:844}}),errors=[];page.on('pageerror',error=>errors.push(error.message));
-  await page.goto('http://127.0.0.1:'+server.httpServer.address().port+'/test-results/engine-settings-ui.html');await page.getByText('当前可用模型：测试供应商 / 可用生成模型',{exact:true}).first().waitFor();
+  await page.goto('http://127.0.0.1:'+server.httpServer.address().port+'/test-results/engine-settings-ui.html');await page.getByRole('combobox',{name:'选择引擎'}).selectOption('pi');await page.getByText('当前可用模型：测试供应商 / 可用生成模型',{exact:true}).first().waitFor();
   const pi=page.getByRole('article').filter({has:page.getByRole('heading',{name:'Pi',exact:true})});await pi.getByRole('button',{name:'更新引擎',exact:true}).click();await page.getByText('引擎已准备并启用；正在运行的任务保持原版本。',{exact:true}).waitFor();
   await pi.getByRole('button',{name:'停用',exact:true}).click();await pi.getByRole('button',{name:'启用',exact:true}).waitFor();await pi.getByRole('button',{name:'移除引擎',exact:true}).click();await page.getByRole('alert').filter({hasText:'仍被启用的 Codex'}).waitFor();
   const calls=await page.evaluate(()=>window.fixture.calls);assert.equal(calls.filter(call=>call.action==='engines.install').length,1);assert.equal(calls.find(call=>call.action==='engines.install').args.identity,'b'.repeat(64));assert.deepEqual(errors,[]);

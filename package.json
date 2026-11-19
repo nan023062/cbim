@@ -30,6 +30,7 @@
     "make": "electron-forge make",
     "make:desktop": "node scripts/make-desktop.mjs",
     "make:resources": "tsx scripts/make-resources.ts",
+    "make:plugin": "tsx scripts/make-plugin.ts",
     "make:engines": "tsx scripts/make-engines.ts",
     "verify:runtime": "tsx scripts/verify-runtime.ts",
     "publish:runtime": "tsx scripts/publish-runtime.ts",

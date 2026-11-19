@@ -22,6 +22,7 @@ import { runtimeScopeMatches, runtimeTaskMatches, runtimeMemberMatches, runtimeT
 
 import { RuntimeScopeRow, RuntimeTaskRow, RuntimeMemberRow, RuntimeRunRow, RuntimeAdmissionRow, runtimePrice, runtimeAvailability, type RuntimeOpen } from './RuntimeRows';
 
+import { LiveMonitor } from './LiveMonitor';
 import './runtime-overview.css';
 
 /** 默认只挂载前 50 行；查看更多只展开已读快照，不回读日志或创建任务。 */
@@ -85,6 +86,7 @@ export function RuntimeOverview({ onOpen }: { onOpen: RuntimeOpen })
 
   return <section className="runtime-overview" data-testid="runtime-overview" data-runtime-revision={data?.cursor.revision} data-runtime-stream={data?.cursor.streamId}>
     <header className="runtime-header"><div><h1>运行管理</h1><p>查看整个应用的本地 Agent 活动与任务压力，返回原会话处理。</p></div><button onClick={() => void refreshRuntime()}><Icon name="refresh" size={16} />刷新运行状态</button></header>
+    {visible && <LiveMonitor />}
     {state.error && <p role="alert">{state.error}{data ? '；保留上次快照，可能已过期。' : ''}</p>}{!visible && <p role="status">页面隐藏，读取已暂停。</p>}
     {!data ? <p role="status">{state.error ? '暂未取得可信运行数据。' : '正在读取运行状态…'}</p> : <>
       <RuntimeMetrics data={data} />

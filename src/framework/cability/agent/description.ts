@@ -28,16 +28,18 @@ export interface AgentDescription
 }
 
 /** 旧调用可以仅提供指令；新岗位装配必须提供完整描述。 */
-export type AgentDefinition = Omit<AgentDescription, 'position' | 'principles' | 'references' | 'effectiveSkills'> &
-  Partial<Pick<AgentDescription, 'position' | 'principles' | 'references' | 'effectiveSkills'>>;
+export type AgentDefinition = Omit<AgentDescription, 'position' | 'principles' | 'references' | 'effectiveSkills'> & Partial<Pick<AgentDescription, 'position' | 'principles' | 'references' | 'effectiveSkills'>>;
 
 export function agentRoleInstructions(role: AgentDefinition): string
 {
   const sections = [role.position && '岗位职责：' + role.position, role.principles, role.instructions];
+
   if (role.references?.length)
     sections.push('岗位参考：\n' + role.references.join('\n'));
+
   for (const skill of role.effectiveSkills ?? [])
     sections.push('技能 ' + skill.skillId + '\n' + skill.content);
+
   return sections.filter(Boolean).join('\n\n');
 }
 
@@ -45,6 +47,9 @@ export function agentRoleInstructions(role: AgentDefinition): string
 export function readRoleSkill(role: AgentDefinition, skillId: string)
 {
   const skill = role.effectiveSkills?.find(item => item.skillId === skillId);
-  if (!skill) throw new Error('当前岗位没有采用该技能');
+
+  if (!skill)
+    throw new Error('当前岗位没有采用该技能');
+
   return skill;
 }

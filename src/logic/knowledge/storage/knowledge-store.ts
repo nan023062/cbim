@@ -288,7 +288,7 @@ Agent 可用 Skill 为自身 Skill 与沿父链递归到根 Team 的全部祖先
 
 workspace/ 是业务根容器，一级 Module 是按领域划分的工程节点，以下是各工程的模块节点。
 每个 Module 通过 module.json.workflows 登记自己的 Workflow，正文位于本模块 workflows/<slug>/workflow.md。
-Agent 任务基于明确的 Module，仅使用该模块自身 Workflow，不继承父模块、工程节点或其他模块的流程。
+Agent 任务基于明确的 Module，可使用该模块及其祖先节点声明的全部 Workflow。
 workspace 根不创建共享 Workflow 清单或流程目录。
 
 ## 初始内容

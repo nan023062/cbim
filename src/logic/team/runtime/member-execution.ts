@@ -19,7 +19,8 @@
  */
 import { workspaceMemberEngine, type WorkspaceMemberModelRef } from '../rules/workspace-member';
 
-import { teamSessionBusy } from '../rules/team-session';
+import { workerBusyForTask } from '../../tasks/rules/dispatch-invariants';
+import { taskWorkerId } from '../../tasks/rules/graph-types';
 
 import { pendingTopicInterruption } from '../../tasks/rules/topic-interruption';
 
@@ -120,6 +121,7 @@ export interface MemberExecutionPorts
   owners?: OwnerExecutionService;
 
   /** 模型短锁先提供公开配置；预算和占用通过后才调用 prepare，不在 Store 中重新排配置队列。 */
+  OfficePermission?(rootSessionId: string, scopeId?: string): import('../../execution/admission/admission-wait').OfficePermissionReader | undefined;
   WithEngineConfiguration?<T>(model: OwnerExecutionBinding['model'] & Pick<WorkspaceMemberModelRef, 'engine' | 'modelRoles'>, options: MemberStartOptions, use: (locked: { model: ResolvedEngineModel['profile']; Prepare(): PreparedEngine }) => Promise<T>): Promise<T>;
 
   /** 独立只读文件复核能力，不隐式采集旧日志或运行模型。 */
@@ -144,7 +146,7 @@ export interface MemberExecutionPorts
   Acquire(key: string, permission: ChatPermission, agentInstanceId?: string, context?: { task: TaskNode; commandId: string; wait?: ExecutionAdmissionWait }): () => void;
 
   /** 仅新命令解析一次模型；公开参数落盘，凭据只由 create 闭包持有，不进入图或日志。 */
-  Prepare(options: MemberStartOptions): Promise<{ model: ResolvedEngineModel['profile']; /** 与本轮实际引擎注册参数一致的工具清单；仅能力预检，不能替代权限或批准。 */ availableTools?: readonly string[]; /** 范围模式独立能力清单；缺省不能让冻结任务回退原生工具。 */ scopedTools?: readonly string[]; /** 工厂实际提供的受限验证器；仅有名称不能替代冻结要求、文件端口或授权。 */ availableValidators?: readonly string[]; Create(run: DispatchRun, task: TaskNode, hooks: { OnEvent(event: StoredEvent): void; OnEngineReady(input: { taskId: string; runId: string; sessionFile?: string; nativeSessionId?: string }): Promise<void>; RequestApproval(call: ToolCall): Promise<ToolDecision>; RequestQuestion(args: unknown, signal: AbortSignal): Promise<unknown> }): Promise<LoopRuntime>; }>;
+  Prepare(options: MemberStartOptions): Promise<{ model: ResolvedEngineModel['profile']; /** 与本轮实际引擎注册参数一致的工具清单；仅能力预检，不能替代权限或批准。 */ availableTools?: readonly string[]; /** 范围模式独立能力清单；缺省不能让冻结任务回退原生工具。 */ scopedTools?: readonly string[]; /** 工厂实际提供的受限验证器；仅有名称不能替代冻结要求、文件端口或授权。 */ availableValidators?: readonly string[]; Create(run: DispatchRun, task: TaskNode, hooks: { ReadPermission?: ExecutionAdmissionWait['ReadPermission']; PermissionRevision?: ExecutionAdmissionWait['PermissionRevision']; OnEvent(event: StoredEvent): void; OnEngineReady(input: { taskId: string; runId: string; sessionFile?: string; nativeSessionId?: string }): Promise<void>; RequestApproval(call: ToolCall): Promise<ToolDecision>; RequestQuestion(args: unknown, signal: AbortSignal): Promise<unknown> }): Promise<LoopRuntime>; }>;
 
   /** 读取指定 run 的真实日志，校验通道安全续接；不得用最新运行或内存猜测替代。 */
   Inspect(run: DispatchRun): Promise<RunSummary>;
@@ -425,10 +427,12 @@ export class MemberExecutionManager
 
       assertCurrent();
 
+      let permissionSource: import('../../execution/admission/admission-wait').OfficePermissionReader | undefined;
       const receipt = await this.ports.owners.WithSnapshot(async (snapshot, hint) =>
       {
         const hinted = memberTask(hint, input.rootSessionId, input.taskId).task;
 
+        permissionSource = hint.scopes?.some(scope => scope.scopeId === hinted.scopeId && scope.recovery) ? undefined : wait?.ReadPermission ? wait : this.ports.OfficePermission?.(input.rootSessionId, hinted.scopeId);
         if (!hinted.ownerBinding && !hinted.fallbackBinding)
           throw new Error('旧任务没有负责岗位绑定');
 
@@ -448,7 +452,7 @@ export class MemberExecutionManager
           throw new Error('续执行原运行不存在');
 
         // 续执行沿原权限和超时准备工具能力；调用方不能用新 options 改变已冻结的运行约束。
-        const engineOptions: MemberStartOptions = resuming ? { profileId: model.profileId, model: model.modelId, permission: prior!.permission, turnTimeoutMs: prior!.turnTimeoutMs } : input.options;
+        const engineOptions: MemberStartOptions = resuming ? { profileId: model.profileId, model: model.modelId, permission: permissionSource?.ReadPermission?.() ?? prior!.permission, turnTimeoutMs: prior!.turnTimeoutMs } : { ...input.options, permission: permissionSource?.ReadPermission?.() ?? input.options.permission };
 
         return this.ports.WithEngineConfiguration!(model, engineOptions, locked => this.store.Transact<MemberStartReceipt | ScopeBudgetRejected>(this.Command(resuming ? 'member.resume' : 'member.start', input), async state =>
         {
@@ -492,7 +496,7 @@ export class MemberExecutionManager
           if (member.activeRunId)
             throw new Error('该成员正在处理另一项任务');
 
-          if (teamSessionBusy(state.teamSessions ?? [], state.runs ?? [], { workspaceId: input.workspaceId, rootSessionId: input.rootSessionId, agentId: member.agentId }))
+          if (workerBusyForTask(state.teamSessions ?? [], state.runs ?? [], state.graphs, task))
             throw new Error('该办公室的 Agent 正在处理另一项任务，本项等待其完成');
 
           const assignment = state.outbox.find(m => m.kind === 'assignment' && m.taskId === task.taskId && m.identity.rootSessionId === input.rootSessionId && m.delivery === 'pending' && !!m.resumeFrom === resuming);
@@ -556,9 +560,9 @@ export class MemberExecutionManager
           if (admitted?.rejected)
             return { scopes: [admitted.scope], receipt: admitted.rejected };
 
-          const options: MemberStartOptions = resuming ? { profileId: previous!.model.id, model: previous!.model.model, permission: previous!.permission, turnTimeoutMs: previous!.turnTimeoutMs } : input.options;
+          const options: MemberStartOptions = resuming ? { profileId: previous!.model.id, model: previous!.model.model, permission: permissionSource?.ReadPermission?.() ?? previous!.permission, turnTimeoutMs: previous!.turnTimeoutMs } : { ...input.options, permission: permissionSource?.ReadPermission?.() ?? input.options.permission };
 
-          release = this.ports.Acquire(runId, options.permission, member.agentInstanceId, { task, commandId: input.commandId, wait });
+          release = this.ports.Acquire(runId, permissionSource?.ReadPermission && !scope?.recovery ? 'execute' : options.permission, member.agentInstanceId, { task, commandId: input.commandId, wait });
 
           // 取得名额不代表后续 await 期间仍获准启动；停止不能等到 claim 后才生效。
           const prepared = await prepareDispatchExecutionContext(this.owner, task, snapshot, task.ownerBinding ? state.workspaceMembers!.find(member => member.memberId === task.ownerBinding!.memberId) : undefined);
@@ -596,7 +600,7 @@ export class MemberExecutionManager
 
           const leaseEpoch = member.leaseEpoch + (resuming ? 1 : 0);
 
-          const logical = state.teamSessions?.find(value => value.rootSessionId === input.rootSessionId && value.agentId === member.agentId);
+          const logical = state.teamSessions?.find(value => value.officeId === input.rootSessionId && value.workerId === taskWorkerId(task));
 
           const topicContext = scope && logical ? createMemberTopicContext(task, scope, graph, logical) : undefined;
 
@@ -634,7 +638,8 @@ export class MemberExecutionManager
 
         this.handles.set(task.taskId, handle);
 
-        handle.done = this.Execute(run, task, engine, handle, release!);
+        const unsubscribe = permissionSource?.OnPermissionChange?.(() => this.approvals.Cancel(task.taskId, 'Office 权限已变更'));
+        handle.done = this.Execute(run, task, engine, handle, release!, permissionSource).finally(() => unsubscribe?.());
 
         // 结算失败保留活动占用并阻止后续任务；不能吞掉失败后伪装空闲。
         void handle.done.catch(() => { });
@@ -653,7 +658,7 @@ export class MemberExecutionManager
     }
   }
 
-  private async Execute(run: DispatchRun, task: TaskNode, engine: PreparedEngine, handle: Handle, release: () => void)
+  private async Execute(run: DispatchRun, task: TaskNode, engine: PreparedEngine, handle: Handle, release: () => void, permissionSource?: import('../../execution/admission/admission-wait').OfficePermissionReader)
   {
     let summary: RunSummary | undefined,
       error: string | undefined;
@@ -693,6 +698,7 @@ export class MemberExecutionManager
       }
 
       handle.runtime = await engine.Create(run, task, {
+        ReadPermission: permissionSource?.ReadPermission, PermissionRevision: permissionSource?.PermissionRevision,
         OnEvent: event => { this.eventStreams.Append(run, spec, event); this.Emit(event) }, OnEngineReady: input => this.Ready(run, input.sessionFile, input.nativeSessionId),
         RequestApproval: call => this.approvals.Request(task.taskId, call), RequestQuestion: (args, signal) => this.questions.Ask(task.taskId, args, signal),
       });

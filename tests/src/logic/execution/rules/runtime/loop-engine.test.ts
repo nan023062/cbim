@@ -1,3 +1,4 @@
+import { fixtureEngines } from '../../../../../support/engine-instances';
 import {runtimeToolGroup} from '../support/runtime-tool-group';
 import {RunJournal} from '../../../../../../src/logic/execution/storage/run-journal';
 import {FileRunStorage} from '../../../../../../src/logic/execution/storage/run-storage';
@@ -11,7 +12,7 @@ import {LoopRuntime,type AgentEngine,type EngineContext,type TaskSpec} from '../
 async function setup(factory:()=>AgentEngine,describeTool?:ConstructorParameters<typeof LoopRuntime>[0]['DescribeTool'],normalizeToolInput?:ConstructorParameters<typeof LoopRuntime>[0]['NormalizeToolInput']){
   const directory=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-loop-unit-'));let locked=false;
   const task:TaskSpec={taskId:'task-a',workspaceId:'workspace-a',root:directory,goal:'Implement a tested feature',moduleIds:[],acceptance:['Tests pass']};
-  const runtime=new LoopRuntime({storage:new FileRunStorage(),directory,CreateEngine:factory,DescribeTool: describeTool,NormalizeToolInput: normalizeToolInput,AcquireLease:async()=>{if(locked)throw Error('locked');locked=true;return()=>{locked=false}},ToolPolicy:async()=>({allow:true})});
+  const runtime=new LoopRuntime({storage:new FileRunStorage(),directory,engines:fixtureEngines(factory),DescribeTool: describeTool,NormalizeToolInput: normalizeToolInput,AcquireLease:async()=>{if(locked)throw Error('locked');locked=true;return()=>{locked=false}},ToolPolicy:async()=>({allow:true})});
   return {runtime,task,directory,cleanup:async()=>{await runtime.Close();await fs.rm(directory,{recursive:true,force:true})}};
 }
 class StubEngine implements AgentEngine {

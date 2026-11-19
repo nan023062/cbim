@@ -1,3 +1,4 @@
+import { fixtureEngines } from '../../../../../support/engine-instances';
 import {expect,it} from 'vitest';
 import fs from 'node:fs/promises';
 import os from 'node:os';
@@ -18,7 +19,7 @@ async function fixture(){
   const task:TaskSpec={taskId:'main-session',workspaceId:'workspace',root:directory,goal:'Review current project',moduleIds:[],acceptance:[],mode:'chat',agentId:'cbim:main'};
   let leases=0;
   const create=(conversationBinding?:ConversationAgentBinding)=>{
-    const runtime=new LoopRuntime({directory,conversationBinding,storage:new FileRunStorage(),AcquireLease:async()=>{leases++;return()=>{leases--}},ToolPolicy:async()=>({allow:false}),CreateEngine:()=>{const engine=new Engine();engines.push(engine);return engine}});
+    const runtime=new LoopRuntime({directory,conversationBinding,storage:new FileRunStorage(),AcquireLease:async()=>{leases++;return()=>{leases--}},ToolPolicy:async()=>({allow:false}),engines:fixtureEngines(()=>{const engine=new Engine();engines.push(engine);return engine})});
     runtimes.push(runtime);return runtime;
   };
   return {directory,task,engines,create,leases:()=>leases,cleanup:async()=>{

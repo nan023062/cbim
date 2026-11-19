@@ -1,3 +1,4 @@
+import { fixtureEngines } from '../../../../support/engine-instances';
 // logic/conversation/runtime: module-owned integration coverage; keep the original scenario and cleanup semantics.
 import {required} from '../../../../scripts/support/assertions';
 import {FileRunStorage} from '../../../../../src/logic/execution/storage/run-storage';
@@ -17,7 +18,7 @@ it('空工作区普通对话默认主 Agent，知识变化后仍可继续，保�
     const e=await f.app.Dispatch('add',{path:f.a}),w=f.app.Workspace(e.id);const modes:unknown[]=[];
     manager=new WorkspaceExecutionManager(w,new FileRunStorage(),async options=>{
       modes.push(options.mode);
-      const runtime=new LoopRuntime({storage:new FileRunStorage(),directory:path.join(f.app.paths.Project(e.id),'loop-engine','tasks'),AcquireLease:async()=>()=>{},ToolPolicy:async()=>({allow:true}),CreateEngine:()=>({kind:'test',start:async context=>{await context.emit({type:'session.bound',data:{sessionFile:'chat-session'}})},run:async()=>({status:'completed'}),stop:async()=>{},close:async()=>{}})});
+      const runtime=new LoopRuntime({storage:new FileRunStorage(),directory:path.join(f.app.paths.Project(e.id),'loop-engine','tasks'),AcquireLease:async()=>()=>{},ToolPolicy:async()=>({allow:true}),engines:fixtureEngines(()=>({kind:'test',start:async context=>{await context.emit({type:'session.bound',data:{sessionFile:'chat-session'}})},run:async()=>({status:'completed'}),stop:async()=>{},close:async()=>{}}))});
       return {runtime,workspace:await f.app.paths.Identity(f.a),agentHome:'test',NewTask:()=>{throw Error('not used')}};
     });
     const options={provider:'test',model:'test',allowNativeExecution:false};
@@ -45,7 +46,7 @@ it('旧直接业务新启动和续轮明确拒绝；实际运行日志仍可读�
     expect(factoryCalls).toBe(0);expect(await manager.List()).toEqual([]);
     // 此处用通用 Core runtime 产生旧形状日志以测读取/拒绝接续，不通过应用入口写入假 owner；真实旧 EXE 另有兼容冒烟。
     const prepared=await prepareTeamTask(w,seeded.input),directory=path.join(f.app.paths.Project(e.id),'loop-engine','tasks');
-    legacy=new LoopRuntime({storage:new FileRunStorage(),directory,AcquireLease:async()=>()=>{},ToolPolicy:async()=>({allow:true}),CreateEngine:()=>({kind:'test',start:async context=>{await context.emit({type:'session.bound',data:{sessionFile:'test-session'}})},run:async()=>({status:'completed'}),stop:async()=>{},close:async()=>{}})});
+    legacy=new LoopRuntime({storage:new FileRunStorage(),directory,AcquireLease:async()=>()=>{},ToolPolicy:async()=>({allow:true}),engines:fixtureEngines(()=>({kind:'test',start:async context=>{await context.emit({type:'session.bound',data:{sessionFile:'test-session'}})},run:async()=>({status:'completed'}),stop:async()=>{},close:async()=>{}}))});
     const run=await legacy.Start(prepared);await run.done;await legacy.Close();
     const runDirectory=path.join(directory,prepared.taskId,run.runId),bytes=async()=>{const files=await fs.readdir(runDirectory,{withFileTypes:true});return Promise.all(files.filter(file=>file.isFile()).map(async file=>[file.name,(await fs.readFile(path.join(runDirectory,file.name))).toString('base64')]))};
     const before=await bytes(),state=await manager.Inspect(prepared.taskId,run.runId);

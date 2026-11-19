@@ -1,3 +1,4 @@
+import { kernel } from '../../../framework/kernel';
 /**
  * 作用定位：把 Agent 引擎选型映射为通用模型连接需求，并在返回快照中冻结显式引擎身份。
  * 设计原因：引擎策略不进入模型配置服务；复用该服务唯一设置队列、配置捕获与延迟解密，避免新增锁或再次读取造成快照漂移。
@@ -142,4 +143,17 @@ export class EngineModelProfiles
   {
     return ({ ...await this.models.Test(id, modelId, requirement(engine)), engine });
   }
+}
+
+/** 工作区提供配置存储；Kernel 在存储锁的有效期内解析并捕获执行配置。 */
+export function engineConfigurations(models: Pick<EngineModelProfiles, 'WithRuntimeConfiguration'> & Partial<Pick<EngineModelProfiles, 'Resolve'>>)
+{
+  return kernel.Configurations<Partial<EngineModelReference>, EngineModelReference, ResolvedEngineModel['profile'], ResolvedEngineModel, LoopEngine>({
+    Resolve: ref => {
+      if (!models.Resolve) throw new Error('当前宿主仅支持显式岗位配置');
+      return models.Resolve(ref.profileId, ref.modelId, ref.engine, ref.modelRoles);
+    },
+    WithRuntimeConfiguration: (ref, use) => models.WithRuntimeConfiguration(ref, use),
+    Describe: model => ({ type: model.profile.engine ?? 'pi', llm: { provider: 'cbim-' + model.profile.id, model: model.profile.model, resolved: model } }),
+  });
 }

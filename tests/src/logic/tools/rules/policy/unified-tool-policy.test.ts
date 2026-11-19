@@ -106,22 +106,26 @@ test.each(['team','auto'] as const)('real Pi %s main governs knowledge with actu
       args={workspaceId:entry.id,instanceId:ws.instanceId,revision:snap.revision,requestId:randomUUID(),changes:[{path:file.path,text:file.text+'\n'+marker+'\n'}]};
       const requestStart=advertisedTools.length;
       const run=await f.app.Dispatch('loop.chat',{id:entry.id,message:'更新团队知识说明并核实结果',options:{permission,collaborationMode:mode,turnTimeoutMs:20000}}) as {taskId:string;runId:string};
+      const revoke = permission === 'ask' && mode === 'team';
       if(permission==='ask'){
         await expect.poll(()=>manager.PendingApprovals(run.taskId).length,{timeout:10000}).toBe(1);
         const approval=manager.PendingApprovals(run.taskId)[0];expect(approval.name).toBe('cbim_knowledge_commit');
         expect((await ws.Snapshot()).revision).toBe(snap.revision);
-        manager.AnswerApproval(run.taskId,approval.id,true);
+        if (revoke) {
+          await f.app.Dispatch('loop.setPermission', { id: entry.id, taskId: run.taskId, runId: run.runId, permission: 'read' });
+          expect(() => manager.AnswerApproval(run.taskId,approval.id,true)).toThrow();
+        } else manager.AnswerApproval(run.taskId,approval.id,true);
       }
       await expect.poll(async()=>(await manager.Inspect(run.taskId,run.runId)).status,{timeout:20000}).not.toBe('running');
       const result=await manager.Inspect(run.taskId,run.runId);
       expect(result.status,JSON.stringify(result.events.at(-1))).toBe('completed');
       expect(result.conversationBinding).toMatchObject({workspaceId:entry.id,agentId:'cbim:main',rootSessionId:run.taskId});
-      expect(result.toolReceipts,JSON.stringify(result.events.filter(event=>event.type.startsWith('tool.')))).toMatchObject([{toolCallId:'main-knowledge-write',outcome:permission==='read'?'denied':'succeeded',workspaceId:entry.id,runId:run.runId,effects:['knowledge-write']}]);
-      expect((await ws.Snapshot()).files.find(item=>item.path===file.path)!.text.includes(marker)).toBe(permission!=='read');
+      expect(result.toolReceipts,JSON.stringify(result.events.filter(event=>event.type.startsWith('tool.')))).toMatchObject([{toolCallId:'main-knowledge-write',outcome:permission==='read'||revoke?'denied':'succeeded',workspaceId:entry.id,runId:run.runId,effects:['knowledge-write']}]);
+      expect((await ws.Snapshot()).files.find(item=>item.path===file.path)!.text.includes(marker)).toBe(permission!=='read' && !revoke);
       expect(manager.PendingApprovals(run.taskId)).toEqual([]);
       expect((await f.app.MemberDispatch(entry.id).Snapshot({workspaceId:entry.id,rootSessionId:run.taskId})).tasks).toEqual([]);
       await expect.poll(async()=>(await ws.dispatchStore.Read()).scopes?.find(scope=>scope.rootSessionId===run.taskId)?.outcome,{timeout:5000}).toBe('completed');
-      for(const names of advertisedTools.slice(requestStart))expect(names.includes('write')).toBe(permission!=='read');
+      for(const names of advertisedTools.slice(requestStart))expect(names).toContain('write');
     }
     expect(advertisedTools.length).toBeGreaterThanOrEqual(6);
     for(const names of advertisedTools){
@@ -151,4 +155,24 @@ test('internal per-call knowledge permission cannot skip identity or revision an
     await expect(tools.CallFromRun('cbim_knowledge_commit',args,false)).rejects.toThrow('知识写入权限');
     for(const tool of tools.List()){expect(tool.version).toBe(['cbim_knowledge_refresh','cbim_workspace_registry','cbim_workspace_get','cbim_object_preview'].includes(tool.name)?2:1);expect(tool.effects?.length).toBeGreaterThan(0)}
   }finally{await f.cleanup()}
+});
+
+test('same running office rechecks writes on the next call and after pending approval', async () => {
+  let mode: 'read' | 'ask' | 'execute' = 'execute';
+  let enter!: () => void, finish!: () => void;
+  const pending = new Promise<void>(resolve => { enter = resolve; });
+  const approval = new Promise<void>(resolve => { finish = resolve; });
+  const context = { workspaceId: 'workspace', permission: 'execute' as const, ReadPermission: () => mode,
+    Guard: async () => ({ allow: true }), Approve: async () => { enter(); await approval; return { allow: true }; } };
+  const write = () => authorizeRunTool({ id: 'write', name: 'write', input: {} }, { effects: ['business-write'], native: true }, context);
+  expect((await write()).allow).toBe(true);
+  mode = 'ask';
+  const waiting = write();
+  await pending;
+  mode = 'read';
+  finish();
+  expect((await waiting).allow).toBe(false);
+  expect((await write()).allow).toBe(false);
+  mode = 'execute';
+  expect((await write()).allow).toBe(true);
 });

@@ -1,3 +1,4 @@
+import { resourceKindIds } from '../../../resource';
 /**
  * 作用定位：桌面资源仓库链接器的输入、静态登记、独立只读授权与 HTTP 核验回执协议。
  * 设计原因：把可复用知识声明和本机工作区授权分开，公开真实核验的有界摘要，不把链接器登记或资源内容解释为模型执行能力。
@@ -61,7 +62,7 @@ export const repositoryConnectionListSchema = z.object({ identity, knowledgeRevi
 export const repositoryConnectionCheckInputSchema = z.object({ ...identityShape, connectorId: connectorIdSchema, expectedGrantRevision: revision }).strict();
 
 /** 最多公开前 20 项目录摘要；不含 content，不代表导入、下载或模型已调用。 */
-export const repositoryConnectionCheckSchema = z.object({ identity, connectorId: connectorIdSchema, repositoryId: uuid, definitionHash: hash, grantRevision: revision.refine(value => value >= 1), connectionId: uuid, checkedAt: z.string().datetime(), revision: id, itemCount: revision, items: z.array(z.object({ id: uuid, kind: z.enum(['connector', 'team', 'agent', 'skill', 'architecture', 'module', 'workflow']), name: z.string(), summary: z.string(), updatedAt: z.string().datetime() }).strict()).max(20), truncated: z.boolean(), readOnly: z.literal(true), transport: z.literal('http'), }).strict();
+export const repositoryConnectionCheckSchema = z.object({ identity, connectorId: connectorIdSchema, repositoryId: uuid, definitionHash: hash, grantRevision: revision.refine(value => value >= 1), connectionId: uuid, checkedAt: z.string().datetime(), revision: id, itemCount: revision, items: z.array(z.object({ id: uuid, kind: z.enum(resourceKindIds), name: z.string(), summary: z.string(), updatedAt: z.string().datetime() }).strict()).max(20), truncated: z.boolean(), readOnly: z.literal(true), transport: z.literal('http'), }).strict();
 
 export type RepositoryConnectionIdentity = z.infer<typeof repositoryConnectionIdentitySchema>;
 

@@ -1,3 +1,4 @@
+import { fixtureEngines } from '../../../../support/engine-instances';
 // logic/execution/rules: module-owned contract coverage; keep the original scenario and cleanup semantics.
 import {expect,it} from 'vitest';
 import fs from 'node:fs/promises';
@@ -6,7 +7,7 @@ import path from 'node:path';
 import {LoopRuntime,checkedRunInputSource,type AgentEngine,type EngineContext,type TaskSpec,type RunInputSource} from '../../../../../src/logic/execution/rules/index';
 import {FileRunStorage} from '../../../../../src/logic/execution/storage/run-storage';
 import {transcript} from '../../../../../src/view/execution-view/transcript';
-import {openBridge} from '../../../../../src/logic/execution/engines/pi/bridge';
+import {openBridge} from '../../../../../src/logic/engines/adapters/pi/bridge';
 
 const source=():Extract<RunInputSource,{kind:'member-results'}>=>({kind:'member-results',continuationId:'batch-one',messageIds:['result-one'],taskIds:['member-task']});
 class Engine implements AgentEngine {
@@ -20,7 +21,7 @@ class Engine implements AgentEngine {
 async function setup(result:'completed'|'failed'|'cancelled'='completed'){
   const directory=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-continuation-')),engines:Engine[]=[],identities:{task:TaskSpec;runId:string}[]=[];
   const task:TaskSpec={taskId:'main-session',workspaceId:'workspace',root:directory,goal:'Deliver reviewed result',moduleIds:[],acceptance:[],mode:'chat'};
-  const runtime=new LoopRuntime({directory,storage:new FileRunStorage(),AcquireLease:async()=>()=>{},ToolPolicy:async()=>({allow:false}),CreateEngine:identity=>{identities.push(identity);const engine=new Engine(result);engines.push(engine);return engine}});
+  const runtime=new LoopRuntime({directory,storage:new FileRunStorage(),AcquireLease:async()=>()=>{},ToolPolicy:async()=>({allow:false}),engines:fixtureEngines(identity=>{identities.push(identity);const engine=new Engine(result);engines.push(engine);return engine})});
   return {directory,task,runtime,engines,identities,cleanup:async()=>{await runtime.Close();const target=path.resolve(directory);if(path.dirname(target)!==path.resolve(os.tmpdir())||!path.basename(target).startsWith('cbim-continuation-'))throw Error('Unexpected test cleanup path');await fs.rm(target,{recursive:true,force:true})}};
 }
 

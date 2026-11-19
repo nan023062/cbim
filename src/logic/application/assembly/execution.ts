@@ -1,3 +1,6 @@
+import { engineConfigurations } from '../../engines/service';
+import type { ResolvedEngineModel, LoopEngine } from '../../engines';
+import { kernel } from '../../../framework/kernel';
 /**
  * 统一 Agent 路径：可信 launch.executionModel 选择独立 Agent 调度装配，主/子共用对象与执行循环；旧 Auto/Team 规则仅用于旧日志续接。
  * 主模型和附加角色交由同一次引擎配置解析，不重新选择单独角色。
@@ -68,6 +71,8 @@ import type { WorkspaceMembers } from '../../team/service/workspace-members';
 
 import type { ModelRequestBudgetService } from '../../budget/runtime/model-request-budget-service';
 
+import type { CbimRuntime } from '../../../framework/cbim-runtime';
+
 import { createAgentCallAssembly } from './agent-calls';
 
 import type { AgentBusinessServices } from './agent-business';
@@ -78,13 +83,14 @@ import type { AgentBusinessServices } from './agent-business';
  * 独立 CLI/测试未装配 dispatch 时保留旧只按会话执行的边界，不编造已登记的成员身份。
  * repositories 是可选可信服务，不接受运行选项提供地址或授权；每次工厂调用固定自己的连接代际。
  */
-export function createExecutionManager(workspace: Workspace, models: EngineModelProfiles, lease = new WorkspaceExecutionLease(), collaboration?: () => AutoCollaboration | undefined, dispatch?: WorkspaceDispatchService, admission?: WorkspaceAdmission, repositories?: RepositoryConnections, ownerships?: { service: ModuleOwnerships; members: WorkspaceMembers }, requestBudgets?: ModelRequestBudgetService, feedback?: GitHubFeedback, web?: WebToolsPort, engineRuntimes?: EngineRuntimeResolver, controlledTransport?: ControlledFileTransport, businessServices?: AgentBusinessServices)
+export function createExecutionManager(runtime: CbimRuntime, workspace: Workspace, models: EngineModelProfiles, lease = new WorkspaceExecutionLease(), collaboration?: () => AutoCollaboration | undefined, dispatch?: WorkspaceDispatchService, admission?: WorkspaceAdmission, repositories?: RepositoryConnections, ownerships?: { service: ModuleOwnerships; members: WorkspaceMembers }, requestBudgets?: ModelRequestBudgetService, feedback?: GitHubFeedback, web?: WebToolsPort, engineRuntimes?: EngineRuntimeResolver, controlledTransport?: ControlledFileTransport, businessServices?: AgentBusinessServices, extensions?: readonly import('../../execution/rules/extensions').ExecutionExtension[], modelAdapters?: ReturnType<typeof import('../../engines').createModelAdapterRegistry>, connectorServers?: import('../../execution/assembly/loop-engine').ExecutionServices['ConnectorServers'], connectorProducts?: import('../../execution/assembly/loop-engine').ExecutionServices['connectorProducts'])
 {
   const storage = new FileRunStorage();
 
   return new WorkspaceExecutionManager(workspace, storage, async (options, task, launch) =>
   {
-    const llm = options.profileId ? await models.Resolve(options.profileId, options.model, options.engine, options.modelRoles) : undefined;
+    const configuration = options.profileId ? await engineConfigurations(models).Resolve({ profileId: options.profileId, modelId: options.model, engine: options.engine, modelRoles: options.modelRoles }) : kernel.Capture<ResolvedEngineModel, LoopEngine>({ type: options.engine ?? 'pi', llm: { provider: options.provider, model: options.model } });
+    const llm = configuration.Read().resolved;
 
     if (llm && (options.provider !== 'cbim-' + llm.profile.id || options.model !== llm.profile.model))
       throw Error('模型配置已变化，请重新启动任务');
@@ -112,14 +118,17 @@ export function createExecutionManager(workspace: Workspace, models: EngineModel
 
     const authorizeNative: import('../../execution/assembly/loop-engine').ExecutionServices['AuthorizeNative'] = async call => { workspace.Assert(); const mapped = call.name === 'find' ? 'Glob' : call.name; const reason = guard({ name: mapped, input: call.input }, workspace.entry.path); return { allow: !reason, reason }; };
 
+    const office = runtime.OpenOffice(workspace.entry.id, task.taskId);
     const agentCalls = launch.executionModel === 'agent-tools-v1' ? createAgentCallAssembly({
-      models, workspace, task, options: { ...options, engineRuntimes }, llm, storage, members: ownerships?.members, admission, dispatch, requestBudgets, authorizeNative, businessServices,
+      runtime, connectorServers, connectorProducts, modelAdapters, extensions, models, workspace, task, options: { ...options, engineRuntimes }, llm, storage, members: ownerships?.members, admission, dispatch, requestBudgets, authorizeNative, businessServices,
       // 每个业务子调用独立捕获工作区身份；仅复用已有受控工人，不降级到任意文件命令。
       artifactTransitions: () => createArtifactTransitionPort(workspace, controlledTransport, () => admission?.IsCurrent() ?? false),
     }) : undefined;
 
-    return createWorkspaceLoop(workspace.paths, workspace, { ...options, llm, images, engineRuntimes }, {
+    return createWorkspaceLoop(workspace.paths, workspace, { ...options, configuration, images, engineRuntimes }, {
+      ConnectorServers: connectorServers, connectorProducts, connectorRootId: conversationBinding?.rootSessionId ?? task.taskId, modelAdapters, extensions,
       storage,
+      organization: office.organization, 
       ...agentCalls,
       RequestBudget: agentCalls ? agentCalls.requestBudget : requestBudgets ? ({ task, runId }, role) => requestBudgets.ForRun({ rootSessionId: task.taskId, taskId: task.taskId, runId, kind: 'main' }, llm, role) : undefined,
       conversationBinding,
@@ -142,7 +151,7 @@ export function createExecutionManager(workspace: Workspace, models: EngineModel
           throw Error('任务与工作区身份不匹配');
 
         // 两种协作模式的主轮都能执行；ask/execute 同样独占，等待审批期间也不能放行冲突运行。
-        const workspacePermission = options.permission ?? (options.allowNativeExecution ? 'execute' : 'read');
+        const workspacePermission = options.ReadPermission ? 'execute' : options.permission ?? (options.allowNativeExecution ? 'execute' : 'read');
 
         const release = acquireExecutionLease(lease, 'conversation:' + task.taskId, { workspaceId: workspace.entry.id, rootSessionId: task.taskId, taskId: task.taskId, scopeId: launch.scopeId, requestId: admissionRequestId('main', launch.requestId), agentInstanceId: conversationBinding?.agentInstanceId, source: launch.wait ? 'main-result' : 'direct', workspacePermission }, admission, launch.wait);
 

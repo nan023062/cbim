@@ -22,14 +22,14 @@ async function fixture(stage:'preflight'|'factory'){
 test.each(['preflight','factory'] as const)('新核实%s等待期间停止，不在停止后重新启动或消费意图',async stage=>{
   const f=await fixture(stage);try{
     const pending=f.manager.RecoverExecution(f.input);void pending.catch(()=>{});await f.entered.promise;
-    const stopped=f.manager.Stop('root');f.release.resolve();await expect(pending).rejects.toMatchObject({code:'COLLABORATION_STOPPED'});await stopped;
+    const stopped=f.manager.Stop('root');f.release.resolve();await expect(pending).rejects.toThrow(/已收到停止(?:请求|或关闭请求)/);await stopped;
     expect(f.startFreshMain).not.toHaveBeenCalled();expect(f.acceptRecovery).not.toHaveBeenCalled();if(stage==='preflight')expect(f.factory).not.toHaveBeenCalled();
   }finally{await f.cleanup()}
 });
 test('预检等待期间关闭应用，不装配新核实引擎或消费意图',async()=>{
   const f=await fixture('preflight');try{
     const pending=f.manager.RecoverExecution(f.input);void pending.catch(()=>{});await f.entered.promise;
-    const closing=f.manager.Close();f.release.resolve();await expect(pending).rejects.toMatchObject({code:'COLLABORATION_STOPPED'});await closing;
+    const closing=f.manager.Close();f.release.resolve();await expect(pending).rejects.toThrow('核实请求准备期间已收到停止或关闭请求');await closing;
     expect(f.factory).not.toHaveBeenCalled();expect(f.acceptRecovery).not.toHaveBeenCalled();
   }finally{await f.cleanup()}
 });
@@ -37,7 +37,7 @@ test('核实请求已进入串行队列但尚未开始时停止，也不能在�
   const f=await fixture('preflight');try{
     const blocker=f.manager.RecoverExecution({...f.input,rootSessionId:'blocker',commandId:randomUUID()});void blocker.catch(()=>{});await f.entered.promise;
     const pending=f.manager.RecoverExecution(f.input);void pending.catch(()=>{});const stopped=f.manager.Stop('root');f.release.resolve();
-    await expect(blocker).rejects.toThrow('stopped attempt must not start runtime');await expect(pending).rejects.toMatchObject({code:'COLLABORATION_STOPPED'});await stopped;
+    await expect(blocker).rejects.toThrow('stopped attempt must not start runtime');await expect(pending).rejects.toThrow('核实请求准备期间已收到停止或关闭请求');await stopped;
     expect(f.factory).toHaveBeenCalledTimes(1);expect(f.acceptRecovery).not.toHaveBeenCalled();
   }finally{await f.cleanup()}
 });

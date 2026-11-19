@@ -24,9 +24,9 @@ const projectRoot = z.object({ id: z.literal('cbim:project'), name: z.string(), 
 /** 内置根范围独立于磁盘派生索引；它不会伪造正式 Module 文件或维护确认。 */
 export const moduleRegistryOutputSchema = z.object({ ...context, workspaceRootId: z.literal('.cbim/workspace'), projectRoot, modules: z.array(registryEntry), roots: z.array(z.string()), indexSource: z.literal('current-definitions'), persistedIndexMatches: z.boolean() }).strict();
 
-const workflow = z.object({ name: z.string(), reference: z.string(), id: knowledgeOutputIdSchema, owner: knowledgeOutputIdSchema, inherited: z.literal(false), content: knowledgeContentOutputSchema }).strict();
+const workflow = z.object({ name: z.string(), reference: z.string(), id: knowledgeOutputIdSchema, owner: knowledgeOutputIdSchema, inherited: z.boolean(), content: knowledgeContentOutputSchema }).strict();
 
-const storedModule = z.object({ ...context, id: knowledgeOutputIdSchema, definition: knowledgeJsonObjectSchema, definitionFile: knowledgeFileSchema, overview: knowledgeContentOutputSchema, workflows: z.array(workflow), workflowScope: z.literal('own-only') }).strict();
+const storedModule = z.object({ ...context, id: knowledgeOutputIdSchema, definition: knowledgeJsonObjectSchema, definitionFile: knowledgeFileSchema, overview: knowledgeContentOutputSchema, workflows: z.array(workflow), workflowScope: z.literal('own-and-ancestors') }).strict();
 
 const rootModule = z.object({ ...context, id: z.literal('cbim:project'), source: z.literal('builtin'), definition: projectRoot.extend({ workflows: z.array(z.never()) }).strict(), overview: inlineContent, workflows: z.array(z.never()), workflowScope: z.literal('own-only') }).strict();
 

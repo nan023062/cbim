@@ -5,7 +5,7 @@ import {randomUUID} from 'node:crypto';
 import {expect,it,vi} from 'vitest';
 import {fixture} from '../../application/support/helpers';
 import {ChatInputs} from '../../../../../src/logic/materials/service/chat-inputs';
-import {RemoteRepository} from '../../../../../src/logic/resources/service/index';
+import {RemoteRepository} from '../../../../../src/resource/service/index';
 import {hash} from '../../../../../src/core/io/serialization';
 import {continuationSourceSnapshotSchema} from '../../../../../src/logic/tasks/rules/continuation-source-snapshot';
 

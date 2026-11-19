@@ -5,6 +5,21 @@
  */
 import type { ChatPermission } from '../../tools/rules/policy/types';
 
+const deferredAdmissions = new WeakSet<Error>();
+
+/** 调度只对可信准入入口拒绝的暂时占用等待释放，普通领域失败不重试。 */
+export function deferredAdmission(message: string)
+{
+  const error = new Error(message);
+  deferredAdmissions.add(error);
+  return error;
+}
+
+export function isDeferredAdmission(error: unknown)
+{
+  return error instanceof Error && deferredAdmissions.has(error);
+}
+
 /** 由工作区装配方共享的进程内协调器；只控制已接入运行，不限制外部程序对文件的访问。 */
 export class WorkspaceExecutionLease
 {
@@ -44,10 +59,10 @@ export class WorkspaceExecutionLease
     const reason = this.CanAcquire(runKey, permission, agentInstanceId);
 
     if (reason === 'agent_busy')
-      throw new Error('该成员实例正在执行其他任务，请等待当前运行结束');
+      throw deferredAdmission('该成员实例正在执行其他任务，请等待当前运行结束');
 
     if (reason === 'workspace_conflict')
-      throw new Error('工作区有冲突运行，请等待结束后启动；不同实例的只读任务可以并行');
+      throw deferredAdmission('工作区有冲突运行，请等待结束后启动；不同实例的只读任务可以并行');
 
     return this.Hold(runKey, permission, agentInstanceId);
   }

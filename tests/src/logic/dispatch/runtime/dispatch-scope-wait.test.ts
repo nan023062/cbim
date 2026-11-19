@@ -1,3 +1,4 @@
+import { fixtureEngines } from '../../../../support/engine-instances';
 import {it,expect} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -38,7 +39,7 @@ async function setup(){
     const prepare=():Awaited<ReturnType<MemberExecutionPorts['Prepare']>>=>({model,Create:async(_run,_task,hooks)=>{
       let context:EngineContext;
       const engine:AgentEngine={kind:'waiting-test',start:async value=>{context=value;await context.emit({type:'session.bound',data:{sessionId:context.nativeSessionId,sessionFile:path.join(memberDirectory,'native.jsonl')}})},run:async()=>({status:'failed',error:'明确的测试失败，未执行任何工具'}),stop:async()=>{},close:async()=>{}};
-      return new LoopRuntime({storage,directory:memberDirectory,CreateEngine:()=>engine,AcquireLease:async()=>()=>{},OnEngineReady:hooks.OnEngineReady,OnEvent:hooks.OnEvent,ToolPolicy:async()=>({allow:false})});
+      return new LoopRuntime({storage,directory:memberDirectory,engines:fixtureEngines(()=>engine),AcquireLease:async()=>()=>{},OnEngineReady:hooks.OnEngineReady,OnEvent:hooks.OnEvent,ToolPolicy:async()=>({allow:false})});
     }});
     members=new MemberExecutionManager(workspace,store,{Acquire:()=>{leases++;return()=>{leases--}},Inspect:run=>storage.Read(path.join(memberDirectory,run.binding.taskId,run.binding.runId)),Prepare:async()=>prepare(),owners:service.owners,WithEngineConfiguration:(reference,_options,use)=>f.app.engineModels.WithRuntimeConfiguration(reference,configuration=>use({model:configuration.profile,Prepare: prepare}))});await members.Initialize();
     const draft={...plan,assignments:[{agentId:'.cbim/team/dev',moduleIds:[moduleId],ownerSelection,criterionIds:['choice'],reason:'验证后交由用户判断'}]};

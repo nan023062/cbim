@@ -11,7 +11,7 @@ import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
 import {seedTeam} from '../tests/src/logic/knowledge/service/support/team-fixture';
 import {modelRequestBudgetProvider} from '../tests/src/logic/budget/runtime/support/model-request-budget-provider';
-import {codexResponse} from '../tests/src/logic/execution/engines/codex/support/codex-fixture';
+import {codexResponse} from '../tests/src/logic/engines/adapters/codex/support/codex-fixture';
 import {latestExecutable} from './build-artifact.mjs';
 
 const exe=await latestExecutable(),evidence=path.resolve(process.env.CBIM_ENGINE_REPORT_DIR??'test-results/multi-engine-ui');

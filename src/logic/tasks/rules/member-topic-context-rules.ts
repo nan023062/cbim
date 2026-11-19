@@ -2,11 +2,13 @@
  * 作用定位：按原办公室、角色和输入版本冻结并解析当前话题的成员上下文引用。
  * 设计原因：纯引用契约独立于话题/运行组合，避免类型环；这里只读取传入快照，不复制归档、不读取其他话题原生历史。
  */
+import { taskWorkerId } from './graph-types';
+
 import type { DispatchScope } from './dispatch-scope';
 
 import type { GraphSnapshot, TaskNode } from './graph-types';
 
-import type { TeamSession } from '../../team/rules/team-session';
+import type { OfficeMemberSession } from '../../../framework/office/session';
 
 import { memberTopicContextSchema, type MemberTopicContext } from './member-topic-context';
 
@@ -17,16 +19,16 @@ function local(task: TaskNode, scope: DispatchScope, graph: GraphSnapshot)
 }
 
 /** 只冻结同角色、同话题已完成候选的引用；当前任务自身由原生当前任务历史负责，其他角色只沿明确前置引用。 */
-export function createMemberTopicContext(task: TaskNode, scope: DispatchScope, graph: GraphSnapshot, session: TeamSession): MemberTopicContext
+export function createMemberTopicContext(task: TaskNode, scope: DispatchScope, graph: GraphSnapshot, session: OfficeMemberSession): MemberTopicContext
 {
   local(task, scope, graph);
 
-  if (session.workspaceId !== scope.workspaceId || session.rootSessionId !== scope.rootSessionId || session.agentId !== task.assignee.agentId)
+  if (session.workspaceId !== scope.workspaceId || session.officeId !== scope.rootSessionId || session.workerId !== taskWorkerId(task))
     throw new Error('子会话登记与当前角色不一致');
 
-  const prior = graph.tasks.filter(value => value.identity.workspaceId === scope.workspaceId && value.identity.rootSessionId === scope.rootSessionId && value.scopeId === scope.scopeId && value.assignee.agentId === session.agentId && value.taskId !== task.taskId && value.result && !value.activeRunId);
+  const prior = graph.tasks.filter(value => value.identity.workspaceId === scope.workspaceId && value.identity.rootSessionId === scope.rootSessionId && value.scopeId === scope.scopeId && taskWorkerId(value) === session.workerId && value.taskId !== task.taskId && value.result && !value.activeRunId);
 
-  return memberTopicContextSchema.parse({ version: 1, workspaceId: scope.workspaceId, rootSessionId: scope.rootSessionId, scopeId: scope.scopeId, sessionId: session.sessionId, agentId: session.agentId, inputRevision: scope.goal?.inputRevision ?? 1, priorTasks: prior.slice(-20).map(value => ({ taskId: value.taskId, planRevision: value.planRevision, resultId: value.result!.resultId })), omittedTasks: Math.max(0, prior.length - 20) });
+  return memberTopicContextSchema.parse({ version: 1, workspaceId: scope.workspaceId, rootSessionId: scope.rootSessionId, scopeId: scope.scopeId, sessionId: session.sessionId, agentId: task.assignee.agentId, inputRevision: scope.goal?.inputRevision ?? 1, priorTasks: prior.slice(-20).map(value => ({ taskId: value.taskId, planRevision: value.planRevision, resultId: value.result!.resultId })), omittedTasks: Math.max(0, prior.length - 20) });
 }
 
 /** 按原引用解析有界资料；任何身份或版本漂移拒绝启动，不退回最近话题。截断只影响提示词，不删归档。 */

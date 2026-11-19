@@ -25,8 +25,8 @@ export function applicableResourceKind(item: Pick<ResourceDefinition, 'kind' | '
   }
 }
 
-/** 已有 module/workflow 允许继续编辑，新增业务资源只使用完整 architecture。 */
+/** 按资产分类列出可创建的定义。 */
 export function creatableResourceKinds(category: ResourceCategory): ResourceKind[]
 {
-  return (Object.keys(resourceKinds) as ResourceKind[]).filter(kind => resourceKinds[kind].category === category && kind !== 'module' && kind !== 'workflow');
+  return (Object.keys(resourceKinds) as ResourceKind[]).filter(kind => resourceKinds[kind].category === category);
 }

@@ -6,5 +6,5 @@ import type { EngineAdapter } from '../rules/engine-adapter';
 
 export function sourceEngineAdapter(_id: string): EngineAdapter
 {
-  throw Error('正式运行需要已验证的独立引擎包，请在引擎设置中准备后重试')
+  throw Error('正式运行需要已验证的独立引擎包，请在主界面左上角的「执行引擎」中准备后重试')
 }

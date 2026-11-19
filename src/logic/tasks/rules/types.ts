@@ -16,6 +16,8 @@ export interface TaskSpec
   /** 业务任务身份；一个任务可以有多个 runId。 */
   taskId: string;
 
+  parentTaskId?: string;
+
   /** 规范化工程路径对应的工作区身份，不是界面当前选中项。 */
   workspaceId: string;
 

@@ -1,10 +1,11 @@
+import { fixtureEngines } from '../../../../../support/engine-instances';
 // logic/execution/rules/runtime: module-owned contract coverage; keep the original scenario and cleanup semantics.
 import {expect,it} from 'vitest';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import {checkedRunInputSource,type HumanDecisionsSource} from '../../../../../../src/logic/execution/rules/input-source';
-import {bridgeExtensionForSource} from '../../../../../../src/logic/execution/engines/pi/bridge';
+import {bridgeExtensionForSource} from '../../../../../../src/logic/engines/adapters/pi/bridge';
 import {LoopRuntime} from '../../../../../../src/logic/execution/rules/runtime/runtime';
 import type {AgentEngine,EngineContext,TaskSpec} from '../../../../../../src/logic/execution/rules/types';
 import {FileRunStorage} from '../../../../../../src/logic/execution/storage/run-storage';
@@ -19,7 +20,7 @@ class SourceEngine implements AgentEngine {
 }
 it('可信人工来源只在已完成主链续跑，保留原用户目标及新run的独立持久身份',async()=>{
   const directory=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-human-source-')),engines:SourceEngine[]=[];
-  const runtime=new LoopRuntime({directory,storage:new FileRunStorage(),AcquireLease:async()=>()=>{},ToolPolicy:async()=>({allow:false}),CreateEngine:()=>{const engine=new SourceEngine();engines.push(engine);return engine}}),task:TaskSpec={taskId:'root',workspaceId:'workspace',root:directory,mode:'chat',goal:'原用户目标',moduleIds:[],acceptance:[]};
+  const runtime=new LoopRuntime({directory,storage:new FileRunStorage(),AcquireLease:async()=>()=>{},ToolPolicy:async()=>({allow:false}),engines:fixtureEngines(()=>{const engine=new SourceEngine();engines.push(engine);return engine})}),task:TaskSpec={taskId:'root',workspaceId:'workspace',root:directory,mode:'chat',goal:'原用户目标',moduleIds:[],acceptance:[]};
   try{
     await expect(runtime.Start(task,'系统转交',undefined,source())).rejects.toThrow('已有主对话');expect(engines).toHaveLength(0);
     const first=await runtime.Start(task,'原始用户正文'),original=await first.done,metadata=source();

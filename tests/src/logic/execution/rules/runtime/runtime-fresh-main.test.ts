@@ -1,3 +1,4 @@
+import { fixtureEngines } from '../../../../../support/engine-instances';
 import {expect,it,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import os from 'node:os';
@@ -20,10 +21,10 @@ it.each(['complete','missing-intent','lease-failed','pre-aborted','before-intent
   const reserve=vi.spyOn(storage,'ReserveTask').mockImplementation(async()=>{throw Error('Fresh main must not reserve or replace the existing root')});
   const createJournal=storage.CreateJournal.bind(storage);storage.CreateJournal=(target,task,runId)=>{const journal=createJournal(target,task,runId),init=journal.Init.bind(journal);journal.Init=async()=>{await init();if(mode==='journal-init'){entered.resolve();await boundary.promise}};return journal};
   let leases=0;const contexts:EngineContext[]=[],states:{ran:boolean;closed:boolean;stopped:boolean}[]=[];
-  const runtime=new LoopRuntime({directory,storage,...(mode==='unbound-main'?{}:{conversationBinding:binding}),AcquireLease:async()=>{if(mode==='lease-failed')throw Error('MEMBER_BUSY');leases++;return()=>{leases--}},ToolPolicy:async()=>({allow:false}),OnEngineReady:async()=>{if(mode==='engine-ready'){entered.resolve();await boundary.promise}},CreateEngine:()=>{
+  const runtime=new LoopRuntime({directory,storage,...(mode==='unbound-main'?{}:{conversationBinding:binding}),AcquireLease:async()=>{if(mode==='lease-failed')throw Error('MEMBER_BUSY');leases++;return()=>{leases--}},ToolPolicy:async()=>({allow:false}),OnEngineReady:async()=>{if(mode==='engine-ready'){entered.resolve();await boundary.promise}},engines:fixtureEngines(()=>{
     const state={ran:false,closed:false,stopped:false};states.push(state);
     const engine:AgentEngine={kind:'test',start:async context=>{contexts.push(context);await context.emit({type:'session.bound',data:{sessionId:context.nativeSessionId,sessionFile:path.join(context.directory,'fresh-native.jsonl')}})},run:async()=>{state.ran=true;return {status:'completed'}},stop:async()=>{state.stopped=true},close:async()=>{state.closed=true}};return engine;
-  }});
+  })});
   try{
     const expectedExcluded=mode==='missing-intent'?['missing-intent',...excludedRunIds]:excludedRunIds,completed=mode==='complete'||mode==='missing-intent';
     const controller=new AbortController(),beforeRun=vi.fn(async(input:{task:TaskSpec;runId:string;nativeSessionId:string;excludedRunIds:string[]})=>{

@@ -1,10 +1,10 @@
 import {expect,it,vi} from 'vitest';
-import {RemoteRepository} from '../../../../../src/logic/resources/service/index';
+import {RemoteRepository} from '../../../../../src/resource/service/index';
 import {githubRequest} from '../../../../../src/logic/feedback/service/github-api';
 import {readUrlSource} from '../../../../../src/logic/materials/service/chat-source-readers';
 import {releaseRequest} from '../../../../../src/logic/updates/service/release-http';
 import {downloadRuntimeManifest} from '../../../../../src/logic/updates/service/runtime-download';
-import {MAX_BYTES} from '../../../../../src/logic/resources/service/index';
+import {MAX_BYTES} from '../../../../../src/resource/service/index';
 
 // 所有断言围绕同一组合契约：utility 的取消事实由调用方映射，不丢失原业务错误或触发重发。
 const consumers:Array<{name:string;code?:string;read:(signal:AbortSignal)=>Promise<unknown>}>= [

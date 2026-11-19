@@ -21,8 +21,11 @@ const layers = {
   'core/platform/node':['core/platform/node','core'],
   'core/platform/browser':['core/platform/browser','core'],
   'core/platform/electron':['core/platform/electron','core/platform/node','core'],
+  plugins:['plugins','core','core/platform/node'],
+  resource:['resource','core','core/platform/node'],
+  monitor:['monitor','framework'],
   framework:['framework','core'],
-  logic:['logic','framework','core','core/platform/node'],
+  logic:['logic','monitor','plugins','framework','core','core/platform/node'],
   view:['view','bridge/client','bridge/contracts','core','core/platform/browser'],
   'bridge/client':['bridge/client','bridge/contracts','core','core/platform/browser'],
   'bridge/server':['bridge/server','bridge/contracts','logic','core','core/platform/node','core/platform/electron'],
@@ -37,7 +40,7 @@ const layerOf = file => {
   if(['node','page-reader','public-http','browser-proxy'].some(name=>file==='src/core/web/'+name+'.ts'))return 'core/platform/node';
   if(file==='src/core/web/electron.ts')return 'core/platform/electron';
   if(file.startsWith('src/core/platform/'))return file.split('/').slice(1,4).join('/');
-  for(const layer of ['core','framework','logic','view'])if(file.startsWith('src/'+layer+'/'))return layer;
+  for(const layer of ['core','plugins','resource','monitor','framework','logic','view'])if(file.startsWith('src/'+layer+'/'))return layer;
   return file.split('/').slice(1,3).join('/');
 };
 
@@ -75,8 +78,8 @@ const feedbackService='src/logic/feedback/service/index.ts';
 const allowsFeedbackAccess=(from,to)=>
   to===feedbackPublic&&(from.startsWith('src/logic/')||from==='src/bridge/contracts/github-feedback.ts')||
   to===feedbackService&&(from.startsWith('src/bridge/server/')||isService(from));
-const resourcePublic='src/logic/resources/index.ts',resourceService='src/logic/resources/service/index.ts';
-const allowsResourceAccess=(from,to)=>to===resourcePublic&&from==='src/bridge/contracts/resources.ts'||to===resourceService&&(from.startsWith('src/bridge/server/')||isService(from));
+const resourcePublic='src/resource/index.ts',resourceService='src/resource/service/index.ts';
+const allowsResourceAccess=(from,to)=>to===resourcePublic&&(from.startsWith('src/logic/')||['src/bridge/contracts/resources.ts','src/bridge/contracts/ipc-resources.ts'].includes(from))||to===resourceService&&(from.startsWith('src/bridge/server/')||isService(from));
 const moduleBoundaries=[
   // 冷壳只持有更新状态和已验证业务入口，不直接装配普通业务服务。
   {sources:['src/bridge/server/bootstrap/'],allow:['src/bridge/server/bootstrap/','src/bridge/server/main.ts','src/logic/updates/service/']},
@@ -84,11 +87,12 @@ const moduleBoundaries=[
   {sources:['src/view/foundations/'],allow:['src/view/foundations/','src/core/utility/index.ts','src/core/io/index.ts']},
   {sources:utilityPortable,allow:utilityPortable},
   // 记忆包仅此存储实现使用公开原子单文件机制，目录权限与正式知识仍由业务边界负责。
-  {sources:['src/logic/execution/engines/memory/storage.ts'],allow:['src/logic/execution/engines/memory/','@domain-public','src/core/io/text-files.ts']},
+  {sources:['src/logic/engines/adapters/memory/storage.ts'],allow:['src/logic/engines/adapters/memory/','@domain-public','src/core/io/text-files.ts']},
   // 其它引擎只组合可移植算法，不借此接入 files/web、平台适配或 Node 私有实现。
-  {sources:['src/logic/execution/engines/'],allow:['src/logic/execution/engines/','@domain-public','src/core/utility/index.ts','src/core/io/index.ts',modelPublic,enginePublic]},
+  {sources:['src/logic/engines/adapters/'],allow:['src/logic/engines/adapters/','@domain-public','src/core/utility/index.ts','src/core/io/index.ts',modelPublic,enginePublic]},
   // 更新子系统仅复用环境无关的数据消费入口，不因此取得 Main 服务或其他基础方案的依赖权。
   {sources:['src/logic/updates/service/engine-artifacts.ts'],allow:['src/logic/updates/service/','src/logic/updates/engine-artifacts.ts','src/core/utility/index.ts','src/core/io/text-files.ts']},
+  {sources:['src/logic/updates/service/runtime-manifest.ts'],allow:['src/framework/kernel/index.ts']},
   {sources:['src/logic/updates/service/runtime-download.ts'],allow:['src/logic/updates/service/','src/core/io/index.ts','src/core/io/node.ts']},
   {sources:['src/logic/updates/service/'],allow:['src/logic/updates/service/','src/logic/updates/contracts.ts','src/logic/updates/engine-artifacts.ts','src/core/utility/index.ts','src/core/io/index.ts']},
   {sources:['src/view/execution-view/'],allow:['src/view/execution-view/','src/view/components/','src/bridge/contracts/']},
@@ -111,7 +115,7 @@ const moduleBoundaries=[
   {sources:['tests/src/logic/knowledge/rules/support/knowledge-data.ts'],allow:[knowledgeTypes,foundation]},
   {sources:['tests/src/logic/knowledge/rules/support/knowledge-fixture.ts'],allow:[knowledgeTypes,foundation,'src/logic/knowledge/rules/knowledge.ts','tests/src/logic/knowledge/rules/support/knowledge-data.ts']},
   // 调度器只组合可移植公开算法，不取得 Node、files 或 web 的访问权。
-  {sources:[...orchestrationRoots],allow:[...orchestrationRoots,'src/framework/office/index.ts','src/framework/cability/agent/exchange.ts','src/framework/cability/agent/index.ts','src/core/io/index.ts','src/logic/execution/engines/','@domain-public','src/core/utility/index.ts',modelPublic,enginePublic,webPublic,feedbackPublic]},
+  {sources:[...orchestrationRoots],allow:[...orchestrationRoots,'src/framework/connectors/index.ts','src/framework/kernel/index.ts','src/framework/office/index.ts','src/framework/office/exchange.ts','src/framework/cability/agent/index.ts','src/framework/cability/organization.ts','src/core/io/index.ts','src/logic/engines/adapters/','@domain-public','src/core/utility/index.ts',modelPublic,enginePublic,webPublic,feedbackPublic]},
 ];
 const matchesBoundary=(file,entry)=>{
   if(entry==='@domain-public')return isDomainFile(file)&&domainPublicEntries.has(file)||['src/core/io/json.ts','src/core/io/serialization.ts'].includes(file);
@@ -121,14 +125,15 @@ const matchesBoundary=(file,entry)=>{
 
 // 非字面量加载不能静态证明目标，只允许逐项核实的外部依赖；表达式变化必须重新审核。
 export const externalLoads = [
+  {file:'src/logic/application/assembly/connector-packages.ts',expression:'loadProduct(entry)',reason:'仅加载宿主按产品 ID 登记的绝对 CJS 入口'},
   {file:'scripts/runtime-build.ts',expression:"require(path.join(plugin,'ViteConfig.js'))",reason:'只从锁定的 @electron-forge/plugin-vite 包路径读取生产配置生成器；与冷包共用构建参数，无运行时用户输入'},
-  {file:'src/logic/execution/engines/native-tools.ts',expression:'import(pathToFileURL(entry).href)',reason:'仅从冷壳验签固定的 E 目录、旧 pi-runtime 或开发依赖加载 1.5.0 的独立文件/命令操作，不接受模型或工作区给定的模块路径'},
-  {file:'src/logic/execution/engines/claude/sdk.ts',expression:'import(pathToFileURL(entry).href)',reason:'仅从固定 CBIM claude-runtime 或开发依赖解析官方 Claude Agent SDK，不接受外部路径'},
+  {file:'src/logic/engines/adapters/native-tools.ts',expression:'import(pathToFileURL(entry).href)',reason:'仅从冷壳验签固定的 E 目录、旧 pi-runtime 或开发依赖加载 1.5.0 的独立文件/命令操作，不接受模型或工作区给定的模块路径'},
+  {file:'src/logic/engines/adapters/claude/sdk.ts',expression:'import(pathToFileURL(entry).href)',reason:'仅从固定 CBIM claude-runtime 或开发依赖解析官方 Claude Agent SDK，不接受外部路径'},
   {file:'src/core/io/locking.ts', expression:"requireNative(packagedNative && fs.existsSync(packagedNative) ? packagedNative : 'koffi')", reason:'仅从安装包或 node_modules 加载第三方 koffi 原生库'},
   {file:'src/logic/file-operations/platform/files/controlled-file-win32.ts', expression:'requireNative(koffiPath)', reason:'专用 utility 的私有参数仅由 Main 固定 resources/koffi 或 require.resolve(koffi) 注入；独立 Electron 测试宿主同样使用真实第三方库，不来自模型或桌面 IPC'},
   {file:'src/logic/file-operations/platform/isolation/isolation-recovery-win32.ts', expression:'requireNative(koffiPath)', reason:'只接受Main私有装配的resources/koffi或require.resolve(koffi)，用于实际原进程/Job/目录核实，不接模型或桌面路径'},
   {file:'src/logic/file-operations/platform/isolation/isolated-node-win32.ts', expression:'requireNative(koffiPath)', reason:'隔离平台装配固定 resources/koffi 或 require.resolve(koffi)；仅加载第三方原生库，业务请求不能提供该私有参数'},
-  {file:'tests/src/logic/execution/engines/pi/model-capacity-sdk.test.ts', expression:"import(pathToFileURL(path.resolve('node_modules/@earendil-works/pi-ai/dist/api/simple-options.js')).href)", reason:'测试固定版本的第三方 Pi 内部容量函数'},
+  {file:'tests/src/logic/engines/adapters/pi/model-capacity-sdk.test.ts', expression:"import(pathToFileURL(path.resolve('node_modules/@earendil-works/pi-ai/dist/api/simple-options.js')).href)", reason:'测试固定版本的第三方 Pi 内部容量函数'},
 ];
 // 冷壳从已验证的构建目录加载固定业务入口；仍把源码边纳入分层与循环检查，不作为外部豁免。
 export const generatedLoads = [
@@ -198,6 +203,11 @@ export function auditDependencies(root = process.cwd(), options = {}) {
     const loaders = new Set(['require', 'requireRuntime', 'requireNative']);
     function collect(node) {
       if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer && ts.isCallExpression(node.initializer) && /(?:^|\.)createRequire$/.test(node.initializer.expression.getText(ast))) loaders.add(node.name.text);
+      if(relative(file).startsWith('src/')&&!isEngine(relative(file))&&ts.isCallExpression(node)&&/(?:^|\.)(?:spawn|spawnSync|exec|execSync|execFile|execFileSync)$/.test(node.expression.getText(ast))){
+        const command=node.arguments[0];
+        if(command&&ts.isStringLiteralLike(command)&&/^(?:.*[\\/])?(?:codex|claude|pi)(?:\.(?:exe|cmd))?(?:\s|$)/i.test(command.text))
+          modelFacadeViolations.push({file:relative(file),line:ast.getLineAndCharacterOfPosition(command.getStart(ast)).line+1,rule:'engine-cli-outside-adapter'});
+      }
       ts.forEachChild(node,collect);
     }
     collect(ast);
@@ -231,7 +241,7 @@ export function auditDependencies(root = process.cwd(), options = {}) {
       if (actual && known.has(key(actual)) && (!target || key(target) !== key(actual))) edges.push({from:info.file,to:known.get(key(actual)),line:info.line,kind,spec});
     }
     function visit(node) {
-      if(relative(file)==='src/bridge/contracts/resources.ts'&&(ts.isImportDeclaration(node)||ts.isExportDeclaration(node))&&node.moduleSpecifier&&ts.isStringLiteral(node.moduleSpecifier)&&/logic\/resources(?:\/index)?(?:\.ts)?$/.test(node.moduleSpecifier.text)){
+      if(relative(file)==='src/bridge/contracts/resources.ts'&&(ts.isImportDeclaration(node)||ts.isExportDeclaration(node))&&node.moduleSpecifier&&ts.isStringLiteral(node.moduleSpecifier)&&/resource(?:\/index)?(?:\.ts)?$/.test(node.moduleSpecifier.text)){
         const names=ts.isExportDeclaration(node)?node.exportClause:node.importClause?.namedBindings;
         if(!names||!(ts.isNamedExports(names)||ts.isNamedImports(names))||names.elements.some(item=>!['resourceKinds','resourceCategories','ResourceKind','ResourceCategory','ResourceDefinition','ResourceLibrarySnapshot','RepositoryConfig','RepositorySession','RepositoryStatus'].includes((item.propertyName??item.name).text)))modelFacadeViolations.push({file:relative(file),rule:'resource-bridge-export',boundary:'resource-contract'});
       }
@@ -284,7 +294,8 @@ export function auditDependencies(root = process.cwd(), options = {}) {
       const runtimeAccess=runtimePublicEntries.has(e.to)&&(e.from.startsWith('src/bridge/server/')||isService(e.from)||isOrchestration(e.from)||isEngine(e.from)&&isEngine(e.to));
       const serviceAccess=servicePublicEntries.has(e.to)&&(isService(e.from)||e.from.startsWith('src/bridge/server/'))||businessDataEntries.has(e.to)&&(isService(e.from)||e.from.startsWith('src/bridge/contracts/'))||isService(e.from)&&[modelPublic,enginePublic,webPublic,feedbackPublic,resourcePublic].includes(e.to);
       const ioErrorAccess=a==='logic'&&['src/logic/io-errors/json.ts','src/logic/io-errors/locking.ts'].includes(e.to);
-      const publicAccess=ioErrorAccess||cipherTypeAccess||allowsEngineAccess(e.from,e.to)||allowsModelAccess(e.from,e.to)||allowsWebAccess(e.from,e.to)||allowsFeedbackAccess(e.from,e.to)||allowsResourceAccess(e.from,e.to)||domainAccess||runtimeAccess||serviceAccess;
+      const adapterAccess=isEngine(e.to)&&e.from.startsWith('src/logic/execution/assembly/') || isEngine(e.from)&&domainPublicEntries.has(e.to);
+      const publicAccess=(e.from==='src/bridge/contracts/workspace.ts'&&e.to==='src/monitor/updates.ts')||adapterAccess||ioErrorAccess||cipherTypeAccess||allowsEngineAccess(e.from,e.to)||allowsModelAccess(e.from,e.to)||allowsWebAccess(e.from,e.to)||allowsFeedbackAccess(e.from,e.to)||allowsResourceAccess(e.from,e.to)||domainAccess||runtimeAccess||serviceAccess;
       if(isService(e.from)&&b==='logic'&&e.from.split('/')[2]!==e.to.split('/')[2]&&!publicAccess)return true;
       if(isEngine(e.to)&&!isEngine(e.from)&&!e.from.startsWith('src/logic/execution/assembly/'))return true;
       // 领域规则只组合领域与既有纯模型/反馈入口，不借目录迁移取得宿主服务权限。
@@ -315,6 +326,8 @@ export function auditDependencies(root = process.cwd(), options = {}) {
   for(const reference of externalReferences){
     if(isTestSupport(reference.file))continue;
     if(reference.file.startsWith('src/')&&/^(?:vitest(?:\/|$)|@vitest\/|node:test$)/.test(reference.spec))logical.violations.push({...reference,rule:'production-test-dependency',boundary:'production'});
+    if(reference.file.startsWith('src/')&&!isEngine(reference.file)&&/^(?:@openai\/codex(?:-sdk)?|@anthropic-ai\/claude-agent-sdk|@earendil-works\/pi-coding-agent)(?:\/|$)/.test(reference.spec))
+      logical.violations.push({...reference,rule:'engine-sdk-outside-adapter',boundary:'engine-instance'});
     const layer=layerOf(reference.file);
     if(['view','bridge/client','bridge/contracts','core/platform/browser'].includes(layer)
       &&(reference.spec.startsWith('node:')||builtinModules.includes(reference.spec)||reference.spec==='electron'||reference.spec.startsWith('electron/'))){

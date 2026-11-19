@@ -1,3 +1,4 @@
+import { fixtureEngines } from '../../../../support/engine-instances';
 import {expect,it,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -81,7 +82,7 @@ it('真实领取先保存，旧游标及刷新后的增删均拒绝；不能删�
   const binding=f.oldSource.ownerBinding!,model=await f.app.engineModels.Configuration(binding.model.profileId,binding.model.modelId);
   const prepare=():PreparedEngine=>({model,Create:async(_run,_task,hooks)=>{
    let context:EngineContext;const engine:AgentEngine={kind:'held-claim-test',start:async c=>{context=c;await c.emit({type:'session.bound',data:{sessionId:c.nativeSessionId,sessionFile:path.join(logs,'native.jsonl')}})},run:async()=>{entered.resolve();await release.promise;return {status:'cancelled'}},stop:async()=>{release.resolve()},close:async()=>{release.resolve()}};
-   return new LoopRuntime({storage,directory:logs,CreateEngine:()=>engine,AcquireLease:async()=>()=>{},OnEngineReady:hooks.OnEngineReady,OnEvent:hooks.OnEvent,ToolPolicy:async()=>({allow:true,effects:['read'],scope:{kind:'workspace',workspaceId:f.entry.id}})});
+   return new LoopRuntime({storage,directory:logs,engines:fixtureEngines(()=>engine),AcquireLease:async()=>()=>{},OnEngineReady:hooks.OnEngineReady,OnEvent:hooks.OnEvent,ToolPolicy:async()=>({allow:true,effects:['read'],scope:{kind:'workspace',workspaceId:f.entry.id}})});
   }});
   members=new MemberExecutionManager(f.workspace,f.store,{Acquire:()=>()=>{},Inspect:r=>storage.Read(path.join(logs,r.binding.taskId,r.binding.runId)),Prepare:async()=>prepare(),owners:f.service.owners,WithEngineConfiguration:(ref,_options,use)=>f.app.engineModels.WithRuntimeConfiguration(ref,c=>use({model:c.profile,Prepare: prepare}))});await members.Initialize();
   await members.Start({...f.identity,taskId:f.oldSource.taskId,commandId:'claim-first',expectedRevision:f.oldSource.revision,options:{permission:'read'}});await entered.promise;

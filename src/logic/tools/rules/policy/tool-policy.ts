@@ -44,6 +44,7 @@ export interface RunPolicyContext
   workspaceId: string;
 
   permission: ChatPermission;
+  ReadPermission?(): ChatPermission;
 
   /** 平台强制边界不可由“本次全部通过”跳过。 */
   Guard(call: ToolCall): Promise<ToolDecision>;
@@ -132,10 +133,11 @@ export async function authorizeRunTool(call: ToolCall, tool: RunToolDescriptor, 
 
   const writes = tool.effects.some(e => ['business-write', 'knowledge-write', 'external-write', 'command'].includes(e));
 
-  if (writes && context.permission === 'read')
+  const currentPermission = () => context.ReadPermission?.() ?? context.permission;
+  if (writes && currentPermission() === 'read')
     return decision(false, '本轮为只读模式，禁止业务写入、知识写入、外部提交与命令执行');
 
-  if (feedback)
+  if (feedback && (!writes || !context.ReadPermission || currentPermission() !== 'ask'))
     return decision(true, '本机已明确允许向捕获的 GitHub 仓库自动提交反馈，或核实原提交');
 
   if (tool.native)
@@ -146,13 +148,15 @@ export async function authorizeRunTool(call: ToolCall, tool: RunToolDescriptor, 
       return decision(false, guarded.reason)
   }
 
-  if (writes && context.permission === 'ask')
+  if (writes && currentPermission() === 'read') return decision(false, 'Office 已切换为只读');
+  if (writes && currentPermission() === 'ask')
   {
     if (!context.Approve)
       return decision(false, '审批通道不可用');
 
     const approved = await context.Approve(call);
 
+    if (currentPermission() === 'read') return decision(false, 'Office 已切换为只读');
     return decision(approved.allow, approved.reason);
   }
 

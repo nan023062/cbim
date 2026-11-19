@@ -31,6 +31,15 @@
       },
       "directory": "src/logic/budget/rules"
     },
+    "framework/connectors": {
+      "directory": "src/framework/connectors",
+      "roots": ["src/framework/connectors/"],
+      "tests": {
+        "unit": ["tests/src/framework/connectors/service.test.ts"],
+        "contract": [],
+        "integration": []
+      }
+    },
     "logic/connectors/rules": {
       "roots": [
         "src/logic/connectors/rules/"
@@ -254,9 +263,7 @@
         "src/logic/team/rules/"
       ],
       "tests": {
-        "unit": [
-          "tests/src/logic/team/rules/team-session.test.ts"
-        ],
+        "unit": [],
         "contract": [
           "tests/src/logic/team/rules/owner-execution-core.test.ts",
           "tests/src/logic/team/rules/utility-json-order-contract.test.ts",
@@ -307,100 +314,100 @@
       },
       "directory": "src/logic/workspace/rules"
     },
-    "logic/execution/engines": {
+    "logic/engines/adapters": {
       "roots": [
-        "src/logic/execution/engines/"
+        "src/logic/engines/adapters/"
       ],
       "tests": {
         "unit": [
-          "tests/src/logic/execution/engines/native-tool-paths.test.ts"
+          "tests/src/logic/engines/adapters/native-tool-paths.test.ts"
         ],
         "contract": [
-          "tests/src/logic/execution/engines/engine-capability-policy.test.ts",
-          "tests/src/logic/execution/engines/engine-inactivity.test.ts",
-          "tests/src/logic/execution/engines/engine-runtime-binding.test.ts",
-          "tests/src/logic/execution/engines/engine-runtime-loader.test.ts",
-          "tests/src/logic/execution/engines/utility-redaction-contract.test.ts",
-          "tests/src/logic/execution/engines/utility-rpc-framing-contract.test.ts"
+          "tests/src/logic/engines/adapters/engine-capability-policy.test.ts",
+          "tests/src/logic/engines/adapters/engine-inactivity.test.ts",
+          "tests/src/logic/engines/adapters/engine-runtime-binding.test.ts",
+          "tests/src/logic/engines/adapters/engine-runtime-loader.test.ts",
+          "tests/src/logic/engines/adapters/utility-redaction-contract.test.ts",
+          "tests/src/logic/engines/adapters/utility-rpc-framing-contract.test.ts"
         ],
         "integration": []
       },
-      "directory": "src/logic/execution/engines"
+      "directory": "src/logic/engines/adapters"
     },
-    "logic/execution/engines/claude": {
+    "logic/engines/adapters/claude": {
       "roots": [
-        "src/logic/execution/engines/claude/"
+        "src/logic/engines/adapters/claude/"
       ],
       "tests": {
         "unit": [
-          "tests/src/logic/execution/engines/claude/claude-engine.test.ts"
+          "tests/src/logic/engines/adapters/claude/claude-engine.test.ts"
         ],
         "contract": [
-          "tests/src/logic/execution/engines/claude/claude-schema.test.ts"
+          "tests/src/logic/engines/adapters/claude/claude-schema.test.ts"
         ],
         "integration": [
-          "tests/src/logic/execution/engines/claude/claude-tools.test.ts"
+          "tests/src/logic/engines/adapters/claude/claude-tools.test.ts"
         ]
       },
-      "directory": "src/logic/execution/engines/claude"
+      "directory": "src/logic/engines/adapters/claude"
     },
-    "logic/execution/engines/codex": {
+    "logic/engines/adapters/codex": {
       "roots": [
-        "src/logic/execution/engines/codex/"
+        "src/logic/engines/adapters/codex/"
       ],
       "tests": {
         "unit": [
-          "tests/src/logic/execution/engines/codex/codex-engine.test.ts",
-          "tests/src/logic/execution/engines/codex/codex-tools.test.ts",
-          "tests/src/logic/execution/engines/codex/codex-write-recovery.test.ts"
+          "tests/src/logic/engines/adapters/codex/codex-engine.test.ts",
+          "tests/src/logic/engines/adapters/codex/codex-tools.test.ts",
+          "tests/src/logic/engines/adapters/codex/codex-write-recovery.test.ts"
         ],
         "contract": [],
         "integration": [
-          "tests/src/logic/execution/engines/codex/codex-interruption.test.ts",
-          "tests/src/logic/execution/engines/codex/codex-lifecycle.test.ts"
+          "tests/src/logic/engines/adapters/codex/codex-interruption.test.ts",
+          "tests/src/logic/engines/adapters/codex/codex-lifecycle.test.ts"
         ]
       },
-      "directory": "src/logic/execution/engines/codex"
+      "directory": "src/logic/engines/adapters/codex"
     },
-    "logic/execution/engines/pi": {
+    "logic/engines/adapters/pi": {
       "roots": [
-        "src/logic/execution/engines/pi/"
+        "src/logic/engines/adapters/pi/"
       ],
       "tests": {
         "unit": [
-          "tests/src/logic/execution/engines/pi/engine-inactivity-pi.test.ts",
-          "tests/src/logic/execution/engines/pi/model-request-budget-bootstrap.test.ts",
-          "tests/src/logic/execution/engines/pi/pi-cancellation.test.ts",
-          "tests/src/logic/execution/engines/pi/pi-rpc.test.ts",
-          "tests/src/logic/execution/engines/pi/pi-tool-catalog.test.ts"
+          "tests/src/logic/engines/adapters/pi/engine-inactivity-pi.test.ts",
+          "tests/src/logic/engines/adapters/pi/model-request-budget-bootstrap.test.ts",
+          "tests/src/logic/engines/adapters/pi/pi-cancellation.test.ts",
+          "tests/src/logic/engines/adapters/pi/pi-rpc.test.ts",
+          "tests/src/logic/engines/adapters/pi/pi-tool-catalog.test.ts"
         ],
         "contract": [
-          "tests/src/logic/execution/engines/pi/human-continuation-source.test.ts",
-          "tests/src/logic/execution/engines/pi/member-continuation.test.ts",
-          "tests/src/logic/execution/engines/pi/model-capacity-sdk.test.ts"
+          "tests/src/logic/engines/adapters/pi/human-continuation-source.test.ts",
+          "tests/src/logic/engines/adapters/pi/member-continuation.test.ts",
+          "tests/src/logic/engines/adapters/pi/model-capacity-sdk.test.ts"
         ],
         "integration": [
-          "tests/src/logic/execution/engines/pi/pi-runtime-config.test.ts"
+          "tests/src/logic/engines/adapters/pi/pi-runtime-config.test.ts"
         ]
       },
-      "directory": "src/logic/execution/engines/pi"
+      "directory": "src/logic/engines/adapters/pi"
     },
-    "logic/execution/engines/transport": {
+    "logic/engines/adapters/transport": {
       "roots": [
-        "src/logic/execution/engines/transport/"
+        "src/logic/engines/adapters/transport/"
       ],
       "tests": {
         "unit": [
-          "tests/src/logic/execution/engines/transport/model-request-budget-usage.test.ts"
+          "tests/src/logic/engines/adapters/transport/model-request-budget-usage.test.ts"
         ],
         "contract": [
-          "tests/src/logic/execution/engines/transport/model-json-requests.test.ts"
+          "tests/src/logic/engines/adapters/transport/model-json-requests.test.ts"
         ],
         "integration": [
-          "tests/src/logic/execution/engines/transport/model-request-budget-transport.test.ts"
+          "tests/src/logic/engines/adapters/transport/model-request-budget-transport.test.ts"
         ]
       },
-      "directory": "src/logic/execution/engines/transport"
+      "directory": "src/logic/engines/adapters/transport"
     },
     "logic/dispatch/storage": {
       "roots": [
@@ -1403,11 +1410,7 @@
     "logic/models": {
       "roots": [
         "src/logic/models/index.ts",
-        "src/framework/kernel/models/catalog.ts",
-        "src/framework/kernel/models/config.ts",
-        "src/framework/kernel/models/provider-connections.ts",
-        "src/framework/kernel/models/provider-presets.ts",
-        "src/framework/kernel/models/ports.ts"
+        "src/logic/models/protocol/"
       ],
       "tests": {
         "unit": [
@@ -1518,23 +1521,25 @@
       },
       "directory": "src/logic/feedback/service"
     },
-    "logic/resources/service": {
+    "resource/service": {
       "roots": [
-        "src/logic/resources/service/"
+        "src/resource/service/",
+        "src/resource/index.ts",
+        "src/resource/contracts.ts"
       ],
       "tests": {
         "unit": [
-          "tests/src/logic/resources/service/resource-store.test.ts"
+          "tests/src/resource/service/resource-store.test.ts"
         ],
         "contract": [
-          "tests/src/logic/resources/service/utility-body-consumers.test.ts"
+          "tests/src/resource/service/utility-body-consumers.test.ts"
         ],
         "integration": [
-          "tests/src/logic/resources/service/repository-connection-http.test.ts",
-          "tests/src/logic/resources/service/resource-repository.test.ts"
+          "tests/src/resource/service/repository-connection-http.test.ts",
+          "tests/src/resource/service/resource-repository.test.ts"
         ]
       },
-      "directory": "src/logic/resources/service"
+      "directory": "src/resource/service"
     },
     "logic/terminal/service": {
       "roots": [
@@ -1609,19 +1614,19 @@
       },
       "directory": "scripts"
     },
-    "logic/execution/engines/memory": {
+    "logic/engines/adapters/memory": {
       "roots": [
-        "src/logic/execution/engines/memory/"
+        "src/logic/engines/adapters/memory/"
       ],
       "tests": {
         "unit": [
-          "tests/src/logic/execution/engines/memory/memory-engine.test.ts",
-          "tests/src/logic/execution/engines/memory/memory-protocol.test.ts"
+          "tests/src/logic/engines/adapters/memory/memory-engine.test.ts",
+          "tests/src/logic/engines/adapters/memory/memory-protocol.test.ts"
         ],
         "contract": [],
         "integration": []
       },
-      "directory": "src/logic/execution/engines/memory"
+      "directory": "src/logic/engines/adapters/memory"
     },
     "logic/workspace/service": {
       "roots": [
@@ -1633,6 +1638,7 @@
         ],
         "contract": [],
         "integration": [
+          "tests/src/logic/workspace/service/git-worktrees.test.ts",
           "tests/src/logic/workspace/service/architecture-service.test.ts",
           "tests/src/logic/workspace/service/failure.test.ts",
           "tests/src/logic/workspace/service/knowledge-source-lifecycle-application.test.ts",
@@ -1670,7 +1676,8 @@
       ],
       "tests": {
         "unit": [
-          "tests/src/logic/execution/assembly/agent-call-scheduler.test.ts"
+          "tests/src/logic/execution/assembly/agent-call-scheduler.test.ts",
+          "tests/src/logic/execution/assembly/engine-instance.test.ts"
         ],
         "contract": [],
         "integration": [
@@ -1757,6 +1764,7 @@
       "tests": {
         "unit": [],
         "contract": [
+          "tests/src/logic/application/assembly/connector-packages.test.ts",
           "tests/src/logic/application/assembly/agent-call-assembly.test.ts"
         ],
         "integration": [
@@ -2062,7 +2070,9 @@
     "framework/cability/agent": {
       "roots": [
         "src/framework/cability/agent/",
-        "src/framework/cability/team/"
+        "src/framework/cability/team.ts",
+        "src/framework/cability/skills.ts",
+        "src/framework/cability/organization.ts"
       ],
       "directory": "src/framework/cability/agent",
       "tests": {
@@ -2073,6 +2083,11 @@
         "integration": []
       }
     },
+    "framework/kernel": {
+      "roots": ["src/framework/kernel/"],
+      "directory": "src/framework/kernel",
+      "tests": { "unit": ["tests/src/framework/kernel/kernel.test.ts"], "contract": [], "integration": [] }
+    },
     "framework/office": {
       "roots": [
         "src/framework/office/"
@@ -2081,6 +2096,7 @@
       "tests": {
         "unit": [],
         "contract": [
+          "tests/src/framework/office/session.test.ts",
           "tests/src/framework/office/dispatcher.test.ts"
         ],
         "integration": []

@@ -7,6 +7,35 @@ import {json,hash} from '../../../../../src/core/io/serialization';
 import {parseJson} from '../../../../../src/logic/knowledge/rules/knowledge';
 import {moduleSections,moduleBodyTemplate} from '../../../../../src/logic/workspace/rules/module-outline';
 
+it('岗位只继承本分支逐级向上的团队技能', async () => {
+  const fixture = await knowledgeFixture();
+  try {
+    const root = '.cbim/team';
+    const leaf = root + '/engineering/client/dev';
+    const owners = [leaf, root + '/engineering/client', root + '/engineering', root, root + '/design'];
+    const files = fixture.base.filter(file => file.path !== root + '/skills.json');
+    for (const [index, owner] of owners.entries()) {
+      const name = 'skill' + index;
+      const reference = 'skills/' + name + '/SKILL.md';
+      const skills = [{ name, purpose: name, reference }];
+      const definition = owner === leaf
+        ? { name: 'dev', summary, authors: [], capabilities: ['开发'], limitations: [], work_principles: 'principles.md', skills, connectors: [] }
+        : { skills };
+      const documents = { [owner + (owner === leaf ? '/agent.json' : '/skills.json')]: json(definition), [owner + '/' + reference]: name };
+      if (owner === leaf) documents[owner + '/principles.md'] = '# principles';
+      for (const [path, text] of Object.entries(documents)) files.push({ path, text, hash: hash(text) });
+    }
+    const result = await fixture.rules.Validate(fixture.root, files);
+    const effective = result.skills![leaf];
+    expect(effective.chain).toEqual(owners.slice(0, 4));
+    expect(effective.entries.map(skill => [skill.owner, skill.scope, skill.name])).toEqual(
+      owners.slice(0, 4).map((owner, index) => [owner, index ? 'team' : 'agent', 'skill' + index])
+    );
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
 it('错误章节直接返回精确标题与可复制模板，空模块和有源模块的模板均可通过结构校验',async()=>{
   const f=await knowledgeFixture();try{
     const base=f.base;

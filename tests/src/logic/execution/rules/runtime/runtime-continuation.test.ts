@@ -1,3 +1,4 @@
+import { fixtureEngines } from '../../../../../support/engine-instances';
 import {expect,it,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -17,10 +18,10 @@ it.each(['before-intent','journal-init','engine-start','engine-ready','lease-fai
   const task:TaskSpec={taskId:'main-session',workspaceId:'workspace',root:directory,goal:'Original goal',mode:'chat',moduleIds:[],acceptance:[]};
   const storage=new FileRunStorage(),createJournal=storage.CreateJournal.bind(storage);
   storage.CreateJournal=(directory,task,runId)=>{const journal=createJournal(directory,task,runId),initialize=journal.Init.bind(journal);journal.Init=async()=>{await initialize();if(continuing&&mode==='journal-init'){entered.resolve();await boundary.promise}};return journal};
-  const runtime=new LoopRuntime({directory,storage,engineKind:'test',AcquireLease:async()=>{if(continuing&&mode==='lease-failed')throw Error('MEMBER_BUSY');leases++;return()=>{leases--}},ToolPolicy:async()=>({allow:false}),OnEngineReady:async()=>{if(continuing&&mode==='engine-ready'){entered.resolve();await boundary.promise}},CreateEngine:()=>{
+  const runtime=new LoopRuntime({directory,storage,engineKind:'test',AcquireLease:async()=>{if(continuing&&mode==='lease-failed')throw Error('MEMBER_BUSY');leases++;return()=>{leases--}},ToolPolicy:async()=>({allow:false}),OnEngineReady:async()=>{if(continuing&&mode==='engine-ready'){entered.resolve();await boundary.promise}},engines:fixtureEngines(()=>{
     const state={ran:false,closed:false,stopped:false};engines.push(state);
     const engine:AgentEngine={kind:'test',start:async(context:EngineContext)=>{await context.emit({type:'session.bound',data:{sessionId:context.nativeSessionId??task.taskId,sessionFile:context.sessionFile??path.join(context.directory,'native.jsonl')}});if(continuing&&mode==='engine-start'){entered.resolve();await boundary.promise}},run:async()=>{state.ran=true;return {status:'completed'}},stop:async()=>{state.stopped=true},close:async()=>{state.closed=true}};return engine;
-  }});
+  })});
   try{
     const original=await runtime.Start(task);await original.done;expect(leases).toBe(0);continuing=true;
     const controller=new AbortController(),beforeRun=vi.fn(async(input:{task:TaskSpec;runId:string})=>{expect(input.task).toEqual(task);expect(input.runId).not.toBe(original.runId);if(mode==='before-intent'){entered.resolve();await boundary.promise}});
@@ -51,9 +52,9 @@ it.each(['oversized','cancelled','valid','factory-failed','wrong-engine'] as con
   let leases=0;
   const acquireLease=async()=>{leases++;return()=>{leases--}};
   let originalContext:EngineContext|undefined,nextContext:EngineContext|undefined;
-  const first=new LoopRuntime({directory,storage,engineKind:'pi',AcquireLease: acquireLease,ToolPolicy:async()=>({allow:false}),CreateEngine:()=>({kind:'pi',start:async context=>{
+  const first=new LoopRuntime({directory,storage,engineKind:'pi',AcquireLease: acquireLease,ToolPolicy:async()=>({allow:false}),engines:fixtureEngines(()=>({kind:'pi',start:async context=>{
     originalContext=context;await context.emit({type:'session.bound',data:{sessionId:context.runId,sessionFile:path.join(context.directory,'native.jsonl')}});
-  },run:async()=>{await originalContext!.emit({type:'message',data:{text:mode==='oversized'?'x'.repeat(1024*1024):'Original result'}});return {status:'completed'}},stop:async()=>{},close:async()=>{}})});
+  },run:async()=>{await originalContext!.emit({type:'message',data:{text:mode==='oversized'?'x'.repeat(1024*1024):'Original result'}});return {status:'completed'}},stop:async()=>{},close:async()=>{}}))});
   const beforeRun=vi.fn(async()=>{}),close=vi.fn(async()=>{});
   const createEngine=vi.fn(()=>{
     expect(beforeRun).toHaveBeenCalledTimes(1);
@@ -62,7 +63,7 @@ it.each(['oversized','cancelled','valid','factory-failed','wrong-engine'] as con
       nextContext=context;await context.emit({type:'session.bound',data:{sessionId:context.runId,sessionFile:path.join(context.directory,'native.jsonl')}});
     },run:async()=>({status:'completed'}),stop:async()=>{},close: close};return engine;
   });
-  const second=new LoopRuntime({directory,storage,engineKind:'codex',AcquireLease: acquireLease,ToolPolicy:async()=>({allow:false}),CreateEngine: createEngine});
+  const second=new LoopRuntime({directory,storage,engineKind:'codex',AcquireLease: acquireLease,ToolPolicy:async()=>({allow:false}),engines:fixtureEngines(createEngine)});
   try{
     const old=await first.Start(task);await old.done;await first.Close();
     const read=storage.Read.bind(storage);

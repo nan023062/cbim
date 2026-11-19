@@ -1,3 +1,4 @@
+import { fixtureEngines } from '../../../../support/engine-instances';
 import {it,expect,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -119,7 +120,7 @@ it('领取与撤销竞争只有一个提交者；已登记运行绝不改称未�
     const target=await f.assign(),draft=await f.input([target.taskId]);let preparing=()=>{};const prepareReached=new Promise<void>(resolve=>{preparing=resolve}),prepareGate=new Promise<void>(resolve=>{releasePrepare=resolve});
     // 在实际领取事务的岗位核验中暂停，保持原用例“领取先占事务、撤销随后竞争”的顺序。
     const verify=f.service.owners.VerifyTask.bind(f.service.owners);vi.spyOn(f.service.owners,'VerifyTask').mockImplementation(async(...args)=>{const binding=await verify(...args);preparing();if(winner==='start')await prepareGate;return binding});
-    const prepare=():PreparedEngine=>({model:f.model,Create:async(_run,_task,hooks)=>new LoopRuntime({storage:f.storage,directory:path.join(f.directory,'runs'),AcquireLease:async()=>()=>{},OnEngineReady:hooks.OnEngineReady,OnEvent:hooks.OnEvent,ToolPolicy:async()=>({allow:true}),CreateEngine:()=>({kind:'cancel-race',start:async context=>context.emit({type:'session.bound',data:{sessionId:context.nativeSessionId,sessionFile:path.join(f.directory,'native-'+context.nativeSessionId)}}),run:()=>new Promise(resolve=>{wake=()=>resolve({status:'cancelled'})}),stop:async()=>wake(),close:async()=>{}})})});
+    const prepare=():PreparedEngine=>({model:f.model,Create:async(_run,_task,hooks)=>new LoopRuntime({storage:f.storage,directory:path.join(f.directory,'runs'),AcquireLease:async()=>()=>{},OnEngineReady:hooks.OnEngineReady,OnEvent:hooks.OnEvent,ToolPolicy:async()=>({allow:true}),engines:fixtureEngines(()=>({kind:'cancel-race',start:async context=>context.emit({type:'session.bound',data:{sessionId:context.nativeSessionId,sessionFile:path.join(f.directory,'native-'+context.nativeSessionId)}}),run:()=>new Promise(resolve=>{wake=()=>resolve({status:'cancelled'})}),stop:async()=>wake(),close:async()=>{}}))})});
     members=new MemberExecutionManager(f.owner,f.store,{Acquire:()=>()=>{},Inspect:run=>f.storage.Read(path.join(f.directory,'runs',run.binding.taskId,run.binding.runId)),owners:f.service.owners,Prepare:async()=>prepare(),WithEngineConfiguration:(reference,_options,use)=>f.app.engineModels.WithRuntimeConfiguration(reference,configuration=>use({model:configuration.profile,Prepare: prepare}))});await members.Initialize();
     const start=()=>members!.Start({...f.identity,taskId:target.taskId,expectedRevision:1,commandId:'start-race',options:{permission:'read'}});
     if(winner==='cancel'){await f.cancel(draft,'cancel-race');await expect(start()).rejects.toMatchObject({code:'GRAPH_REVISION_CONFLICT'});expect((await members.Inspect({...f.identity,taskId:target.taskId})).runs).toEqual([])}

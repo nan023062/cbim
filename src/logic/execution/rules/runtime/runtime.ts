@@ -64,6 +64,8 @@ import { completeOutputRequired } from '../../../evidence/rules/complete-output-
 
 import { prepareRunValidation, type RunValidation, type ValidationFilePort } from '../capabilities/run-validation';
 
+import { composeTaskTools } from '../../../../framework/office';
+
 import { memberToolCapabilities } from '../capabilities/member-tool-capabilities';
 
 import { RunScopedExecution, type ScopedExecutionPort } from '../capabilities/run-scoped-execution';
@@ -111,8 +113,18 @@ import { scopeActiveInputTokenSchema, type ScopeActiveInputToken, type ScopeActi
 import { scopedActiveInputHash } from '../../../tasks/rules/scope-active-input-rules';
 
 /** 运行装配端口；可靠启动确认与只读事件观察分开，业务状态不能靠观察回调提交。 */
+type ExecutionInstance = import('../../../../framework/kernel').EngineInstance<import('../types').InputImage, EngineEvent>;
+interface PreparedInstance
+{
+  kind: string;
+  Open(context: import('../types').EngineContext, signal: AbortSignal): Promise<ExecutionInstance>;
+  Close(instance?: ExecutionInstance): Promise<void>;
+}
+
 export interface RuntimeOptions
 {
+  extensions?: readonly import('../extensions').ExecutionExtension[];
+  extensionCapability?: import('../engine-tools').EngineCapability;
   /** 可信调度装配的统一 Agent 工具；父工具批次必须独占才能把执行权交给子循环。 */
   AgentTools?(context: AgentToolContext): AgentToolsBinding;
 
@@ -152,7 +164,7 @@ export interface RuntimeOptions
   workflowContracts?: WorkflowContractBinding[];
 
   /** 纯分类与参数解析，不询问批准或运行工具；同一个描述继续交给授权端，避免两套 effects 判断。 */
-  DescribeTool?(call: ToolCall): RunToolDescriptor;
+  DescribeTool?(call: ToolCall, runId: string): RunToolDescriptor;
 
   /** 可信适配器在日志与授权之前解析缺省参数；失败仍记录原请求并拒绝，不执行工具。 */
   NormalizeToolInput?(call: ToolCall): ToolCall['input'];
@@ -173,9 +185,12 @@ export interface RuntimeOptions
   engineKind?: string;
 
   /** 每轮创建独立引擎，并以已确定的任务/运行身份装配工具；不接受模型指定身份。 */
-  CreateEngine(context: { task: TaskSpec; runId: string }): AgentEngine;
+  engines: {
+    Create(context: { task: TaskSpec; runId: string }): Promise<PreparedInstance> | PreparedInstance;
+  };
 
   /** 复用此前纯分类结果授权或审批；没有约定的旧装配可缺 descriptor，不能在此重新解释已给分类。 */
+  PermissionRevision?(): number;
   ToolPolicy(call: ToolCall, descriptor?: RunToolDescriptor): Promise<ToolDecision>;
 
   /** 引擎成功准备后、模型生成前确认启动；nativeSessionId 取已落盘 session.bound，允许 Codex 首次绑定服务端分配的 ID。失败中断本轮。 */
@@ -232,7 +247,7 @@ export class LoopRuntime
     {
       runId: string;
 
-      engine: AgentEngine;
+
 
       stop: () => Promise<void>;
 
@@ -418,7 +433,10 @@ export class LoopRuntime
 
     let excludedRunIds: string[] | undefined;
 
-    let preparedEngine: AgentEngine | undefined;
+    let preparedEngine: PreparedInstance | undefined;
+    let instance: ExecutionInstance | undefined;
+    let turnId: string | undefined;
+    const opening = new AbortController();
 
     try
     {
@@ -509,7 +527,7 @@ export class LoopRuntime
       control?.signal.throwIfAborted();
 
       // 先创建尚未启动的适配器，工具装配失败不留下空运行日志。init 成功后必须写入头和真实取消终态，不能直接抛取消而破坏整条会话读取。
-      const engine = preparedEngine = this.options.CreateEngine({ task: structuredClone(task), runId });
+      const engine = preparedEngine = await this.options.engines.Create({ task: structuredClone(task), runId });
 
       if (declaredEngine !== undefined && engine.kind !== declaredEngine)
         throw Error('实际引擎与启动预检的冻结引擎身份不一致');
@@ -626,7 +644,9 @@ export class LoopRuntime
           event = { ...event, data: { ...event.data, outcome: toolOutcome(status) } };
         }
 
-        const saved = await journal.Append(event);
+        const saved = await journal.Append(turnId ? { ...event, data: { ...event.data, turnId } } : event);
+        for (const extension of this.options.extensions ?? [])
+          if (extension.OnEvent) void Promise.resolve().then(() => extension.OnEvent!(structuredClone(saved))).catch(() => {});
 
         artifactCapture?.Observed(saved);
 
@@ -782,7 +802,7 @@ export class LoopRuntime
       const injection = {
         runId, pending: new Set<Promise<ScopeActiveInputSendReceipt | undefined>>(), send: async (message: string, images: import('../types').InputImage[], signal: AbortSignal, activeInput?: RunSteerControl['activeInput']) =>
         {
-          const assertReady = () => { if (stopping || this.closing || signal.aborted) throw new Error('当前运行已停止插入，原消息仍保留在队列'); if (finishing || task.mode !== 'chat' || task.agentId !== 'cbim:main' || !engine.steer) throw new Error('原主运行已结束或不支持插入，原消息仍保留在队列'); };
+          const assertReady = () => { if (stopping || this.closing || signal.aborted) throw new Error('当前运行已停止插入，原消息仍保留在队列'); if (finishing || task.mode !== 'chat' || task.agentId !== 'cbim:main' || !instance?.supportsAppend || !turnId) throw new Error('原主运行已结束或不支持插入，原消息仍保留在队列'); };
 
           assertReady();
 
@@ -799,7 +819,7 @@ export class LoopRuntime
           {
             assertReady();
 
-            await engine.steer!(message, images, signal);
+            await instance!.Append(turnId!, message, images, signal);
 
             nativeAccepted = true;
 
@@ -872,7 +892,8 @@ export class LoopRuntime
         }
 
         // 记录失败不能阻止实际 abort；失败事实在收尾按 interrupted 保留，不把无日志停止写成正常求助。
-        const stopped = await Promise.allSettled([engine.stop(), agentTools?.Stop()]);
+        opening.abort();
+        const stopped = await Promise.allSettled([turnId ? instance?.Stop(turnId) : undefined, agentTools?.Stop()]);
 
         for (const result of stopped)
           if (result.status === 'rejected')
@@ -904,14 +925,15 @@ export class LoopRuntime
 
           if (!stopping)
           {
-            await engine.start({
-              task, runId, directory, sessionFile: engineSession.sessionFile, engineHandoff: engineSession.handoff, nativeSessionId: previous && !member ? engineSession.nativeSessionId : nativeSessionId, memberBinding: member?.binding, conversationBinding: conversationBinding ? structuredClone(conversationBinding) : undefined, source: source ? structuredClone(source) : undefined, capabilities: [...(agentTools ? [agentTools.capability] : []), ...memberToolCapabilities({ codeCheckTools: codeChecks, taskTools, memberHelpTools, artifactTools: artifactCapture?.tools, manifestTools: manifestCapture?.tools, memberCheckpointTools: checkpointTools?.tools, validationTools: validation?.tools, controlledFileTools: controlledFile, artifactTransitionTools: artifactTransition, scopedExecutionTools: scopedExecution })], assertMemberResume: memberResume ? this.options.AssertMemberResume : undefined, emit: async event => { await emit(event) }, beforeTool: async call =>
+            instance = await engine.Open({
+              task, runId, directory, sessionFile: engineSession.sessionFile, engineHandoff: engineSession.handoff, nativeSessionId: previous && !member ? engineSession.nativeSessionId : nativeSessionId, memberBinding: member?.binding, conversationBinding: conversationBinding ? structuredClone(conversationBinding) : undefined, source: source ? structuredClone(source) : undefined, capabilities: composeTaskTools([...(agentTools ? [agentTools.capability] : []), ...(this.options.extensionCapability ? [this.options.extensionCapability] : [])], memberToolCapabilities({ codeCheckTools: codeChecks, taskTools, memberHelpTools, artifactTools: artifactCapture?.tools, manifestTools: manifestCapture?.tools, memberCheckpointTools: checkpointTools?.tools, validationTools: validation?.tools, controlledFileTools: controlledFile, artifactTransitionTools: artifactTransition, scopedExecutionTools: scopedExecution })), assertMemberResume: memberResume ? this.options.AssertMemberResume : undefined, emit: async event => { await emit(event) }, beforeTool: async call =>
               {
                 call = structuredClone(call);
 
                 if (calls.has(call.id))
                   return { allow: false, reason: '同一运行不能重复使用工具调用 ID' };
 
+                const permissionRevision = this.options.PermissionRevision?.();
                 const originalInput = structuredClone(call.input);
 
                 let normalizationError: unknown;
@@ -974,12 +996,19 @@ export class LoopRuntime
                     if (workflows.length && call.name === 'cbim_delivery_prepare')
                       assertDeliveryReady();
 
-                    descriptor = this.options.DescribeTool?.(structuredClone(call));
+                    descriptor = this.options.DescribeTool?.(structuredClone(call), runId);
 
-                    if (descriptor && workflowHasEffects(descriptor.effects))
+                    let veto: string | undefined;
+                    for (const extension of this.options.extensions ?? [])
+                    {
+                      const response = await extension.BeforeToolCall?.({ ...structuredClone(call), runId, turnId }, opening.signal);
+                      if (response) { veto = response.block || '扩展阻止了工具调用'; break; }
+                    }
+                    if (stopping) veto = '任务正在停止';
+                    if (!veto && descriptor && workflowHasEffects(descriptor.effects))
                       planVersion = taskTools.BeforeEffects();
 
-                    decision = descriptor ? await this.options.ToolPolicy(structuredClone(call), structuredClone(descriptor)) : await this.options.ToolPolicy(structuredClone(call));
+                    decision = veto ? { allow: false, reason: veto } : descriptor ? await this.options.ToolPolicy(structuredClone(call), structuredClone(descriptor)) : await this.options.ToolPolicy(structuredClone(call));
                   }
                 }
                 catch (error)
@@ -1054,9 +1083,10 @@ export class LoopRuntime
 
                 const authorization = await emit({ type: decision.allow ? 'tool.allowed' : 'tool.denied', data: { id: call.id, name: call.name, input: call.input, ...decision, ...(Number.isSafeInteger(descriptor?.contractVersion) && descriptor!.contractVersion! > 0 ? { contractVersion: descriptor!.contractVersion } : {}), ...(!decision.allow ? { receipt: toolReceipt(identity, call, decision, 'denied') } : {}) } }, true);
 
-                if (stopping && decision.allow)
+                const staleGrant = permissionRevision !== this.options.PermissionRevision?.() && descriptor?.effects.some(effect => ['business-write', 'knowledge-write', 'external-write', 'command'].includes(effect));
+                if ((stopping || staleGrant) && decision.allow)
                 {
-                  decision = { ...decision, allow: false, reason: '任务正在停止' };
+                  decision = { ...decision, allow: false, reason: stopping ? '任务正在停止' : 'Office 权限已变更，原调用授权已失效' };
 
                   calls.set(call.id, { ...calls.get(call.id)!, call, decision, generation: taskTools.generation });
 
@@ -1077,7 +1107,7 @@ export class LoopRuntime
 
                 return decision;
               }
-            });
+            }, opening.signal);
           }
 
           if (control?.signal.aborted)
@@ -1092,7 +1122,13 @@ export class LoopRuntime
           if (control?.signal.aborted)
             await stop();
 
-          result = stopping ? { status: 'cancelled' as const } : await engine.run(message);
+          if (stopping) result = { status: 'cancelled' };
+          else
+          {
+            const turn = instance!.Submit(message);
+            turnId = turn.turnId;
+            result = await turn.done;
+          }
 
           if (!stopping && agentTools?.Active())
             throw new Error('仍有未答复的子调用，已停止原子树；不能报告本轮完成');
@@ -1123,7 +1159,7 @@ export class LoopRuntime
 
           try
           {
-            await engine.close()
+            await engine.Close(instance)
           }
           catch (error)
           {
@@ -1186,7 +1222,7 @@ export class LoopRuntime
         return this.options.storage.Read(directory);
       })();
 
-      this.active.set(task.taskId, { runId, engine, stop, done });
+      this.active.set(task.taskId, { runId, stop, done });
 
       void done.catch(() => { });
 
@@ -1198,7 +1234,7 @@ export class LoopRuntime
 
       try
       {
-        await preparedEngine?.close()
+        await preparedEngine?.Close(instance)
       }
       finally
       {

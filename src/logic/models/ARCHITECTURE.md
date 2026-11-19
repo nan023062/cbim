@@ -24,10 +24,15 @@ class N_8ac456a485c9["公开入口"] {
   <<module>>
 }
 click N_8ac456a485c9 href "index.ts"
+class N_5c23708d3ede["protocol"] {
+  <<virtual>>
+}
+click N_5c23708d3ede href "protocol/ARCHITECTURE.md"
 class N_3da65b7589f4["service"] {
   <<virtual>>
 }
 click N_3da65b7589f4 href "service/ARCHITECTURE.md"
+N_8ac456a485c9 ..> N_5c23708d3ede : 依赖
 N_3da65b7589f4 ..> N_8ac456a485c9 : 依赖
 ```
 
@@ -35,6 +40,7 @@ N_3da65b7589f4 ..> N_8ac456a485c9 : 依赖
 
 | 虚拟封装 | 整体职责 |
 | --- | --- |
+| [protocol](protocol/ARCHITECTURE.md) | 维护模型配置结构、供应商连接选择、模型目录解析及生成与嵌入快照。凭据存取和设置持久化由 Logic 装配。 |
 | [service](service/ARCHITECTURE.md) | 持久管理模型供应商配置，并在一致配置版本下解析运行连接与凭据。 |
 
 [上层设计](../ARCHITECTURE.md)

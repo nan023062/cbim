@@ -1,3 +1,4 @@
+import { fixtureEngines } from '../../../../../support/engine-instances';
 import {afterEach,expect,it} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -12,7 +13,7 @@ async function fixture(attempts:{kind:string;fail?:boolean;tool?:boolean}[]){
   const directory=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-failed-retry-')),contexts:EngineContext[]=[];
   const task:TaskSpec={taskId:'main',workspaceId:'workspace',root:directory,mode:'chat',agentId:'cbim:main',goal:'User request',moduleIds:[],acceptance:[]};
   let leases=0,index=0,modelCalls=0;
-  const runtime=new LoopRuntime({directory,storage:new FileRunStorage(),AcquireLease:async()=>{leases++;return()=>{leases--}},ToolPolicy:async()=>({allow:true,effects:['read']}),CreateEngine:()=>{
+  const runtime=new LoopRuntime({directory,storage:new FileRunStorage(),AcquireLease:async()=>{leases++;return()=>{leases--}},ToolPolicy:async()=>({allow:true,effects:['read']}),engines:fixtureEngines(()=>{
     const attempt=attempts[index++];let current:EngineContext;
     const engine:AgentEngine={kind:attempt.kind,start:async context=>{
       current=context;contexts.push(context);
@@ -24,7 +25,7 @@ async function fixture(attempts:{kind:string;fail?:boolean;tool?:boolean}[]){
       return {status:'completed'};
     },stop:async()=>{},close:async()=>{}};
     return engine;
-  }});
+  })});
   cleanups.push(async()=>{await runtime.Close();expect(leases).toBe(0);const target=path.resolve(directory);if(path.dirname(target)!==path.resolve(os.tmpdir())||!path.basename(target).startsWith('cbim-failed-retry-'))throw Error('Unexpected cleanup path');await fs.rm(target,{recursive:true,force:true})});
   return {task,runtime,contexts,modelCalls:()=>modelCalls};
 }

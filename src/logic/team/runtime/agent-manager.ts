@@ -1,7 +1,7 @@
 /**
  * 目录归属：logic/team/runtime；主运行与成员执行管理。
  * 作用定位：根据已核实角色配置注册持久化成员，按主会话分配独立逻辑 Session。
- * 设计原因：主/子逻辑对话按办公室与角色唯一保留；任务执行租约和原生通道继续隔离，旧无周期登记仍按原规则恢复。返回待提交对象，由调度事务统一保存。
+ * 设计原因：主/子逻辑对话按办公室与 Worker 唯一保留；任务执行租约和原生通道继续隔离，旧无周期登记仍按原规则恢复。返回待提交对象，由调度事务统一保存。
  * 职责边界：目前只管理身份与注册，不分配 Pi 进程、执行槽或宣布 working。
  */
 import { randomUUID } from 'node:crypto';
@@ -10,12 +10,12 @@ import type { AgentConfigurationSnapshot, AgentSessionBinding } from '../rules/a
 
 import type { DispatchState } from '../../dispatch/rules/dispatch-storage';
 
-import type { AgentRef } from '../../tasks/rules/graph-types';
+import { defaultWorkerId, type AgentRef } from '../../tasks/rules/graph-types';
 
-import type { TeamSession } from '../rules/team-session';
+import type { OfficeMemberSession } from '../../../framework/office';
 
 /** 先尊重既有图根身份；新主会话创建独立主实例。同实例按根会话和用途复用通道，缺省用途兼容旧 task 记录。 */
-export function prepareMember(state: DispatchState, configuration: AgentConfigurationSnapshot, rootSessionId: string, purpose: NonNullable<AgentSessionBinding['purpose']> = 'task', execution?: { scopeId: string; taskId: string })
+export function prepareMember(state: DispatchState, configuration: AgentConfigurationSnapshot, rootSessionId: string, purpose: NonNullable<AgentSessionBinding['purpose']> = 'task', execution?: { scopeId: string; taskId: string }, workerId = defaultWorkerId(configuration.agentId))
 {
   if (state.workspaceId !== configuration.workspaceId)
     throw new Error('角色不属于当前工作区');
@@ -68,12 +68,9 @@ export function prepareMember(state: DispatchState, configuration: AgentConfigur
   const agent: AgentRef = { agentId: member.agentId, agentInstanceId: member.agentInstanceId, agentSessionId: session.agentSessionId, name: configuration.name };
 
   // 长期逻辑对话与任务执行租约分别登记：后者结束不会让用户失去子会话入口。
-  const teamSession: TeamSession = state.teamSessions?.find(item => item.rootSessionId === rootSessionId && item.agentId === configuration.agentId) ?? {
-    workspaceId: configuration.workspaceId, rootSessionId, agentId: configuration.agentId, teamId: configuration.teamId, sessionId: randomUUID(), createdAt: new Date().toISOString(),
+  const teamSession: OfficeMemberSession = state.teamSessions?.find(item => item.officeId === rootSessionId && item.workerId === workerId) ?? {
+    workspaceId: configuration.workspaceId, officeId: rootSessionId, workerId, sessionId: randomUUID(), createdAt: new Date().toISOString(),
   };
-
-  if (teamSession.teamId !== configuration.teamId)
-    throw new Error('团队对话的角色归属已经变化');
 
   return { member, session: structuredClone(session), agent, teamSession: structuredClone(teamSession) };
 }

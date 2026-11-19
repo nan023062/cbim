@@ -81,8 +81,9 @@ it('每个派发任务创建独立执行实例，关闭原子取消未执行任�
     const graph=await f.service.Snapshot(f.identity);
     expect(graph.tasks).toHaveLength(2);
     const logical=(await f.store.Read()).teamSessions!;
-    expect(logical.filter(session=>session.rootSessionId===f.identity.rootSessionId)).toHaveLength(2);
-    const child=logical.find(session=>session.agentId==='.cbim/team/dev')!;
+    expect(logical.filter(session=>session.officeId===f.identity.rootSessionId)).toHaveLength(2);
+    const child=logical.find(session=>session.workerId===graph.tasks[0].workerId)!;
+    expect(child).toBeDefined();
     expect(new Set(graph.tasks.map(task=>task.assignee.agentInstanceId)).size).toBe(2);
     expect(graph.tasks.every(task=>task.assignee.agentInstanceId!==root.agent.agentInstanceId&&task.scopeId==='scope-one')).toBe(true);
     await expect(f.service.DispatchTask({...f.input('untrusted-scope'),scopeId:'scope-one'})).rejects.toMatchObject({code:'GRAPH_INPUT_INVALID'});
@@ -102,7 +103,7 @@ it('每个派发任务创建独立执行实例，关闭原子取消未执行任�
     await expect(f.service.DispatchTask(f.input('late-task'),'scope-one')).rejects.toMatchObject({code:'DISPATCH_SCOPE_CLOSED'});
     await f.openPlanned('scope-next');
     const next=await f.service.DispatchTask(f.input('new-cycle'),'scope-next');
-    expect((await f.store.Read()).teamSessions!.find(session=>session.agentId==='.cbim/team/dev')).toEqual(child);
+    expect((await f.store.Read()).teamSessions!.find(session=>session.workerId===graph.tasks[0].workerId)).toEqual(child);
     expect((await f.service.Snapshot(f.identity)).tasks.find(task=>task.taskId===next.taskId)?.assignee.agentInstanceId).not.toBe(graph.tasks[0].assignee.agentInstanceId);
   }finally{await f.cleanup()}
 });

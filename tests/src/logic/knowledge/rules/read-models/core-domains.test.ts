@@ -9,7 +9,7 @@ it('核心领域在固定快照上解析团队 Skill 和本模块 Workflow，无
   expect(agent.skills.map(s=>s.id)).toEqual([seed.own,seed.shared]);
   expect(agent.skills.map(s=>s.inherited)).toEqual([false,true]);
   expect((await business.Module(seed.moduleId)).workflows[0].id).toBe(seed.workflowId);
-  expect((await business.Module(seed.child)).workflows).toEqual([]);
+  expect((await business.Module(seed.child)).workflows).toMatchObject([{id:seed.workflowId,inherited:true}]);
   expect(seed.snapshot).toEqual(before);
 });
 it('固定快照缺对象或正文时明确报告，不从磁盘补造资料',async()=>{

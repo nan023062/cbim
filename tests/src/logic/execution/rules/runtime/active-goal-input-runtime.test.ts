@@ -1,3 +1,4 @@
+import { fixtureEngines } from '../../../../../support/engine-instances';
 import {expect,it,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import os from 'node:os';
@@ -13,7 +14,7 @@ async function fixture(afterSave?:(event:EngineEvent)=>void){
   storage.CreateJournal=(...args)=>{const journal=create(...args),append=journal.Append.bind(journal);journal.Append=async event=>{const saved=await append(event);afterSave?.(event);return saved};return journal};
   let context!:EngineContext,finish!:(value:{status:'cancelled'})=>void;const done=new Promise<{status:'cancelled'}>(resolve=>{finish=resolve}),steer=vi.fn(async()=>{});
   const engine:AgentEngine={kind:'controlled',start:async value=>{context=value},run:()=>done,steer: steer,stop:async()=>{finish({status:'cancelled'})},close:async()=>{}};
-  const runtime=new LoopRuntime({directory,storage,CreateEngine:()=>engine,AcquireLease:async()=>()=>{},ToolPolicy:async()=>({allow:false})}),run=await runtime.Start({taskId:'main',workspaceId:'workspace',root:directory,mode:'chat',agentId:'cbim:main',moduleIds:[],goal:'原输入',acceptance:[]});
+  const runtime=new LoopRuntime({directory,storage,engines:fixtureEngines(()=>engine),AcquireLease:async()=>()=>{},ToolPolicy:async()=>({allow:false})}),run=await runtime.Start({taskId:'main',workspaceId:'workspace',root:directory,mode:'chat',agentId:'cbim:main',moduleIds:[],goal:'原输入',acceptance:[]});
   await vi.waitFor(()=>expect(context).toBeDefined());const input={message:'新增输入'},token={scopeId:'scope',insertionId:hash(json({scopeId:'scope',runId:run.runId,queueId:'queue'})),queueId:'queue',runId:run.runId,inputHash:scopedActiveInputHash(input)};
   return {runtime,run,context,token,input,steer,insert:()=>runtime.Steer('main',input.message,[],{expectedRunId:run.runId,signal:new AbortController().signal,activeInput:{token}}),cleanup:async()=>{finish({status:'cancelled'});await runtime.Close();const target=path.resolve(directory);if(path.dirname(target)!==path.resolve(os.tmpdir())||!path.basename(target).startsWith('cbim-active-input-runtime-'))throw Error('Unexpected cleanup');await fs.rm(target,{recursive:true,force:true})}};
 }

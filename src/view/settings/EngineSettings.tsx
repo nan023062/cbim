@@ -3,9 +3,11 @@
  * 设计原因：所有引擎操作留在自己的详情页；轮询只读本机状态，切页停止轮询，不自动检查远端或重复安装。
  * 状态边界：AsyncGeneration 只隔离迟到快照；提交冻结的候选摘要与 revision；在途刷新不能覆盖操作回执，已有安装与缓存归后端持久化。
  */
+import './settings.css';
+
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { modelRoleChoices, supportedEngines, providerSupportsEngine, engineDescriptor, type LoopEngine, type EnginePackageSettings } from '../../bridge/contracts/engines';
+import { registerPackageEngines, modelRoleChoices, supportedEngines, providerSupportsEngine, engineDescriptor, type LoopEngine, type EnginePackageSettings } from '../../bridge/contracts/engines';
 
 import type { LlmSettings } from '../../bridge/contracts/models';
 
@@ -32,7 +34,7 @@ export function EngineSettings({ active = true }: { active?: boolean })
     acting = useRef(false),
     generation = useRef(new AsyncGeneration());
 
-  const reload = useCallback(async (includeModels = false) => { if (reading.current === generation.current.Capture()) return; const request = generation.current.Capture(); reading.current = request; try { const [engines, models] = await Promise.all([api.call('engines.settings'), includeModels ? api.call('models.list') : Promise.resolve(undefined)]); if (alive.current && generation.current.IsCurrent(request)) { setState(engines); setReadError(''); if (models) setModels(models) } } catch (error: any) { if (alive.current && generation.current.IsCurrent(request)) setReadError(error.message) } finally { if (reading.current === request) reading.current = undefined } }, []);
+  const reload = useCallback(async (includeModels = false) => { if (reading.current === generation.current.Capture()) return; const request = generation.current.Capture(); reading.current = request; try { const [engines, models] = await Promise.all([api.call('engines.settings'), includeModels ? api.call('models.list') : Promise.resolve(undefined)]); if (alive.current && generation.current.IsCurrent(request)) { registerPackageEngines(engines.items.flatMap(item => item.installed.concat(item.candidate ?? []))); setState(engines); setReadError(''); if (models) setModels(models) } } catch (error: any) { if (alive.current && generation.current.IsCurrent(request)) setReadError(error.message) } finally { if (reading.current === request) reading.current = undefined } }, []);
 
   useEffect(() => { if (!active) return; alive.current = true; void reload(true); const timer = setInterval(() => { if (!document.hidden) void reload() }, 1000); return () => { alive.current = false; generation.current.Advance(); clearInterval(timer) }; }, [active, reload]);
 
@@ -57,6 +59,7 @@ export function EngineSettings({ active = true }: { active?: boolean })
 
       generation.current.Advance();
 
+      registerPackageEngines(next.items.flatMap(item => item.installed.concat(item.candidate ?? [])));
       setState(next);
 
       setNotice(message)

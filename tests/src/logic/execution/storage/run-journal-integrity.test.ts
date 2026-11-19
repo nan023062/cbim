@@ -1,3 +1,4 @@
+import { fixtureEngines } from '../../../../support/engine-instances';
 import {afterEach,expect,test} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -49,6 +50,6 @@ test('only zero bytes has a fresh-log code; an incomplete first event is invalid
 test('known incomplete log cannot be resumed and releases the preflight lease without creating an engine',async()=>{
   const f=await fixture(),original=await RunJournal.Read(f.directory);await fs.appendFile(f.file,'{"unfinished');
   const storage=new FileRunStorage();storage.Read=()=>RunJournal.Read(f.directory);let leases=0,engines=0;
-  const runtime=new LoopRuntime({storage,directory:f.directory,AcquireLease:async()=>{leases++;return()=>{leases--}},CreateEngine:()=>{engines++;throw Error('Must not construct engine')},ToolPolicy:async()=>({allow:false})});
+  const runtime=new LoopRuntime({storage,directory:f.directory,AcquireLease:async()=>{leases++;return()=>{leases--}},engines:fixtureEngines(()=>{engines++;throw Error('Must not construct engine')}),ToolPolicy:async()=>({allow:false})});
   try{await expect(runtime.Start(original.task,'Continue',{runId:original.runId,reconciledToolIds:[]})).rejects.toThrow('尾行不完整');expect(leases).toBe(0);expect(engines).toBe(0)}finally{await runtime.Close()}
 });

@@ -6,7 +6,14 @@
 import type { InputImage } from '../rules/types';
 
 /** 仅 AutoCollaboration 创建；scope 与回调固定归属一个仍活动的批次。 */
-export interface ExecutionAdmissionWait
+export interface OfficePermissionReader
+{
+  ReadPermission?(): 'read' | 'ask' | 'execute';
+  PermissionRevision?(): number;
+  OnPermissionChange?(listener: () => void): () => void;
+}
+
+export interface ExecutionAdmissionWait extends OfficePermissionReader
 {
   scopeId: string;
 

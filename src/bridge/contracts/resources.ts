@@ -1,10 +1,10 @@
 /**
  * 作用定位：资源界面的通信类型及静态资源包操作协议。
- * 设计原因：仓库定义由 Logic 持有；迁移期仅转接具名纯契约，不向界面加载仓库服务。
+ * 设计原因：仓库定义由 Resource 持有；迁移期仅转接具名纯契约，不向界面加载仓库服务。
  */
-export { resourceKinds, resourceCategories } from '../../logic/resources';
+export { resourceKinds, resourceCategories } from '../../resource';
 
-export type { ResourceKind, ResourceCategory, ResourceDefinition, ResourceLibrarySnapshot, RepositoryConfig, RepositorySession, RepositoryStatus } from '../../logic/resources';
+export type { ResourceKind, ResourceCategory, ResourceDefinition, ResourceLibrarySnapshot, RepositoryConfig, RepositorySession, RepositoryStatus } from '../../resource';
 
 /** 资源包只运输静态知识；不包含目标工程人员、授权、成员实例、任务或会话。 */
 export type { WorkspacePackage, WorkspacePackageKind, WorkspacePackageMode } from '../../logic/knowledge/rules/portable-package';

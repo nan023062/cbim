@@ -28,14 +28,14 @@ export function data(s: Snapshot, p: string)
 export function content(s: Snapshot, owner: string, reference: unknown)
 {
   if (typeof reference !== 'string')
-    return { available: false, reference };
+    return { available: false as const, reference };
 
   const p = path.posix.normalize(path.posix.join(owner, reference.split('#')[0]));
 
   if (!p.startsWith('.cbim/'))
-    return { available: false, reference, reason: '引用越界' };
+    return { available: false as const, reference, reason: '引用越界' };
 
   const f = s.files.find(f => f.path === p);
 
-  return f ? { available: true, ...f } : { available: false, reference, path: p, reason: '正文未找到或不属于知识正文类型' };
+  return f ? { available: true as const, ...f } : { available: false as const, reference, path: p, reason: '正文未找到或不属于知识正文类型' };
 }

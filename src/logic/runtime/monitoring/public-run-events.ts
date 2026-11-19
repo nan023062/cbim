@@ -238,6 +238,13 @@ export function projectRunEvent(event: StoredEvent, identity: PublicRunIdentity,
       {
         data = { label: labels.has(String(source.label)) ? source.label : '运行状态已更新' };
 
+        if (source.metric === 'public-summary' || source.metric === 'command-progress' || source.metric === 'thinking')
+        {
+          data.metric = source.metric;
+          data.label = source.metric === 'public-summary' ? '推理摘要' : source.metric === 'thinking' ? '正在思考' : '命令正在输出';
+          if (source.metric === 'public-summary') data.text = text(source.text, 4096);
+          if (typeof source.itemId === 'string') data.itemId = text(source.itemId, 128);
+        }
         if (['activity', 'context', 'request-limit', 'run-usage', 'insertion'].includes(String(source.metric)))
           data.metric = source.metric;
 
@@ -276,5 +283,6 @@ export function projectRunEvent(event: StoredEvent, identity: PublicRunIdentity,
       data = { label: '执行记录已更新' };
   }
 
+  if (typeof source.turnId === 'string') data.turnId = text(source.turnId, 128);
   return { version: 1, seq: event.seq, taskId: task.taskId, runId: identity.runId, workspaceId: task.workspaceId, time: event.time, type, data };
 }

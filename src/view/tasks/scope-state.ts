@@ -4,9 +4,9 @@
  * 职责边界：只投影后端事实；运行内补充优先展示接收中/待核实，已接收也不是完成。摘要与详情须核对同一补充状态，不能用旧审阅盖过未知输入。
  * 详情契约：只持有 PublicDispatchScope 的安全来源和新处置引用，不能将公共投影当作含原生上下文的完整持久周期。
  */
-import { applyScopeBatch, validateScopeSnapshot, scopeActiveInputStatus, scopeActiveInputSchema, teamSessionSchema, topicInterruptionSchema, pendingTopicInterruption } from '../../bridge/contracts/dispatch';
+import { applyScopeBatch, validateScopeSnapshot, scopeActiveInputStatus, scopeActiveInputSchema, officeMemberSessionSchema, topicInterruptionSchema, pendingTopicInterruption } from '../../bridge/contracts/dispatch';
 
-import type { TeamSession } from '../../bridge/contracts/dispatch';
+import type { OfficeMemberSession } from '../../bridge/contracts/dispatch';
 
 import type { PublicDispatchScope, DispatchSessionRead, GraphIdentity, GraphSnapshot, ScopeCursor, ScopeDelta, ScopeSnapshot, ScopeSummary, ScopeDetailStamp } from '../../bridge/contracts/dispatch';
 
@@ -205,7 +205,7 @@ export class SessionReadProjection
       scope: PublicDispatchScope
     }>();
 
-  private sessions?: readonly TeamSession[];
+  private sessions?: readonly OfficeMemberSession[];
 
   constructor(readonly identity: GraphIdentity)
   {
@@ -272,9 +272,9 @@ export class SessionReadProjection
 
     if (response.teamSessions !== undefined)
     {
-      const parsed = response.teamSessions.map(value => teamSessionSchema.parse(value));
+      const parsed = response.teamSessions.map(value => officeMemberSessionSchema.parse(value));
 
-      if (parsed.some(value => value.workspaceId !== this.identity.workspaceId || value.rootSessionId !== this.identity.rootSessionId) || new Set(parsed.map(value => value.sessionId)).size !== parsed.length || new Set(parsed.map(value => value.agentId)).size !== parsed.length)
+      if (parsed.some(value => value.workspaceId !== this.identity.workspaceId || value.officeId !== this.identity.rootSessionId) || new Set(parsed.map(value => value.sessionId)).size !== parsed.length || new Set(parsed.map(value => value.workerId)).size !== parsed.length)
         throw Error('团队对话身份重复或属于其他办公室');
 
       if (this.graphCursor?.streamId === graphs.cursor?.streamId && sessions?.some(old => !parsed.some(value => JSON.stringify(value) === JSON.stringify(old))))
@@ -400,7 +400,7 @@ export function completeSessionRead(response: DispatchSessionRead, projection: S
 export interface ScopeGoalState
 {
   /** 同读取屏障验证的长期对话；旧记录缺省，不从执行实例推造子 Session。 */
-  teamSessions?: readonly TeamSession[];
+  teamSessions?: readonly OfficeMemberSession[];
 
   scopes: readonly ScopeSummary[];
 

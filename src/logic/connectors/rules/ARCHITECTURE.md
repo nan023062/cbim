@@ -13,7 +13,6 @@
 | 组成 | 定位 |
 | --- | --- |
 | [standards](standards.ts) | 连接器声明规范与注册表 Schema；不携带凭据或发起网络连接。 |
-| [ConnectorRegistry](registry.ts) | 链接器领域封装，管理插件或资源仓库的静态身份、查询与重复校验。 |
 
 <!-- architecture:generated:start -->
 
@@ -21,8 +20,6 @@
 
 ```mermaid
 classDiagram
-class N_a1513c940270["ConnectorRegistry"]
-click N_a1513c940270 href "registry.ts"
 class N_3d7d3147d79d["standards"] {
   <<module>>
 }

@@ -9,7 +9,7 @@ import type {ScopeSummary} from '../../../../src/bridge/contracts/dispatch';
 const scope:ScopeSummary={scopeId:'topic',status:'active',createdAt:officeTime,hasGoal:true,hasPlan:false,inputPreview:'当前目标',stamp:{scopeId:'topic',streamId:'scopes:graph',seq:1}};
 it('同一逻辑成员的不同执行实例只显示一人，当前模块与串行待办分别展示',()=>{
  const current={...officeTask('one'),status:'running' as const,activeRunId:'run',modules:[{moduleId:'module-a',name:'模块 A',knowledgeRevision:'k',maintenanceBindingId:'m',maintainerPersonIds:['p'],workflow:{kind:'general' as const,id:'general',version:'1',reason:'test'}}]},other={...officeTask('two'),modules:current.modules};
- const graph=officeGraph([current,other]),sessions=[officeSession(),{...officeSession('foreign'),rootSessionId:'other'}];
+ const graph=officeGraph([current,other]),sessions=[officeSession(),{...officeSession('foreign'),officeId:'other'}];
  const scene=officeScene(graph,sessions,[scope],true);expect(scene.actors).toHaveLength(2);expect(scene.actors[1]).toMatchObject({id:'worker-session',taskId:'one',deskId:'module:module-a',queued:1,working:true});expect(scene.desks.map(value=>value.name)).toEqual(['主 Agent 工位','模块 A']);
  const html=renderToStaticMarkup(createElement(OfficeScene,{graph,sessions,scopes:[scope],mainRunning:true,queued:2,onChat:()=>{},onTask:()=>{}}));
  expect(html.match(/data-office-actor="worker-session"/g)).toHaveLength(1);expect(html).toContain('打开 建模员 的对话');expect(html).toContain('同一 Agent 串行');expect(html).not.toContain('foreign');expect(html).not.toContain('type="checkbox"');expect(html).not.toContain('人物动态');expect(html).toContain('office-person-drawing working');expect(html).not.toContain('office-current-tasks');expect(html).not.toContain('当前任务 ·');expect(html).toContain('任务详情');

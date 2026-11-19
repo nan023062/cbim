@@ -6,7 +6,7 @@ import {fixture} from '../support/helpers';
 import {seedTeam} from '../../knowledge/service/support/team-fixture';
 import {registerFixtureOwner} from '../../team/service/support/owner-execution-fixture';
 import {modelRequestBudgetProvider} from '../../budget/runtime/support/model-request-budget-provider';
-import {codexFixture} from '../../execution/engines/codex/support/codex-fixture';
+import {codexFixture} from '../../engines/adapters/codex/support/codex-fixture';
 import {budgetScopes} from '../../budget/runtime/support/scope-budget-fixture';
 import {requestBudgetReportSchema} from '../../../../../src/logic/budget/rules/model-request-budget';
 import {NativeSessionFiles} from '../../../../../src/logic/execution/platform/native-session-files';

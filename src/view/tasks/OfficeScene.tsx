@@ -4,7 +4,7 @@
  */
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 
-import type { GraphSnapshot, TeamSession, ScopeSummary } from '../../bridge/contracts/dispatch';
+import type { GraphSnapshot, OfficeMemberSession, ScopeSummary } from '../../bridge/contracts/dispatch';
 
 import { officeScene, OfficeEventTracker, type OfficeActor, type OfficeEvent } from './office-state';
 
@@ -16,7 +16,7 @@ export interface OfficeSceneProps
 {
   graph: GraphSnapshot;
 
-  sessions?: readonly TeamSession[];
+  sessions?: readonly OfficeMemberSession[];
 
   scopes: readonly ScopeSummary[];
 
@@ -71,14 +71,14 @@ export function OfficeScene({ graph, sessions, scopes, mainRunning, queued, acti
 
   const actors = scene.actors;
 
-  const actorFor = (event: OfficeEvent) => event.kind === 'assignment' ? actors.find(actor => actor.main) : actors.find(actor => actor.agentId === event.agentId);
+  const actorFor = (event: OfficeEvent) => event.kind === 'assignment' ? actors.find(actor => actor.main) : actors.find(actor => actor.workerId === event.workerId);
 
   // 同一人物最多播放一条；不同成员可同时汇报，主 Agent 的派发按顺序表现。
   const playing = events.filter((event, index) => { const actor = actorFor(event); return actor && !events.slice(0, index).some(prior => actorFor(prior)?.id === actor.id) });
 
   const playKey = playing.map(event => event.id).join('|');
 
-  useLayoutEffect(() => { const measure = () => { const next: Record<string, { x: number; y: number }> = {}; for (const event of playing) { const actor = actorFor(event), target = actors.find(value => event.kind === 'assignment' ? value.agentId === event.agentId : value.main); if (!actor || !target) continue; const origin = anchors.current.get(actor.id)?.getBoundingClientRect(), destination = anchors.current.get(target.id)?.getBoundingClientRect(); if (origin && destination) next[event.id] = { x: destination.left - origin.left + (destination.width - origin.width) / 2 + (target.main ? 36 : -36), y: destination.top - origin.top } } setPaths(next) }; measure(); const observer = typeof ResizeObserver === 'undefined' ? undefined : new ResizeObserver(measure); if (stage.current) observer?.observe(stage.current); return () => observer?.disconnect(); }, [playKey, scene]);
+  useLayoutEffect(() => { const measure = () => { const next: Record<string, { x: number; y: number }> = {}; for (const event of playing) { const actor = actorFor(event), target = actors.find(value => event.kind === 'assignment' ? value.workerId === event.workerId : value.main); if (!actor || !target) continue; const origin = anchors.current.get(actor.id)?.getBoundingClientRect(), destination = anchors.current.get(target.id)?.getBoundingClientRect(); if (origin && destination) next[event.id] = { x: destination.left - origin.left + (destination.width - origin.width) / 2 + (target.main ? 36 : -36), y: destination.top - origin.top } } setPaths(next) }; measure(); const observer = typeof ResizeObserver === 'undefined' ? undefined : new ResizeObserver(measure); if (stage.current) observer?.observe(stage.current); return () => observer?.disconnect(); }, [playKey, scene]);
 
   useEffect(() => { if (!playing.length) return; const ids = new Set(playing.map(event => event.id)); const timer = setTimeout(() => setEvents(old => old.filter(event => !ids.has(event.id))), 3200); return () => clearTimeout(timer) }, [playKey]);
 

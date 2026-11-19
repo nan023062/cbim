@@ -67,7 +67,7 @@ export class ApprovalQueue
     pending.resolve({ allow: allow === true, reason: allow ? '用户允许本次调用' : '用户拒绝本次调用' });
   }
 
-  Cancel(taskId?: string)
+  Cancel(taskId?: string, reason = '对话已停止')
   {
     if (taskId)
       this.approvedRuns.delete(taskId);
@@ -79,7 +79,7 @@ export class ApprovalQueue
       {
         this.approvals.delete(id);
 
-        p.resolve({ allow: false, reason: '对话已停止' })
+        p.resolve({ allow: false, reason })
       }
   }
 }

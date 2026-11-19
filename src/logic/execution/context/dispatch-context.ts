@@ -75,7 +75,7 @@ export async function resolveDispatchAgent(snapshot: Snapshot, agentId: string):
 
 /**
  * 解析至少一个真实模块，核实本模块实际挂载的 Workflow；岗位及负责人由派发入口独立核实。
- * 显式选择只按逻辑 ID 查本模块清单；未选择的模块沿用首项或空清单 general，不回退失效选择、不继承父模块。
+ * 显式选择只按逻辑 ID 查本模块清单；未选择的模块沿用首项或空清单 general，显式选择可使用祖先节点声明的 Workflow。
  */
 export async function resolveDispatchModules(snapshot: Snapshot, moduleIds: string[], workflowSelections?: readonly WorkflowSelection[]): Promise<ModuleBinding[]>
 {
@@ -98,7 +98,7 @@ export async function resolveDispatchModules(snapshot: Snapshot, moduleIds: stri
 
     const selected = workflowSelections?.find(item => item.moduleId === moduleId);
 
-    const workflow = selected ? module.workflows.find((item: { id: string }) => item.id === selected.workflowId) : module.workflows[0];
+    const workflow = selected ? module.workflows.find((item: { id: string }) => item.id === selected.workflowId) : module.workflows.find(item => !item.inherited);
 
     if (selected && !workflow)
       throw new Error('选定的 Workflow 未挂载于对应模块，请查询当前模块后重新规划');

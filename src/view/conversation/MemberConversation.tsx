@@ -38,7 +38,7 @@ export function MemberConversation({ member, graph, scopes, active, onSelectTask
 
   const runId = task?.runIds.includes(runChoice ?? '') ? runChoice : task?.runIds.at(-1);
 
-  const { run, loading, error, refresh } = useMemberRun(member.session.workspaceId, member.session.rootSessionId, task?.taskId ?? '', runId, !!task && active, active);
+  const { run, loading, error, refresh } = useMemberRun(member.session.workspaceId, member.session.officeId, task?.taskId ?? '', runId, !!task && active, active);
 
   return <section className="member-conversation" aria-label={member.name + ' 的对话'}>
     <header><h3>{member.name}</h3><p>执行 Agent 对话为只读，指令来自调用方 Agent，结果返回调用方。以下保留旧任务的真实记录。</p></header>

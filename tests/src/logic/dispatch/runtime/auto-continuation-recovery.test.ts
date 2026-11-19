@@ -45,7 +45,7 @@ it('Auto补充事务真实落盘后读取失败，只关闭本次run对应的意
     expect(f.hooks.Waiting?.(f.task.taskId)).toBe(false);expect(f.coordinator.Busy(f.task.taskId)).toBe(false);
     expect(launchModel).not.toHaveBeenCalled();expect(f.members.Start).not.toHaveBeenCalled();expect(f.execution.ContinueFromResults).not.toHaveBeenCalled();
     const before=await fs.readFile(path.join(f.directory,'dispatch.jsonl'),'utf8');
-    await expect(f.hooks.AcceptContinuation!(f.request,f.task,randomUUID()).then(()=>launchModel('duplicate'))).rejects.toMatchObject({code:'GOAL_WAIT_CONFLICT'});
+    await expect(f.hooks.AcceptContinuation!(f.request,f.task,randomUUID()).then(()=>launchModel('duplicate'))).rejects.toThrow('当前会话没有匹配的等待目标');
     expect(close).toHaveBeenCalledTimes(1);expect(await fs.readFile(path.join(f.directory,'dispatch.jsonl'),'utf8')).toBe(before);expect(launchModel).not.toHaveBeenCalled();
   }finally{await f.cleanup()}
 });
@@ -55,7 +55,7 @@ it('Auto迟到重复补充读到不同run的旧receipt，不关闭原活动周�
     const close=vi.spyOn(f.dispatch,'CloseScope'),launchModel=vi.fn(),originalRun=randomUUID();
     await f.hooks.AcceptContinuation!(f.request,f.task,originalRun);launchModel(originalRun);
     const accepted=await f.store.Read();expect(accepted.scopes![0]).toMatchObject({status:'active',continuations:[{runId:originalRun}]});
-    await expect(f.hooks.AcceptContinuation!(f.request,f.task,randomUUID()).then(()=>launchModel('duplicate'))).rejects.toMatchObject({code:'GOAL_WAIT_CONFLICT'});
+    await expect(f.hooks.AcceptContinuation!(f.request,f.task,randomUUID()).then(()=>launchModel('duplicate'))).rejects.toThrow('当前会话没有匹配的等待目标');
     expect(close).not.toHaveBeenCalled();expect(await f.store.Read()).toEqual(accepted);expect(f.coordinator.Busy(f.task.taskId)).toBe(true);expect(f.hooks.Waiting?.(f.task.taskId)).toBe(false);
     expect(launchModel).toHaveBeenCalledExactlyOnceWith(originalRun);expect(f.members.Start).not.toHaveBeenCalled();expect(f.execution.ContinueFromResults).not.toHaveBeenCalled();
     expect(()=>f.coordinator.Tools(f.task,originalRun,f.options)).not.toThrow();

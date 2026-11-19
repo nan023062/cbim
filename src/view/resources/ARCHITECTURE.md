@@ -26,15 +26,14 @@ class N_b797aca046dd["ResourceRepositoryView"] {
   <<component>>
 }
 click N_b797aca046dd href "ResourceRepositoryView.tsx"
-class N_8c9735b973da["RepositoryConnections"] {
-  <<component>>
-}
-click N_8c9735b973da href "RepositoryConnections.tsx"
 class N_2af600758a68["WorkspaceResourceTransfer"] {
   <<component>>
 }
 click N_2af600758a68 href "WorkspaceResourceTransfer.tsx"
-N_b797aca046dd ..> N_8c9735b973da : 依赖
+class N_8c9735b973da["RepositoryConnections"] {
+  <<component>>
+}
+click N_8c9735b973da href "RepositoryConnections.tsx"
 N_b797aca046dd ..> N_2af600758a68 : 依赖
 ```
 

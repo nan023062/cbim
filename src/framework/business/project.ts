@@ -1,0 +1,59 @@
+/** Project 组织整棵 Workspace 树，负责跨节点查找及 Workflow 继承，并提供打开指定工作区的入口。 */
+import type { WorkflowDefinition } from '../skills';
+
+import { WorkflowScope } from './workflow';
+
+import { projectRootModuleId } from './project-root';
+
+import type { Workspace, WorkspaceTree } from './workspace';
+
+import { WorkspaceInstance, type WorkspaceOpenContext, type WorkspaceInstanceFactory } from './workspace-instance';
+
+/** 一个项目是一棵业务树的根；旧知识索引的 roots 为直属工作区。 */
+export class Project
+{
+  public readonly kind = 'project';
+
+  public readonly id = projectRootModuleId;
+
+  public constructor(private _tree: WorkspaceTree)
+  {
+  }
+
+  public UpdateTree(tree: WorkspaceTree): void
+  {
+    this._tree = structuredClone(tree);
+  }
+
+  public get children(): readonly string[]
+  {
+    return [...this._tree.roots];
+  }
+
+  public FindWorkspace(id: string): Workspace | undefined
+  {
+    if (id === this.id || !Object.hasOwn(this._tree.nodes, id))
+      return undefined;
+
+    const node = this._tree.nodes[id];
+
+    return { ...node, children: [...node.children], sources: node.sources.map(source => ({ ...source })) };
+  }
+
+  /** 沿真实 children 关系从当前工作区向上读取各节点的 Workflow。 */
+  public ResolveWorkflows<T extends WorkflowDefinition>(workspaceId: string, declared: (owner: string) => readonly T[])
+  {
+    return WorkflowScope.Resolve(this._tree, workspaceId, declared);
+  }
+
+  /** 从当前项目选择物理业务节点，再由宿主打开对应目录。 */
+  public async OpenWorkspace(id: string, context: WorkspaceOpenContext, factory: WorkspaceInstanceFactory): Promise<WorkspaceInstance>
+  {
+    const description = this.FindWorkspace(id);
+
+    if (!description || description.virtual)
+      throw new Error('项目中没有可打开的物理工作区：' + id);
+
+    return WorkspaceInstance.Open(description, context, factory);
+  }
+}

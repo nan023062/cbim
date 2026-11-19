@@ -2,7 +2,7 @@
  * 作用定位：Agent 调用的便携身份、工具绑定和生命周期契约，供 Runtime 与 Bridge 使用。
  * 设计原因：记录读取及运行门禁不加载调度器实现，不通过聚合出口隐藏反向类型依赖。
  */
-export * from '../../framework/cability/agent/call';
+export * from '../../framework/office/call';
 
 import type { ScopeActiveInputPayload, ScopeActiveInputToken, ScopeActiveInputSendReceipt } from '../tasks/rules/scope-active-input';
 

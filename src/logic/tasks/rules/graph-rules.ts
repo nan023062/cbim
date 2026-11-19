@@ -18,6 +18,7 @@ import { candidateReviewSchema } from './candidate-review';
 
 import { queuedTaskCancellationSchema } from './queued-task-cancel';
 
+import { defaultWorkerId } from "./graph-types";
 import type { AgentRef, GraphEventBatch, GraphIdentity, GraphSnapshot, TaskNode } from './graph-types';
 
 import { memberHelpRecordSchema } from './member-help';
@@ -65,7 +66,7 @@ const moduleBinding = z.object({
 const root = z.object({ kind: z.literal('session-root'), nodeId: id, identity, agent, revision, createdAt: time }).strict();
 
 const task = z.object({
-  kind: z.literal('task'), nodeId: id, taskId: id, identity, scopeId: id.optional(), parentTaskId: id.optional(), requester: agent, assignee: agent,
+  kind: z.literal('task'), nodeId: id, taskId: id, identity, scopeId: id.optional(), parentTaskId: id.optional(), requester: agent, assignee: agent, workerId: z.string().min(1).max(520).optional(),
   modules: z.array(moduleBinding).min(1), workflowSelections: workflowSelectionsSchema.optional(), ownerBinding: ownerExecutionBindingSchema.optional(), fallbackBinding: automaticExecutionBindingSchema.optional(), goal: text, acceptance: z.array(z.object({ id, text }).strict()).min(1),
   revision, planRevision: revision, status: z.enum(['planned', 'queued', 'running', 'waiting', 'result_ready', 'blocked', 'failed', 'cancelled', 'interrupted', 'checkpointed']),
   awaitedChildren: z.array(z.object({ taskId: id, planRevision: revision }).strict()), waitReason: text.optional(), runIds: z.array(id), activeRunId: id.optional(),
@@ -181,6 +182,7 @@ export function usableResult(task: TaskNode, planRevision: number, resultId?: st
 /** 单项查询与完整图共用节点自身可核实的不变量；跨节点、图流及边关系仍由 validateGraph 核验。 */
 export function validateTaskNode(t: TaskNode): void
 {
+  if (t.workerId !== undefined && t.workerId !== (t.ownerBinding?.memberId ?? defaultWorkerId(t.assignee.agentId))) throw Error("任务的 Worker 与派发绑定不一致");
   shape(task, t);
 
   if (t.nodeId !== `task:${t.taskId}`)

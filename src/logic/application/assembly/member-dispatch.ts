@@ -1,3 +1,5 @@
+import { engineConfigurations } from '../../engines/service';
+import type { EngineConfigurationRef } from '../../../framework/kernel';
 /**
  * 目录归属：logic/application/assembly；应用与执行服务装配。
 
@@ -116,7 +118,7 @@ export function createMemberDispatch(workspace: Workspace, observer?: DispatchOb
  * prepare 固定公开模型参数和凭据，create 不重新读取默认设置；没有已保存模型时拒绝启动。
  * workspaceMembers 复用此 store 保存独立岗位审计；只调用 configuration 读取公开配置，不进入 prepare/create 或影响派发选择。
  */
-export function createMemberServices(workspace: Workspace, models: EngineModelProfiles, lease: WorkspaceExecutionLease, observer?: DispatchObserver, admission?: WorkspaceAdmission, budgetPolicy?: () => ScopeBudgetPolicy, controlledTransport?: ControlledFileTransport, engineRuntimes?: EngineRuntimeResolver)
+export function createMemberServices(workspace: Workspace, models: EngineModelProfiles, lease: WorkspaceExecutionLease, observer?: DispatchObserver, admission?: WorkspaceAdmission, budgetPolicy?: () => ScopeBudgetPolicy, controlledTransport?: ControlledFileTransport, engineRuntimes?: EngineRuntimeResolver, extensions?: readonly import('../../execution/rules/extensions').ExecutionExtension[], modelAdapters?: ReturnType<typeof import('../../engines').createModelAdapterRegistry>, officePermission?: (rootSessionId: string, scopeId?: string) => import('../../execution/admission/admission-wait').OfficePermissionReader | undefined)
 {
   workspace.Assert();
 
@@ -168,8 +170,9 @@ export function createMemberServices(workspace: Workspace, models: EngineModelPr
 
   const requestBudgets = new ModelRequestBudgetService(workspace, requestBudgetStore(store), dispatch.budgets);
 
-  const prepareEngine = (llm: ResolvedEngineModel, options: MemberStartOptions): PreparedEngine =>
+  const prepareEngine = (configuration: EngineConfigurationRef<ResolvedEngineModel, import('../../engines').LoopEngine>, options: MemberStartOptions): PreparedEngine =>
   {
+    const llm = configuration.Read().resolved!;
     return {
       model: structuredClone(llm.profile), availableTools: nativeToolNames(options.permission !== 'read', llm.profile.engine), scopedTools: process.platform === 'win32' && process.arch === 'x64' ? ['cbim_scoped_read', ...(options.permission !== 'read' ? ['cbim_scoped_node', ...(controlledTransport ? ['cbim_file_write_controlled'] : [])] : [])] : undefined, availableValidators: ['json-schema-v1', 'csv-table-v1', 'png-raster-v1'], Create: async (run, task, hooks) =>
       {
@@ -212,9 +215,10 @@ export function createMemberServices(workspace: Workspace, models: EngineModelPr
         const runCheckpointPorts = { ...checkpointPorts, CheckFiles: runFiles.CheckFiles.bind(runFiles) };
 
         const loop = await createWorkspaceLoop(workspace.paths, workspace, {
-          provider: 'cbim-' + llm.profile.id, model: llm.profile.model, profileId: llm.profile.id, llm, engineRuntimes,
-          permission: run.permission, turnTimeoutMs: run.turnTimeoutMs, OnEvent: hooks.OnEvent, RequestApproval: hooks.RequestApproval, RequestQuestion: hooks.RequestQuestion,
+          provider: 'cbim-' + llm.profile.id, model: llm.profile.model, profileId: llm.profile.id, configuration, engineRuntimes,
+          permission: topic?.recovery ? 'read' : run.permission, ReadPermission: topic?.recovery ? undefined : hooks.ReadPermission, PermissionRevision: topic?.recovery ? undefined : hooks.PermissionRevision, turnTimeoutMs: run.turnTimeoutMs, OnEvent: hooks.OnEvent, RequestApproval: hooks.RequestApproval, RequestQuestion: hooks.RequestQuestion,
         }, {
+          modelAdapters, extensions,
           memberCheckpointAllowance: memberCheckpointLimit - (task.checkpoints?.length ?? 0),
           RequestBudget: (_context, role) => requestBudgets.ForRun({ rootSessionId: run.binding.rootSessionId, taskId: task.taskId, runId: run.binding.runId, scopeId: task.scopeId, kind: 'member' }, llm, role),
           storage, member: { directory: runsDirectory, prompt: memberExecutionPrompt(run.prepared, task, run.prerequisites, topicContext), workflowContracts: preparedWorkflowContracts(run.prepared) }, OnEngineReady: hooks.OnEngineReady,
@@ -247,6 +251,7 @@ export function createMemberServices(workspace: Workspace, models: EngineModelPr
   };
 
   const members = new MemberExecutionManager(workspace, store, {
+    OfficePermission: officePermission,
     artifacts: {
       InspectAgent: inspectMember, NormalizePath: normalizeArtifact, CheckFiles: (files, signal) => artifactFiles.CheckFiles(files, signal), AcquireRead: () => { workspace.Assert(); return lease.Acquire('artifact-report:' + randomUUID(), 'read') }
     },
@@ -259,8 +264,8 @@ export function createMemberServices(workspace: Workspace, models: EngineModelPr
     signal: admission?.signal,
     Acquire: (key, permission, agentInstanceId, context) => { if (!context) { if (admission) throw new Error('成员准入缺少可信任务与命令身份'); return lease.Acquire('member:' + key, permission, agentInstanceId) } return acquireExecutionLease(lease, 'member:' + key, { workspaceId: workspace.entry.id, rootSessionId: context.task.identity.rootSessionId, taskId: context.task.taskId, scopeId: context.task.scopeId, requestId: admissionRequestId('member', context.commandId), agentInstanceId, source: context.wait ? 'member' : 'direct', workspacePermission: permission }, admission, context.wait); },
     owners: dispatch.owners,
-    Prepare: async options => prepareEngine(await models.Resolve(options.profileId, options.model), options),
-    WithEngineConfiguration: (model, options, use) => models.WithRuntimeConfiguration(model, async configuration => { workspace.Assert(); if (workspaceMemberModelHash(configuration.profile) !== model.configurationHash) throw new Error('岗位模型配置已变化，请明确采纳后重新规划'); return use({ model: configuration.profile, Prepare: () => prepareEngine(configuration.Resolve(), options) }); }),
+    Prepare: async options => prepareEngine(await engineConfigurations(models).Resolve({ profileId: options.profileId, modelId: options.model }), options),
+    WithEngineConfiguration: (model, options, use) => engineConfigurations(models).WithConfiguration(model, async (profile, capture) => { workspace.Assert(); if (workspaceMemberModelHash(profile) !== model.configurationHash) throw new Error('岗位模型配置已变化，请明确采纳后重新规划'); return use({ model: profile, Prepare: () => prepareEngine(capture(), options) }); }),
     Inspect: inspectMember, InspectAgent: inspectMember,
   });
 

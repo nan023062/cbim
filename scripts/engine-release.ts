@@ -12,7 +12,7 @@ export function signEngineRelease(input:{engines:EnginePackage[];sequence:number
   if(!input.engines.length)throw Error('没有待发布的引擎制品');
   const kinds=new Set<string>();
   for(const raw of input.engines){
-    const engine=enginePackageSchema.parse(raw),descriptor=engineDescriptor(loopEngineSchema.parse(engine.kind));
+    const engine=enginePackageSchema.parse(raw),descriptor=engine.plugin?.type==='connector'||(!engine.plugin&&engine.kind==='world-clock')?{packageDependencies:[] as readonly string[]}:engineDescriptor(loopEngineSchema.parse(engine.plugin?.type==='engine'?engine.plugin.profile:engine.kind));
     if(kinds.has(engine.kind))throw Error('重复引擎候选');kinds.add(engine.kind);
     if(!engine.adapter||(engine.dependencies??[]).length!==(descriptor.packageDependencies??[]).length||(engine.dependencies??[]).some(ref=>!(descriptor.packageDependencies??[]).includes(ref.kind)))throw Error('引擎包不满足静态声明');
     const old=releases.find(item=>item.kind===engine.kind&&item.adapter?.version===engine.adapter!.version);

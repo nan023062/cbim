@@ -1,4 +1,4 @@
-import { AgentCallExchange as Exchange } from '../../framework/cability/agent/exchange';
+import { AgentCallExchange as Exchange } from '../../framework/office/exchange';
 import type { ToolResult } from '../tools/rules/results';
 
 export const AgentCallExchange = Exchange<ToolResult>;

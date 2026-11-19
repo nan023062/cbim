@@ -1,11 +1,3 @@
-export { supportedEngines } from '../../framework/kernel';
-export type { LoopEngine, EngineDescriptor } from '../../framework/kernel';
-export { loopEngineSchema, engineDescriptor, engineLabel, engineApi, engineSupportsApi, engineModelRequirement, connectionForEngine, providerSupportsEngine } from '../../framework/kernel';
-export type { ResolvedEngineModel } from '../../framework/kernel';
-export { modelRoleSnapshotSchema, modelRolesSelectionSchema, modelRolesSnapshotSchema, modelRolesMatch } from '../../framework/kernel';
-export type { ModelRolesSelection, ModelRolesSnapshot, ModelRoleDescriptor } from '../../framework/kernel';
-export { additionalRoleOperations } from '../../framework/kernel';
-export { modelRoleChoices, engineSelectionAvailable } from '../../framework/kernel';
-export { engineAdapterProtocol, checkedEngineAdapter, type EngineAdapter } from '../../framework/kernel';
-export type { AgentEngine } from '../../framework/kernel';
+export * from './catalog';
+export { engineAdapterProtocol, type AgentEngine } from '../../framework/kernel';
 export type { EnginePackageStatus, EnginePackageSettings } from './package-status';

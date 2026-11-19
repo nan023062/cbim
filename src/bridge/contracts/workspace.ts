@@ -11,8 +11,11 @@ export { projectRootModuleId, projectRootModule } from '../../logic/workspace/ru
 export type { WorkspaceEntry, Catalog, WorkspaceView } from './workspace-view';
 
 /** 渲染进程唯一服务调用边界；操作契约限制调用类型，主进程另核身份、输入及实际允许的路由。 */
+export type { MonitorUpdate } from '../../monitor/updates';
 export interface Bridge
 {
+  WatchMonitor?(listener: (event: import('../../monitor/updates').MonitorUpdate) => void): () => void;
+
   call: IpcCaller;
 
   /** 原生拖入或粘贴的 File 经 preload 解析路径；不接受字符串路径。 */

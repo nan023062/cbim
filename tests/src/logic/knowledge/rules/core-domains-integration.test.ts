@@ -12,6 +12,6 @@ it('真实工作区关闭后，已取得的领域快照保留 Skill 继承和本
     const agent=await hr.Agent(seed.input.agentId);
     expect(agent.skills.map(s=>s.id)).toEqual([seed.own,seed.shared]);
     expect((await business.Module(seed.input.moduleId)).workflows[0].id).toBe(seed.input.workflowId);
-    expect((await business.Module(seed.child)).workflows).toEqual([]);
+    expect((await business.Module(seed.child)).workflows).toMatchObject([{id:seed.input.workflowId,inherited:true}]);
   }finally{await f.cleanup()}
 });

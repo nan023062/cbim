@@ -1,3 +1,4 @@
+import { fixtureEngines } from '../../../../support/engine-instances';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
@@ -24,7 +25,7 @@ async function setup(){
   const factory=vi.fn(async(options:WorkspaceLoopOptions,task:TaskSpec,launch:ExecutionLaunchContext)=>{
     const completion=deferred(),record:{finish:()=>void;message?:string;launch:ExecutionLaunchContext;options:WorkspaceLoopOptions}={finish:completion.resolve,launch,options};runs.push(record);
     const engine:AgentEngine={kind:'controlled',start:async context=>{await context.emit({type:'session.bound',data:{sessionId:context.nativeSessionId??task.taskId,sessionFile:context.sessionFile??path.join(f.user,'attachment-native.jsonl')}})},run:async message=>{record.message=message;await completion.promise;return {status:'completed'}},stop:async()=>completion.resolve(),close:async()=>{}};
-    return {runtime:new LoopRuntime({directory:path.join(workspace.paths.Project(entry.id),'loop-engine','tasks'),storage,conversationBinding:await dispatch.ConversationBinding(task),AcquireLease:async()=>{launch.signal.throwIfAborted();leases++;return()=>{leases--}},ToolPolicy:async()=>({allow:false}),CreateEngine:()=>engine,OnEvent:options.OnEvent})} as unknown as Awaited<ReturnType<ConstructorParameters<typeof WorkspaceExecutionManager>[2]>>;
+    return {runtime:new LoopRuntime({directory:path.join(workspace.paths.Project(entry.id),'loop-engine','tasks'),storage,conversationBinding:await dispatch.ConversationBinding(task),AcquireLease:async()=>{launch.signal.throwIfAborted();leases++;return()=>{leases--}},ToolPolicy:async()=>({allow:false}),engines:fixtureEngines(()=>engine),OnEvent:options.OnEvent})} as unknown as Awaited<ReturnType<ConstructorParameters<typeof WorkspaceExecutionManager>[2]>>;
   });
   const prepare=vi.fn((input:GoalContinuationRequest['input'],signal:AbortSignal)=>inputs.PrepareContinuation(input.message,input.attachmentIds,signal));
   manager=new WorkspaceExecutionManager(workspace,storage,factory,undefined,prepare);

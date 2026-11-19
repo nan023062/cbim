@@ -78,7 +78,7 @@ it('真实知识事务接受两类静态定义与模块/角色引用，幂等提
     const remove={revision:current.revision,requestId:randomUUID(),changes:[{path:'.cbim/connectors/registry.json',text:JSON.stringify({connectors:[plugin]})}]};
     const rejected=await call('cbim_knowledge_preview',remove);expect(rejected.validation.structural).toBe(false);
     expect(rejected.validation.issues.some((issue:{code:string})=>issue.code==='connector')).toBe(true);
-    await expect(call('cbim_knowledge_commit',remove,true)).rejects.toMatchObject({code:'VALIDATION'});
+    await expect(call('cbim_knowledge_commit',remove,true)).rejects.toThrow('未登记连接器');
     expect((await ws.Snapshot()).revision).toBe(current.revision);
   }finally{await f.cleanup()}
 });
@@ -90,7 +90,7 @@ it('真实预览保留重复仓库诊断，结构错误不能提交也不会改�
       const input={revision:snapshot.revision,requestId:randomUUID(),changes:[{path:'.cbim/connectors/registry.json',text:JSON.stringify({connectors})}]};
       const preview=await call('cbim_knowledge_preview',input);expect(preview.validation.structural).toBe(false);
       expect(preview.validation.issues.some((issue:{code:string})=>['duplicate','schema'].includes(issue.code))).toBe(true);
-      await expect(call('cbim_knowledge_commit',input,true)).rejects.toMatchObject({code:'VALIDATION'});
+      await expect(call('cbim_knowledge_commit',input,true)).rejects.toThrow('.cbim/connectors/registry.json');
       expect((await ws.Snapshot()).revision).toBe(snapshot.revision);
     }
   }finally{await f.cleanup()}

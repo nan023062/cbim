@@ -1,3 +1,4 @@
+import { fixtureEngines } from '../../../../support/engine-instances';
 import {expect,it,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import os from 'node:os';
@@ -7,7 +8,7 @@ import type {ExecutionCollaboration} from '../../../../../src/logic/conversation
 import type {DispatchScope} from '../../../../../src/logic/tasks/rules/dispatch-scope';
 import type {GoalContinuationReceipt} from '../../../../../src/logic/tasks/rules/scope-continuation';
 import {LoopRuntime} from '../../../../../src/logic/execution/rules/runtime/runtime';
-import {PiEngine} from '../../../../../src/logic/execution/engines/pi/engine';
+import {PiEngine} from '../../../../../src/logic/engines/adapters/pi/engine';
 import type {AgentEngine,EngineEvent,InputImage} from '../../../../../src/logic/execution/rules/types';
 import type {KnowledgeWorkspace} from '../../../../../src/logic/knowledge/rules/ports';
 import type {MessageQueue} from '../../../../../src/logic/conversation/runtime/message-queue';
@@ -27,7 +28,7 @@ async function fixture(hook?:(event:EngineEvent)=>Promise<void>,extensions:Parti
     let finish!:(value:{status:'completed'|'cancelled'})=>void;const completion=new Promise<{status:'completed'|'cancelled'}>(resolve=>{finish=resolve});
     const steer=vi.fn<NonNullable<AgentEngine['steer']>>(async()=>{}),stop=vi.fn(async()=>{finish({status:'cancelled'})}),close=vi.fn(async()=>{});
     const engine:AgentEngine={kind:'controlled',start:async context=>{await context.emit({type:'session.bound',data:{sessionFile:path.join(directory,'native.jsonl'),sessionId:context.nativeSessionId}})},run:()=>completion,steer: steer,stop: stop,close: close};
-    const runtime=new LoopRuntime({directory:path.join(directory,'loop-engine','tasks'),storage,CreateEngine:()=>engine,AcquireLease:async()=>()=>{},ToolPolicy:async()=>({allow:false}),OnEvent:config.OnEvent});
+    const runtime=new LoopRuntime({directory:path.join(directory,'loop-engine','tasks'),storage,engines:fixtureEngines(()=>engine),AcquireLease:async()=>()=>{},ToolPolicy:async()=>({allow:false}),OnEvent:config.OnEvent});
     runs.push({runtime,engine,steer,stop,close,finish:status=>finish({status})});return {runtime} as never;
   },images);
   const stop=vi.fn(async()=>{busy=false}),starting=vi.fn(async()=>{});manager.AttachCollaboration({Busy:()=>busy,Settled: settled,Stop: stop,Starting: starting,...extensions});

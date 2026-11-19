@@ -2,6 +2,8 @@
  * 作用定位：虚拟成员的角色配置、持久化实例及独立会话身份，供调度和存储共同使用。
  * 设计原因：主调度实例随主会话保留，执行实例按调度周期中的单个任务创建并在周期结束释放；历史身份与原生记录保留用于审计。
  */
+import type { EffectiveSkill } from '../skills';
+
 /** 角色属于工作区 Team；内置主角色与自定义角色使用相同身份模型。 */
 export interface AgentIdentity
 {
@@ -23,16 +25,7 @@ export interface AgentConfigurationSnapshot extends AgentIdentity
 
   principles: string;
 
-  effectiveSkills: Array<
-    {
-      skillId: string;
-
-      ownerId: string;
-
-      inherited: boolean;
-
-      content: string
-    }>;
+  effectiveSkills: EffectiveSkill[];
 }
 
 /** 成员活动摘要；排队任务尚未执行，不能因此宣称 working。 */

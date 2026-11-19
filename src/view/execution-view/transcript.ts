@@ -82,6 +82,16 @@ export function transcript(run: RunSummary): ChatItem[]
 
       items.push({ id: run.runId + '-' + e.seq, kind: 'user', text: message.split(marker)[0], time: e.time });
     }
+    else if (e.type === 'engine.status' && ['public-summary', 'command-progress', 'thinking'].includes(String(e.data.metric)))
+    {
+      const id = [run.runId, e.data.turnId ?? '', e.data.metric, e.data.itemId ?? ''].join('/');
+      const last = items.at(-1);
+      if (last?.id.startsWith(id + '-'))
+      {
+        if (e.data.metric === 'public-summary') last.text += String(e.data.text ?? '');
+      }
+      else items.push({ id: id + '-' + e.seq, kind: 'system', text: String(e.data.label ?? '') + (e.data.text ? '：' + e.data.text : ''), time: e.time });
+    }
     else if (e.type === 'message.delta')
     {
       if (!partial)

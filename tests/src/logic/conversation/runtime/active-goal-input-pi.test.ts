@@ -4,7 +4,7 @@ import path from 'node:path';
 import {fixture} from '../../application/support/helpers';
 import {Application} from '../../../../../src/bridge/server/application';
 import {Paths} from '../../../../../src/logic/workspace/service/paths';
-import {PiRpc} from '../../../../../src/logic/execution/engines/pi/rpc';
+import {PiRpc} from '../../../../../src/logic/engines/adapters/pi/rpc';
 import type {PendingQuestion} from '../../../../../src/logic/tools/rules/questions';
 import type {QueuedMessage} from '../../../../../src/logic/tasks/rules/queue';
 import {activeInputProvider,activeInputData as data,type ActiveInputMode} from './support/active-goal-input-provider';

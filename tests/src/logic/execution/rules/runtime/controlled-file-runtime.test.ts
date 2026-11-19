@@ -1,3 +1,4 @@
+import { fixtureEngines } from '../../../../../support/engine-instances';
 import {runtimeToolGroup} from '../support/runtime-tool-group';
 import {it,expect,vi} from 'vitest';
 import fs from 'node:fs/promises';import os from 'node:os';import path from 'node:path';
@@ -16,7 +17,7 @@ async function fixture(work:(c:EngineContext)=>Promise<void>,options:{port?:Cont
  const directory=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-controlled-runtime-'));let context!:EngineContext;const release=vi.fn(),write=vi.fn(async()=>applied()),drain=vi.fn(async()=>{}),port=options.port??{scopeId:'scope',Write: write,Drain: drain};
  const engine:AgentEngine={kind:'test',start:async c=>{context=c},run:async()=>{await work(context);return {status:'completed'}},stop:async()=>{},close:async()=>{}};
  const storage=new FileRunStorage(),create=storage.CreateJournal.bind(storage);if(options.rejectAllowed)storage.CreateJournal=(...args)=>{const journal=create(...args),append=journal.Append.bind(journal);journal.Append=async event=>{if(event.type==='tool.allowed')throw Error('durable append rejected');return append(event)};return journal};
- const runtime=new LoopRuntime({storage,directory,controlledFiles:port,CreateEngine:()=>engine,AcquireLease:async()=>release,ToolPolicy:async()=>({allow:options.policy?await options.policy():true,effects:['business-write'],scope:{kind:'workspace',workspaceId:binding.workspaceId}})});
+ const runtime=new LoopRuntime({storage,directory,controlledFiles:port,engines:fixtureEngines(()=>engine),AcquireLease:async()=>release,ToolPolicy:async()=>({allow:options.policy?await options.policy():true,effects:['business-write'],scope:{kind:'workspace',workspaceId:binding.workspaceId}})});
  const task:TaskSpec={workspaceId:binding.workspaceId,taskId:binding.taskId,agentId:binding.agentId,root:directory,goal:'replace',moduleIds:['module'],acceptance:[]};
  return {runtime,write,drain,release,start:()=>runtime.StartMember(task,task.goal,{binding,session:{nativeSessionId:'native-one'}}),cleanup:async()=>{await runtime.Close();if(path.dirname(directory)!==os.tmpdir()||!path.basename(directory).startsWith('cbim-controlled-runtime-'))throw Error('cleanup');await fs.rm(directory,{recursive:true,force:true})}};
 }

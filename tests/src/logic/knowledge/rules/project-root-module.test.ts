@@ -35,3 +35,26 @@ test('项目下每级工作区都独立承载业务',()=>{
   expect(project.FindWorkspace('refunds')).toEqual({...leaf,kind:'workspace'});
   expect(project.FindWorkspace(project.id)).toBeUndefined();
 });
+test('打开业务目录失败时释放 worktree，成功实例的并发关闭只释放一次', async () => {
+  const project = new Project({ roots: ['art'], nodes: { art: { kind: 'workspace', id: 'art', name: 'Art', summary: '', sources: [], children: [] } } });
+  let released = 0;
+  const factory = {
+    OpenWorktree: async (office: string, repository: string) => ({
+      ResolveDirectory: async (relative: string) => {
+        if (relative === 'missing') throw Error('missing');
+        return [repository, office, relative].join('/');
+      },
+      Release: async () => { released++; }
+    })
+  };
+  const context = { officeId: 'a', repositoryRoot: 'repo', relativeDirectory: 'Art' };
+  const a = await project.OpenWorkspace('art', context, factory);
+  const b = await project.OpenWorkspace('art', { ...context, officeId: 'b' }, factory);
+  expect(a.directory).toBe('repo/a/Art');
+  expect(b.directory).toBe('repo/b/Art');
+  expect(a.instanceId).not.toBe(b.instanceId);
+  await expect(project.OpenWorkspace('art', { ...context, relativeDirectory: 'missing' }, factory)).rejects.toThrow('missing');
+  expect(released).toBe(1);
+  await Promise.all([a.Close(), a.Close(), b.Close()]);
+  expect(released).toBe(3);
+});

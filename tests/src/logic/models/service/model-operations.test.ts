@@ -35,17 +35,17 @@ test('多个角色共用配置短锁；保存不能插入快照之间，停止�
 
 test('只有向量模型的供应商不需要伪造生成模型或默认型号；禁用或错误操作不能回退',async()=>{
   const f=await fixture();await f.profiles.Save({id:f.id,profile:{...value,models:[],defaultModel:''}});
-  await expect(f.profiles.Resolve(f.id)).rejects.toMatchObject({code:'LLM_MODEL'});
+  await expect(f.profiles.Resolve(f.id)).rejects.toThrow('模型不存在或已禁用');
   await f.profiles.WithModelOperations([{kind:'embedding',profileId:f.id,modelId:'vector'}],async locked=>expect(locked.profiles[0]).toMatchObject({kind:'embedding'}));
-  await expect(f.profiles.WithModelOperations([{kind:'embedding',profileId:f.id,modelId:'chat'}],async()=>{})).rejects.toMatchObject({code:'LLM_MODEL'});
-  await expect(f.profiles.WithModelOperations([{kind:'unknown' as 'embedding',profileId:f.id,modelId:'vector'}],async()=>{})).rejects.toMatchObject({code:'LLM_MODEL_ROLE'});
+  await expect(f.profiles.WithModelOperations([{kind:'embedding',profileId:f.id,modelId:'chat'}],async()=>{})).rejects.toThrow('模型不存在或已禁用');
+  await expect(f.profiles.WithModelOperations([{kind:'unknown' as 'embedding',profileId:f.id,modelId:'vector'}],async()=>{})).rejects.toThrow('模型操作类型无效');
   expect(definition.safeParse({...value,models:[],defaultModel:'',embedding:undefined}).success).toBe(false);
   expect(definition.safeParse({...value,embedding:{...value.embedding,models:[{...value.embedding!.models[0],maxTokens:100}]}}).success).toBe(false);
 });
 
 test('新增或改变向量凭据目标要求重输密钥，纯改维度和价格不复制凭据',async()=>{
   const f=await fixture(),changed={...value,embedding:{...value.embedding!,baseUrl:'https://other.example/v1'}};
-  await expect(f.profiles.Save({id:f.id,profile:changed})).rejects.toMatchObject({code:'KEY_REQUIRED'});
+  await expect(f.profiles.Save({id:f.id,profile:changed})).rejects.toThrow('请重新输入 API Key');
   await f.profiles.Save({id:f.id,profile:{...value,embedding:{...value.embedding!,models:[{...value.embedding!.models[0],dimensions:512,inputPrice:0}]}}});
   expect((await f.profiles.List()).profiles[0].embedding?.models[0].dimensions).toBe(512);expect(f.decryptions()).toBe(0);
 });

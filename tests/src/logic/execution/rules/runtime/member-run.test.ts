@@ -1,3 +1,4 @@
+import { fixtureEngines } from '../../../../../support/engine-instances';
 import {expect,it} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -17,7 +18,7 @@ class Engine implements AgentEngine {
 async function setup(onEngineReady?:RuntimeOptions['OnEngineReady']){
   const directory=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-member-run-'));
   const engines:Engine[]=[];let leases=0;
-  const runtime=new LoopRuntime({directory,storage:new FileRunStorage(),AcquireLease:async()=>{leases++;return()=>{leases--}},CreateEngine:()=>{const engine=new Engine();engines.push(engine);return engine},ToolPolicy:async()=>({allow:true}),OnEngineReady: onEngineReady});
+  const runtime=new LoopRuntime({directory,storage:new FileRunStorage(),AcquireLease:async()=>{leases++;return()=>{leases--}},engines:fixtureEngines(()=>{const engine=new Engine();engines.push(engine);return engine}),ToolPolicy:async()=>({allow:true}),OnEngineReady: onEngineReady});
   const task:TaskSpec={taskId:'task-one',workspaceId:'workspace-one',root:directory,goal:'Implement the assigned module',agentId:'.cbim/team/engineer',moduleIds:['.cbim/workspace/product/game'],acceptance:['Verification passes']};
   const launch:MemberRunLaunch={binding:{workspaceId:task.workspaceId,teamId:'.cbim/team',agentId:task.agentId!,agentInstanceId:'member-one',agentSessionId:'channel-one',rootSessionId:'root-session',taskId:task.taskId,runId:'run-one',leaseEpoch:2,planRevision:1},session:{nativeSessionId:'native-one'}};
   return {directory,runtime,engines,task,launch,get leases(){return leases},cleanup:async()=>{

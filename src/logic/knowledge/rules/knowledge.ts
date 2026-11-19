@@ -3,9 +3,13 @@
  * 设计原因：调度、桌面和外部适配共用规则；模块 Workflow 的显式程序条件不能绕过完整事务校验。Ajv 使用不改变字段值的兼容副本，原严格 JSON 解析仍保留危险键和重复键拒绝。历史作者和维护声明不再关联真人花名册；结构校验不签发执行或架构批准。
  * 机制边界：存在探测复用独立文件基础库；知识路径、验证和索引语义仍由本模块决定。
  */
+import type { SkillDefinition } from '../../../framework/skills';
+
+import { SkillScope } from '../../../framework/cability/skills';
+
 import fs from 'node:fs/promises';
 
-import { ConnectorRegistry } from '../../connectors/rules/registry';
+import { ConnectorRegistry } from '../../../framework/connectors';
 
 import path from 'node:path';
 
@@ -329,7 +333,7 @@ export class Rules
         add(id + '/agent.json', 'team_root', 'Team 根不能是 Agent')
     }
 
-    const inventories = new Map<string, any[]>();
+    const inventories = new Map<string, SkillDefinition[]>();
 
     for (const owner of new Set([...groups, ...agents.keys()]))
     {
@@ -356,34 +360,20 @@ export class Rules
 
     for (const [agent] of agents)
     {
-      let owner = agent;
-
+      const { chain, entries } = SkillScope.Resolve(agent, inventories, id => id === '.cbim/team' ? undefined : pp.dirname(id));
       const seen = new Map<string, string>();
 
-      const chain: string[] = [],
-        entries: NonNullable<Validation['skills']>[string]['entries'] = [];
-
-      while (owner.startsWith('.cbim/team'))
+      for (const skill of entries)
       {
-        chain.push(owner);
+        skill.reference = skill.owner + '/' + skill.reference;
 
-        for (const skill of inventories.get(owner) || [])
+        for (const key of ['name:' + skill.name.toLowerCase(), 'slug:' + pp.basename(pp.dirname(skill.reference)).toLowerCase()])
         {
-          entries.push({ ...skill, reference: owner + '/' + skill.reference, owner, scope: owner === agent ? 'agent' : 'team' });
+          if (seen.has(key))
+            add(agent + '/agent.json', 'skill_conflict', `继承冲突：${skill.reference} 与 ${seen.get(key)}`);
 
-          for (const key of ['name:' + skill.name.toLowerCase(), 'slug:' + pp.basename(pp.dirname(skill.reference)).toLowerCase()])
-          {
-            if (seen.has(key))
-              add(agent + '/agent.json', 'skill_conflict', `继承冲突：${owner}/${skill.reference} 与 ${seen.get(key)}`);
-
-            seen.set(key, owner + '/' + skill.reference)
-          }
+          seen.set(key, skill.reference)
         }
-
-        if (owner === '.cbim/team')
-          break;
-
-        owner = pp.dirname(owner)
       }
 
       skills[agent] = { chain, entries }

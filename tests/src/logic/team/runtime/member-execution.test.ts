@@ -1,3 +1,4 @@
+import { fixtureEngines } from '../../../../support/engine-instances';
 import {runtimeToolGroup} from '../../execution/rules/support/runtime-tool-group';
 import {expect,it,vi} from 'vitest';
 import fs from 'node:fs/promises';
@@ -63,7 +64,7 @@ async function setup(useBuiltin=false){
         await invoke('cbim_delivery_prepare',{expectedVersion:2,summary:'已核验产物',limitations:['仍需业务验收']});
         return {status:'completed'};
       },stop:async()=>release(),close:async()=>{}};
-    return new LoopRuntime({storage,directory:path.join(directory,'runs','tasks'),AcquireLease:async()=>{await beforeRuntimeLease();return ()=>{}},CreateEngine:()=>engine,OnEngineReady:hooks.OnEngineReady,OnEvent:hooks.OnEvent,ToolPolicy:async call=>({allow:true,effects:[call.name==='read'?'read':'maintenance']})});
+    return new LoopRuntime({storage,directory:path.join(directory,'runs','tasks'),AcquireLease:async()=>{await beforeRuntimeLease();return ()=>{}},engines:fixtureEngines(()=>engine),OnEngineReady:hooks.OnEngineReady,OnEvent:hooks.OnEvent,ToolPolicy:async call=>({allow:true,effects:[call.name==='read'?'read':'maintenance']})});
   }}));
   const ports:MemberExecutionPorts={Acquire:(key,permission,agentInstanceId)=>lease.Acquire(key,permission,agentInstanceId),Prepare:async()=>prepare(),owners:dispatch.owners,WithEngineConfiguration:(reference,_options,use)=>f.app.engineModels.WithRuntimeConfiguration(reference,configuration=>use({model:configuration.profile,Prepare: prepare})),Inspect:run=>storage.Read(path.join(directory,'runs','tasks',run.binding.taskId,run.binding.runId))};
   const members=new MemberExecutionManager(workspace,store,ports);await members.Initialize();
@@ -79,8 +80,8 @@ it('整话题补充保存后拒绝新领取和派发，原成员任务不被删�
   const f=await setup();try{
     const assigned=await f.assign();
     await f.dispatch.interruptions.Prepare({...f.identity,scopeId:f.scopeId,expectedInputRevision:1,commandId:crypto.randomUUID(),input:{message:'等待重新分析'},options:{provider:'fixture',model:'fixture',profileId:crypto.randomUUID(),permission:'read'}});
-    await expect(f.start(assigned.taskId)).rejects.toMatchObject({code:'TOPIC_PAUSING'});
-    await expect(f.assign()).rejects.toMatchObject({code:'TOPIC_PAUSING'});
+    await expect(f.start(assigned.taskId)).rejects.toThrow('等待补充排空');
+    await expect(f.assign()).rejects.toThrow('等待补充排空');
     expect(f.prepare).not.toHaveBeenCalled();expect((await f.store.Read()).runs??[]).toEqual([]);
     expect((await f.dispatch.Snapshot(f.identity)).tasks).toHaveLength(1);
   }finally{await f.cleanup()}
@@ -111,11 +112,14 @@ it('同办公室同角色的两个任务串行，等待不创建运行，前项�
     await f.start(first.taskId);
     await until(()=>f.members.Inspect(f.input(first.taskId)),view=>view.runs[0]?.status==='running');
     const before=(await f.store.Read()).runs!.length;
-    await expect(f.start(second.taskId)).rejects.toMatchObject({code:'TEAM_SESSION_BUSY'});
+    await expect(f.start(second.taskId)).rejects.toThrow('该办公室的 Agent 正在处理另一项任务');
     expect((await f.store.Read()).runs).toHaveLength(before);expect(f.prepare).toHaveBeenCalledTimes(1);
     await f.members.Stop(f.input(first.taskId));await f.members.WaitForSettlement(f.input(first.taskId));
     f.setBehavior('candidate');await f.start(second.taskId);expect((await f.settled(second.taskId)).task.status).toBe('result_ready');
-    expect((await f.store.Read()).teamSessions!.filter(session=>session.agentId===f.agentId)).toHaveLength(1);
+    const state = await f.store.Read();
+    const assigned = state.graphs.flatMap(graph => graph.tasks).find(task => task.taskId === first.taskId)!;
+    expect(assigned.workerId).toBe(assigned.ownerBinding!.memberId);
+    expect(state.teamSessions!.filter(session => session.officeId === assigned.identity.rootSessionId && session.workerId === assigned.workerId)).toHaveLength(1);
   }finally{await f.cleanup()}
 });
 
@@ -165,7 +169,7 @@ it('同任务不能重复领取；同岗位新任务独立实例，不借停止�
     const original=(await f.members.Inspect(f.input(first.taskId))).task,second=await f.assign(),next=(await f.members.Inspect(f.input(second.taskId))).task;
     expect(next.assignee.agentInstanceId).not.toBe(original.assignee.agentInstanceId);
     expect((await f.store.Read()).members.find(m=>m.agentInstanceId===original.assignee.agentInstanceId)?.activity).toBe('working');
-    await expect(f.members.Start({...f.input(first.taskId),commandId:'duplicate-active',expectedRevision:original.revision,options:{permission:'read'}})).rejects.toMatchObject({code:'TASK_NOT_STARTABLE'});
+    await expect(f.members.Start({...f.input(first.taskId),commandId:'duplicate-active',expectedRevision:original.revision,options:{permission:'read'}})).rejects.toThrow('当前任务不能重新执行');
     await f.members.Stop(f.input(first.taskId));expect((await f.settled(first.taskId)).task.status).toBe('cancelled');
     f.setBehavior('candidate');await f.start(second.taskId);expect((await f.settled(second.taskId)).task.status).toBe('result_ready');
     expect(f.contexts[1].nativeSessionId).not.toBe(f.contexts[0].nativeSessionId);expect(f.prepare).toHaveBeenCalledTimes(2);
@@ -175,7 +179,7 @@ it('同任务不能重复领取；同岗位新任务独立实例，不借停止�
 it('工作区写占用与主会话冲突，释放后只读派发可重试；默认不继承执行权限',async()=>{
   const f=await setup();try{
     const first=await f.assign(),release=f.lease.Acquire('main-chat','execute');
-    await expect(f.start(first.taskId)).rejects.toMatchObject({code:'WORKSPACE_EXECUTION_BUSY'});release();
+    await expect(f.start(first.taskId)).rejects.toThrow('工作区有冲突运行');release();
     expect(f.prepare).not.toHaveBeenCalled();await f.start(first.taskId);await f.settled(first.taskId);
     expect((await f.store.Read()).runs![0].permission).toBe('read');
   }finally{await f.cleanup()}
@@ -201,7 +205,7 @@ it.each([
     const pending=f.members.Start({...f.input(assigned.taskId),commandId:'start-pending',expectedRevision:1,options:{permission:'read'}},wait);void pending.catch(()=>{});
     await began;expect(admission.Snapshot().occupied).toHaveLength(0);
     if(cause==='batch')currentBatch=false;else{currentOwner=false;admission.RetireOwner(f.entry.id,1)}
-    unblock();await expect(pending).rejects.toMatchObject({code:'COLLABORATION_STOPPED'});
+    unblock();await expect(pending).rejects.toThrow('成员启动所属工作区或协作批次已停止');
     const state=await f.store.Read(),node=state.graphs[0].tasks.find(task=>task.taskId===assigned.taskId)!;
     expect(node.runIds).toEqual([]);expect(node.activeRunId).toBeUndefined();expect(state.runs??[]).toEqual([]);
     expect(state.outbox.find(item=>item.taskId===assigned.taskId)).toMatchObject({delivery:'pending'});
@@ -217,9 +221,9 @@ it('手动成员停止在模型解析期间建立屏障，不等待领取事务�
     const configuration=f.ports.WithEngineConfiguration!;
     f.ports.WithEngineConfiguration=(reference,options,use)=>configuration(reference,options,async locked=>{entered();await gate;return use(locked)});
     const pending=f.start(assigned.taskId);void pending.catch(()=>{});await began;
-    await expect(f.members.Stop({...f.input(assigned.taskId),rootSessionId:'other-root'})).rejects.toMatchObject({code:'TASK_NOT_FOUND'});
+    await expect(f.members.Stop({...f.input(assigned.taskId),rootSessionId:'other-root'})).rejects.toThrow('当前主会话没有此派发任务');
     expect(await f.members.Stop(f.input(assigned.taskId))).toEqual({requested:true});
-    unblock();await expect(pending).rejects.toMatchObject({code:'COLLABORATION_STOPPED'});
+    unblock();await expect(pending).rejects.toThrow('成员启动所属工作区或协作批次已停止');
     const view=await f.members.Inspect(f.input(assigned.taskId));expect(view.task.runIds).toEqual([]);expect(view.runs).toEqual([]);
     expect(f.prepare).not.toHaveBeenCalled();expect(f.contexts).toEqual([]);expect(f.lease.CanAcquire('next','execute')).toBeUndefined();
   }finally{unblock();await f.cleanup()}
@@ -242,40 +246,40 @@ it.each(['stop','owner'] as const)('已领取但原生尚未登记active时%s中
 
 it('主实例不创建独立成员，已登记自定义执行岗位按任务独立创建并在周期结束后释放',async()=>{
   const f=await setup(true);try{
-    await expect(f.assign('cbim:main')).rejects.toMatchObject({code:'AGENT_NOT_EXECUTABLE'});
+    await expect(f.assign('cbim:main')).rejects.toThrow('主 Agent 请在当前会话直接执行');
     const root=(await f.dispatch.Snapshot(f.identity)).root.agent,first=await f.assign(),second=await f.assign();
     const firstTask=(await f.members.Inspect(f.input(first.taskId))).task,secondTask=(await f.members.Inspect(f.input(second.taskId))).task;
     expect(firstTask.assignee.agentInstanceId).not.toBe(root.agentInstanceId);expect(secondTask.assignee.agentInstanceId).not.toBe(firstTask.assignee.agentInstanceId);
     f.setBehavior('hold');await f.start(first.taskId);await until(()=>f.members.Inspect(f.input(first.taskId)),view=>view.task.status==='running');
-    await expect(f.dispatch.CloseScope(f.identity,f.scopeId,'completed')).rejects.toMatchObject({code:'GOAL_REVIEW_REQUIRED'});
-    await expect(f.dispatch.CloseScope(f.identity,f.scopeId,'cancelled')).rejects.toMatchObject({code:'DISPATCH_SCOPE_BUSY'});
+    await expect(f.dispatch.CloseScope(f.identity,f.scopeId,'completed')).rejects.toThrow('结构化目标审阅');
+    await expect(f.dispatch.CloseScope(f.identity,f.scopeId,'cancelled')).rejects.toThrow('调度周期仍有未结算运行');
     await f.members.Stop(f.input(first.taskId));await f.settled(first.taskId);await f.members.WaitForSettlement(f.input(first.taskId));
     await f.dispatch.CloseScope(f.identity,f.scopeId,'cancelled');
     const state=await f.store.Read();expect(state.members.find(m=>m.agentInstanceId===firstTask.assignee.agentInstanceId)?.lifecycle).toBe('released');
     expect(state.members.find(m=>m.agentInstanceId===root.agentInstanceId)?.lifecycle).not.toBe('released');
-    await expect(f.start(second.taskId)).rejects.toMatchObject({code:'MEMBER_RELEASED'});expect(f.prepare).toHaveBeenCalledTimes(1);
+    await expect(f.start(second.taskId)).rejects.toThrow('执行实例已随调度周期释放');expect(f.prepare).toHaveBeenCalledTimes(1);
   }finally{await f.cleanup()}
 });
 
 it.each(['accept','reject'] as const)('依赖任务等待精确候选审阅通过：%s，并固定实际消费的 resultId',async decision=>{
   const f=await setup();try{
     const first=await f.assign(),second=await f.assign(f.agentId,[{taskId:first.taskId,expectedPlanRevision:1}]);
-    await expect(f.start(second.taskId)).rejects.toMatchObject({code:'TASK_DEPENDENCY_PENDING'});
+    await expect(f.start(second.taskId)).rejects.toThrow('前置任务尚未交付当前候选');
     await f.start(first.taskId);const done=await f.settled(first.taskId);
-    await expect(f.start(second.taskId)).rejects.toMatchObject({code:'TASK_DEPENDENCY_PENDING'});
+    await expect(f.start(second.taskId)).rejects.toThrow('前置任务尚未交付当前候选');
     const input={taskId:first.taskId,expectedRevision:done.task.revision,resultId:done.task.result!.resultId,decision,reason:'已核对原运行工具证据与限制'};
-    await expect(f.dispatch.goals.ReviewCandidate(f.identity,f.scopeId,'main-one','candidate-review-wrong',{...input,resultId:'wrong'},()=>{})).rejects.toMatchObject({code:'CANDIDATE_REVIEW_STALE'});
-    await expect(f.dispatch.goals.ReviewCandidate(f.identity,f.scopeId,'other-main','candidate-review-other',input,()=>{})).rejects.toMatchObject({code:'GOAL_EVIDENCE_IDENTITY'});
+    await expect(f.dispatch.goals.ReviewCandidate(f.identity,f.scopeId,'main-one','candidate-review-wrong',{...input,resultId:'wrong'},()=>{})).rejects.toThrow('候选或版本已变化');
+    await expect(f.dispatch.goals.ReviewCandidate(f.identity,f.scopeId,'other-main','candidate-review-other',input,()=>{})).rejects.toThrow('主运行日志与当前主会话实例或对话通道不一致');
     const reviewed=await f.dispatch.goals.ReviewCandidate(f.identity,f.scopeId,'main-one','candidate-review-accept',input,()=>{});
     expect(reviewed.candidateReview).toMatchObject({decision,resultId:input.resultId,mainRunId:'main-one'});
     expect(await f.dispatch.goals.ReviewCandidate(f.identity,f.scopeId,'main-one','candidate-review-accept',input,()=>{})).toEqual(reviewed);
-    await expect(f.dispatch.goals.ReviewCandidate(f.identity,f.scopeId,'main-one','candidate-review-rewrite',{...input,expectedRevision:reviewed.revision,decision:'reject'},()=>{})).rejects.toMatchObject({code:'CANDIDATE_REVIEW_STALE'});
+    await expect(f.dispatch.goals.ReviewCandidate(f.identity,f.scopeId,'main-one','candidate-review-rewrite',{...input,expectedRevision:reviewed.revision,decision:'reject'},()=>{})).rejects.toThrow('候选或版本已变化');
     const backup=path.join(f.temp,'review-snapshot');await fs.mkdir(backup);await fs.copyFile(path.join(f.directory,'dispatch.jsonl'),path.join(backup,'dispatch.jsonl'));
     const reopened=new FileDispatchStore(backup,f.entry.id);
     try{expect((await reopened.Read()).graphs[0].tasks.find(t=>t.taskId===first.taskId)?.candidateReview).toEqual(reviewed.candidateReview)}finally{await reopened.Close()}
     if(decision==='reject'){
-      await expect(f.start(second.taskId)).rejects.toMatchObject({code:'TASK_DEPENDENCY_PENDING'});
-      await expect(f.dispatch.goals.Review(f.identity,f.scopeId,'main-one','reject-final',{expectedRevision:2,decision:'complete',checks:[{criterionId:'verified',outcome:'satisfied',reason:'企图引用被拒候选',evidence:[{kind:'member-result',taskId:first.taskId,runId:done.task.result!.runId,resultId:input.resultId,planRevision:1,toolCallIds:done.task.result!.evidenceRefs}]}],superseded:[],gaps:[],reason:'不得成功'})).rejects.toMatchObject({code:'GOAL_EVIDENCE_INVALID'});
+      await expect(f.start(second.taskId)).rejects.toThrow('前置任务尚未交付当前候选');
+      await expect(f.dispatch.goals.Review(f.identity,f.scopeId,'main-one','reject-final',{expectedRevision:2,decision:'complete',checks:[{criterionId:'verified',outcome:'satisfied',reason:'企图引用被拒候选',evidence:[{kind:'member-result',taskId:first.taskId,runId:done.task.result!.runId,resultId:input.resultId,planRevision:1,toolCallIds:done.task.result!.evidenceRefs}]}],superseded:[],gaps:[],reason:'不得成功'})).rejects.toThrow('成员证据不是当前可接受的结果候选');
       const saved=(await f.store.Read()).graphs[0].tasks.find(t=>t.taskId===first.taskId)!;
       expect(saved.candidateReview).toEqual(reviewed.candidateReview);expect(f.prepare).toHaveBeenCalledTimes(1);return;
     }
@@ -297,7 +301,7 @@ it('领取前知识变化拒绝启动且没有半次占用，恢复 starting/run
     }finally{await restored.Close();await restoredStore.Close()}
     const second=await f.assign(),snapshot=await f.workspace.Snapshot(),file=snapshot.files.find(x=>x.path.endsWith('/module.md'))!;
     await f.workspace.Commit(request(snapshot,[{path:file.path,text:file.text+'\n知识已变化\n'}]));
-    await expect(f.start(second.taskId)).rejects.toMatchObject({code:'KNOWLEDGE_CHANGED'});
+    await expect(f.start(second.taskId)).rejects.toThrow('派发后的知识版本已经变化');
     expect((await f.members.Inspect(f.input(second.taskId))).runs).toEqual([]);
   }finally{await f.cleanup()}
 });

@@ -1,3 +1,4 @@
+import { fixtureEngines } from '../../../../support/engine-instances';
 import {registerServiceOwner} from '../../team/service/support/owner-service-fixture';
 import {it,expect,vi} from 'vitest';
 import fs from 'node:fs/promises';
@@ -30,7 +31,7 @@ async function setup(withRun=true){
   const ownerSelection=(await service.owners.Discover([moduleId])).groups[0].selection!;
   const prepare=vi.fn<()=>Awaited<ReturnType<MemberExecutionPorts['Prepare']>>>(()=>({model,Create:async(_run,_task,hooks)=>{
     let context:EngineContext;
-    return new LoopRuntime({storage,directory:path.join(directory,'runs'),AcquireLease:async()=>()=>{},OnEngineReady:hooks.OnEngineReady,OnEvent:hooks.OnEvent,ToolPolicy:async()=>({allow:true,effects:['read']}),CreateEngine:()=>({kind:'fixture',start:async value=>{context=value;await context.emit({type:'session.bound',data:{sessionId:context.nativeSessionId,sessionFile:path.join(directory,context.nativeSessionId+'.jsonl')}})},run:async()=>({status:'failed'}),stop:async()=>{},close:async()=>{}})});
+    return new LoopRuntime({storage,directory:path.join(directory,'runs'),AcquireLease:async()=>()=>{},OnEngineReady:hooks.OnEngineReady,OnEvent:hooks.OnEvent,ToolPolicy:async()=>({allow:true,effects:['read']}),engines:fixtureEngines(()=>({kind:'fixture',start:async value=>{context=value;await context.emit({type:'session.bound',data:{sessionId:context.nativeSessionId,sessionFile:path.join(directory,context.nativeSessionId+'.jsonl')}})},run:async()=>({status:'failed'}),stop:async()=>{},close:async()=>{}}))});
   }}));
   const members=new MemberExecutionManager(workspace,store,{Prepare:async()=>prepare(),owners:service.owners,WithEngineConfiguration:(reference,_options,use)=>f.app.engineModels.WithRuntimeConfiguration(reference,configuration=>use({model:configuration.profile,Prepare: prepare})),Inspect: inspect,Acquire:(key,permission,agent)=>lease.Acquire(key,permission,agent)});await members.Initialize();
   let count=0;

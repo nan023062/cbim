@@ -1,8 +1,9 @@
 /**
  * 作用定位：把当前办公室已提交任务投影为唯一人物、模块工位及派发/汇报动态。
- * 设计原因：长期 TeamSession 才是人物，执行实例不是分身；动画只消费可靠事实，不能改变领取、退出或验收。旧图、跨办公室和重开不会重演历史。
+ * 设计原因：长期 OfficeMemberSession 才是人物，执行实例不是分身；动画只消费可靠事实，不能改变领取、退出或验收。旧图、跨办公室和重开不会重演历史。
  */
-import type { GraphSnapshot, TeamSession, ScopeSummary, TaskNode } from '../../bridge/contracts/dispatch';
+import { defaultWorkerId, taskWorkerId } from '../../bridge/contracts/dispatch';
+import type { GraphSnapshot, OfficeMemberSession, ScopeSummary, TaskNode } from '../../bridge/contracts/dispatch';
 
 import { teamConversations } from '../execution-view/team-conversations';
 
@@ -14,7 +15,7 @@ export interface OfficeActor
 
   sessionId?: string;
 
-  agentId: string;
+  workerId: string;
 
   name: string;
 
@@ -54,7 +55,7 @@ export interface OfficeSceneState
 }
 
 /** 当前和历史仅决定可见任务；角色保留，已完成话题不会删除其子对话。 */
-export function officeScene(graph: GraphSnapshot, sessions: readonly TeamSession[] | undefined, scopes: readonly ScopeSummary[], mainRunning: boolean): OfficeSceneState
+export function officeScene(graph: GraphSnapshot, sessions: readonly OfficeMemberSession[] | undefined, scopes: readonly ScopeSummary[], mainRunning: boolean): OfficeSceneState
 {
   const archived = taskHistoryView(graph, scopes),
     current = graph.tasks.filter(task => !archived.taskIds.has(task.taskId));
@@ -75,11 +76,11 @@ export function officeScene(graph: GraphSnapshot, sessions: readonly TeamSession
   const paused = open?.status === 'waiting',
     pausing = open?.interruption?.phase === 'requested';
 
-  const actors: OfficeActor[] = [{ id: 'main:' + graph.identity.rootSessionId, agentId: main.agentId, name: main.name, main: true, state: pausing ? '正在暂停' : paused ? '等待补充' : mainRunning ? '执行 / 协调中' : open ? '等待成员反馈' : '空闲', working: mainRunning && !paused, deskId: 'main', scopeId: open?.scopeId, goal: open?.objective ?? open?.inputPreview ?? '等待新任务', queued: 0 }];
+  const actors: OfficeActor[] = [{ id: 'main:' + graph.identity.rootSessionId, workerId: defaultWorkerId(main.agentId), name: main.name, main: true, state: pausing ? '正在暂停' : paused ? '等待补充' : mainRunning ? '执行 / 协调中' : open ? '等待成员反馈' : '空闲', working: mainRunning && !paused, deskId: 'main', scopeId: open?.scopeId, goal: open?.objective ?? open?.inputPreview ?? '等待新任务', queued: 0 }];
 
   for (const member of teamConversations(sessions, graph))
   {
-    const tasks = current.filter(task => task.assignee.agentId === member.session.agentId);
+    const tasks = current.filter(task => taskWorkerId(task) === member.session.workerId);
 
     const working = tasks.find(task => task.activeRunId || task.status === 'running');
 
@@ -93,7 +94,7 @@ export function officeScene(graph: GraphSnapshot, sessions: readonly TeamSession
     // 工位键与模块原 ID 分域，合法的 main / lounge 模块不会覆盖办公室固定区域。
     const deskId = task?.modules[0] ? 'module:' + task.modules[0].moduleId : 'lounge';
 
-    actors.push({ id: member.session.sessionId, sessionId: member.session.sessionId, agentId: member.session.agentId, name: member.name, main: false, state, working: !!working && !(inOpen && paused), deskId, ...(task ? { taskId: task.taskId, scopeId: task.scopeId } : {}), goal: task?.goal ?? '等待主 Agent 安排', queued: tasks.filter(value => value !== working && ['queued', 'waiting', 'planned'].includes(value.status)).length });
+    actors.push({ id: member.session.sessionId, sessionId: member.session.sessionId, workerId: member.session.workerId, name: member.name, main: false, state, working: !!working && !(inOpen && paused), deskId, ...(task ? { taskId: task.taskId, scopeId: task.scopeId } : {}), goal: task?.goal ?? '等待主 Agent 安排', queued: tasks.filter(value => value !== working && ['queued', 'waiting', 'planned'].includes(value.status)).length });
   }
 
   if (actors.some(actor => actor.deskId === 'lounge'))
@@ -108,7 +109,7 @@ export interface OfficeEvent
 
   kind: 'assignment' | 'feedback';
 
-  agentId: string;
+  workerId: string;
 
   taskId: string;
 
@@ -119,7 +120,7 @@ export interface OfficeEvent
 
 function facts(graph: GraphSnapshot): OfficeEvent[]
 {
-  return graph.tasks.flatMap(task => { const common = { agentId: task.assignee.agentId, taskId: task.taskId, scopeId: task.scopeId }; const events: OfficeEvent[] = [{ ...common, id: 'assignment:' + task.taskId, kind: 'assignment', label: '派发任务' }]; if (task.result) events.push({ ...common, id: 'result:' + task.result.resultId, kind: 'feedback', label: '汇报候选' }); if (task.help) events.push({ ...common, id: 'help:' + task.help.helpId, kind: 'feedback', label: '请求协助' }); for (const checkpoint of task.checkpoints ?? []) events.push({ ...common, id: 'checkpoint:' + checkpoint.checkpointId, kind: 'feedback', label: '汇报检查点' }); return events; });
+  return graph.tasks.flatMap(task => { const common = { workerId: taskWorkerId(task), taskId: task.taskId, scopeId: task.scopeId }; const events: OfficeEvent[] = [{ ...common, id: 'assignment:' + task.taskId, kind: 'assignment', label: '派发任务' }]; if (task.result) events.push({ ...common, id: 'result:' + task.result.resultId, kind: 'feedback', label: '汇报候选' }); if (task.help) events.push({ ...common, id: 'help:' + task.help.helpId, kind: 'feedback', label: '请求协助' }); for (const checkpoint of task.checkpoints ?? []) events.push({ ...common, id: 'checkpoint:' + checkpoint.checkpointId, kind: 'feedback', label: '汇报检查点' }); return events; });
 }
 
 /** 首次快照是静态基线；只播放本次可见期间的新增事实，返回全部新事件供界面摘要，动画可有界合并。 */

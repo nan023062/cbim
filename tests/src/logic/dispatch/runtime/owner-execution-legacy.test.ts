@@ -19,7 +19,7 @@ it.skipIf(!existsSync(ownerExecutionLegacyExecutable()))('reads genuine pre-owne
     expect(queued).toEqual(old.queuedGraph);expect(queued.tasks[0].ownerBinding).toBeUndefined();
     const bytes=(await knowledgeSourceDiskEvidence(legacy.user,id)).dispatchBytes;
     expect(await current.Dispatch('dispatch.task',old.queued.input)).toEqual(old.queued.receipt);
-    await expect(current.Dispatch('dispatch.executionStart',{...queuedIdentity,commandId:randomUUID(),expectedRevision:queued.tasks[0].revision,options:{permission:'read'}})).rejects.toMatchObject({code:'OWNER_BINDING_REQUIRED'});
+    await expect(current.Dispatch('dispatch.executionStart',{...queuedIdentity,commandId:randomUUID(),expectedRevision:queued.tasks[0].revision,options:{permission:'read'}})).rejects.toThrow(/旧任务.*负责岗位/);
     expect((await knowledgeSourceDiskEvidence(legacy.user,id)).dispatchBytes).toEqual(bytes);
     expect(await current.Dispatch('dispatch.ownerInspect',queuedIdentity)).toMatchObject({taskId:queuedIdentity.taskId,taskRevision:queued.tasks[0].revision});
     const inspection=await current.Dispatch('dispatch.ownerInspect',queuedIdentity);expect(inspection.ownerBinding).toBeUndefined();
@@ -32,7 +32,7 @@ it.skipIf(!existsSync(ownerExecutionLegacyExecutable()))('reads genuine pre-owne
     expect(legacy.counts()).toEqual(old.requestCounts);expect(legacy.providerErrors()).toEqual([]);
     const stabilized=(await knowledgeSourceDiskEvidence(legacy.user,id)).dispatchBytes;await current.Shutdown();app=new Application(new Paths(legacy.user,path.resolve('.')));await app.Init();
     expect((await knowledgeSourceDiskEvidence(legacy.user,id)).dispatchBytes).toEqual(stabilized);expect(await ownerExecutionRecords(legacy.user,id)).toEqual(records);expect(legacy.counts()).toEqual(old.requestCounts);
-    await fs.mkdir('test-results',{recursive:true});await fs.writeFile('test-results/owner-execution-legacy-application-evidence.json',JSON.stringify({oldExecutable:old.executable,workspaceId:id,killedTestPid:old.killedPid,actualQueuedTask:old.queued.receipt.taskId,actualRunningTask:old.live.receipt.taskId,actualCheckpointTask:old.checkpointTaskId,oldRunningFinalStatus:live.status,originalReceiptStable:true,legacyClaimError:'OWNER_BINDING_REQUIRED',originalModelsAndPreparedBytesPreserved:true,originalNativeBytesPreserved:true,canonicalOriginalPrefixesPreserved:true,noOwnerBindingBackfill:true,restartWithoutReplay:true,requestCounts:legacy.counts()},null,2));passed=true;
+    await fs.mkdir('test-results',{recursive:true});await fs.writeFile('test-results/owner-execution-legacy-application-evidence.json',JSON.stringify({oldExecutable:old.executable,workspaceId:id,killedTestPid:old.killedPid,actualQueuedTask:old.queued.receipt.taskId,actualRunningTask:old.live.receipt.taskId,actualCheckpointTask:old.checkpointTaskId,oldRunningFinalStatus:live.status,originalReceiptStable:true,legacyClaimRejected:true,originalModelsAndPreparedBytesPreserved:true,originalNativeBytesPreserved:true,canonicalOriginalPrefixesPreserved:true,noOwnerBindingBackfill:true,restartWithoutReplay:true,requestCounts:legacy.counts()},null,2));passed=true;
   }catch(error){await fs.mkdir('test-results',{recursive:true});await fs.writeFile('test-results/owner-execution-legacy-application-failure.json',JSON.stringify({...legacy.evidence,error:String(error),actualCounts:legacy.counts(),providerErrors:legacy.providerErrors(),retained:true},null,2));throw error}
   finally{if(app)await app.Shutdown();await legacy.cleanup(passed)}
 },150000);

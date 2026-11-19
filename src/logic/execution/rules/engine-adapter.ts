@@ -12,9 +12,13 @@ import type { EngineRuntimePackage } from './engine-runtime';
 
 import type { ResolvedEngineModel } from '../../engines';
 
-import { checkedEngineAdapter as checkAdapter, type EngineAdapter as FrameworkAdapter } from '../../../framework/kernel';
+import { checkedEngineAdapter as checkAdapter, type EngineAdapter as FrameworkAdapter } from '../../engines';
 
 import type { RequestBudgetPort } from '../../budget/rules/request-budget';
+
+import type { EnginePluginModule } from '../../../framework/kernel';
+import type { EngineDescriptor } from '../../engines';
+export type PublishedEngineAdapter = EnginePluginModule<EngineAdapterOptions, AgentEngine, EngineDescriptor>['engineAdapter'];
 
 export { engineAdapterProtocol } from '../../../framework/kernel';
 
@@ -50,8 +54,11 @@ export interface EngineAdapterOptions
 
   llm?: ResolvedEngineModel;
 
+  modelInstance?: import('../../../framework/kernel').ModelInstance<import('../../../framework/kernel').ModelConfiguration<ResolvedEngineModel>>;
+
   images?: InputImage[];
 
+  ReadPermission?(): 'read' | 'ask' | 'execute';
   allowNativeExecution?: boolean;
 
   turnTimeoutMs?: number;

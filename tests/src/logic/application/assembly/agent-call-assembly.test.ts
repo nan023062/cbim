@@ -1,3 +1,4 @@
+import { CbimRuntime } from '../../../../../src/framework/cbim-runtime';
 import {afterEach,expect,it,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import os from 'node:os';
@@ -15,10 +16,10 @@ import type {RequestBudgetPort} from '../../../../../src/logic/budget/rules/requ
 
 // Only the external engine is replaced. Assembly, runtime, scheduler, logs and admission remain real.
 const fake=vi.hoisted(()=>({engine:vi.fn()}));
-vi.mock('../../../../../src/logic/execution/engines/pi/engine',()=>({PiEngine:class {constructor(options:unknown){return fake.engine(options)}}}));
+vi.mock('../../../../../src/logic/engines/adapters/pi/engine',()=>({PiEngine:class {constructor(options:unknown){return fake.engine(options)}}}));
 
-vi.mock('../../../../../src/logic/execution/engines/claude/engine',()=>({ClaudeCodeEngine:class {constructor(options:unknown){return fake.engine(options)}}}));
-vi.mock('../../../../../src/logic/execution/engines/codex/engine',()=>({CodexEngine:class {constructor(options:unknown){return fake.engine(options)}}}));
+vi.mock('../../../../../src/logic/engines/adapters/claude/engine',()=>({ClaudeCodeEngine:class {constructor(options:unknown){return fake.engine(options)}}}));
+vi.mock('../../../../../src/logic/engines/adapters/codex/engine',()=>({CodexEngine:class {constructor(options:unknown){return fake.engine(options)}}}));
 
 const cleanups:(()=>Promise<void>)[]=[];
 afterEach(async()=>{for(const cleanup of cleanups.splice(0))await cleanup();fake.engine.mockReset()});
@@ -49,7 +50,7 @@ async function fixture(mode:'implicit-engine'|'chain'|'different-model'|'changed
   if(rootPermit.kind!=='granted')throw Error('Root admission failed');
   if(mode==='capacity')admission.Configure({revision:1,maxConcurrentRuns:1});
   const options={mode:'chat' as const,engine:'pi' as const,provider:'cbim-profile',profileId:'profile',model:'model',permission:mode==='read'?'read' as const:'execute' as const,process:{command:'test-engine',args:[]},llm};
-  const input={workspace,task:rootTask,options,llm,storage,members:{Get:memberGet},admission:{manager:admission,ownerEpoch:1,IsCurrent:()=>true},dispatch:{budgets:{HoldMain: holdMain},OpenScope: openScope,CloseScope: closeScope},requestBudgets:{ForRun: forRun,Preflight:async()=>{}},...((mode.startsWith('cross-model')||mode==='changed-model-capture'||mode==='implicit-engine')?{models:{WithRuntimeConfiguration:async(ref:any,use:any)=>{const selected=[modelB,modelC,llm].find(m=>m.profile.id===ref.profileId)!;expect(ref).toMatchObject({modelId:selected.profile.model,engine:selected.profile.engine});return use({profile:{...structuredClone(selected.profile),...(mode==='changed-model-capture'?{maxTokens:selected.profile.maxTokens+1}:{})},Resolve:()=>structuredClone(selected)})}}}:{}),authorizeNative:async()=>({allow:true})} as unknown as AgentCallAssemblyInput;
+  const input={runtime:new CbimRuntime(),workspace,task:rootTask,options,llm,storage,members:{Get:memberGet,List:async()=>({items:['worker-b','worker-c'].map(memberId=>({memberId,name:memberId,state:'active',teamId:'team',agentId:'.cbim/team/'+memberId,position:memberId})),registryCursor:'v1'})},admission:{manager:admission,ownerEpoch:1,IsCurrent:()=>true},dispatch:{budgets:{HoldMain: holdMain},OpenScope: openScope,CloseScope: closeScope},requestBudgets:{ForRun: forRun,Preflight:async()=>{}},...((mode.startsWith('cross-model')||mode==='changed-model-capture'||mode==='implicit-engine')?{models:{WithRuntimeConfiguration:async(ref:any,use:any)=>{const selected=[modelB,modelC,llm].find(m=>m.profile.id===ref.profileId)!;expect(ref).toMatchObject({modelId:selected.profile.model,engine:selected.profile.engine});return use({profile:{...structuredClone(selected.profile),...(mode==='changed-model-capture'?{maxTokens:selected.profile.maxTokens+1}:{})},Resolve:()=>structuredClone(selected)})}}}:{}),authorizeNative:async()=>({allow:true})} as unknown as AgentCallAssemblyInput;
   const assembly=createAgentCallAssembly(input);
   fake.engine.mockImplementation((engineOptions:any):AgentEngine=>{
     let context:EngineContext;
@@ -113,6 +114,8 @@ it('routes root to child to grandchild through real loops, exact identities and 
   expect(f.holdMain).toHaveBeenCalledTimes(1);expect(f.openScope).toHaveBeenCalledTimes(1);expect(f.closeScope).toHaveBeenCalledTimes(1);expect(f.holdRelease).toHaveBeenCalledTimes(1);
   const [a,b,c]=f.events;
   const child=await f.storage.Read(b.directory),leaf=await f.storage.Read(c.directory);
+  expect(b.task.parentTaskId).toBe(a.task.taskId);
+  expect(c.task.parentTaskId).toBe(b.task.taskId);
   expect(child.events[0].data.agentCall).toMatchObject({callerTaskId:a.task.taskId,callerRunId:a.runId,toolCallId:'nested-call',taskId:b.task.taskId,runId:b.runId});
   expect(leaf.events[0].data.agentCall).toMatchObject({callerTaskId:b.task.taskId,callerRunId:b.runId,toolCallId:'nested-call',taskId:c.task.taskId,runId:c.runId});
   expect(f.admission.Snapshot().occupied).toHaveLength(1);
@@ -175,4 +178,23 @@ it('binds root control tools only after admission and waits for the original com
  await vi.waitFor(()=>expect(entered).toBe(true));const stopping=f.assembly.agentLifecycle.Failed(Error('stop'));await Promise.resolve();
  expect(f.closeScope).not.toHaveBeenCalled();expect(f.holdRelease).not.toHaveBeenCalled();expect(()=>context.AssertCurrent(new AbortController().signal)).toThrow();expect(()=>context.Track(async()=> 'new')).toThrow();
  resolve('original receipt');expect(await original).toBe('original receipt');await stopping;expect(f.closeScope).toHaveBeenCalledTimes(1);expect(f.holdRelease).toHaveBeenCalledTimes(1);expect(f.assembly.MainToolContext(f.rootTask,'root-run')).toBeUndefined();
+});
+
+it('隔离工作区与主会话并按宿主生命周期释放 Office', () => {
+  const runtime = new CbimRuntime();
+  const first = runtime.OpenOffice('a', 'main');
+  const second = runtime.OpenOffice('a', 'second');
+  const other = runtime.OpenOffice('b', 'main');
+  expect(runtime.OpenOffice('a', 'main')).toBe(first);
+  expect(second).not.toBe(first);
+  expect(other).not.toBe(first);
+  runtime.CloseWorkspace('a');
+  expect(first.closed).toBe(true);
+  expect(second.closed).toBe(true);
+  expect(runtime.OpenOffice('b', 'main')).toBe(other);
+  expect(runtime.OpenOffice('a', 'main')).not.toBe(first);
+  runtime.Close();
+  runtime.Close();
+  expect(other.closed).toBe(true);
+  expect(() => runtime.OpenOffice('a', 'main')).toThrow('已关闭');
 });

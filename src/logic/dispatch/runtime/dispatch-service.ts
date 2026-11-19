@@ -697,7 +697,7 @@ export class WorkspaceDispatchService
 
       const taskId = randomUUID();
 
-      const prepared = prepareMember(state, await resolveDispatchAgent(snapshot, input.task.assigneeAgentId), input.rootSessionId, 'task', trustedScopeId === undefined ? undefined : { scopeId: trustedScopeId, taskId });
+      const prepared = prepareMember(state, await resolveDispatchAgent(snapshot, input.task.assigneeAgentId), input.rootSessionId, 'task', trustedScopeId === undefined ? undefined : { scopeId: trustedScopeId, taskId }, registered?.memberId);
 
       if (registered)
         prepared.agent.name = registered.name;
@@ -731,7 +731,7 @@ export class WorkspaceDispatchService
         edges.push({ edgeId: randomUUID(), identity: graph.identity, kind: 'dependency', fromNodeId: source.nodeId, toNodeId: 'task:' + taskId, revision: 1, enabled: true, condition: { kind: 'result_ready', reviewRequired: true, planRevision: source.planRevision, ...(ready ? { resultId: source.result!.resultId } : {}) } });
       }
 
-      const task: TaskNode = { kind: 'task', nodeId: 'task:' + taskId, taskId, scopeId: trustedScopeId, identity: graph.identity, requester: graph.root.agent, assignee: prepared.agent, ...(ownerBinding ? { ownerBinding } : {}), ...(fallbackBinding ? { fallbackBinding } : {}), modules, ...(input.task.workflowSelections ? { workflowSelections: input.task.workflowSelections } : {}), goal: input.task.goal, acceptance: input.task.acceptance, revision: 1, planRevision: 1, status: waiting ? 'waiting' : 'queued', awaitedChildren: [], runIds: [], createdAt: now, updatedAt: now, ...(waiting ? { waitReason: '等待前置任务交付并通过主 Agent 审阅' } : {}) };
+      const task: TaskNode = { kind: 'task', nodeId: 'task:' + taskId, taskId, scopeId: trustedScopeId, identity: graph.identity, requester: graph.root.agent, assignee: prepared.agent, workerId: prepared.teamSession.workerId, ...(ownerBinding ? { ownerBinding } : {}), ...(fallbackBinding ? { fallbackBinding } : {}), modules, ...(input.task.workflowSelections ? { workflowSelections: input.task.workflowSelections } : {}), goal: input.task.goal, acceptance: input.task.acceptance, revision: 1, planRevision: 1, status: waiting ? 'waiting' : 'queued', awaitedChildren: [], runIds: [], createdAt: now, updatedAt: now, ...(waiting ? { waitReason: '等待前置任务交付并通过主 Agent 审阅' } : {}) };
 
       const previous = graph.agents.find(a => a.agentInstanceId === prepared.member.agentInstanceId);
 

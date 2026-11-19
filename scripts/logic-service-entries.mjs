@@ -95,6 +95,7 @@ export const servicePublicEntries=new Set([
   "src/logic/workspace/service/catalog.ts",
   "src/logic/workspace/service/main-module-ownership-tools.ts",
   "src/logic/workspace/service/module-ownerships.ts",
+  "src/logic/workspace/service/git-worktrees.ts",
   "src/logic/workspace/service/paths.ts",
   "src/logic/workspace/service/workspace.ts"
 ]);

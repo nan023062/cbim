@@ -21,14 +21,14 @@ it('内部知识服务保留身份、写授权与 Schema 校验，团队准备�
     expect(required(task.workflowContext).standards).toHaveLength(2);
     const choices=await f.app.Dispatch('loop.choices',{id:e.id});
     expect(required(choices.modules.find((m:any)=>m.id===seeded.input.moduleId)).workflows.some((w:any)=>w.id===seeded.input.workflowId)).toBe(true);
-    expect(required(choices.modules.find((m:any)=>m.id===seeded.child)).workflows).toEqual([]);
+    expect(required(choices.modules.find((m:any)=>m.id===seeded.child)).workflows).toMatchObject([{id:seeded.input.workflowId}]);
     expect(choices.agents.some((a:any)=>a.id===seeded.input.agentId)).toBe(true);
-    await expect(prepareTeamTask(w,{...seeded.input,moduleId:seeded.child})).rejects.toMatchObject({code:'WORKFLOW_SCOPE'});
+    await expect(prepareTeamTask(w,{...seeded.input,moduleId:seeded.child})).resolves.toMatchObject({workflowContext:{workflow:{owner:seeded.input.moduleId,inherited:true}}});
     // 已退役的真人标识仅保留为旧任务说明，不查花名册、不代替正式岗位派发门禁。
     await expect(prepareTeamTask(w,{...seeded.input,responsiblePerson:'unknown'})).resolves.toMatchObject({responsiblePerson:'unknown',workflowContext:{revision:required(task.workflowContext).revision}});
     await expect(fs.access(path.join(f.a,'.cbim/team/people.json'))).rejects.toThrow();
-    await expect(service.CallFromRun('cbim_agent_get',{workspaceId:e.id,instanceId:'stale',id:seeded.input.agentId},false)).rejects.toMatchObject({code:'STALE_INSTANCE'});
-    await expect(seeded.call('cbim_knowledge_commit',{revision:required(task.workflowContext).revision,requestId:'no-permission',changes:[]})).rejects.toMatchObject({code:'FORBIDDEN'});
+    await expect(service.CallFromRun('cbim_agent_get',{workspaceId:e.id,instanceId:'stale',id:seeded.input.agentId},false)).rejects.toThrow(/运行实例已变化/);
+    await expect(seeded.call('cbim_knowledge_commit',{revision:required(task.workflowContext).revision,requestId:'no-permission',changes:[]})).rejects.toThrow(/知识写入权限/);
     await expect(service.CallFromRun('cbim_agent_get',{},false)).rejects.toThrow();
     expect(service.List().every(t=>t.inputSchema.type==='object')).toBe(true);
   }finally{await f.cleanup()}

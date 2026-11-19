@@ -43,6 +43,8 @@ export interface PreparedDispatchModule
 
   workflowText: string;
 
+  availableWorkflows?: { skillId: string; ownerId: string; content: string }[];
+
   /** 同一正文的可选程序约定；无声明不补默认规则，保存后必须与正文解析完全一致。 */
   workflowContract?: WorkflowContract;
 }
@@ -130,7 +132,7 @@ const shape = z.object({
     workspaceId: id, teamId: id, agentId: id, knowledgeRevision: id, name: text, source: z.enum(['builtin', 'workspace']), principles: text,
     effectiveSkills: z.array(z.object({ skillId: id, ownerId: id, inherited: z.boolean(), content: text }).strict()),
   }).strict(), agentDefinition: definition,
-  modules: z.array(z.object({ binding: moduleBinding, definition, overview: text, workflowText: text, workflowContract: workflowContractSchema.optional() }).strict()).min(1).max(100),
+  modules: z.array(z.object({ binding: moduleBinding, definition, overview: text, workflowText: text, availableWorkflows: z.array(z.object({ skillId: id, ownerId: id, content: text }).strict()).optional(), workflowContract: workflowContractSchema.optional() }).strict()).min(1).max(100),
   standards: z.array(z.object({ id, version: id, text }).strict()).min(1), memberContext: z.object({ binding: ownerExecutionBindingSchema, name: z.string().min(1).max(100), position: z.string().min(1).max(500), adaptation: workspaceMemberAdaptationSchema }).strict().optional(), fallbackBinding: automaticExecutionBindingSchema.optional(), fingerprint: z.string().regex(/^[a-f0-9]{64}$/),
 }).strict();
 

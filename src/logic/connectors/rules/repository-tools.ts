@@ -1,3 +1,4 @@
+import { resourceKindIds } from '../../../resource';
 /**
  * 作用定位：主 Loop 资源仓库只读工具的严格分页、正文分块协议和可信捕获端口。
  * 设计原因：模型只能选择已装配链接器和资源，不提供仓库身份、共享代际或权限；有界输出保留完整正文指纹和分页版本，避免部分内容冒充全文。
@@ -14,7 +15,7 @@ const revision = z.string().regex(/^[a-f0-9]{64}$/),
 
 export const repositoryToolLimits = { listItems: 50, contentCharacters: 4096 } as const;
 
-const resource = z.object({ id: z.string().uuid(), kind: z.enum(['connector', 'team', 'agent', 'skill', 'architecture', 'module', 'workflow']), name: z.string().max(100), summary: z.string().max(1000), updatedAt: z.string().datetime() }).strict();
+const resource = z.object({ id: z.string().uuid(), kind: z.enum(resourceKindIds), name: z.string().max(100), summary: z.string().max(1000), updatedAt: z.string().datetime() }).strict();
 
 /** 首次目录可不指定版本；后续页必须锁定此前真实返回的仓库 revision。 */
 export const repositoryListInputSchema = z.object({ connectorId: connectorIdSchema, expectedRevision: revision.optional(), offset: offset.optional(), limit: z.number().int().min(1).max(repositoryToolLimits.listItems).optional() }).strict().superRefine((value, context) => { if ((value.offset ?? 0) > 0 && !value.expectedRevision) context.addIssue({ code: z.ZodIssueCode.custom, path: ['expectedRevision'], message: '后续目录分页必须指定原仓库版本' }) });

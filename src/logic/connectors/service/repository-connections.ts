@@ -27,7 +27,7 @@ import { repositoryConnectionListInputSchema, repositoryConnectionListSchema, re
 
 import { RepositoryConnectionStore } from './repository-connection-store';
 
-import type { ResourceRepositories, SharedRepositoryReadConnection } from '../../resources/service';
+import type { ResourceRepositories, SharedRepositoryReadConnection } from '../../../resource/service';
 
 import { repositoryListInputSchema, repositoryGetInputSchema, repositoryToolLimits, type RepositoryToolsPort, type RepositoryToolTarget, } from '../rules/repository-tools';
 
@@ -135,7 +135,7 @@ export class RepositoryConnections
     return result
   }
 
-  private async Definitions(owner: KnowledgeWorkspace)
+  private async ReadDefinitions(owner: KnowledgeWorkspace)
   {
     owner.Assert();
 
@@ -143,7 +143,7 @@ export class RepositoryConnections
       file = snapshot.files.find(file => file.path === registryPath);
 
     if (!file)
-      throw new Error('当前知识缺少链接器注册表');
+      return { snapshot, entries: undefined };
 
     let entries: ConnectorDefinition[];
 
@@ -153,10 +153,19 @@ export class RepositoryConnections
     }
     catch
     {
-      throw new Error('链接器注册表无效，请先修复正式知识')
+      return { snapshot, entries: undefined };
     }
 
     owner.Assert();
+
+    return { snapshot, entries };
+  }
+
+  private async Definitions(owner: KnowledgeWorkspace)
+  {
+    const { snapshot, entries } = await this.ReadDefinitions(owner);
+    if (!entries)
+      throw new Error('链接器注册表无效，请先修复正式知识');
 
     return { snapshot, entries };
   }
@@ -370,19 +379,9 @@ export class RepositoryConnections
     if (!sharing)
       return undefined;
 
-    let entries: ConnectorDefinition[];
-
-    try
-    {
-      ({ entries } = await this.Definitions(owner))
-    }
-    catch (error: any)
-    {
-      if (error.code === 'REPOSITORY_CONNECTION_DEFINITION')
-        return undefined;
-
-      throw error
-    }
+    const { entries } = await this.ReadDefinitions(owner);
+    if (!entries)
+      return undefined;
 
     this.AssertOwner(owner, input);
 

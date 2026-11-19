@@ -1,9 +1,10 @@
+import { fixtureEngines } from '../../../../support/engine-instances';
 import {expect,test,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import {WorkspaceExecutionManager} from '../../../../../src/logic/conversation/runtime/execution-manager';
-import {Agent} from '../../../../../src/framework/cability/agent';
+import {AgentRole} from '../../../../../src/framework/cability/agent';
 import type {ExecutionCollaboration} from '../../../../../src/logic/conversation/runtime/execution-manager';
 import {LoopRuntime} from '../../../../../src/logic/execution/rules/runtime/runtime';
 import type {AgentEngine,EngineContext,RunInputSource,TaskSpec} from '../../../../../src/logic/execution/rules/types';
@@ -20,7 +21,7 @@ test('统一 Agent 根运行只使用独立生命周期，不触发旧协调器'
   const f=await fixture();
   const lifecycle={BeforeRun:vi.fn(async()=>{}),Settled:vi.fn(async()=>{}),Failed:vi.fn(async()=>{})};
   const original=f.factory.getMockImplementation()!;
-  f.factory.mockImplementation(async(...args)=>({...await original(...args),agent:new Agent({id:'cbim:main',name:'main',instructions:''},{workspaceId:args[1].workspaceId,taskId:args[1].taskId}),unifiedAgentTools:true,agentLifecycle:lifecycle}));
+  f.factory.mockImplementation(async(...args)=>({...await original(...args),agent:new AgentRole({id:'cbim:main',name:'main',instructions:''},{workspaceId:args[1].workspaceId,taskId:args[1].taskId}),unifiedAgentTools:true,agentLifecycle:lifecycle}));
   try{
     const run=await f.manager.Chat('通过统一工具执行',options);
     expect(f.factory.mock.calls[0][2].executionModel).toBe('agent-tools-v1');
@@ -36,7 +37,7 @@ test('统一 Agent 受理失败归原生命周期，不能调用旧失败清理'
   const f=await fixture();const refusal=new Error('budget denied');
   const lifecycle={BeforeRun:vi.fn(async()=>{throw refusal}),Settled:vi.fn(async()=>{}),Failed:vi.fn(async()=>{})};
   const original=f.factory.getMockImplementation()!;
-  f.factory.mockImplementation(async(...args)=>({...await original(...args),agent:new Agent({id:'cbim:main',name:'main',instructions:''},{workspaceId:args[1].workspaceId,taskId:args[1].taskId}),unifiedAgentTools:true,agentLifecycle:lifecycle}));
+  f.factory.mockImplementation(async(...args)=>({...await original(...args),agent:new AgentRole({id:'cbim:main',name:'main',instructions:''},{workspaceId:args[1].workspaceId,taskId:args[1].taskId}),unifiedAgentTools:true,agentLifecycle:lifecycle}));
   try{
     await expect(f.manager.Chat('拒绝前不得派发',options)).rejects.toThrow('budget denied');
     expect(lifecycle.Failed).toHaveBeenCalledWith(refusal);
@@ -75,7 +76,7 @@ async function fixture(admission?:GlobalRunAdmission,allowTools=false){
         const release=acquireExecutionLease(lease,task.taskId,{workspaceId:task.workspaceId,rootSessionId:task.taskId,taskId:task.taskId,requestId:admissionRequestId('main',launch.requestId),scopeId:launch.scopeId,source:launch.wait?'main-result':'direct',workspacePermission:'read'},admission?{manager:admission,ownerEpoch:1,IsCurrent:()=>true}:undefined,launch.wait);
         if(leased)throw Error('lease overlaps');leased=true;return ()=>{leased=false;release()};
       },
-      CreateEngine:()=>engine,ToolPolicy:async()=>({allow:allowTools,effects:['business-write']}),OnEvent:config.onEvent,
+      engines:fixtureEngines(()=>engine),ToolPolicy:async()=>({allow:allowTools,effects:['business-write']}),OnEvent:config.onEvent,
     });
     return {runtime} as any;
   });
@@ -111,7 +112,7 @@ test('直接 Manager resume 不能用裸调用 ID 解除真实未知，既不入
     const chat=await f.manager.Chat('原未知操作',options),call={id:'unknown-native-call',name:'write',input:{path:'result.txt',content:'original'}};
     expect((await f.runs[0].context!.beforeTool(call)).allow).toBe(true);await f.finish(0,'failed');
     const summary=await f.manager.Inspect(chat.taskId,chat.runId);expect(summary.unresolvedTools).toEqual([call.id]);
-    for(const ids of [[],[call.id]])await expect(f.manager.Resume(chat.taskId,chat.runId,'我已检查',options,ids)).rejects.toMatchObject({code:'RECOVERY_INSPECTION_REQUIRED'});
+    for(const ids of [[],[call.id]])await expect(f.manager.Resume(chat.taskId,chat.runId,'我已检查',options,ids)).rejects.toThrow('只读核实');
     expect(f.factory).toHaveBeenCalledTimes(1);expect(await f.manager.Queued(chat.taskId)).toEqual([]);expect(await f.manager.Inspect(chat.taskId,chat.runId)).toEqual(summary);
   }finally{await f.cleanup()}
 });
@@ -122,11 +123,11 @@ test('持久等待期间普通同意消息只排队，继续队列不能解除�
     await f.manager.Enqueue(chat.taskId,'同意',options);
     const result=await f.manager.Resume(chat.taskId,chat.runId,'补充但来自普通输入',options);
     expect(result).toMatchObject({queued:true});
-    await expect(f.manager.ContinueQueue(chat.taskId)).rejects.toMatchObject({code:'GOAL_WAITING'});
+    await expect(f.manager.ContinueQueue(chat.taskId)).rejects.toThrow('当前目标正在等待补充');
     expect(f.runs).toHaveLength(1);
     const pending=await f.manager.Queued(chat.taskId);expect(pending).toHaveLength(2);expect(pending.every(item=>item.status==='pending')).toBe(true);
     await f.manager.CollaborationReady(chat.taskId);expect(f.runs).toHaveLength(1);
-    await f.reopen();expect(await f.manager.Queued(chat.taskId)).toMatchObject(pending.map(item=>({id:item.id,message:item.message,status:'paused'})));await expect(f.manager.ContinueQueue(chat.taskId)).rejects.toMatchObject({code:'GOAL_WAITING'});expect(f.runs).toHaveLength(1);
+    await f.reopen();expect(await f.manager.Queued(chat.taskId)).toMatchObject(pending.map(item=>({id:item.id,message:item.message,status:'paused'})));await expect(f.manager.ContinueQueue(chat.taskId)).rejects.toThrow('当前目标正在等待补充');expect(f.runs).toHaveLength(1);
   }finally{await f.cleanup()}
 });
 
@@ -155,9 +156,9 @@ test('result continuation has durable source and duplicate receipts never start 
     expect(summary.source).toEqual(source());expect(summary.events[0].data.source).toEqual(source());
     expect(await f.manager.ContinueFromResults(chat.taskId,'member candidate is ready',options,source())).toEqual(receipt);
     expect(f.runs).toHaveLength(2);
-    await expect(f.manager.ContinueFromResults(chat.taskId,'changed candidate',options,source())).rejects.toMatchObject({code:'CONTINUATION_CONFLICT'});
-    await expect(f.manager.ContinueFromResults(chat.taskId,'different input',options,source('continuation-one',['result-one'],['another-task']))).rejects.toMatchObject({code:'CONTINUATION_CONFLICT'});
-    await expect(f.manager.ContinueFromResults(chat.taskId,'partial replay',options,source('continuation-two',['result-one','result-two']))).rejects.toMatchObject({code:'RESULT_ALREADY_CONSUMED'});
+    await expect(f.manager.ContinueFromResults(chat.taskId,'changed candidate',options,source())).rejects.toThrow('同一回传标识已经绑定其他成员结果或内容');
+    await expect(f.manager.ContinueFromResults(chat.taskId,'different input',options,source('continuation-one',['result-one'],['another-task']))).rejects.toThrow('同一回传标识已经绑定其他成员结果或内容');
+    await expect(f.manager.ContinueFromResults(chat.taskId,'partial replay',options,source('continuation-two',['result-one','result-two']))).rejects.toThrow('部分成员结果已进入本会话');
     await f.finish(1);await f.reopen();
     expect(await f.manager.ContinueFromResults(chat.taskId,'member candidate is ready',options,source())).toEqual(receipt);
     expect(f.runs).toHaveLength(2);expect(await f.manager.Queued(chat.taskId)).toEqual([]);
@@ -178,12 +179,12 @@ test('failed or blocked member reports can continue without result messages but 
 test('a new continuation requires a completed, verified main thread and cannot recover a failed run automatically',async()=>{
   const f=await fixture();try{
     const chat=await f.manager.Chat('coordinate work',options);
-    await expect(f.manager.ContinueFromResults(chat.taskId,'too early',options,source())).rejects.toMatchObject({code:'CONTINUATION_NOT_READY'});
+    await expect(f.manager.ContinueFromResults(chat.taskId,'too early',options,source())).rejects.toThrow('主会话上轮未安全完成');
     await f.finish(0,'failed');
-    await expect(f.manager.ContinueFromResults(chat.taskId,'must not replay',options,source())).rejects.toMatchObject({code:'CONTINUATION_NOT_READY'});
+    await expect(f.manager.ContinueFromResults(chat.taskId,'must not replay',options,source())).rejects.toThrow('主会话上轮未安全完成');
     const foreign={...f.workspace,entry:{...f.workspace.entry,id:'other-workspace'}} as KnowledgeWorkspace;
     const manager=new WorkspaceExecutionManager(foreign,f.storage,f.factory);
-    try{await expect(manager.ContinueFromResults(chat.taskId,'foreign',options,source())).rejects.toMatchObject({code:'IDENTITY'})}finally{await manager.Close()}
+    try{await expect(manager.ContinueFromResults(chat.taskId,'foreign',options,source())).rejects.toThrow('执行记录属于其他工作区、会话或运行')}finally{await manager.Close()}
     expect(f.runs).toHaveLength(1);
   }finally{await f.cleanup()}
 });
@@ -195,7 +196,7 @@ test('user resume while members are busy queues the original message; reconcilia
     const queued=await f.manager.Resume(chat.taskId,chat.runId,message,{...options,model:'next-model'});
     expect(queued).toMatchObject({...chat,queued:true});expect(f.runs).toHaveLength(1);
     expect(await f.manager.Queued(chat.taskId)).toMatchObject([{message,options:{model:'next-model'}}]);
-    await expect(f.manager.Resume(chat.taskId,chat.runId,'reconcile',options,['unknown-tool'])).rejects.toMatchObject({code:'COLLABORATION_BUSY'});
+    await expect(f.manager.Resume(chat.taskId,chat.runId,'reconcile',options,['unknown-tool'])).rejects.toThrow('协作期间不能排队未决工具核实');
     expect(await f.manager.Queued(chat.taskId)).toHaveLength(1);
   }finally{await f.cleanup()}
 });
@@ -216,7 +217,7 @@ test('stop marks collaboration before waiting, late results cannot restart, and 
     releaseStop();await stop;
     expect(await f.manager.Queued(chat.taskId)).toMatchObject([{status:'paused'},{status:'paused'}]);
     await f.manager.CollaborationReady(chat.taskId);expect(f.runs).toHaveLength(1);
-    await expect(f.manager.ContinueFromResults(chat.taskId,'late result',options,source())).rejects.toMatchObject({code:'COLLABORATION_STOPPED'});
+    await expect(f.manager.ContinueFromResults(chat.taskId,'late result',options,source())).rejects.toThrow('本会话已停止自动协作');
     await f.manager.ContinueQueue(chat.taskId);expect(f.runs).toHaveLength(2);
   }finally{await f.cleanup()}
 });
@@ -269,7 +270,7 @@ test('collaboration failure synchronously blocks an enqueue that is already read
     expect(f.runs).toHaveLength(1);
     expect(await f.manager.Queued(chat.taskId)).toMatchObject([{message:'already pending user message',status:'paused'}]);
     await f.manager.CollaborationReady(chat.taskId);expect(f.runs).toHaveLength(1);
-    await expect(f.manager.ContinueFromResults(chat.taskId,'late member report',options,source())).rejects.toMatchObject({code:'COLLABORATION_STOPPED'});
+    await expect(f.manager.ContinueFromResults(chat.taskId,'late member report',options,source())).rejects.toThrow('本会话已停止自动协作');
     await f.manager.ContinueQueue(chat.taskId);expect(f.runs).toHaveLength(2);
   }finally{releaseHistory();await f.cleanup()}
 });
@@ -277,7 +278,7 @@ test('collaboration failure synchronously blocks an enqueue that is already read
 test('并发已满时首轮尚未受理：不开目标、不创建运行或引擎，准备失败仍释放名额',async()=>{
   const admission=new GlobalRunAdmission();admission.Configure({revision:1,maxConcurrentRuns:1});
   const release=occupied(admission),f=await fixture(admission);try{
-    await expect(f.manager.Chat('保留原草稿',options)).rejects.toMatchObject({code:'CAPACITY_BUSY'});
+    await expect(f.manager.Chat('保留原草稿',options)).rejects.toThrow('当前运行名额暂不可用');
     expect(f.starting).not.toHaveBeenCalled();expect(f.startFailed).not.toHaveBeenCalled();
     expect(f.runs.every(run=>!run.context)).toBe(true);expect(await f.manager.List()).toEqual([]);
     expect(admission.Snapshot().waiting).toEqual([]);expect(admission.Snapshot().occupied).toHaveLength(1);
@@ -299,14 +300,14 @@ test('已受理结果回注等待保留稳定票，不开失败周期；释放�
     // Admission uses a bounded hash; the source journal itself still enforces its own input schema.
     const validSource=source('auto-return-one');
     expect(admissionRequestId('main',(report as {continuationId:string}).continuationId)).toMatch(/^main-[a-f0-9]{64}$/);
-    await expect(f.manager.ContinueFromResults(chat.taskId,'真实结果',options,validSource,wait)).rejects.toMatchObject({code:'CAPACITY_WAITING'});
+    await expect(f.manager.ContinueFromResults(chat.taskId,'真实结果',options,validSource,wait)).rejects.toThrow('当前执行名额或工作区占用暂不可用');
     const first=admission.Snapshot().waiting[0];expect(first).toMatchObject({source:'main-result',scopeId:'scope-one'});
     expect(f.starting).toHaveBeenCalledTimes(1);expect(f.startFailed).not.toHaveBeenCalled();expect(await f.manager.Thread(chat.taskId)).toHaveLength(1);
-    await expect(f.manager.ContinueFromResults(chat.taskId,'真实结果',options,validSource,wait)).rejects.toMatchObject({code:'CAPACITY_WAITING'});
+    await expect(f.manager.ContinueFromResults(chat.taskId,'真实结果',options,validSource,wait)).rejects.toThrow('当前执行名额或工作区占用暂不可用');
     expect(admission.Snapshot().waiting[0].ticketId).toBe(first.ticketId);expect(callbacks.size).toBe(1);
     // Withdrawal uses only identity, not Request's source/permission, and is safe to repeat.
     callbacks.values().next().value!();expect(admission.Snapshot().waiting).toEqual([]);
-    await expect(f.manager.ContinueFromResults(chat.taskId,'真实结果',options,validSource,wait)).rejects.toMatchObject({code:'CAPACITY_WAITING'});
+    await expect(f.manager.ContinueFromResults(chat.taskId,'真实结果',options,validSource,wait)).rejects.toThrow('当前执行名额或工作区占用暂不可用');
     release();await vi.waitFor(()=>expect(onReady).toHaveBeenCalled());
     expect(await f.manager.Thread(chat.taskId)).toHaveLength(1);
     await f.manager.ContinueFromResults(chat.taskId,'真实结果',options,validSource,wait);
@@ -335,14 +336,14 @@ test('活动原运行的未决工具只允许补充排队，不启动新模型�
     const run=await f.manager.Chat('原运行',options);
     const call={id:'active-agent-call',name:'write',input:{path:'result.txt',content:'pending'}};
     expect((await f.runs[0].context!.beforeTool(call)).allow).toBe(true);
-    await expect(f.manager.Resume(run.taskId,run.runId,'不能用 ID 绕过',options,[call.id])).rejects.toMatchObject({code:'COLLABORATION_BUSY'});
+    await expect(f.manager.Resume(run.taskId,run.runId,'不能用 ID 绕过',options,[call.id])).rejects.toThrow('活动运行仅接收补充排队');
     const queued=await f.manager.Resume(run.taskId,run.runId,'保留新的用户要求',{...options,model:'model-two'});
     expect(queued).toMatchObject({taskId:run.taskId,runId:run.runId,queued:true});
     expect(f.factory).toHaveBeenCalledTimes(1);
     expect(await f.manager.Queued(run.taskId)).toMatchObject([{message:'保留新的用户要求',status:'pending',options:{model:'model-two'}}]);
     await f.manager.Stop(run.taskId);
     expect(await f.manager.Queued(run.taskId)).toMatchObject([{message:'保留新的用户要求',status:'paused'}]);
-    await expect(f.manager.Resume(run.taskId,run.runId,'历史未知操作不能排队恢复',options)).rejects.toMatchObject({code:'RECOVERY_INSPECTION_REQUIRED'});
+    await expect(f.manager.Resume(run.taskId,run.runId,'历史未知操作不能排队恢复',options)).rejects.toThrow('只读核实');
     expect(f.factory).toHaveBeenCalledTimes(1);
   }finally{await f.cleanup()}
 });
@@ -351,7 +352,7 @@ test.each([false,true])('closing waits for unified Agent durable settlement and 
  const f=await fixture();let release!:()=>void;const gate=new Promise<void>(resolve=>release=resolve);
  const lifecycle={BeforeRun:vi.fn(async()=>{}),Settled:vi.fn(async()=>{await gate;if(reject)throw Error('durable settlement failed')}),Failed:vi.fn(async()=>{})};
  const original=f.factory.getMockImplementation()!;
- f.factory.mockImplementation(async(...args)=>({...await original(...args),agent:new Agent({id:'cbim:main',name:'main',instructions:''},{workspaceId:args[1].workspaceId,taskId:args[1].taskId}),unifiedAgentTools:true,agentLifecycle:lifecycle}));
+ f.factory.mockImplementation(async(...args)=>({...await original(...args),agent:new AgentRole({id:'cbim:main',name:'main',instructions:''},{workspaceId:args[1].workspaceId,taskId:args[1].taskId}),unifiedAgentTools:true,agentLifecycle:lifecycle}));
  try{
   const run=await f.manager.Chat('关闭仍需保存原运行事实',options);
   await f.manager.Enqueue(run.taskId,'关闭后不得自动执行',options);

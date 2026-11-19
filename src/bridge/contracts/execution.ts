@@ -7,13 +7,13 @@
 export type { RunSummary, StoredEvent, EngineEvent, ConversationThreadView } from '../../logic/execution/rules/types';
 
 /** Agent 工具的可信日志引用；查看详情不取得执行或恢复权限。 */
-export type { AgentCallReference } from '../../logic/agents/contracts';
+export type { AgentCallReference } from '../../framework/office/call';
 
 export type { TaskSpec } from '../../logic/tasks/rules/types';
 
 export type { QueuedMessage, QueueCursor, QueueDelta } from '../../logic/tasks/rules/queue';
 
-export type { PendingQuestion, QuestionInput } from '../../logic/tools/rules/questions';
+export type { PendingQuestion, QuestionInput } from '../../framework/cability/agent/questions';
 
 /** 只读字段说明；不据错误文本决定是否执行或是否可重试。 */
 export { inputIssueMessage } from '../../logic/tools/rules/input-validation';

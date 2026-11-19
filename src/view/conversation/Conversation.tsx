@@ -771,7 +771,7 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
   // 初次周期读取尚未完成时不能凭运行日志猜测 resume；等待信息就绪后再决定发送或排队。
   const recoveryReason = tab.taskId && !taskOpen ? threadRecoveryReason(currentRun) : undefined;
 
-  const canSendRequest = active && !selectedChild && loaded && !pollError && !graph.loading && !busy && !stopping && !attachmentBusy && modelAvailable && !recoveryReason;
+  const canSendRequest = active && loaded && !pollError && !graph.loading && !busy && !stopping && !attachmentBusy && modelAvailable && !recoveryReason;
 
   const canSend = canSendRequest && (!waiting || continuation.editable) && (!!tab.draft?.trim() || attachments.length > 0);
 
@@ -799,10 +799,11 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
       <div ref={historyContent}>{selectedChild ? (member ? <MemberConversation key={member.session.sessionId} member={member} graph={graph.graph} scopes={graph.scopes} selectedTopicId={selectedTopicId} onSelectTopic={selectTopic} active={active && section === 'chat'} onSelectTask={viewMember} /> : <p role="status">正在同步执行对话；当前没有可验证的 Agent 身份。</p>) : runs.map(run => <ConversationTurn key={run.runId} run={run} workspaceId={workspace.id} now={run.status === 'running' ? now : 0} recovery={recovery} active={active && section === 'chat'} onSelectTask={viewMember} />)}</div>
       {!selectedChild && selectedTopicId && graph.selectedScope?.scopeId === selectedTopicId && !graph.detailLoading && !graph.error && graph.selectedScope.topicInterruptions?.some(item => !graph.selectedScope!.continuations?.some(value => value.continuationId === item.request.commandId)) && <TopicInterruptionForm key={JSON.stringify([workspace.instanceId, tab.taskId, selectedTopicId, graph.selectedScope.goal?.inputRevision ?? 1])} scope={graph.selectedScope} options={continuationConfig?.options} active={active && section === 'chat' && !stopping} onRefresh={graph.refresh} />}
       {graph.error && <p role="alert">{graph.error} <button onClick={graph.refresh}><Icon name="refresh" size={16} />重新同步成员动态</button></p>}
-      {!selectedChild && questions.map(q => <QuestionCard key={q.id} request={q} onAnswer={async answers => { await api.call('loop.answerQuestion', { id: workspace.id, taskId: q.taskId, questionId: q.id, answers }) }} />)}
+      {questions.map(q => <QuestionCard key={q.id} request={q} onAnswer={async answers => { await api.call('loop.answerQuestion', { id: workspace.id, taskId: q.taskId, questionId: q.id, answers }) }} />)}
       {currentRun && !mainRunning && currentRun.unresolvedTools.length > 0 && <div className="chat-reconcile" data-testid="unresolved-tools-notice"><h3>原操作结果尚未确认</h3><p>展开原工具记录，明确核实当前影响并保存处置。需要继续调查时创建独立只读核实任务；原记录保留，勾选调用标识不能恢复原运行。</p><ul>{currentRun.unresolvedTools.map(id => <li key={id}><code>{id}</code></li>)}</ul></div>}
     </div>
-    {selectedChild ? <div className="chat-composer"><p>执行 Agent 对话为只读。输入来自调用方 Agent，结果返回调用方。</p><button onClick={() => onAgentChat?.(undefined)}><Icon name="undo" size={16} />返回主 Agent 对话</button></div> : <div className="chat-composer">
+    <div className="chat-composer" data-recipient="office-main-agent">
+      {selectedChild && <button onClick={() => onAgentChat?.(undefined)}><Icon name="undo" size={16} />返回主 Agent 对话</button>}
       {loaded && !pollError && !graph.loading && recoveryReason && <ThreadRecoveryNotice reason={recoveryReason} disabled={!active || busy || stopping || attachmentBusy} onInspect={() => { graph.selectScope(undefined); setSelectedTaskId(graph.graph?.root.nodeId); setSection('tasks') }} onNewConversation={() => onBind(undefined)} />}
       {taskOpen && !!nextTip && <p className="composer-next-tip" role="status">附件随下次发送；引擎和模型修改在下一轮执行生效。</p>}
       {waiting && <p className="composer-next-tip" role="status" data-testid="conversation-waiting">主 Agent 正在等待补充。下方发送将继续当前目标，不另建任务。
@@ -847,7 +848,7 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
             ]} />{taskOpen && <SendButton disabled={stopping} isStreaming stopLabel={waiting ? '取消当前任务' : undefined} onClick={() => void stopCurrent()} />} {(!taskOpen || !!tab.draft?.trim() || attachments.length > 0) && <SendButton disabled={!canSend} continuing={waiting} queued={shouldQueue && !waiting} onClick={() => void send()} />}</div></div>
       </ComposerCard>
       <div className="chat-footer"><span><Icon name="folder" size={13} />{workspace.name}</span><UsageStatus runs={runs} currentRun={currentRun ?? null} historyIncomplete={threadIssues.length > 0} now={now} placement="footer" capacity={selectedModel?.contextWindow} /></div>
-    </div>}
+    </div>
     </div>
   </div>
 }

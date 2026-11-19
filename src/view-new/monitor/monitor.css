@@ -1,0 +1,15 @@
+.process-monitor { height: 100dvh; overflow: hidden; display: flex; flex-direction: column; background: #191919; color: #eee; font: 13px/1.4 "Segoe UI", sans-serif; }
+.process-monitor > header { height: 40px; flex: none; display: flex; align-items: center; gap: 9px; padding: 0 12px; -webkit-app-region: drag; }
+.process-columns { display: grid; grid-template-columns: minmax(0,1fr) 70px 80px 64px; align-items: center; text-align: right; gap: 6px; font-variant-numeric: tabular-nums; }
+.process-columns > :first-child { text-align: left; }
+.process-monitor > .process-columns { border-block: 1px solid #333; color: #aaa; font-size: 12px; padding: 7px 12px; }
+.process-list { flex: 1; min-height: 0; overflow: auto; padding: 0 6px; scrollbar-gutter: stable; }
+.process-list h2, .process-list p { font-size: 12px; font-weight: 400; margin: 12px 4px 4px; color: #aaa; }
+.process-list button { width: 100%; min-height: 42px; padding: 4px 6px; margin: 0; border: 0; border-radius: 6px; background: transparent; color: inherit; font: inherit; }
+.process-list button:hover, .process-list button[aria-pressed=true] { background: #292929; }
+.process-name { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.process-name svg { color: #70b5e5; flex: none; }
+.process-name > span, .process-name small { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.process-name small { display: block; font-size: 11px; color: #aaa; }
+.process-monitor footer { min-height: 44px; border-top: 1px solid #333; padding: 0 10px; display: flex; align-items: center; justify-content: space-between; color: #aaa; }
+.process-monitor footer button { border: 1px solid #444; border-radius: 20px; background: #242424; color: #aaa; }

@@ -4,7 +4,7 @@ import path from 'node:path';
 import type {DispatchMutation,DispatchMessage} from '../../../../../../src/logic/dispatch/rules/dispatch-storage';
 import type {DispatchRun} from '../../../../../../src/logic/tasks/rules/dispatch-execution';
 import type {DispatchScope} from '../../../../../../src/logic/tasks/rules/dispatch-scope';
-import type {AgentInstance} from '../../../../../../src/logic/team/rules/agent-types';
+import type {AgentInstance} from '../../../../../../src/framework/cability/agent/identity';
 import {seedTeam} from '../../../knowledge/service/support/team-fixture';
 import {request} from '../../../knowledge/rules/data/knowledge';
 import {workflowConditionFixture as data,type WorkflowConditionMode} from './workflow-condition-provider';

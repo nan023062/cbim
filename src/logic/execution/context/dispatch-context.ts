@@ -10,7 +10,7 @@ import { content, Team, BusinessWorkspace } from '../../knowledge/rules/read-mod
 
 import type { Snapshot } from '../../knowledge/rules/types';
 
-import type { AgentConfigurationSnapshot } from '../../team/rules/agent-types';
+import type { AgentConfigurationSnapshot } from '../../../framework/cability/agent/identity';
 
 import type { ModuleBinding } from '../../tasks/rules/graph-types';
 

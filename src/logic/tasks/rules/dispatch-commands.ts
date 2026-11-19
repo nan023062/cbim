@@ -7,7 +7,7 @@ import { type AutomaticExecutionBinding } from '../../team/rules/automatic-execu
 
 import { z } from 'zod';
 
-import type { AgentInstance, AgentSessionBinding } from '../../team/rules/agent-types';
+import type { AgentInstance, AgentSessionBinding } from '../../../framework/cability/agent/identity';
 
 import type { AgentRef, GraphCursor } from './graph-types';
 

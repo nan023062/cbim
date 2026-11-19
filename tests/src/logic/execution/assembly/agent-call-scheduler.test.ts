@@ -1,7 +1,7 @@
 import {describe,it,expect,vi} from 'vitest';
 import {AgentCallScheduler} from '../../../../../src/logic/execution/assembly/agent-call-scheduler';
 import type {AgentSchedulerPorts} from '../../../../../src/logic/execution/assembly/agent-call-scheduler';
-import type {AgentToolContext} from '../../../../../src/logic/agents/contracts';
+import type { AgentToolContext } from '../../../../../src/logic/execution/rules/agent-call-contracts';
 import type {RunSummary,TaskSpec,EngineEvent} from '../../../../../src/logic/execution/rules/types';
 
 const task=(id='root'):TaskSpec=>({taskId:id,workspaceId:'workspace',root:'/project',mode:'chat',agentId:'cbim:main',goal:'work',moduleIds:[],acceptance:[]});

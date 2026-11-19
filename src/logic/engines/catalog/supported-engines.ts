@@ -3,6 +3,11 @@
  * 设计原因：身份、业务专长和模型协议声明集中维护；清单不加载具体 SDK，也不开放用户注册或配置文件覆盖。
  * 职责边界：协议兼容表示可以选择，不代表模型工具调用能力、凭据或运行环境已经验证；不属于冷启动框架。
  */
+import { manifest as pi } from '../../../engine-plugins/pi/manifest';
+import { manifest as claude } from '../../../engine-plugins/claude/manifest';
+import { manifest as codex } from '../../../engine-plugins/codex/manifest';
+import { manifest as memory } from '../../../engine-plugins/memory/manifest';
+
 import type { LlmApi } from '../../models';
 
 import type { ModelRoleDescriptor } from './model-roles';
@@ -60,7 +65,7 @@ function declareEngine<const T extends EngineDeclaration>(value: T): Readonly<T>
   return Object.freeze(value);
 }
 
-export const builtInEngines = Object.freeze([declareEngine({ id: 'pi', storageDirectory: 'pi', nativeHistoryFormat: 'pi', label: 'Pi', businessTypes: ['通用任务', '代码开发'], supportedApis: ['openai-completions', 'openai-responses', 'anthropic-messages'] }), declareEngine({ id: 'claude-code', storageDirectory: 'claude', nativeHistoryFormat: 'claude', label: 'Claude Code', businessTypes: ['代码开发', '代码审查'], supportedApis: ['anthropic-messages'], fallbackApi: 'anthropic-messages' }), declareEngine({ id: 'codex', storageDirectory: 'codex', nativeHistoryFormat: 'codex', packageDependencies: ['pi'], label: 'Codex', businessTypes: ['代码开发', '代码审查'], supportedApis: ['openai-responses'], fallbackApi: 'openai-responses' }), declareEngine({ id: 'memory', storageDirectory: 'memory', nativeHistoryFormat: 'cbim', label: '记忆引擎', businessTypes: ['知识库管理', '语义检索', '摘要与压缩'], supportedApis: ['openai-completions'], additionalModelRoles: [{ id: 'embedding', label: '记忆向量模型', kind: 'embedding', required: true }] }),] as const);
+export const builtInEngines = Object.freeze([declareEngine(pi), declareEngine(claude), declareEngine(codex), declareEngine(memory)] as const);
 
 export type LoopEngine = string;
 export let supportedEngines: readonly EngineDescriptor[] = builtInEngines;

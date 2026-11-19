@@ -8,7 +8,7 @@ import {Application} from '../../../../../src/bridge/server/application';
 import {Paths} from '../../../../../src/logic/workspace/service/paths';
 import {FileRunStorage} from '../../../../../src/logic/execution/storage/run-storage';
 import {globalRuntimeLogBytes} from '../../runtime/monitoring/support/global-runtime-fixture';
-import type {PendingQuestion} from '../../../../../src/logic/tools/rules/questions';
+import type {PendingQuestion} from '../../../../../src/framework/cability/agent/questions';
 
 it.each(['complete','stop','cancel-not-success'] as const)('preserves sequential Agent cancellation and immutable history (%s)',async mode=>{
   const f=await fixture(),provider=await queuedTaskCancelProvider(mode);let app=f.app;

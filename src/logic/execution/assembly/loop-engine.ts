@@ -55,7 +55,10 @@ import { kernel, type EngineConfigurationRef } from '../../../framework/kernel';
 
 import { composeTaskInstructions } from '../../../framework/office';
 
-import { agentRoleInstructions, agentCallToolName, agentListToolName, agentReplyToolName, AgentRole, Organization, type AgentToolContext, type AgentToolsBinding, type AgentCallReference } from '../../agents';
+import { agentRoleInstructions, AgentRole } from '../../../framework/cability/agent';
+import { agentCallToolName, agentListToolName, agentReplyToolName, type AgentCallReference } from '../../../framework/office/call';
+import { Organization } from '../../../framework/cability/organization';
+import { type AgentToolContext, type AgentToolsBinding } from '../rules/agent-call-contracts';
 
 import type { ChatPermission } from '../rules/types';
 
@@ -76,7 +79,7 @@ import { authorizeRunTool, type RunToolDescriptor } from '../../tools/rules/poli
 
 import { progressTool } from '../../evidence/rules/progress-tools';
 
-import { pinRuntimeEngine } from '../../engines/adapters/runtime-binding';
+import { pinRuntimeEngine } from '../../../engine-plugins/runtime-binding';
 
 import { memberHelpTool } from '../../tasks/rules/member-help-tools';
 
@@ -116,7 +119,7 @@ import { nativeToolDescriptor, nativeToolNames } from '../../tools/rules/native-
 
 import type { WorkflowContractBinding } from '../../tasks/rules/execution-context';
 
-import type { RepositoryToolsPort } from '../../connectors/rules/repository-tools';
+import type { RepositoryToolsPort } from '../../../resource/connections/rules/repository-tools';
 
 import { FeedbackTools } from '../../tools/runtime/feedback-tools';
 
@@ -214,7 +217,7 @@ export interface ExecutionServices
   modelAdapters?: ReturnType<typeof createModelAdapterRegistry>;
   extensions?: readonly ExecutionExtension[];
   /** 新主循环的账本生命周期，不调用旧 AutoCollaboration 推进任务。 */
-  agentLifecycle?: import('../../agents/contracts').AgentLifecycle;
+  agentLifecycle?: import('../rules/agent-call-contracts').AgentLifecycle;
 
   /** 子 Agent 对象提供冻结身份和专业指令；不冒用旧成员调度绑定。 */
   agent?: AgentRole;
@@ -340,7 +343,7 @@ export interface WorkspaceLoop
 
   unifiedAgentTools?: boolean;
 
-  agentLifecycle?: import('../../agents/contracts').AgentLifecycle;
+  agentLifecycle?: import('../rules/agent-call-contracts').AgentLifecycle;
 
   NewTask(goal: string, acceptance?: string[]): TaskSpec;
 }

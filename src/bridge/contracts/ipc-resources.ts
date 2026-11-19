@@ -7,7 +7,7 @@ import { z } from 'zod';
 
 import { ipcId, noIpcArgs } from './ipc-shapes';
 
-import { type RepositoryConnectionCheck, type RepositoryConnectionCommit, type RepositoryConnectionList, type RepositoryConnectionPreview, type RepositoryConnectionReceipt, type RepositoryConnectionUnaccepted, repositoryConnectionCheckInputSchema, repositoryConnectionCommitInputSchema, repositoryConnectionCommitLookupSchema, repositoryConnectionGrantInputSchema, repositoryConnectionListInputSchema, repositoryConnectionLookupSchema, repositoryConnectionPreviewInputSchema, repositoryConnectionRevokeInputSchema, repositoryConnectionUnacceptedInputSchema } from '../../logic/connectors/rules/repository-connection';
+import { type RepositoryConnectionCheck, type RepositoryConnectionCommit, type RepositoryConnectionList, type RepositoryConnectionPreview, type RepositoryConnectionReceipt, type RepositoryConnectionUnaccepted, repositoryConnectionCheckInputSchema, repositoryConnectionCommitInputSchema, repositoryConnectionCommitLookupSchema, repositoryConnectionGrantInputSchema, repositoryConnectionListInputSchema, repositoryConnectionLookupSchema, repositoryConnectionPreviewInputSchema, repositoryConnectionRevokeInputSchema, repositoryConnectionUnacceptedInputSchema } from '../../resource/connections/rules/repository-connection';
 
 import { type KnowledgeCommit } from '../../logic/knowledge/rules/types';
 

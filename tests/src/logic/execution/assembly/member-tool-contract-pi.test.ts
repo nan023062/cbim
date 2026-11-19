@@ -5,7 +5,7 @@ import {fixture} from '../../application/support/helpers';
 import {Application} from '../../../../../src/bridge/server/application';
 import {Paths} from '../../../../../src/logic/workspace/service/paths';
 import {QuestionTools} from '../../../../../src/logic/tools/runtime/question-tools';
-import type {QuestionInput} from '../../../../../src/logic/tools/rules/questions';
+import type {QuestionInput} from '../../../../../src/framework/cability/agent/questions';
 import {FileRunStorage} from '../../../../../src/logic/execution/storage/run-storage';
 import {mainToolContractFixture as data} from './support/main-tool-contract-provider';
 import {seedMainToolContract,mainToolContractRecords,mainToolContractLogBytes} from './support/main-tool-contract-fixture';

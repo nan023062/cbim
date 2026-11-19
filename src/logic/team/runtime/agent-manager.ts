@@ -6,7 +6,7 @@
  */
 import { randomUUID } from 'node:crypto';
 
-import type { AgentConfigurationSnapshot, AgentSessionBinding } from '../rules/agent-types';
+import type { AgentConfigurationSnapshot, AgentSessionBinding } from '../../../framework/cability/agent/identity';
 
 import type { DispatchState } from '../../dispatch/rules/dispatch-storage';
 

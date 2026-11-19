@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import type {Application} from '../../../../../../src/bridge/server/application';
 import {attachmentHash,attachmentWait,seedWaitingAttachments} from './waiting-attachments-fixture';
 import {waitingAttachmentsProvider,attachmentFixture as data,requestImages} from './waiting-attachments-provider';
-import {PiRpc} from '../../../../../../src/logic/engines/adapters/pi/rpc';
+import {PiRpc} from '../../../../../../src/engine-plugins/pi/rpc';
 import type {ChatAttachment} from '../../../../../../src/logic/materials/contracts';
 
 /** Runs actual queue/native ACK, material snapshots and Agent tools; only responses and the chosen fault window are controlled. */

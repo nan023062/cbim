@@ -7,7 +7,7 @@ import type { MemberRunBinding } from './member-run';
 
 import type { PreparedDispatchKnowledge } from '../../tasks/rules/execution-context';
 
-import type { AgentCallReference } from '../../agents/contracts';
+import type { AgentCallReference } from '../../../framework/office/call';
 
 /** 文件机制只消费冻结身份；不依赖旧派工信封、模型或任务图。 */
 export interface BusinessRunSource

@@ -13,7 +13,7 @@ import { checkedJsonToolResult } from '../rules/results';
 
 import type { RunToolDescriptor } from '../rules/policy/tool-policy';
 
-import { repositoryListInputSchema, repositoryGetInputSchema, repositoryListOutputSchema, repositoryGetOutputSchema, repositoryToolTargetSchema, type RepositoryToolsPort, type RepositoryToolTarget, } from '../../connectors/rules/repository-tools';
+import { repositoryListInputSchema, repositoryGetInputSchema, repositoryListOutputSchema, repositoryGetOutputSchema, repositoryToolTargetSchema, type RepositoryToolsPort, type RepositoryToolTarget, } from '../../../resource/connections/rules/repository-tools';
 
 const listName = 'cbim_repository_list',
   getName = 'cbim_repository_get';

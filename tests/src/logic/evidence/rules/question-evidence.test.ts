@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest';
-import {questionToolName} from '../../../../../src/logic/tools/rules/questions';
+import {questionToolName} from '../../../../../src/framework/cability/agent/questions';
 import {toolReceipt} from '../../../../../src/logic/tools/rules/receipts';
 import {toolReceiptSchema} from '../../../../../src/logic/tools/rules/receipt-schema';
 import {jsonToolResult} from '../../../../../src/logic/tools/rules/results';

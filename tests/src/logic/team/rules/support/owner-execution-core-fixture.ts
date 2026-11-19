@@ -4,7 +4,7 @@ import type {DispatchState,DispatchMutation,DispatchCommand,AssignmentMessage} f
 import type {DispatchScope} from '../../../../../../src/logic/tasks/rules/dispatch-scope';
 import type {DispatchRun} from '../../../../../../src/logic/tasks/rules/dispatch-execution';
 import type {TaskNode,AgentRef,GraphEventBatch} from '../../../../../../src/logic/tasks/rules/graph-types';
-import type {AgentInstance,AgentSessionBinding} from '../../../../../../src/logic/team/rules/agent-types';
+import type {AgentInstance,AgentSessionBinding} from '../../../../../../src/framework/cability/agent/identity';
 import type {WorkspaceMember,WorkspaceMemberChange,WorkspaceMemberChangeInput,WorkspaceMemberModelSnapshot} from '../../../../../../src/logic/team/rules/workspace-member';
 import {summarizeWorkspaceMember} from '../../../../../../src/logic/team/rules/workspace-member';
 import {workspaceMemberCapabilityHash,workspaceMemberModelHash,workspaceMemberHash,workspaceMemberCommand,workspaceMemberPreviewBasis,workspaceMemberProposed,workspaceMemberReceipt} from '../../../../../../src/logic/team/rules/workspace-member-rules';

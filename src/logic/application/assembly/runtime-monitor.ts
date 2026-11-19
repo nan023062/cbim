@@ -6,7 +6,7 @@
  */
 import fs from 'node:fs/promises';
 
-import { checkedAgentCallReference } from '../../agents/contracts';
+import { checkedAgentCallReference } from '../../../framework/office/call';
 
 import path from 'node:path';
 

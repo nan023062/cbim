@@ -5,9 +5,9 @@
  */
 import { randomUUID } from 'node:crypto';
 
-import { questionInput as input, questionAnswersInputSchema, type PendingQuestion, type QuestionResult } from '../../tools/rules/questions';
+import { questionInput as input, questionAnswersInputSchema, type PendingQuestion, type QuestionResult } from '../../../framework/cability/agent/questions';
 
-export type { QuestionInput, PendingQuestion } from '../../tools/rules/questions';
+export type { QuestionInput, PendingQuestion } from '../../../framework/cability/agent/questions';
 
 export class QuestionQueue
 {

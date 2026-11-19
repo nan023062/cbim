@@ -8,7 +8,7 @@ import type { DispatchStore } from '../../dispatch/rules/dispatch-storage';
 
 import type { AgentBusinessRun } from '../rules/business-run';
 
-import type { AgentCallReference } from '../../agents/contracts';
+import type { AgentCallReference } from '../../../framework/office/call';
 
 import type { RunSummary } from '../rules/types';
 

@@ -12,9 +12,9 @@ import { hash } from '../../../core/io/serialization';
 
 import type { KnowledgeWorkspace } from '../../knowledge/rules/ports';
 
-import { repositoryListInputSchema } from '../../connectors/rules/repository-tools';
+import { repositoryListInputSchema } from '../../../resource/connections/rules/repository-tools';
 
-import type { RepositoryConnections } from '../../connectors/service/repository-connections';
+import type { RepositoryConnections } from '../../../resource/connections/service/repository-connections';
 
 import { ChatInputs } from './chat-inputs';
 

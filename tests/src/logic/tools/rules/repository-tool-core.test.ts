@@ -1,6 +1,6 @@
 import {it,expect,vi} from 'vitest';
 import {toolScopeSchema,repositoryToolScopeSchema,type RepositoryToolScope} from '../../../../../src/logic/tools/rules/scope-schema';
-import {repositoryListInputSchema,repositoryGetInputSchema,repositoryListOutputSchema,repositoryGetOutputSchema,repositoryToolTargetSchema} from '../../../../../src/logic/connectors/rules/repository-tools';
+import {repositoryListInputSchema,repositoryGetInputSchema,repositoryListOutputSchema,repositoryGetOutputSchema,repositoryToolTargetSchema} from '../../../../../src/resource/connections/rules/repository-tools';
 import {authorizeRunTool,type RunToolDescriptor} from '../../../../../src/logic/tools/rules/policy/tool-policy';
 import {toolReceipt} from '../../../../../src/logic/tools/rules/receipts';
 import type {ToolReceipt} from '../../../../../src/logic/tools/rules/types';

@@ -7,7 +7,7 @@ import path from 'node:path';
 import {fixture} from './src/logic/application/support/helpers';
 import {seedTeam} from './src/logic/knowledge/service/support/team-fixture';
 import {LoopRuntime} from '../src/logic/execution/rules/index';
-import {PiEngine} from '../src/logic/engines/adapters/pi/engine';
+import {PiEngine} from '../src/engine-plugins/pi/engine';
 import {FileRunStorage} from '../src/logic/execution/storage/run-storage';
 import {guard} from '../src/logic/execution/platform/tool-guard';
 import {authorizeRunTool} from '../src/logic/tools/rules/policy/tool-policy';

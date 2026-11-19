@@ -7,7 +7,7 @@ import {Application} from '../../../../../../src/bridge/server/application';
 import {Paths} from '../../../../../../src/logic/workspace/service/paths';
 import {FileDispatchStore} from '../../../../../../src/logic/dispatch/storage/dispatch-store';
 import {FileRunStorage} from '../../../../../../src/logic/execution/storage/run-storage';
-import type {PendingQuestion} from '../../../../../../src/logic/tools/rules/questions';
+import type {PendingQuestion} from '../../../../../../src/framework/cability/agent/questions';
 
 /** 真实应用集成夹具：仅本地模型输出可控，不构造运行状态或旧派工图。 */
 export async function prepareRecursivePause(secondQuestion=false,holdAfterAnswer=false,invalidateByCommand=false){

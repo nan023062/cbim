@@ -1,0 +1,25 @@
+.preferences { display: grid; grid-template-columns: clamp(190px, 18vw, 285px) minmax(0, 1fr); height: calc(100dvh - 32px); background: var(--bg); color: var(--text); }
+.preferences aside, .preference-scroll { overflow: auto; min-height: 0; }
+.preferences aside { padding: 18px 14px; }
+.preferences aside header, .preferences nav button, .preference-search, .preference-profile { display: flex; align-items: center; gap: 10px; }
+.preferences aside header { margin: 0 6px 16px; }
+.preferences h1 { margin: 0; font-size: 19px; }
+.preferences aside button { background: transparent; border: 0; }
+.preference-search { padding: 0 10px; border-radius: 18px; background: var(--surface); border: 1px solid var(--line); }
+.preference-search input { min-width: 0; width: 100%; border: 0; background: transparent; }
+.preferences nav { margin-top: 14px; }
+.preferences nav button { width: 100%; justify-content: flex-start; padding: 7px 12px; border-radius: 18px; }
+.preferences nav button[aria-current=page] { background: var(--selected); }
+.preference-content { width: min(100%, 770px); box-sizing: border-box; padding: 8px 20px 40px; margin: 0 auto; }
+.preference-content section { margin-top: 26px; }
+.preference-content h2 { font-size: 14px; margin: 0 0 9px; }
+.preference-profile, .preference-row { padding: 14px 16px; border: 1px solid var(--line); background: var(--surface); }
+.preference-profile { min-height: 74px; border-radius: 10px; }
+.preference-content small { display: block; color: var(--muted); margin-top: 4px; }
+.preference-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 54px; font-size: 13px; }
+.preference-row + .preference-row { border-top: 0; }
+.preference-content h2 + .preference-row { border-radius: 9px 9px 0 0; }
+.preference-content .preference-row:last-child { border-bottom-left-radius: 9px; border-bottom-right-radius: 9px; }
+.preference-switch { appearance: none; position: relative; width: 30px; height: 17px; padding: 0; border: 0; border-radius: 12px; background: var(--muted); }
+.preference-switch::before { content: ''; position: absolute; inset: 2px auto auto 2px; width: 13px; height: 13px; border-radius: 50%; background: white; }
+@media(max-width: 640px) { .preferences { grid-template-columns: minmax(0,1fr); grid-template-rows: auto minmax(0,1fr); } .preferences aside { padding: 8px 12px; } .preferences nav { display: flex; overflow-x: auto; } .preferences nav button { white-space: nowrap; width: auto; } .preference-content { padding-inline: 12px; } }

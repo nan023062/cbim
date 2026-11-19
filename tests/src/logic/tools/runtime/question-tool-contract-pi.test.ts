@@ -5,8 +5,8 @@ import {fixture} from '../../application/support/helpers';
 import {Application} from '../../../../../src/bridge/server/application';
 import {Paths} from '../../../../../src/logic/workspace/service/paths';
 import {QuestionQueue} from '../../../../../src/logic/conversation/runtime/questions';
-import {AgentCallExchange} from '../../../../../src/logic/agents/exchange';
-import type {PendingQuestion} from '../../../../../src/logic/tools/rules/questions';
+import { AgentCallExchange } from '../../../../../src/framework/office/exchange';
+import type {PendingQuestion} from '../../../../../src/framework/cability/agent/questions';
 import type {GraphSnapshot} from '../../../../../src/logic/tasks/rules/graph-types';
 import {questionContractData as data,questionContractProvider,type QuestionContractMode} from './support/question-tool-contract-provider';
 import {questionWait,questionRun,seedQuestionContract} from './support/question-tool-contract-fixture';
@@ -17,7 +17,7 @@ it.each(['complete','cancel-question','invalid-output','stop'] as QuestionContra
   try{
     if(mode==='invalid-output'){
       const original=AgentCallExchange.prototype.Ask;
-      askSpy=vi.spyOn(AgentCallExchange.prototype,'Ask').mockImplementation(async function(this:AgentCallExchange,args,signal){const result=await original.call(this,args,signal);if((args as {questions:{question:string}[]}).questions[0].question===data.memberQuestions[0].question){realMemberConsumption++;return {answers:[{question:'消费之后的错误题目，必须被输出契约拒绝',answer:'真实读取'}]}}return result});
+      askSpy=vi.spyOn(AgentCallExchange.prototype,'Ask').mockImplementation(async function(this:AgentCallExchange<unknown>,args,signal){const result=await original.call(this,args,signal);if((args as {questions:{question:string}[]}).questions[0].question===data.memberQuestions[0].question){realMemberConsumption++;return {answers:[{question:'消费之后的错误题目，必须被输出契约拒绝',answer:'真实读取'}]}}return result});
     }
     const seed=await seedQuestionContract(app,f.a,provider),started=await app.Dispatch('loop.chat',{id:seed.entry.id,message:data.goal,options:seed.options}),identity={workspaceId:seed.entry.id,rootSessionId:started.taskId};
     const mainQuestions=()=>app.Dispatch('loop.questions',{id:seed.entry.id,taskId:started.taskId}) as Promise<PendingQuestion[]>,graph=()=>app.Dispatch('dispatch.graphSnapshot',{identity}) as Promise<GraphSnapshot>;

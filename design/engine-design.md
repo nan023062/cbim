@@ -30,4 +30,4 @@ Agent Loop 引擎封装一类任务的执行循环，可以适配厂商 SDK，�
 
 正式知识由知识服务维护，向量索引是可重建派生数据。索引失败不能触发已提交知识的自动重写；索引代次关联来源版本、模型身份、维度和分块规则，切换模型时不能混用向量空间。
 
-当前结构从 [引擎领域](../src/logic/engines/ARCHITECTURE.md)、[执行引擎](../src/logic/engines/adapters/ARCHITECTURE.md)、[记忆引擎](../src/logic/engines/adapters/memory/ARCHITECTURE.md) 和 [模型领域](../src/logic/models/ARCHITECTURE.md) 阅读。未来音视频等新领域须先有真实场景及能力评估，不因可抽象而预建空引擎。
+当前结构从 [引擎领域](../src/logic/engines/ARCHITECTURE.md)、[执行引擎](../src/engine-plugins/ARCHITECTURE.md)、[记忆引擎](../src/engine-plugins/memory/ARCHITECTURE.md) 和 [模型领域](../src/logic/models/ARCHITECTURE.md) 阅读。未来音视频等新领域须先有真实场景及能力评估，不因可抽象而预建空引擎。

@@ -19,7 +19,7 @@ import { moduleSchema } from '../../workspace/rules/standards';
 
 import { agentSchema, teamSkillsSchema } from '../../team/rules/standards';
 
-import { connectorSchema } from '../../connectors/rules/standards';
+import { connectorSchema } from './connector-standards';
 
 import ignore from 'ignore';
 

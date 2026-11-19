@@ -26,14 +26,10 @@
 
 标注为 `virtual` 的节点是直接子模块的虚拟类封装；内部设计沿下方入口阅读。
 
-### 关系组 1：logic
+### 关系组 1：bridge
 
 ```mermaid
 classDiagram
-class N_8ad7653761f5["logic"] {
-  <<virtual>>
-}
-click N_8ad7653761f5 href "logic/ARCHITECTURE.md"
 class N_22a9dc163407["bridge"] {
   <<virtual>>
 }
@@ -46,37 +42,53 @@ class N_2a213dc873da["framework"] {
   <<virtual>>
 }
 click N_2a213dc873da href "framework/ARCHITECTURE.md"
-class N_1efd411ed272["monitor"] {
+class N_8ad7653761f5["logic"] {
   <<virtual>>
 }
-click N_1efd411ed272 href "monitor/ARCHITECTURE.md"
-class N_9ea79ac20c37["plugins"] {
+click N_8ad7653761f5 href "logic/ARCHITECTURE.md"
+class N_9a23854b4d79["logic-new"] {
   <<virtual>>
 }
-click N_9ea79ac20c37 href "plugins/ARCHITECTURE.md"
-N_22a9dc163407 ..> N_2ac6ecef0e06 : 依赖
-N_22a9dc163407 ..> N_8ad7653761f5 : 依赖
-N_22a9dc163407 ..> N_1efd411ed272 : 依赖
-N_8ad7653761f5 ..> N_2ac6ecef0e06 : 依赖
-N_8ad7653761f5 ..> N_2a213dc873da : 依赖
-N_8ad7653761f5 ..> N_1efd411ed272 : 依赖
-N_8ad7653761f5 ..> N_9ea79ac20c37 : 依赖
-N_1efd411ed272 ..> N_2a213dc873da : 依赖
-N_9ea79ac20c37 ..> N_2ac6ecef0e06 : 依赖
-```
-
-### 关系组 2：resource
-
-```mermaid
-classDiagram
+click N_9a23854b4d79 href "logic-new/ARCHITECTURE.md"
 class N_212574dc93ac["resource"] {
   <<virtual>>
 }
 click N_212574dc93ac href "resource/ARCHITECTURE.md"
+N_22a9dc163407 ..> N_2ac6ecef0e06 : 依赖
+N_22a9dc163407 ..> N_2a213dc873da : 依赖
+N_22a9dc163407 ..> N_8ad7653761f5 : 依赖
+N_22a9dc163407 ..> N_9a23854b4d79 : 依赖
+N_22a9dc163407 ..> N_212574dc93ac : 依赖
+N_8ad7653761f5 ..> N_2ac6ecef0e06 : 依赖
+N_8ad7653761f5 ..> N_2a213dc873da : 依赖
+N_8ad7653761f5 ..> N_212574dc93ac : 依赖
+N_9a23854b4d79 ..> N_2ac6ecef0e06 : 依赖
+N_9a23854b4d79 ..> N_2a213dc873da : 依赖
+N_9a23854b4d79 ..> N_212574dc93ac : 依赖
+N_212574dc93ac ..> N_2ac6ecef0e06 : 依赖
+N_212574dc93ac ..> N_2a213dc873da : 依赖
+```
+
+### 关系组 2：engine-plugins
+
+```mermaid
+classDiagram
+class N_be04b6eef23f["engine-plugins"] {
+  <<virtual>>
+}
+click N_be04b6eef23f href "engine-plugins/ARCHITECTURE.md"
+class N_b572c76539a3["updater"] {
+  <<virtual>>
+}
+click N_b572c76539a3 href "updater/ARCHITECTURE.md"
 class N_eae847246398["view"] {
   <<virtual>>
 }
 click N_eae847246398 href "view/ARCHITECTURE.md"
+class N_c755adb87123["view-new"] {
+  <<virtual>>
+}
+click N_c755adb87123 href "view-new/ARCHITECTURE.md"
 ```
 
 ### 跨图协作
@@ -85,10 +97,10 @@ click N_eae847246398 href "view/ARCHITECTURE.md"
 
 | 引用方 | 关系 | 目标 |
 | --- | --- | --- |
-| [bridge](bridge/ARCHITECTURE.md)（图 1） | 依赖 | [resource](resource/ARCHITECTURE.md)（图 2） |
-| [logic](logic/ARCHITECTURE.md)（图 1） | 依赖 | [resource](resource/ARCHITECTURE.md)（图 2） |
-| [resource](resource/ARCHITECTURE.md)（图 2） | 依赖 | [core](core/ARCHITECTURE.md)（图 1） |
+| [engine-plugins](engine-plugins/ARCHITECTURE.md)（图 2） | 依赖 | [core](core/ARCHITECTURE.md)（图 1）、[logic](logic/ARCHITECTURE.md)（图 1） |
+| [logic](logic/ARCHITECTURE.md)（图 1） | 依赖 | [engine-plugins](engine-plugins/ARCHITECTURE.md)（图 2） |
 | [view](view/ARCHITECTURE.md)（图 2） | 依赖 | [bridge](bridge/ARCHITECTURE.md)（图 1）、[core](core/ARCHITECTURE.md)（图 1） |
+| [view-new](view-new/ARCHITECTURE.md)（图 2） | 依赖 | [bridge](bridge/ARCHITECTURE.md)（图 1） |
 
 ## 子模块
 
@@ -96,12 +108,14 @@ click N_eae847246398 href "view/ARCHITECTURE.md"
 | --- | --- |
 | [bridge](bridge/ARCHITECTURE.md) | 把桌面宿主与业务应用连接起来，同时限制页面可触达的能力。通信数据、安全桥和可信服务端分别封装，业务规则与权威状态留在 Logic。 |
 | [core](core/ARCHITECTURE.md) | 提供不认识工作区、Agent 或任务身份的技术机制，让业务在明确端口上组合算法、文件、网络和平台能力。 |
+| [engine-plugins](engine-plugins/ARCHITECTURE.md) | 将不同供应商和专业循环适配到统一执行协议，隔离会话、工具和传输差异。 |
 | [framework](framework/ARCHITECTURE.md) | Framework 定义 CBIM 的模型能力与 Agent 引擎协议，供 Logic 装配。引擎按能力选择模型；模型目录独立于引擎。 |
 | [logic](logic/ARCHITECTURE.md) | 按领域组织业务事实、规则和运行服务，以统一应用生命周期连接各领域，使业务不依赖窗口、IPC 或 Electron。 |
-| [monitor](monitor/ARCHITECTURE.md) | Monitor 单向读取 Framework 的运行实例。Office 管理成员、引擎和工作区的生命周期；应用宿主提供进程采样，模型执行事件提供实际 Token 用量。 |
-| [plugins](plugins/ARCHITECTURE.md) | 宿主提供可用产品目录和受信任的制品端口。管理器持久化已安装版本与启用状态，并在运行期间跟踪固定版本及其依赖的引用。 |
-| [resource](resource/ARCHITECTURE.md) | 能力资产包括引擎插件、Agent 模板、团队架构模板和 Skill。业务资产包括业务架构模板、工作区模板和 Workflow。本地工作区是用户目录，模型 API 配置由用户在本机设置。应用通过同一资产库服务访问本地目录或远端 HTTP 仓库。Framework 管理运行实例的生命周期，工作区发布和导入由 Logic 编排。 |
+| [logic-new](logic-new/ARCHITECTURE.md) | 为桌面视图提供按模块组织的业务用例。 |
+| [resource](resource/ARCHITECTURE.md) | Resource 拥有可共享的资产定义和当前用户的本机资源。公共入口导出的 `resourceInventory` 按这两种范围登记资产。 |
+| [updater](updater/ARCHITECTURE.md) | 为应用外的更新和安装进程预留入口。 |
 | [view](view/ARCHITECTURE.md) | 以页面、局部控制器和共享展示组件呈现业务事实，让界面变化与后端状态机保持独立。 |
+| [view-new](view-new/ARCHITECTURE.md) | 桌面主框架管理页面导航与扩展区，通过桌面菜单接口登记本地工作区、浏览资源和读取运行状态。 |
 
 
 <!-- architecture:generated:end -->

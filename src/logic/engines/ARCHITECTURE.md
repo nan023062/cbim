@@ -28,10 +28,6 @@ class N_36c40847e267["catalog"] {
   <<virtual>>
 }
 click N_36c40847e267 href "catalog/ARCHITECTURE.md"
-class N_e1e47e090bc2["adapters"] {
-  <<virtual>>
-}
-click N_e1e47e090bc2 href "adapters/ARCHITECTURE.md"
 class N_e36725470015["packages"] {
   <<virtual>>
 }
@@ -41,7 +37,6 @@ class N_c89715d50249["service"] {
 }
 click N_c89715d50249 href "service/ARCHITECTURE.md"
 N_fbb1ef4949d9 ..> N_36c40847e267 : 依赖
-N_e1e47e090bc2 ..> N_fbb1ef4949d9 : 依赖
 N_e36725470015 ..> N_fbb1ef4949d9 : 依赖
 N_c89715d50249 ..> N_fbb1ef4949d9 : 依赖
 ```
@@ -50,7 +45,6 @@ N_c89715d50249 ..> N_fbb1ef4949d9 : 依赖
 
 | 虚拟封装 | 整体职责 |
 | --- | --- |
-| [adapters](adapters/ARCHITECTURE.md) | 将不同供应商和专业循环适配到统一执行协议，隔离会话、工具和传输差异。 |
 | [catalog](catalog/ARCHITECTURE.md) | 声明随产品发布的引擎、适配器兼容规则和可选模型角色。 |
 | [packages](packages/ARCHITECTURE.md) | 管理应用选择的官方引擎版本、依赖闭包和运行引用，隔离下载制品与启用选择。 |
 | [service](service/ARCHITECTURE.md) | 把引擎选择转换为模型服务可核实的协议需求，返回绑定引擎身份的冻结执行快照。 |

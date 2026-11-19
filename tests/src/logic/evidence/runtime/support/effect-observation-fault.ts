@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import {PiEngine} from '../../../../../../src/logic/engines/adapters/pi/engine';
+import {PiEngine} from '../../../../../../src/engine-plugins/pi/engine';
 import type {EngineContext} from '../../../../../../src/logic/execution/rules/types';
 import {effectFixture as data} from './effect-observation-provider';
 

@@ -4,7 +4,7 @@
  */
 import { isDeepStrictEqual as equal } from 'node:util';
 
-import { checkedAgentCallReference } from '../../agents/contracts';
+import { checkedAgentCallReference } from '../../../framework/office/call';
 
 import type { AgentBusinessRun } from '../../execution/rules/business-run';
 

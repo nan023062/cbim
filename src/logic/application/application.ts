@@ -1,3 +1,4 @@
+import { openProjectOffice } from '../project';
 /**
  * 作用定位：Logic 层的业务应用入口，持有应用级服务和按工作区装配的唯一服务实例。
  * 设计原因：集中管理打开、退役、排空和关闭顺序；通信适配留在 Bridge，业务服务不反向读取本类。
@@ -36,8 +37,8 @@ import { BudgetSettings } from '../budget/settings/budget-settings';
 
 import { GitHubFeedback } from '../feedback/service';
 
-import { RuntimeMonitor } from '../../monitor';
-import { CbimRuntime } from '../../framework/cbim-runtime';
+import type { RuntimeMonitor } from '../../framework/monitor';
+import type { CbimRuntime } from '../../framework/cbim-runtime';
 
 import { createExecutionManager } from './assembly/execution';
 
@@ -81,7 +82,7 @@ import { Catalog } from '../workspace/service/catalog';
 
 
 
-import { GitWorktrees } from '../workspace/service/git-worktrees';
+import { createApplicationInstances } from './assembly/application-instances';
 
 import { Paths } from '../workspace/service/paths';
 
@@ -91,9 +92,9 @@ import { Rules } from '../knowledge/rules/knowledge';
 
 import { Workspace } from '../workspace/service/workspace';
 
-import { ResourceRepositories } from '../../resource/service';
+import type { ResourceRepositories } from '../../resource/service';
 
-import { RepositoryConnections } from '../connectors/service/repository-connections';
+import { RepositoryConnections } from '../../resource/connections/service/repository-connections';
 
 import { bindConnectorPackages, managedConnectorPackages, type ConnectorPackages } from './assembly/connector-packages';
 import { connectorRegistrySchema } from '../../framework/connectors';
@@ -129,7 +130,7 @@ export class Application
 
   public readonly connectorPackages?: ReturnType<typeof managedConnectorPackages>['manager'];
 
-  private readonly _runtime: CbimRuntime;
+  private readonly cbimRuntime: CbimRuntime;
 
   /** 可信宿主注入的平台能力；普通对话选项不能替换文件传输或受管引擎解析。 */
   private readonly platform: ApplicationPlatform;
@@ -301,8 +302,10 @@ export class Application
   {
     this.paths = paths;
     this._connectorProducts = platform.connectorPackages && bindConnectorPackages(platform.connectorPackages);
-    this._runtime = new CbimRuntime(new GitWorktrees(path.join(paths.userRoot, 'worktrees')));
-    this.monitor = new RuntimeMonitor(this._runtime, () => { const cpu = process.cpuUsage(); return { pid: process.pid, rssBytes: process.memoryUsage.rss(), cpuMicros: cpu.user + cpu.system }; });
+    const instances = createApplicationInstances(paths);
+    this.cbimRuntime = instances.cbimRuntime;
+    this.resources = instances.resources;
+    this.monitor = instances.monitor;
 
     this.platform = platform;
 
@@ -375,7 +378,7 @@ export class Application
 
     this.rules = new Rules();
 
-    this.resources = new ResourceRepositories(paths);
+
 
     this.repositoryConnections = new RepositoryConnections(
       path.join(paths.userRoot, 'repository-connections.json'),
@@ -594,14 +597,7 @@ export class Application
   {
     this.AssertServiceAvailable(workspaceId);
     const workspace = this.Workspace(workspaceId);
-    const office = this._runtime.OpenOffice(workspaceId, rootSessionId);
-    const snapshot = await workspace.Snapshot();
-    workspace.Assert();
-
-    if (!snapshot.validation?.structural)
-      throw new Error('打开工位需要有效业务树');
-
-    office.project.UpdateTree(snapshot.validation.tree);
+    const office = await openProjectOffice(this.cbimRuntime, workspace, rootSessionId, this.memberRegistries.get(workspaceId), true);
     return office.OpenWorkspace( nodeId, workspace.entry.path, relativeDirectory);
   }
 
@@ -671,7 +667,7 @@ export class Application
           await this.executions.get(id)?.Close();
 
           this.executions.delete(id);
-          await this._runtime.CloseWorkspace(id);
+          await this.cbimRuntime.CloseWorkspace(id);
 
           await this.memberExecutions.get(id)?.Close();
 
@@ -753,7 +749,7 @@ export class Application
                 (rootSessionId, scopeId) => this.collaborations.get(id)?.MemberPermission(rootSessionId, scopeId)
               ),
               execution = createExecutionManager(
-                this._runtime,
+                this.cbimRuntime,
                 ws,
                 this.engineModels,
                 lease,
@@ -878,7 +874,7 @@ export class Application
       await this.executions.get(id)?.Close();
 
       this.executions.delete(id);
-          await this._runtime.CloseWorkspace(id);
+          await this.cbimRuntime.CloseWorkspace(id);
 
       await this.memberExecutions.get(id)?.Close();
 
@@ -966,7 +962,7 @@ export class Application
     for (const id of this.admissionOwners.keys())
       this.RetireAdmission(id);
 
-    this.shutdownPromise = (async () => { await this.githubFeedback.Close(); await this.chatMaterials.Close(); await this.repositoryConnections.Close(); await Promise.allSettled([...this.opening.values()]); for (const id of this.admissionOwners.keys()) this.RetireAdmission(id); await Promise.all([...this.automationServices.values()].map((x) => x.scheduler.Close())); this.automationServices.clear(); await Promise.all([...this.collaborations.values()].map((x) => x.Close())); this.collaborations.clear(); await Promise.all([...this.executions.values(), ...this.memberExecutions.values()].map((x) => x.Close())); this.executions.clear(); this.monitor.Close(); await this._runtime.Close(); this.memberExecutions.clear(); await Promise.all([...this.controlledFileServices.values()].map((x) => x.Close())); this.controlledFileServices.clear(); await Promise.all([...this.isolatedExecutionServices.values()].map((x) => x.Close())); this.isolatedExecutionServices.clear(); await this.platform.controlledFiles?.Close(); await Promise.all([...this.running.values()].map((w) => w.PrepareClose())); await Promise.all([...this.dispatchers.values()].map((x) => x.Close())); this.dispatchers.clear(); this.memberRegistries.clear(); this.ownershipRegistries.clear(); for (const monitor of this.monitors.values()) monitor.Close(); await Promise.all([...this.histories.values()].map((x) => x.Close())); this.histories.clear(); this.monitors.clear(); const results = await Promise.allSettled([...this.running.values()].map((w) => w.Close())); await this.resources.Close(); this.running.clear(); const failed = results.find((r) => r.status === 'rejected'); if (failed?.status === 'rejected') throw failed.reason; })();
+    this.shutdownPromise = (async () => { await this.githubFeedback.Close(); await this.chatMaterials.Close(); await this.repositoryConnections.Close(); await Promise.allSettled([...this.opening.values()]); for (const id of this.admissionOwners.keys()) this.RetireAdmission(id); await Promise.all([...this.automationServices.values()].map((x) => x.scheduler.Close())); this.automationServices.clear(); await Promise.all([...this.collaborations.values()].map((x) => x.Close())); this.collaborations.clear(); await Promise.all([...this.executions.values(), ...this.memberExecutions.values()].map((x) => x.Close())); this.executions.clear(); this.monitor.Close(); await this.cbimRuntime.Close(); this.memberExecutions.clear(); await Promise.all([...this.controlledFileServices.values()].map((x) => x.Close())); this.controlledFileServices.clear(); await Promise.all([...this.isolatedExecutionServices.values()].map((x) => x.Close())); this.isolatedExecutionServices.clear(); await this.platform.controlledFiles?.Close(); await Promise.all([...this.running.values()].map((w) => w.PrepareClose())); await Promise.all([...this.dispatchers.values()].map((x) => x.Close())); this.dispatchers.clear(); this.memberRegistries.clear(); this.ownershipRegistries.clear(); for (const monitor of this.monitors.values()) monitor.Close(); await Promise.all([...this.histories.values()].map((x) => x.Close())); this.histories.clear(); this.monitors.clear(); const results = await Promise.allSettled([...this.running.values()].map((w) => w.Close())); await this.resources.Close(); this.running.clear(); const failed = results.find((r) => r.status === 'rejected'); if (failed?.status === 'rejected') throw failed.reason; })();
 
     void this.shutdownPromise.catch((error) => { if (['CONTROLLED_FILE_DRAIN_PENDING', 'EXECUTION_SCOPE_DRAIN_PENDING'].includes(error?.code)) this.shutdownPromise = undefined; });
 

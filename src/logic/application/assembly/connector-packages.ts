@@ -3,7 +3,7 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 import { ConnectorRuntime, type ConnectorTaskContext } from '../../../framework/connectors';
 import type { RunToolDescriptor } from '../../tools/rules/policy/tool-policy';
-import { PluginManager } from '../../../plugins';
+import { PluginManager } from '../../../resource/plugins';
 import type { EngineArtifactsPort } from '../../updates/engine-artifacts';
 
 const loadProduct = createRequire(typeof __filename === 'string' ? __filename : import.meta.url);

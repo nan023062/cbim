@@ -1,8 +1,6 @@
 // 编排与适配按领域归属；公开文件单独登记，规则不得依赖运行服务。
-export const engineRoot='src/logic/engines/adapters/';
+export const engineRoot='src/engine-plugins/';
 export const orchestrationRoots=[
-  "src/logic/agents/exchange.ts",
-  "src/logic/agents/index.ts",
   "src/logic/execution/admission/",
   "src/logic/execution/assembly/",
   "src/logic/automation/runtime/",
@@ -20,8 +18,6 @@ export const orchestrationRoots=[
 export const isOrchestration=file=>orchestrationRoots.some(root=>file.startsWith(root));
 export const isEngine=file=>file.startsWith(engineRoot);
 export const runtimePublicEntries=new Set([
-  "src/logic/agents/index.ts",
-  "src/logic/agents/exchange.ts",
   "src/logic/automation/runtime/scheduler.ts",
   "src/logic/budget/runtime/model-request-budget-service.ts",
   "src/logic/budget/runtime/scope-budget-service.ts",
@@ -53,11 +49,11 @@ export const runtimePublicEntries=new Set([
   "src/logic/execution/context/dispatch-context.ts",
   "src/logic/execution/context/execution-context.ts",
   "src/logic/execution/context/team-workflow.ts",
-  "src/logic/engines/adapters/claude/engine.ts",
-  "src/logic/engines/adapters/codex/engine.ts",
-  "src/logic/engines/adapters/pi/engine.ts",
-  "src/logic/engines/adapters/pi/rpc.ts",
-  "src/logic/engines/adapters/runtime-binding.ts",
+  "src/engine-plugins/claude/engine.ts",
+  "src/engine-plugins/codex/engine.ts",
+  "src/engine-plugins/pi/engine.ts",
+  "src/engine-plugins/pi/rpc.ts",
+  "src/engine-plugins/runtime-binding.ts",
   "src/logic/history/runtime/agent-history.ts",
   "src/logic/runtime/monitoring/global-runtime.ts",
   "src/logic/runtime/monitoring/member-events.ts",

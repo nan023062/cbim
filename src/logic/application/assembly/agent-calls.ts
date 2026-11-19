@@ -1,6 +1,7 @@
-import type { CbimRuntime } from '../../../framework/cbim-runtime';
+import { readProjectOrganization } from '../../project';
+import type { Office } from '../../../framework/office';
 
-import { composeTaskSkills, type TeamDescription } from '../../../framework/office';
+import { composeTaskSkills } from '../../../framework/office';
 
 import { engineConfigurations } from '../../engines/service';
 
@@ -19,13 +20,14 @@ import { prepareAgentBusiness, type AgentBusinessServices } from './agent-busine
 
 import { randomUUID } from 'node:crypto';
 
-import { AgentRole, type AgentDescription, type AgentToolContext } from '../../agents';
+import { AgentRole, type AgentDescription } from '../../../framework/cability/agent';
+import { type AgentToolContext } from '../../execution/rules/agent-call-contracts';
 
 import { AgentCallScheduler } from '../../execution/assembly/agent-call-scheduler';
 
-import type { AgentLifecycle } from '../../agents/contracts';
+import type { AgentLifecycle } from '../../execution/rules/agent-call-contracts';
 
-import { AgentConstraintError } from '../../agents/contracts';
+import { AgentConstraintError } from '../../../framework/office/call';
 
 import { createWorkspaceLoop, type WorkspaceLoopOptions, type ExecutionServices } from '../../execution/assembly/loop-engine';
 
@@ -55,7 +57,7 @@ import type { RequestBudgetPort } from '../../budget/rules/request-budget';
 
 export interface AgentCallAssemblyInput
 {
-  runtime: CbimRuntime;
+  office: Office;
   businessServices?: AgentBusinessServices;
 
   workspace: Workspace;
@@ -100,7 +102,7 @@ export function createAgentCallAssembly(input: AgentCallAssemblyInput)
 
   let directoryRead: ReturnType<typeof readMembers> | undefined;
 
-  const officeInstance = input.runtime.OpenOffice(workspace.entry.id, task.taskId);
+  const officeInstance = input.office;
   const office = officeInstance.members;
 
   const organization = office.organization;
@@ -136,72 +138,9 @@ export function createAgentCallAssembly(input: AgentCallAssemblyInput)
 
   async function readMembers()
   {
-    workspace.Assert();
-
-    if (!members)
-      return { items: [], reason: '当前宿主没有已配置的 Agent 目录' };
-
-    const teams = new Map<string, Extract<TeamDescription['children'][number],
-      {
-        kind: 'agent'
-      }>[]>();
-
-    const items:
-      {
-        id: string;
-
-        name: string;
-
-        model:
-        {
-          engine: string;
-
-          profileId: string;
-
-          modelId: string
-        };
-
-        available: boolean;
-
-        reason?: string
-      }[] = [];
-
-    let offset = 0,
-      cursor: Awaited<ReturnType<WorkspaceMembers['List']>>['registryCursor'] | undefined;
-
-    do
-    {
-      const page = await members.List({ workspaceId: workspace.entry.id, instanceId: workspace.instanceId, offset, ...(cursor ? { expectedRegistryCursor: cursor } : {}) });
-
-      cursor = page.registryCursor;
-
-      for (const item of page.items)
-      {
-        const detail = await members.Get({ workspaceId: workspace.entry.id, instanceId: workspace.instanceId, memberId: item.memberId }),
-          policy = detail.member.runtimePolicy,
-          model = { engine: workspaceMemberEngine(policy) ?? 'pi', profileId: policy.profileId, modelId: policy.modelId };
-
-        const reason = item.state !== 'active' ? 'Agent 已暂停或退役' : detail.currentDiff.capability.status !== 'same' || detail.currentDiff.model.status !== 'same' ? '配置变化，需要先核实采纳' : unsupportedBudget ? '当前预算模式不能可靠计量子调用' : undefined;
-
-        const children = teams.get(item.teamId) ?? [];
-
-        teams.set(item.teamId, children);
-
-        children.push({ kind: 'agent', id: item.memberId, agentId: item.agentId, name: detail.member.name, position: item.position, model, available: !reason, reason });
-
-        items.push({ id: item.memberId, name: item.name, model, available: !reason, ...(reason ? { reason } : {}) });
-      }
-
-      if (page.nextOffset === undefined)
-        break;
-
-      offset = page.nextOffset;
-    }
-    while (true);
-
-    office.SetMembers([...teams].map(([id, children]) => ({ kind: 'team', id, children })));
-
-    return { items };
+    const { children, ...directory } = await readProjectOrganization(workspace, members, unsupportedBudget);
+    office.SetMembers(children);
+    return directory;
   }
 
   const scheduler = new AgentCallScheduler({ maxDepth: 8 }, {

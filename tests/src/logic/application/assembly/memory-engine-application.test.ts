@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fixture} from '../support/helpers';
 import {budgetScopes} from '../../budget/runtime/support/scope-budget-fixture';
-import {memoryChatReply,memoryEmbeddingReply} from '../../engines/adapters/memory/support/memory-engine-data';
+import {memoryChatReply,memoryEmbeddingReply} from '../../../engine-plugins/memory/support/memory-engine-data';
 import type {RunSummary} from '../../../../../src/logic/execution/rules/types';
 
 test.each(['complete','unknown-after-write'])('完整应用记忆引擎的真实知识事务与双模型账本：%s',async mode=>{

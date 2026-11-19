@@ -1,7 +1,7 @@
 import type {Application} from '../../../../../../src/bridge/server/application';
-import type {RepositoryConnectionPreview,RepositoryConnectionReceipt} from '../../../../../../src/logic/connectors/rules/repository-connection';
+import type {RepositoryConnectionPreview,RepositoryConnectionReceipt} from '../../../../../../src/resource/connections/rules/repository-connection';
 import {randomUUID} from 'node:crypto';
-import {seedRepositoryConnection} from '../../../connectors/service/support/repository-connection-fixture';
+import {seedRepositoryConnection} from '../../../../resource/connections/service/support/repository-connection-fixture';
 import {repositoryToolsFixture as data} from './repository-tools-provider';
 export {workflowConditionRecords as repositoryToolsRecords,workflowConditionLogBytes as repositoryToolsLogBytes} from '../../../execution/assembly/support/workflow-condition-fixture';
 

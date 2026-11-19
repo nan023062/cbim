@@ -5,7 +5,7 @@ import {expect,it,vi} from 'vitest';
 import {fixture} from '../../application/support/helpers';
 import {RemoteRepository} from '../../../../../src/resource/service/index';
 import {RepositoryTools} from '../../../../../src/logic/tools/runtime/repository-tools';
-import {repositoryGetOutputSchema,repositoryListOutputSchema} from '../../../../../src/logic/connectors/rules/repository-tools';
+import {repositoryGetOutputSchema,repositoryListOutputSchema} from '../../../../../src/resource/connections/rules/repository-tools';
 import {hash} from '../../../../../src/core/io/serialization';
 import {toolReceipt} from '../../../../../src/logic/tools/rules/receipts';
 import {executionToolFacts} from '../../../../../src/logic/evidence/runtime/execution-report-facts';

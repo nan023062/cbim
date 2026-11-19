@@ -15,7 +15,7 @@ import type { DispatchState } from '../../dispatch/rules/dispatch-storage';
 
 import type { GraphSnapshot, GraphEventBatch, GraphChange, TaskNode, AgentGraphView } from '../../tasks/rules/graph-types';
 
-import type { AgentInstance } from '../rules/agent-types';
+import type { AgentInstance } from '../../../framework/cability/agent/identity';
 
 import { isProgressEvidence } from '../../tasks/rules/member-tool-output';
 

@@ -49,7 +49,7 @@ function boot()
     const entry = path.join(__dirname, 'main.js');
 
     // 复用真实导出类型，防止动态加载边界的入口名称与实现漂移；运行时仍按已选路径加载。
-    const implementation = loadApplication(entry) as typeof import('../main');
+    const implementation = loadApplication(entry) as typeof import('../desktop/main');
 
     implementation.startDesktop();
 
@@ -165,7 +165,7 @@ function boot()
 
   const entry = path.join(selection.root, '.vite/build/main.js');
 
-  const implementation = loadApplication(entry) as typeof import('../main');
+  const implementation = loadApplication(entry) as typeof import('../desktop/main');
 
   implementation.startDesktop(host);
 }

@@ -28,7 +28,7 @@ import { randomUUID } from 'node:crypto';
 
 import { candidateReviewInputSchema, type CandidateReviewInput } from '../rules/candidate-review';
 
-import { questionToolName } from '../../tools/rules/questions';
+import { questionToolName } from '../../../framework/cability/agent/questions';
 
 import { scopeHasUnresolvedActiveInput } from '../rules/scope-active-input';
 

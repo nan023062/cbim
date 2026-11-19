@@ -38,7 +38,7 @@ import type { DispatchStore, DispatchState, DispatchMessage } from '../rules/dis
 
 import { dispatchScopeInputSchema, type DispatchScope, type DispatchScopeOutcome, type DispatchScopeInput, type DispatchScopeGoal } from '../../tasks/rules/dispatch-scope';
 
-import type { AgentInstance } from '../../team/rules/agent-types';
+import type { AgentInstance } from '../../../framework/cability/agent/identity';
 
 import type { TaskSpec } from '../../tasks/rules/types';
 

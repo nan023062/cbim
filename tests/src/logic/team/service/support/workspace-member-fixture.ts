@@ -8,7 +8,7 @@ import type {WorkspaceMemberChangeInput} from '../../../../../../src/logic/team/
 import type {DispatchStore} from '../../../../../../src/logic/dispatch/rules/dispatch-storage';
 import {seedTeam} from '../../../knowledge/service/support/team-fixture';
 import {request} from '../../../knowledge/rules/data/knowledge';
-export {repositoryConnectionRunFiles as workspaceMemberRunFiles} from '../../../connectors/service/support/repository-connection-fixture';
+export {repositoryConnectionRunFiles as workspaceMemberRunFiles} from '../../../../resource/connections/service/support/repository-connection-fixture';
 
 export const workspaceMemberFixture={
   firstName:'客户端实现岗位',secondName:'客户端复核岗位',renamed:'客户端实现岗位（职责修订）',

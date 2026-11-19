@@ -16,7 +16,7 @@ import { z } from 'zod';
 
 import { hash } from '../../../core/io/serialization';
 
-import type { AgentConfigurationSnapshot } from '../../team/rules/agent-types';
+import type { AgentConfigurationSnapshot } from '../../../framework/cability/agent/identity';
 
 import type { ModuleBinding } from './graph-types';
 

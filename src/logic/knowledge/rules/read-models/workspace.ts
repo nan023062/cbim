@@ -12,7 +12,7 @@ import { parseJson } from '../../../io-errors/json';
 
 import type { Snapshot } from '../types';
 
-import { Project, projectRootModuleId, projectRootWithChildren, projectRootOverview } from '../../../workspace/rules/project-root';
+import { Project, projectRootModuleId, projectRootWithChildren, projectRootOverview } from '../../../../framework/business';
 
 /** 实例固定绑定一个快照；刷新知识后由调用方创建新的领域视图。 */
 export class BusinessWorkspace

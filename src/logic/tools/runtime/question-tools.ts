@@ -5,7 +5,7 @@
  */
 import { zodToJsonSchema } from 'zod-to-json-schema';
 
-import { questionInput, questionResultSchema, questionResultForInput, questionToolName, type QuestionInput } from '../rules/questions';
+import { questionInput, questionResultSchema, questionResultForInput, questionToolName, type QuestionInput } from '../../../framework/cability/agent/questions';
 
 import { checkedJsonToolResult } from '../rules/results';
 

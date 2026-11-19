@@ -19,7 +19,7 @@ import type { DispatchMutation, DispatchState } from '../../dispatch/rules/dispa
 
 import type { TaskNode } from '../../tasks/rules/graph-types';
 
-import type { AgentInstance } from '../../team/rules/agent-types';
+import type { AgentInstance } from '../../../framework/cability/agent/identity';
 
 import type { RuntimeCursor, RuntimeDispatchTask, RuntimeLoopTask, RuntimeMember, RuntimePressure, RuntimeQueueCounts, RuntimeRead, RuntimeRun, RuntimeScope, RuntimeSnapshot, RuntimeUsage, RuntimeWorkspace } from '../rules/types';
 

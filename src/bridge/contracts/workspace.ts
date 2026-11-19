@@ -6,15 +6,15 @@ import type { IpcCaller } from './ipc-call';
 
 export type { TaskView, KnowledgeFile, Change, ChangeRequest, Issue, Validation, Workspace, Snapshot, Preview } from '../../logic/knowledge/rules/types';
 
-export { projectRootModuleId, projectRootModule } from '../../logic/workspace/rules/project-root';
+export { projectRootModuleId, projectRootModule } from '../../framework/business';
 
 export type { WorkspaceEntry, Catalog, WorkspaceView } from './workspace-view';
 
 /** 渲染进程唯一服务调用边界；操作契约限制调用类型，主进程另核身份、输入及实际允许的路由。 */
-export type { MonitorUpdate } from '../../monitor/updates';
+export type { MonitorUpdate } from '../../framework/monitor/updates';
 export interface Bridge
 {
-  WatchMonitor?(listener: (event: import('../../monitor/updates').MonitorUpdate) => void): () => void;
+  WatchMonitor?(listener: (event: import('../../framework/monitor/updates').MonitorUpdate) => void): () => void;
 
   call: IpcCaller;
 

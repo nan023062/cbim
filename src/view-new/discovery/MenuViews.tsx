@@ -1,0 +1,36 @@
+/** 发现页负责展示和筛选资源，运行管理页读取当前应用的监控快照。 */
+import { useEffect, useState } from 'react';
+import type { DiscoveryPage, DiscoveryResult } from '../../bridge/contracts/discovery';
+
+function useMenuData<T>(load: () => Promise<T>)
+{
+  const [data, setData] = useState<T>();
+  const [error, setError] = useState('');
+  const [revision, setRevision] = useState(0);
+  useEffect(() => {
+    let current = true;
+    setError('');
+    Promise.resolve().then(load).then(value => { if (current) setData(value); })
+      .catch(e => { if (current) setError(String(e)); });
+    return () => { current = false; };
+  }, [revision, load]);
+  return { data, error, refresh: () => setRevision(r => r + 1) };
+}
+
+export function DiscoveryView({ page, title }: { page: DiscoveryPage; title: string })
+{
+  const [load] = useState(() => () => window.desktopMenu.resources(page));
+  const { data, error, refresh } = useMenuData<DiscoveryResult>(load);
+  const [query, setQuery] = useState('');
+  const [kind, setKind] = useState('');
+  const items = data?.items.filter(i => (!kind || i.kind === kind) && (i.name+' '+i.summary).toLowerCase().includes(query.toLowerCase()));
+  return <section className="view-page menu-page"><header className="view-heading"><h1>{title}</h1><button onClick={refresh}>刷新</button></header>
+    {error && <p role="alert">{error}</p>}
+    {data && <><div className="repository-bar"><strong>{data.source}</strong></div>
+      <div className="graph-toolbar"><input aria-label="搜索资源" placeholder="搜索名称或说明…" value={query} onChange={e => setQuery(e.target.value)} />
+        <select aria-label="资源类型" value={kind} onChange={e => setKind(e.target.value)}><option value="">全部类型</option>{[...new Set(data.items.map(i => i.kind))].map(k => <option key={k}>{k}</option>)}</select></div>
+      <div className="definition-grid">{items?.map(item => <article className="definition-card" key={item.id}><small>{item.kind}</small><h3>{item.name}</h3><p>{item.summary}</p></article>)}</div>
+      {!items?.length && <p role="status">{query || kind ? '没有匹配的资源' : '暂无可展示的资源'}</p>}</>}
+  </section>;
+}
+

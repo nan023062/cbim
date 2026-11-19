@@ -66,15 +66,12 @@ class N_efcc6effcb00["bootstrap"] {
   <<virtual>>
 }
 click N_efcc6effcb00 href "bootstrap/ARCHITECTURE.md"
+class N_a4e76f139ed6["desktop"] {
+  <<virtual>>
+}
+click N_a4e76f139ed6 href "desktop/ARCHITECTURE.md"
+N_efcc6effcb00 ..> N_a4e76f139ed6 : 依赖
 ```
-
-### 跨图协作
-
-按引用方归并目标，保留全部跨图关系；分图只用于阅读，不表示新增模块或依赖边界。
-
-| 引用方 | 关系 | 目标 |
-| --- | --- | --- |
-| [bootstrap](bootstrap/ARCHITECTURE.md)（图 2） | 依赖 | [main](main.ts)（图 1） |
 
 外部继承／实现边界：[Application](../../logic/application/application.ts)。
 
@@ -84,6 +81,7 @@ click N_efcc6effcb00 href "bootstrap/ARCHITECTURE.md"
 | --- | --- |
 | [bootstrap](bootstrap/ARCHITECTURE.md) | 在业务访问用户数据前选择可信运行资源，并隔离资源切换、失败恢复与正式应用启动。 |
 | [commands](commands/ARCHITECTURE.md) | 提供面向开发与诊断的命令行执行入口，复用业务应用的初始化、运行与关闭流程。 |
+| [desktop](desktop/ARCHITECTURE.md) | 装配新版应用，协调窗口与桌面进程的生命周期。 |
 | [ipc](ipc/ARCHITECTURE.md) | 将已接入的桌面操作解析并分派到对应业务服务，保持传输路由与领域决策分离。 |
 | [platform](platform/ARCHITECTURE.md) | 以 Electron utility 子进程承载受控文件的可信传输，将宿主进程管理与业务文件规则分开。 |
 

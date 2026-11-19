@@ -4,7 +4,7 @@
  */
 import { z } from 'zod';
 
-import { agentCallReferenceSchema, checkedAgentCallReference, type AgentCallReference } from '../../agents/contracts';
+import { agentCallReferenceSchema, checkedAgentCallReference, type AgentCallReference } from '../../../framework/office/call';
 
 import type { TaskSpec } from '../../tasks/rules/types';
 

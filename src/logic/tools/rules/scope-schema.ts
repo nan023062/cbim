@@ -5,13 +5,14 @@
  */
 import { z } from 'zod';
 
-import { connectorIdSchema } from '../../connectors/rules/definition';
+import { repositoryToolScopeSchema } from '../../../resource/connections/rules/repository-tools';
+export { repositoryToolScopeSchema };
 
 import { githubFeedbackScopeSchema } from '../../feedback';
 
 const workspaceId = z.string();
 
-export const repositoryToolScopeSchema = z.object({ kind: z.literal('repository'), workspaceId, connectorId: connectorIdSchema, repositoryId: z.string().uuid(), connectionId: z.string().uuid(), operation: z.enum(['list', 'get']) }).strict();
+
 
 // 兼容原工具日志出口，反馈范围唯一实现由 Logic 拥有。
 export { githubFeedbackScopeSchema } from '../../feedback';

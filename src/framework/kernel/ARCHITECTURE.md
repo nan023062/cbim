@@ -26,12 +26,12 @@ Kernel 是 CBIM 面向大模型厂商和 Agent 工具厂商的兼容层。模型
 ## 可扩展的部分
 
 - **模型厂商**可以复用已有推理协议，扩充提供方预设、模型目录及连接配置。若厂商引入新的传输协议，还需在 Logic 实现协议和兼容规则。模型加载器的载荷和资源释放方式由宿主提供。[模型实现](../../logic/models/protocol/ARCHITECTURE.md) · [引擎选型](../../logic/engines/catalog/supported-engines.ts)
-- **Agent 工具厂商**在 Logic 适配 SDK、子进程、会话恢复和原生事件。支持运行中追加时实现 `steer`。能够在工具产生副作用前拦截调用时，才声明 `supportsBeforeToolCall`。宿主要求拦截而包缺少该声明时，服务在创建驱动前拒绝运行。[适配器实现](../../logic/engines/adapters/ARCHITECTURE.md)
+- **Agent 工具厂商**在 Logic 适配 SDK、子进程、会话恢复和原生事件。支持运行中追加时实现 `steer`。能够在工具产生副作用前拦截调用时，才声明 `supportsBeforeToolCall`。宿主要求拦截而包缺少该声明时，服务在创建驱动前拒绝运行。[适配器实现](../../engine-plugins/ARCHITECTURE.md)
 - **可信宿主扩展**可用 `BeforeTurn` 补充上下文或阻止轮次，用 `BeforeToolCall` 否决调用，用 `OnEvent` 观察已保存事件，也可提供工具。工具最终仍由运行时按 Office 权限授权。事件详情随引擎能力变化，View 只展示厂商提供且允许公开的摘要与进度。[扩展契约](engines/extensions.ts)
 
 ## 示例：接入一家提供 Agent CLI 的厂商
 
-假设新引擎叫 `acme`，可调用 CBIM 已支持的模型协议。先在 Logic 的引擎清单登记 `acme`、兼容协议和实际使用的历史格式。然后在 `logic/engines/adapters/acme/` 实现驱动。下面是该目录的包入口示例，`AcmeEngine` 代表接入方编写的驱动类。
+假设新引擎叫 `acme`，可调用 CBIM 已支持的模型协议。先在 Logic 的引擎清单登记 `acme`、兼容协议和实际使用的历史格式。然后在 `engine-plugins/acme/` 实现驱动。下面是该目录的包入口示例，`AcmeEngine` 代表接入方编写的驱动类。
 
 ```ts
 import { engineDescriptor } from '../..';
@@ -47,7 +47,7 @@ export const engineAdapter: EngineAdapter = Object.freeze({
 });
 ```
 
-1. **绑定模型与会话。** 在 `start(context)` 中使用工厂收到的模型配置准备 CLI 和事件桥；在 `run(message)` 中发送本轮输入，把厂商输出映射为 `context.emit` 事件和统一终态。`stop` 请求取消，`close` 回收进程与监听器。可参考 [Pi 包入口](../../logic/engines/adapters/pi/package.ts) 和 [Pi 驱动](../../logic/engines/adapters/pi/engine.ts)。
+1. **绑定模型与会话。** 在 `start(context)` 中使用工厂收到的模型配置准备 CLI 和事件桥；在 `run(message)` 中发送本轮输入，把厂商输出映射为 `context.emit` 事件和统一终态。`stop` 请求取消，`close` 回收进程与监听器。可参考 [Pi 包入口](../../engine-plugins/pi/package.ts) 和 [Pi 驱动](../../engine-plugins/pi/engine.ts)。
 2. **按能力接入工具。** 示例省略工具拦截声明。如果 CLI 支持工具预执行回调，让驱动等待 `context.beforeTool` 的裁决，验证拒绝时工具未执行，再声明拦截能力。每次工具调用沿用同一个调用 ID。
 3. **登记并验证。** 把工厂加入[源码装配表](../../logic/execution/assembly/engine-adapters.ts)；需要发布引擎包时，在[构建入口](../../../scripts/build-engine-adapters.mjs)登记源码映射，按[包管理模块](../../logic/engines/packages/ARCHITECTURE.md)核对制品身份。通过服务按配置创建实例，验证一次输入、实时事件、终态、取消和销毁，以及缺少所需能力时的拒绝行为。[服务契约用例](../../../tests/src/framework/kernel/kernel.test.ts)
 

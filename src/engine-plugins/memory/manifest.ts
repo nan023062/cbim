@@ -1,0 +1,9 @@
+export const manifest = {
+  id: 'memory',
+  storageDirectory: 'memory',
+  nativeHistoryFormat: 'cbim',
+  label: '记忆引擎',
+  businessTypes: ['知识库管理', '语义检索', '摘要与压缩'],
+  supportedApis: ['openai-completions'],
+  additionalModelRoles: [{ id: 'embedding', label: '记忆向量模型', kind: 'embedding', required: true }]
+} as const;

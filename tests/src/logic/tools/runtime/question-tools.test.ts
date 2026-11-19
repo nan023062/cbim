@@ -1,7 +1,7 @@
 import {expect,it,vi} from 'vitest';
 import {QuestionTools,questionTool} from '../../../../../src/logic/tools/runtime/question-tools';
 import {QuestionQueue} from '../../../../../src/logic/conversation/runtime/questions';
-import {questionToolName,questionInput,questionResultSchema,questionResultForInput} from '../../../../../src/logic/tools/rules/questions';
+import {questionToolName,questionInput,questionResultSchema,questionResultForInput} from '../../../../../src/framework/cability/agent/questions';
 import {toolMetadataSchema} from '../../../../../src/logic/tools/rules/contracts';
 
 const input={questions:[{question:'下一步？',options:[{label:'方案A'},{label:'方案B'}]},{question:'补充目标？',options:[{label:'小型'},{label:'完整'}]}]};

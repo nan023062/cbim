@@ -1,0 +1,8 @@
+export const manifest = {
+  id: 'codex',
+  storageDirectory: 'codex',
+  nativeHistoryFormat: 'codex', packageDependencies: ['pi'],
+  label: 'Codex',
+  businessTypes: ['代码开发', '代码审查'],
+  supportedApis: ['openai-responses'], fallbackApi: 'openai-responses'
+} as const;

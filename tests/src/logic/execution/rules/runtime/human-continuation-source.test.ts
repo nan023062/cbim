@@ -5,7 +5,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import {checkedRunInputSource,type HumanDecisionsSource} from '../../../../../../src/logic/execution/rules/input-source';
-import {bridgeExtensionForSource} from '../../../../../../src/logic/engines/adapters/pi/bridge';
+import {bridgeExtensionForSource} from '../../../../../../src/engine-plugins/pi/bridge';
 import {LoopRuntime} from '../../../../../../src/logic/execution/rules/runtime/runtime';
 import type {AgentEngine,EngineContext,TaskSpec} from '../../../../../../src/logic/execution/rules/types';
 import {FileRunStorage} from '../../../../../../src/logic/execution/storage/run-storage';

@@ -8,7 +8,7 @@ import {seedMemberCheckpoint} from '../../team/runtime/support/member-checkpoint
 import {Application} from '../../../../../src/bridge/server/application';
 import {Paths} from '../../../../../src/logic/workspace/service/paths';
 import {FileRunStorage} from '../../../../../src/logic/execution/storage/run-storage';
-import type {PendingQuestion} from '../../../../../src/logic/tools/rules/questions';
+import type {PendingQuestion} from '../../../../../src/framework/cability/agent/questions';
 
 // 新协议在同一个调用内暂停；关闭应用不将未知等待伪装成可重放检查点。
 it.each(['complete-restart','stop-wait','changed-files','submitted-stop'] as const)('recursive pause keeps the original run and gates dependent work (%s)',async mode=>{

@@ -9,7 +9,7 @@ import {Paths} from '../../../../../src/logic/workspace/service/paths';
 import {WorkspaceExecutionLease} from '../../../../../src/logic/execution/admission/workspace-lease';
 import {FileRunStorage} from '../../../../../src/logic/execution/storage/run-storage';
 import {globalRuntimeLogBytes} from '../../runtime/monitoring/support/global-runtime-fixture';
-import type {PendingQuestion} from '../../../../../src/logic/tools/rules/questions';
+import type {PendingQuestion} from '../../../../../src/framework/cability/agent/questions';
 
 it.each(['complete','waiting','stop','unknown-log'] as const)('hands help to the direct caller within the original Agent call (%s)',async mode=>{
  const f=await fixture(),provider=await memberHelpProvider(mode);let app=f.app;

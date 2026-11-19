@@ -21,14 +21,18 @@ const layers = {
   'core/platform/node':['core/platform/node','core'],
   'core/platform/browser':['core/platform/browser','core'],
   'core/platform/electron':['core/platform/electron','core/platform/node','core'],
-  plugins:['plugins','core','core/platform/node'],
+  'engine-plugins':['engine-plugins','logic','core','core/platform/node'],
+  'resource/plugins':['core','core/platform/node','resource/plugins'],
   resource:['resource','core','core/platform/node'],
-  monitor:['monitor','framework'],
+  'framework/monitor':['framework/monitor','framework'],
   framework:['framework','core'],
-  logic:['logic','monitor','plugins','framework','core','core/platform/node'],
+  'logic-new':['logic-new','framework','framework/monitor','core','core/platform/node'],
+  'view-new':['view-new','bridge/contracts'],
+  updater:['updater'],
+  logic:['logic','framework/monitor','resource/plugins','framework','core','core/platform/node'],
   view:['view','bridge/client','bridge/contracts','core','core/platform/browser'],
   'bridge/client':['bridge/client','bridge/contracts','core','core/platform/browser'],
-  'bridge/server':['bridge/server','bridge/contracts','logic','core','core/platform/node','core/platform/electron'],
+  'bridge/server':['logic-new','bridge/server','bridge/contracts','logic','core','core/platform/node','core/platform/electron'],
   'bridge/contracts':['bridge/contracts','core'],
   'bridge/preload':['bridge/preload','bridge/contracts','core'],
 };
@@ -40,7 +44,7 @@ const layerOf = file => {
   if(['node','page-reader','public-http','browser-proxy'].some(name=>file==='src/core/web/'+name+'.ts'))return 'core/platform/node';
   if(file==='src/core/web/electron.ts')return 'core/platform/electron';
   if(file.startsWith('src/core/platform/'))return file.split('/').slice(1,4).join('/');
-  for(const layer of ['core','plugins','resource','monitor','framework','logic','view'])if(file.startsWith('src/'+layer+'/'))return layer;
+  for(const layer of ['core','engine-plugins','resource/plugins','resource','framework/monitor','framework','logic-new','view-new','updater','logic','view'])if(file.startsWith('src/'+layer+'/'))return layer;
   return file.split('/').slice(1,3).join('/');
 };
 
@@ -52,7 +56,6 @@ const knowledgeTypes='src/logic/knowledge/rules/types.ts';
 const knowledgeSnapshot='src/logic/knowledge/rules/read-models/snapshot.ts';
 const teamView='src/logic/knowledge/rules/read-models/team.ts';
 const businessView='src/logic/knowledge/rules/read-models/workspace.ts';
-const projectRoot='src/logic/workspace/rules/project-root.ts';
 // utility 通用入口只能组合环境无关实现，Node 算法必须显式选用独立入口。
 const utilityPortable=['src/core/utility/index.ts','src/core/utility/json.ts','src/core/utility/async.ts','src/core/utility/strings.ts','src/core/utility/bytes.ts','src/core/utility/graphs.ts'];
 const enginePublic='src/logic/engines/index.ts',engineService='src/logic/engines/service/index.ts';
@@ -79,17 +82,21 @@ const allowsFeedbackAccess=(from,to)=>
   to===feedbackPublic&&(from.startsWith('src/logic/')||from==='src/bridge/contracts/github-feedback.ts')||
   to===feedbackService&&(from.startsWith('src/bridge/server/')||isService(from));
 const resourcePublic='src/resource/index.ts',resourceService='src/resource/service/index.ts';
-const allowsResourceAccess=(from,to)=>to===resourcePublic&&(from.startsWith('src/logic/')||['src/bridge/contracts/resources.ts','src/bridge/contracts/ipc-resources.ts'].includes(from))||to===resourceService&&(from.startsWith('src/bridge/server/')||isService(from));
+const allowsResourceAccess=(from,to)=>from==='src/logic-new/resource-management/index.ts'&&[resourcePublic,resourceService].includes(to)||from==='src/logic-new/application/index.ts'&&to===resourceService||from==='src/logic/models/service/llm-profiles.ts'&&to==='src/resource/models/local-profiles.ts'||to===resourcePublic&&(from.startsWith('src/logic/')||['src/bridge/contracts/resources.ts','src/bridge/contracts/ipc-resources.ts'].includes(from))||to===resourceService&&(from.startsWith('src/bridge/server/')||isService(from));
+const agentQuestions='src/framework/cability/agent/questions.ts';
+const agentIdentity='src/framework/cability/agent/identity.ts';
 const moduleBoundaries=[
+  {sources:['src/view-new/desktop/'],allow:['src/view-new/desktop/','src/view-new/settings/','src/view-new/discovery/','src/view-new/extension/','src/view-new/shared/','src/bridge/contracts/']},
+  ...['discovery','extension','monitor','settings','shared'].map(name=>({sources:['src/view-new/'+name+'/'],allow:['src/view-new/'+name+'/','src/view-new/shared/','src/bridge/contracts/']})),
   // 冷壳只持有更新状态和已验证业务入口，不直接装配普通业务服务。
-  {sources:['src/bridge/server/bootstrap/'],allow:['src/bridge/server/bootstrap/','src/bridge/server/main.ts','src/logic/updates/service/']},
+  {sources:['src/bridge/server/bootstrap/'],allow:['src/bridge/server/bootstrap/','src/bridge/server/desktop/main.ts','src/logic/updates/service/']},
   // 视图专属适配可以组合共享 Core，但不反向依赖页面、通信契约或后端实现。
   {sources:['src/view/foundations/'],allow:['src/view/foundations/','src/core/utility/index.ts','src/core/io/index.ts']},
   {sources:utilityPortable,allow:utilityPortable},
   // 记忆包仅此存储实现使用公开原子单文件机制，目录权限与正式知识仍由业务边界负责。
-  {sources:['src/logic/engines/adapters/memory/storage.ts'],allow:['src/logic/engines/adapters/memory/','@domain-public','src/core/io/text-files.ts']},
+  {sources:['src/engine-plugins/memory/storage.ts'],allow:['src/engine-plugins/memory/','@domain-public','src/core/io/text-files.ts']},
   // 其它引擎只组合可移植算法，不借此接入 files/web、平台适配或 Node 私有实现。
-  {sources:['src/logic/engines/adapters/'],allow:['src/logic/engines/adapters/','@domain-public','src/core/utility/index.ts','src/core/io/index.ts',modelPublic,enginePublic]},
+  {sources:['src/engine-plugins/'],allow:['src/engine-plugins/','@domain-public','src/core/utility/index.ts','src/core/io/index.ts',modelPublic,enginePublic]},
   // 更新子系统仅复用环境无关的数据消费入口，不因此取得 Main 服务或其他基础方案的依赖权。
   {sources:['src/logic/updates/service/engine-artifacts.ts'],allow:['src/logic/updates/service/','src/logic/updates/engine-artifacts.ts','src/core/utility/index.ts','src/core/io/text-files.ts']},
   {sources:['src/logic/updates/service/runtime-manifest.ts'],allow:['src/framework/kernel/index.ts']},
@@ -102,8 +109,7 @@ const moduleBoundaries=[
   {sources:[knowledgeTypes],allow:['src/framework/business/index.ts']},
   {sources:[knowledgeSnapshot],allow:[knowledgeTypes,foundation]},
   {sources:[teamView],allow:[knowledgeTypes,knowledgeSnapshot,foundation]},
-  {sources:[projectRoot],allow:['src/framework/business/index.ts']},
-  {sources:[businessView],allow:[knowledgeTypes,knowledgeSnapshot,projectRoot,foundation]},
+  {sources:[businessView],allow:[knowledgeTypes,knowledgeSnapshot,'src/framework/business/index.ts',foundation]},
   {sources:['src/logic/knowledge/rules/knowledge-queries.ts'],allow:['src/logic/knowledge/rules/read-models/index.ts',knowledgeTypes,foundation]},
   // 文件索引只实现稳定存储契约；工作区身份、服务和日志读取由 workspace 装配。
   {sources:['src/logic/history/service/file-store.ts'],allow:[foundation,'src/core/io/text-files.ts','src/logic/team/rules/session-history-storage.ts']},
@@ -115,7 +121,7 @@ const moduleBoundaries=[
   {sources:['tests/src/logic/knowledge/rules/support/knowledge-data.ts'],allow:[knowledgeTypes,foundation]},
   {sources:['tests/src/logic/knowledge/rules/support/knowledge-fixture.ts'],allow:[knowledgeTypes,foundation,'src/logic/knowledge/rules/knowledge.ts','tests/src/logic/knowledge/rules/support/knowledge-data.ts']},
   // 调度器只组合可移植公开算法，不取得 Node、files 或 web 的访问权。
-  {sources:[...orchestrationRoots],allow:[...orchestrationRoots,'src/framework/connectors/index.ts','src/framework/kernel/index.ts','src/framework/office/index.ts','src/framework/office/exchange.ts','src/framework/cability/agent/index.ts','src/framework/cability/organization.ts','src/core/io/index.ts','src/logic/engines/adapters/','@domain-public','src/core/utility/index.ts',modelPublic,enginePublic,webPublic,feedbackPublic]},
+  {sources:[...orchestrationRoots],allow:[...orchestrationRoots,'src/framework/office/call.ts',agentIdentity,agentQuestions,'src/framework/connectors/index.ts','src/framework/kernel/index.ts','src/framework/office/index.ts','src/framework/office/exchange.ts','src/framework/cability/agent/index.ts','src/framework/cability/organization.ts','src/core/io/index.ts','src/engine-plugins/','@domain-public','src/core/utility/index.ts',modelPublic,enginePublic,webPublic,feedbackPublic]},
 ];
 const matchesBoundary=(file,entry)=>{
   if(entry==='@domain-public')return isDomainFile(file)&&domainPublicEntries.has(file)||['src/core/io/json.ts','src/core/io/serialization.ts'].includes(file);
@@ -127,19 +133,19 @@ const matchesBoundary=(file,entry)=>{
 export const externalLoads = [
   {file:'src/logic/application/assembly/connector-packages.ts',expression:'loadProduct(entry)',reason:'仅加载宿主按产品 ID 登记的绝对 CJS 入口'},
   {file:'scripts/runtime-build.ts',expression:"require(path.join(plugin,'ViteConfig.js'))",reason:'只从锁定的 @electron-forge/plugin-vite 包路径读取生产配置生成器；与冷包共用构建参数，无运行时用户输入'},
-  {file:'src/logic/engines/adapters/native-tools.ts',expression:'import(pathToFileURL(entry).href)',reason:'仅从冷壳验签固定的 E 目录、旧 pi-runtime 或开发依赖加载 1.5.0 的独立文件/命令操作，不接受模型或工作区给定的模块路径'},
-  {file:'src/logic/engines/adapters/claude/sdk.ts',expression:'import(pathToFileURL(entry).href)',reason:'仅从固定 CBIM claude-runtime 或开发依赖解析官方 Claude Agent SDK，不接受外部路径'},
+  {file:'src/engine-plugins/native-tools.ts',expression:'import(pathToFileURL(entry).href)',reason:'仅从冷壳验签固定的 E 目录、旧 pi-runtime 或开发依赖加载 1.5.0 的独立文件/命令操作，不接受模型或工作区给定的模块路径'},
+  {file:'src/engine-plugins/claude/sdk.ts',expression:'import(pathToFileURL(entry).href)',reason:'仅从固定 CBIM claude-runtime 或开发依赖解析官方 Claude Agent SDK，不接受外部路径'},
   {file:'src/core/io/locking.ts', expression:"requireNative(packagedNative && fs.existsSync(packagedNative) ? packagedNative : 'koffi')", reason:'仅从安装包或 node_modules 加载第三方 koffi 原生库'},
   {file:'src/logic/file-operations/platform/files/controlled-file-win32.ts', expression:'requireNative(koffiPath)', reason:'专用 utility 的私有参数仅由 Main 固定 resources/koffi 或 require.resolve(koffi) 注入；独立 Electron 测试宿主同样使用真实第三方库，不来自模型或桌面 IPC'},
   {file:'src/logic/file-operations/platform/isolation/isolation-recovery-win32.ts', expression:'requireNative(koffiPath)', reason:'只接受Main私有装配的resources/koffi或require.resolve(koffi)，用于实际原进程/Job/目录核实，不接模型或桌面路径'},
   {file:'src/logic/file-operations/platform/isolation/isolated-node-win32.ts', expression:'requireNative(koffiPath)', reason:'隔离平台装配固定 resources/koffi 或 require.resolve(koffi)；仅加载第三方原生库，业务请求不能提供该私有参数'},
-  {file:'tests/src/logic/engines/adapters/pi/model-capacity-sdk.test.ts', expression:"import(pathToFileURL(path.resolve('node_modules/@earendil-works/pi-ai/dist/api/simple-options.js')).href)", reason:'测试固定版本的第三方 Pi 内部容量函数'},
+  {file:'tests/src/engine-plugins/pi/model-capacity-sdk.test.ts', expression:"import(pathToFileURL(path.resolve('node_modules/@earendil-works/pi-ai/dist/api/simple-options.js')).href)", reason:'测试固定版本的第三方 Pi 内部容量函数'},
 ];
 // 冷壳从已验证的构建目录加载固定业务入口；仍把源码边纳入分层与循环检查，不作为外部豁免。
 export const generatedLoads = [
   {file:'src/logic/execution/assembly/engine-package-loader.ts',expression:'loadAdapter(descriptor.entry)',source:'src/logic/execution/assembly/engine-adapters.ts'},
   {file:'scripts/build-engine-adapters.mjs',expression:'load(file)',source:'src/logic/execution/assembly/engine-adapters.ts'},
-  {file:'src/bridge/server/bootstrap/desktop.ts',expression:'loadApplication(entry)',source:'src/bridge/server/main.ts'},
+  {file:'src/bridge/server/bootstrap/desktop.ts',expression:'loadApplication(entry)',source:'src/bridge/server/desktop/main.ts'},
 ];
 
 /** 返回强连通分量及其中全部依赖边，不遗漏类型环、长环或自引用。 */
@@ -271,6 +277,7 @@ export function auditDependencies(root = process.cwd(), options = {}) {
     }
   }
   const violations = edges.filter(e => {
+    if(e.to.startsWith('src/resource/')&&(e.from.startsWith('src/view/')||e.from.startsWith('src/framework/')))return true;
     if(e.from.startsWith('src/')&&!isTestSupport(e.from)&&isTestSupport(e.to))return true;
     if(isUnitTestPath(e.from)){
       const boundary=moduleBoundaries.find(rule=>rule.sources.some(source=>isTestSupport(source)&&matchesBoundary(e.from,source)));
@@ -280,9 +287,11 @@ export function auditDependencies(root = process.cwd(), options = {}) {
       if(e.from.startsWith('src/core/')&&e.to.startsWith('src/core/')&&e.from.split('/')[2]!==e.to.split('/')[2])return true;
       if(e.to.startsWith('src/framework/kernel/')&&!e.from.startsWith('src/framework/kernel/')&&e.to!=='src/framework/kernel/index.ts')return true;
       const a=layerOf(e.from),b=layerOf(e.to);
+      if(a==='view-new'&&b==='view')return !['src/view/components/Icon.tsx','src/view/components/BrandMark.tsx'].includes(e.to);
       if(e.to==='src/core/web/electron.ts'&&e.from!=='src/bridge/server/main.ts')return true;
       // 业务只消费桌面宿主注入的凭据类型；运行时引用仍受 Electron 分层限制。
       const cipherTypeAccess=e.kind==='type'&&e.to==='src/core/io/electron.ts'&&[
+        'src/resource/models/local-profiles.ts',
         'src/logic/models/index.ts',
         'src/logic/feedback/service/github-feedback.ts',
         'src/logic/feedback/service/github-feedback-auth.ts',
@@ -294,10 +303,14 @@ export function auditDependencies(root = process.cwd(), options = {}) {
       const runtimeAccess=runtimePublicEntries.has(e.to)&&(e.from.startsWith('src/bridge/server/')||isService(e.from)||isOrchestration(e.from)||isEngine(e.from)&&isEngine(e.to));
       const serviceAccess=servicePublicEntries.has(e.to)&&(isService(e.from)||e.from.startsWith('src/bridge/server/'))||businessDataEntries.has(e.to)&&(isService(e.from)||e.from.startsWith('src/bridge/contracts/'))||isService(e.from)&&[modelPublic,enginePublic,webPublic,feedbackPublic,resourcePublic].includes(e.to);
       const ioErrorAccess=a==='logic'&&['src/logic/io-errors/json.ts','src/logic/io-errors/locking.ts'].includes(e.to);
-      const adapterAccess=isEngine(e.to)&&e.from.startsWith('src/logic/execution/assembly/') || isEngine(e.from)&&domainPublicEntries.has(e.to);
-      const publicAccess=(e.from==='src/bridge/contracts/workspace.ts'&&e.to==='src/monitor/updates.ts')||adapterAccess||ioErrorAccess||cipherTypeAccess||allowsEngineAccess(e.from,e.to)||allowsModelAccess(e.from,e.to)||allowsWebAccess(e.from,e.to)||allowsFeedbackAccess(e.from,e.to)||allowsResourceAccess(e.from,e.to)||domainAccess||runtimeAccess||serviceAccess;
+      const manifestAccess=e.from==='src/logic/engines/catalog/supported-engines.ts'&&/^src\/engine-plugins\/(pi|claude|codex|memory)\/manifest\.ts$/.test(e.to);
+      const adapterAccess=manifestAccess||isEngine(e.to)&&e.from.startsWith('src/logic/execution/assembly/') || isEngine(e.from)&&domainPublicEntries.has(e.to);
+      const bridgeContractAccess=e.from==='src/bridge/contracts/execution.ts'&&e.to==='src/framework/office/call.ts'&&e.kind==='type'||e.to===agentQuestions&&['execution','ipc-dispatch','ipc-loop','ipc-shapes'].some(name=>e.from==='src/bridge/contracts/'+name+'.ts')||e.from==='src/bridge/contracts/workspace.ts'&&e.to==='src/framework/business/index.ts';
+      if(a==='resource'&&b==='logic')return true;
+      const connectorContract=e.from.startsWith('src/resource/connections/')&&e.to==='src/framework/connectors/index.ts';
+      const publicAccess=connectorContract||bridgeContractAccess||(e.from==='src/bridge/contracts/workspace.ts'&&e.to==='src/framework/monitor/updates.ts')||adapterAccess||ioErrorAccess||cipherTypeAccess||allowsEngineAccess(e.from,e.to)||allowsModelAccess(e.from,e.to)||allowsWebAccess(e.from,e.to)||allowsFeedbackAccess(e.from,e.to)||allowsResourceAccess(e.from,e.to)||domainAccess||runtimeAccess||serviceAccess;
       if(isService(e.from)&&b==='logic'&&e.from.split('/')[2]!==e.to.split('/')[2]&&!publicAccess)return true;
-      if(isEngine(e.to)&&!isEngine(e.from)&&!e.from.startsWith('src/logic/execution/assembly/'))return true;
+      if(isEngine(e.to)&&!manifestAccess&&!isEngine(e.from)&&!e.from.startsWith('src/logic/execution/assembly/'))return true;
       // 领域规则只组合领域与既有纯模型/反馈入口，不借目录迁移取得宿主服务权限。
       if(isDomainFile(e.from)&&e.to.startsWith('src/logic/')&&!isDomainFile(e.to)&&!ioErrorAccess&&![modelPublic,enginePublic,feedbackPublic].includes(e.to))return true;
       if((!layers[a]||!layers[a].includes(b))&&!publicAccess)return true;

@@ -5,11 +5,7 @@
  * 模型服务只接受协议需求，不读取引擎身份；连接错误保留安全端点与状态诊断，不泄露密钥、查询参数或供应商响应正文，不清空已保存模型目录。
  * 运行、岗位和显式测试在解密前共用接口选择；候选地址不进入运行快照，列表读取不会探测网络。
  */
-import fs from 'node:fs/promises';
-
-import { ModelProfiles, type ModelProfileSet } from './model-profiles';
-
-import { randomUUID } from 'node:crypto';
+import { LocalModelProfiles, type ModelFile, type StoredProfile } from '../../../resource/models/local-profiles';
 
 import { z } from 'zod';
 
@@ -17,25 +13,13 @@ import { discoverProtocolModels, probeEmbedding, probeGeneration } from './proto
 
 import { selectProviderConnection, connectionSchema, definition, type ModelConnectionRequirement, type LlmDefinition, type LlmSettings, type SecretCipher, type ResolvedLlm } from '../index';
 
-import { atomic } from '../../../core/io/text-files';
+
 
 import type { ResolvedModelOperation } from '../index';
 
 export type { ResolvedModelOperation } from '../index';
 
 export type { LlmDefinition, LlmProfile, LlmSettings, SecretCipher, ResolvedLlm } from '../index';
-
-interface DiskProfile extends LlmDefinition
-{
-  id: string;
-
-  encryptedKey?: string
-}
-
-interface ModelFile extends ModelProfileSet<DiskProfile>
-{
-  version: 1;
-}
 
 /** 明确岗位选型，不允许默认模型或主会话设置参与解析。 */
 export interface ExplicitModelReference
@@ -73,10 +57,8 @@ export interface LockedModelOperations
   Resolve(index: number): ResolvedModelOperation
 }
 
-const fileSchema = z.object({ version: z.literal(1), selectedId: z.string().uuid().optional(), profiles: z.array(z.object({ id: z.string().uuid(), encryptedKey: z.string().optional() }).passthrough()).max(100) });
-
 /** 单一纯选型投影；只有运行 resolve 可在选定之后解密，登记调用必须显式给出两个 ID。 */
-function selectConfiguration(data: ModelFile, id?: string, modelId?: string, connection?: ModelConnectionRequirement)
+function selectConfiguration(data: ModelFile<LlmDefinition>, id?: string, modelId?: string, connection?: ModelConnectionRequirement)
 {
   const definition = data.profiles.find(profile => profile.id === (id ?? data.selectedId));
 
@@ -103,7 +85,7 @@ function selectConfiguration(data: ModelFile, id?: string, modelId?: string, con
 }
 
 /** 向量操作必须具有显式接口、启用型号和真实维度；不从生成模型补造向量能力。 */
-function selectOperation(data: ModelFile, ref: ModelOperationReference): { definition: DiskProfile; profile: ResolvedModelOperation['profile'] }
+function selectOperation(data: ModelFile<LlmDefinition>, ref: ModelOperationReference): { definition: StoredProfile<LlmDefinition>; profile: ResolvedModelOperation['profile'] }
 {
   if (!('kind' in ref))
     return selectConfiguration(data, ref.profileId, ref.modelId, ref.connection);
@@ -125,105 +107,54 @@ function selectOperation(data: ModelFile, ref: ModelOperationReference): { defin
   return { definition, profile: { kind: 'embedding', id: definition.id, name: definition.name, api: connection.api, baseUrl: connection.baseUrl, auth: definition.auth, model: model.id, inputTokens: model.inputTokens, dimensions: model.dimensions, ...(model.inputPrice === undefined ? {} : { inputPrice: model.inputPrice }) } };
 }
 
-const draftSchema = z.object({ id: z.string().uuid().optional(), profile: definition, apiKey: z.string().max(16000).optional() }).strict();
-type ProfileDraft = z.infer<typeof draftSchema>;
-
-export class LlmProfiles extends ModelProfiles<DiskProfile, ModelFile, ProfileDraft, LlmSettings>
+export class LlmProfiles extends LocalModelProfiles<LlmDefinition>
 {
-  protected readonly _maxProfiles = 100;
-
-  constructor(private filename: string, private cipher?: SecretCipher)
+  constructor(filename: string, cipher?: SecretCipher)
   {
-    super();
+    super(filename, definition, cipher);
   }
 
-  protected async Read(): Promise<ModelFile>
+  private Settings(data: ModelFile<LlmDefinition>): LlmSettings
   {
-    let raw: any;
-
-    try
-    {
-      raw = JSON.parse(await fs.readFile(this.filename, 'utf8'))
-    }
-    catch (e: any)
-    {
-      if (e.code === 'ENOENT')
-        return { version: 1, profiles: [] };
-
-      throw Error('模型配置读取失败，请检查配置文件')
-    }
-
-    const data = fileSchema.parse(raw),
-      profiles = data.profiles.map(p => { const { id, encryptedKey, ...rest } = p; return { ...definition.parse(rest), id, encryptedKey } });
-
-    if (new Set(profiles.map(p => p.id)).size !== profiles.length || data.selectedId && !profiles.some(p => p.id === data.selectedId))
-      throw new Error('模型配置身份不一致');
-
-    return { version: 1, selectedId: data.selectedId, profiles };
+    const profiles = data.profiles.map(({ encryptedKey, ...profile }) => ({ ...profile, hasKey: Boolean(encryptedKey) }));
+    return { selectedId: data.selectedId, secureStorage: this.credentialStorageAvailable, profiles };
   }
 
-  protected View(data: ModelFile): LlmSettings
+  public async List()
   {
-    return { selectedId: data.selectedId, secureStorage: this.cipher?.Available() === true, profiles: data.profiles.map(({ encryptedKey, ...p }) => ({ ...p, hasKey: !!encryptedKey })) }
+    return this.Settings(await this.Read());
   }
 
-  protected Write(data: ModelFile)
+  public async Save(input: unknown)
   {
-    return atomic(this.filename, JSON.stringify(data, null, 2));
+    return this.Settings(await this.SaveProfile(input));
   }
 
-  protected Parse(input: unknown)
+  public async Select(id: string)
   {
-    return draftSchema.parse(input);
+    return this.Settings(await this.SelectProfile(id));
   }
 
-  protected Build(draft: ProfileDraft, previous?: DiskProfile): DiskProfile
+  public async Remove(id: string)
   {
-    let encryptedKey: string | undefined;
-    if (draft.profile.auth === 'api-key')
-    {
-      if (draft.apiKey)
-      {
-        if (!this.cipher?.Available()) throw new Error('系统加密不可用，无法保存 API Key');
-        encryptedKey = this.cipher.Encrypt(draft.apiKey);
-      }
-      else
-      {
-        const addedTarget = draft.profile.alternateConnections?.some(connection => !previous?.alternateConnections?.some(old => old.api === connection.api && old.baseUrl === connection.baseUrl))
-          || draft.profile.embedding && draft.profile.embedding.baseUrl !== previous?.embedding?.baseUrl;
-        if (previous && (previous.baseUrl !== draft.profile.baseUrl || previous.api !== draft.profile.api || addedTarget))
-          throw new Error('更换接口地址、协议或新增兼容接口后请重新输入 API Key');
-        encryptedKey = previous?.encryptedKey;
-      }
-      if (!encryptedKey) throw new Error('请输入 API Key');
-    }
-    return { ...draft.profile, id: previous?.id ?? randomUUID(), encryptedKey };
+    return this.Settings(await this.RemoveProfile(id));
   }
 
-  private Decrypt(p: DiskProfile)
+  private RuntimeKey(profile: StoredProfile<LlmDefinition>)
   {
-    if (p.auth === 'none')
-      return 'cbim-local-no-auth';
-
-    if (!p.encryptedKey || !this.cipher?.Available())
-      throw new Error('模型密钥不可用，请重新保存 API Key');
-
-    try
-    {
-      return this.cipher.Decrypt(p.encryptedKey)
-    }
-    catch
-    {
-      throw new Error('模型密钥无法解密，请重新保存 API Key')
-    }
+    return profile.auth === 'none' ? 'cbim-local-no-auth' : this.Decrypt(profile);
   }
 
+  protected WithResolvedProfiles<Ref, Public, Resolved, T>(refs: readonly Ref[], select: (data: ModelFile<LlmDefinition>, ref: Ref) => { profile: Public; Resolve(): Resolved }, use: (locked: { profiles: Public[]; Resolve(index: number): Resolved }) => Promise<T>): Promise<T>
+  {
+    return this.WithSnapshot(refs, async (data, fixed) => { const selected = fixed.map(ref => select(data, ref)); const cache = new Map<number, Resolved>(); let active = true; try { return await use({ profiles: selected.map(item => structuredClone(item.profile)), Resolve(index) { if (!active) throw new Error('模型配置准备已结束，不能重新解析凭据'); if (!Number.isInteger(index) || index < 0 || index >= selected.length) throw new Error('模型角色索引不存在'); if (!cache.has(index)) cache.set(index, selected[index].Resolve()); return cache.get(index)!; }, }); } finally { active = false; cache.clear(); } });
+  }
   /** 将公开供应商配置展开为选定模型；禁用模型不得用于新运行。 */
   async Resolve(id?: string, modelId?: string, connection?: ModelConnectionRequirement): Promise<ResolvedLlm>
   {
     const selected = selectConfiguration(await this.Read(), id, modelId, connection);
 
-    return { profile: selected.profile, apiKey: this.Decrypt(selected.definition) };
+    return { profile: selected.profile, apiKey: this.RuntimeKey(selected.definition) };
   }
 
   /** 供岗位登记与当前差异读取；不使用默认选择、不解密、不探测接口，也不保证凭据可用或模型能运行。 */
@@ -251,7 +182,7 @@ export class LlmProfiles extends ModelProfiles<DiskProfile, ModelFile, ProfileDr
     {
       this.Explicit(fixed);
       const selected = selectConfiguration(data, fixed.profileId, fixed.modelId, fixed.connection);
-      return { profile: selected.profile, Resolve: () => ({ profile: structuredClone(selected.profile), apiKey: this.Decrypt(selected.definition) }) };
+      return { profile: selected.profile, Resolve: () => ({ profile: structuredClone(selected.profile), apiKey: this.RuntimeKey(selected.definition) }) };
     }, locked => use({ profile: locked.profiles[0], Resolve: () => locked.Resolve(0) }));
   }
 
@@ -272,7 +203,7 @@ export class LlmProfiles extends ModelProfiles<DiskProfile, ModelFile, ProfileDr
     {
       this.Explicit(ref);
       const selected = selectOperation(data, ref);
-      return { profile: selected.profile, Resolve: () => ({ profile: structuredClone(selected.profile), apiKey: this.Decrypt(selected.definition) }) };
+      return { profile: selected.profile, Resolve: () => ({ profile: structuredClone(selected.profile), apiKey: this.RuntimeKey(selected.definition) }) };
     }, use);
   }
 
@@ -296,7 +227,7 @@ export class LlmProfiles extends ModelProfiles<DiskProfile, ModelFile, ProfileDr
       if (!p || p.baseUrl !== r.connection.baseUrl || p.api !== r.connection.api)
         throw new Error('请先输入该接口的 API Key');
 
-      key = this.Decrypt(p)
+      key = this.RuntimeKey(p)
     }
 
     return discoverProtocolModels(r.connection, key);

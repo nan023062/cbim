@@ -1,5 +1,5 @@
 /** 引擎设置与执行入口，提供官方引擎目录及制品兼容规则。 */
-import { PluginManager } from '../../../plugins';
+import { PluginManager } from '../../../resource/plugins';
 import { registerPackageEngines, supportedEngines, engineDescriptor, loopEngineSchema, type LoopEngine } from '../index';
 
 import type { EngineArtifact, EngineArtifactsPort, PreparedEngineArtifact } from '../../updates/engine-artifacts';

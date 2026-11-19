@@ -27,7 +27,7 @@ import type { EnginePackages } from '../../../logic/engines/packages';
 
 import type { ResourceRepositories } from '../../../resource/service';
 
-import type { RepositoryConnections } from '../../../logic/connectors/service/repository-connections';
+import type { RepositoryConnections } from '../../../resource/connections/service/repository-connections';
 
 import type { GitHubFeedback } from '../../../logic/feedback/service';
 

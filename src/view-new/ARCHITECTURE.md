@@ -1,0 +1,91 @@
+# 新版视图
+
+## 设计意图
+
+桌面主框架管理页面导航与扩展区，通过桌面菜单接口登记本地工作区、浏览资源和读取运行状态。
+
+## 主要组成
+
+| 组成 | 定位 |
+| --- | --- |
+| [入口](main.ts) | 加载外壳样式并挂载首页。 |
+
+每个界面或窗口拥有独立模块。主窗口组合发现页和扩展面板，资源监视器由渲染入口独立挂载。各模块单向使用共享表现组件。
+
+<!-- architecture:generated:start -->
+
+## 架构关系
+
+标注为 `virtual` 的节点是直接子模块的虚拟类封装；内部设计沿下方入口阅读。
+
+### 关系组 1：desktop
+
+```mermaid
+classDiagram
+class N_3b750e3edb60["desktop"] {
+  <<virtual>>
+}
+click N_3b750e3edb60 href "desktop/ARCHITECTURE.md"
+class N_b08560c38277["入口"] {
+  <<module>>
+}
+click N_b08560c38277 href "main.ts"
+class N_52575372bc39["discovery"] {
+  <<virtual>>
+}
+click N_52575372bc39 href "discovery/ARCHITECTURE.md"
+class N_3581845b4caa["extension"] {
+  <<virtual>>
+}
+click N_3581845b4caa href "extension/ARCHITECTURE.md"
+class N_d63ed31fde81["settings"] {
+  <<virtual>>
+}
+click N_d63ed31fde81 href "settings/ARCHITECTURE.md"
+class N_a94f7ca21bb9["shared"] {
+  <<virtual>>
+}
+click N_a94f7ca21bb9 href "shared/ARCHITECTURE.md"
+N_b08560c38277 ..> N_3b750e3edb60 : 依赖
+N_b08560c38277 ..> N_a94f7ca21bb9 : 依赖
+N_3b750e3edb60 ..> N_52575372bc39 : 依赖
+N_3b750e3edb60 ..> N_3581845b4caa : 依赖
+N_3b750e3edb60 ..> N_d63ed31fde81 : 依赖
+N_3b750e3edb60 ..> N_a94f7ca21bb9 : 依赖
+N_3581845b4caa ..> N_a94f7ca21bb9 : 依赖
+N_d63ed31fde81 ..> N_a94f7ca21bb9 : 依赖
+```
+
+### 关系组 2：monitor
+
+```mermaid
+classDiagram
+class N_c05d0a357d4a["monitor"] {
+  <<virtual>>
+}
+click N_c05d0a357d4a href "monitor/ARCHITECTURE.md"
+```
+
+### 跨图协作
+
+按引用方归并目标，保留全部跨图关系；分图只用于阅读，不表示新增模块或依赖边界。
+
+| 引用方 | 关系 | 目标 |
+| --- | --- | --- |
+| [入口](main.ts)（图 1） | 依赖 | [monitor](monitor/ARCHITECTURE.md)（图 2） |
+| [monitor](monitor/ARCHITECTURE.md)（图 2） | 依赖 | [shared](shared/ARCHITECTURE.md)（图 1） |
+
+## 子模块
+
+| 虚拟封装 | 整体职责 |
+| --- | --- |
+| [desktop](desktop/ARCHITECTURE.md) | 组合发现页与扩展区，管理工作区导航。 |
+| [discovery](discovery/ARCHITECTURE.md) | 浏览和筛选资源分类。 |
+| [extension](extension/ARCHITECTURE.md) | 维护当前窗口的扩展标签。 |
+| [monitor](monitor/ARCHITECTURE.md) | 独立渲染 Agent 和进程的资源占用。 |
+| [settings](settings/ARCHITECTURE.md) | 在主窗口内提供独立的设置导航与分组内容。 |
+| [shared](shared/ARCHITECTURE.md) | 承载跨界面的图标、品牌及基础样式。 |
+
+[上层设计](../ARCHITECTURE.md)
+
+<!-- architecture:generated:end -->

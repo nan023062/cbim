@@ -5,7 +5,7 @@ import {fixture} from '../../application/support/helpers';
 import {Application} from '../../../../../src/bridge/server/application';
 import {Paths} from '../../../../../src/logic/workspace/service/paths';
 import {FileRunStorage} from '../../../../../src/logic/execution/storage/run-storage';
-import type {PendingQuestion} from '../../../../../src/logic/tools/rules/questions';
+import type {PendingQuestion} from '../../../../../src/framework/cability/agent/questions';
 import {completeOutputProvider,completeOutputData as d} from './support/complete-output-provider';
 import {seedCompleteOutput,completeOutputRecords} from './support/complete-output-pi-fixture';
 

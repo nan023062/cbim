@@ -14,7 +14,6 @@
 | --- | --- |
 | [ToolRegistry](registry.ts) | 实际内部工具的输入/业务输出协议、版本、副作用及取消/恢复说明，支持摘要与按需完整描述。 |
 | [contracts](contracts.ts) | 工具契约发现、取消及恢复说明的纯协议。 |
-| [questions](questions.ts) | 结构化提问、桌面答案和待答快照，供运行队列与工具共用。 |
 | [receipts](receipts.ts) | 从已核实调用、授权和终态生成可追溯回执。 |
 | [results](results.ts) | 校验业务工具结果并封装合法文本块。 |
 
@@ -40,10 +39,6 @@ class N_20be9fc34f67["results"] {
   <<module>>
 }
 click N_20be9fc34f67 href "results.ts"
-class N_4b6b8d56b197["questions"] {
-  <<module>>
-}
-click N_4b6b8d56b197 href "questions.ts"
 class N_5089adb40911["receipts"] {
   <<module>>
 }

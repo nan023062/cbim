@@ -1,3 +1,4 @@
+import { openProjectOffice } from '../../project';
 import { engineConfigurations } from '../../engines/service';
 import type { ResolvedEngineModel, LoopEngine } from '../../engines';
 import { kernel } from '../../../framework/kernel';
@@ -57,7 +58,7 @@ import { admissionRequestId, acquireExecutionLease, type WorkspaceAdmission } fr
 
 import type { GitHubFeedback } from '../../feedback/service';
 
-import type { RepositoryConnections } from '../../connectors/service/repository-connections';
+import type { RepositoryConnections } from '../../../resource/connections/service/repository-connections';
 
 import { mainGovernanceTools } from '../../governance/service/main-governance-tools';
 
@@ -118,9 +119,9 @@ export function createExecutionManager(runtime: CbimRuntime, workspace: Workspac
 
     const authorizeNative: import('../../execution/assembly/loop-engine').ExecutionServices['AuthorizeNative'] = async call => { workspace.Assert(); const mapped = call.name === 'find' ? 'Glob' : call.name; const reason = guard({ name: mapped, input: call.input }, workspace.entry.path); return { allow: !reason, reason }; };
 
-    const office = runtime.OpenOffice(workspace.entry.id, task.taskId);
+    const office = await openProjectOffice(runtime, workspace, conversationBinding?.rootSessionId ?? task.taskId, ownerships?.members);
     const agentCalls = launch.executionModel === 'agent-tools-v1' ? createAgentCallAssembly({
-      runtime, connectorServers, connectorProducts, modelAdapters, extensions, models, workspace, task, options: { ...options, engineRuntimes }, llm, storage, members: ownerships?.members, admission, dispatch, requestBudgets, authorizeNative, businessServices,
+      office, connectorServers, connectorProducts, modelAdapters, extensions, models, workspace, task, options: { ...options, engineRuntimes }, llm, storage, members: ownerships?.members, admission, dispatch, requestBudgets, authorizeNative, businessServices,
       // 每个业务子调用独立捕获工作区身份；仅复用已有受控工人，不降级到任意文件命令。
       artifactTransitions: () => createArtifactTransitionPort(workspace, controlledTransport, () => admission?.IsCurrent() ?? false),
     }) : undefined;
@@ -128,7 +129,7 @@ export function createExecutionManager(runtime: CbimRuntime, workspace: Workspac
     return createWorkspaceLoop(workspace.paths, workspace, { ...options, configuration, images, engineRuntimes }, {
       ConnectorServers: connectorServers, connectorProducts, connectorRootId: conversationBinding?.rootSessionId ?? task.taskId, modelAdapters, extensions,
       storage,
-      organization: office.organization, 
+      organization: office.organization,
       ...agentCalls,
       RequestBudget: agentCalls ? agentCalls.requestBudget : requestBudgets ? ({ task, runId }, role) => requestBudgets.ForRun({ rootSessionId: task.taskId, taskId: task.taskId, runId, kind: 'main' }, llm, role) : undefined,
       conversationBinding,

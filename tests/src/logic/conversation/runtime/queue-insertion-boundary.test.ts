@@ -8,7 +8,7 @@ import type {ExecutionCollaboration} from '../../../../../src/logic/conversation
 import type {DispatchScope} from '../../../../../src/logic/tasks/rules/dispatch-scope';
 import type {GoalContinuationReceipt} from '../../../../../src/logic/tasks/rules/scope-continuation';
 import {LoopRuntime} from '../../../../../src/logic/execution/rules/runtime/runtime';
-import {PiEngine} from '../../../../../src/logic/engines/adapters/pi/engine';
+import {PiEngine} from '../../../../../src/engine-plugins/pi/engine';
 import type {AgentEngine,EngineEvent,InputImage} from '../../../../../src/logic/execution/rules/types';
 import type {KnowledgeWorkspace} from '../../../../../src/logic/knowledge/rules/ports';
 import type {MessageQueue} from '../../../../../src/logic/conversation/runtime/message-queue';

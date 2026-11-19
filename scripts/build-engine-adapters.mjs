@@ -10,7 +10,7 @@ export const adapterSources=Object.freeze({pi:'pi','claude-code':'claude',codex:
 /** 构建可单独加载的 CJS 工厂；SDK 生产依赖由引擎包原有构建流程提供。 */
 export async function buildEngineAdapter(kind,destination){
   const source=adapterSources[kind];if(!source)throw Error('没有已登记的官方引擎构建入口：'+kind);
-  const root=path.resolve(fileURLToPath(new URL('..',import.meta.url))),entry=path.join(root,'src/logic/engines/adapters',source,'package.ts');
+  const root=path.resolve(fileURLToPath(new URL('..',import.meta.url))),entry=path.join(root,'src/engine-plugins',source,'package.ts');
   await fs.mkdir(destination,{recursive:true});
   await build({configFile:false,root,plugins:[productionTestGuard(root)],logLevel:'error',build:{target:'node22',emptyOutDir:false,outDir:destination,minify:false,lib:{entry,formats:['cjs'],fileName:()=> 'adapter.cjs'},rollupOptions:{external:[...builtinModules,...builtinModules.map(name=>'node:'+name),'electron','koffi']}}});
   const load=createRequire(import.meta.url),file=path.resolve(destination,'adapter.cjs');delete load.cache[file];

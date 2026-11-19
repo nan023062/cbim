@@ -28,7 +28,7 @@ import type { ToolReceipt, ToolEffect } from '../../tools/rules/types';
 
 import { nativeToolDescriptor } from '../../tools/rules/native-tools';
 
-import { questionToolName } from '../../tools/rules/questions';
+import { questionToolName } from '../../../framework/cability/agent/questions';
 
 import { commandReportToolName } from '../../tasks/rules/command-verification';
 

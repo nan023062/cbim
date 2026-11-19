@@ -1,0 +1,72 @@
+/* 桌面标题栏使用系统窗口按钮；标签区与工作区各自占用可用宽度。 */
+#application-home .desktop-shell { height: calc(100dvh - 32px); position: relative; }
+.desktop-titlebar { display: flex; align-items: center; gap: 3px; height: 32px; padding-left: 8px; background: #202124; color: #eee; -webkit-app-region: drag; }
+.desktop-titlebar button { -webkit-app-region: no-drag; color: inherit; font-size: 12px; height: 26px; padding: 0 6px; }
+.desktop-titlebar button, .desktop-extension header button { background: transparent; border: 0; }
+.desktop-titlebar .title-popup {
+  position: fixed; position-anchor: auto;
+  inset: anchor(bottom) auto auto anchor(left); margin: 6px 0 0;
+  padding: 5px; width: 138px; max-height: calc(100dvh - 42px); overflow: auto;
+  background: var(--surface); color: var(--text); border: 1px solid var(--line);
+  border-radius: 10px; box-shadow: 0 6px 22px #0004; -webkit-app-region: no-drag;
+}
+.desktop-titlebar .title-info { width: min(260px, 75vw); padding: 14px; font-size: 13px; }
+.title-info p { margin: 6px 0 0; }
+.sidebar-footer .user-profile-trigger { anchor-name: --user-bar; }
+#user-actions {
+  position: fixed;
+  position-anchor: --user-bar;
+  inset: auto auto anchor(top) anchor(left);
+  margin: 0 0 6px;
+  width: anchor-size(width);
+  box-sizing: border-box;
+  padding: 5px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--text);
+  background: var(--surface);
+  box-shadow: 0 6px 22px #0004;
+}
+#user-actions button { display: flex; align-items: center; justify-content: flex-start; gap: 9px; width: 100%; height: 32px; padding: 0 10px; border: 0; background: transparent; }
+#application-home .panel-switch { position: absolute; z-index: 6; inset: 8px 10px auto auto; width: 32px; height: 32px; padding: 0; border: 0; background: transparent; }
+#application-home .panel-switch:hover { background: var(--hover); }
+.resource-more { anchor-name: --resource-trigger; }
+.primary-nav:has(:popover-open) > .resource-more { background: var(--selected); }
+#resource-overflow {
+  position: fixed;
+  position-anchor: --resource-trigger;
+  inset: anchor(top) auto auto anchor(right);
+  margin: 0 0 0 6px;
+  width: 164px;
+  max-height: 60dvh;
+  overflow: auto;
+  padding: 4px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 4px 14px #0002;
+}
+#resource-overflow button { width: 100%; justify-content: flex-start; gap: 10px; padding: 7px 10px; border: 0; background: transparent; }
+@media (max-width: 480px) {
+  #resource-overflow { left: auto; right: 8px; }
+}
+.desktop-extension { display: flex; flex-direction: column; flex: 0 0 43%; min-width: 0; background: var(--sidebar); border-left: 1px solid var(--line); }
+.desktop-extension[hidden] { display: none; }
+.desktop-extension header { display: flex; align-items: center; gap: 4px; padding: 0 46px 0 14px; height: 48px; flex: none; border-bottom: 1px solid var(--line); }
+.desktop-extension header > button, .extension-address button { width: 28px; height: 28px; padding: 0; flex: none; border: 0; background: transparent; }
+.panel-size { margin-left: auto; }
+.menu-page { min-height: 0; overflow-y: auto; }
+.extension-strip { display: flex; gap: 3px; min-width: 0; overflow-x: auto; }
+.extension-strip > div { display: flex; width: 168px; flex: none; align-items: center; border-radius: 5px; white-space: nowrap; }
+.extension-strip button { height: 26px; padding: 0 7px; }
+.extension-strip button[role=tab] { flex: 1; justify-content: flex-start; }
+.extension-strip .chosen { background: var(--selected); }
+.extension-address { display: flex; align-items: center; gap: 4px; height: 42px; padding: 0 12px; }
+.extension-address input { min-width: 0; flex: 1; height: 28px; border: 0; background: var(--surface); padding: 0 10px; }
+.extension-placeholder { flex: 1; display: grid; place-content: center; justify-items: center; gap: 12px; font-size: 12px; color: var(--muted); }
+.extension-placeholder svg { opacity: .55; }
+@media (max-width: 959px) {
+  .desktop-extension { position: absolute; z-index: 4; inset: 0 0 0 auto; width: min(420px, 90%); }
+}
+.desktop-extension[data-maximized=true] { position: absolute; z-index: 5; inset: 0; width: 100%; }

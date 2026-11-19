@@ -15,7 +15,7 @@ import type { ToolCancellation, ToolRecovery } from '../../tools/rules/contracts
 
 import { toolReceiptSchema } from '../../tools/rules/receipt-schema';
 
-import { questionToolName } from '../../tools/rules/questions';
+import { questionToolName } from '../../../framework/cability/agent/questions';
 
 import type { ToolReceipt } from '../../tools/rules/types';
 

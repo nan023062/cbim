@@ -9,7 +9,7 @@ import type { RunUsage } from '../../execution/rules/usage';
 
 import type { TaskStatus } from '../../tasks/rules/graph-types';
 
-import type { AgentActivity } from '../../team/rules/agent-types';
+import type { AgentActivity } from '../../../framework/cability/agent/identity';
 
 import type { MemberRunBinding } from '../../execution/rules/member-run';
 

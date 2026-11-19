@@ -11,7 +11,7 @@ import { validateWorkflowEvidence } from '../../evidence/rules/workflow-evidence
 
 import { AgentArtifactVerification } from '../../evidence/runtime/agent-artifact-verification';
 
-import type { AgentCallReference } from '../../agents/contracts';
+import type { AgentCallReference } from '../../../framework/office/call';
 
 import type { AgentBusinessRun } from '../../execution/rules/business-run';
 

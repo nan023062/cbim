@@ -1,7 +1,7 @@
 import {expect,it,vi} from 'vitest';
 import {runtimeEngineTools} from '../../../../../src/logic/execution/rules/engine-tools';
-import {claudeTools} from '../../../../../src/logic/engines/adapters/claude/tools';
-import {codexTools} from '../../../../../src/logic/engines/adapters/codex/tools';
+import {claudeTools} from '../../../../../src/engine-plugins/claude/tools';
+import {codexTools} from '../../../../../src/engine-plugins/codex/tools';
 import {engineInstructions} from '../../../../../src/logic/execution/rules/engine-instructions';
 import {memberToolCapabilities} from '../../../../../src/logic/execution/rules/capabilities/member-tool-capabilities';
 import type {EngineContext} from '../../../../../src/logic/execution/rules/types';

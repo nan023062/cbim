@@ -1,10 +1,10 @@
 // Logic 领域规则的明确入口；沿迁移前真实消费者核对，新增公开文件须在此登记并审阅。
 // 不聚合成全域 barrel，避免无关运行实现被纯协议消费者加载；具体逻辑边界继续限制私有读模型等入口。
 export const domainRoots=[
-  "src/logic/agents/contracts.ts",
+
   "src/logic/automation/rules/",
   "src/logic/budget/rules/",
-  "src/logic/connectors/rules/",
+  "src/resource/connections/rules/",
   "src/logic/dispatch/rules/",
   "src/logic/evidence/rules/",
   "src/logic/execution/rules/",
@@ -25,8 +25,8 @@ export const domainPublicEntries=new Set([
   "src/logic/workspace/rules/standards.ts",
   "src/logic/team/rules/standards.ts",
   "src/logic/tasks/rules/standards.ts",
-  "src/logic/connectors/rules/standards.ts",
-  "src/logic/agents/contracts.ts",
+  "src/logic/knowledge/rules/connector-standards.ts",
+  "src/logic/execution/rules/agent-call-contracts.ts",
   "src/logic/execution/rules/engine-adapter.ts",
   "src/logic/tasks/rules/topic-interruption.ts",
   "src/logic/tasks/rules/office-history.ts",
@@ -43,10 +43,8 @@ export const domainPublicEntries=new Set([
   "src/logic/budget/rules/scope-budget-invariants.ts",
   "src/logic/budget/rules/scope-budget.ts",
   "src/logic/budget/rules/scope-usage.ts",
-  "src/logic/connectors/rules/definition.ts",
-  "src/logic/connectors/rules/registry.ts",
-  "src/logic/connectors/rules/repository-connection.ts",
-  "src/logic/connectors/rules/repository-tools.ts",
+  "src/resource/connections/rules/repository-connection.ts",
+  "src/resource/connections/rules/repository-tools.ts",
   "src/logic/dispatch/rules/dispatch-storage.ts",
   "src/logic/evidence/rules/artifact-baseline.ts",
   "src/logic/evidence/rules/artifact-evidence.ts",
@@ -194,7 +192,6 @@ export const domainPublicEntries=new Set([
   "src/logic/tasks/rules/workflow-selection.ts",
   "src/logic/tasks/rules/workspace-member-invariants.ts",
   "src/logic/team/rules/agent-runtime.ts",
-  "src/logic/team/rules/agent-types.ts",
   "src/logic/team/rules/automatic-execution.ts",
   "src/logic/team/rules/implicit-module-owner.ts",
   "src/logic/team/rules/member-execution-binding.ts",
@@ -211,7 +208,6 @@ export const domainPublicEntries=new Set([
   "src/logic/tools/rules/outcome.ts",
   "src/logic/tools/rules/policy/tool-policy.ts",
   "src/logic/tools/rules/policy/types.ts",
-  "src/logic/tools/rules/questions.ts",
   "src/logic/tools/rules/receipt-schema.ts",
   "src/logic/tools/rules/receipts.ts",
   "src/logic/tools/rules/registry.ts",
@@ -233,7 +229,6 @@ export const domainPublicEntries=new Set([
   "src/logic/workspace/rules/module-ownership.ts",
   "src/logic/workspace/rules/source-browser.ts",
   "src/logic/workspace/rules/png-validation-schema.ts",
-  "src/logic/workspace/rules/project-root.ts",
   "src/logic/workspace/rules/workflow-contract.ts"
 ]);
 export const isDomainFile=file=>domainRoots.some(root=>file.startsWith(root));

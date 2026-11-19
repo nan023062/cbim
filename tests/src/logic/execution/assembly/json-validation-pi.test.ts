@@ -114,7 +114,7 @@ it.each(formats.flatMap(format=>(['reject','request_evidence']as const).map(deci
     const records=()=>jsonValidationRecords(f.user,entry.id),file=path.join(f.a,data.file);
     const rootDir=path.join(f.user,entry.id,'loop-engine','tasks',started.taskId,started.runId);
     const readRoot=()=>new FileRunStorage().Read(rootDir);
-    const questions=()=>app.Dispatch('loop.questions',{id:entry.id,taskId:started.taskId}) as Promise<import('../../../../../src/logic/tools/rules/questions').PendingQuestion[]>;
+    const questions=()=>app.Dispatch('loop.questions',{id:entry.id,taskId:started.taskId}) as Promise<import('../../../../../src/framework/cability/agent/questions').PendingQuestion[]>;
     const until=async(condition:()=>Promise<void>|void)=>{await vi.waitFor(async()=>{if(provider.errors.length)return;await condition()},{timeout:45000,interval:30});expect(provider.errors).toEqual([])};
     await until(()=>expect(provider.state.readyForReview).toBe(true));
     expect(provider.main).toHaveLength(2);expect(provider.member).toHaveLength(16);expect(await fs.readFile(file)).toEqual(payload(data.good));

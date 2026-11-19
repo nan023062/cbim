@@ -1,4 +1,4 @@
-import { Organization } from '../../agents';
+import { Organization } from '../../../framework/cability/organization';
 import { OfficeMembers, OfficeDispatcher, OfficeSchedule, type OfficeChildTask, type OfficeWorkflow } from '../../../framework/office';
 
 /**
@@ -10,9 +10,9 @@ import { z } from 'zod';
 
 import { readRoleSkill, type AgentRole } from '../../../framework/cability/agent';
 
-import { AgentCallExchange } from '../../agents/exchange';
+import { AgentCallExchange } from '../../../framework/office/exchange';
 
-import { questionResultSchema, questionResultForInput, type QuestionInput } from '../../tools/rules/questions';
+import { questionResultSchema, questionResultForInput, type QuestionInput } from '../../../framework/cability/agent/questions';
 
 import { zodToJsonSchema } from 'zod-to-json-schema';
 
@@ -24,9 +24,10 @@ import type { TaskSpec } from '../rules/types';
 
 import type { RunSummary } from '../rules/types';
 
-import type { AgentCallReference, AgentCallContext, AgentCallLimits, AgentToolContext, AgentToolsBinding } from '../../agents/contracts';
+import type { AgentCallReference } from '../../../framework/office/call';
+import type { AgentCallContext, AgentCallLimits, AgentToolContext, AgentToolsBinding } from '../rules/agent-call-contracts';
 
-import { AgentConstraintError, agentCallToolName, agentListToolName, agentReplyToolName } from '../../agents/contracts';
+import { AgentConstraintError, agentCallToolName, agentListToolName, agentReplyToolName } from '../../../framework/office/call';
 
 import { toolOutcome } from '../../tools/rules/outcome';
 
@@ -237,7 +238,7 @@ export class AgentCallScheduler
             const key = prefix + id;
             let reference: AgentCallReference | undefined;
 
-            const exchange = new AgentCallExchange(async (phase, questionId, questions, answer) => { if (!reference) throw Error('子运行身份尚未登记'); await context.Emit({ type: 'tool.updated', data: { id, name: agentCallToolName, agentCall: reference, agentCallState: phase, questionId, ...(questions ? { questions } : {}), ...(answer ? { answer } : {}) } }); return jsonToolResult(agentCallToolName, { status: 'waiting', callId: id, questionId, questions, agentCall: reference, nextStep: '用 cbim_agent_reply 回答原问题，继续此调用；不要重新调用 Agent' }); });
+            const exchange = new AgentCallExchange<ToolResult>(async (phase, questionId, questions, answer) => { if (!reference) throw Error('子运行身份尚未登记'); await context.Emit({ type: 'tool.updated', data: { id, name: agentCallToolName, agentCall: reference, agentCallState: phase, questionId, ...(questions ? { questions } : {}), ...(answer ? { answer } : {}) } }); return jsonToolResult(agentCallToolName, { status: 'waiting', callId: id, questionId, questions, agentCall: reference, nextStep: '用 cbim_agent_reply 回答原问题，继续此调用；不要重新调用 Agent' }); });
 
             return this.schedule.Dispatch(key, JSON.stringify(parsed.data), signal,
               () => errorResult('AGENT_CALL_CONFLICT', '原调用身份已用于不同指令'), () =>
@@ -267,7 +268,7 @@ export class AgentCallScheduler
     };
   }
 
-  private async Execute(context: AgentToolContext, depth: number, id: string, input: z.infer<typeof callInput>, signal: AbortSignal, exchange: AgentCallExchange, onReference: (ref: AgentCallReference) => void): Promise<ToolResult>
+  private async Execute(context: AgentToolContext, depth: number, id: string, input: z.infer<typeof callInput>, signal: AbortSignal, exchange: AgentCallExchange<ToolResult>, onReference: (ref: AgentCallReference) => void): Promise<ToolResult>
   {
     let rejection: { code: string; message: string } | undefined;
     let reference: AgentCallReference | undefined;

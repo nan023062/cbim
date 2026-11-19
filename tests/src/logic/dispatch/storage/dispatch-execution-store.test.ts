@@ -8,7 +8,7 @@ import {dispatchKnowledgeFingerprint} from '../../../../../src/logic/tasks/rules
 import type {PreparedDispatchKnowledge} from '../../../../../src/logic/tasks/rules/execution-context';
 import type {DispatchRun} from '../../../../../src/logic/tasks/rules/dispatch-execution';
 import type {DispatchMutation,DispatchState,AssignmentMessage} from '../../../../../src/logic/dispatch/rules/dispatch-storage';
-import type {AgentInstance,AgentSessionBinding} from '../../../../../src/logic/team/rules/agent-types';
+import type {AgentInstance,AgentSessionBinding} from '../../../../../src/framework/cability/agent/identity';
 import type {AgentRef,GraphEventBatch,GraphIdentity,TaskNode} from '../../../../../src/logic/tasks/rules/graph-types';
 import {seedExecutionOwner} from './support/owner-execution-store-support';
 import {bindingFor} from '../../team/rules/support/owner-execution-core-fixture';

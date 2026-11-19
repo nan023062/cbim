@@ -104,7 +104,8 @@ import type { WorkflowContractBinding } from '../../../tasks/rules/execution-con
 
 import { workflowHasEffects } from '../../../evidence/rules/workflow-evidence';
 
-import type { AgentCallReference, AgentToolContext, AgentToolsBinding } from '../../../agents/contracts';
+import type { AgentCallReference } from '../../../../framework/office/call';
+import type { AgentToolContext, AgentToolsBinding } from '../agent-call-contracts';
 
 import { toolInputError } from '../../../tools/rules/input-validation';
 

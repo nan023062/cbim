@@ -7,7 +7,7 @@ import { z } from 'zod';
 
 import { loopEngineSchema, modelRolesSelectionSchema } from '../../engines';
 
-import { projectRootModuleId } from '../../workspace/rules/project-root';
+import { projectRootModuleId } from '../../../framework/business';
 
 const id = z.string().min(1).max(512),
   digest = z.string().regex(/^[a-f0-9]{64}$/);

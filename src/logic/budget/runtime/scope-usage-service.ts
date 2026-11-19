@@ -4,7 +4,7 @@
  * 设计原因：同一主会话可跨多个目标，不能按时间或最近日志猜归属；缺失记录与未知价格保留不完整，不参与执行许可。
  * 职责边界：公开查询只读有界来源并前后核实基线；collect 为预算事务复用相同 canonical 校验但不重入存储，不扫描其它主会话、不修复或启动模型。
  */
-import { agentCallReferenceSchema, type AgentCallReference } from '../../agents/contracts';
+import { agentCallReferenceSchema, type AgentCallReference } from '../../../framework/office/call';
 
 import { hash, json } from '../../../core/io/serialization';
 

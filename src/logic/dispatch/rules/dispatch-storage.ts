@@ -7,7 +7,7 @@
  */
 import type { AgentBusinessRun } from '../../execution/rules/business-run';
 
-import type { AgentInstance, AgentSessionBinding } from '../../team/rules/agent-types';
+import type { AgentInstance, AgentSessionBinding } from '../../../framework/cability/agent/identity';
 
 import type { OfficeMemberSession } from '../../../framework/office/session';
 

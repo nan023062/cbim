@@ -6,7 +6,7 @@
 
 [产品官网](https://nan023062.github.io/cbim/) · [Windows 下载与更新日志](https://nan023062.github.io/cbim/download.html)
 
-[引擎无关执行内核](src/logic/execution/rules/ARCHITECTURE.md)通过注入的存储端口管理执行事件、中断与显式恢复；[具体引擎](src/logic/engines/adapters/ARCHITECTURE.md)由调度装配接入。桌面主对话经调度引擎派发正式业务任务，执行结束不等于业务验收通过。开发运行要求 Node.js 22.19+。
+[引擎无关执行内核](src/logic/execution/rules/ARCHITECTURE.md)通过注入的存储端口管理执行事件、中断与显式恢复；[具体引擎](src/engine-plugins/ARCHITECTURE.md)由调度装配接入。桌面主对话经调度引擎派发正式业务任务，执行结束不等于业务验收通过。开发运行要求 Node.js 22.19+。
 
 界面采用工作区侧栏与主会话区：中间切换对话与办公室视图，右侧扩展区承载团队架构、业务架构、浏览器与终端。详见 [工作区界面](src/view/ARCHITECTURE.md)。
 

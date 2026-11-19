@@ -4,7 +4,7 @@
  * 设计原因：实例释放不删除履历，索引与正文分离；只接收已落盘日志/派发意图，列表不回读日志，详情按需恢复后消费增量。
  * 生命周期：装配方先 initialize，再接入观察；关闭前排空执行并撤销订阅，close 等待索引写完。索引错误可见但不改变已发生的执行。
  */
-import { checkedAgentCallReference } from '../../agents/contracts';
+import { checkedAgentCallReference } from '../../../framework/office/call';
 
 import type { RunSummary, StoredEvent, TaskSpec } from '../../execution/rules/types';
 

@@ -16,10 +16,10 @@ import type {RequestBudgetPort} from '../../../../../src/logic/budget/rules/requ
 
 // Only the external engine is replaced. Assembly, runtime, scheduler, logs and admission remain real.
 const fake=vi.hoisted(()=>({engine:vi.fn()}));
-vi.mock('../../../../../src/logic/engines/adapters/pi/engine',()=>({PiEngine:class {constructor(options:unknown){return fake.engine(options)}}}));
+vi.mock('../../../../../src/engine-plugins/pi/engine',()=>({PiEngine:class {constructor(options:unknown){return fake.engine(options)}}}));
 
-vi.mock('../../../../../src/logic/engines/adapters/claude/engine',()=>({ClaudeCodeEngine:class {constructor(options:unknown){return fake.engine(options)}}}));
-vi.mock('../../../../../src/logic/engines/adapters/codex/engine',()=>({CodexEngine:class {constructor(options:unknown){return fake.engine(options)}}}));
+vi.mock('../../../../../src/engine-plugins/claude/engine',()=>({ClaudeCodeEngine:class {constructor(options:unknown){return fake.engine(options)}}}));
+vi.mock('../../../../../src/engine-plugins/codex/engine',()=>({CodexEngine:class {constructor(options:unknown){return fake.engine(options)}}}));
 
 const cleanups:(()=>Promise<void>)[]=[];
 afterEach(async()=>{for(const cleanup of cleanups.splice(0))await cleanup();fake.engine.mockReset()});
@@ -50,7 +50,7 @@ async function fixture(mode:'implicit-engine'|'chain'|'different-model'|'changed
   if(rootPermit.kind!=='granted')throw Error('Root admission failed');
   if(mode==='capacity')admission.Configure({revision:1,maxConcurrentRuns:1});
   const options={mode:'chat' as const,engine:'pi' as const,provider:'cbim-profile',profileId:'profile',model:'model',permission:mode==='read'?'read' as const:'execute' as const,process:{command:'test-engine',args:[]},llm};
-  const input={runtime:new CbimRuntime(),workspace,task:rootTask,options,llm,storage,members:{Get:memberGet,List:async()=>({items:['worker-b','worker-c'].map(memberId=>({memberId,name:memberId,state:'active',teamId:'team',agentId:'.cbim/team/'+memberId,position:memberId})),registryCursor:'v1'})},admission:{manager:admission,ownerEpoch:1,IsCurrent:()=>true},dispatch:{budgets:{HoldMain: holdMain},OpenScope: openScope,CloseScope: closeScope},requestBudgets:{ForRun: forRun,Preflight:async()=>{}},...((mode.startsWith('cross-model')||mode==='changed-model-capture'||mode==='implicit-engine')?{models:{WithRuntimeConfiguration:async(ref:any,use:any)=>{const selected=[modelB,modelC,llm].find(m=>m.profile.id===ref.profileId)!;expect(ref).toMatchObject({modelId:selected.profile.model,engine:selected.profile.engine});return use({profile:{...structuredClone(selected.profile),...(mode==='changed-model-capture'?{maxTokens:selected.profile.maxTokens+1}:{})},Resolve:()=>structuredClone(selected)})}}}:{}),authorizeNative:async()=>({allow:true})} as unknown as AgentCallAssemblyInput;
+  const input={office:new CbimRuntime().OpenOffice(workspace.entry.id,rootTask.taskId),workspace,task:rootTask,options,llm,storage,members:{Get:memberGet,List:async()=>({items:['worker-b','worker-c'].map(memberId=>({memberId,name:memberId,state:'active',teamId:'team',agentId:'.cbim/team/'+memberId,position:memberId})),registryCursor:'v1'})},admission:{manager:admission,ownerEpoch:1,IsCurrent:()=>true},dispatch:{budgets:{HoldMain: holdMain},OpenScope: openScope,CloseScope: closeScope},requestBudgets:{ForRun: forRun,Preflight:async()=>{}},...((mode.startsWith('cross-model')||mode==='changed-model-capture'||mode==='implicit-engine')?{models:{WithRuntimeConfiguration:async(ref:any,use:any)=>{const selected=[modelB,modelC,llm].find(m=>m.profile.id===ref.profileId)!;expect(ref).toMatchObject({modelId:selected.profile.model,engine:selected.profile.engine});return use({profile:{...structuredClone(selected.profile),...(mode==='changed-model-capture'?{maxTokens:selected.profile.maxTokens+1}:{})},Resolve:()=>structuredClone(selected)})}}}:{}),authorizeNative:async()=>({allow:true})} as unknown as AgentCallAssemblyInput;
   const assembly=createAgentCallAssembly(input);
   fake.engine.mockImplementation((engineOptions:any):AgentEngine=>{
     let context:EngineContext;

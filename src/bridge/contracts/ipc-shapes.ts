@@ -14,4 +14,4 @@ export const taskIdArgs = workspaceIdArgs.extend({ taskId: ipcId }).strict();
 
 export const runIdArgs = taskIdArgs.extend({ runId: ipcId }).strict();
 
-export { questionAnswersInputSchema as questionAnswers } from '../../logic/tools/rules/questions';
+export { questionAnswersInputSchema as questionAnswers } from '../../framework/cability/agent/questions';

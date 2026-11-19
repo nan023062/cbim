@@ -12,7 +12,6 @@
 
 | 组成 | 定位 |
 | --- | --- |
-| [ModelProfiles](model-profiles.ts) | 管理用户本机模型配置的保存、选择、删除与读取。 |
 | [LlmProfiles](llm-profiles.ts) | 本机供应商配置持久化、生成模型选择、跨模型操作原子捕获和连接检测。 |
 
 <!-- architecture:generated:start -->
@@ -23,10 +22,14 @@
 classDiagram
 class N_7e700ed60c8f["LlmProfiles"]
 click N_7e700ed60c8f href "llm-profiles.ts"
-class N_5d3a57ae0259["ModelProfiles"]
-click N_5d3a57ae0259 href "model-profiles.ts"
-N_5d3a57ae0259 <|-- N_7e700ed60c8f
+class N_30ea792262af["LocalModelProfiles"] {
+  <<boundary>>
+}
+click N_30ea792262af href "../../../resource/models/local-profiles.ts"
+N_30ea792262af <|-- N_7e700ed60c8f
 ```
+
+外部继承／实现边界：[LocalModelProfiles](../../../resource/models/local-profiles.ts)。
 
 [上层设计](../ARCHITECTURE.md)
 

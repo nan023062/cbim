@@ -17,7 +17,7 @@ import { agentSpec, agentSchema, agentRegistrySchema, teamSkillsSchema, createAg
 
 import { taskSpec, taskLoop, baseTask, taskBaseline, businessExecution } from '../../tasks/rules/standards';
 
-import { connectorSpec, connectorSchema } from '../../connectors/rules/standards';
+import { connectorSpec, connectorSchema } from './connector-standards';
 
 import { hash } from '../../../core/io/serialization';
 
@@ -49,9 +49,9 @@ const entries = [
   { id: 'module-schema', kind: 'schema', title: 'Module Schema', source: 'src/logic/workspace/rules/standards.ts#moduleSchema', referenceBase: 'business/module.schema.json', text: moduleSchema },
   { id: 'agent-schema', kind: 'schema', title: 'Agent Schema', source: 'src/logic/team/rules/standards.ts#agentSchema', referenceBase: 'capability/agent.schema.json', text: agentSchema },
   { id: 'team-skills-schema', kind: 'schema', title: 'Team Skill Schema', source: 'src/logic/team/rules/standards.ts#teamSkillsSchema', referenceBase: 'capability/team-skills.schema.json', text: teamSkillsSchema },
-  { id: 'connector-schema', kind: 'schema', title: '连接器 Schema', source: 'src/logic/connectors/rules/standards.ts#connectorSchema', referenceBase: 'connector/registry.schema.json', text: connectorSchema },
+  { id: 'connector-schema', kind: 'schema', title: '连接器 Schema', source: 'src/logic/knowledge/rules/connector-standards.ts#connectorSchema', referenceBase: 'connector/registry.schema.json', text: connectorSchema },
   { id: 'agent-registry-schema', kind: 'schema', title: 'Agent 注册表 Schema', source: 'src/logic/team/rules/standards.ts#agentRegistrySchema', referenceBase: 'capability/registry.schema.json', text: agentRegistrySchema },
-  { id: 'connector-spec', kind: 'standard', title: '连接器定义规范', source: 'src/logic/connectors/rules/standards.ts#connectorSpec', referenceBase: 'connector/connector-spec.md', text: connectorSpec },
+  { id: 'connector-spec', kind: 'standard', title: '连接器定义规范', source: 'src/logic/knowledge/rules/connector-standards.ts#connectorSpec', referenceBase: 'connector/connector-spec.md', text: connectorSpec },
 ];
 
 const contract = '内置资料只读，版本由内容 SHA-256 标识。查询以内部知识服务当前返回值为准；Agent 的原生工具禁止直接读写 .cbim；全部知识 CRUD 由受授权的内部工具执行，使用 cbim_object_preview/cbim_object_commit 或受控知识事务接口。派生注册表由 CBIM 维护。旧 Python 规则工具不是入口。Skill 工具返回流程，不会替 Agent 执行任务；结构校验不能替代语义与人工判断。';

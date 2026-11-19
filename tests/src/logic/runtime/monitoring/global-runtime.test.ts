@@ -1,7 +1,7 @@
 import {expect,test} from 'vitest';
 import {GlobalRuntimeManager} from '../../../../../src/logic/runtime/monitoring/global-runtime';
 import type {RunSummary,StoredEvent,TaskSpec} from '../../../../../src/logic/execution/rules/types';
-import type {AgentInstance} from '../../../../../src/logic/team/rules/agent-types';
+import type {AgentInstance} from '../../../../../src/framework/cability/agent/identity';
 import type {DispatchState,DispatchMutation} from '../../../../../src/logic/dispatch/rules/dispatch-storage';
 import type {GraphSnapshot,TaskNode} from '../../../../../src/logic/tasks/rules/graph-types';
 import type {MemberRunBinding} from '../../../../../src/logic/execution/rules/member-run';

@@ -4,11 +4,16 @@ import type { LlmApi } from './config';
 export function modelRequestUrl(baseUrl: string, api: LlmApi | 'openai-embeddings')
 {
   const base = baseUrl.replace(/\/+$/, '');
+
   switch (api)
   {
-    case 'openai-completions': return base + '/chat/completions';
-    case 'openai-responses': return base + '/responses';
-    case 'openai-embeddings': return base + '/embeddings';
-    case 'anthropic-messages': return base + (base.endsWith('/v1') ? '/messages' : '/v1/messages');
+    case 'openai-completions':
+      return base + '/chat/completions';
+    case 'openai-responses':
+      return base + '/responses';
+    case 'openai-embeddings':
+      return base + '/embeddings';
+    case 'anthropic-messages':
+      return base + (base.endsWith('/v1') ? '/messages' : '/v1/messages');
   }
 }

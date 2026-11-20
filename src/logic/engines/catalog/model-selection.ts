@@ -10,7 +10,10 @@ import { selectProviderConnection, type ModelConnectionRequirement, type Provide
 import { supportedEngines, type LoopEngine, type EngineDescriptor } from './supported-engines';
 
 /** 非空静态元组生成校验枚举，新增引擎不再修改第二份 ID 列表。 */
-export const loopEngineSchema = Object.defineProperty(z.string().refine(id => supportedEngines.some(item => item.id === id), '未登记的执行引擎'), 'options', { get: () => supportedEngines.map(item => item.id) }) as unknown as z.ZodType<string> & { readonly options: string[] };
+export const loopEngineSchema = Object.defineProperty(z.string().refine(id => supportedEngines.some(item => item.id === id), '未登记的执行引擎'), 'options', { get: () => supportedEngines.map(item => item.id) }) as unknown as z.ZodType<string> &
+{
+  readonly options: string[]
+};
 
 /** 只返回已静态声明的官方引擎；未知身份拒绝，不默认为其他实现。 */
 export function engineDescriptor(engine: LoopEngine): EngineDescriptor

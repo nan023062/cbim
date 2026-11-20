@@ -85,6 +85,7 @@ click N_20ee62e66639 href "kernel/ARCHITECTURE.md"
 | --- | --- | --- |
 | [business](business/ARCHITECTURE.md)（图 1） | 依赖 | [skills](skills/ARCHITECTURE.md)（图 2） |
 | [cability](cability/ARCHITECTURE.md)（图 1） | 依赖 | [skills](skills/ARCHITECTURE.md)（图 2） |
+| [monitor](monitor/ARCHITECTURE.md)（图 1） | 依赖 | [connectors](connectors/ARCHITECTURE.md)（图 2） |
 
 ## 子模块
 

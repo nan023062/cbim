@@ -147,4 +147,3 @@ export class kernel
     return resource.Close();
   }
 }
-

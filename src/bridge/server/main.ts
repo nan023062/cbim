@@ -147,18 +147,22 @@ export function startDesktop(runtime?: DesktopRuntimeHost)
     // 拖放走独立 IPC；与原生选择器共用快照和 .cbim 边界检查。
     ipcMain.handle('cbim:drop', async (event, request: { id: string; paths: string[] }) => { if (event.sender !== window.webContents || event.senderFrame !== window.webContents.mainFrame) throw Error('UNAUTHORIZED'); if (updates?.Status().phase === 'installing') return { ok: false, error: { code: 'UPDATING', message: '正在关闭任务并安装更新，请稍后重新打开。' } }; try { if (!request || !Array.isArray(request.paths) || !request.paths.length || request.paths.length > 12 || request.paths.some(p => typeof p !== 'string')) throw Error('无效文件列表'); const inputs = new ChatInputs(application.Workspace(request.id)); const items = []; for (const file of request.paths) { const stat = await fs.stat(file); items.push(await inputs.Path(stat.isDirectory() ? 'folder' : 'file', file)) } return { ok: true, value: items }; } catch (e: any) { return { ok: false, error: { message: e.message } } } });
 
-    let monitorSubscription: { id: string; cancel(): void } | undefined;
-    const stopMonitor = () => { monitorSubscription?.cancel(); monitorSubscription = undefined; };
+    let monitorSubscription:
+      {
+        id: string;
+
+        Cancel(): void
+      } | undefined;
+
+    const stopMonitor = () => { monitorSubscription?.Cancel(); monitorSubscription = undefined; };
+
     window.webContents.on('did-start-navigation', (_event, _url, inPlace, mainFrame) => { if (mainFrame && !inPlace) stopMonitor(); });
+
     window.webContents.on('destroyed', stopMonitor);
+
     window.webContents.on('render-process-gone', stopMonitor);
-    ipcMain.on('cbim:monitor-watch', (event, id, start) => {
-      if (event.sender !== window.webContents || event.senderFrame !== window.webContents.mainFrame || typeof id !== 'string' || id.length !== 36 || typeof start !== 'boolean') return;
-      if (!start) { if (monitorSubscription?.id === id) stopMonitor(); return; }
-      stopMonitor();
-      const cancel = application.monitor.WatchRows(row => event.sender.send('cbim:monitor-row', id, row));
-      monitorSubscription = { id, cancel };
-    });
+
+    ipcMain.on('cbim:monitor-watch', (event, id, start) => { if (event.sender !== window.webContents || event.senderFrame !== window.webContents.mainFrame || typeof id !== 'string' || id.length !== 36 || typeof start !== 'boolean') return; if (!start) { if (monitorSubscription?.id === id) stopMonitor(); return; } stopMonitor(); const cancel = application.monitor.WatchRows(row => event.sender.send('cbim:monitor-row', id, row)); monitorSubscription = { id, Cancel: cancel }; });
 
     ipcMain.handle('cbim:call', async (event, action: unknown, args: unknown) =>
     {

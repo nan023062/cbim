@@ -37,4 +37,3 @@ export interface ModelAdapterRegistry<Model = unknown, Protocol extends string =
 
   Get(id: string): ModelAdapter<Model, Protocol> | undefined;
 }
-

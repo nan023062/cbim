@@ -1,31 +1,50 @@
-/** 独立的资源监视器视图，按 CPU 占用显示 Agent 实例与桌面进程。 */
-import { useEffect, useState } from 'react';
-import type { ProcessRow } from '../../bridge/contracts/discovery';
+/** 对照查看 CBIM 运行资源与宿主的真实操作系统进程。 */
+import { memo, useEffect, useState } from 'react';
+
+import type { ProcessGroup, ProcessRow } from '../../bridge/contracts/discovery';
+
 import { Icon } from '../shared/Icon';
+
 import './monitor.css';
+
+const ResourceList = memo(function ResourceList({ title, rows, icon }: { title: string; rows: ProcessRow[]; icon: string })
+{
+  return <details open><summary>{title}<b>{rows.length}</b></summary>
+    {rows.map(row => <div className="resource-entry" key={row.id}><Icon name={icon} size={15} />
+      <div><strong>{row.name}</strong><small>{row.detail}</small></div></div>)}
+  </details>;
+});
 
 export function ResourceMonitor()
 {
-  const [agents, setAgents] = useState<ProcessRow[]>([]);
+  const [runtime, setRuntime] = useState<Extract<ProcessGroup,
+    {
+      group: 'runtime'
+    }>>();
+
   const [processes, setProcesses] = useState<ProcessRow[]>([]);
-  const [selection, select] = useState('');
-  useEffect(() => window.watchProcesses(update => {
-    if (update.group === 'agents') setAgents(update.rows);
-    else setProcesses([...update.rows].sort((a,b) => (b.cpu ?? 0) - (a.cpu ?? 0)));
-  }), []);
-  const selected = [...agents, ...processes].find(row => row.id === selection);
+
+  useEffect(() => window.WatchProcesses(update => { if (update.group === 'runtime') setRuntime(update); else setProcesses([...update.rows].sort((a, b) => (b.cpu ?? 0) - (a.cpu ?? 0))); }), []);
+
   return <main className="process-monitor">
     <header><Icon name="flow" size={16} />资源监视器</header>
-    <div className="process-columns"><span>进程</span><span>CPU ↓</span><span>内存</span><span>PID</span></div>
-    <div className="process-list">{([['Agent 实例',agents],['应用进程',processes]] as const).map(([title,rows]) =>
-      <section key={title}><h2>{title}</h2>
-        {rows.map(row => <button className="process-columns" key={row.id} aria-pressed={selection === row.id} onClick={() => select(row.id)}>
-          <span className="process-name"><Icon name={row.pid ? 'desktop' : 'person'} size={15} /><span>{row.name}{row.detail && <small>{row.detail}</small>}</span></span>
-          <span>{row.cpu === undefined ? '—' : row.cpu.toFixed(1)+'%'}</span>
-          <span>{row.memoryKiB === undefined ? '—' : Math.round(row.memoryKiB/1024)+' MB'}</span><span>{row.pid ?? '—'}</span>
-        </button>)}
-        {!rows.length && <p>{title === 'Agent 实例' ? '当前没有运行中的 Agent' : '正在读取进程'}</p>}
-      </section>)}</div>
-    <footer><span>{selected?.name ?? '选择一个进程'}</span><button disabled title="当前窗口提供只读监控">终止进程</button></footer>
+    <div className="process-list">
+      {runtime && <>
+        <div className="load-summary"><div><strong>虚拟总负载</strong><b>{runtime.load.total} / {runtime.load.threshold}</b></div>
+          <progress aria-label="虚拟总负载" max={runtime.load.threshold} value={runtime.load.total} />
+          <small>每进程 {runtime.load.weights.agents} · 每核心 {runtime.load.weights.engines} · 每磁盘 {runtime.load.weights.workspaces} · 每外设 {runtime.load.weights.connectors}</small>
+        </div>
+        <div className="flow-summary">流量（Token 速度）<b>{runtime.traffic.toFixed(1)} tok/s</b></div>
+        <ResourceList title="进程（Agent 实例）" rows={runtime.agents} icon="person" />
+        <ResourceList title="CPU 核心（引擎实例）" rows={runtime.engines} icon="api" />
+        <ResourceList title="磁盘（Workspace 实例）" rows={runtime.disks} icon="folder" />
+        <ResourceList title="外设（链接器实例）" rows={runtime.peripherals} icon="connector" />
+      </>}
+      <section className="host-processes"><h2>操作系统进程 · CBIM</h2>
+        <div className="process-columns"><span>进程</span><span>CPU ↓</span><span>内存</span><span>PID</span></div>
+        {processes.map(row => <div key={row.id} className="process-columns"><span className="process-name"><Icon name="desktop" size={15} /><span>{row.name}<small>{row.detail}</small></span></span>
+          <span>{row.cpu?.toFixed(1)}%</span><span>{Math.round((row.memoryKiB ?? 0) / 1024)} MB</span><span>{row.pid}</span></div>)}
+      </section>
+    </div>
   </main>;
 }

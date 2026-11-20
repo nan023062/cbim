@@ -1,8 +1,1 @@
-export const manifest = {
-  id: 'claude-code',
-  storageDirectory: 'claude',
-  nativeHistoryFormat: 'claude',
-  label: 'Claude Code',
-  businessTypes: ['代码开发', '代码审查'],
-  supportedApis: ['anthropic-messages'], fallbackApi: 'anthropic-messages'
-} as const;
+export const manifest = { id: 'claude-code', storageDirectory: 'claude', nativeHistoryFormat: 'claude', label: 'Claude Code', businessTypes: ['代码开发', '代码审查'], supportedApis: ['anthropic-messages'], fallbackApi: 'anthropic-messages' } as const;

@@ -31,6 +31,7 @@ async function request(url: string, init: RequestInit)
   endpoint.hash = '';
 
   let response: Response;
+
   try
   {
     response = await fetch(url, { ...init, redirect: 'error', signal: AbortSignal.timeout(15000) });
@@ -39,7 +40,6 @@ async function request(url: string, init: RequestInit)
   {
     throw new Error(`模型端点 ${endpoint.href} 连接失败或超时，请检查网络与接口配置`);
   }
-
 
   if (!response.ok)
   {
@@ -79,7 +79,6 @@ async function request(url: string, init: RequestInit)
   }
 
   return JSON.parse(text);
-
 }
 
 export async function discoverProtocolModels(connection: Pick<LlmDefinition, 'api' | 'auth' | 'baseUrl'>, key: string)

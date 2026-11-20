@@ -51,17 +51,34 @@ function checkedInput<T>(schema: z.ZodType<T>, raw: unknown): T
 
 /** 查询原提交的端口归本机知识事务，不扩大 Core 普通知识调用权限。 */
 type ChangeRequest = z.infer<typeof requestSchema>;
-type ConnectionCommit = Pick<RepositoryConnectionCommit, 'changed'> & { revision: string };
+
+type ConnectionCommit = Pick<RepositoryConnectionCommit, 'changed'> &
+{
+  revision: string
+};
 
 export interface RepositoryConnectionWorkspace
 {
-  readonly entry: { id: string };
+  readonly entry:
+  {
+    id: string
+  };
+
   readonly instanceId: string;
-  readonly paths: { Local(id: string, area: 'cache'): string };
+
+  readonly paths:
+  {
+    Local(id: string, area: 'cache'): string
+  };
+
   Assert(identity?: RepositoryConnectionIdentity): void;
-  Read(): Promise<{ revision: string; files: readonly {path: string; text: string}[] }>;
+
+  Read(): Promise<{ revision: string; files: readonly { path: string; text: string }[] }>;
+
   Preview(request: ChangeRequest): Promise<Pick<RepositoryConnectionPreview, 'changes' | 'validation' | 'diff'>>;
+
   Commit(request: ChangeRequest): Promise<ConnectionCommit>;
+
   CommittedReceipt(request: ChangeRequest): Promise<ConnectionCommit | undefined>;
 
   HasRecordedRequest(request: ChangeRequest): Promise<boolean>
@@ -170,6 +187,7 @@ export class RepositoryConnections
   private async Definitions(owner: RepositoryConnectionWorkspace)
   {
     const { snapshot, entries } = await this.ReadDefinitions(owner);
+
     if (!entries)
       throw new Error('链接器注册表无效，请先修复正式知识');
 
@@ -386,6 +404,7 @@ export class RepositoryConnections
       return undefined;
 
     const { entries } = await this.ReadDefinitions(owner);
+
     if (!entries)
       return undefined;
 

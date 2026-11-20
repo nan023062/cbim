@@ -11,7 +11,9 @@ const deferredAdmissions = new WeakSet<Error>();
 export function deferredAdmission(message: string)
 {
   const error = new Error(message);
+
   deferredAdmissions.add(error);
+
   return error;
 }
 

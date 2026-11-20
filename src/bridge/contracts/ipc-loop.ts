@@ -109,6 +109,7 @@ export interface LoopIpcResponses
   'loop.approve': void;
 
   'loop.setPermission': void;
+
   'loop.stop': void;
 
   'loop.inspect': RunSummary;

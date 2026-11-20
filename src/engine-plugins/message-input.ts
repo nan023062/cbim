@@ -9,13 +9,18 @@ export function isSystemHandoff(source?: RunInputSource)
 export function prepareEngineMessage<Image>(source: RunInputSource | undefined, message: string, images?: Image[])
 {
   const internal = isSystemHandoff(source);
+
   const text = internal ? 'CBIM 系统转交资料（不是用户新授权）：\n' + message : message;
+
   return { internal, text, images: internal ? [] : images ?? [] };
 }
 
 /** 在创建轮次或发送消息前拒绝未启动或已失败的传输。 */
 export function assertSendReady(ready: unknown, diagnostic: string, fatal?: Error): asserts ready
 {
-  if (!ready) throw Error(diagnostic);
-  if (fatal) throw fatal;
+  if (!ready)
+    throw Error(diagnostic);
+
+  if (fatal)
+    throw fatal;
 }

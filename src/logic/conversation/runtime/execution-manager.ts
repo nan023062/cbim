@@ -1,4 +1,5 @@
 import { isDeferredAdmission } from '../../execution/admission/workspace-lease';
+
 /**
  * 递归材料排队冻结清单，原调用插入绑定同一清单与 ACK；新重规划按可信来源选择递归执行，旧协议仍独立。
  * 公开运行选项保留 V2 角色引用，缺省历史不补字段。
@@ -92,7 +93,9 @@ export interface MainStartup
 export interface ExecutionCollaboration
 {
   SetBatchPermission?(rootSessionId: string, runId: string, permission: NonNullable<Options['permission']>): boolean;
+
   IsReadOnlyScope?(rootSessionId: string, scopeId?: string): Promise<boolean>;
+
   /** 新任务入队前核对原话题同办公室且已关闭；不恢复或改变原话题。 */
   ValidateFollowup?(rootSessionId: string, scopeId: string): Promise<void>;
 
@@ -489,6 +492,7 @@ export class WorkspaceExecutionManager
       runId: string;
 
       SetPermission?: (permission: NonNullable<Options['permission']>) => void;
+
       isMain: boolean;
 
       loop: Awaited<ReturnType<typeof createWorkspaceLoop>>;
@@ -523,9 +527,13 @@ export class WorkspaceExecutionManager
   SetOfficePermission(taskId: string, runId: string, permission: NonNullable<Options['permission']>)
   {
     const active = this.active.get(taskId);
-    if (!active && this.collaboration?.SetBatchPermission?.(taskId, runId, permission)) return;
+
+    if (!active && this.collaboration?.SetBatchPermission?.(taskId, runId, permission))
+      return;
+
     if (!active || active.runId !== runId || !active.SetPermission)
       throw new Error('当前 Office 运行已结束或使用固定权限');
+
     active.SetPermission(permission);
   }
 
@@ -814,19 +822,22 @@ export class WorkspaceExecutionManager
       const executionModel = fresh ? freshExecutionModel : !source && !startup && (!resume || previousModel === 'agent-tools-v1') ? 'agent-tools-v1' : 'legacy';
 
       let permission = options.permission ?? (options.allowNativeExecution ? 'execute' : 'read');
+
       let permissionRevision = 0;
+
       const scopeId = admissionWait?.scopeId ?? continuation?.scopeId ?? human?.scopeId;
+
       const fixedRead = !!recovery || (!replan && await this.collaboration?.IsReadOnlyScope?.(task.taskId, scopeId));
-      if (fixedRead) permission = 'read';
+
+      if (fixedRead)
+        permission = 'read';
+
       const livePermission = !fixedRead;
+
       const listeners = new Set<() => void>();
-      const setPermission = (next: typeof permission) => {
-        if (permission === next) return;
-        permission = next;
-        permissionRevision++;
-        for (const listener of listeners) listener();
-        this.approvalQueue.Cancel(task.taskId, 'Office 权限已变更，请按当前权限重新请求');
-      };
+
+      const setPermission = (next: typeof permission) => { if (permission === next) return; permission = next; permissionRevision++; for (const listener of listeners) listener(); this.approvalQueue.Cancel(task.taskId, 'Office 权限已变更，请按当前权限重新请求'); };
+
       loop = await this.factory({
         ...options, permission, SetBatchPermission: livePermission ? setPermission : undefined, OnPermissionChange: livePermission ? listener => { listeners.add(listener); return () => { listeners.delete(listener); }; } : undefined, PermissionRevision: livePermission ? () => permissionRevision : undefined, ReadPermission: livePermission ? () => permission : undefined, allowNativeExecution: options.permission ? options.permission !== 'read' : options.allowNativeExecution, mode: task.mode, RequestQuestion: (args, signal) => this.questions.Ask(task.taskId, args, signal), RequestApproval: call => this.approvalQueue.Request(task.taskId, call), OnEvent: event => { for (const listener of this.listeners) try { listener(event) } catch { /* observers are not transactions */ } }
       }, structuredClone(task), { executionModel, requestId: source?.kind === 'member-results' || source?.kind === 'goal-repair' ? source.continuationId : randomUUID(), scopeId: admissionWait?.scopeId ?? human?.scopeId ?? continuation?.scopeId ?? recovery?.commandId ?? replan?.commandId, wait: admissionWait, signal: controller.signal, ...(preparedInput ? { preparedInputImages: preparedInput.images } : queuedImages ? { preparedInputImages: queuedImages } : {}) });
@@ -977,6 +988,7 @@ export class WorkspaceExecutionManager
           runId: string;
 
           SetPermission?: (permission: NonNullable<Options['permission']>) => void;
+
           isMain: boolean;
 
           loop: typeof loop;

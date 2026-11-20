@@ -74,11 +74,17 @@ export class EngineArtifacts implements EngineArtifactsPort
       if (!pkg.adapter)
         continue;
 
-      for (const previous of target.values()) {
-        if (previous.kind !== pkg.kind) continue;
+      for (const previous of target.values())
+      {
+        if (previous.kind !== pkg.kind)
+          continue;
+
         const type = (p: EnginePackage) => p.plugin?.type ?? (p.kind === 'world-clock' ? 'connector' : 'engine');
-        if (type(previous) !== type(pkg) || (previous.plugin?.type === 'engine' && pkg.plugin?.type === 'engine' && previous.plugin.profile !== pkg.plugin.profile)) throw Error('同一插件不能更改类型或兼容协议');
+
+        if (type(previous) !== type(pkg) || (previous.plugin?.type === 'engine' && pkg.plugin?.type === 'engine' && previous.plugin.profile !== pkg.plugin.profile))
+          throw Error('同一插件不能更改类型或兼容协议');
       }
+
       const existing = [...target.values()].find(item => item.kind === pkg.kind && item.adapter?.version === pkg.adapter!.version);
 
       if (existing && JSON.stringify(existing) !== JSON.stringify(pkg))

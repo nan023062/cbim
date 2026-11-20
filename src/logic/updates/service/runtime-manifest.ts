@@ -5,6 +5,7 @@
 import { createHash, createPublicKey, verify } from 'node:crypto';
 
 import { z } from 'zod';
+
 import { enginePluginPackageHeader, enginePluginAdapterEntry } from '../../../framework/kernel';
 
 const hash = z.string().regex(/^[a-f0-9]{64}$/);
@@ -17,7 +18,7 @@ const fileSchema = z.object({ path: z.string().min(1).max(600), bytes: z.number(
 
 const packageSchema = z.object({ tag: asset, name: asset, bytes: z.number().int().positive().max(2 ** 31), sha256: hash, files: z.array(fileSchema).min(1).max(50000) }).strict();
 
-export const enginePackageSchema = enginePluginPackageHeader.extend({ plugin: z.discriminatedUnion('type', [z.object({ type: z.literal('connector') }).strict(), z.object({ type: z.literal('engine'), profile: z.enum(['pi','claude-code','codex','memory']), label: z.string().trim().min(1).max(100) }).strict()]).optional(), adapter: enginePluginAdapterEntry.optional(), dependencies: z.array(z.object({ kind: z.string().regex(/^[a-z][a-z0-9-]{0,47}$/), identity: hash }).strict()).max(16).optional(), package: packageSchema }).strict();
+export const enginePackageSchema = enginePluginPackageHeader.extend({ plugin: z.discriminatedUnion('type', [z.object({ type: z.literal('connector') }).strict(), z.object({ type: z.literal('engine'), profile: z.enum(['pi', 'claude-code', 'codex', 'memory']), label: z.string().trim().min(1).max(100) }).strict()]).optional(), adapter: enginePluginAdapterEntry.optional(), dependencies: z.array(z.object({ kind: z.string().regex(/^[a-z][a-z0-9-]{0,47}$/), identity: hash }).strict()).max(16).optional(), package: packageSchema }).strict();
 
 const manifestSchema = z.object({
   schema: z.literal(1), codeVersion: version, resourceVersion: z.number().int().positive(), coldFingerprint: hash,

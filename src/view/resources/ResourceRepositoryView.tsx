@@ -15,7 +15,6 @@ import type { Snapshot, WorkspaceView } from '../../bridge/contracts/workspace';
 
 import { WorkspaceResourceTransfer } from './WorkspaceResourceTransfer';
 
-
 import { applicableResourceKind, creatableResourceKinds, type ApplicableResourceKind } from './resource-application';
 
 type Draft =

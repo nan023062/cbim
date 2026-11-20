@@ -20,15 +20,13 @@ export class GitWorktrees implements WorkspaceInstanceFactory
   private async Git(directory: string, ...args: string[]): Promise<string>
   {
     const { stdout } = await execute('git', ['-C', directory, ...args], { windowsHide: true, encoding: 'utf8' });
+
     return stdout.replace(/[\r\n]+$/, '');
   }
 
   private async Prepare(repository: string, target: string): Promise<string>
   {
-    const registered = async () => {
-      const list = await this.Git(repository, 'worktree', 'list', '--porcelain', '-z');
-      return list.split('\0').some(field => field.startsWith('worktree ') && path.relative(target, field.slice(9)) === '');
-    };
+    const registered = async () => { const list = await this.Git(repository, 'worktree', 'list', '--porcelain', '-z'); return list.split('\0').some(field => field.startsWith('worktree ') && path.relative(target, field.slice(9)) === ''); };
 
     if (!await registered())
     {
@@ -44,7 +42,9 @@ export class GitWorktrees implements WorkspaceInstanceFactory
     }
 
     const actual = await fs.realpath(target);
+
     const root = await fs.realpath(await this.Git(target, 'rev-parse', '--show-toplevel'));
+
     const common = async (cwd: string) => fs.realpath(await this.Git(cwd, 'rev-parse', '--path-format=absolute', '--git-common-dir'));
 
     if (path.relative(target, actual) || path.relative(actual, root) || path.relative(await common(repository), await common(target)))
@@ -63,35 +63,33 @@ export class GitWorktrees implements WorkspaceInstanceFactory
       throw new Error('工作树需要 Office 身份和仓库绝对路径');
 
     const repository = await fs.realpath(repositoryRoot);
+
     const top = await fs.realpath(await this.Git(repository, 'rev-parse', '--show-toplevel'));
 
     if (path.relative(repository, top))
       throw new Error('工作树需要仓库根目录');
 
     await fs.mkdir(this._storage, { recursive: true });
+
     const storage = await fs.realpath(this._storage);
+
     const target = path.join(storage, hash(JSON.stringify([repository, officeId])));
+
     let opening = this._opening.get(target);
 
     if (!opening)
     {
       opening = this.Prepare(repository, target).finally(() => this._opening.delete(target));
+
       this._opening.set(target, opening);
     }
 
     const root = await opening;
+
     let released = false;
 
     return {
-      ResolveDirectory: async relative => {
-        if (released || !relative || path.isAbsolute(relative) || relative.split(/[\\/]/).includes('..'))
-          throw new Error('工作树使用权或相对目录无效');
-        const resolved = await fs.realpath(path.resolve(root, relative));
-        const within = path.relative(root, resolved);
-        if (within === '..' || within.startsWith('..' + path.sep) || path.isAbsolute(within) || !(await fs.stat(resolved)).isDirectory())
-          throw new Error('业务目录必须位于当前工作树内');
-        return resolved;
-      },
+      ResolveDirectory: async relative => { if (released || !relative || path.isAbsolute(relative) || relative.split(/[\\/]/).includes('..')) throw new Error('工作树使用权或相对目录无效'); const resolved = await fs.realpath(path.resolve(root, relative)); const within = path.relative(root, resolved); if (within === '..' || within.startsWith('..' + path.sep) || path.isAbsolute(within) || !(await fs.stat(resolved)).isDirectory()) throw new Error('业务目录必须位于当前工作树内'); return resolved; },
       Release: async () => { released = true; }
     };
   }

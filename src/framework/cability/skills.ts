@@ -25,7 +25,14 @@ export class SkillScope
   public static Resolve(agentId: string, inventories: ReadonlyMap<string, readonly SkillDefinition[]>, parentTeam: (id: string) => string | undefined)
   {
     const chain: string[] = [];
-    const entries: (SkillDefinition & { owner: string; scope: 'agent' | 'team' })[] = [];
+
+    const entries: (SkillDefinition &
+    {
+      owner: string;
+
+      scope: 'agent' | 'team'
+    })[] = [];
+
     const visited = new Set<string>();
 
     for (let owner: string | undefined = agentId; owner !== undefined; owner = parentTeam(owner))
@@ -34,6 +41,7 @@ export class SkillScope
         throw new Error('Skill 所属组织存在循环');
 
       visited.add(owner);
+
       chain.push(owner);
 
       for (const skill of inventories.get(owner) ?? [])

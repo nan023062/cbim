@@ -1,5 +1,6 @@
 /** WorkspaceInstance 表示一个已打开的 Workspace，供 Office 工位访问该业务目录，并管理本次使用的生命周期。 */
 import { changeEvents } from '../events';
+
 import type { Workspace } from './workspace';
 
 /** 宿主定位 Office 专属工作副本所需的身份及目录。 */
@@ -32,11 +33,15 @@ export interface WorkspaceInstanceFactory
 export class WorkspaceInstance
 {
   private readonly released = changeEvents<void>();
+
   public readonly OnClosed = this.released.Subscribe;
 
   private _closed = false;
 
-  public get closed() { return this._closed; }
+  public get closed()
+  {
+    return this._closed;
+  }
 
   private _closing?: Promise<void>;
 
@@ -54,11 +59,13 @@ export class WorkspaceInstance
     try
     {
       const directory = await worktree.ResolveDirectory(context.relativeDirectory);
+
       return new WorkspaceInstance(crypto.randomUUID(), description, directory, worktree);
     }
     catch (error)
     {
       await worktree.Release();
+
       throw error;
     }
   }

@@ -1,11 +1,10 @@
 import { readProjectOrganization } from '../../project';
+
 import type { Office } from '../../../framework/office';
 
 import { composeTaskSkills } from '../../../framework/office';
 
 import { engineConfigurations } from '../../engines/service';
-
-
 
 /**
  * 作用定位：把 Agent 对象与 execution 的调用协调器、LoopRuntime 装配到工作区真实引擎、准入和请求账本。
@@ -21,6 +20,7 @@ import { prepareAgentBusiness, type AgentBusinessServices } from './agent-busine
 import { randomUUID } from 'node:crypto';
 
 import { AgentRole, type AgentDescription } from '../../../framework/cability/agent';
+
 import { type AgentToolContext } from '../../execution/rules/agent-call-contracts';
 
 import { AgentCallScheduler } from '../../execution/assembly/agent-call-scheduler';
@@ -58,6 +58,7 @@ import type { RequestBudgetPort } from '../../budget/rules/request-budget';
 export interface AgentCallAssemblyInput
 {
   office: Office;
+
   businessServices?: AgentBusinessServices;
 
   workspace: Workspace;
@@ -69,6 +70,7 @@ export interface AgentCallAssemblyInput
   modelAdapters?: ExecutionServices['modelAdapters'];
 
   connectorProducts?: ExecutionServices['connectorProducts'];
+
   connectorServers?: ExecutionServices['ConnectorServers'];
 
   extensions?: ExecutionServices['extensions'];
@@ -103,9 +105,11 @@ export function createAgentCallAssembly(input: AgentCallAssemblyInput)
   let directoryRead: ReturnType<typeof readMembers> | undefined;
 
   const officeInstance = input.office;
+
   const office = officeInstance.members;
 
   const organization = office.organization;
+
   const observe = async () => { await listMembers(); return { organization: { kind: organization.kind, id: organization.id, children: organization.children }, modules: [] }; };
 
   const rootAgent = new AgentRole({ id: task.agentId ?? 'cbim:main', name: '主 Agent', position: '接收用户任务、协调岗位并向用户交付成果', principles: '依据实际结果验证交付，明确尚未完成的工作。', effectiveSkills: [], references: [], instructions: '', ...(llm ? { model: { engine: options.engine ?? llm.profile.engine ?? 'pi', profileId: llm.profile.id, modelId: llm.profile.model } } : {}) } satisfies AgentDescription, { workspaceId: workspace.entry.id, taskId: task.taskId }, observe);
@@ -139,7 +143,9 @@ export function createAgentCallAssembly(input: AgentCallAssemblyInput)
   async function readMembers()
   {
     const { children, ...directory } = await readProjectOrganization(workspace, members, unsupportedBudget);
+
     office.SetMembers(children);
+
     return directory;
   }
 
@@ -194,7 +200,6 @@ export function createAgentCallAssembly(input: AgentCallAssemblyInput)
 
       const childTaskId = request.child.taskId,
         definition = detail.member.adoption.configuration;
-
 
       const permit = admission.manager.Attempt({ workspaceId: workspace.entry.id, rootSessionId: task.taskId, taskId: childTaskId, scopeId, requestId: childTaskId, ownerEpoch: admission.ownerEpoch, source: 'direct', workspacePermission: options.ReadPermission ? 'execute' : officePermission() }, {
         // 根独占租约仍在；Runtime 已核实父工具批次唯一，不能将此入口暴露给任意任务。

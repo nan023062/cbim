@@ -3,6 +3,7 @@
  * 设计原因：长期 OfficeMemberSession 才是人物，执行实例不是分身；动画只消费可靠事实，不能改变领取、退出或验收。旧图、跨办公室和重开不会重演历史。
  */
 import { defaultWorkerId, taskWorkerId } from '../../bridge/contracts/dispatch';
+
 import type { GraphSnapshot, OfficeMemberSession, ScopeSummary, TaskNode } from '../../bridge/contracts/dispatch';
 
 import { teamConversations } from '../execution-view/team-conversations';

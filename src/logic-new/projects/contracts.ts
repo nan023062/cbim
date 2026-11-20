@@ -21,4 +21,3 @@ export interface Catalog
 
   recent: string[];
 }
-

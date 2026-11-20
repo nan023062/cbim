@@ -158,6 +158,7 @@ type Batch =
     runId: string;
 
     permissionSource?: Pick<WorkspaceLoopOptions, 'ReadPermission' | 'PermissionRevision' | 'OnPermissionChange' | 'SetBatchPermission'>;
+
     options: Options;
 
     tasks: string[];
@@ -234,12 +235,7 @@ export class AutoCollaboration
     this.releaseListener = lease.ObserveRelease(() => this.Schedule());
 
     execution.AttachCollaboration({
-      SetBatchPermission: (rootSessionId, runId, permission) => {
-        const batch = this.batches.get(runId);
-        if (!batch || batch.task.taskId !== rootSessionId || batch.stopped || batch.cycle.stopped || batch.cycle.ending || this.cycles.get(rootSessionId) !== batch.cycle || !batch.permissionSource?.SetBatchPermission) return false;
-        batch.permissionSource.SetBatchPermission(permission);
-        return true;
-      },
+      SetBatchPermission: (rootSessionId, runId, permission) => { const batch = this.batches.get(runId); if (!batch || batch.task.taskId !== rootSessionId || batch.stopped || batch.cycle.stopped || batch.cycle.ending || this.cycles.get(rootSessionId) !== batch.cycle || !batch.permissionSource?.SetBatchPermission) return false; batch.permissionSource.SetBatchPermission(permission); return true; },
       IsReadOnlyScope: async (rootSessionId, scopeId) => scopeId ? !!(await dispatch.goals.Inspect({ workspaceId: owner.entry.id, rootSessionId }, scopeId)).recovery : !!this.cycles.get(rootSessionId)?.readOnly,
       ValidateFollowup: async (rootSessionId, scopeId) => { const scope = await dispatch.goals.Inspect({ workspaceId: owner.entry.id, rootSessionId }, scopeId); if (scope.status !== 'closed') throw new Error('原话题尚未结束，请在话题内明确补充') }, InterruptTopic: (request, stopMain) => this.InterruptTopic(request, stopMain), ActiveInputReceipt: (rootSessionId, runId, queueId) => dispatch.activeInputs.Inspect({ workspaceId: owner.entry.id, rootSessionId }, runId, queueId), InsertActiveInput: (rootSessionId, runId, queueId, input, signal, send) => this.InsertActiveInput(rootSessionId, runId, queueId, input, signal, send), HoldMain: runId => dispatch.budgets.HoldMain(runId), Busy: id => this.Busy(id), Waiting: id => this.waitingSlots.has(id), HumanContinuationReceipt: query => dispatch.humanContinuations.Inspect(query), HumanContinuationPreflight: request => this.HumanContinuationPreflight(request), AcceptHumanContinuation: (request, task, runId, signal) => this.AcceptHumanContinuation(request, task, runId, signal), ReplanReceipt: query => dispatch.replans.Inspect(query), ReplanPreflight: request => this.ReplanPreflight(request), AcceptReplan: (request, task, context) => this.AcceptReplan(request, task, context), RecoveryReceipt: query => dispatch.recoveries.Inspect(query), RecoveryPreflight: request => this.RecoveryPreflight(request), AcceptRecovery: (request, task, context) => this.AcceptRecovery(request, task, context), RecoveryContext: rootSessionId => dispatch.recoveries.LatestContext({ workspaceId: owner.entry.id, rootSessionId }), RecoveryRunIds: rootSessionId => dispatch.recoveries.PriorRunIds({ workspaceId: owner.entry.id, rootSessionId }), ContinuationReceipt: query => dispatch.continuations.Inspect(query), ContinuationCheckpoint: request => this.ContinuationCheckpoint(request), AcceptContinuation: (request, task, runId, trusted) => this.AcceptContinuation(request, task, runId, trusted), Starting: (task, options, source, message, runId, queuedTopicId, followupOf) => this.Starting(task, source, options, message, options.attachmentIds, runId, queuedTopicId, followupOf), StartFailed: (task, source, error) => this.StartFailed(task, source, error), Settled: (task, _options, summary) => this.Settled(task, summary), Stop: id => this.Stop(id)
     });
@@ -785,7 +781,33 @@ export class AutoCollaboration
 
     cycle.mainRuns.add(runId);
 
-    const batch: Batch = { permissionSource: cycle.readOnly ? undefined : { SetBatchPermission: options.SetBatchPermission, ReadPermission: options.ReadPermission, PermissionRevision: options.PermissionRevision, OnPermissionChange: options.OnPermissionChange }, cycle, task: structuredClone(task), runId, options: { engine: options.engine, ...(options.modelRoles === undefined ? {} : { modelRoles: structuredClone(options.modelRoles) }), collaborationMode: cycle.collaborationMode, provider: options.provider, model: options.model, profileId: options.profileId, get permission() { return options.ReadPermission?.() ?? permission; }, get allowNativeExecution() { return this.permission !== 'read'; }, turnTimeoutMs: options.turnTimeoutMs }, tasks: this.preparedTasks.get(runId) ?? [], calls: new Set(), stopped: false, failures: new Map(), watched: new Set(), admissions: new Map() };
+    const batch: Batch = {
+      permissionSource: cycle.readOnly ? undefined : { SetBatchPermission: options.SetBatchPermission, ReadPermission: options.ReadPermission, PermissionRevision: options.PermissionRevision, OnPermissionChange: options.OnPermissionChange }, cycle, task: structuredClone(task), runId, options: {
+        engine: options.engine,
+
+        ...(options.modelRoles === undefined ? {} : { modelRoles: structuredClone(options.modelRoles) }),
+
+        collaborationMode: cycle.collaborationMode,
+
+        provider: options.provider,
+
+        model: options.model,
+
+        profileId: options.profileId,
+
+        get permission()
+        {
+          return options.ReadPermission?.() ?? permission;
+        },
+
+        get allowNativeExecution()
+        {
+          return this.permission !== 'read';
+        },
+
+        turnTimeoutMs: options.turnTimeoutMs
+      }, tasks: this.preparedTasks.get(runId) ?? [], calls: new Set(), stopped: false, failures: new Map(), watched: new Set(), admissions: new Map()
+    };
 
     this.preparedTasks.delete(runId);
 
@@ -968,7 +990,10 @@ export class AutoCollaboration
   MemberPermission(rootSessionId: string, scopeId?: string)
   {
     const cycle = this.cycles.get(rootSessionId);
-    if (!cycle || cycle.scopeId !== scopeId || cycle.readOnly || cycle.stopped || cycle.ending) return;
+
+    if (!cycle || cycle.scopeId !== scopeId || cycle.readOnly || cycle.stopped || cycle.ending)
+      return;
+
     for (const batch of this.batches.values())
       if (batch.cycle === cycle && !batch.stopped && batch.permissionSource?.ReadPermission)
         return batch.permissionSource;
@@ -1374,6 +1399,7 @@ export class AutoCollaboration
           const failureLimit = cycle.tasks.size
             ? memberFailureStopReason(await this.dispatch.Snapshot(this.Identity(cycle)), cycle.scopeId)
             : undefined;
+
           const blockedReason = failureLimit || (cycle.workRequested && !scope.goal?.plan ? '业务规划或派发未能建立有效目标计划，请核实缺口后继续' : undefined);
 
           if (cycle.cancelRequested || this.closed)
@@ -1381,8 +1407,11 @@ export class AutoCollaboration
           else if (blockedReason)
           {
             await this.dispatch.goals.Block(this.Identity(cycle), cycle.scopeId, blockedReason);
+
             this.reportIssue(cycle.task.taskId, new Error(blockedReason));
+
             await this.execution.PauseCollaboration(cycle.task.taskId, '目标尚未完成：' + blockedReason);
+
             finalOutcome = 'failed';
           }
           else if (scope.goal?.review?.decision === 'awaiting_user')

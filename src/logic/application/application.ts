@@ -1,4 +1,5 @@
 import { openProjectOffice } from '../project';
+
 /**
  * 作用定位：Logic 层的业务应用入口，持有应用级服务和按工作区装配的唯一服务实例。
  * 设计原因：集中管理打开、退役、排空和关闭顺序；通信适配留在 Bridge，业务服务不反向读取本类。
@@ -38,6 +39,7 @@ import { BudgetSettings } from '../budget/settings/budget-settings';
 import { GitHubFeedback } from '../feedback/service';
 
 import type { RuntimeMonitor } from '../../framework/monitor';
+
 import type { CbimRuntime } from '../../framework/cbim-runtime';
 
 import { createExecutionManager } from './assembly/execution';
@@ -80,8 +82,6 @@ import type { WorkspaceExecutionManager } from '../conversation/runtime/executio
 
 import { Catalog } from '../workspace/service/catalog';
 
-
-
 import { createApplicationInstances } from './assembly/application-instances';
 
 import { Paths } from '../workspace/service/paths';
@@ -97,7 +97,9 @@ import type { ResourceRepositories } from '../../resource/service';
 import { RepositoryConnections } from '../../resource/connections/service/repository-connections';
 
 import { bindConnectorPackages, managedConnectorPackages, type ConnectorPackages } from './assembly/connector-packages';
+
 import { connectorRegistrySchema } from '../../framework/connectors';
+
 import type { WorkspaceMembers } from '../team/service/workspace-members';
 
 import type { ModuleOwnerships } from '../workspace/service/module-ownerships';
@@ -110,8 +112,11 @@ interface ApplicationPlatform
 
   /** 源码或其它可信宿主提供的引擎解析器；已安装包管理器存在时优先使用后者。 */
   engineRuntimes?: EngineRuntimeResolver;
+
   modelAdapters?: ReturnType<typeof import('../engines').createModelAdapterRegistry>;
+
   connectorPackages?: ConnectorPackages;
+
   connectorServers?: import('../execution/assembly/loop-engine').ExecutionServices['ConnectorServers'];
 
   engineExtensions?: readonly import('../execution/rules/extensions').ExecutionExtension[];
@@ -301,10 +306,15 @@ export class Application
   public constructor(paths: Paths, secretCipher?: SecretCipher, platform: ApplicationPlatform = {})
   {
     this.paths = paths;
+
     this._connectorProducts = platform.connectorPackages && bindConnectorPackages(platform.connectorPackages);
+
     const instances = createApplicationInstances(paths);
+
     this.cbimRuntime = instances.cbimRuntime;
+
     this.resources = instances.resources;
+
     this.monitor = instances.monitor;
 
     this.platform = platform;
@@ -312,39 +322,16 @@ export class Application
     if (platform.engineArtifacts)
     {
       const products = managedConnectorPackages(path.join(paths.userRoot, 'connector-installations.json'), platform.engineArtifacts);
+
       this.connectorPackages = products.manager;
+
       const custom = this._connectorProducts;
+
       this._connectorProducts = {
-        Open: async (context, agentId, moduleIds, signal, definitionId) => {
-          const snapshot = await this.Workspace(context.workspaceId).Read();
-          const definitions = new Set([(definitionId ?? agentId) + '/agent.json', ...moduleIds.map(id => id + '/module.json')]);
-          const refs = new Set<string>();
-          for (const file of snapshot.files.filter(file => definitions.has(file.path))) {
-            const ids = JSON.parse(file.text).connectors;
-            if (Array.isArray(ids)) for (const id of ids) refs.add(id);
-          }
-          const registry = snapshot.files.find(file => file.path === '.cbim/connectors/registry.json');
-          const ids = refs.size && registry ? connectorRegistrySchema.parse(JSON.parse(registry.text)).connectors.flatMap(entry => refs.has(entry.id) && 'productId' in entry ? [entry.productId] : []) : [];
-          const other = await custom?.Open(context, agentId, moduleIds, signal);
-          if (!ids.length) return other ?? { sessions: [], Release: async () => {} };
-          const leases = other ? [other] : [];
-          const release = async () => {
-            const results = await Promise.allSettled(leases.map(lease => lease.Release()));
-            const errors = results.flatMap(result => result.status === 'rejected' ? [result.reason] : []);
-            if (errors.length) throw new AggregateError(errors, '连接器释放失败');
-          };
-          try {
-            for (const id of [...new Set(ids)].sort()) leases.push(await products.Open(id, context, signal));
-            return {
-              sessions: leases.flatMap(lease => lease.sessions),
-              Release: release
-            };
-          } catch (error) {
-            await release();
-            throw error;
-          }
-        }
+        Close: async () => { await custom?.Close(); },
+        Open: async (context, agentId, moduleIds, signal, definitionId) => { const snapshot = await this.Workspace(context.workspaceId).Read(); const definitions = new Set([(definitionId ?? agentId) + '/agent.json', ...moduleIds.map(id => id + '/module.json')]); const refs = new Set<string>(); for (const file of snapshot.files.filter(file => definitions.has(file.path))) { const ids = JSON.parse(file.text).connectors; if (Array.isArray(ids)) for (const id of ids) refs.add(id); } const registry = snapshot.files.find(file => file.path === '.cbim/connectors/registry.json'); const ids = refs.size && registry ? connectorRegistrySchema.parse(JSON.parse(registry.text)).connectors.flatMap(entry => refs.has(entry.id) && 'productId' in entry ? [entry.productId] : []) : []; const other = await custom?.Open(context, agentId, moduleIds, signal); if (!ids.length) return other ?? { sessions: [], Release: async () => { } }; const leases = other ? [other] : []; const release = async () => { const results = await Promise.allSettled(leases.map(lease => lease.Release())); const errors = results.flatMap(result => result.status === 'rejected' ? [result.reason] : []); if (errors.length) throw new AggregateError(errors, '连接器释放失败'); }; try { for (const id of [...new Set(ids)].sort()) leases.push(await products.Open(id, context, signal)); return { sessions: leases.flatMap(lease => lease.sessions), Release: release }; } catch (error) { await release(); throw error; } }
       };
+
       this.enginePackages = new EnginePackages(
         path.join(paths.userRoot, 'engine-installations.json'),
         platform.engineArtifacts
@@ -377,8 +364,6 @@ export class Application
     this.catalog = new Catalog(paths);
 
     this.rules = new Rules();
-
-
 
     this.repositoryConnections = new RepositoryConnections(
       path.join(paths.userRoot, 'repository-connections.json'),
@@ -596,9 +581,12 @@ export class Application
   public async OpenWorkspaceInstance(workspaceId: string, rootSessionId: string, nodeId: string, relativeDirectory: string)
   {
     this.AssertServiceAvailable(workspaceId);
+
     const workspace = this.Workspace(workspaceId);
+
     const office = await openProjectOffice(this.cbimRuntime, workspace, rootSessionId, this.memberRegistries.get(workspaceId), true);
-    return office.OpenWorkspace( nodeId, workspace.entry.path, relativeDirectory);
+
+    return office.OpenWorkspace(nodeId, workspace.entry.path, relativeDirectory);
   }
 
   public Workspace(id: string)
@@ -667,6 +655,7 @@ export class Application
           await this.executions.get(id)?.Close();
 
           this.executions.delete(id);
+
           await this.cbimRuntime.CloseWorkspace(id);
 
           await this.memberExecutions.get(id)?.Close();
@@ -745,7 +734,9 @@ export class Application
                 admission,
                 () => this.budgetSettings.Read(),
                 this.platform.controlledFiles,
-                this.enginePackages ?? this.platform.engineRuntimes, this.platform.engineExtensions, this.platform.modelAdapters,
+                this.enginePackages ?? this.platform.engineRuntimes,
+                this.platform.engineExtensions,
+                this.platform.modelAdapters,
                 (rootSessionId, scopeId) => this.collaborations.get(id)?.MemberPermission(rootSessionId, scopeId)
               ),
               execution = createExecutionManager(
@@ -763,7 +754,11 @@ export class Application
                 this.web,
                 this.enginePackages ?? this.platform.engineRuntimes,
                 this.platform.controlledFiles,
-                { runs: businessRuns, controlledFiles, isolatedExecutions }, this.platform.engineExtensions, this.platform.modelAdapters, this.platform.connectorServers, this._connectorProducts
+                { runs: businessRuns, controlledFiles, isolatedExecutions },
+                this.platform.engineExtensions,
+                this.platform.modelAdapters,
+                this.platform.connectorServers,
+                this._connectorProducts
               );
 
             this.dispatchers.set(id, service);
@@ -874,7 +869,8 @@ export class Application
       await this.executions.get(id)?.Close();
 
       this.executions.delete(id);
-          await this.cbimRuntime.CloseWorkspace(id);
+
+      await this.cbimRuntime.CloseWorkspace(id);
 
       await this.memberExecutions.get(id)?.Close();
 
@@ -962,7 +958,7 @@ export class Application
     for (const id of this.admissionOwners.keys())
       this.RetireAdmission(id);
 
-    this.shutdownPromise = (async () => { await this.githubFeedback.Close(); await this.chatMaterials.Close(); await this.repositoryConnections.Close(); await Promise.allSettled([...this.opening.values()]); for (const id of this.admissionOwners.keys()) this.RetireAdmission(id); await Promise.all([...this.automationServices.values()].map((x) => x.scheduler.Close())); this.automationServices.clear(); await Promise.all([...this.collaborations.values()].map((x) => x.Close())); this.collaborations.clear(); await Promise.all([...this.executions.values(), ...this.memberExecutions.values()].map((x) => x.Close())); this.executions.clear(); this.monitor.Close(); await this.cbimRuntime.Close(); this.memberExecutions.clear(); await Promise.all([...this.controlledFileServices.values()].map((x) => x.Close())); this.controlledFileServices.clear(); await Promise.all([...this.isolatedExecutionServices.values()].map((x) => x.Close())); this.isolatedExecutionServices.clear(); await this.platform.controlledFiles?.Close(); await Promise.all([...this.running.values()].map((w) => w.PrepareClose())); await Promise.all([...this.dispatchers.values()].map((x) => x.Close())); this.dispatchers.clear(); this.memberRegistries.clear(); this.ownershipRegistries.clear(); for (const monitor of this.monitors.values()) monitor.Close(); await Promise.all([...this.histories.values()].map((x) => x.Close())); this.histories.clear(); this.monitors.clear(); const results = await Promise.allSettled([...this.running.values()].map((w) => w.Close())); await this.resources.Close(); this.running.clear(); const failed = results.find((r) => r.status === 'rejected'); if (failed?.status === 'rejected') throw failed.reason; })();
+    this.shutdownPromise = (async () => { await this.githubFeedback.Close(); await this.chatMaterials.Close(); await this.repositoryConnections.Close(); await Promise.allSettled([...this.opening.values()]); for (const id of this.admissionOwners.keys()) this.RetireAdmission(id); await Promise.all([...this.automationServices.values()].map((x) => x.scheduler.Close())); this.automationServices.clear(); await Promise.all([...this.collaborations.values()].map((x) => x.Close())); this.collaborations.clear(); await Promise.all([...this.executions.values(), ...this.memberExecutions.values()].map((x) => x.Close())); this.executions.clear(); await this._connectorProducts?.Close(); this.monitor.Close(); await this.cbimRuntime.Close(); this.memberExecutions.clear(); await Promise.all([...this.controlledFileServices.values()].map((x) => x.Close())); this.controlledFileServices.clear(); await Promise.all([...this.isolatedExecutionServices.values()].map((x) => x.Close())); this.isolatedExecutionServices.clear(); await this.platform.controlledFiles?.Close(); await Promise.all([...this.running.values()].map((w) => w.PrepareClose())); await Promise.all([...this.dispatchers.values()].map((x) => x.Close())); this.dispatchers.clear(); this.memberRegistries.clear(); this.ownershipRegistries.clear(); for (const monitor of this.monitors.values()) monitor.Close(); await Promise.all([...this.histories.values()].map((x) => x.Close())); this.histories.clear(); this.monitors.clear(); const results = await Promise.allSettled([...this.running.values()].map((w) => w.Close())); await this.resources.Close(); this.running.clear(); const failed = results.find((r) => r.status === 'rejected'); if (failed?.status === 'rejected') throw failed.reason; })();
 
     void this.shutdownPromise.catch((error) => { if (['CONTROLLED_FILE_DRAIN_PENDING', 'EXECUTION_SCOPE_DRAIN_PENDING'].includes(error?.code)) this.shutdownPromise = undefined; });
 

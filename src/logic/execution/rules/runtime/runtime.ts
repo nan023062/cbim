@@ -105,6 +105,7 @@ import type { WorkflowContractBinding } from '../../../tasks/rules/execution-con
 import { workflowHasEffects } from '../../../evidence/rules/workflow-evidence';
 
 import type { AgentCallReference } from '../../../../framework/office/call';
+
 import type { AgentToolContext, AgentToolsBinding } from '../agent-call-contracts';
 
 import { toolInputError } from '../../../tools/rules/input-validation';
@@ -115,17 +116,22 @@ import { scopedActiveInputHash } from '../../../tasks/rules/scope-active-input-r
 
 /** 运行装配端口；可靠启动确认与只读事件观察分开，业务状态不能靠观察回调提交。 */
 type ExecutionInstance = import('../../../../framework/kernel').EngineInstance<import('../types').InputImage, EngineEvent>;
+
 interface PreparedInstance
 {
   kind: string;
+
   Open(context: import('../types').EngineContext, signal: AbortSignal): Promise<ExecutionInstance>;
+
   Close(instance?: ExecutionInstance): Promise<void>;
 }
 
 export interface RuntimeOptions
 {
   extensions?: readonly import('../extensions').ExecutionExtension[];
+
   extensionCapability?: import('../engine-tools').EngineCapability;
+
   /** 可信调度装配的统一 Agent 工具；父工具批次必须独占才能把执行权交给子循环。 */
   AgentTools?(context: AgentToolContext): AgentToolsBinding;
 
@@ -186,12 +192,14 @@ export interface RuntimeOptions
   engineKind?: string;
 
   /** 每轮创建独立引擎，并以已确定的任务/运行身份装配工具；不接受模型指定身份。 */
-  engines: {
+  engines:
+  {
     Create(context: { task: TaskSpec; runId: string }): Promise<PreparedInstance> | PreparedInstance;
   };
 
   /** 复用此前纯分类结果授权或审批；没有约定的旧装配可缺 descriptor，不能在此重新解释已给分类。 */
   PermissionRevision?(): number;
+
   ToolPolicy(call: ToolCall, descriptor?: RunToolDescriptor): Promise<ToolDecision>;
 
   /** 引擎成功准备后、模型生成前确认启动；nativeSessionId 取已落盘 session.bound，允许 Codex 首次绑定服务端分配的 ID。失败中断本轮。 */
@@ -247,8 +255,6 @@ export class LoopRuntime
   private active = new Map<string,
     {
       runId: string;
-
-
 
       stop: () => Promise<void>;
 
@@ -435,8 +441,11 @@ export class LoopRuntime
     let excludedRunIds: string[] | undefined;
 
     let preparedEngine: PreparedInstance | undefined;
+
     let instance: ExecutionInstance | undefined;
+
     let turnId: string | undefined;
+
     const opening = new AbortController();
 
     try
@@ -646,8 +655,10 @@ export class LoopRuntime
         }
 
         const saved = await journal.Append(turnId ? { ...event, data: { ...event.data, turnId } } : event);
+
         for (const extension of this.options.extensions ?? [])
-          if (extension.OnEvent) void Promise.resolve().then(() => extension.OnEvent!(structuredClone(saved))).catch(() => {});
+          if (extension.OnEvent)
+            void Promise.resolve().then(() => extension.OnEvent!(structuredClone(saved))).catch(() => { });
 
         artifactCapture?.Observed(saved);
 
@@ -894,6 +905,7 @@ export class LoopRuntime
 
         // 记录失败不能阻止实际 abort；失败事实在收尾按 interrupted 保留，不把无日志停止写成正常求助。
         opening.abort();
+
         const stopped = await Promise.allSettled([turnId ? instance?.Stop(turnId) : undefined, agentTools?.Stop()]);
 
         for (const result of stopped)
@@ -935,6 +947,7 @@ export class LoopRuntime
                   return { allow: false, reason: '同一运行不能重复使用工具调用 ID' };
 
                 const permissionRevision = this.options.PermissionRevision?.();
+
                 const originalInput = structuredClone(call.input);
 
                 let normalizationError: unknown;
@@ -1000,12 +1013,22 @@ export class LoopRuntime
                     descriptor = this.options.DescribeTool?.(structuredClone(call), runId);
 
                     let veto: string | undefined;
+
                     for (const extension of this.options.extensions ?? [])
                     {
                       const response = await extension.BeforeToolCall?.({ ...structuredClone(call), runId, turnId }, opening.signal);
-                      if (response) { veto = response.block || '扩展阻止了工具调用'; break; }
+
+                      if (response)
+                      {
+                        veto = response.block || '扩展阻止了工具调用';
+
+                        break;
+                      }
                     }
-                    if (stopping) veto = '任务正在停止';
+
+                    if (stopping)
+                      veto = '任务正在停止';
+
                     if (!veto && descriptor && workflowHasEffects(descriptor.effects))
                       planVersion = taskTools.BeforeEffects();
 
@@ -1085,6 +1108,7 @@ export class LoopRuntime
                 const authorization = await emit({ type: decision.allow ? 'tool.allowed' : 'tool.denied', data: { id: call.id, name: call.name, input: call.input, ...decision, ...(Number.isSafeInteger(descriptor?.contractVersion) && descriptor!.contractVersion! > 0 ? { contractVersion: descriptor!.contractVersion } : {}), ...(!decision.allow ? { receipt: toolReceipt(identity, call, decision, 'denied') } : {}) } }, true);
 
                 const staleGrant = permissionRevision !== this.options.PermissionRevision?.() && descriptor?.effects.some(effect => ['business-write', 'knowledge-write', 'external-write', 'command'].includes(effect));
+
                 if ((stopping || staleGrant) && decision.allow)
                 {
                   decision = { ...decision, allow: false, reason: stopping ? '任务正在停止' : 'Office 权限已变更，原调用授权已失效' };
@@ -1123,11 +1147,14 @@ export class LoopRuntime
           if (control?.signal.aborted)
             await stop();
 
-          if (stopping) result = { status: 'cancelled' };
+          if (stopping)
+            result = { status: 'cancelled' };
           else
           {
             const turn = instance!.Submit(message);
+
             turnId = turn.turnId;
+
             result = await turn.done;
           }
 

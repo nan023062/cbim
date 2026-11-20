@@ -1,0 +1,127 @@
+/** 将 Office 的一轮对话交给已安装的引擎，关闭实例后释放固定版本。 */
+import { runUsage } from '../../contracts/usage';
+
+import path from 'node:path';
+
+import { mkdir } from 'node:fs/promises';
+
+import type { OfficeChat } from '../../../logic-new/projects/offices';
+
+import type { EnginePackages } from '../../../logic/engines/packages';
+
+import { loopEngineSchema } from '../../../logic/engines';
+
+import { EngineModelProfiles } from '../../../logic/engines/service';
+
+import type { LlmProfiles } from '../../../logic/models/service';
+
+import { packagedEngineAdapter } from '../../../logic/execution/assembly/engine-package-loader';
+
+export async function runOfficePlugin(packages: EnginePackages, profiles: LlmProfiles, ...[instructions, messages, signal, progress, turn]: Parameters<OfficeChat>)
+{
+  const started = Date.now();
+
+  await packages.Init();
+
+  const kind = loopEngineSchema.parse(turn.selection.engine);
+
+  const status = (await packages.List()).find(item => item.kind === kind);
+
+  if (!status?.active || !status.enabled)
+    throw Error('请先在执行引擎页安装并启用该引擎');
+
+  const llm = await new EngineModelProfiles(profiles).Resolve(turn.selection.profileId, turn.selection.modelId, kind);
+
+  const model = llm.profile.model;
+
+  progress({ phase: 'connecting', model });
+
+  const runId = crypto.randomUUID();
+
+  const agentHome = path.join(turn.dataRoot, 'office-engines', turn.session, kind);
+
+  const directory = path.join(agentHome, runId);
+
+  await mkdir(directory, { recursive: true });
+
+  const runtime = await packages.ResolveEngine(kind);
+
+  const release = runtime.retain?.();
+
+  try
+  {
+    signal.throwIfAborted();
+
+    const tools = { list: async () => [], call: async () => { throw Error('对话未绑定该工具'); } };
+
+    const engine = packagedEngineAdapter(kind, runtime).create({ runtime, llm, provider: 'cbim-' + llm.profile.id, model, agentHome, prompt: instructions, knowledge: tools });
+
+    const stop = () => { void engine.stop().catch(() => { }); };
+
+    signal.addEventListener('abort', stop, { once: true });
+
+    const usageEvents: Parameters<typeof runUsage>[0][number][] = [];
+
+    let contextUsed: number | undefined;
+
+    try
+    {
+      const goal = messages.at(-1)!.content;
+
+      const replies: string[] = [];
+
+      await engine.start({
+        runId, directory, task: { taskId: runId, workspaceId: turn.project, mode: 'chat', root: turn.root, goal, acceptance: [], moduleIds: [] },
+        engineHandoff: messages.length > 1 ? JSON.stringify(messages.slice(0, -1)) : undefined,
+        capabilities: [{ id: 'office-chat', tools, disableNativeTools: true }],
+        beforeTool: async () => ({ allow: false, reason: '对话未绑定该工具' }),
+        emit: async event => { if ((event.type === 'message' && event.data.usage) || (event.type === 'engine.status' && event.data.metric === 'run-usage')) usageEvents.push(event); if (event.type === 'engine.status' && event.data.metric === 'context' && typeof event.data.tokens === 'number') contextUsed = event.data.tokens; if (event.type === 'message' && event.data.role === 'assistant' && typeof event.data.text === 'string') replies.push(event.data.text); if (event.type === 'message.delta' || event.type === 'message') progress({ phase: 'writing', model }); },
+      });
+
+      signal.throwIfAborted();
+
+      progress({ phase: 'thinking', model });
+
+      const result = await engine.run(goal);
+
+      signal.throwIfAborted();
+
+      if (result.status !== 'completed')
+        throw Error(result.error || '引擎未完成回复');
+
+      const text = replies.join('\n\n').trim();
+
+      if (!text)
+        throw Error('引擎没有返回回复正文');
+
+      const usage = runUsage(usageEvents);
+
+      return {
+        text, metrics: {
+          model, elapsed: Date.now() - started, capacity: llm.profile.contextWindow, used: contextUsed,
+          output: usage.usageReported ? usage.output : undefined, cost: usage.costPartial ? undefined : usage.cost
+        }
+      };
+    }
+    finally
+    {
+      signal.removeEventListener('abort', stop);
+
+      try
+      {
+        await engine.close();
+      }
+      finally
+      {
+        const usage = runUsage(usageEvents);
+
+        if (usage.usageReported)
+          turn.ReportTokens(usage.total);
+      }
+    }
+  }
+  finally
+  {
+    release?.();
+  }
+}

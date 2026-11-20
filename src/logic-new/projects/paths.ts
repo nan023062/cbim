@@ -10,8 +10,6 @@ import os from 'node:os';
 
 import { hash } from '../../core/io/serialization';
 
-
-
 export class Paths
 {
   constructor(readonly userRoot = path.join(os.homedir(), '.cbim'), readonly installRoot = path.resolve('.'), readonly protectedRoots: readonly string[] = [])
@@ -54,5 +52,4 @@ export class Paths
 
     return path.join(this.userRoot, id)
   }
-
 }

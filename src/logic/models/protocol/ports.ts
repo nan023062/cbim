@@ -8,7 +8,6 @@ import type { LlmDefinition, LlmModel } from './config';
 import type { ResolvedEmbedding } from './embedding';
 
 /** 平台加密端口；不可用时拒绝保存密钥，不回退到明文。 */
-
 /** 单次运行的模型快照；仅冻结选中的接口，不携带候选地址或自动识别策略，不包含引擎身份。只有主进程装配和测试可以取得凭据。 */
 export interface ResolvedLlm
 {

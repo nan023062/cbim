@@ -18,6 +18,7 @@
  * 算法入口：通过 Core StringUtils 静态方法复用机制，本文件继续拥有原业务策略。
  */
 import { consumeStreamDelta } from '../stream-delta';
+
 import { assertSendReady, prepareEngineMessage } from '../message-input';
 
 import { StringUtils } from '../../core/io';
@@ -78,6 +79,7 @@ export interface PiOptions
   knowledge: KnowledgeBridge;
 
   ReadPermission?(): 'read' | 'ask' | 'execute';
+
   allowNativeExecution?: boolean;
 
   turnTimeoutMs?: number;

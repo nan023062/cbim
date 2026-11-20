@@ -51,7 +51,7 @@ const number = (value: unknown): value is number => typeof value === 'number' &&
 const record = (value: unknown): Record<string, unknown> | undefined => value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : undefined;
 
 /** 消息用于计时；完整原生汇总用于计量，两者不能相加，也不能用工具耗时稀释生成速度。 */
-function measureRun(events: readonly StoredEvent[]): RunMeasurement
+function measureRun(events: readonly Pick<StoredEvent, 'type' | 'data'>[]): RunMeasurement
 {
   let input = 0,
     output = 0,
@@ -165,7 +165,7 @@ function measureRun(events: readonly StoredEvent[]): RunMeasurement
  * 计算单个 runId 的已报告消耗，不要求运行成功或已经结束。
  * 调用方负责事件去重与跨轮求和；完整 run-usage 以覆盖方式收口，context 指标不参与累计消耗。
  */
-export function runUsage(events: readonly StoredEvent[]): RunUsage
+export function runUsage(events: readonly Pick<StoredEvent, 'type' | 'data'>[]): RunUsage
 {
   return measureRun(events).usage
 }

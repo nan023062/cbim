@@ -44,6 +44,7 @@ export interface RunPolicyContext
   workspaceId: string;
 
   permission: ChatPermission;
+
   ReadPermission?(): ChatPermission;
 
   /** 平台强制边界不可由“本次全部通过”跳过。 */
@@ -134,6 +135,7 @@ export async function authorizeRunTool(call: ToolCall, tool: RunToolDescriptor, 
   const writes = tool.effects.some(e => ['business-write', 'knowledge-write', 'external-write', 'command'].includes(e));
 
   const currentPermission = () => context.ReadPermission?.() ?? context.permission;
+
   if (writes && currentPermission() === 'read')
     return decision(false, '本轮为只读模式，禁止业务写入、知识写入、外部提交与命令执行');
 
@@ -148,7 +150,9 @@ export async function authorizeRunTool(call: ToolCall, tool: RunToolDescriptor, 
       return decision(false, guarded.reason)
   }
 
-  if (writes && currentPermission() === 'read') return decision(false, 'Office 已切换为只读');
+  if (writes && currentPermission() === 'read')
+    return decision(false, 'Office 已切换为只读');
+
   if (writes && currentPermission() === 'ask')
   {
     if (!context.Approve)
@@ -156,7 +160,9 @@ export async function authorizeRunTool(call: ToolCall, tool: RunToolDescriptor, 
 
     const approved = await context.Approve(call);
 
-    if (currentPermission() === 'read') return decision(false, 'Office 已切换为只读');
+    if (currentPermission() === 'read')
+      return decision(false, 'Office 已切换为只读');
+
     return decision(approved.allow, approved.reason);
   }
 

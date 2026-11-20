@@ -708,12 +708,9 @@ export class FileDispatchStore implements DispatchStore
         valid(!this.ownerProtocolSeen || body.executionProtocol === 'module_owner_v1', '负责人执行协议开始后不能回退旧日志格式');
 
         const mutation = body.mutation;
-        const sessions = mutation.teamSessions?.map(value => {
-          if ('officeId' in value) return value;
-          const old = value as { workspaceId: string; rootSessionId: string; sessionId: string; agentId: string; teamId: string; createdAt: string };
-          valid(typeof old.agentId === 'string' && typeof old.teamId === 'string', '旧会话身份不完整');
-          return { workspaceId: old.workspaceId, officeId: old.rootSessionId, workerId: defaultWorkerId(old.agentId), sessionId: old.sessionId, createdAt: old.createdAt };
-        });
+
+        const sessions = mutation.teamSessions?.map(value => { if ('officeId' in value) return value; const old = value as { workspaceId: string; rootSessionId: string; sessionId: string; agentId: string; teamId: string; createdAt: string }; valid(typeof old.agentId === 'string' && typeof old.teamId === 'string', '旧会话身份不完整'); return { workspaceId: old.workspaceId, officeId: old.rootSessionId, workerId: defaultWorkerId(old.agentId), sessionId: old.sessionId, createdAt: old.createdAt }; });
+
         const next = this.Project(sessions ? { ...mutation, teamSessions: sessions } : mutation, body.command, body.executionProtocol ?? 'legacy');
 
         this.Publish(body, record.checksum, next);

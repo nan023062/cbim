@@ -1,4 +1,5 @@
 import { Organization } from '../../../framework/cability/organization';
+
 import { OfficeMembers, OfficeDispatcher, OfficeSchedule, type OfficeChildTask, type OfficeWorkflow } from '../../../framework/office';
 
 /**
@@ -25,6 +26,7 @@ import type { TaskSpec } from '../rules/types';
 import type { RunSummary } from '../rules/types';
 
 import type { AgentCallReference } from '../../../framework/office/call';
+
 import type { AgentCallContext, AgentCallLimits, AgentToolContext, AgentToolsBinding } from '../rules/agent-call-contracts';
 
 import { AgentConstraintError, agentCallToolName, agentListToolName, agentReplyToolName } from '../../../framework/office/call';
@@ -100,169 +102,7 @@ export class AgentCallScheduler
       GuardEffects: (effects) => this.humanBlocked.has(context.runId) && (!effects?.length || effects.some(effect => !['read', 'preview'].includes(effect))) ? 'AGENT_HUMAN_DECISION_REQUIRED: 意见不授权返工或修改，请等待新的用户执行指令' : undefined, AllowsWhileWaiting: (name) => { return this.schedule.Waiting(prefix) && [agentReplyToolName, agentListToolName, 'cbim_ask_user_question'].includes(name) }, Active: () => this.schedule.Active(prefix), Stop: async () => { for (const [key, controller] of this.reviewControllers) if (key.startsWith(prefix)) controller.abort(); await Promise.allSettled([...this.reviews].filter(([key]) => key.startsWith(prefix)).map(([, review]) => review.result)); await this.schedule.Stop(prefix) }, capability: {
         id: 'agent-call', instructions: ['明确业务模块的调用须提供 business.moduleIds 与 acceptance；宿主冻结该模块 Workflow。业务返回的 verification 只证明当时证据与文件一致，不替代人工验收；交付前用 cbim_agent_result_check 按原 callId 复核当前字节，失败不能报告完成。', '调用其他 Agent 与普通工具相同；结果和提问只返回直接调用方。仅可调用本轮实际配置能力。深度、并发或预算错误不是成功，不重复相同调用或绕过权限。'], tools: {
           list: async () => [...(agent?.definition.effectiveSkills?.length || workflows.length ? [{ name: 'cbim_agent_skill_read', description: '读取本次任务的岗位技能。读取业务 Workflow 时同时提供 workspaceId 和 skillId。', inputSchema: { type: 'object', properties: { skillId: { type: 'string' }, workspaceId: { type: 'string' } }, required: ['skillId'], additionalProperties: false } }] : []), ...(depth === 0 && this.ports.RequestReview ? [{ name: 'cbim_agent_result_review', description: '请用户评价本次子 Agent 交付。保存意见后再明确选择是否继续；文件变化不能接受，意见不授权自动返工。', inputSchema: { type: 'object', properties: { callId: { type: 'string' } }, required: ['callId'], additionalProperties: false } }] : []), { name: 'cbim_agent_result_check', description: '按当前调用者原 callId 重新核验子 Agent 的交付证据及实际文件；不重启执行，不代替用户验收。', inputSchema: { type: 'object', properties: { callId: { type: 'string' } }, required: ['callId'], additionalProperties: false } }, { name: agentReplyToolName, description: '回答原 Agent 调用返回的求助，等待原子运行继续；不创建新任务。result 必须对应原问题。', inputSchema: zodToJsonSchema(replyInput) as Record<string, unknown> }, ...(this.ports.List ? [{ name: agentListToolName, description: '读取已登记可调用 Agent 的真实 ID、名称、模型与可用性。', inputSchema: { type: 'object', properties: {}, additionalProperties: false } }] : []), { name: agentCallToolName, description: '调用一个已配置 Agent，等待其真实执行结果；执行 Agent 也可使用此工具。', inputSchema: zodToJsonSchema(callInput) as Record<string, unknown> }],
-          call: async (name, args, signal, id) =>
-          {
-            if (name === 'cbim_agent_skill_read' && agent && (agent.definition.effectiveSkills?.length || workflows.length))
-            {
-              signal.throwIfAborted();
-              const input = z.object({ skillId: z.string().min(1), workspaceId: z.string().min(1).optional() }).strict().parse(args);
-              if (input.workspaceId)
-              {
-                const workflow = workflows.find(item => item.workspaceId === input.workspaceId && item.skillId === input.skillId);
-                if (!workflow) throw new Error('当前任务没有采用该工作流');
-                return jsonToolResult(name, { workflow });
-              }
-              const skill = readRoleSkill(agent.definition, input.skillId);
-              return jsonToolResult(name, { position: agent.definition.position, skill });
-            }
-
-            if (name === 'cbim_agent_result_review')
-            {
-              const parsed = z.object({ callId: z.string().min(1) }).strict().safeParse(args);
-
-              if (!parsed.success || !id)
-                return errorResult('AGENT_REVIEW_INPUT', '需要原 callId');
-
-              if (depth !== 0 || !this.ports.RequestReview)
-                return errorResult('AGENT_REVIEW_UNAVAILABLE', '只有主 Agent 可以请求真实用户评价');
-
-              const key = prefix + id,
-                existing = this.reviews.get(key);
-
-              if (existing)
-                return existing.callId === parsed.data.callId ? existing.result : errorResult('AGENT_REVIEW_CONFLICT', '同一评审调用不能更换交付对象');
-
-              const controller = new AbortController();
-
-              this.reviewControllers.set(key, controller);
-
-              const result = this.Review(context, parsed.data.callId, id, AbortSignal.any([signal, controller.signal])).finally(() => this.reviewControllers.delete(key));
-
-              this.reviews.set(key, { callId: parsed.data.callId, result });
-
-              return result;
-            }
-
-            if (name === 'cbim_agent_result_check')
-            {
-              const parsed = z.object({ callId: z.string().min(1) }).strict().safeParse(args);
-
-              if (!parsed.success || !id)
-                return errorResult('AGENT_RESULT_INPUT', '需要原 callId');
-
-              try
-              {
-                signal.throwIfAborted();
-
-                if (this.closed)
-                  throw Error('调用已关闭');
-
-                context.AssertExclusive(id);
-
-                const check = this.checks.get(prefix + parsed.data.callId);
-
-                if (!check)
-                  return errorResult('AGENT_RESULT_UNAVAILABLE', '本调用者没有可核验的已完成业务调用');
-
-                return jsonToolResult(name, await check(signal))
-              }
-              catch (error)
-              {
-                return errorResult((error as
-                  {
-                    code?: string
-                  }).code ?? 'AGENT_RESULT_FAILED', String(error))
-              }
-            }
-
-            if (name === agentReplyToolName)
-            {
-              if (!id || signal.aborted || this.closed)
-                return errorResult('AGENT_CALL_CANCELLED', '答复调用已停止');
-
-              const parsed = replyInput.safeParse(args);
-
-              if (!parsed.success)
-                return errorResult('AGENT_REPLY_INPUT', '答复必须包含原 callId、questionId 和严格答案');
-
-              try
-              {
-                context.AssertExclusive(id);
-
-                const key = prefix + parsed.data.callId;
-                const exchange = this.schedule.Exchange(key);
-
-                if (!exchange)
-                  return errorResult('AGENT_CALL_IDENTITY', '原调用不属于当前调用者或已丢失，不重建执行');
-
-                const abort = () => this.schedule.Cancel(key, signal.reason);
-
-                signal.addEventListener('abort', abort, { once: true });
-
-                try
-                {
-                  return await exchange.Reply(parsed.data.questionId, parsed.data.result)
-                }
-                finally
-                {
-                  signal.removeEventListener('abort', abort)
-                }
-              }
-              catch (error)
-              {
-                return errorResult((error as
-                  {
-                    code?: string
-                  }).code ?? 'AGENT_REPLY_FAILED', error instanceof Error ? error.message : String(error))
-              }
-            }
-
-            if (name === agentListToolName && this.ports.List)
-            {
-              if (Object.keys(args).length)
-                return errorResult('AGENT_LIST_INPUT', 'Agent 目录不接受身份或权限参数');
-
-              signal.throwIfAborted();
-
-              return jsonToolResult(agentListToolName, await this.ports.List())
-            }
-
-            if (name !== agentCallToolName || !id)
-              return errorResult('AGENT_CALL_IDENTITY', '缺少已授权工具调用身份');
-
-            const parsed = callInput.safeParse(args);
-
-            if (!parsed.success)
-              return errorResult('AGENT_CALL_INPUT', '需要有效 agentId 和 message，不能传入调用方或权限字段');
-
-            const key = prefix + id;
-            let reference: AgentCallReference | undefined;
-
-            const exchange = new AgentCallExchange<ToolResult>(async (phase, questionId, questions, answer) => { if (!reference) throw Error('子运行身份尚未登记'); await context.Emit({ type: 'tool.updated', data: { id, name: agentCallToolName, agentCall: reference, agentCallState: phase, questionId, ...(questions ? { questions } : {}), ...(answer ? { answer } : {}) } }); return jsonToolResult(agentCallToolName, { status: 'waiting', callId: id, questionId, questions, agentCall: reference, nextStep: '用 cbim_agent_reply 回答原问题，继续此调用；不要重新调用 Agent' }); });
-
-            return this.schedule.Dispatch(key, JSON.stringify(parsed.data), signal,
-              () => errorResult('AGENT_CALL_CONFLICT', '原调用身份已用于不同指令'), () =>
-            {
-              if (this.humanBlocked.has(context.runId))
-                return errorResult('AGENT_HUMAN_DECISION_REQUIRED', '负面意见已保存；继续仅处理意见，不授权新子运行。请等待新的用户执行指令', { started: false });
-
-              if (this.closed || signal.aborted)
-                return errorResult('AGENT_CALL_CANCELLED', '调用已停止', { started: false });
-
-              if (depth + 1 > this.limits.maxDepth)
-                return errorResult('AGENT_DEPTH_LIMIT', '递归深度超过限制', { limit: this.limits.maxDepth, current: depth, requested: depth + 1, unit: 'depth', started: false });
-
-              try
-              {
-                context.AssertExclusive(id)
-              }
-              catch (error)
-              {
-                return errorResult('AGENT_CALL_BUSY', error instanceof Error ? error.message : String(error), { started: false })
-              }
-              return undefined;
-            }, exchange, childSignal => this.Execute(context, depth, id, parsed.data, childSignal, exchange, ref => { reference = ref }).then(async result => { if (exchange.yielded && reference) await context.Emit({ type: 'tool.updated', data: { id, name: agentCallToolName, agentCall: reference, agentCallState: result.isError ? 'failed' : 'completed', result, isError: result.isError === true } }); return result; }));
-          },
+          call: async (name, args, signal, id) => { if (name === 'cbim_agent_skill_read' && agent && (agent.definition.effectiveSkills?.length || workflows.length)) { signal.throwIfAborted(); const input = z.object({ skillId: z.string().min(1), workspaceId: z.string().min(1).optional() }).strict().parse(args); if (input.workspaceId) { const workflow = workflows.find(item => item.workspaceId === input.workspaceId && item.skillId === input.skillId); if (!workflow) throw new Error('当前任务没有采用该工作流'); return jsonToolResult(name, { workflow }); } const skill = readRoleSkill(agent.definition, input.skillId); return jsonToolResult(name, { position: agent.definition.position, skill }); } if (name === 'cbim_agent_result_review') { const parsed = z.object({ callId: z.string().min(1) }).strict().safeParse(args); if (!parsed.success || !id) return errorResult('AGENT_REVIEW_INPUT', '需要原 callId'); if (depth !== 0 || !this.ports.RequestReview) return errorResult('AGENT_REVIEW_UNAVAILABLE', '只有主 Agent 可以请求真实用户评价'); const key = prefix + id, existing = this.reviews.get(key); if (existing) return existing.callId === parsed.data.callId ? existing.result : errorResult('AGENT_REVIEW_CONFLICT', '同一评审调用不能更换交付对象'); const controller = new AbortController(); this.reviewControllers.set(key, controller); const result = this.Review(context, parsed.data.callId, id, AbortSignal.any([signal, controller.signal])).finally(() => this.reviewControllers.delete(key)); this.reviews.set(key, { callId: parsed.data.callId, result }); return result; } if (name === 'cbim_agent_result_check') { const parsed = z.object({ callId: z.string().min(1) }).strict().safeParse(args); if (!parsed.success || !id) return errorResult('AGENT_RESULT_INPUT', '需要原 callId'); try { signal.throwIfAborted(); if (this.closed) throw Error('调用已关闭'); context.AssertExclusive(id); const check = this.checks.get(prefix + parsed.data.callId); if (!check) return errorResult('AGENT_RESULT_UNAVAILABLE', '本调用者没有可核验的已完成业务调用'); return jsonToolResult(name, await check(signal)) } catch (error) { return errorResult((error as { code?: string }).code ?? 'AGENT_RESULT_FAILED', String(error)) } } if (name === agentReplyToolName) { if (!id || signal.aborted || this.closed) return errorResult('AGENT_CALL_CANCELLED', '答复调用已停止'); const parsed = replyInput.safeParse(args); if (!parsed.success) return errorResult('AGENT_REPLY_INPUT', '答复必须包含原 callId、questionId 和严格答案'); try { context.AssertExclusive(id); const key = prefix + parsed.data.callId; const exchange = this.schedule.Exchange(key); if (!exchange) return errorResult('AGENT_CALL_IDENTITY', '原调用不属于当前调用者或已丢失，不重建执行'); const abort = () => this.schedule.Cancel(key, signal.reason); signal.addEventListener('abort', abort, { once: true }); try { return await exchange.Reply(parsed.data.questionId, parsed.data.result) } finally { signal.removeEventListener('abort', abort) } } catch (error) { return errorResult((error as { code?: string }).code ?? 'AGENT_REPLY_FAILED', error instanceof Error ? error.message : String(error)) } } if (name === agentListToolName && this.ports.List) { if (Object.keys(args).length) return errorResult('AGENT_LIST_INPUT', 'Agent 目录不接受身份或权限参数'); signal.throwIfAborted(); return jsonToolResult(agentListToolName, await this.ports.List()) } if (name !== agentCallToolName || !id) return errorResult('AGENT_CALL_IDENTITY', '缺少已授权工具调用身份'); const parsed = callInput.safeParse(args); if (!parsed.success) return errorResult('AGENT_CALL_INPUT', '需要有效 agentId 和 message，不能传入调用方或权限字段'); const key = prefix + id; let reference: AgentCallReference | undefined; const exchange = new AgentCallExchange<ToolResult>(async (phase, questionId, questions, answer) => { if (!reference) throw Error('子运行身份尚未登记'); await context.Emit({ type: 'tool.updated', data: { id, name: agentCallToolName, agentCall: reference, agentCallState: phase, questionId, ...(questions ? { questions } : {}), ...(answer ? { answer } : {}) } }); return jsonToolResult(agentCallToolName, { status: 'waiting', callId: id, questionId, questions, agentCall: reference, nextStep: '用 cbim_agent_reply 回答原问题，继续此调用；不要重新调用 Agent' }); }); return this.schedule.Dispatch(key, JSON.stringify(parsed.data), signal, () => errorResult('AGENT_CALL_CONFLICT', '原调用身份已用于不同指令'), () => { if (this.humanBlocked.has(context.runId)) return errorResult('AGENT_HUMAN_DECISION_REQUIRED', '负面意见已保存；继续仅处理意见，不授权新子运行。请等待新的用户执行指令', { started: false }); if (this.closed || signal.aborted) return errorResult('AGENT_CALL_CANCELLED', '调用已停止', { started: false }); if (depth + 1 > this.limits.maxDepth) return errorResult('AGENT_DEPTH_LIMIT', '递归深度超过限制', { limit: this.limits.maxDepth, current: depth, requested: depth + 1, unit: 'depth', started: false }); try { context.AssertExclusive(id) } catch (error) { return errorResult('AGENT_CALL_BUSY', error instanceof Error ? error.message : String(error), { started: false }) } return undefined; }, exchange, childSignal => this.Execute(context, depth, id, parsed.data, childSignal, exchange, ref => { reference = ref }).then(async result => { if (exchange.yielded && reference) await context.Emit({ type: 'tool.updated', data: { id, name: agentCallToolName, agentCall: reference, agentCallState: result.isError ? 'failed' : 'completed', result, isError: result.isError === true } }); return result; })); },
         }
       }
     };
@@ -270,50 +110,22 @@ export class AgentCallScheduler
 
   private async Execute(context: AgentToolContext, depth: number, id: string, input: z.infer<typeof callInput>, signal: AbortSignal, exchange: AgentCallExchange<ToolResult>, onReference: (ref: AgentCallReference) => void): Promise<ToolResult>
   {
-    let rejection: { code: string; message: string } | undefined;
-    let reference: AgentCallReference | undefined;
-    const ref = (taskId: string, runId: string): AgentCallReference => ({ version: 1, workspaceId: context.task.workspaceId, callerTaskId: context.task.taskId, callerRunId: context.runId, toolCallId: id, taskId, runId });
-    const caller = { workspaceId: context.task.workspaceId, taskId: context.task.taskId };
-    const key = context.runId + ':' + id;
-    const office = new OfficeDispatcher<RunSummary, ToolResult>(caller, async (step, child, agents) =>
-    {
-      const prepared = await this.ports.Prepare({ ...input, child, agents, agentId: step.memberId, message: step.task, parent: { task: context.task, runId: context.runId, depth }, signal, reference: ref, RequestQuestion: (question, questionSignal) => exchange.Ask(question, AbortSignal.any([signal, questionSignal])) });
-      if ('rejection' in prepared)
+    let rejection:
       {
-        rejection = prepared.rejection;
-        throw new Error(rejection.message);
-      }
-      const verify = prepared.Verify?.bind(prepared);
-      return {
-        Start: async () =>
-        {
-          const control = {
-            signal, BeforeRun: async ({ runId }: { runId: string }) => { reference = ref(prepared.agent.conversation.taskId, runId); onReference(reference); await context.Emit({ type: 'tool.updated', data: { id, name: agentCallToolName, agentCall: reference, limits: { depth: depth + 1, maxDepth: this.limits.maxDepth, ...this.Capacity() } } }); await prepared.BeforeRun?.(runId) }
-          };
-    
-          return prepared.launch ? await prepared.runtime.StartMember!(prepared.task, input.message, prepared.launch, control) : await prepared.runtime.Start(prepared.task, input.message, undefined, undefined, control);
-        },
-        Settle: async summary =>
-        {
-          let verification: unknown;
+        code: string;
 
-          if (verify && summary.status === 'completed' && !summary.unresolvedTools.length)
-          {
-            this.checks.set(context.runId + ':' + id, signal => verify(summary, signal));
+        message: string
+      } | undefined;
 
-            verification = await verify(summary, signal);
+    let reference: AgentCallReference | undefined;
 
-            this.reviewProofs.set(context.runId + ':' + id, structuredClone(verification))
-          }
+    const ref = (taskId: string, runId: string): AgentCallReference => ({ version: 1, workspaceId: context.task.workspaceId, callerTaskId: context.task.taskId, callerRunId: context.runId, toolCallId: id, taskId, runId });
 
-          const output = { agentCall: reference, status: summary.status, summary: this.Message(summary), ...(verification ? { verification } : {}), unresolvedTools: summary.unresolvedTools };
-          const completed = summary.status === 'completed' && !summary.unresolvedTools.length;
-          return { completed, summary: output.summary, value: { ...jsonToolResult(agentCallToolName, output), ...(!completed ? { isError: true } : {}) } };
-        },
-        Close: () => prepared.runtime.Close(),
-        Release: () => prepared.Release()
-      };
-    }, retry => this.schedule.Retain(key, retry), signal, this.agents);
+    const caller = { workspaceId: context.task.workspaceId, taskId: context.task.taskId };
+
+    const key = context.runId + ':' + id;
+
+    const office = new OfficeDispatcher<RunSummary, ToolResult>(caller, async (step, child, agents) => { const prepared = await this.ports.Prepare({ ...input, child, agents, agentId: step.memberId, message: step.task, parent: { task: context.task, runId: context.runId, depth }, signal, reference: ref, RequestQuestion: (question, questionSignal) => exchange.Ask(question, AbortSignal.any([signal, questionSignal])) }); if ('rejection' in prepared) { rejection = prepared.rejection; throw new Error(rejection.message); } const verify = prepared.Verify?.bind(prepared); return { Start: async () => { const control = { signal, BeforeRun: async ({ runId }: { runId: string }) => { reference = ref(prepared.agent.conversation.taskId, runId); onReference(reference); await context.Emit({ type: 'tool.updated', data: { id, name: agentCallToolName, agentCall: reference, limits: { depth: depth + 1, maxDepth: this.limits.maxDepth, ...this.Capacity() } } }); await prepared.BeforeRun?.(runId) } }; return prepared.launch ? await prepared.runtime.StartMember!(prepared.task, input.message, prepared.launch, control) : await prepared.runtime.Start(prepared.task, input.message, undefined, undefined, control); }, Settle: async summary => { let verification: unknown; if (verify && summary.status === 'completed' && !summary.unresolvedTools.length) { this.checks.set(context.runId + ':' + id, signal => verify(summary, signal)); verification = await verify(summary, signal); this.reviewProofs.set(context.runId + ':' + id, structuredClone(verification)) } const output = { agentCall: reference, status: summary.status, summary: this.Message(summary), ...(verification ? { verification } : {}), unresolvedTools: summary.unresolvedTools }; const completed = summary.status === 'completed' && !summary.unresolvedTools.length; return { completed, summary: output.summary, value: { ...jsonToolResult(agentCallToolName, output), ...(!completed ? { isError: true } : {}) } }; }, Close: () => prepared.runtime.Close(), Release: () => prepared.Release() }; }, retry => this.schedule.Retain(key, retry), signal, this.agents);
 
     try
     {
@@ -321,8 +133,12 @@ export class AgentCallScheduler
     }
     catch (error)
     {
-      if (rejection) return errorResult(rejection.code, rejection.message, { started: false });
-      if (this.schedule.NeedsCleanup(key)) throw error;
+      if (rejection)
+        return errorResult(rejection.code, rejection.message, { started: false });
+
+      if (this.schedule.NeedsCleanup(key))
+        throw error;
+
       const failure = error as
         {
           code?: string;

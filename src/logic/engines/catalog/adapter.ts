@@ -1,5 +1,7 @@
 import { JsonUtils } from '../../../core/io';
+
 import { engineAdapterProtocol, type EngineAdapter as KernelAdapter } from '../../../framework/kernel';
+
 import type { EngineDescriptor } from './supported-engines';
 
 export type EngineAdapter<Options, Engine> = KernelAdapter<Options, Engine, EngineDescriptor>;

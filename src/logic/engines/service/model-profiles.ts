@@ -1,4 +1,5 @@
 import { kernel } from '../../../framework/kernel';
+
 /**
  * 作用定位：把 Agent 引擎选型映射为通用模型连接需求，并在返回快照中冻结显式引擎身份。
  * 设计原因：引擎策略不进入模型配置服务；复用该服务唯一设置队列、配置捕获与延迟解密，避免新增锁或再次读取造成快照漂移。
@@ -91,9 +92,18 @@ export class EngineModelProfiles
   /** 执行准备时选择协议并取凭据；无显式模型时允许模型服务使用当前默认值，不保存该选择。 */
   async Resolve(id?: string, modelId?: string, engine?: LoopEngine, modelRoles?: ModelRolesSelection): Promise<ResolvedEngineModel>
   {
-    if (modelRoles !== undefined) { if (!id || !modelId) throw new Error('多模型执行必须明确指定主模型'); return this.WithRuntimeConfiguration({ profileId: id, modelId, engine, modelRoles }, async locked => locked.Resolve()) }
+    if (modelRoles !== undefined)
+    {
+      if (!id || !modelId)
+        throw new Error('多模型执行必须明确指定主模型');
+
+      return this.WithRuntimeConfiguration({ profileId: id, modelId, engine, modelRoles }, async locked => locked.Resolve())
+    }
+
     operations({ profileId: id ?? '', modelId: modelId ?? '', engine });
+
     const resolved = await this.models.Resolve(id, modelId, requirement(engine));
+
     return { ...resolved, profile: profileForEngine(resolved.profile, engine) };
   }
 
@@ -109,6 +119,7 @@ export class EngineModelProfiles
     const fixed = structuredClone(refs);
 
     const grouped = fixed.map(references);
+
     return this.models.WithModelOperations(grouped.flat(), async locked => { let offset = 0; const profiles = fixed.map((ref, index) => { const values = locked.profiles.slice(offset, offset + grouped[index].length); offset += grouped[index].length; return snapshot(ref, values) }); return use(profiles) });
   }
 
@@ -149,10 +160,7 @@ export class EngineModelProfiles
 export function engineConfigurations(models: Pick<EngineModelProfiles, 'WithRuntimeConfiguration'> & Partial<Pick<EngineModelProfiles, 'Resolve'>>)
 {
   return kernel.Configurations<Partial<EngineModelReference>, EngineModelReference, ResolvedEngineModel['profile'], ResolvedEngineModel, LoopEngine>({
-    Resolve: ref => {
-      if (!models.Resolve) throw new Error('当前宿主仅支持显式岗位配置');
-      return models.Resolve(ref.profileId, ref.modelId, ref.engine, ref.modelRoles);
-    },
+    Resolve: ref => { if (!models.Resolve) throw new Error('当前宿主仅支持显式岗位配置'); return models.Resolve(ref.profileId, ref.modelId, ref.engine, ref.modelRoles); },
     WithRuntimeConfiguration: (ref, use) => models.WithRuntimeConfiguration(ref, use),
     Describe: model => ({ type: model.profile.engine ?? 'pi', llm: { provider: 'cbim-' + model.profile.id, model: model.profile.model, resolved: model } }),
   });

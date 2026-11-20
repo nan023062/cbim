@@ -3,4 +3,3 @@ export type { ModelConfiguration, ModelInstance, ModelLoader, ModelAdapter, Mode
 export * from './engines';
 
 export { kernel, type EngineDescription, type EngineConfigurationRef } from './kernel';
-

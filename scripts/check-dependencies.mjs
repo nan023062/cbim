@@ -287,7 +287,8 @@ export function auditDependencies(root = process.cwd(), options = {}) {
       if(e.from.startsWith('src/core/')&&e.to.startsWith('src/core/')&&e.from.split('/')[2]!==e.to.split('/')[2])return true;
       if(e.to.startsWith('src/framework/kernel/')&&!e.from.startsWith('src/framework/kernel/')&&e.to!=='src/framework/kernel/index.ts')return true;
       const a=layerOf(e.from),b=layerOf(e.to);
-      if(a==='view-new'&&b==='view')return !['src/view/components/Icon.tsx','src/view/components/BrandMark.tsx'].includes(e.to);
+      if ((a==='logic-new'||a==='view-new')&&(b==='logic'||b==='view')) return true;
+      if(e.from==='src/bridge/contracts/desktop-models.ts' && e.to==='src/logic-new/settings/models/index.ts') return false;
       if(e.to==='src/core/web/electron.ts'&&e.from!=='src/bridge/server/main.ts')return true;
       // 业务只消费桌面宿主注入的凭据类型；运行时引用仍受 Electron 分层限制。
       const cipherTypeAccess=e.kind==='type'&&e.to==='src/core/io/electron.ts'&&[
@@ -308,7 +309,8 @@ export function auditDependencies(root = process.cwd(), options = {}) {
       const bridgeContractAccess=e.from==='src/bridge/contracts/execution.ts'&&e.to==='src/framework/office/call.ts'&&e.kind==='type'||e.to===agentQuestions&&['execution','ipc-dispatch','ipc-loop','ipc-shapes'].some(name=>e.from==='src/bridge/contracts/'+name+'.ts')||e.from==='src/bridge/contracts/workspace.ts'&&e.to==='src/framework/business/index.ts';
       if(a==='resource'&&b==='logic')return true;
       const connectorContract=e.from.startsWith('src/resource/connections/')&&e.to==='src/framework/connectors/index.ts';
-      const publicAccess=connectorContract||bridgeContractAccess||(e.from==='src/bridge/contracts/workspace.ts'&&e.to==='src/framework/monitor/updates.ts')||adapterAccess||ioErrorAccess||cipherTypeAccess||allowsEngineAccess(e.from,e.to)||allowsModelAccess(e.from,e.to)||allowsWebAccess(e.from,e.to)||allowsFeedbackAccess(e.from,e.to)||allowsResourceAccess(e.from,e.to)||domainAccess||runtimeAccess||serviceAccess;
+      const desktopEngineLoader=e.from==='src/bridge/server/desktop/office-plugin.ts'&&e.to==='src/logic/execution/assembly/engine-package-loader.ts';
+      const publicAccess=desktopEngineLoader||connectorContract||bridgeContractAccess||(e.from==='src/bridge/contracts/workspace.ts'&&e.to==='src/framework/monitor/updates.ts')||adapterAccess||ioErrorAccess||cipherTypeAccess||allowsEngineAccess(e.from,e.to)||allowsModelAccess(e.from,e.to)||allowsWebAccess(e.from,e.to)||allowsFeedbackAccess(e.from,e.to)||allowsResourceAccess(e.from,e.to)||domainAccess||runtimeAccess||serviceAccess;
       if(isService(e.from)&&b==='logic'&&e.from.split('/')[2]!==e.to.split('/')[2]&&!publicAccess)return true;
       if(isEngine(e.to)&&!manifestAccess&&!isEngine(e.from)&&!e.from.startsWith('src/logic/execution/assembly/'))return true;
       // 领域规则只组合领域与既有纯模型/反馈入口，不借目录迁移取得宿主服务权限。
@@ -321,6 +323,24 @@ export function auditDependencies(root = process.cwd(), options = {}) {
     const boundary=moduleBoundaries.find(rule=>rule.sources.some(source=>matchesBoundary(e.from,source)));
     return !!boundary&&!boundary.allow.some(target=>matchesBoundary(e.to,target));
   });
+  // 从新模块出发检查完整依赖链，包括桥接契约的类型导出。
+  const pending = [...known.values()].filter(file => /^src\/(logic-new|view-new)\//.test(file));
+  const visited = new Set(pending);
+  const outgoing = new Map();
+  for (const edge of edges) {
+    if (!outgoing.has(edge.from)) outgoing.set(edge.from, []);
+    outgoing.get(edge.from).push(edge);
+  }
+  for (let i = 0; i < pending.length; i++) {
+    for (const edge of outgoing.get(pending[i]) ?? []) {
+      if (/^src\/(logic|view)\//.test(edge.to)) {
+        if (!violations.includes(edge)) violations.push(edge);
+      } else if (!visited.has(edge.to)) {
+        visited.add(edge.to);
+        pending.push(edge.to);
+      }
+    }
+  }
   const circular = cycles([...known.values()],edges);
   // 产品层规则不作用于验证设施，但迁移后的纯领域数据仍保留原有窄依赖/公开入口检查。
   const testData=file=>file.startsWith('tests/src/logic/knowledge/rules/data/');

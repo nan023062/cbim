@@ -47,17 +47,28 @@ export function nativeToolsDisabled(context: EngineCapabilities): boolean
 /** 一个公开名称绑定一个端口和原始工具名；别名也参与同一目录的冲突检查。 */
 export async function collectToolRoutes(sources: readonly { port: EngineToolsPort; prefix?: string }[])
 {
-  const routes = new Map<string, { name: string; port: EngineToolsPort; schema: EngineToolSchema }>();
+  const routes = new Map<string,
+    {
+      name: string;
+
+      port: EngineToolsPort;
+
+      schema: EngineToolSchema
+    }>();
+
   for (const { port, prefix = '' } of sources)
   {
     for (const tool of await port.list())
     {
       const name = prefix + tool.name;
+
       if (!/^cbim_[a-z0-9_]+$/.test(name) || routes.has(name))
         throw Error('运行工具名称无效或重复：' + name);
+
       routes.set(name, { name: tool.name, port, schema: structuredClone(tool) });
     }
   }
+
   return routes;
 }
 
@@ -65,16 +76,18 @@ export async function collectToolRoutes(sources: readonly { port: EngineToolsPor
 export async function runtimeEngineTools(context: EngineCapabilities, knowledge: EngineToolsPort, includeKnowledge?: (name: string) => boolean): Promise<EngineToolsPort>
 {
   const sources = [{ port: knowledge }, ...(context.capabilities ?? []).map(capability => ({ port: capability.tools }))];
+
   const routes = await collectToolRoutes(sources);
+
   if (includeKnowledge)
+  {
     for (const [name, route] of routes)
-      if (route.port === knowledge && !includeKnowledge(name)) routes.delete(name);
+      if (route.port === knowledge && !includeKnowledge(name))
+        routes.delete(name);
+  }
+
   return {
     list: async () => Array.from(routes.values(), route => structuredClone(route.schema)),
-    call: (name, args, signal, id) => {
-      const route = routes.get(name);
-      if (!route) throw Error('本轮未注册该工具');
-      return route.port.call(route.name, args, signal, id);
-    },
+    call: (name, args, signal, id) => { const route = routes.get(name); if (!route) throw Error('本轮未注册该工具'); return route.port.call(route.name, args, signal, id); },
   };
 }

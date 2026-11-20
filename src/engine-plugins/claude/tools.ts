@@ -101,6 +101,7 @@ export async function claudeTools(context: EngineContext, port: EngineToolsPort,
     controller = new AbortController();
 
   const allowed = new Set(allowedNativeTools(context, allowExecution, 'claude-code'));
+
   const native = Object.keys(nativeNames).filter(name => allowed.has(nativeNames[name]));
 
   const active = new Map<string,

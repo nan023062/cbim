@@ -20,6 +20,7 @@
 import { workspaceMemberEngine, type WorkspaceMemberModelRef } from '../rules/workspace-member';
 
 import { workerBusyForTask } from '../../tasks/rules/dispatch-invariants';
+
 import { taskWorkerId } from '../../tasks/rules/graph-types';
 
 import { pendingTopicInterruption } from '../../tasks/rules/topic-interruption';
@@ -122,6 +123,7 @@ export interface MemberExecutionPorts
 
   /** 模型短锁先提供公开配置；预算和占用通过后才调用 prepare，不在 Store 中重新排配置队列。 */
   OfficePermission?(rootSessionId: string, scopeId?: string): import('../../execution/admission/admission-wait').OfficePermissionReader | undefined;
+
   WithEngineConfiguration?<T>(model: OwnerExecutionBinding['model'] & Pick<WorkspaceMemberModelRef, 'engine' | 'modelRoles'>, options: MemberStartOptions, use: (locked: { model: ResolvedEngineModel['profile']; Prepare(): PreparedEngine }) => Promise<T>): Promise<T>;
 
   /** 独立只读文件复核能力，不隐式采集旧日志或运行模型。 */
@@ -428,11 +430,13 @@ export class MemberExecutionManager
       assertCurrent();
 
       let permissionSource: import('../../execution/admission/admission-wait').OfficePermissionReader | undefined;
+
       const receipt = await this.ports.owners.WithSnapshot(async (snapshot, hint) =>
       {
         const hinted = memberTask(hint, input.rootSessionId, input.taskId).task;
 
         permissionSource = hint.scopes?.some(scope => scope.scopeId === hinted.scopeId && scope.recovery) ? undefined : wait?.ReadPermission ? wait : this.ports.OfficePermission?.(input.rootSessionId, hinted.scopeId);
+
         if (!hinted.ownerBinding && !hinted.fallbackBinding)
           throw new Error('旧任务没有负责岗位绑定');
 
@@ -639,6 +643,7 @@ export class MemberExecutionManager
         this.handles.set(task.taskId, handle);
 
         const unsubscribe = permissionSource?.OnPermissionChange?.(() => this.approvals.Cancel(task.taskId, 'Office 权限已变更'));
+
         handle.done = this.Execute(run, task, engine, handle, release!, permissionSource).finally(() => unsubscribe?.());
 
         // 结算失败保留活动占用并阻止后续任务；不能吞掉失败后伪装空闲。

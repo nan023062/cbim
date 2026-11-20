@@ -3,21 +3,28 @@ import { Project, type WorkspaceTree, type WorkspaceInstanceFactory } from './bu
 
 import { AgentInstances, Organization } from './cability/organization';
 
-
-
 import { changeEvents } from './events';
+
 import { Office } from './office';
 
 export interface ProjectResources
 {
   readonly projectId: string;
+
   readonly organization: Parameters<Organization['ReplaceChildren']>[0];
+
   readonly business: WorkspaceTree;
 }
 
 export class CbimRuntime
 {
-  private readonly changes = changeEvents<{ officeId: string; change: 'opened' | Parameters<Parameters<Office['Subscribe']>[0]>[0] }>();
+  private readonly changes = changeEvents<
+    {
+      officeId: string;
+
+      change: 'opened' | Parameters<Parameters<Office['Subscribe']>[0]>[0]
+    }>();
+
   public readonly Subscribe = this.changes.Subscribe;
 
   private readonly _workspaces = new Map<string, Map<string, Office>>();
@@ -26,25 +33,39 @@ export class CbimRuntime
 
   public constructor(private readonly _worktrees?: WorkspaceInstanceFactory, private readonly resources?: ProjectResources)
   {
-    if (resources) {
+    if (resources)
+    {
       this.resources = structuredClone(resources);
+
       this.organization = this.CreateOrganization(resources.projectId);
+
       this.project = new Project(structuredClone(resources.business));
     }
   }
 
   public readonly organization?: Organization;
+
   public readonly project?: Project;
 
   private CreateOrganization(id: string)
   {
     const organization = new Organization(id);
-    if (this.resources) organization.ReplaceChildren(this.resources.organization);
+
+    if (this.resources)
+      organization.ReplaceChildren(this.resources.organization);
+
     return organization;
   }
 
-  public ListOffices() { return [...this._workspaces.values()].flatMap(group => [...group.values()].filter(office => !office.closed)); }
-  public FindOffice(id: string) { return this.ListOffices().find(office => office.id === id); }
+  public ListOffices()
+  {
+    return [...this._workspaces.values()].flatMap(group => [...group.values()].filter(office => !office.closed));
+  }
+
+  public FindOffice(id: string)
+  {
+    return this.ListOffices().find(office => office.id === id);
+  }
 
   /** 首轮创建办公室，后续轮次继续使用同一办公室及成员绑定。 */
   public OpenOffice(workspaceId: string, rootSessionId: string): Office
@@ -63,6 +84,7 @@ export class CbimRuntime
     if (!offices)
     {
       offices = new Map();
+
       this._workspaces.set(workspaceId, offices);
     }
 
@@ -71,10 +93,15 @@ export class CbimRuntime
     if (!office || office.closed)
     {
       const organization = this.organization ?? new Organization(workspaceId);
+
       office = new Office(workspaceId, rootSessionId, organization, this._worktrees, this.project, this.organization ? new AgentInstances() : organization);
+
       offices.set(rootSessionId, office);
+
       const officeId = office.id;
+
       const detach = office.Subscribe(change => { if (change.type === 'closed') detach(); this.changes.Emit({ officeId, change }); });
+
       this.changes.Emit({ officeId, change: 'opened' });
     }
 
@@ -85,9 +112,14 @@ export class CbimRuntime
   public async CloseWorkspace(workspaceId: string): Promise<void>
   {
     const offices = this._workspaces.get(workspaceId);
-    if (!offices) return;
+
+    if (!offices)
+      return;
+
     await Promise.all([...offices].map(async ([key, office]) => { await office.Close(); if (offices.get(key) === office) offices.delete(key); }));
-    if (!offices.size) this._workspaces.delete(workspaceId);
+
+    if (!offices.size)
+      this._workspaces.delete(workspaceId);
   }
 
   /** 应用退出时回收所有办公室，并终止新会话受理。 */

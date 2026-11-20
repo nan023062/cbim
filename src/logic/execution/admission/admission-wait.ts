@@ -9,7 +9,9 @@ import type { InputImage } from '../rules/types';
 export interface OfficePermissionReader
 {
   ReadPermission?(): 'read' | 'ask' | 'execute';
+
   PermissionRevision?(): number;
+
   OnPermissionChange?(listener: () => void): () => void;
 }
 

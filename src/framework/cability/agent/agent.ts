@@ -8,7 +8,14 @@ import type { Team } from '../team';
 
 export interface OfficeObservation
 {
-  organization?: { readonly kind: 'organization'; readonly id: string; readonly children: Team['children'] };
+  organization?:
+  {
+    readonly kind: 'organization';
+
+    readonly id: string;
+
+    readonly children: Team['children']
+  };
 
   modules: readonly
   {

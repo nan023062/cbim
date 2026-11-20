@@ -24,6 +24,8 @@ export abstract class ExclusiveConnector<Descriptor, Result>
 {
   public readonly mode = 'exclusive' as const;
 
+  public Close?(): Promise<void>;
+
   public abstract Acquire(context: ConnectorTaskContext, signal: AbortSignal): Promise<ConnectorSession<Descriptor, Result>>;
 }
 
@@ -31,6 +33,8 @@ export abstract class ExclusiveConnector<Descriptor, Result>
 export abstract class ConcurrentConnector<Descriptor, Result>
 {
   public readonly mode = 'concurrent' as const;
+
+  public Close?(): Promise<void>;
 
   public abstract OpenSession(context: ConnectorTaskContext, signal: AbortSignal): Promise<ConnectorSession<Descriptor, Result>>;
 }

@@ -40,6 +40,7 @@ export async function codexTools(context: EngineContext, port: EngineToolsPort, 
     active = new InFlightOperations();
 
   const nativeAllowed = new Set(allowedNativeTools(context, allowExecution, 'codex'));
+
   const mapping = await collectToolRoutes(nativeAllowed.size === 0
     ? [{ port }]
     : [{ port }, { port: native, prefix: 'cbim_native_' }]);

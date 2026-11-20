@@ -42,7 +42,7 @@ export class ConnectorRegistry
         provider = isResourceRepositoryConnector(c)
           ? JSON.stringify(['resource_repository_v1', c.repository.repositoryId.toLowerCase()])
           : 'productId' in c ? JSON.stringify([c.provider, c.productId])
-          : JSON.stringify(['plugin', c.plugin.ghost_id, c.plugin.namespace]);
+            : JSON.stringify(['plugin', c.plugin.ghost_id, c.plugin.namespace]);
 
       if (ids.has(id) || providers.has(provider))
         duplicates.push(c.id);

@@ -12,8 +12,6 @@ import { promisify } from 'node:util';
 
 import { KernelLock, KernelLockError } from '../../core/io/locking';
 
-
-
 import { Paths } from './paths';
 
 import { atomic, exists, readJson } from '../../core/io/text-files';
@@ -142,5 +140,4 @@ export class Catalog
 
     return entry;
   }
-
-  }
+}

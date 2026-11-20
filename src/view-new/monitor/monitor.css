@@ -13,3 +13,15 @@
 .process-name small { display: block; font-size: 11px; color: #aaa; }
 .process-monitor footer { min-height: 44px; border-top: 1px solid #333; padding: 0 10px; display: flex; align-items: center; justify-content: space-between; color: #aaa; }
 .process-monitor footer button { border: 1px solid #444; border-radius: 20px; background: #242424; color: #aaa; }
+.process-list {padding:0 12px 12px}
+.load-summary {border-block:1px solid #333;padding:12px 2px}
+.load-summary div,.flow-summary {display:flex;align-items:center;justify-content:space-between}
+.load-summary progress {width:100%;height:5px;accent-color:#70b5e5}
+.load-summary small,.resource-entry small {color:#aaa}
+.flow-summary,.process-list summary {padding:8px 2px}
+.process-list summary {cursor:pointer;border-bottom:1px solid #333}
+.process-list summary b {float:right;font-variant-numeric:tabular-nums}
+.resource-entry {display:flex;align-items:center;gap:8px;padding:6px;overflow-wrap:anywhere}
+.resource-entry svg {flex:none;color:#70b5e5}
+.resource-entry strong,.resource-entry small {display:block;font-weight:400}
+.host-processes .process-columns {padding:6px;border-bottom:1px solid #292929}

@@ -3,6 +3,7 @@
  * 设计原因：同一角色的执行实例可以变化，导航始终使用唯一逻辑 Session；只接受原办公室登记，不从名字猜身份。
  */
 import { defaultWorkerId, taskWorkerId } from '../../bridge/contracts/dispatch';
+
 import type { GraphSnapshot, OfficeMemberSession, TaskNode } from '../../bridge/contracts/dispatch';
 
 export interface TeamConversation

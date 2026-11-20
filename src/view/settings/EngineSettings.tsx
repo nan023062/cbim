@@ -60,6 +60,7 @@ export function EngineSettings({ active = true }: { active?: boolean })
       generation.current.Advance();
 
       registerPackageEngines(next.items.flatMap(item => item.installed.concat(item.candidate ?? [])));
+
       setState(next);
 
       setNotice(message)

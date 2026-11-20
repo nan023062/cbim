@@ -37,6 +37,7 @@ import { WorkspaceList } from './WorkspaceList';
 import { ExtensionArea } from './ExtensionArea';
 
 import { registerPackageEngines } from '../../bridge/contracts/engines';
+
 import { resourceCategories, type ResourceCategory } from '../../bridge/contracts/resources';
 
 import { renameConversation, removeConversation, mergeConversations, newTab, initialLayout, readLayouts, type Layouts, type TabLayout, type TabKind } from './tabs';
@@ -60,6 +61,7 @@ import { RuntimeNavigationResolver, bindRuntimeConversation, type RuntimeNavigat
 const ExecutionEngines = deferredView<NonNullable<Parameters<typeof import('../settings/EngineSettings').EngineSettings>[0]>>(() => import('../settings/EngineSettings').then(module => ({ default: module.EngineSettings })), '执行引擎');
 
 const RepositoryConnections = deferredView<Parameters<typeof import('../resources/RepositoryConnections').RepositoryConnections>[0]>(() => import('../resources/RepositoryConnections').then(module => ({ default: module.RepositoryConnections })), '链接器');
+
 const ResourceRepositoryView = deferredView<NonNullable<Parameters<typeof import('../resources/ResourceRepositoryView').ResourceRepositoryView>[0]>>(() => import('../resources/ResourceRepositoryView').then(module => ({ default: module.ResourceRepositoryView })), '资源库');
 
 const SettingsView = deferredView<NonNullable<Parameters<typeof import('../settings/SettingsView').SettingsView>[0]>>(() => import('../settings/SettingsView').then(module => ({ default: module.SettingsView })), '设置');
@@ -88,7 +90,8 @@ export function App()
     [selected, setSelected] = useState(''),
     [screen, setScreen] = useState<'workspace' | 'settings' | 'runtime' | 'engines' | 'connectors' | ResourceCategory>('workspace');
 
-  useEffect(() => { let current = true; void api.call('engines.settings').then(state => { if (current) registerPackageEngines(state.items.flatMap(item => item.installed.concat(item.candidate ?? []))); }).catch(() => {}); return () => { current = false; }; }, []);
+  useEffect(() => { let current = true; void api.call('engines.settings').then(state => { if (current) registerPackageEngines(state.items.flatMap(item => item.installed.concat(item.candidate ?? []))); }).catch(() => { }); return () => { current = false; }; }, []);
+
   const runtimeResolver = useRef(new RuntimeNavigationResolver((action, args) => api.call(...checkedIpcCall(action, args))));
 
   const runtimeSequence = useRef(0);

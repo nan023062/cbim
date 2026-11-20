@@ -1,4 +1,5 @@
 import { resourceKindIds } from '..';
+
 /**
  * 作用定位：RepositoryStore 与 LocalRepository：本地资源仓库校验、版本检查及原子更新。
  * 设计原因：用统一接口隔离本地和远端仓库，写入要求仓库身份与版本一致；允许完整静态架构包，仍统一限制单项和仓库总字节数。
@@ -32,6 +33,7 @@ export const snapshotSchema = z.object({ repositoryId: z.string().uuid(), revisi
 
 // 旧版记录只留在原仓库文件，公开快照和 HTTP 共享只返回当前资产。
 const archivedItem = itemSchema.extend({ kind: z.enum(['connector', 'model', 'workspace', 'module']) });
+
 const diskSchema = z.object({ version: z.literal(1), repositoryId: z.string().uuid(), items: z.array(z.union([itemSchema, archivedItem])).max(2000) }).strict();
 
 export const saveSchema = z.object({ repositoryId: z.string().uuid(), revision: z.string(), id: z.string().uuid().optional(), item: resourceFields }).strict();
@@ -82,7 +84,11 @@ export class LocalRepository implements RepositoryStore
       }
     }
 
-    { report?.('busy'); throw new Error('仓库正由其他请求更新，请稍后重试') }
+    {
+      report?.('busy');
+
+      throw new Error('仓库正由其他请求更新，请稍后重试')
+    }
   }
 
   private async CheckFile(report?: ReportIssue)
@@ -90,7 +96,11 @@ export class LocalRepository implements RepositoryStore
     try
     {
       if ((await fs.lstat(this.file)).isSymbolicLink())
-        { report?.('unsafePath'); throw new Error('仓库数据文件不能是符号链接') }
+      {
+        report?.('unsafePath');
+
+        throw new Error('仓库数据文件不能是符号链接')
+      }
     }
     catch (e: any)
     {
@@ -143,14 +153,26 @@ export class LocalRepository implements RepositoryStore
       const stat = await fs.stat(this.file);
 
       if (stat.size > MAX_BYTES)
-        { report?.('oversize'); throw new Error('资源仓库超过 8 MiB 限制') };
+      {
+        report?.('oversize');
+
+        throw new Error('资源仓库超过 8 MiB 限制')
+      }
+
+      ;
 
       text = await fs.readFile(this.file, 'utf8')
     }
     catch (e: any)
     {
       if (e.code === 'ENOENT')
-        { report?.('missing'); throw new Error('仓库文件不存在，请重新选择仓库') };
+      {
+        report?.('missing');
+
+        throw new Error('仓库文件不存在，请重新选择仓库')
+      }
+
+      ;
 
       throw e
     }
@@ -163,20 +185,28 @@ export class LocalRepository implements RepositoryStore
         throw Error('duplicate');
 
       const items: ResourceLibrarySnapshot['items'] = [];
+
       const archived: z.infer<typeof archivedItem>[] = [];
+
       for (const item of data.items)
       {
         const old = archivedItem.safeParse(item);
+
         if (old.success)
           archived.push(old.data);
         else
           items.push(itemSchema.parse(item));
       }
+
       return { snapshot: { repositoryId: data.repositoryId, revision: hash(text), items }, archived };
     }
     catch
     {
-      { report?.('invalidData'); throw new Error('仓库内容格式无效，原文件已保留，请修复后重试') }
+      {
+        report?.('invalidData');
+
+        throw new Error('仓库内容格式无效，原文件已保留，请修复后重试')
+      }
     }
   }
 
@@ -203,17 +233,35 @@ export class LocalRepository implements RepositoryStore
       const { snapshot: current, archived } = await this.ReadDisk(report);
 
       if (current.repositoryId !== request.repositoryId)
-        { report?.('identityChanged'); throw new Error('仓库身份已变化，请重新连接') };
+      {
+        report?.('identityChanged');
+
+        throw new Error('仓库身份已变化，请重新连接')
+      }
+
+      ;
 
       if (current.revision !== request.revision)
-        { report?.('revisionChanged'); throw new Error('仓库已被修改，请刷新后重新编辑') };
+      {
+        report?.('revisionChanged');
+
+        throw new Error('仓库已被修改，请刷新后重新编辑')
+      }
+
+      ;
 
       edit(current);
 
       const text = JsonUtils.FormatJson(diskSchema.parse({ version: 1, repositoryId: current.repositoryId, items: [...current.items, ...archived] }));
 
       if (Buffer.byteLength(text) > MAX_BYTES)
-        { report?.('oversize'); throw new Error('资源仓库超过 8 MiB 限制') };
+      {
+        report?.('oversize');
+
+        throw new Error('资源仓库超过 8 MiB 限制')
+      }
+
+      ;
 
       await atomic(this.file, text);
 

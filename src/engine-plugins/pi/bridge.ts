@@ -17,6 +17,7 @@ import type { ToolCall, ToolDecision } from '../../logic/execution/rules/types';
 import { validateToolResult, type ToolResult } from '../../logic/tools/rules/results';
 
 import { isSystemHandoff } from '../message-input';
+
 import { checkedRunInputSource, type RunInputSource } from '../../logic/execution/rules/input-source';
 
 import type { EngineToolsPort as KnowledgeBridge } from '../../logic/execution/rules/engine-tools';
@@ -45,7 +46,12 @@ export async function openBridge(knowledge: KnowledgeBridge, beforeTool: (call: 
   function rejectCatalog(response: http.ServerResponse, code: string, message: string)
   {
     const failure = toolFailureResult(new Error(message));
-    const detail = JSON.parse((failure.content[0] as { text: string }).text);
+
+    const detail = JSON.parse((failure.content[0] as
+      {
+        text: string
+      }).text);
+
     response.writeHead(400, { 'Content-Type': 'application/json' }).end(JSON.stringify({ ...detail, code, error: message }));
   }
 
@@ -123,6 +129,7 @@ export default async function(pi) {
 export function bridgeExtensionForSource(source?: RunInputSource)
 {
   const trusted = source ? checkedRunInputSource(source) : undefined;
+
   return 'const returnedOutcome=' + JSON.stringify(toolOutcome('returned')) + ';const rejectedOutcome=' + JSON.stringify(toolOutcome('rejected')) + ';const unknownOutcome=' + JSON.stringify(toolOutcome('unknown')) + ';\n' + 'const trustedInputSource=' + JSON.stringify(isSystemHandoff(trusted) ? trusted : null) + ';\n' + bridgeExtensionBody;
 }
 

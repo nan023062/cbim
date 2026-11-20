@@ -11,4 +11,3 @@ export { RemoteRepository, repositoryUrl, serveRepository } from './resource-htt
 export { ResourceRepositories } from './resource-repository';
 
 export type { SharedRepositoryReadConnection, ResourceRepositoryPaths } from './resource-repository';
-

@@ -9,6 +9,7 @@
  * 算法入口：通过 Core StringUtils 静态方法复用机制，本文件继续拥有原业务策略。
  */
 import { consumeStreamDelta } from '../stream-delta';
+
 import { assertSendReady, prepareEngineMessage } from '../message-input';
 
 import { StringUtils } from '../../core/io';
@@ -53,6 +54,7 @@ export interface ClaudeOptions
   knowledge: EngineToolsPort;
 
   ReadPermission?(): 'read' | 'ask' | 'execute';
+
   allowNativeExecution?: boolean;
 
   llm?: ResolvedEngineModel;
@@ -401,12 +403,19 @@ export class ClaudeCodeEngine implements AgentEngine
     if (event.type === 'stream_event')
     {
       const value = event.event;
+
       if (value.type === 'content_block_start' && value.content_block.type === 'thinking')
         await this.Emit({ type: 'engine.status', data: { metric: 'thinking', label: '正在思考' } });
-      if (value.type !== 'content_block_delta') return;
+
+      if (value.type !== 'content_block_delta')
+        return;
+
       const delta = value.delta;
+
       const progress = () => this.inactivity?.Progress();
+
       const emit = (chunk: EngineEvent) => this.Emit(chunk);
+
       if (delta.type === 'text_delta')
         await consumeStreamDelta(event.parent_tool_use_id ? 'activity' : 'text', delta.text, progress, emit);
       else if (delta.type === 'thinking_delta')

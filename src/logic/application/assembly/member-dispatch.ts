@@ -1,5 +1,7 @@
 import { engineConfigurations } from '../../engines/service';
+
 import type { EngineConfigurationRef } from '../../../framework/kernel';
+
 /**
  * 目录归属：logic/application/assembly；应用与执行服务装配。
 
@@ -173,6 +175,7 @@ export function createMemberServices(workspace: Workspace, models: EngineModelPr
   const prepareEngine = (configuration: EngineConfigurationRef<ResolvedEngineModel, import('../../engines').LoopEngine>, options: MemberStartOptions): PreparedEngine =>
   {
     const llm = configuration.Read().resolved!;
+
     return {
       model: structuredClone(llm.profile), availableTools: nativeToolNames(options.permission !== 'read', llm.profile.engine), scopedTools: process.platform === 'win32' && process.arch === 'x64' ? ['cbim_scoped_read', ...(options.permission !== 'read' ? ['cbim_scoped_node', ...(controlledTransport ? ['cbim_file_write_controlled'] : [])] : [])] : undefined, availableValidators: ['json-schema-v1', 'csv-table-v1', 'png-raster-v1'], Create: async (run, task, hooks) =>
       {

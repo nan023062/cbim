@@ -1,7 +1,11 @@
 import { openProjectOffice } from '../../project';
+
 import { engineConfigurations } from '../../engines/service';
+
 import type { ResolvedEngineModel, LoopEngine } from '../../engines';
+
 import { kernel } from '../../../framework/kernel';
+
 /**
  * 统一 Agent 路径：可信 launch.executionModel 选择独立 Agent 调度装配，主/子共用对象与执行循环；旧 Auto/Team 规则仅用于旧日志续接。
  * 主模型和附加角色交由同一次引擎配置解析，不重新选择单独角色。
@@ -91,6 +95,7 @@ export function createExecutionManager(runtime: CbimRuntime, workspace: Workspac
   return new WorkspaceExecutionManager(workspace, storage, async (options, task, launch) =>
   {
     const configuration = options.profileId ? await engineConfigurations(models).Resolve({ profileId: options.profileId, modelId: options.model, engine: options.engine, modelRoles: options.modelRoles }) : kernel.Capture<ResolvedEngineModel, LoopEngine>({ type: options.engine ?? 'pi', llm: { provider: options.provider, model: options.model } });
+
     const llm = configuration.Read().resolved;
 
     if (llm && (options.provider !== 'cbim-' + llm.profile.id || options.model !== llm.profile.model))
@@ -120,6 +125,7 @@ export function createExecutionManager(runtime: CbimRuntime, workspace: Workspac
     const authorizeNative: import('../../execution/assembly/loop-engine').ExecutionServices['AuthorizeNative'] = async call => { workspace.Assert(); const mapped = call.name === 'find' ? 'Glob' : call.name; const reason = guard({ name: mapped, input: call.input }, workspace.entry.path); return { allow: !reason, reason }; };
 
     const office = await openProjectOffice(runtime, workspace, conversationBinding?.rootSessionId ?? task.taskId, ownerships?.members);
+
     const agentCalls = launch.executionModel === 'agent-tools-v1' ? createAgentCallAssembly({
       office, connectorServers, connectorProducts, modelAdapters, extensions, models, workspace, task, options: { ...options, engineRuntimes }, llm, storage, members: ownerships?.members, admission, dispatch, requestBudgets, authorizeNative, businessServices,
       // 每个业务子调用独立捕获工作区身份；仅复用已有受控工人，不降级到任意文件命令。

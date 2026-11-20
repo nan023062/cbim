@@ -6,13 +6,12 @@
 import { z } from 'zod';
 
 import { repositoryToolScopeSchema } from '../../../resource/connections/rules/repository-tools';
-export { repositoryToolScopeSchema };
 
 import { githubFeedbackScopeSchema } from '../../feedback';
 
+export { repositoryToolScopeSchema };
+
 const workspaceId = z.string();
-
-
 
 // 兼容原工具日志出口，反馈范围唯一实现由 Logic 拥有。
 export { githubFeedbackScopeSchema } from '../../feedback';

@@ -1,4 +1,5 @@
 export { engineAdapterProtocol, type EngineAdapter } from './adapter';
+
 export { enginePluginPackageHeader, enginePluginAdapterEntry, type EnginePluginManifest, type EnginePluginModule } from './plugin-package';
 
 export type { AgentEngine } from './agent-engine';

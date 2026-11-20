@@ -134,12 +134,7 @@ export async function prepareAgentBusiness(input: { workspace: Workspace; dispat
   signal.throwIfAborted();
 
   return {
-    workflows: prepared.modules.flatMap(({ binding, workflowText, availableWorkflows }) => {
-      const list = (availableWorkflows ?? []).map(workflow => ({ ...workflow, workspaceId: binding.moduleId }));
-      if (!list.some(workflow => workflow.skillId === binding.workflow.id))
-        list.push({ workspaceId: binding.moduleId, ownerId: binding.moduleId, skillId: binding.workflow.id, content: workflowText });
-      return list;
-    }),
+    workflows: prepared.modules.flatMap(({ binding, workflowText, availableWorkflows }) => { const list = (availableWorkflows ?? []).map(workflow => ({ ...workflow, workspaceId: binding.moduleId })); if (!list.some(workflow => workflow.skillId === binding.workflow.id)) list.push({ workspaceId: binding.moduleId, ownerId: binding.moduleId, skillId: binding.workflow.id, content: workflowText }); return list; }),
     task: memberPublicTask(task, workspace.entry.path), launch, services,
     BeforeRun: async runId => { if (runId !== binding.runId) throw new Error('启动身份与冻结业务不一致'); registrationAttempted = true; await ports.runs.Start(record) },
     Close: async () => { if (registrationAttempted) await ports.runs.Close(record) }, Verify: async (summary, signal) =>

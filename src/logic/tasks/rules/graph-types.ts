@@ -364,10 +364,12 @@ export type GraphDelta = |
 };
 
 /** 旧任务和无登记岗位的派发沿用办公室内的默认岗位。 */
-export function taskWorkerId(task: Pick<TaskNode, 'workerId' | 'assignee'>): string {
+export function taskWorkerId(task: Pick<TaskNode, 'workerId' | 'assignee'>): string
+{
   return task.workerId ?? defaultWorkerId(task.assignee.agentId);
 }
 
-export function defaultWorkerId(agentId: string): string {
+export function defaultWorkerId(agentId: string): string
+{
   return 'role:' + agentId;
 }

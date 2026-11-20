@@ -19,6 +19,7 @@ import { candidateReviewSchema } from './candidate-review';
 import { queuedTaskCancellationSchema } from './queued-task-cancel';
 
 import { defaultWorkerId } from "./graph-types";
+
 import type { AgentRef, GraphEventBatch, GraphIdentity, GraphSnapshot, TaskNode } from './graph-types';
 
 import { memberHelpRecordSchema } from './member-help';
@@ -182,7 +183,9 @@ export function usableResult(task: TaskNode, planRevision: number, resultId?: st
 /** 单项查询与完整图共用节点自身可核实的不变量；跨节点、图流及边关系仍由 validateGraph 核验。 */
 export function validateTaskNode(t: TaskNode): void
 {
-  if (t.workerId !== undefined && t.workerId !== (t.ownerBinding?.memberId ?? defaultWorkerId(t.assignee.agentId))) throw Error("任务的 Worker 与派发绑定不一致");
+  if (t.workerId !== undefined && t.workerId !== (t.ownerBinding?.memberId ?? defaultWorkerId(t.assignee.agentId)))
+    throw Error("任务的 Worker 与派发绑定不一致");
+
   shape(task, t);
 
   if (t.nodeId !== `task:${t.taskId}`)

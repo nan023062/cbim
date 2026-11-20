@@ -1,32 +1,63 @@
 /** Local model configuration storage and credential protection. */
 import fs from 'node:fs/promises';
+
 import { randomUUID } from 'node:crypto';
+
 import { z } from 'zod';
+
 import { atomic } from '../../core/io/text-files';
+
 import { SerialQueue } from '../../core/utility';
+
 import type { SecretCipher } from '../../core/io/electron';
 
 interface ProviderConfiguration
 {
   auth: string;
+
   api: string;
+
   baseUrl: string;
-  alternateConnections?: readonly { api: string; baseUrl: string }[];
-  embedding?: { baseUrl: string };
+
+  alternateConnections?: readonly
+  {
+    api: string;
+
+    baseUrl: string
+  }[];
+
+  embedding?:
+  {
+    baseUrl: string
+  };
 }
 
-export type StoredProfile<P> = P & { id: string; encryptedKey?: string };
-export interface ModelFile<P> { version: 1; selectedId?: string; profiles: StoredProfile<P>[] }
+export type StoredProfile<P> = P &
+{
+  id: string;
+
+  encryptedKey?: string
+};
+
+export interface ModelFile<P>
+{
+  version: 1;
+
+  selectedId?: string;
+
+  profiles: StoredProfile<P>[]
+}
+
 const fileSchema = z.object({ version: z.literal(1), selectedId: z.string().uuid().optional(), profiles: z.array(z.object({ id: z.string().uuid(), encryptedKey: z.string().optional() }).passthrough()).max(100) });
 
 export class LocalModelProfiles<P extends ProviderConfiguration>
 {
   private readonly _queue = new SerialQueue();
+
   private readonly draftSchema = z.object({ id: z.string().uuid().optional(), profile: z.unknown(), apiKey: z.string().max(16000).optional() }).strict();
 
   constructor(private filename: string, private definition: z.ZodType<P, z.ZodTypeDef, unknown>, private cipher?: SecretCipher)
   {
-
   }
 
   protected async Read(): Promise<ModelFile<P>>
@@ -67,29 +98,38 @@ export class LocalModelProfiles<P extends ProviderConfiguration>
   private Parse(input: unknown)
   {
     const draft = this.draftSchema.parse(input);
+
     return { ...draft, profile: this.definition.parse(draft.profile) };
   }
 
   private Build(draft: { id?: string; profile: P; apiKey?: string }, previous?: StoredProfile<P>): StoredProfile<P>
   {
     let encryptedKey: string | undefined;
+
     if (draft.profile.auth === 'api-key')
     {
       if (draft.apiKey)
       {
-        if (!this.cipher?.Available()) throw new Error('系统加密不可用，无法保存 API Key');
+        if (!this.cipher?.Available())
+          throw new Error('系统加密不可用，无法保存 API Key');
+
         encryptedKey = this.cipher.Encrypt(draft.apiKey);
       }
       else
       {
         const addedTarget = draft.profile.alternateConnections?.some(connection => !previous?.alternateConnections?.some(old => old.api === connection.api && old.baseUrl === connection.baseUrl))
           || draft.profile.embedding && draft.profile.embedding.baseUrl !== previous?.embedding?.baseUrl;
+
         if (previous && (previous.baseUrl !== draft.profile.baseUrl || previous.api !== draft.profile.api || addedTarget))
           throw new Error('更换接口地址、协议或新增兼容接口后请重新输入 API Key');
+
         encryptedKey = previous?.encryptedKey;
       }
-      if (!encryptedKey) throw new Error('请输入 API Key');
+
+      if (!encryptedKey)
+        throw new Error('请输入 API Key');
     }
+
     return { ...draft.profile, id: previous?.id ?? randomUUID(), encryptedKey };
   }
 
@@ -139,5 +179,4 @@ export class LocalModelProfiles<P extends ProviderConfiguration>
 
     return this.Change(async () => use(await this.Read(), fixed));
   }
-
 }

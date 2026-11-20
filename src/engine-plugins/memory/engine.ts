@@ -92,6 +92,7 @@ export class MemoryEngine implements AgentEngine
     this.context = context;
 
     this.tools = await runtimeEngineTools(context, this.options.knowledge, memoryTool);
+
     this.catalog = await this.tools.list();
 
     if (!this.catalog.some(tool => tool.name === 'cbim_knowledge_search'))

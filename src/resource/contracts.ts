@@ -9,12 +9,7 @@ export const resourceCategories = { talent: { label: '人才市场', description
 export type ResourceKind = keyof typeof resourceKinds;
 
 /** 按使用范围登记 Resource 拥有的资产。共享仓库只接受 repository 中的类型。 */
-export const resourceInventory = {
-  repository: resourceKinds,
-  local: {
-    model_configuration: { label: '本地大模型配置', description: '当前用户的模型 ID、服务地址、协议及本机凭据引用' },
-  },
-} as const;
+export const resourceInventory = { repository: resourceKinds, local: { model_configuration: { label: '本地大模型配置', description: '当前用户的模型 ID、服务地址、协议及本机凭据引用' }, }, } as const;
 
 export const resourceKindIds = Object.freeze(Object.keys(resourceKinds)) as readonly [ResourceKind, ...ResourceKind[]];
 

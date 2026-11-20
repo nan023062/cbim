@@ -13,8 +13,6 @@ import { discoverProtocolModels, probeEmbedding, probeGeneration } from './proto
 
 import { selectProviderConnection, connectionSchema, definition, type ModelConnectionRequirement, type LlmDefinition, type LlmSettings, type SecretCipher, type ResolvedLlm } from '../index';
 
-
-
 import type { ResolvedModelOperation } from '../index';
 
 export type { ResolvedModelOperation } from '../index';
@@ -117,6 +115,7 @@ export class LlmProfiles extends LocalModelProfiles<LlmDefinition>
   private Settings(data: ModelFile<LlmDefinition>): LlmSettings
   {
     const profiles = data.profiles.map(({ encryptedKey, ...profile }) => ({ ...profile, hasKey: Boolean(encryptedKey) }));
+
     return { selectedId: data.selectedId, secureStorage: this.credentialStorageAvailable, profiles };
   }
 
@@ -149,6 +148,7 @@ export class LlmProfiles extends LocalModelProfiles<LlmDefinition>
   {
     return this.WithSnapshot(refs, async (data, fixed) => { const selected = fixed.map(ref => select(data, ref)); const cache = new Map<number, Resolved>(); let active = true; try { return await use({ profiles: selected.map(item => structuredClone(item.profile)), Resolve(index) { if (!active) throw new Error('模型配置准备已结束，不能重新解析凭据'); if (!Number.isInteger(index) || index < 0 || index >= selected.length) throw new Error('模型角色索引不存在'); if (!cache.has(index)) cache.set(index, selected[index].Resolve()); return cache.get(index)!; }, }); } finally { active = false; cache.clear(); } });
   }
+
   /** 将公开供应商配置展开为选定模型；禁用模型不得用于新运行。 */
   async Resolve(id?: string, modelId?: string, connection?: ModelConnectionRequirement): Promise<ResolvedLlm>
   {
@@ -178,12 +178,7 @@ export class LlmProfiles extends LocalModelProfiles<LlmDefinition>
        */
   WithRuntimeConfiguration<T>(ref: ExplicitModelReference, use: (configuration: LockedModelConfiguration) => Promise<T>): Promise<T>
   {
-    return this.WithResolvedProfiles([ref], (data, fixed) =>
-    {
-      this.Explicit(fixed);
-      const selected = selectConfiguration(data, fixed.profileId, fixed.modelId, fixed.connection);
-      return { profile: selected.profile, Resolve: () => ({ profile: structuredClone(selected.profile), apiKey: this.RuntimeKey(selected.definition) }) };
-    }, locked => use({ profile: locked.profiles[0], Resolve: () => locked.Resolve(0) }));
+    return this.WithResolvedProfiles([ref], (data, fixed) => { this.Explicit(fixed); const selected = selectConfiguration(data, fixed.profileId, fixed.modelId, fixed.connection); return { profile: selected.profile, Resolve: () => ({ profile: structuredClone(selected.profile), apiKey: this.RuntimeKey(selected.definition) }) }; }, locked => use({ profile: locked.profiles[0], Resolve: () => locked.Resolve(0) }));
   }
 
   private Explicit(ref: ExplicitModelReference)
@@ -199,12 +194,7 @@ export class LlmProfiles extends LocalModelProfiles<LlmDefinition>
        */
   WithModelOperations<T>(refs: readonly ModelOperationReference[], use: (locked: LockedModelOperations) => Promise<T>): Promise<T>
   {
-    return this.WithResolvedProfiles(refs, (data, ref) =>
-    {
-      this.Explicit(ref);
-      const selected = selectOperation(data, ref);
-      return { profile: selected.profile, Resolve: () => ({ profile: structuredClone(selected.profile), apiKey: this.RuntimeKey(selected.definition) }) };
-    }, use);
+    return this.WithResolvedProfiles(refs, (data, ref) => { this.Explicit(ref); const selected = selectOperation(data, ref); return { profile: selected.profile, Resolve: () => ({ profile: structuredClone(selected.profile), apiKey: this.RuntimeKey(selected.definition) }) }; }, use);
   }
 
   /** 获取草稿接口的模型 ID；失败不阻止手动添加。保存凭据只在同地址、同协议时复用。 */

@@ -9,6 +9,7 @@
  * 算法入口：通过 Core StringUtils 静态方法复用机制，本文件继续拥有原业务策略。
  */
 import { consumeStreamDelta } from '../stream-delta';
+
 import { assertSendReady, prepareEngineMessage } from '../message-input';
 
 import { StringUtils } from '../../core/io';
@@ -57,6 +58,7 @@ export interface CodexOptions
   knowledge: EngineToolsPort;
 
   ReadPermission?(): 'read' | 'ask' | 'execute';
+
   allowNativeExecution?: boolean;
 
   llm?: ResolvedEngineModel;
@@ -307,6 +309,7 @@ export class CodexEngine implements AgentEngine
     this.inactivity = new RunInactivityTimer(this.options.turnTimeoutMs, 'Codex', error => this.Fail(error));
 
     const input = prepareEngineMessage(this.context.source, message, this.options.images);
+
     const profile = this.options.llm!.profile;
 
     const effort = profile.reasoning && profile.thinkingLevel !== 'off' ? (profile.thinkingLevel ?? 'medium') : 'none';
@@ -351,9 +354,11 @@ export class CodexEngine implements AgentEngine
       return;
 
     const kind = codexDeltaKinds.get(method);
+
     if (kind)
     {
       await consumeStreamDelta(kind, params.delta, () => this.inactivity?.Progress(), event => this.Emit(event), params.itemId);
+
       return;
     }
 

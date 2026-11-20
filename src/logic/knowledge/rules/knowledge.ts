@@ -361,6 +361,7 @@ export class Rules
     for (const [agent] of agents)
     {
       const { chain, entries } = SkillScope.Resolve(agent, inventories, id => id === '.cbim/team' ? undefined : pp.dirname(id));
+
       const seen = new Map<string, string>();
 
       for (const skill of entries)

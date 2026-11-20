@@ -1,5 +1,6 @@
 /** 引擎设置与执行入口，提供官方引擎目录及制品兼容规则。 */
 import { PluginManager } from '../../../resource/plugins';
+
 import { registerPackageEngines, supportedEngines, engineDescriptor, loopEngineSchema, type LoopEngine } from '../index';
 
 import type { EngineArtifact, EngineArtifactsPort, PreparedEngineArtifact } from '../../updates/engine-artifacts';
@@ -15,33 +16,60 @@ export class EnginePackages implements EngineRuntimeResolver
   constructor(file: string, private readonly artifacts: EngineArtifactsPort)
   {
     this.manager = new PluginManager(file, artifacts, {
-      get ids() { return supportedEngines.map(engine => engine.id); },
+      get ids()
+      {
+        return supportedEngines.map(engine => engine.id);
+      },
+
       ParseId: raw => loopEngineSchema.parse(raw),
-      Validate: artifact => {
-        const descriptor = engineDescriptor(loopEngineSchema.parse(artifact.kind));
-    
-        if (artifact.plugin?.type === 'connector' || artifact.protocol !== 1 || artifact.dependencies.length !== (descriptor.packageDependencies ?? []).length || artifact.dependencies.some(ref => !(descriptor.packageDependencies ?? []).includes(loopEngineSchema.parse(ref.kind))))
-          throw Error('引擎制品与官方声明不兼容');
-      }
+
+      Validate: artifact => { const descriptor = engineDescriptor(loopEngineSchema.parse(artifact.kind)); if (artifact.plugin?.type === 'connector' || artifact.protocol !== 1 || artifact.dependencies.length !== (descriptor.packageDependencies ?? []).length || artifact.dependencies.some(ref => !(descriptor.packageDependencies ?? []).includes(loopEngineSchema.parse(ref.kind)))) throw Error('引擎制品与官方声明不兼容'); }
     });
   }
 
-  async Init() { registerPackageEngines((await this.artifacts.List()).available); await this.manager.Init(); }
+  async Init()
+  {
+    registerPackageEngines((await this.artifacts.List()).available);
 
-  Read(): Promise<EnginePackageSettings> { return this.manager.Read(); }
+    await this.manager.Init();
+  }
 
-  List() { return this.manager.List(); }
+  Read(): Promise<EnginePackageSettings>
+  {
+    return this.manager.Read();
+  }
 
-  async Check() { await this.artifacts.Check(); await this.Init(); return this.List(); }
+  List()
+  {
+    return this.manager.List();
+  }
 
-  Install(kind: LoopEngine, expected?: { revision: number; identity: string }) { return this.manager.Install(kind, expected); }
+  async Check()
+  {
+    await this.artifacts.Check();
 
-  SetEnabled(kind: LoopEngine, enabled: boolean, remove = false, revision?: number) { return this.manager.SetEnabled(kind, enabled, remove, revision); }
+    await this.Init();
+
+    return this.List();
+  }
+
+  Install(kind: LoopEngine, expected?: { revision: number; identity: string })
+  {
+    return this.manager.Install(kind, expected);
+  }
+
+  SetEnabled(kind: LoopEngine, enabled: boolean, remove = false, revision?: number)
+  {
+    return this.manager.SetEnabled(kind, enabled, remove, revision);
+  }
 
   async ResolveEngine(raw: string): Promise<EngineRuntimePackage>
   {
-    if (!supportedEngines.some(engine => engine.id === raw)) await this.Init();
+    if (!supportedEngines.some(engine => engine.id === raw))
+      await this.Init();
+
     const { root, dependencies, retain } = await this.manager.Resolve(raw);
+
     return { ...root, dependencies, retain };
   }
 }

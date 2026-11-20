@@ -43,15 +43,21 @@ export interface OfficeWorkflow
 export function composeTaskSkills(role: Pick<AgentRole['definition'], 'effectiveSkills'>, workflows: readonly OfficeWorkflow[])
 {
   const skills = [...(role.effectiveSkills ?? [])];
+
   const seen = new Set(skills.map(skill => skill.skillId));
+
   for (const workflow of workflows)
   {
     if (seen.has(workflow.skillId))
       continue;
+
     seen.add(workflow.skillId);
+
     const ownerId = workflow.ownerId ?? workflow.workspaceId;
+
     skills.push({ skillId: workflow.skillId, ownerId, inherited: ownerId !== workflow.workspaceId, content: workflow.content });
   }
+
   return skills;
 }
 
@@ -100,9 +106,30 @@ export class OfficeDispatcher<Result, Value> implements AgentTaskDispatcher
     this._signal.throwIfAborted();
 
     const child = Object.freeze({ workspaceId: caller.workspaceId, taskId: crypto.randomUUID(), parentTaskId: caller.taskId, memberId: step.memberId, goal: step.task });
+
     const agents = this._agents.ForTask(child);
+
     let run: OfficeRun<Result, Value>;
-    try { run = await this._prepare(step, child, agents); } catch (error) { try { await agents.Close(); } catch (cleanupError) { this._retainCleanup(agents.Close); throw cleanupError; } throw error; }
+
+    try
+    {
+      run = await this._prepare(step, child, agents);
+    }
+    catch (error)
+    {
+      try
+      {
+        await agents.Close();
+      }
+      catch (cleanupError)
+      {
+        this._retainCleanup(agents.Close);
+
+        throw cleanupError;
+      }
+
+      throw error;
+    }
 
     let closed = false;
 
@@ -147,8 +174,6 @@ export { OfficeSchedule } from './schedule';
 export { OfficeMembers } from './members';
 
 export { Office } from './office';
-
-
 
 export type { TeamDescription } from '../cability/team';
 

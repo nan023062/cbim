@@ -1,4 +1,4 @@
-﻿/** 连接器是外部办公工具服务。宿主负责建立连接，本轮 Agent 通过已连接的服务发现并调用工具。 */
+/** 连接器是外部办公工具服务。宿主负责建立连接，本轮 Agent 通过已连接的服务发现并调用工具。 */
 export interface ConnectorTool
 {
   name: string;
@@ -35,6 +35,7 @@ export class ConnectorService<Descriptor, Result>
           throw new Error('连接器工具名称为空或重复：' + tool.name);
 
         this._routes.set(tool.name, server);
+
         this._tools.push(structuredClone(tool));
       }
     }
@@ -68,8 +69,11 @@ export class ConnectorService<Descriptor, Result>
   public async Call(name: string, input: unknown, signal: AbortSignal): Promise<Result>
   {
     signal.throwIfAborted();
+
     const result = await this.Resolve(name).Call(name, input, signal);
+
     signal.throwIfAborted();
+
     return result;
   }
 }

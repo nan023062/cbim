@@ -27,6 +27,7 @@ export function requestBudgetEndpoint(llm: ResolvedLlm): string
     throw Error('模型请求地址不受支持');
 
   const endpoint = modelRequestUrl(base.href, llm.profile.api);
+
   return llm.profile.api === 'anthropic-messages' ? endpoint + '?beta=true' : endpoint;
 }
 

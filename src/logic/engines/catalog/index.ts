@@ -12,7 +12,6 @@ export type { ModelRolesSelection, ModelRolesSnapshot, ModelRoleDescriptor } fro
 
 export { additionalRoleOperations } from './role-operations';
 
-
 export { modelRoleChoices, engineSelectionAvailable } from './model-choices';
 
 export { checkedEngineAdapter, type EngineAdapter } from './adapter';

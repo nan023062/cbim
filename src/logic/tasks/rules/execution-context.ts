@@ -43,7 +43,14 @@ export interface PreparedDispatchModule
 
   workflowText: string;
 
-  availableWorkflows?: { skillId: string; ownerId: string; content: string }[];
+  availableWorkflows?:
+  {
+    skillId: string;
+
+    ownerId: string;
+
+    content: string
+  }[];
 
   /** 同一正文的可选程序约定；无声明不补默认规则，保存后必须与正文解析完全一致。 */
   workflowContract?: WorkflowContract;

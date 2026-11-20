@@ -45,10 +45,7 @@ export function loopIpcHandlers(app: ApplicationServices): IpcHandlers<keyof Loo
     'loop.approve': async args => { return app.Execution(args.id).AnswerApproval(args.taskId, args.approvalId, args.allow, args.allowAll === true); },
     'loop.setPermission': async args => app.Execution(args.id).SetOfficePermission(args.taskId, args.runId, args.permission),
     'loop.stop': async args => { return app.Execution(args.id).Stop(args.taskId); },
-    'loop.inspect': async args => { const run = await app.Execution(args.id).Inspect(args.taskId, args.runId);
-      if (args.afterSeq === undefined) return run;
-      if (args.afterSeq > (run.events.at(-1)?.seq ?? 0)) throw new Error('事件游标超过当前运行日志');
-      return { ...run, events: run.events.filter(event => event.seq > args.afterSeq!) }; },
+    'loop.inspect': async args => { const run = await app.Execution(args.id).Inspect(args.taskId, args.runId); if (args.afterSeq === undefined) return run; if (args.afterSeq > (run.events.at(-1)?.seq ?? 0)) throw new Error('事件游标超过当前运行日志'); return { ...run, events: run.events.filter(event => event.seq > args.afterSeq!) }; },
     'loop.list': async args => { return app.Execution(args.id).List(); },
   };
 }

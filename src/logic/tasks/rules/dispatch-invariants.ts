@@ -492,11 +492,17 @@ export function validateDispatchExecution(previous: DispatchState, next: Dispatc
 }
 
 /** 从已派发任务的岗位快照投影运行占用，避免执行实例或模型配置充当岗位身份。 */
-export function workerBusyForTask(sessions: NonNullable<DispatchState['teamSessions']>, runs: NonNullable<DispatchState['runs']>, graphs: DispatchState['graphs'], task: TaskNode, excludeRunId?: string) {
+export function workerBusyForTask(sessions: NonNullable<DispatchState['teamSessions']>, runs: NonNullable<DispatchState['runs']>, graphs: DispatchState['graphs'], task: TaskNode, excludeRunId?: string)
+{
   const { workspaceId, rootSessionId: officeId } = task.identity;
+
   const workerId = taskWorkerId(task);
+
   const graph = graphs.find(g => g.identity.workspaceId === workspaceId && g.identity.rootSessionId === officeId);
+
   const taskIds = new Set(graph?.tasks.filter(t => taskWorkerId(t) === workerId).map(t => t.taskId));
+
   const matching = runs.filter(r => r.binding.workspaceId === workspaceId && r.binding.rootSessionId === officeId && taskIds.has(r.binding.taskId));
+
   return officeMemberSessionBusy(sessions, matching.map(r => ({ binding: { workspaceId, officeId, workerId, runId: r.binding.runId }, status: r.status })), { workspaceId, officeId, workerId }, excludeRunId);
 }

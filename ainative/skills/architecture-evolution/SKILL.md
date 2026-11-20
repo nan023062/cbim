@@ -55,7 +55,7 @@ description: "项目架构治理入口：遵守通用架构设计规范，按标
 
 ## 选择可沉淀的抽象
 
-Core、Logic、Bridge、View 四层源码迁移已完成，见 [四层设计](../../../design/four-layer-architecture.md)。src/core 仅持有独立技术机制；任务、知识、预算、运行和存储归 Logic，通信与可信宿主归 Bridge，页面及交互归 View。旧目录已退出，但原共享事务与依赖密集模块仍需按真实变化点渐进治理，不能把目录迁移等同于全部语义解耦。
+Core、Logic、Bridge、View 四层源码迁移已完成，见 [四层设计](https://github.com/nan023062/cbim/blob/7dcff4142e09fdac1a670438bd3081d6c0341f23/design/four-layer-architecture.md)。src/core 仅持有独立技术机制；任务、知识、预算、运行和存储归 Logic，通信与可信宿主归 Bridge，页面及交互归 View。旧目录已退出，但原共享事务与依赖密集模块仍需按真实变化点渐进治理，不能把目录迁移等同于全部语义解耦。
 
 前后端使用相同契约的机制可共享 Core；语言相同不证明语义相同，必须核对排序、空值、错误和生命周期后再统一。业务/视图策略保持原归属，view/foundations 可组合 Core 但不引用后端实现。Core 不依赖 Logic/Bridge/View 或旧 backend/frontend；平台专用实现有独立入口。Bridge 只负责通信，Logic 不依赖 Bridge；View 仅依赖 Bridge 客户端/契约与适用 Core。每项能力有自己的公开入口、实例状态和资源所有者，不建立万能容器。
 

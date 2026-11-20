@@ -8,6 +8,11 @@ import {execFileSync} from 'node:child_process';
 import {assertProductionTree} from './production-test-guard.mjs';
 import {enginePackageSchema,validateEnginePackage,runtimeRelativePath,validateRuntimeFiles,verifyRuntimeManifest,type ColdRuntime,type RuntimeFile,type RuntimePackage,type RuntimeManifest,type EnginePackage} from '../src/logic/updates/service/runtime-manifest';
 
+import {engineIndexAsset,officialEnginePublicKey,verifyEngineIndex} from '../src/logic/updates/service/engine-index';
+import {downloadRuntimeManifest} from '../src/logic/updates/service/runtime-download';
+
+
+
 const require=createRequire(import.meta.url),{ZipFile}=require('yazl');
 export async function fileHash(file:string){const hash=createHash('sha256');for await(const chunk of createReadStream(file))hash.update(chunk);return hash.digest('hex')}
 /** 精确文件表同时用作归档输入和验收清单；不跟随链接或收录未声明的节点。 */
@@ -108,10 +113,17 @@ export async function stageColdRuntime(appDirectory:string,buildRoot:string,vers
   assertProductionTree(appDirectory);
   if(process.platform!=='win32'||process.arch!=='x64')throw Error('分层桌面包目前只支持 Windows x64');
   const key=await runtimeSigningKey(),output=path.join(buildRoot,'runtime'),resourceRoot=path.join(buildRoot,'bundled-resources');
-  const cold:ColdRuntime={schema:1,codeVersion:version,platform:'win32-x64',coldFingerprint:await coldFingerprint(path.join(appDirectory,'.vite/build/desktop.js')),publicKey:createPublicKey(key).export({type:'spki',format:'pem'}).toString()};
+  const cold:ColdRuntime={schema:1,codeVersion:version,platform:'win32-x64',enginePublicKey:officialEnginePublicKey,coldFingerprint:await coldFingerprint(path.join(appDirectory,'.vite/build/desktop.js')),publicKey:createPublicKey(key).export({type:'spki',format:'pem'}).toString()};
   await collectResources(path.join(appDirectory,'.vite'),resourceRoot);
   const resource=await archiveDirectory(resourceRoot,output,'runtime-c'+version,'resources-c'+version+'-r1-win32-x64');
-  const engines=await collectEngines(buildRoot,output),createdAt=new Date().toISOString();
+  const envelope=await downloadRuntimeManifest('runtime-engines',engineIndexAsset(officialEnginePublicKey),AbortSignal.timeout(60000));
+  const {index}=verifyEngineIndex(envelope,{platform:cold.platform,publicKey:officialEnginePublicKey});
+  const engines=['codex','claude-code','pi'].map(kind=>{
+    const identity=index.current.find(ref=>ref.kind===kind)?.identity;
+    const artifact=index.releases.find(item=>item.kind===kind && item.package.sha256===identity);
+    if(!artifact)throw Error('正式仓库缺少默认引擎：'+kind);
+    return artifact;
+  }),createdAt=new Date().toISOString();
   engines.push(await collectWorldClock(output));
   const manifest:RuntimeManifest={schema:1,codeVersion:version,resourceVersion:1,platform:'win32-x64',coldFingerprint:cold.coldFingerprint,sourceCommit:sourceCommit(),createdAt,expiresAt:new Date(Date.now()+90*86400000).toISOString(),notes,resource,engines};
   const signed=await signRuntimeManifest(manifest,key,cold);

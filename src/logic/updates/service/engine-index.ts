@@ -8,6 +8,8 @@ import { z } from 'zod';
 
 import { enginePackageSchema, validateEnginePackage, runtimeManifestDigest, type EnginePackage, type ColdRuntime } from './runtime-manifest';
 
+export const officialEnginePublicKey = '-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEA6RvM5J7MXSvrRfAFXbc9OLImwRNr80qCsf9dmnU/ZJU=\n-----END PUBLIC KEY-----\n';
+
 const reference = z.object({ kind: z.string().regex(/^[a-z][a-z0-9-]{0,47}$/), identity: z.string().regex(/^[a-f0-9]{64}$/) }).strict();
 
 const indexSchema = z.object({ schema: z.literal(1), sequence: z.number().int().positive().max(Number.MAX_SAFE_INTEGER), platform: z.literal('win32-x64'), createdAt: z.string().datetime(), expiresAt: z.string().datetime(), sourceCommit: z.string().regex(/^[a-f0-9]{40}$/), notes: z.string().max(30000), current: z.array(reference).min(1).max(64), releases: z.array(enginePackageSchema).min(1).max(256) }).strict();

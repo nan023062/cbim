@@ -66,3 +66,17 @@ test.each(['seeds','indexes'] as const)('历史 %s 篡改仍失败且不重写�
     await expect(migrated.List()).rejects.toThrow(/签名/);expect(await fs.readFile(old.file,'utf8')).toBe(bytes);
   }finally{await old.cleanup();await fresh.cleanup()}
 });
+
+test('源码宿主首次打开时验签目录，断网重启可读取已验证的版本',async()=>{
+  const f=await fixture();
+  try {
+    const signal=new AbortController().signal;
+    const create=()=>new EngineArtifacts(f.file,f.store,undefined,signal,f.fetchIndex);
+    const catalog=await create().List();
+    expect(catalog.current[0].identity).toBe(f.next.package.sha256);
+    f.fetchIndex.mockRejectedValue(Error('offline'));
+    expect(await create().List()).toEqual(catalog);
+    expect(f.fetchIndex).toHaveBeenCalledTimes(1);
+    expect(f.prepare).not.toHaveBeenCalled();
+  } finally { await f.cleanup() }
+});

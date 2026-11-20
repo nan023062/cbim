@@ -14,7 +14,7 @@
 
 执行引擎由独立适配器接入；工具、MCP、连接器和插件属于能力或业务扩展。已有模型服务、反馈和更新可能使用网络，因此“本地优先”不等于已经支持完全离线运行。
 
-当前已具备目标计划、岗位派发、成员结果自动回流、权限与证据核验等基础；完整无人值守开发闭环仍有缺口。见 [核心模型](design/product-model.md) 和 [源码审计与清理记录](https://github.com/nan023062/cbim/blob/c3178be11e24259d99ed59db60cc4781afb15782/design/verification/local-ai-workflow-audit-20261112.md)。产品目标与现有实现分别维护，不能用模型回合结束代替业务验收。
+当前已具备目标计划、岗位派发、成员结果自动回流、权限与证据核验等基础；完整无人值守开发闭环仍有缺口。见 [核心模型](https://github.com/nan023062/cbim/blob/7dcff4142e09fdac1a670438bd3081d6c0341f23/design/product-model.md) 和 [源码审计与清理记录](https://github.com/nan023062/cbim/blob/c3178be11e24259d99ed59db60cc4781afb15782/design/verification/local-ai-workflow-audit-20261112.md)。产品目标与现有实现分别维护，不能用模型回合结束代替业务验收。
 
 桌面技术栈为 Electron + React + TypeScript + Vite + Electron Forge + pnpm。桌面与内部 Loop 共用 TypeScript 领域服务，运行时不需要 Python。
 
@@ -60,7 +60,7 @@ pnpm start
 
 新人先阅读 [AI 协作统一入口](ainative/AGENTS.md)。根目录 [AGENTS.md](AGENTS.md)、[CLAUDE.md](CLAUDE.md) 以及各工具的 Skill 入口均转到共享源；已有规则与流程正文只需修改 `ainative/` 一处。
 
-开发清单与实时进度统一从 [GitHub Issues](https://github.com/nan023062/cbim/issues) 获取。读取选定 Issue、相关 PR／Git 提交记录和实际代码，核实范围、依赖与验收后实施，每个 Issue 独立验证、提交并在已有授权内回填。`design/` 只保存[产品目标、核心取舍、未落地设计和原型](design/README.md)，操作流程沿项目 Skill 和工具维护，验证事实进入提交及关联 Issue／PR；`ainative/docs/` 保存下方概念设计、编码规范与架构标准。
+开发清单与实时进度统一从 [GitHub Issues](https://github.com/nan023062/cbim/issues) 获取。读取选定 Issue、相关 PR／Git 提交记录和实际代码，核实范围、依赖与验收后实施，每个 Issue 独立验证、提交并在已有授权内回填。`design/` 保存[新版桌面 UX 交互设计规范](design/desktop-ux-spec.md)和原型，操作流程沿项目 Skill 和工具维护，验证事实进入提交及关联 Issue／PR；`ainative/docs/` 保存下方概念设计、编码规范与架构标准。
 
 四个项目工作流均必须读取并遵守 [05《代码阅读设计及编码规范》](ainative/docs/05-代码阅读设计及编码规范.md) 和 [06《架构设计原则和工程结构规范》](ainative/docs/06-架构设计原则和工程结构规范.md)，只引用规范，不复制正文。入口与选择见 [项目协作入口](ainative/AGENTS.md#工作流入口)；架构治理步骤维护在 [architecture-evolution](ainative/skills/architecture-evolution/SKILL.md#架构治理执行流程)。这些入口仅服务本工程开发。
 

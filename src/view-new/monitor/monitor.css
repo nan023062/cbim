@@ -1,27 +1,29 @@
-.process-monitor { height: 100dvh; overflow: hidden; display: flex; flex-direction: column; background: #191919; color: #eee; font: 13px/1.4 "Segoe UI", sans-serif; }
+.process-monitor { height: 100dvh; overflow: hidden; display: flex; flex-direction: column; background: var(--bg); color: var(--text); font: 13px/1.4 "Segoe UI", sans-serif; }
 .process-monitor > header { height: 40px; flex: none; display: flex; align-items: center; gap: 9px; padding: 0 12px; -webkit-app-region: drag; }
 .process-columns { display: grid; grid-template-columns: minmax(0,1fr) 70px 80px 64px; align-items: center; text-align: right; gap: 6px; font-variant-numeric: tabular-nums; }
 .process-columns > :first-child { text-align: left; }
-.process-monitor > .process-columns { border-block: 1px solid #333; color: #aaa; font-size: 12px; padding: 7px 12px; }
+.process-monitor > .process-columns { border-block: 1px solid var(--line); color: var(--muted); font-size: 12px; padding: 7px 12px; }
 .process-list { flex: 1; min-height: 0; overflow: auto; padding: 0 6px; scrollbar-gutter: stable; }
-.process-list h2, .process-list p { font-size: 12px; font-weight: 400; margin: 12px 4px 4px; color: #aaa; }
+.process-list h2, .process-list p { font-size: 12px; font-weight: 400; margin: 12px 4px 4px; color: var(--muted); }
 .process-list button { width: 100%; min-height: 42px; padding: 4px 6px; margin: 0; border: 0; border-radius: 6px; background: transparent; color: inherit; font: inherit; }
-.process-list button:hover, .process-list button[aria-pressed=true] { background: #292929; }
+.process-list button:hover, .process-list button[aria-pressed=true] { background: var(--hover); }
 .process-name { display: flex; align-items: center; gap: 7px; min-width: 0; }
-.process-name svg { color: #70b5e5; flex: none; }
+.process-name svg { color: var(--focus); flex: none; }
 .process-name > span, .process-name small { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.process-name small { display: block; font-size: 11px; color: #aaa; }
-.process-monitor footer { min-height: 44px; border-top: 1px solid #333; padding: 0 10px; display: flex; align-items: center; justify-content: space-between; color: #aaa; }
-.process-monitor footer button { border: 1px solid #444; border-radius: 20px; background: #242424; color: #aaa; }
+.process-name small { display: block; font-size: 11px; color: var(--muted); }
+.process-monitor footer { min-height: 44px; border-top: 1px solid var(--line); padding: 0 10px; display: flex; align-items: center; justify-content: space-between; color: var(--muted); }
+.process-monitor footer button { border: 1px solid var(--control-line); border-radius: 20px; background: var(--surface); color: var(--muted); }
 .process-list {padding:0 12px 12px}
-.load-summary {border-block:1px solid #333;padding:12px 2px}
+.load-summary {border-block:1px solid var(--line);padding:12px 2px}
 .load-summary div,.flow-summary {display:flex;align-items:center;justify-content:space-between}
-.load-summary progress {width:100%;height:5px;accent-color:#70b5e5}
-.load-summary small,.resource-entry small {color:#aaa}
+.load-summary progress {width:100%;height:5px;accent-color:var(--focus)}
+.load-summary small,.resource-entry small {color:var(--muted)}
 .flow-summary,.process-list summary {padding:8px 2px}
-.process-list summary {cursor:pointer;border-bottom:1px solid #333}
+.process-list summary {cursor:pointer;border-bottom:1px solid var(--line)}
 .process-list summary b {float:right;font-variant-numeric:tabular-nums}
 .resource-entry {display:flex;align-items:center;gap:8px;padding:6px;overflow-wrap:anywhere}
-.resource-entry svg {flex:none;color:#70b5e5}
+.resource-entry svg {flex:none;color:var(--focus)}
 .resource-entry strong,.resource-entry small {display:block;font-weight:400}
-.host-processes .process-columns {padding:6px;border-bottom:1px solid #292929}
+.host-processes .process-columns {padding:6px;border-bottom:1px solid var(--hover)}
+
+.process-list details { padding-block: 2px; } .process-list summary { min-height: 32px; } .resource-entry { padding: 8px; } .process-monitor header { background: var(--sidebar); } .process-list progress { accent-color: var(--focus); }

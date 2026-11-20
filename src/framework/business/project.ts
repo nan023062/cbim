@@ -30,6 +30,15 @@ export class Project
     return [...this._tree.roots];
   }
 
+  /** 当前业务树的层级与职责索引，供主 Agent 在每轮任务定位时读取。 */
+  public DescribeWorkspaces()
+  {
+    return {
+      roots: [...this._tree.roots],
+      nodes: Object.values(this._tree.nodes).map(({ id, name, summary, children }) => ({ id, name, summary, children: [...children] })),
+    };
+  }
+
   public FindWorkspace(id: string): Workspace | undefined
   {
     if (id === this.id || !Object.hasOwn(this._tree.nodes, id))

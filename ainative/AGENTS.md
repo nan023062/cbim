@@ -34,7 +34,7 @@
 
 ## 工程阅读与操作入口
 
-- 当前实现从 [src 整体架构](../src/ARCHITECTURE.md) 下钻；产品目标与未落地方案从 [design 导航](../design/README.md) 阅读。
+- 当前实现从 [src 整体架构](../src/ARCHITECTURE.md) 下钻；产品目标与未落地方案从 [design 导航](https://github.com/nan023062/cbim/blob/7dcff4142e09fdac1a670438bd3081d6c0341f23/design/README.md) 阅读。
 - 分层与导入许可核对 [依赖检查器](../scripts/check-dependencies.mjs) 和 [边界登记](../scripts/architecture-boundaries.mjs)；类型引用和动态装配均需纳入实际影响分析。
 - 构建入口调整先核实固定输出名、用户数据和恢复兼容要求；发布与真实升级验收沿 cbim-release 执行。
 

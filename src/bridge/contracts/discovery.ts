@@ -97,7 +97,7 @@ export interface OfficeSelection
 
 export interface DesktopMenu
 {
-  Engines(action: 'list' | 'check' | 'install', target?: { kind: string; revision: number; identity: string }): Promise<import('./desktop-engines').EnginePackageSettings>;
+  Engines(action: 'list' | 'check' | 'install' | 'configure', target?: { kind: string; revision: number; identity: string } | { kind: string; revision: number; action: 'enable' | 'disable' | 'remove' }): Promise<import('./desktop-engines').EnginePackageSettings>;
 
   Model<K extends DesktopModelAction>(action: K, ...args: K extends 'models.list' ? [] : [import('./desktop-models').ModelActionInput<K>]): Promise<import('./desktop-models').ModelActionResults[K]>;
 
@@ -107,7 +107,7 @@ export interface DesktopMenu
 
   StopOffice(project: string, session: string): Promise<void>;
 
-  SendOffice(project: string, session: string, text: string, permission?: 'read' | 'ask' | 'execute', selection?: OfficeSelection): Promise<OfficeMessage[]>;
+  SendOffice(project: string, session: string, text: string, permission: 'read' | 'ask' | 'execute', selection: Required<OfficeSelection>): Promise<OfficeMessage[]>;
 
   OpenMonitor(): Promise<void>;
 

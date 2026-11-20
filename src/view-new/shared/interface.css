@@ -4,7 +4,7 @@
  * 设计原因：沿用现有颜色变量以覆盖业务页面；新增语义令牌供统一交互使用，业务布局和状态判断仍归各页面。
  */
 :root {
-  --font-ui: var(--chat-text-size,15px);
+  --font-ui: var(--chat-text-size,14px);
   --font-code: var(--chat-code-size,14px);
   --font-page-title: 20px;
   --font-dialog-title: 18px;
@@ -12,16 +12,16 @@
   --weight-medium: 500;
   font-family: 'Segoe UI', 'Microsoft YaHei', system-ui, sans-serif;
   font-size: var(--font-ui);
-  --bg: #17191d; --sidebar: #1b1e23; --surface: #202329;
-  --raised: #2a2e36; --hover: #303640; --selected: #343d49;
-  --line: #414854; --control-line: #7f8a9a;
-  --text: #f0f2f5; --muted: #adb5c2; --accent: #f0f2f5;
+  --bg: #191919; --sidebar: #111111; --surface: #202020;
+  --raised: #252525; --hover: #292929; --selected: #37383a;
+  --line: #353535; --control-line: #505052;
+  --text: #ededed; --muted: #a1a1a4; --accent: #f0f2f5;
   --green: #88d0a2; --warning: #f0b575; --danger: #ffaaaa;
   --success: var(--green);
   --focus: #9bbdff;
   --space-1: 4px; --space-2: 8px; --space-3: 12px;
   --space-4: 16px; --space-6: 24px; --space-8: 32px;
-  --radius-small: 6px; --radius-control: 10px; --radius-dialog: 16px;
+  --radius-small: 6px; --radius-control: 8px; --radius-dialog: 16px;
   --motion-fast: 120ms; --motion-normal: 180ms; --motion-panel: 220ms;
   --motion-ease: cubic-bezier(.2,.7,.2,1);
 }
@@ -32,8 +32,8 @@
   --text: #20242c; --muted: #596270; --accent: #20242c;
   --green: #246642; --warning: #8c4a10; --danger: #b13737; --focus: #2459bc;
 }
-body {line-height: 1.65}
-button {min-height: 36px; border-radius: var(--radius-control); transition: background-color var(--motion-fast), border-color var(--motion-fast), color var(--motion-fast)}
+body {line-height: 1.5}
+button {min-height: 32px; border-radius: var(--radius-control); transition: background-color var(--motion-fast), border-color var(--motion-fast), color var(--motion-fast)}
 button:not(:disabled):active {translate: 0 1px}
 button:disabled {opacity: .55; cursor: not-allowed}
 button:focus-visible, a:focus-visible, summary:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, [tabindex]:focus-visible {outline: 2px solid var(--focus); outline-offset: 3px}
@@ -50,10 +50,10 @@ button > .cbim-icon {color: inherit}
 .cbim-icon {display: inline-block; vertical-align: -.15em; flex: 0 0 auto}
 .icon-button {min-width: 36px; min-height: 36px; border-radius: var(--radius-small)}
 .sidebar-top {height: 36px}
-.desktop-shell .primary-nav > button {min-height: 38px; height: auto; border-radius: var(--radius-control)}
+.desktop-shell .primary-nav > button {min-height: 34px; height: auto; border-radius: var(--radius-control)}
 .desktop-shell .sidebar-search {height: 36px; border-radius: var(--radius-control)}
 .desktop-shell .workspace-item {border-radius: var(--radius-control)}
-.workspace-topbar {min-height: 54px}
+.workspace-topbar {min-height: 44px}
 .topbar-right {gap: 8px}
 .interface-help-trigger {font-size: var(--font-ui); white-space: nowrap; background: transparent; border-color: transparent}
 .workspace-sidebar .sidebar-footer {border-radius: var(--radius-control)}

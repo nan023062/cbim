@@ -29,6 +29,8 @@ interface Props
 
   onSelect(id: string): void;
 
+  onManageEngines(): void;
+
   onCreate(): void;
 }
 
@@ -39,7 +41,7 @@ function duration(ms: number)
   return s < 60 ? s + 's' : Math.floor(s / 60) + 'm ' + s % 60 + 's';
 }
 
-export function OfficeView({ project, conversation, draft, onDraft, onSaved, onSelect, onCreate }: Props)
+export function OfficeView({ project, conversation, draft, onDraft, onSaved, onSelect, onCreate, onManageEngines }: Props)
 {
   const [started, setStarted] = useState(0);
 
@@ -49,9 +51,11 @@ export function OfficeView({ project, conversation, draft, onDraft, onSaved, onS
 
   const [error, setError] = useState('');
 
+  const [engineReady, setEngineReady] = useState(false);
+
   const selectionKey = 'office-main-agent:' + conversation.id;
 
-  const [selection, setSelection] = useState<OfficeSelection>(() => { try { return JSON.parse(localStorage.getItem(selectionKey) || '{}') ?? {}; } catch { return {}; } });
+  const [selection, setSelection] = useState<OfficeSelection>(() => { try { const stored = JSON.parse(localStorage.getItem(selectionKey) || '{}'); return { ...stored, engine: stored?.engine || 'codex' }; } catch { return { engine: 'codex' }; } });
 
   const pref = 'office-permission:' + conversation.id;
 
@@ -81,7 +85,7 @@ export function OfficeView({ project, conversation, draft, onDraft, onSaved, onS
 
   async function submit()
   {
-    if (started || !draft.trim())
+    if (started || !draft.trim() || !engineReady || !selection.engine || !selection.profileId || !selection.modelId)
       return;
 
     stopped.current = false;
@@ -96,13 +100,13 @@ export function OfficeView({ project, conversation, draft, onDraft, onSaved, onS
 
     try
     {
-      onSaved(await window.desktopMenu.SendOffice(project.id, conversation.id, draft, permission, selection));
+      onSaved(await window.desktopMenu.SendOffice(project.id, conversation.id, draft, permission, { engine: selection.engine, profileId: selection.profileId, modelId: selection.modelId }));
 
       onDraft('');
     }
     catch (e)
     {
-      setError(stopped.current ? '已停止回复' : String(e));
+      setError(stopped.current ? '已停止回复' : (e instanceof Error ? e.message : String(e)).replace(/^Error invoking remote method 'office:send': (?:Error: )?/, ''));
     }
     finally
     {
@@ -168,18 +172,18 @@ export function OfficeView({ project, conversation, draft, onDraft, onSaved, onS
       <div className="office-strip" title={project.name}><span role="status" className={started ? 'active' : ''}><Icon name="sparkles" size={14} />{phase}</span>
       <span title="累计工作时间 · 近两秒估算生成速度">{duration(elapsed)} · {started && sample?.rate != null ? '≈' + sample.rate.toFixed(1) : '—'} tok/s</span></div>
       <form onSubmit={e => { e.preventDefault(); void submit(); }}>
-        <textarea id="office-message" aria-label="任务目标或补充消息" placeholder="继续聊一聊…" rows={1} maxLength={32000} disabled={!!started} value={started ? '' : draft} onChange={e => onDraft(e.target.value)}
+        <textarea id="office-message" aria-label="任务目标或补充消息" placeholder="继续聊一聊…" rows={3} maxLength={32000} disabled={!!started} value={started ? '' : draft} onChange={e => onDraft(e.target.value)}
           onKeyDown={e => { if (!e.nativeEvent.isComposing && e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); void submit(); } }} />
         <footer><button type="button" disabled={!!started} title="添加文本文件到草稿" aria-label="添加文本文件" onClick={() => picker.current?.click()}><Icon name="plus" size={16} /></button>
           <input ref={picker} type="file" hidden accept="text/*,.md,.json,.yaml,.csv" onChange={e => { void attach(e.target.files?.[0]); e.target.value = ''; }} />
           <label className="office-permission" title="执行权限"><Icon name="unblock" size={16} /><select aria-label="执行权限" disabled={!!started} value={permission} onChange={e => { const v = e.target.value as typeof permission; setPermission(v); localStorage.setItem(pref, v); }}>
             <option value="read">只读访问</option><option value="ask">默认权限</option><option value="execute">完全访问</option></select></label>
-          <MainAgentPicker value={selection} disabled={!!started} fail={setError} change={next => { setSelection(next); localStorage.setItem(selectionKey, JSON.stringify(next)); }} />
-          <span className="office-meter" title={'会话累计估算费用（美元） · 最近一次请求的输入上下文 ' + (last?.used ?? '—') + ' / ' + (last?.capacity ?? '—') + ' tokens'}>费用 {cost} <i style={{ background: 'conic-gradient(currentColor ' + Math.min(100, percent ?? 0) + '%, var(--line) 0)' }} />{percent == null ? '—' : percent + '%'}</span>
+          <MainAgentPicker onManage={onManageEngines} onReady={setEngineReady} value={selection} disabled={!!started} fail={setError} change={next => { setSelection(next); localStorage.setItem(selectionKey, JSON.stringify(next)); }} />
           {started ? <button className="office-action" type="button" onClick={stop} aria-label="停止回复"><Icon name="stop" size={14} /></button> :
-            <button className="office-action" type="submit" disabled={!draft.trim()} title="发送（Ctrl / ⌘ + Enter）" aria-label="发送"><Icon name="send" size={15} /></button>}
+            <button className="office-action" type="submit" disabled={!draft.trim() || !engineReady} title="发送（Ctrl / ⌘ + Enter）" aria-label="发送"><Icon name="send" size={15} /></button>}
         </footer>
       </form>
+      <span className="office-meter" title={'会话累计估算费用（美元） · 最近一次请求的输入上下文 ' + (last?.used ?? '—') + ' / ' + (last?.capacity ?? '—') + ' tokens'}>费用 {cost} · 上下文 <i style={{ background: 'conic-gradient(currentColor ' + Math.min(100, percent ?? 0) + '%, var(--line) 0)' }} />{percent == null ? '—' : percent + '%'}</span>
 
       {error && <small role="alert">{error}</small>}
     </div>

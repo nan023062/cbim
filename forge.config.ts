@@ -4,7 +4,7 @@ import { MakerZIP } from '@electron-forge/maker-zip';
 import fs from 'node:fs/promises';
 import {readFileSync} from 'node:fs';
 import path from 'node:path';
-import {packageOfficialEngineRuntimes} from './scripts/package-pi-runtime.mjs';
+
 import {signingConfig, desktopSigningMode, desktopReleaseNotes, updaterConfigYaml} from './scripts/desktop-signing/config.cjs';
 import {verifyBrandAssets} from './scripts/build-brand-assets.mjs';
 import {runtimeSigningKey,stageColdRuntime} from './scripts/runtime-packaging';
@@ -36,7 +36,7 @@ const config: ForgeConfig = {
   makers: [new MakerZIP({}, ['win32'])],
   hooks:{
     prePackage:async()=>{await runtimeSigningKey()},
-    generateAssets:async()=>{await verifyBrandAssets();await packageOfficialEngineRuntimes(buildOut);if(desktopRelease){await fs.writeFile(path.join(buildOut,'desktop-release.json'),JSON.stringify({channel:'desktop-stable',version:desktopVersion,notes:releaseNotes,signingMode}));await fs.writeFile(path.join(buildOut,'app-update.yml'),updaterConfigYaml(desktopVersion,signing?.publisherName,signingMode))}},
+    generateAssets:async()=>{await verifyBrandAssets();await fs.mkdir(buildOut,{recursive:true});if(desktopRelease){await fs.writeFile(path.join(buildOut,'desktop-release.json'),JSON.stringify({channel:'desktop-stable',version:desktopVersion,notes:releaseNotes,signingMode}));await fs.writeFile(path.join(buildOut,'app-update.yml'),updaterConfigYaml(desktopVersion,signing?.publisherName,signingMode))}},
     readPackageJson:async(_config,pkg)=>desktopRelease?{...pkg,version:desktopVersion}:pkg,
     packageAfterPrune:async(_config,appDirectory)=>{
       await runtimeSigningKey();

@@ -23,3 +23,14 @@
 .preference-switch { appearance: none; position: relative; width: 30px; height: 17px; padding: 0; border: 0; border-radius: 12px; background: var(--muted); }
 .preference-switch::before { content: ''; position: absolute; inset: 2px auto auto 2px; width: 13px; height: 13px; border-radius: 50%; background: white; }
 @media(max-width: 640px) { .preferences { grid-template-columns: minmax(0,1fr); grid-template-rows: auto minmax(0,1fr); } .preferences aside { padding: 8px 12px; } .preferences nav { display: flex; overflow-x: auto; } .preferences nav button { white-space: nowrap; width: auto; } .preference-content { padding-inline: 12px; } }
+
+
+.preferences { grid-template-columns: clamp(200px, 18vw, 260px) minmax(0, 1fr); }
+.preferences aside { background: var(--sidebar); border-right: 1px solid var(--line); }
+.preference-content { width: min(100%, 816px); padding: 24px clamp(16px, 3vw, 40px) 48px; }
+.preferences nav button { border-radius: 7px; min-height: 34px; }
+.preference-content h2 { margin-bottom: 8px; }
+.preference-content small { font-size: 12px; line-height: 1.5; }
+.preference-row { padding: 12px 16px; min-height: 52px; }
+@media(max-width:640px) { .preferences { grid-template-columns: minmax(0,1fr); } .preferences aside { border-right: 0; border-bottom: 1px solid var(--line); } }
+

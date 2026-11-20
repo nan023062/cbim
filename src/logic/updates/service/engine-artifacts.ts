@@ -40,7 +40,7 @@ export class EngineArtifacts implements EngineArtifactsPort
   private digest = '';
 
   /** historicalKeys 由可信冷宿主固定，不能来自用户状态或网络；只用于重验已保存的历史来源。 */
-  constructor(private readonly stateFile: string, private readonly store: RuntimeStore, private readonly seed: SignedRuntimeManifest, private readonly signal: AbortSignal, private readonly fetchIndex = () => downloadRuntimeManifest('runtime-engines', engineIndexAsset(store.cold.publicKey), signal), private readonly progress: (kind: string, version: string, progress?: number, error?: string) => void = () => { }, private readonly historicalKeys: readonly string[] = [])
+  constructor(private readonly stateFile: string, private readonly store: RuntimeStore, private readonly seed: SignedRuntimeManifest | undefined, private readonly signal: AbortSignal, private readonly fetchIndex = () => downloadRuntimeManifest('runtime-engines', engineIndexAsset(store.cold.enginePublicKey ?? store.cold.publicKey), signal), private readonly progress: (kind: string, version: string, progress?: number, error?: string) => void = () => { }, private readonly historicalKeys: readonly string[] = [])
   {
   }
 
@@ -100,7 +100,8 @@ export class EngineArtifacts implements EngineArtifactsPort
       return;
 
     // 当前启动来源始终必须使用当前身份；历史公钥不能将旧签名提升为新资源授权。
-    verifyRuntimeManifest(this.seed, this.store.cold, { installed: true });
+    if (this.seed)
+      verifyRuntimeManifest(this.seed, this.store.cold, { installed: true });
 
     const available = new Map<string, EnginePackage>(),
       current = new Map<string, string>();
@@ -132,7 +133,9 @@ export class EngineArtifacts implements EngineArtifactsPort
     if (raw.schema !== 1 || !Array.isArray(raw.indexes) || raw.indexes.length > 128 || !Array.isArray(raw.seeds) || raw.seeds.length > 128)
       throw Error('本机引擎索引格式无效');
 
-    const seeds = raw.seeds.some(value => value.payload === this.seed.payload) ? raw.seeds : [...raw.seeds, this.seed];
+    const seed = this.seed;
+
+    const seeds = seed && !raw.seeds.some(value => value.payload === seed.payload) ? [...raw.seeds, seed] : raw.seeds;
 
     if (seeds.length > 128)
       throw Error('引擎来源保留数量达到上限');
@@ -146,7 +149,7 @@ export class EngineArtifacts implements EngineArtifactsPort
 
       this.Add(checked.manifest.engines, available);
 
-      if (envelope.payload === this.seed.payload)
+      if (envelope.payload === seed?.payload)
       {
         for (const pkg of checked.manifest.engines)
           if (pkg.adapter)
@@ -159,7 +162,7 @@ export class EngineArtifacts implements EngineArtifactsPort
 
     for (const envelope of raw.indexes)
     {
-      const checked = this.VerifyHistory(publicKey => verifyEngineIndex(envelope, { ...this.store.cold, publicKey }, true));
+      const checked = this.store.cold.enginePublicKey ? verifyEngineIndex(envelope, { ...this.store.cold, publicKey: this.store.cold.enginePublicKey }, true) : this.VerifyHistory(publicKey => verifyEngineIndex(envelope, { ...this.store.cold, publicKey }, true));
 
       if (checked.index.sequence <= head)
         throw Error('本机引擎索引序号无效');
@@ -199,12 +202,17 @@ export class EngineArtifacts implements EngineArtifactsPort
 
   List()
   {
-    return this.queue.Run(async () => { await this.Init(); return { current: [...this.current].map(([kind, id]) => this.Summary(this.available.get(kind + ':' + id)!)), available: [...this.available.values()].map(pkg => this.Summary(pkg)) } })
+    return this.queue.Run(async () => { await this.Init(); if (!this.seed && !this.head) await this.RefreshIndex(); return { current: [...this.current].map(([kind, id]) => this.Summary(this.available.get(kind + ':' + id)!)), available: [...this.available.values()].map(pkg => this.Summary(pkg)) } })
   }
 
   Check()
   {
-    return this.queue.Run(async () => { await this.Init(); const checked = verifyEngineIndex(await this.fetchIndex(), this.store.cold); if (checked.index.sequence < this.head || checked.index.sequence === this.head && checked.digest !== this.digest) throw Error('引擎索引回退或同序号冲突'); if (checked.index.sequence === this.head) return; if (this.envelopes.length >= 128) throw Error('引擎索引保留数量达到上限，需要维护后再更新'); const available = new Map(this.available); this.Add(checked.index.releases, available); const envelopes = [...this.envelopes, checked.envelope]; await atomic(this.stateFile, JSON.stringify({ schema: 1, seeds: this.seeds, indexes: envelopes })); this.available = available; this.envelopes = envelopes; this.head = checked.index.sequence; this.digest = checked.digest; for (const ref of checked.index.current) this.current.set(ref.kind, ref.identity); })
+    return this.queue.Run(async () => { await this.Init(); await this.RefreshIndex(); });
+  }
+
+  private async RefreshIndex()
+  {
+    const checked = verifyEngineIndex(await this.fetchIndex(), { ...this.store.cold, publicKey: this.store.cold.enginePublicKey ?? this.store.cold.publicKey }); if (checked.index.sequence < this.head || checked.index.sequence === this.head && checked.digest !== this.digest) throw Error('引擎索引回退或同序号冲突'); if (checked.index.sequence === this.head) return; if (this.envelopes.length >= 128) throw Error('引擎索引保留数量达到上限，需要维护后再更新'); const available = new Map(this.available); this.Add(checked.index.releases, available); const envelopes = [...this.envelopes, checked.envelope]; await atomic(this.stateFile, JSON.stringify({ schema: 1, seeds: this.seeds, indexes: envelopes })); this.available = available; this.envelopes = envelopes; this.head = checked.index.sequence; this.digest = checked.digest; for (const ref of checked.index.current) this.current.set(ref.kind, ref.identity);
   }
 
   /** 只准备已验签的准确版本；并发下载交给 RuntimeStore，失败不会删除已安装包；回调含本地校验，不能据此宣称发生网络下载。 */

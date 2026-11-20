@@ -41,7 +41,7 @@ description: "维护 CBIM 源码架构、单向依赖、注释和目录类图，
 
 当前允许方向以 `scripts/check-dependencies.mjs` 的 layers 和源码为准：
 
-四层已经落地，依据 [四层设计](../../../design/four-layer-architecture.md) 和 src 契约维护实际结构，不再保留旧源码层级许可。
+四层已经落地，依据 [四层设计](https://github.com/nan023062/cbim/blob/7dcff4142e09fdac1a670438bd3081d6c0341f23/design/four-layer-architecture.md) 和 src 契约维护实际结构，不再保留旧源码层级许可。
 
 - Core → 自身公开技术入口及获准第三方；便携算法不加载 Node/Electron，平台实现独立。
 - Logic 规则 → 明确领域契约与适用 Core；不依赖运行服务或 Application。具体引擎仅由 execution/assembly 选择，编排通过业务端口协作。

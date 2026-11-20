@@ -1,4 +1,4 @@
-// 打包主窗验收。下载源使用本次签名构建的原始 ZIP，模型使用本机已有配置。
+// 正式仓库下载验收；只在隔离用户目录中读取本机加密模型配置。
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import os from 'node:os';
@@ -8,17 +8,17 @@ import { _electron } from 'playwright-core';
 import { latestExecutable } from './build-artifact.mjs';
 
 const executable = await latestExecutable();
-const archives = path.resolve(path.dirname(executable), '../runtime');
 const root = await fs.mkdtemp(path.join(os.tmpdir(), 'office-handoff-'));
 const project = path.join(root, 'handoff-project');
 const user = path.join(root, 'user');
 const original = path.join(os.homedir(), '.cbim');
 const marker = randomUUID();
+const managementOnly = process.argv.includes('--manage-only');
 let app;
 try {
   await fs.mkdir(project);
   await fs.mkdir(path.join(user, 'desktop'), { recursive: true });
-  for (const file of ['llm.json','desktop/Local State'])
+  for (const file of managementOnly ? [] : ['llm.json','desktop/Local State'])
     await fs.copyFile(path.join(original,file),path.join(user,file));
   const launch = async () => {
     app = await _electron.launch({ executablePath: executable, env: { ...process.env, CBIM_USER_DATA_ROOT: user }, timeout: 60000 });
@@ -28,38 +28,48 @@ try {
     return page;
   };
   let page = await launch();
-  await app.evaluate(({ dialog }, { project, archives }) => {
+  await app.evaluate(({ dialog }, project) => {
     dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [project] });
-    const fs = process.getBuiltinModule('fs');
-    const path = process.getBuiltinModule('path');
-    const fetch = globalThis.fetch;
-    globalThis.fetch = async (url, options) => {
-      const asset = new URL(url);
-      if (asset.origin === 'https://github.com' && asset.pathname.startsWith('/nan023062/cbim/releases/download/runtime-engines/') && asset.pathname.endsWith('.zip')) {
-        const file = path.join(archives,path.basename(asset.pathname));
-        return new Response(process.getBuiltinModule('stream').Readable.toWeb(fs.createReadStream(file)), { headers: { 'content-length': String(fs.statSync(file).size) } });
-      }
-      return fetch(url,options);
-    };
-  }, { project, archives });
+  }, project);
+  await page.evaluate(() => window.desktopMenu.Engines('check'));
   await page.getByRole('button',{name:'执行引擎',exact:true}).click();
   for (const kind of ['pi','codex']) {
     const state = await page.evaluate(() => window.desktopMenu.Engines('list'));
     const item = state.items.find(i => i.kind === kind);
-    assert(item?.candidate);
-    const card = page.locator('.definition-card').filter({has:page.getByRole('heading',{name:item.candidate.plugin?.label ?? kind,exact:true})});
+    assert(item?.candidate && !item.active);
+    const card = page.locator('.definition-card').filter({has:page.getByRole('heading',{name:item.label,exact:true})});
     await card.getByRole('button',{name:'下载并安装'}).click();
-    await card.getByText(/当前版本/).waitFor({timeout:180000});
-    console.log('installed',kind,item.candidate.version);
+    await page.waitForFunction(async ({kind, identity}) => (await window.desktopMenu.Engines('list')).items.find(item => item.kind === kind)?.active?.identity === identity, {kind, identity:item.candidate.identity}, {timeout:600000,polling:1500});
+    const installed = await page.evaluate(() => window.desktopMenu.Engines('list'));
+    assert.equal(installed.items.find(i => i.kind === kind)?.active?.identity,item.candidate.identity);
+    console.log('installed',kind,item.candidate.version,item.candidate.identity);
   }
   await page.getByRole('button',{name:'新建工作区',exact:true}).click();
   const engine = page.getByLabel('主 Agent 执行引擎');
   const messages = () => page.locator('.office-transcript article');
+  const draft = page.getByLabel('任务目标或补充消息');
+  if (managementOnly) {
+  await draft.fill(marker);
+  await engine.selectOption(':manage');
+  const packageState = await page.evaluate(() => window.desktopMenu.Engines('list'));
+  const codexCard = page.locator('.definition-card').filter({has:page.getByRole('heading',{name:packageState.items.find(item => item.kind === 'codex').label,exact:true})});
+  await codexCard.getByRole('button',{name:'停用',exact:true}).click();
+  await codexCard.getByRole('button',{name:'启用',exact:true}).click();
+  await codexCard.getByRole('button',{name:'停用',exact:true}).waitFor();
+  await page.getByRole('button',{name:'返回工作区'}).click();
+  assert.equal(await draft.inputValue(),marker);
+  await page.waitForFunction(() => document.querySelector('select[aria-label="主 Agent 执行引擎"]')?.value === 'codex');
+    console.log('PASS: install, disable, enable, return to Office with original draft and engine');
+  } else {
   async function send(kind, input) {
     await engine.selectOption(kind);
+    const model = page.getByLabel('主 Agent 大模型');
+    if (!await model.inputValue()) await model.selectOption({ index: 1 });
+    const count = await messages().count();
+    console.log('sending',kind,await model.locator('option:checked').innerText());
     await page.getByLabel('任务目标或补充消息').fill(input);
     await page.getByRole('button',{name:'发送',exact:true}).click();
-    await page.waitForFunction(() => !document.querySelector('button[aria-label="停止回复"]') && (!!document.querySelector('.office-assistant') || !!document.querySelector('.office-dock [role="alert"]')), { }, {timeout:150000});
+    await page.waitForFunction(count => !document.querySelector('button[aria-label="停止回复"]') && (document.querySelectorAll('.office-transcript article').length >= count + 2 || !!document.querySelector('.office-dock [role="alert"]')), count, {timeout:150000});
     const error = await page.locator('.office-dock [role="alert"]').allTextContents();
     assert.equal(error.join(''),'');
   }
@@ -79,6 +89,7 @@ try {
   assert.deepEqual(await messages().allTextContents(),after);
   assert.equal(await page.getByLabel('主 Agent 执行引擎').inputValue(),'codex');
   console.log('PASS: Pi → Codex, recalled '+marker+', all four messages and engine selection survived restart');
+  }
 } finally {
   await app?.close();
   for (const file of ['llm.json','desktop/Local State']) await fs.rm(path.join(user,file),{force:true});

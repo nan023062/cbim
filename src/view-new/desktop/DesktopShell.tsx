@@ -26,7 +26,7 @@ const resourceNavigation = [
 
 export function DesktopShell()
 {
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(() => window.innerWidth > 720);
 
   const [settings, setSettings] = useState<'通用' | '外观'>();
 
@@ -94,7 +94,7 @@ export function DesktopShell()
 
   const title = page === 'workspace' ? selected?.name || '工作区' : resourceNavigation.find(item => item[2] === page)![1];
 
-  const [panelOpen, setPanelOpen] = useState(() => window.innerWidth >= 960);
+  const [panelOpen, setPanelOpen] = useState(() => window.innerWidth >= 1380);
 
   const sidebarToggle = <button className="icon-button" aria-controls="team-sidebar" aria-expanded={expanded}
     aria-label={expanded ? '收起侧栏' : '展开侧栏'} onClick={() => setExpanded(!expanded)}><Icon name="panelLeft" size={16} /></button>;
@@ -147,16 +147,16 @@ export function DesktopShell()
       </header>
       {error && <p role="alert">{error}</p>}
       {page !== 'workspace' ? <DiscoveryView key={page} page={page} title={title} /> : selected ? office ?
-          <OfficeView key={office.id} conversation={office} project={selected} draft={drafts[office.id] ?? ''}
+          <OfficeView onManageEngines={() => setPage('engines')} key={office.id} conversation={office} project={selected} draft={drafts[office.id] ?? ''}
             onDraft={text => setDrafts(previous => ({ ...previous, [office.id]: text }))}
             onSelect={id => openProject(selected, false, id)} onCreate={() => openProject(selected, true)}
             onSaved={messages => setOffice(current => current?.id === office.id ? { ...current, sessions: current.sessions.map(s => s.id === current.id && !current.messages.length ? { ...s, title: messages[0].text.slice(0, 32) } : s), messages: [...current.messages, ...messages] } : current)} />
           : <p role="status">{error ? '无法打开 Office 对话' : '正在打开 Office 对话…'}</p> : <section className="workspace-welcome">
         <div className="intro-emblem"><BrandMark size={64} decorative /></div>
-        <p className="overline">CBIM Assistant · 团队工作空间</p>
-        <h1>你的团队，新的工作方式</h1>
-        <p>连接团队能力、项目知识与每一次协作。</p>
-        <button className="solid-button" disabled={choosing} onClick={() => void chooseProject()}><Icon name="plus" size={17} />新建</button>
+        
+        <h1>打开一个工作区</h1>
+        <p>选择本地项目目录，开始 Office 对话。</p>
+        <button className="solid-button" disabled={choosing} onClick={() => void chooseProject()}><Icon name="folder" size={16} />选择目录</button>
       </section>}
     </main>
     <ExtensionPanel open={panelOpen} />

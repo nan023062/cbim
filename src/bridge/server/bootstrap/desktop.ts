@@ -20,6 +20,8 @@ import { RuntimeJournal } from '../../../logic/updates/service/runtime-journal';
 
 import { verifyRuntimeManifest, type ColdRuntime } from '../../../logic/updates/service/runtime-manifest';
 
+import { officialEnginePublicKey } from '../../../logic/updates/service/engine-index';
+
 import { EngineArtifacts } from '../../../logic/updates/service/engine-artifacts';
 
 import { RuntimeStore } from '../../../logic/updates/service/runtime-store';
@@ -51,7 +53,17 @@ function boot()
     // 复用真实导出类型，防止动态加载边界的入口名称与实现漂移；运行时仍按已选路径加载。
     const implementation = loadApplication(entry) as typeof import('../desktop/main');
 
-    implementation.startDesktop();
+    const userRoot = updateUserRoot(process.argv, process.env.CBIM_USER_DATA_ROOT) ?? path.join(app.getPath('home'), '.cbim');
+
+    const cacheRoot = path.join(userRoot, 'desktop-runtime', 'development');
+
+    const controller = new AbortController();
+
+    const store = new RuntimeStore(path.join(cacheRoot, 'engines'), { schema: 1, platform: 'win32-x64', codeVersion: app.getVersion(), coldFingerprint: createHash('sha256').update(entry).digest('hex'), publicKey: officialEnginePublicKey });
+
+    const engineArtifacts = new EngineArtifacts(path.join(cacheRoot, 'engine-index.json'), store, undefined, controller.signal);
+
+    implementation.startDesktop({ engineArtifacts, cacheRoot, StopPreparingEngines: () => controller.abort(), Confirm: () => {} });
 
     return;
   }

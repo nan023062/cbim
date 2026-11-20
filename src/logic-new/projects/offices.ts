@@ -33,11 +33,11 @@ export type ChatProgress =
 
 export interface MainAgentSelection
 {
-  engine?: string;
+  engine: string;
 
-  profileId?: string;
+  profileId: string;
 
-  modelId?: string
+  modelId: string
 }
 
 export type OfficeChat = (instructions: string, messages: readonly { role: 'user' | 'assistant'; content: string }[], signal: AbortSignal, progress: (sample: ChatProgress) => void, turn: { ReportTokens(total: number): void; selection: MainAgentSelection; root: string; session: string; project: string; dataRoot: string }) => Promise<{ text: string; metrics: TurnMetrics }>;
@@ -93,8 +93,14 @@ export class ProjectOffices
     return { id, officeId: office.id, sessions, messages: await history.Messages(id) };
   }
 
-  public async Send(projectId: string, id: string, input: string, progress: (sample: ChatProgress) => void = () => { }, permission: 'read' | 'ask' | 'execute' = 'ask', selection: MainAgentSelection = {})
+  public async Send(projectId: string, id: string, input: string, progress: (sample: ChatProgress) => void = () => { }, permission: 'read' | 'ask' | 'execute' = 'ask', selection: MainAgentSelection)
   {
+    if (!selection?.profileId?.trim() || !selection.modelId?.trim())
+      throw Error('请选择大模型');
+
+    if (!selection?.engine?.trim())
+      throw Error('请选择已安装并启用的执行引擎');
+
     if (typeof input !== 'string' || !input.trim() || input.length > 32000)
       throw Error('消息长度须为 1 至 32000 个字符');
 
@@ -106,7 +112,7 @@ export class ProjectOffices
     const chat = this.chat;
 
     if (!chat)
-      throw Error('Office chat service is unavailable');
+      throw Error('当前宿主未提供执行引擎插件');
 
     const office = project.runtime.OpenOffice(projectId, id);
 
@@ -127,9 +133,13 @@ export class ProjectOffices
     {
       const context = (await history.Messages(id)).map(m => ({ role: m.role, content: m.text }));
 
-      context.push({ role: 'user', content: input.trim() });
+      const workspaceTree = office.project.DescribeWorkspaces();
 
-      const reply = await office.OpenMainAgent({ parameters: controller.signal, CreateEngine: async (signal, _id, _role, report) => ({ session: async () => { const result = await chat(office.mainRole.definition.instructions, context, signal, progress, { ReportTokens: total => report(1, 'summary', total), selection, root: project.entry.path, session: id, project: projectId, dataRoot: this.projects.paths.Project(projectId) }); const { used, output } = result.metrics; if (!selection.engine && used !== undefined && output !== undefined) report(1, 'summary', used + output); return result; }, Close: async () => { controller.abort(); }, }) });
+      const goal = JSON.stringify({ project: project.entry.name, workspaceTree, userRequest: input.trim() });
+
+      context.push({ role: 'user', content: goal });
+
+      const reply = await office.OpenMainAgent({ parameters: controller.signal, CreateEngine: async (signal, _id, _role, report) => ({ session: async () => { return chat(office.mainRole.definition.instructions, context, signal, progress, { ReportTokens: total => report(1, 'summary', total), selection, root: project.entry.path, session: id, project: projectId, dataRoot: this.projects.paths.Project(projectId) }); }, Close: async () => { controller.abort(); }, }) });
 
       try
       {

@@ -7,6 +7,13 @@ interface EngineVersion
 
   identity: string;
 
+  dependencies?:
+  {
+    kind: string;
+
+    identity: string
+  }[];
+
   plugin?:
   {
     type: string;
@@ -28,6 +35,19 @@ export interface EnginePackageStatus
   active?: EngineVersion;
 
   candidate?: EngineVersion;
+
+  installed: EngineVersion[];
+
+  references: number;
+
+  preparing: boolean;
+
+  preparation?:
+  {
+    version: string;
+
+    progress?: number
+  };
 
   error?: string;
 }

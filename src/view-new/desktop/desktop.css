@@ -81,3 +81,39 @@
   .desktop-extension { position: absolute; z-index: 4; inset: 0 0 0 auto; width: min(420px, 90%); }
 }
 .desktop-extension[data-maximized=true] { position: absolute; z-index: 5; inset: 0; width: 100%; }
+
+
+#application-home { --sidebar-width: clamp(208px, 18vw, 264px); }
+.desktop-titlebar { background: var(--sidebar); color: var(--text); }
+.desktop-titlebar button { min-height: 26px; }
+.desktop-shell .workspace-sidebar { padding: 10px 10px 8px; }
+.desktop-shell .project-list-row { border-radius: 7px; }
+.desktop-shell .project-select { min-height: 32px; }
+.workspace-welcome { max-width: 420px; }
+.workspace-welcome .intro-emblem { margin-bottom: 12px; }
+.workspace-welcome h1 { margin: 0; }
+.workspace-welcome p { color: var(--muted); margin: 8px 0; }
+.workspace-welcome .solid-button { margin-top: 14px; }
+.desktop-extension { flex-basis: clamp(310px, 32vw, 600px); background: var(--surface); }
+.desktop-extension header { height: 44px; padding-left: 10px; }
+.desktop-extension header button, .extension-address button { min-height: 28px; }
+.extension-strip > div { width: clamp(110px, 12vw, 164px); }
+.menu-page.view-page { max-width: 940px; padding: clamp(18px, 3vw, 38px); }
+.menu-page .view-heading { display: flex; align-items: center; justify-content: space-between; flex-direction: row; margin-bottom: 18px; }
+.menu-page .view-heading h1 { margin: 0; }
+.menu-page .repository-bar { border: 0; background: transparent; color: var(--muted); padding: 0; margin: 0 0 12px; }
+.menu-page .graph-toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 16px; }
+.menu-page .graph-toolbar input { flex: 1; min-width: min(180px, 100%); }
+.menu-page .definition-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(270px, 100%), 1fr)); align-items: start; gap: 12px; }
+.menu-page .definition-card { min-width: 0; border: 1px solid var(--line); padding: 16px; overflow-wrap: anywhere; }
+.menu-page .definition-card h3 { margin: 0 0 6px; font-size: 16px; }
+.menu-page .definition-card p { color: var(--muted); margin: 6px 0 12px; }
+.menu-page .definition-card details { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 6px; }
+.menu-page .definition-card summary { font-size: 12px; color: var(--muted); padding-block: 5px; }
+.menu-page .definition-card [role=alert] { color: var(--danger); }
+@media (max-width: 720px) {
+  #application-home .desktop-shell { flex-direction: row; }
+  #application-home .workspace-sidebar { position: absolute; z-index: 4; inset: 0 auto 0 0; width: min(270px, 86vw) !important; max-height: none; border-right: 1px solid var(--line); }
+  .desktop-shell.sidebar-collapsed .workspace-sidebar { display: none; }
+}
+

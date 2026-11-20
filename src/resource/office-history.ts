@@ -61,11 +61,15 @@ export class OfficeHistory
 
     const turns = await Promise.all(files.map(file => readJson<Message | Message[]>(path.join(dir, file))));
 
-    return turns.flat().map(message => ({ ...message, role: message.role ?? 'user' as const }));
+    // 早期版本可能只写入助手消息的身份。跳过空记录，保留同轮有效的用户输入。
+    return turns.flat().filter(message => typeof message?.text === 'string' && message.text.trim()).map(message => ({ ...message, role: message.role ?? 'user' as const }));
   }
 
   public async AppendTurn(id: string, input: string, reply: string, metrics: Usage)
   {
+    if (!input?.trim() || !reply?.trim())
+      throw Error('无法保存缺少正文的对话');
+
     const created = Date.now();
 
     const messages = [

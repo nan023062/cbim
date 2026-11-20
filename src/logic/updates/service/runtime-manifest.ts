@@ -61,6 +61,8 @@ export function validateEnginePackage(engine: EnginePackage)
 /** 由安装基础包携带；只有冷更可更换公钥与基础能力指纹。 */
 export interface ColdRuntime
 {
+  enginePublicKey?: string;
+
   schema: 1;
 
   codeVersion: string;

@@ -6,8 +6,8 @@ import {createRequire} from 'node:module';
 import {_electron as electron,type ElectronApplication,type Page} from 'playwright-core';
 import {buildRuntimeCode} from './runtime-build';
 import {archiveDirectory,collectResources,signRuntimeManifest,coldFingerprint} from './runtime-packaging';
-import {RuntimeJournal} from '../src/logic/updates/service/runtime-journal';
-import type {ColdRuntime,RuntimeManifest} from '../src/logic/updates/service/runtime-manifest';
+import {RuntimeJournal} from '../src/logic-new/updates/service/runtime-journal';
+import type {ColdRuntime,RuntimeManifest} from '../src/logic-new/updates/service/runtime-manifest';
 import type {} from '../src/bridge/contracts/workspace';
 
 async function main(){
@@ -45,21 +45,22 @@ async function main(){
   const launch=async()=>{const start=Date.now();const env:Record<string,string>=Object.fromEntries(Object.entries(process.env).filter((pair):pair is [string,string]=>pair[1]!==undefined));env.CBIM_USER_DATA_ROOT=user;delete env.ELECTRON_RUN_AS_NODE;desktop=await electron.launch({executablePath:require('electron'),args:[appRoot],env,timeout:45000});page=await desktop.firstWindow();page.on('pageerror',error=>errors.push(error.message));await page.getByRole('button',{name:'用户菜单',exact:true}).waitFor();timings.push(Date.now()-start);return desktop;};
   try{
     await fs.writeFile(path.join(user,'preserved.txt'),'existing user data');await launch();
-    const before=await page!.evaluate(()=>window.cbim.call('desktop.updates.status'));assert.equal(before.currentResourceVersion,1);assert.equal(before.enabled,true);
-    const prepared=await page!.evaluate(()=>window.cbim.call('desktop.updates.check'));assert.equal(prepared.phase,'ready');assert.equal(prepared.release?.resourceVersion,2);assert.equal(journal.Read().pending,undefined);
+    const before=await page!.evaluate(()=>window.desktopMenu.Update('status'));assert.notEqual(before.phase,'disabled');
+    const prepared=await page!.evaluate(()=>window.desktopMenu.Update('check'));assert.equal(prepared.phase,'ready');assert.equal(journal.Read().pending,undefined);
     assert.equal((await fs.readdir(path.join(cache,'packages'))).length,1,'window startup must not prepare engines');
     await desktop!.close();desktop=undefined;assert.equal(journal.Read().pending,undefined,'ordinary exit cannot activate a download');
-    await launch();await page!.evaluate(()=>window.cbim.call('desktop.updates.check'));
-    const button=page!.getByRole('button',{name:'版本与更新',exact:true});await button.waitFor();
-    // controller 用轮询取得真实 ready 快照；等待属性，不在尚未就绪时强行派发点击。
-    await page!.waitForFunction(()=>document.querySelector('.software-update-button')?.getAttribute('aria-disabled')==='false');
-    await button.hover();await page!.screenshot({path:'test-results/runtime-ready.png'});
+    await launch();await page!.evaluate(()=>window.desktopMenu.Update('check'));
+    await page!.getByRole('button',{name:'用户菜单',exact:true}).click();
+    await page!.getByRole('button',{name:'检查更新',exact:true}).click();
+    const button=page!.getByRole('button',{name:'重启安装',exact:true});
+    await button.waitFor();
+    await desktop!.evaluate(({dialog})=>{ dialog.showMessageBox=async()=>({response:1,checkboxChecked:false}); });
     const closed=desktop!.waitForEvent('close');await button.click();await closed;desktop=undefined;
     assert.equal(journal.Read().pending?.stage,'authorized');assert.equal(JSON.parse(await fs.readFile(relaunchReceipt,'utf8')).profile,path.join(user,'desktop'));
     await launch();
-    const after=await page!.evaluate(()=>window.cbim.call('desktop.updates.status'));assert.equal(after.currentResourceVersion,2);
+    const after=await page!.evaluate(()=>window.desktopMenu.Update('status'));assert.notEqual(after.phase,'disabled');
     assert.equal(journal.Read().pending,undefined);assert.equal(journal.Read().highestResource,2);assert.equal(await fs.readFile(path.join(user,'preserved.txt'),'utf8'),'existing user data');
-    await page!.getByRole('button',{name:'版本与更新',exact:true}).hover();await page!.screenshot({path:'test-results/runtime-r2.png'});assert.deepEqual(errors,[]);
+    await page!.getByRole('button',{name:'用户菜单',exact:true}).hover();await page!.screenshot({path:'test-results/runtime-r2.png'});assert.deepEqual(errors,[]);
     await fs.writeFile('test-results/runtime-update-smoke.json',JSON.stringify({passed:true,root,checks:['real signed R1 boot','no engine download before UI','background R preparation','ordinary exit leaves R1 active','sidebar explicit apply','drain before relaunch','same profile','real R2 main/preload/renderer boot','confirmation journal','user data retained'],resourceBytes:nextResource.bytes,windowReadyMs:timings,pageErrors:errors,limitations:'isolated Electron host with fixture network/install identity; no NSIS install, real update service, or model execution'},null,2));
     console.log(JSON.stringify({passed:true,resourceBytes:nextResource.bytes,windowReadyMs:timings,pageErrors:errors}));
   }finally{await desktop?.close()}

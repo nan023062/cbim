@@ -2,8 +2,8 @@ import {test,expect,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import {EnginePackages} from '../../../../../src/logic/engines/packages/index';
-import type {EngineArtifact,EngineArtifactsPort} from '../../../../../src/logic/updates/engine-artifacts';
+import {EnginePackages} from '../../../../../src/logic-new/engines/packages/index';
+import type {EngineArtifact,EngineArtifactsPort} from '../../../../../src/logic-new/updates/engine-artifacts';
 
 const artifact=(kind:string,letter:string,version='1.0.0',dependencies:EngineArtifact['dependencies']=[]):EngineArtifact=>({kind,identity:letter.repeat(64),version,nativeVersion:'1.0.0',protocol:1,dependencies});
 async function fixture(){
@@ -82,4 +82,14 @@ test('准备进度只在引擎快照出现，成功前不伪造已安装，完�
     await f.manager.SetEnabled('pi',false);const reopened=new EnginePackages(f.file,f.port);
     expect((await reopened.Read()).items[0]).toMatchObject({enabled:false,active:f.pi,installed:[f.pi],preparing:false});
   }finally{await f.cleanup()}
+});
+
+test('matching requests from two installation entry points share one activation', async () => {
+  const f = await fixture();
+  try {
+    const expected = { revision: (await f.manager.Read()).revision, identity: f.codex.identity };
+    await Promise.all([f.manager.Install('codex', expected), f.manager.Install('codex', expected)]);
+    expect(f.prepare.mock.calls.map(call => call[0])).toEqual(['pi', 'codex']);
+    expect((await f.manager.Read()).revision).toBe(expected.revision + 1);
+  } finally { await f.cleanup(); }
 });

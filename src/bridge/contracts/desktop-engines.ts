@@ -28,6 +28,8 @@ export interface EnginePackageStatus
 
   label: string;
 
+  logo?: string;
+
   requirement: ModelConnectionRequirement;
 
   enabled: boolean;
@@ -44,6 +46,8 @@ export interface EnginePackageStatus
 
   preparation?:
   {
+    identity?: string;
+
     version: string;
 
     progress?: number

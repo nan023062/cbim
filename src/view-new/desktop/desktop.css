@@ -154,3 +154,7 @@
 .engine-version-icon.retry { color: #e5bc48; }
 :root[data-theme=light] .engine-version-icon.retry { color: #856700; }
 .engine-version-icon.notRun { color: var(--danger); }
+
+.engine-brand {display:inline-flex;gap:7px;align-items:center;}
+.engine-brand img {width:20px;height:20px;object-fit:contain;}
+h2.engine-brand img {width:30px;height:30px;}

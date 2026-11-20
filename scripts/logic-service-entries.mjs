@@ -27,6 +27,7 @@ export const serviceRoots=[
   "src/logic/execution/storage/",
   "src/logic/runtime/settings/",
   "src/logic/budget/settings/",
+  "src/logic-new/updates/service/",
   "src/logic/updates/service/"
 ];
 export const isService=file=>serviceRoots.some(root=>file.startsWith(root));

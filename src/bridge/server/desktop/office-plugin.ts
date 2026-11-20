@@ -1,5 +1,5 @@
 /** 将 Office 的一轮对话交给已安装的引擎，关闭实例后释放固定版本。 */
-import { runUsage } from '../../contracts/usage';
+import { runUsage } from '../../../logic-new/projects/office-usage';
 
 import path from 'node:path';
 
@@ -7,15 +7,15 @@ import { mkdir } from 'node:fs/promises';
 
 import type { OfficeChat } from '../../../logic-new/projects/offices';
 
-import type { EnginePackages } from '../../../logic/engines/packages';
+import type { EnginePackages } from '../../../logic-new/engines/packages';
 
-import { loopEngineSchema } from '../../../logic/engines';
+import { loopEngineSchema } from '../../../logic-new/engines';
 
-import { EngineModelProfiles } from '../../../logic/engines/service';
+import { EngineModelProfiles } from '../../../logic-new/engines/service';
 
-import type { LlmProfiles } from '../../../logic/models/service';
+import type { LlmProfiles } from '../../../logic-new/models/service';
 
-import { packagedEngineAdapter } from '../../../logic/execution/assembly/engine-package-loader';
+import { packagedEngineAdapter } from '../../../logic-new/projects/office-engine-loader';
 
 export async function runOfficePlugin(packages: EnginePackages, profiles: LlmProfiles, ...[instructions, messages, signal, progress, turn]: Parameters<OfficeChat>)
 {

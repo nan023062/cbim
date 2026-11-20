@@ -45,6 +45,13 @@ export type OfficeChat = (instructions: string, messages: readonly { role: 'user
 
 export class ProjectOffices
 {
+  private readonly activeEngines = new Map<string, string>();
+
+  public ActiveEngine(session: string)
+  {
+    return this.activeEngines.get(session);
+  }
+
   private readonly controllers = new Map<string, AbortController>();
 
   public Stop(project: string, session: string)
@@ -131,6 +138,7 @@ export class ProjectOffices
     office.permission = permission;
 
     this.busy.add(office.id);
+    this.activeEngines.set(id, selection.engine);
 
     const key = JSON.stringify([projectId, id]);
 
@@ -164,6 +172,7 @@ export class ProjectOffices
     finally
     {
       this.busy.delete(office.id);
+      this.activeEngines.delete(id);
 
       this.controllers.delete(key);
     }

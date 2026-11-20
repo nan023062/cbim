@@ -10,7 +10,7 @@ import './monitor.css';
 const ResourceList = memo(function ResourceList({ title, rows, icon }: { title: string; rows: ProcessRow[]; icon: string })
 {
   return <details open><summary>{title}<b>{rows.length}</b></summary>
-    {rows.map(row => <div className="resource-entry" key={row.id}><Icon name={icon} size={15} />
+    {rows.map(row => <div className="resource-entry" key={row.id}>{row.logo ? <img alt="" src={row.logo} width={16} height={16} /> : <Icon name={icon} size={15} />}
       <div><strong>{row.name}</strong><small>{row.detail}</small></div></div>)}
   </details>;
 });

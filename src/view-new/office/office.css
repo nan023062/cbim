@@ -41,3 +41,7 @@
 .office-jump[data-visible=true],.office-jump:focus-visible { opacity:1; pointer-events:auto; }
 @media (prefers-reduced-motion:reduce) { .office-jump { transition:none; } }
 
+
+.office-chat .engine-choice, .engine-choice::picker(select) { appearance:base-select; }
+.office-chat .engine-choice { background-image:var(--logo); background-size:16px; background-position:3px center; background-repeat:no-repeat; padding-left:22px; }
+.engine-choice option[style]::before { content:''; width:16px; height:16px; background:var(--logo) center/contain no-repeat; }

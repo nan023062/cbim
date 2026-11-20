@@ -8,9 +8,9 @@ import path from 'node:path';
 
 import { createHash } from 'node:crypto';
 
-import { RuntimeJournal } from '../../../logic/updates/service/runtime-journal';
+import { RuntimeJournal } from '../../../logic-new/updates/service/runtime-journal';
 
-import { verifyRuntimeManifest, runtimeRelativePath, type ColdRuntime, type RuntimeManifest, type RuntimeFile, type SignedRuntimeManifest } from '../../../logic/updates/service/runtime-manifest';
+import { verifyRuntimeManifest, runtimeRelativePath, type ColdRuntime, type RuntimeManifest, type RuntimeFile, type SignedRuntimeManifest } from '../../../logic-new/updates/service/runtime-manifest';
 
 /** 同步启动校验只处理有限资源，不用于大型引擎包；活动目录不得有额外文件或链接。 */
 export function verifyBootResources(root: string, files: RuntimeFile[])

@@ -20,9 +20,13 @@
     },
     "framework/connectors": {
       "directory": "src/framework/connectors",
-      "roots": ["src/framework/connectors/"],
+      "roots": [
+        "src/framework/connectors/"
+      ],
       "tests": {
-        "unit": ["tests/src/framework/connectors/service.test.ts"],
+        "unit": [
+          "tests/src/framework/connectors/service.test.ts"
+        ],
         "contract": [],
         "integration": []
       }
@@ -2072,9 +2076,17 @@
       }
     },
     "framework/kernel": {
-      "roots": ["src/framework/kernel/"],
+      "roots": [
+        "src/framework/kernel/"
+      ],
       "directory": "src/framework/kernel",
-      "tests": { "unit": ["tests/src/framework/kernel/kernel.test.ts"], "contract": [], "integration": [] }
+      "tests": {
+        "unit": [
+          "tests/src/framework/kernel/kernel.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      }
     },
     "framework/office": {
       "roots": [
@@ -2088,6 +2100,19 @@
           "tests/src/framework/office/session.test.ts",
           "tests/src/framework/office/dispatcher.test.ts"
         ],
+        "integration": []
+      }
+    },
+    "updater": {
+      "directory": "src/updater",
+      "roots": [
+        "src/updater/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/src/updater/install.test.ts"
+        ],
+        "contract": [],
         "integration": []
       }
     }

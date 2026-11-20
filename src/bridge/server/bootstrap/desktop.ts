@@ -16,25 +16,27 @@ import { createRequire } from 'node:module';
 
 import { selectBootResources } from './selection';
 
-import { RuntimeJournal } from '../../../logic/updates/service/runtime-journal';
+import { RuntimeJournal } from '../../../logic-new/updates/service/runtime-journal';
 
-import { verifyRuntimeManifest, type ColdRuntime } from '../../../logic/updates/service/runtime-manifest';
+import { verifyRuntimeManifest, type ColdRuntime } from '../../../logic-new/updates/service/runtime-manifest';
 
-import { officialEnginePublicKey } from '../../../logic/updates/service/engine-index';
+import { officialEnginePublicKey } from '../../../logic-new/updates/service/engine-index';
 
-import { EngineArtifacts } from '../../../logic/updates/service/engine-artifacts';
+import { EngineArtifacts } from '../../../logic-new/updates/service/engine-artifacts';
 
-import { RuntimeStore } from '../../../logic/updates/service/runtime-store';
+import { DownloadService } from '../../../logic-new/updates/service/download-service';
 
-import { RuntimeUpdates } from '../../../logic/updates/service/runtime-updates';
+import { RuntimeStore } from '../../../logic-new/updates/service/runtime-store';
 
-import { DesktopUpdates } from '../../../logic/updates/service/desktop-updates';
+import { RuntimeUpdates } from '../../../logic-new/updates/service/runtime-updates';
 
-import { NsisUpdateInstaller } from '../../../logic/updates/service/nsis-updater';
+import { DesktopUpdates } from '../../../logic-new/updates/service/desktop-updates';
 
-import { updateUserRoot } from '../../../logic/updates/service/restart-profile';
+import { NsisUpdateInstaller } from '../../../updater';
 
-import type { DesktopRuntimeHost } from '../../../logic/updates/service/runtime-host';
+import { updateUserRoot } from '../../../logic-new/updates/service/restart-profile';
+
+import type { DesktopRuntimeHost } from '../../../logic-new/updates/service/runtime-host';
 
 const loadApplication = createRequire(__filename);
 
@@ -59,11 +61,13 @@ function boot()
 
     const controller = new AbortController();
 
-    const store = new RuntimeStore(path.join(cacheRoot, 'engines'), { schema: 1, platform: 'win32-x64', codeVersion: app.getVersion(), coldFingerprint: createHash('sha256').update(entry).digest('hex'), publicKey: officialEnginePublicKey });
+    const downloads = new DownloadService(path.join(cacheRoot, 'downloads'), controller.signal);
+
+    const store = new RuntimeStore(path.join(cacheRoot, 'engines'), { schema: 1, platform: 'win32-x64', codeVersion: app.getVersion(), coldFingerprint: createHash('sha256').update(entry).digest('hex'), publicKey: officialEnginePublicKey }, downloads);
 
     const engineArtifacts = new EngineArtifacts(path.join(cacheRoot, 'engine-index.json'), store, undefined, controller.signal);
 
-    implementation.startDesktop({ engineArtifacts, cacheRoot, StopPreparingEngines: () => controller.abort(), Confirm: () => {} });
+    implementation.startDesktop({ downloads, engineArtifacts, cacheRoot, StopPreparingEngines: () => controller.abort(), Confirm: () => {} });
 
     return;
   }
@@ -127,9 +131,10 @@ function boot()
 
   const reuseRoots = fs.existsSync(cacheIdentityRoot) ? fs.readdirSync(cacheIdentityRoot, { withFileTypes: true }).filter(entry => entry.isDirectory() && /^\d+\.\d+\.\d+$/.test(entry.name)).map(entry => path.join(cacheIdentityRoot, entry.name)) : [];
 
-  const store = new RuntimeStore(cacheRoot, cold),
-    engineStore = new RuntimeStore(path.join(cacheIdentityRoot, 'engines'), cold, undefined, reuseRoots),
-    controller = new AbortController();
+  const controller = new AbortController(),
+    downloads = new DownloadService(path.join(cacheIdentityRoot, 'downloads'), controller.signal),
+    store = new RuntimeStore(cacheRoot, cold, downloads),
+    engineStore = new RuntimeStore(path.join(cacheIdentityRoot, 'engines'), cold, downloads, reuseRoots);
 
   const preparation = new Map<string,
     {
@@ -145,6 +150,7 @@ function boot()
   const engineArtifacts = new EngineArtifacts(path.join(userRoot, 'desktop-runtime', identity, 'engine-index.json'), engineStore, selection.envelope, controller.signal, undefined, (engine, version, progress, error) => { if (progress === undefined && !error) preparation.delete(engine); else preparation.set(engine, { engine, version, progress, error }) }, historicalEngineKeys);
 
   const host: DesktopRuntimeHost = {
+    downloads,
     assetsRoot: selection.root,
 
     cacheRoot: cacheIdentityRoot,
@@ -162,7 +168,7 @@ function boot()
 
     Updates(beforeInstall, enabled)
     {
-      const installer = new RuntimeUpdates(store, selection.journal, selection.manifest, new NsisUpdateInstaller(), () => { app.relaunch(); app.exit(0) }, undefined, () => []);
+      const installer = new RuntimeUpdates(store, selection.journal, selection.manifest, new NsisUpdateInstaller(work => downloads.RunInstaller(work)), () => { app.relaunch(); app.exit(0) }, undefined, () => []);
 
       return new DesktopUpdates(cold.codeVersion, selection.manifest.notes, enabled, signal => installer.Latest(signal), installer, beforeInstall, selection.manifest.resourceVersion, () => [...preparation.values()]);
     },

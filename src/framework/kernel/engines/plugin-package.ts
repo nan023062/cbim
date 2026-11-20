@@ -17,6 +17,8 @@ export interface EnginePluginManifest extends z.infer<typeof enginePluginPackage
 
     profile: string;
 
+    logo: string;
+
     label: string
   };
 

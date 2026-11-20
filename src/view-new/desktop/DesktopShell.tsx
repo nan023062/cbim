@@ -66,6 +66,18 @@ export function DesktopShell()
     }).catch(e => { if (sequence === request.current) setError(String(e)); });
   }
 
+  const [updateOpen, setUpdateOpen] = useState(false);
+  const [updateStatus, setUpdateStatus] = useState<Awaited<ReturnType<typeof window.desktopMenu.Update>>>();
+  useEffect(() =>
+  {
+    if (!updateOpen) return;
+    let active = true;
+    let timer: ReturnType<typeof setTimeout>;
+    const read = async () => { try { const state = await window.desktopMenu.Update('status'); if (active) setUpdateStatus(state); } catch(e) { if (active) setError(String(e)); } if (active) timer = setTimeout(read, 750); };
+    void read();
+    return () => { active = false; clearTimeout(timer); };
+  }, [updateOpen]);
+
   const [search, setSearch] = useState('');
 
   const [error, setError] = useState('');
@@ -121,6 +133,10 @@ export function DesktopShell()
         <strong>关于 CBIM Assistant</strong><p>在项目工作区中组织 Agent 团队与工作流。</p>
       </section>
     </header>
+    {updateOpen && <div className="update-notice" role="region" aria-label="应用更新"><strong>应用更新</strong> {({disabled:'当前构建不支持更新',idle:'等待检查',checking:'正在检查',available:'有可用更新',current:'已是最新版',downloading:'正在下载',ready:'已就绪，等待重启',installing:'正在重启安装'} as Record<string,string>)[updateStatus?.phase ?? 'checking']} {updateStatus?.version} {updateStatus?.progress != null && Math.round(updateStatus.progress) + '%'} {updateStatus?.error}
+      {updateStatus?.phase === 'ready' && <button onClick={() => void window.desktopMenu.Update('install').catch(e => setError(String(e)))}>重启安装</button>}
+      {updateStatus?.phase === 'available' && <button onClick={() => void window.desktopMenu.Update('download').catch(e => setError(String(e)))}>重新下载</button>}
+      <button onClick={() => setUpdateOpen(false)}>关闭</button></div>}
     {settings && <SettingsView initial={settings} onBack={() => setSettings(undefined)} />}
     <div style={settings ? { display: 'none' } : undefined} className={'desktop-shell' + (expanded ? '' : ' sidebar-collapsed')}>
     <aside id="team-sidebar" className="workspace-sidebar sidebar-frame">
@@ -150,7 +166,7 @@ export function DesktopShell()
           <span className="profile-badge">C</span><span className="user-profile-copy"><b>本地用户</b><small>CBIM · 本地使用</small></span>
         </button>
         <div id="user-actions" popover="auto" role="group" aria-label="用户操作">
-          <button disabled><Icon name="retry" size={16} />检查更新</button>
+          <button popoverTarget="user-actions" popoverTargetAction="hide" onClick={() => { setUpdateOpen(true); void window.desktopMenu.Update('check').catch(e => setError(String(e))); }}><Icon name="retry" size={16} />检查更新</button>
           <button popoverTarget="user-actions" popoverTargetAction="hide" onClick={() => setSettings('通用')}><Icon name="settings" size={16} />设置</button>
         </div>
       </footer>

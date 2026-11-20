@@ -95,9 +95,18 @@ export interface OfficeSelection
   modelId?: string
 }
 
+export interface TransferState
+{
+  identity: string;
+  name: string;
+  phase: 'queued' | 'downloading' | 'verifying';
+  bytes: number;
+  total: number;
+}
+
 export interface DesktopMenu
 {
-  EngineCatalog(): Promise<{ id: string; label: string; businessTypes: readonly string[]; supportedApis: readonly string[] }[]>;
+  EngineCatalog(): Promise<{ id: string; label: string; logo: string; businessTypes: readonly string[]; supportedApis: readonly string[] }[]>;
 
   Engines(action: 'list' | 'check' | 'install' | 'configure', target?: { kind: string; revision: number; identity: string } | { kind: string; revision: number; action: 'enable' | 'disable' | 'remove' }): Promise<import('./desktop-engines').EnginePackageSettings>;
 
@@ -105,6 +114,11 @@ export interface DesktopMenu
 
   ReadOfficeTurn(project: string, session: string, file: string): Promise<OfficeMessage[]>;
 
+  Transfers(): Promise<TransferState[]>;
+  WatchTransfers(listener: () => void): () => void;
+  CancelTransfer(identity: string): Promise<void>;
+  Connector(id: string, install: boolean): Promise<{ installed: boolean; identity: string }>;
+  Update(action: 'status' | 'check' | 'download' | 'install'): Promise<{ phase: string; progress?: number; error?: string; version?: string }>;
   OpenOffice(project: string, action: 'latest' | 'create' | 'select', session?: string): Promise<OfficeConversation>;
 
   WatchOffice(listener: (event: OfficeProgress) => void): () => void;
@@ -189,6 +203,8 @@ export interface OfficeConversation
 
 export interface ProcessRow
 {
+  logo?: string;
+
   id: string;
 
   name: string;

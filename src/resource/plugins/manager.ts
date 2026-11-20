@@ -25,6 +25,9 @@ export class PluginManager<Id extends string, Artifact extends PluginArtifact, P
 
   private readonly queue = new SerialQueue();
 
+  /** 两个入口同时确认相同清单版本时，共享一次安装结果。 */
+  private readonly installations = new Map<string, Promise<void>>();
+
   private readonly references = new Map<string, number>();
 
   private readonly busy = new Set<string>();
@@ -129,7 +132,14 @@ export class PluginManager<Id extends string, Artifact extends PluginArtifact, P
   /** 用户显式动作；整个依赖闭包准备完成才改活动指针，其他插件的活动版本不随依赖下载改变。 */
   Install(kind: Id, expected?: { revision: number; identity: string })
   {
-    return this.queue.Run(async () => { await this.Init(); this.AssertRevision(expected?.revision); return this.InstallNow(kind, true, expected?.identity) })
+    const key = JSON.stringify([kind, expected?.revision, expected?.identity]);
+    const pending = this.installations.get(key);
+    if (pending)
+      return pending;
+
+    const result = this.queue.Run(async () => { await this.Init(); this.AssertRevision(expected?.revision); return this.InstallNow(kind, true, expected?.identity); }).finally(() => this.installations.delete(key));
+    this.installations.set(key, result);
+    return result;
   }
 
   private AssertRevision(revision?: number)

@@ -5,6 +5,8 @@ import type { EnginePackageSettings, EnginePackageStatus } from '../../bridge/co
 
 import { Icon } from '../shared/Icon';
 
+import { useTransfers, TransferProgress } from '../shared/transfers';
+
 function EngineVersionIcon({ state, kind }: { state?: EnginePackageSettings; kind: string })
 {
   const item = state?.items.find(entry => entry.kind === kind);
@@ -86,6 +88,7 @@ export function EnginePackagesView()
     }
   }
 
+  const transfers = useTransfers();
   const product = catalog.find(entry => entry.id === selected) ?? catalog[0];
 
   const item = state?.items.find(entry => entry.kind === product?.id);
@@ -93,6 +96,8 @@ export function EnginePackagesView()
   function progressFor(kind: string)
   {
     const engine = state?.items.find(entry => entry.kind === kind);
+    const transfer = transfers.find(t => t.identity === (engine?.preparation?.identity ?? engine?.candidate?.identity));
+    if (transfer) return { label: {queued:'排队中',downloading:'下载中',verifying:'校验中'}[transfer.phase], percent: Math.floor(100 * transfer.bytes / transfer.total) };
     if (!engine?.preparing && busy !== 'install:' + kind) return;
     const value = engine?.preparation?.progress;
     return { label: engine?.active ? '正在更新' : '正在安装', percent: value === undefined ? undefined : Math.floor(value) };
@@ -108,11 +113,11 @@ export function EnginePackagesView()
         const row = progressFor(entry.id);
         return <button key={entry.id} type="button" aria-current={entry.id === product?.id ? 'true' : undefined} onClick={() => setSelected(entry.id)}>
         {row && <span aria-hidden="true" className={'engine-progress-fill' + (row.percent === undefined ? ' pending' : '')} style={{ width: row.percent === undefined ? undefined : row.percent + '%' }} />}
-        <span className="engine-list-title"><strong>{entry.label}</strong><EngineVersionIcon state={state} kind={entry.id} /></span><small>{entry.businessTypes.join(' · ')}</small>
+        <span className="engine-list-title"><strong className="engine-brand"><img src={entry.logo} alt="" />{entry.label}</strong><EngineVersionIcon state={state} kind={entry.id} /></span><small>{entry.businessTypes.join(' · ')}</small>
       </button>;
       })}</nav>
       {product && <article className="engine-detail" aria-label={product.label + ' 详情'}>
-        <h2>{product.label}</h2><p>{product.businessTypes.join(' · ')}</p>
+        <h2 className="engine-brand"><img src={product.logo} alt="" />{product.label}</h2><p>{product.businessTypes.join(' · ')}</p>
         <dl><dt>支持协议</dt><dd>{product.supportedApis.join(' / ')}</dd>
         <dt>本机状态</dt><dd>{!state ? error ? '状态未知' : '正在读取…' : !state.managed ? '宿主不可用' : item?.active ? item.enabled ? '已启用' : '已停用' : '尚未安装'}</dd>
         <dt>当前版本</dt><dd>{item?.active?.version ?? '—'}</dd>
@@ -124,9 +129,10 @@ export function EnginePackagesView()
           <button disabled={!!busy || item.preparing || item.references > 0} onClick={() => void update(item, 'remove')}>卸载本机版本</button></>}</div>
           {progress && <label className="engine-install-progress"><span>{progress.label}</span><span>{progress.percent === undefined ? '准备中…' : progress.percent + '%'}</span>
             <progress max={100} value={progress.percent} /></label>}
+          {transfers.filter(t => t.identity === (item.preparation?.identity ?? item.candidate?.identity)).map(t => <TransferProgress item={t} key={t.identity} />)}
           <details><summary>缓存与依赖</summary><p>使用中 · {item.references}</p>
           {item.installed.map(version => <p key={version.identity}>已缓存 {version.version} · {version.identity.slice(0, 12)}</p>)}
-          {(item.active ?? item.candidate)?.dependencies?.map(ref => <p key={ref.kind}>依赖 {ref.kind} · {ref.identity.slice(0, 12)}</p>)}</details>
+          {(item.active ?? item.candidate)?.dependencies?.map(ref => <p key={ref.kind}>依赖 <span className="engine-brand"><img src={catalog.find(entry => entry.id === ref.kind)?.logo ?? state?.items.find(entry => entry.kind === ref.kind)?.logo} alt="" />{catalog.find(entry => entry.id === ref.kind)?.label ?? state?.items.find(entry => entry.kind === ref.kind)?.label ?? ref.kind}</span> · {ref.identity.slice(0, 12)}</p>)}</details>
           {item.error && <p role="alert">{item.error}</p>}
         </>}
       </article>}

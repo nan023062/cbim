@@ -1,5 +1,5 @@
 /** 主对话每轮发送前选择引擎及其兼容模型。 */
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 
 import type { OfficeSelection } from '../../bridge/contracts/discovery';
 
@@ -8,6 +8,8 @@ import type { ModelActionResults } from '../../bridge/contracts/desktop-models';
 import type { EnginePackageSettings } from '../../bridge/contracts/desktop-engines';
 
 import { selectProviderConnection } from '../../bridge/contracts/desktop-models';
+
+import { useTransfers, TransferProgress } from '../shared/transfers';
 
 export function MainAgentPicker({ value, change, disabled, fail, onReady, onManage }: { onManage(): void; onReady: (ready: boolean) => void; value: OfficeSelection; change(v: OfficeSelection): void; disabled: boolean; fail(error: string): void })
 {
@@ -23,6 +25,16 @@ export function MainAgentPicker({ value, change, disabled, fail, onReady, onMana
 
   useEffect(() => { let active = true; setChecked(undefined); setBusy(true); const load = async () => { const [local, list] = await Promise.all([window.desktopMenu.Engines('list'), window.desktopMenu.Model('models.list')]); if (!active) return; setCatalog(local); setModels(list); const latest = await window.desktopMenu.Engines('check'); if (active) { setCatalog(latest); setChecked(value.engine); } }; void load().catch(error => { if (active) fail(String(error)); }).finally(() => { if (active) setBusy(false); }); return () => { active = false; }; }, [value.engine, fail, retry]);
 
+  const transfers = useTransfers();
+  useEffect(() =>
+  {
+    let active = true;
+    let timer: ReturnType<typeof setTimeout>;
+    const off = window.desktopMenu.WatchTransfers(() => { clearTimeout(timer); timer = setTimeout(() => { void window.desktopMenu.Engines('list').then(state => { if (active) setCatalog(state); }).catch(() => {}); }, 180); });
+    return () => { active = false; clearTimeout(timer); off(); };
+  }, []);
+  const [products, setProducts] = useState<Awaited<ReturnType<typeof window.desktopMenu.EngineCatalog>>>([]);
+  useEffect(() => { void window.desktopMenu.EngineCatalog().then(setProducts).catch(e => fail(String(e))); }, [fail]);
   const engines = catalog?.items ?? [];
 
   const engine = engines.find(item => item.kind === value.engine);
@@ -39,9 +51,10 @@ export function MainAgentPicker({ value, change, disabled, fail, onReady, onMana
 
   useEffect(() => { if (!engine || value.profileId || value.modelId) return; const profile = models?.profiles.find(item => item.id === models.selectedId); if (profile?.models.some(model => model.enabled && model.id === profile.defaultModel && selectProviderConnection(profile, engine.requirement, model.id))) change({ engine: engine.kind, profileId: profile.id, modelId: profile.defaultModel }); }, [models, engine, value, change]);
 
-  return <div className="office-model office-pickers"><select disabled={disabled} aria-label="主 Agent 执行引擎" value={value.engine ?? ''} onChange={e => { if (e.target.value === ':manage') onManage(); else change({ engine: e.target.value }); }}>
+  return <div className="office-model office-pickers"><select className="engine-choice" style={{'--logo': 'url("' + (engine?.logo ?? products.find(p => p.id === value.engine)?.logo ?? '') + '")'} as CSSProperties} disabled={disabled} aria-label="主 Agent 执行引擎"  value={value.engine ?? ''} onChange={e => { if (e.target.value === ':manage') onManage(); else change({ engine: e.target.value }); }}>
     <option disabled value="">{!models ? '正在加载引擎…' : engines.length ? '选择执行引擎' : '请先安装并启用引擎'}</option>{value.engine && !engine && <option disabled value={value.engine}>{value.engine}（不可用）</option>}
-    {engines.map(item => <option key={item.kind} value={item.kind}>{item.label}{!item.active ? ' · 未安装' : !item.enabled ? ' · 已停用' : item.active.identity !== item.candidate?.identity ? ' · 需更新' : ''}</option>)}<option value=":manage">管理执行引擎…</option></select>
+    {engines.map(item => <option style={{'--logo': 'url("' + item.logo + '")'} as CSSProperties} key={item.kind} value={item.kind}>{item.label}{!item.active ? ' · 未安装' : !item.enabled ? ' · 已停用' : item.active.identity !== item.candidate?.identity ? ' · 需更新' : ''}</option>)}<option value=":manage">管理执行引擎…</option></select>
+    {transfers.filter(t => t.identity === (engine?.preparation?.identity ?? engine?.candidate?.identity)).map(t => <TransferProgress key={t.identity} item={t}/>)}
     {!busy && !checked && <button type="button" onClick={() => setRetry(n => n + 1)}>重试版本检查</button>}
     {checked && !current && engine?.candidate && catalog && <button type="button" disabled={busy || disabled} onClick={async () => { setBusy(true); try { setCatalog(engine.active?.identity === engine.candidate!.identity ? await window.desktopMenu.Engines('configure', { kind: engine.kind, revision: catalog.revision, action: 'enable' }) : await window.desktopMenu.Engines('install', { kind: engine.kind, revision: catalog.revision, identity: engine.candidate!.identity })); setRetry(n => n + 1); } catch (error) { fail(String(error)); setChecked(undefined); } finally { setBusy(false); } }}>{busy ? '准备中…' : engine.active?.identity === engine.candidate.identity ? '启用' : engine.active ? '更新并启用' : '下载安装'}</button>}
     <select disabled={disabled || !engine} aria-label="主 Agent 大模型" value={selected} onChange={e => { const [profileId, modelId] = e.target.value ? JSON.parse(e.target.value) : []; change({ engine: value.engine, profileId, modelId }); }}>

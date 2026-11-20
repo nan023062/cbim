@@ -40,7 +40,14 @@ try {
     await page.locator('.engine-list button').filter({has:page.getByText(item.label,{exact:true})}).click();
     const card = page.getByRole('article',{name:item.label+' 详情'});
     await card.getByRole('button',{name:'下载并安装'}).click();
-    await page.waitForFunction(async ({kind, identity}) => (await window.desktopMenu.Engines('list')).items.find(item => item.kind === kind)?.active?.identity === identity, {kind, identity:item.candidate.identity}, {timeout:600000,polling:1500});
+    const deadline = Date.now() + 600000;
+    for (;;) {
+      const snapshot = await page.evaluate(() => window.desktopMenu.Engines('list'));
+      const row = snapshot.items.find(entry => entry.kind === kind);
+      if (row?.active?.identity === item.candidate.identity) break;
+      if (row?.error || Date.now() > deadline) throw Error(row?.error ?? 'Engine installation timed out');
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
     const installed = await page.evaluate(() => window.desktopMenu.Engines('list'));
     assert.equal(installed.items.find(i => i.kind === kind)?.active?.identity,item.candidate.identity);
     console.log('installed',kind,item.candidate.version,item.candidate.identity);

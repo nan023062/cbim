@@ -6,10 +6,10 @@ import {createRequire} from 'node:module';
 import {pipeline} from 'node:stream/promises';
 import {execFileSync} from 'node:child_process';
 import {assertProductionTree} from './production-test-guard.mjs';
-import {enginePackageSchema,validateEnginePackage,runtimeRelativePath,validateRuntimeFiles,verifyRuntimeManifest,type ColdRuntime,type RuntimeFile,type RuntimePackage,type RuntimeManifest,type EnginePackage} from '../src/logic/updates/service/runtime-manifest';
+import {enginePackageSchema,validateEnginePackage,runtimeRelativePath,validateRuntimeFiles,verifyRuntimeManifest,type ColdRuntime,type RuntimeFile,type RuntimePackage,type RuntimeManifest,type EnginePackage} from '../src/logic-new/updates/service/runtime-manifest';
 
-import {engineIndexAsset,officialEnginePublicKey,verifyEngineIndex} from '../src/logic/updates/service/engine-index';
-import {downloadRuntimeManifest} from '../src/logic/updates/service/runtime-download';
+import {engineIndexAsset,officialEnginePublicKey,verifyEngineIndex} from '../src/logic-new/updates/service/engine-index';
+import {downloadRuntimeManifest} from '../src/logic-new/updates/service/runtime-download';
 
 
 
@@ -95,6 +95,7 @@ export async function collectWorldClock(output:string):Promise<EnginePackage>{
 /** 从独立产品目录读取声明，不执行包内脚本。返回现有签名工具接受的制品描述。 */
 export async function collectDeclaredPlugin(root:string,output:string):Promise<EnginePackage>{
   const manifest=enginePackageSchema.omit({package:true}).strict().parse(JSON.parse(await fs.readFile(path.join(root,'plugin.json'),'utf8')));
+  if (manifest.plugin?.type === 'engine' && !manifest.plugin.logo) throw Error('引擎插件必须提供 PNG Logo');
   if(!manifest.plugin || !manifest.adapter)throw Error('插件清单需要 plugin 类型与版本化 adapter 入口');
   runtimeRelativePath(manifest.entry);
   runtimeRelativePath(manifest.adapter.entry);

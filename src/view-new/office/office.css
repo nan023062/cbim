@@ -4,10 +4,10 @@
 .office-chat header select {margin-left:auto;min-width:0;max-width:60%}
 .office-column {width:100%;max-width:900px;margin-inline:auto;box-sizing:border-box;padding-inline:clamp(12px,3%,40px)}
 .office-transcript {flex:1;min-height:0;overflow:auto;padding-block:18px}
-.office-transcript h2 {margin:12vh auto;text-align:center;font-size:18px}
+.office-transcript > h2 {margin:12vh auto;text-align:center;font-size:18px}
 .office-transcript article {margin-bottom:26px;overflow-wrap:anywhere;font-size:14px;line-height:1.65}
 .office-user {margin-left:auto;width:fit-content;max-width:85%;background:var(--raised);border:1px solid var(--line);border-radius:12px;padding:10px 15px;white-space:pre-wrap}
-.office-assistant p {margin:.65em 0}.office-assistant small,.office-strip,.office-model {color:var(--muted);font-size:12px}
+.office-assistant p {margin:.65em 0;color:inherit}.office-assistant small,.office-strip,.office-model {color:var(--muted);font-size:12px}
 .office-assistant table {border-collapse:collapse;display:block;overflow:auto}.office-assistant td,.office-assistant th {padding:5px 12px;border:1px solid var(--line)}
 .office-assistant pre {overflow:auto;padding:10px;background:var(--raised);border-radius:6px}
 .office-dock {padding-bottom:5px}.office-strip {min-height:24px;justify-content:space-between;gap:6px;font-variant-numeric:tabular-nums}
@@ -36,7 +36,9 @@
 .office-meter { padding-top: 6px; }
 .office-transcript { position:relative; display:flex; flex-direction:column; padding:0; overflow:hidden; }
 .office-message-row { display:flow-root; padding-top:8px; }
-.office-stream { white-space:pre-wrap; }
+.office-assistant :is(h1,h2,h3,h4,h5,h6) {margin:1em 0 .4em;text-align:start;line-height:1.4}
+.office-assistant :is(ul,ol) {padding-inline-start:1.7em}
+.office-assistant > :last-child {margin-bottom:0}
 .office-jump { position:absolute; bottom:10px; left:50%; transform:translateX(-50%); border:1px solid var(--line); background:var(--raised); color:var(--text); border-radius:50%; width:34px; height:34px; padding:0; opacity:0; pointer-events:none; transition:opacity var(--ui-normal) var(--ui-ease-out); }
 .office-jump[data-visible=true],.office-jump:focus-visible { opacity:1; pointer-events:auto; }
 @media (prefers-reduced-motion:reduce) { .office-jump { transition:none; } }
@@ -45,3 +47,11 @@
 .office-chat .engine-choice, .engine-choice::picker(select) { appearance:base-select; }
 .office-chat .engine-choice { background-image:var(--logo); background-size:16px; background-position:3px center; background-repeat:no-repeat; padding-left:22px; }
 .engine-choice option[style]::before { content:''; width:16px; height:16px; background:var(--logo) center/contain no-repeat; }
+
+.office-work-record {margin-bottom:8px;color:var(--muted);font-size:12px}
+.office-work-record button {font:inherit;color:inherit;border:0;background:none;display:inline-flex;align-items:center;gap:4px;width:fit-content;cursor:pointer;padding:3px 0}
+.office-work-record button:hover,.office-work-record button:focus-visible {color:var(--text)}
+.office-work-record ol {border-inline-start:1px solid var(--line);margin:.5em 0;padding-inline-start:2em}
+
+.office-work-record pre {white-space:pre-wrap;max-height:20rem;overflow:auto}
+.office-assistant .office-work-alert {color:var(--warning,currentColor)}

@@ -38,7 +38,7 @@ interface OfficeEngineContext
   task: { taskId: string; workspaceId: string; mode: 'chat'; root: string; goal: string; acceptance: string[]; moduleIds: string[] };
   engineHandoff?: string;
   capabilities: { id: string; tools: ChatTools; disableNativeTools: boolean }[];
-  beforeTool(): Promise<{ allow: boolean; reason: string }>;
+  beforeTool(call: { id: string; name: string; input?: unknown }): Promise<{ allow: boolean; reason: string }>;
   emit(event: { type: string; data: Record<string, unknown> }): Promise<void>;
 }
 

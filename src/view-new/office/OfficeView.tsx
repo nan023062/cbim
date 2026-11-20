@@ -1,5 +1,5 @@
 /** Office 消息记录与贴底输入栏。执行状态由当前会话的模型流驱动。 */
-import { useEffect, useRef, useState } from 'react';
+import { useDeferredValue, useEffect, useRef, useState } from 'react';
 
 import { Screen } from '../../framework-ui/screen';
 import { Button } from '../../framework-ui/controls';
@@ -76,7 +76,7 @@ export function OfficeView({ project, conversation, draft, onDraft, onSaved, sta
 
   const stopped = useRef(false);
 
-  useEffect(() => window.desktopMenu.WatchOffice(event => { if (event.session === conversation.id && event.project === project.id) setSample(event); }), [conversation.id, project.id]);
+  useEffect(() => window.desktopMenu.WatchOffice(event => { if (event.session === conversation.id && event.project === project.id) setSample(previous => ({ ...event, text: event.text ?? previous?.text, workLog: event.workLog ?? previous?.workLog })); }), [conversation.id, project.id]);
 
   useEffect(() => { if (!started) return; const timer = setInterval(() => setNow(Date.now()), 500); return () => clearInterval(timer); }, [started]);
 
@@ -168,16 +168,21 @@ export function OfficeView({ project, conversation, draft, onDraft, onSaved, sta
 
   const earlier = conversation.earlier ?? [];
   const persisted = earlier.length + conversation.messages.length;
-  const count = persisted + (started ? sample?.text ? 2 : 1 : 0);
+  const streamingText = useDeferredValue(sample?.text ?? '');
+  const count = persisted + (started ? 2 : 0);
   return <Screen className="office-chat" aria-label="Office 对话" onPointerMove={interact} onPointerDown={interact}
     onWheelCapture={interact} onTouchMove={interact} onKeyDownCapture={interact} onFocusCapture={interact} onInputCapture={interact}>
     <div className="office-transcript">
       {count ? <WindowList listRef={log} count={count} label="对话记录" initialEnd
-        itemKey={i => earlier[i] ?? conversation.messages[i - earlier.length]?.id ?? ('pending-' + (i - persisted))}
-        render={i => <div className="office-column office-message-row">{i < earlier.length ?
-          <EarlierTurn project={project.id} session={conversation.id} file={earlier[i]} /> :
-          i < persisted ? <Message message={conversation.messages[i - earlier.length]} /> :
-          <article className={i === persisted ? 'office-user' : 'office-assistant office-stream'}>{i === persisted ? draft : sample?.text}</article>}</div>} />
+        itemKey={i => earlier[i] ?? ('message-' + (i - earlier.length))}
+        render={i =>
+        {
+          const message = conversation.messages[i - earlier.length];
+          return <div className="office-column office-message-row">{i < earlier.length ?
+            <EarlierTurn project={project.id} session={conversation.id} file={earlier[i]} /> :
+            <Message role={message?.role ?? (i === persisted ? 'user' : 'assistant')}
+              text={message?.text ?? (i === persisted ? draft : streamingText)} messageId={message?.id ?? conversation.id + ':' + started} live={!message && !!started} elapsed={message?.metrics?.elapsed ?? (!message && started ? Math.max(0, now - started) : undefined)} workLog={message ? message.workLog : sample?.workLog} model={message ? message.metrics?.model : sample?.model} />}</div>;
+        }} />
         : <h2>在 {project.name} 中开始对话</h2>}
       <Button className="office-jump" data-visible={arrow} aria-label="移动到最下方" title="移动到最下方" onClick={() => log.current?.scrollToEnd()}>↓</Button>
     </div>

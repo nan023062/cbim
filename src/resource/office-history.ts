@@ -5,6 +5,15 @@ import path from 'node:path';
 
 import { atomic, readJson } from '../core/io/text-files';
 
+export interface OfficeActivity
+{
+  id: string;
+  label: string;
+  input?: string;
+  result?: string;
+  alert?: string;
+}
+
 type Usage =
   {
     elapsed: number;
@@ -55,6 +64,8 @@ export class OfficeHistory
       {
         metrics?: Usage;
 
+        workLog?: OfficeActivity[];
+
         id: string;
 
         role?: 'user' | 'assistant';
@@ -99,7 +110,7 @@ export class OfficeHistory
     return totals;
   }
 
-  public async AppendTurn(id: string, input: string, reply: string, metrics: Usage)
+  public async AppendTurn(id: string, input: string, reply: string, metrics: Usage, workLog?: OfficeActivity[])
   {
     if (!input?.trim() || !reply?.trim())
       throw Error('无法保存缺少正文的对话');
@@ -108,7 +119,7 @@ export class OfficeHistory
 
     const messages = [
       { id: crypto.randomUUID(), role: 'user' as const, created, text: input },
-      { id: crypto.randomUUID(), role: 'assistant' as const, created, text: reply, metrics },
+      { id: crypto.randomUUID(), role: 'assistant' as const, created, text: reply, metrics, workLog },
     ];
 
     await atomic(path.join(this.root, id, created + '-' + messages[0].id + '.json'), JSON.stringify(messages));

@@ -138,8 +138,18 @@ export interface DesktopMenu
   Monitor(): Promise<MonitorResult>;
 }
 
+export interface OfficeActivity
+{
+  id: string;
+  label: string;
+  input?: string;
+  result?: string;
+  alert?: string;
+}
+
 export interface OfficeProgress
 {
+  workLog?: OfficeActivity[];
   text?: string;
 
   project: string;
@@ -157,6 +167,8 @@ export interface OfficeProgress
 
 export interface OfficeMessage
 {
+  workLog?: OfficeActivity[];
+
   metrics?:
   {
     elapsed: number;

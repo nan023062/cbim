@@ -17,6 +17,13 @@ import type { LlmProfiles } from '../../../logic-new/models/service';
 
 import { packagedEngineAdapter } from '../../../logic-new/projects/office-engine-loader';
 
+function activityDetail(value: unknown): string | undefined
+{
+  if (value === undefined) return;
+  const text = typeof value === 'string' ? value : JSON.stringify(value, (key, item) => /^(authorization|api[_-]?key|access[_-]?token|password|secret)$/i.test(key) ? '•••' : item, 2);
+  return text?.length > 16000 ? text.slice(0, 16000) + '…' : text;
+}
+
 export async function runOfficePlugin(packages: EnginePackages, profiles: LlmProfiles, ...[instructions, messages, signal, progress, turn]: Parameters<OfficeChat>)
 {
   const started = Date.now();
@@ -82,9 +89,15 @@ export async function runOfficePlugin(packages: EnginePackages, profiles: LlmPro
         runId, directory, task: { taskId: runId, workspaceId: turn.project, mode: 'chat', root: turn.root, goal, acceptance: [], moduleIds: [] },
         engineHandoff: messages.length > 1 ? JSON.stringify(messages.slice(0, -1)) : undefined,
         capabilities: [{ id: 'office-chat', tools, disableNativeTools: true }],
-        beforeTool: async () => ({ allow: false, reason: '对话未绑定该工具' }),
+        beforeTool: async call => { const reason = '对话未绑定该工具'; progress({ phase: 'thinking', model, activity: { id: 'tool:' + call.id, label: call.name, input: activityDetail(call.input), alert: reason } }); return { allow: false, reason }; },
         emit: async event =>
         {
+          if (['tool.started', 'tool.updated', 'tool.finished'].includes(event.type) && typeof event.data.id === 'string')
+          {
+            const name = String(event.data.name ?? '工具');
+            const result = activityDetail(event.data.result);
+            progress({ phase: 'thinking', model, activity: { id: 'tool:' + event.data.id, label: name, ...(result !== undefined && { result }), ...(event.data.isError === true && { alert: name + '执行失败' }) } });
+          }
           if ((event.type === 'message' && event.data.usage) || (event.type === 'engine.status' && event.data.metric === 'run-usage')) usageEvents.push(event);
           if (event.type === 'engine.status' && event.data.metric === 'context' && typeof event.data.tokens === 'number') contextUsed = event.data.tokens;
           if (typeof event.data.text !== 'string') return;

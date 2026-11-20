@@ -48,20 +48,24 @@ export function DesktopShell()
 
   function openProject(project: ProjectItem, draft = false, session?: string)
   {
-    setSelected(project);
-
     setPage('workspace');
 
     const sequence = ++request.current;
 
-    setOffice(undefined);
-
     setError('');
+
+    if (!draft && session && selected?.id === project.id && office?.id === session)
+      return;
+
+    // ?????????????????????????????????
+    if (!office)
+      setSelected(project);
 
     window.desktopMenu.OpenOffice(project.id, draft ? 'create' : session ? 'select' : 'latest', session).then(value =>
     {
       if (sequence !== request.current) return;
       setSessions(previous => ({ ...previous, [project.id]: value.sessions }));
+      setSelected(project);
       setOffice(value);
     }).catch(e => { if (sequence === request.current) setError(String(e)); });
   }

@@ -1,7 +1,7 @@
 /** 仅为已登记项目打开 Office，将持久会话身份映射到当前运行时实例。 */
 import path from 'node:path';
 
-import { OfficeHistory } from '../../resource/office-history';
+import { OfficeHistory, type OfficeActivity } from '../../resource/office-history';
 
 import type { ProjectList } from './project';
 
@@ -22,6 +22,8 @@ export interface TurnMetrics
 
 export type ChatProgress =
   {
+    activity?: OfficeActivity;
+    workLog?: OfficeActivity[];
     phase: 'connecting' | 'thinking' | 'writing';
 
     model: string;
@@ -146,23 +148,56 @@ export class ProjectOffices
 
     this.controllers.set(key, controller);
 
+    let detach: (() => void) | undefined;
     try
     {
       const context = (await history.Messages(id)).map(m => ({ role: m.role, content: m.text }));
 
       const workspaceTree = office.project.DescribeWorkspaces();
 
+      const workLog = new Map<string, OfficeActivity>();
+      const turnKey = crypto.randomUUID();
+      const append = (label: string) => { const id = turnKey + ':' + workLog.size; workLog.set(id, { id, label }); };
+      append('已读取工作区结构');
+      const phases = { connecting: '连接模型', thinking: '启动主 Agent 执行', writing: '生成答复' };
+      let lastPhase: ChatProgress['phase'] = 'connecting';
+      const publish = (sample: ChatProgress) => progress({ ...sample, workLog: Array.from(workLog.values()) });
+      publish({ phase: lastPhase, model: selection.modelId });
+      const record = (item: OfficeActivity) => workLog.set(item.id, { ...workLog.get(item.id), ...item });
+      const reportProgress = (sample: ChatProgress) =>
+      {
+        if (sample.activity)
+        {
+          record(sample.activity);
+          publish({ ...sample, phase: lastPhase });
+        }
+        else if (lastPhase !== sample.phase || workLog.size === 1)
+        {
+          lastPhase = sample.phase;
+          append(phases[lastPhase]);
+          publish(sample);
+        }
+        else progress(sample);
+      };
+      detach = office.Subscribe(event =>
+      {
+        if (event.type !== 'task') return;
+        const task = event.task;
+        const states = { waiting: '等待依赖', blocked: '受阻', queued: '已排队', running: '执行中', completed: '已完成', suspended: '已挂起', cancelled: '已取消' };
+        record({ id: 'task:' + task.id + ':' + task.attempt + ':' + task.state, label: task.agentId + ' · ' + states[task.state], input: task.goal, result: task.workspaceInstanceId, alert: task.state === 'blocked' || task.state === 'suspended' ? task.error || task.goal : undefined });
+        publish({ phase: lastPhase, model: selection.modelId });
+      });
       const goal = JSON.stringify({ project: project.entry.name, workspaceTree, userRequest: input.trim() });
 
       context.push({ role: 'user', content: goal });
 
-      const reply = await office.OpenMainAgent({ parameters: controller.signal, CreateEngine: async (signal, _id, _role, report) => ({ session: async () => { return chat(office.mainRole.definition.instructions, context, signal, progress, { ReportTokens: total => report(1, 'summary', total), selection, root: project.entry.path, session: id, project: projectId, dataRoot: this.projects.paths.Project(projectId) }); }, Close: async () => { controller.abort(); }, }) });
+      const reply = await office.OpenMainAgent({ parameters: controller.signal, CreateEngine: async (signal, _id, _role, report) => ({ session: async () => { return chat(office.mainRole.definition.instructions, context, signal, reportProgress, { ReportTokens: total => report(1, 'summary', total), selection, root: project.entry.path, session: id, project: projectId, dataRoot: this.projects.paths.Project(projectId) }); }, Close: async () => { controller.abort(); }, }) });
 
       try
       {
         const result = await reply();
 
-        return await history.AppendTurn(id, input.trim(), result.text, result.metrics);
+        return await history.AppendTurn(id, input.trim(), result.text, result.metrics, Array.from(workLog.values()));
       }
       finally
       {
@@ -171,6 +206,7 @@ export class ProjectOffices
     }
     finally
     {
+      detach?.();
       this.busy.delete(office.id);
       this.activeEngines.delete(id);
 

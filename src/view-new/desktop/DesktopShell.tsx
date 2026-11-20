@@ -115,9 +115,9 @@ export function DesktopShell()
         <OfficeView key={office.id} conversation={office} project={selected} draft={drafts[office.id] ?? ''}
           onDraft={text => setDrafts(previous => ({ ...previous, [office.id]: text }))}
           onSelect={id => openProject(selected, false, id)} onCreate={() => openProject(selected, true)}
-          onSaved={message => setOffice(current => current?.id === office.id ? { ...current,
-            sessions: current.sessions.map(s => s.id === current.id && !current.messages.length ? { ...s, title: message.text.slice(0,32) } : s),
-            messages: [...current.messages, message] } : current)} />
+          onSaved={messages => setOffice(current => current?.id === office.id ? { ...current,
+            sessions: current.sessions.map(s => s.id === current.id && !current.messages.length ? { ...s, title: messages[0].text.slice(0,32) } : s),
+            messages: [...current.messages, ...messages] } : current)} />
         : <p role="status">{error ? '无法打开 Office 对话' : '正在打开 Office 对话…'}</p> : <section className="workspace-welcome">
         <div className="intro-emblem"><BrandMark size={64} decorative /></div>
         <p className="overline">CBIM Assistant · 团队工作空间</p>

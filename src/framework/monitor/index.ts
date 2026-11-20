@@ -27,7 +27,7 @@ export class RuntimeMonitor
         return { ...agent, running: agent.state === "executing", taskId: running?.role.conversation.taskId, tokens: agent.reported ? agent.totalTokens : undefined };
       });
       const workspaces = office.ListWorkspaces().map(instance => ({ id: instance.instanceId, workspaceId: instance.description.id, directory: instance.directory }));
-      return { id: office.id, workspaceId: office.workspaceId, rootSessionId: office.rootSessionId, agents, workspaces, engines: active.size, totalTokens: usage.totalTokens, tokensPerSecond: usage.tokensPerSecond, reportedTokens: agents.some(agent => agent.reported) ? usage.totalTokens : undefined };
+      return { id: office.id, workspaceId: office.workspaceId, rootSessionId: office.rootSessionId, agents, workspaces, tasks: office.ListTasks(), engines: active.size, totalTokens: usage.totalTokens, tokensPerSecond: usage.tokensPerSecond, reportedTokens: agents.some(agent => agent.reported) ? usage.totalTokens : undefined };
     });
     return {
       sampledAt: Date.now(), host: this.sampleHost?.(), offices,

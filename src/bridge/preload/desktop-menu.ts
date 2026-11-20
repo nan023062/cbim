@@ -4,7 +4,13 @@ import type { DesktopMenu, ProcessGroup } from '../contracts/discovery';
 
 const menu: DesktopMenu = {
   openOffice: (project, action, session) => ipcRenderer.invoke('office:open', { project, action, session }),
-  sendOffice: (project, session, text) => ipcRenderer.invoke('office:send', { project, session, text }),
+  watchOffice: listener => {
+    const receive = (_: unknown, value: Parameters<typeof listener>[0]) => listener(value);
+    ipcRenderer.on('office:progress', receive);
+    return () => { ipcRenderer.removeListener('office:progress', receive); };
+  },
+  stopOffice: (project,session) => ipcRenderer.invoke('office:stop',{ project, session }),
+  sendOffice: (project, session, text, permission) => ipcRenderer.invoke('office:send', { project, session, text, permission }),
   openMonitor: () => ipcRenderer.invoke('menu:open-monitor'),
   projects: () => ipcRenderer.invoke('menu:projects'),
   addProject: () => ipcRenderer.invoke('menu:add-project'),

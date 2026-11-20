@@ -9,14 +9,17 @@ export interface MonitorResult {
 }
 export interface DesktopMenu {
   openOffice(project: string, action: 'latest' | 'create' | 'select', session?: string): Promise<OfficeConversation>;
-  sendOffice(project: string, session: string, text: string): Promise<OfficeMessage>;
+  watchOffice(listener: (event: OfficeProgress) => void): () => void;
+  stopOffice(project: string, session: string): Promise<void>;
+  sendOffice(project: string, session: string, text: string, permission?: 'read' | 'ask' | 'execute'): Promise<OfficeMessage[]>;
   openMonitor(): Promise<void>;
   projects(): Promise<ProjectItem[]>;
   addProject(): Promise<ProjectItem | null>;
   resources(page: DiscoveryPage): Promise<DiscoveryResult>;
   monitor(): Promise<MonitorResult>;
 }
-export interface OfficeMessage { id: string; created: number; text: string }
+export interface OfficeProgress { project: string; session: string; phase: 'thinking' | 'connecting' | 'writing'; model: string; rate?: number; estimated?: boolean }
+export interface OfficeMessage { metrics?: { elapsed: number; model: string; capacity: number; used?: number; cost?: number; output?: number }; role: 'user' | 'assistant'; id: string; created: number; text: string }
 export interface OfficeConversation { id: string; officeId: string; sessions: { id: string; title: string }[]; messages: OfficeMessage[] }
 export interface ProcessRow {
   id: string; name: string; detail?: string; pid?: number; cpu?: number; memoryKiB?: number;

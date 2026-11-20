@@ -3,9 +3,28 @@ import path from 'node:path';
 import { OfficeHistory } from '../../resource/office-history';
 import type { ProjectList } from './project';
 
+export interface TurnMetrics {
+  elapsed: number;
+  model: string;
+  capacity: number;
+  used?: number;
+  output?: number;
+  cost?: number;
+}
+export type ChatProgress = { phase: 'connecting' | 'thinking' | 'writing'; model: string; rate?: number; estimated?: boolean };
+export type OfficeChat = (instructions: string, messages: readonly { role: 'user' | 'assistant'; content: string }[], signal: AbortSignal, progress: (sample: ChatProgress) => void) => Promise<{text: string; metrics: TurnMetrics}>;
+
 export class ProjectOffices
 {
-  public constructor(private readonly projects: ProjectList) {}
+  private readonly controllers = new Map<string, AbortController>();
+
+  public Stop(project: string, session: string) {
+    this.controllers.get(JSON.stringify([project,session]))?.abort();
+  }
+
+  private readonly busy = new Set<string>();
+
+  public constructor(private readonly projects: ProjectList, private readonly chat?: OfficeChat) {}
 
   private async History(projectId: string)
   {
@@ -33,12 +52,32 @@ export class ProjectOffices
     return { id, officeId: office.id, sessions, messages: await history.Messages(id) };
   }
 
-  public async Send(projectId: string, id: string, input: string)
+  public async Send(projectId: string, id: string, input: string, progress: (sample: ChatProgress) => void = () => {}, permission: 'read' | 'ask' | 'execute' = 'ask')
   {
     if (typeof input !== 'string' || !input.trim() || input.length > 32000) throw Error('消息长度须为 1 至 32000 个字符');
     const { project, history } = await this.History(projectId);
     if (!(await history.List()).includes(id)) throw Error('会话不属于该项目');
-    project.runtime.OpenOffice(projectId, id);
-    return history.Append(id, input.trim());
+    const chat = this.chat;
+    if (!chat) throw Error('Office chat service is unavailable');
+    const office = project.runtime.OpenOffice(projectId, id);
+    if (this.busy.has(office.id)) throw Error('A reply is already in progress');
+    office.permission = permission;
+    this.busy.add(office.id);
+    const key = JSON.stringify([projectId,id]);
+    const controller = new AbortController();
+    this.controllers.set(key, controller);
+    try {
+      const context = (await history.Messages(id)).map(m => ({ role: m.role, content: m.text }));
+      context.push({ role: 'user', content: input.trim() });
+
+      const reply = await office.OpenMainAgent({ parameters: controller.signal, CreateEngine: async signal => ({
+        session: () => chat(office.mainRole.definition.instructions, context, signal, progress),
+        Close: async () => { controller.abort(); },
+      }) });
+      try {
+        const result = await reply();
+        return await history.AppendTurn(id, input.trim(), result.text, result.metrics);
+      } finally { await office.CloseMainEngine(); }
+    } finally { this.busy.delete(office.id); this.controllers.delete(key); }
   }
 }

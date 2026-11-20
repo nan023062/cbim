@@ -3,7 +3,7 @@ import { ResourceRepositories, type ResourceRepositoryPaths } from '../../resour
 import { ResourceManagement, type PluginSource } from '../resource-management';
 import { createApplicationMonitor } from '../monitor';
 import { ProjectList } from '../projects/project';
-import { ProjectOffices } from '../projects/offices';
+import { ProjectOffices, type OfficeChat } from '../projects/offices';
 import { Paths } from '../projects/paths';
 
 export interface ApplicationInitOptions
@@ -30,12 +30,12 @@ export class Application implements ApplicationEntry
   public readonly offices: ProjectOffices;
   public readonly discovery: ResourceManagement;
 
-  public constructor(paths: ResourceRepositoryPaths, plugins?: PluginSource)
+  public constructor(paths: ResourceRepositoryPaths, plugins?: PluginSource, chat?: OfficeChat)
   {
     this.resources = new ResourceRepositories(paths);
     this.projects = new ProjectList(new Paths(paths.userRoot, paths.installRoot, paths.protectedRoots));
     this.monitor = createApplicationMonitor(this.projects);
-    this.offices = new ProjectOffices(this.projects);
+    this.offices = new ProjectOffices(this.projects, chat);
     this.discovery = new ResourceManagement(this.resources, plugins);
   }
 

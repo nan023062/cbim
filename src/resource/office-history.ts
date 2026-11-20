@@ -3,6 +3,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { atomic, readJson } from '../core/io/text-files';
 
+type Usage = { elapsed: number; model: string; capacity: number; used?: number; output?: number; cost?: number };
+
 export class OfficeHistory
 {
   public constructor(private readonly root: string) {}
@@ -26,13 +28,19 @@ export class OfficeHistory
   {
     const dir = path.join(this.root, id);
     const files = (await fs.readdir(dir)).filter(file => file.endsWith('.json')).sort();
-    return Promise.all(files.map(file => readJson<{ id: string; text: string; created: number }>(path.join(dir,file))));
+    type Message = { metrics?: Usage; id: string; role?: 'user' | 'assistant'; text: string; created: number };
+    const turns = await Promise.all(files.map(file => readJson<Message | Message[]>(path.join(dir,file))));
+    return turns.flat().map(message => ({ ...message, role: message.role ?? 'user' as const }));
   }
 
-  public async Append(id: string, text: string)
+  public async AppendTurn(id: string, input: string, reply: string, metrics: Usage)
   {
-    const message = { id: crypto.randomUUID(), created: Date.now(), text };
-    await atomic(path.join(this.root, id, message.created+'-'+message.id+'.json'), JSON.stringify(message));
-    return message;
+    const created = Date.now();
+    const messages = [
+      { id: crypto.randomUUID(), role: 'user' as const, created, text: input },
+      { id: crypto.randomUUID(), role: 'assistant' as const, created, text: reply, metrics },
+    ];
+    await atomic(path.join(this.root, id, created+'-'+messages[0].id+'.json'), JSON.stringify(messages));
+    return messages;
   }
 }

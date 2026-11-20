@@ -1,3 +1,4 @@
+import type { MainTaskCommands } from '../src/framework/office/office';
 import { expect, test } from 'vitest';
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs/promises';
@@ -56,7 +57,92 @@ test('project startup loads both trees once, isolates Offices, and retries inval
     const [left, right] = await Promise.all([first, sibling].map(office => office.OpenWorkspace(workspace, repo, '.')));
     expect(left.instanceId).not.toBe(right.instanceId);
     expect(left.directory).not.toBe(right.directory);
+    let main!: MainTaskCommands;
+    let otherMain!: MainTaskCommands;
+    const events: string[] = [];
+    const factory = { parameters: 0, CreateEngine: async () => ({ session: {}, Close: async () => {} }) };
+    await first.OpenMainAgent(factory, (_, port) => {
+      main = port;
+      return task => {
+        events.push(task.id + ':' + task.state);
+        if (task.id === 'bad' && task.state === 'suspended') port.Cancel(task.id);
+      };
+    });
+    await sibling.OpenMainAgent(factory, (_, port) => { otherMain = port; return () => {}; });
+    const request = { memberId: role, workspaceInstanceId: left.instanceId, goal: 'review' };
+    expect(() => otherMain.DispatchTask(request, async () => {})).toThrow();
+    let release!: () => void;
+    const gate = new Promise<void>(resolve => { release = resolve; });
+    const work = main.DispatchTask(request, async (task, agent, desk) => {
+      expect([task.goal, agent.id, desk.instanceId]).toEqual(['review', mine.id, left.instanceId]);
+      await gate;
+    });
+    const queued = main.DispatchTask(request, async () => 'next');
+    const independent = main.DispatchTask({ workspaceInstanceId: left.instanceId, goal: 'coordinate', parentTaskId: work.id }, async () => 'ready');
+    expect(await independent.done).toBe('ready');
+    expect(first.ListTasks().map(t => t.state)).toEqual(['running', 'queued', 'completed']);
+    expect(sibling.ListTasks()).toEqual([]);
+    main.Cancel(queued.id);
+    await expect(queued.done).rejects.toThrow();
+    release();
+    await work.done;
+    const node = (id: string, dependsOn: string[] = [], memberId?: string) => ({
+      id, dependsOn, memberId, goal: id, workspaceInstanceId: left.instanceId,
+    });
+    const before = first.ListTasks();
+    for (const invalid of [[node('A', ['missing'])], [node('A', ['B']), node('B', ['A'])], [node('A'), node('A')]]) {
+      expect(() => main.SubmitTaskGraph(invalid, async () => {})).toThrow();
+      expect(first.ListTasks()).toEqual(before);
+    }
+    expect(() => otherMain.SubmitTaskGraph([node('A')], async () => {})).toThrow();
+    let finishBranch!: () => void;
+    const holdBranch = new Promise<void>(resolve => { finishBranch = resolve; });
+    const calls: string[] = [];
+    const [join, branch, other, rootTask] = main.SubmitTaskGraph([
+      node('D', ['B', 'C']), node('B', ['A'], role), node('C', ['A']), node('A'),
+    ], async task => {
+      calls.push(task.id);
+      if (task.id === 'B') await holdBranch;
+    });
+    await rootTask.done;
+    await other.done;
+    expect(calls[0]).toBe('A');
+    expect(calls.slice(1).sort()).toEqual(['B', 'C']);
+    expect(first.ListTasks().find(t => t.id === join.id)?.state).toBe('waiting');
+    finishBranch();
+    await Promise.all([join.done, branch.done]);
+    expect(calls.at(-1)).toBe('D');
+    const attempted: string[] = [];
+    const failed = main.SubmitTaskGraph([
+      node('bad'), node('child', ['bad']), node('grandchild', ['child']), node('separate', [], role),
+    ], async task => {
+      attempted.push(task.id);
+      if (task.id === 'bad') throw Error('failure');
+    });
+    await Promise.allSettled(failed.map(handle => handle.done));
+    expect(attempted.sort()).toEqual(['bad', 'separate']);
+    expect(first.ListTasks().slice(-4).map(task => task.state)).toEqual(['cancelled', 'blocked', 'blocked', 'completed']);
+    let finishOld!: () => void;
+    const old = new Promise<void>(resolve => { finishOld = resolve; });
+    const retry = main.DispatchTask(request, async (task, agent) => {
+      if (task.attempt === 1) { await old; return 'stale'; }
+      expect(agent.id).toBe(first.mainAgentId);
+      return task.instruction;
+    });
+    await Promise.resolve();
+    main.Suspend(retry.id, 'needs review');
+    main.Reassign(retry.id, left.instanceId);
+    main.Resume(retry.id, 'approved');
+    finishOld();
+    expect(await retry.done).toBe('approved');
+    expect(events).toContain('bad:suspended');
+    const closing = main.DispatchTask(request, async (_task, _agent, _desk, signal) => {
+      await new Promise(resolve => signal.addEventListener('abort', resolve, { once: true }));
+    });
+    await Promise.resolve();
     await first.Close();
+    await expect(closing.done).rejects.toThrow();
+    expect(() => main.Resume(retry.id)).toThrow();
     expect(left.closed).toBe(true);
     expect(right.closed).toBe(false);
     expect(sibling.FindAgent(theirs.id)).toBe(theirs);

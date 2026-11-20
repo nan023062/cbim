@@ -16,6 +16,7 @@ Office 是用户与团队交互的唯一对象，一个主会话对应一个办�
 
 | 组成 | 定位 |
 | --- | --- |
+| [OfficeTaskManager](task-manager.ts) | 按 Office 内的 Agent 实例排队，记录工位、目标、父任务和执行状态。 |
 | [OfficeMembers](members.ts) | 按本办公室的组织树定位成员并绑定任务。 |
 | [Office](office.ts) | 持有一个主会话的办公室身份与成员。 |
 | [Worker](worker.ts) | 将本办公室的岗位与唯一 Agent 实例关联。 |
@@ -32,29 +33,27 @@ Office 是用户与团队交互的唯一对象，一个主会话对应一个办�
 
 ## 架构关系
 
-### 关系组 1：OfficeMembers
+### 关系组 1：Office
 
 ```mermaid
 classDiagram
+class N_ffd9d70903a7["Office"]
+click N_ffd9d70903a7 href "office.ts"
+class N_11622fd437a0["Workstation"]
+click N_11622fd437a0 href "workstation.ts"
+class N_c7ef68ff2025["OfficeTaskManager"]
+click N_c7ef68ff2025 href "task-manager.ts"
 class N_59750c90a0a0["OfficeMembers"]
 click N_59750c90a0a0 href "members.ts"
 class N_94112da49e14["Worker"]
 click N_94112da49e14 href "worker.ts"
-class N_ffd9d70903a7["Office"]
-click N_ffd9d70903a7 href "office.ts"
 class N_a2efd1e9efe3["OfficeDispatcher"]
 click N_a2efd1e9efe3 href "index.ts"
-class N_11622fd437a0["Workstation"]
-click N_11622fd437a0 href "workstation.ts"
-class N_89a1c69bfd27["AgentTaskDispatcher"] {
-  <<boundary>>
-}
-click N_89a1c69bfd27 href "../cability/agent/execution.ts"
 N_59750c90a0a0 ..> N_94112da49e14 : 依赖
 N_ffd9d70903a7 ..> N_11622fd437a0 : 依赖
+N_ffd9d70903a7 ..> N_c7ef68ff2025 : 依赖
 N_ffd9d70903a7 ..> N_59750c90a0a0 : 依赖
 N_a2efd1e9efe3 ..> N_59750c90a0a0 : 依赖
-N_89a1c69bfd27 <|.. N_a2efd1e9efe3
 ```
 
 ### 关系组 2：AgentCallExchange
@@ -67,12 +66,24 @@ class N_0ae17ffad4f1["OfficeSchedule"]
 click N_0ae17ffad4f1 href "schedule.ts"
 class N_270b6d5a1d80["AgentConstraintError"]
 click N_270b6d5a1d80 href "call.ts"
+class N_89a1c69bfd27["AgentTaskDispatcher"] {
+  <<boundary>>
+}
+click N_89a1c69bfd27 href "../cability/agent/execution.ts"
 class N_b7b436f4eeb9["Error"] {
   <<boundary>>
 }
 N_0ae17ffad4f1 ..> N_05f34cd1b4f1 : 依赖
 N_b7b436f4eeb9 <|-- N_270b6d5a1d80
 ```
+
+### 跨图协作
+
+按引用方归并目标，保留全部跨图关系；分图只用于阅读，不表示新增模块或依赖边界。
+
+| 引用方 | 关系 | 目标 |
+| --- | --- | --- |
+| [OfficeDispatcher](index.ts)（图 1） | 实现 | [AgentTaskDispatcher](../cability/agent/execution.ts)（图 2） |
 
 外部继承／实现边界：[AgentTaskDispatcher](../cability/agent/execution.ts)、`Error`。
 

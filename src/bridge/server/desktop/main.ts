@@ -3,6 +3,7 @@ import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 import path from 'node:path';
 import { z } from 'zod';
 import { Application } from '../../../logic-new/application';
+import { desktopOfficeChat } from './office-chat';
 import { createMonitorOpener } from './monitor-window';
 import { updateUserRoot } from '../../../logic/updates/service/restart-profile';
 
@@ -27,7 +28,7 @@ export function startDesktop(host?: StartupHost)
     userRoot,
     installRoot: app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath(),
     protectedRoots: host ? [host.cacheRoot] : [],
-  }, host?.engineArtifacts);
+  }, host?.engineArtifacts, desktopOfficeChat(userRoot));
   let window: BrowserWindow | undefined;
   let closing = false;
   let closed = false;
@@ -70,9 +71,13 @@ export function startDesktop(host?: StartupHost)
       const { project, action, session } = z.object({ project: z.string(), action: z.enum(['latest','select','create']), session: z.string().uuid().optional() }).parse(input);
       return application.offices.Open(project, action, session);
     });
+    handle('office:stop', input => {
+      const { project, session } = z.object({ project: z.string(), session: z.string().uuid() }).parse(input);
+      application.offices.Stop(project, session);
+    });
     handle('office:send', input => {
-      const { project, session, text } = z.object({ project: z.string(), session: z.string().uuid(), text: z.string().max(32000) }).parse(input);
-      return application.offices.Send(project, session, text);
+      const { project, session, text, permission } = z.object({ project: z.string(), session: z.string().uuid(), text: z.string().max(32000), permission: z.enum(['read','ask','execute']).default('ask') }).parse(input);
+      return application.offices.Send(project, session, text, sample => window?.webContents.send('office:progress', { project, session, ...sample }), permission);
     });
     handle('menu:add-project', async () => {
       const choice = await dialog.showOpenDialog(window!, { properties: ['openDirectory'], title: '选择项目目录' });

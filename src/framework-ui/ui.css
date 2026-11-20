@@ -1,0 +1,28 @@
+:root {
+  --ui-fast: 160ms; --ui-normal: 240ms;
+  --ui-ease-in: cubic-bezier(.4,0,1,1); --ui-ease-out: cubic-bezier(0,0,.2,1);
+  --ui-ease-in-out: cubic-bezier(.4,0,.2,1); --ui-spring: cubic-bezier(.2,.8,.3,1.2);
+}
+.ui-screen,.ui-tabs { display:flex; flex:1; flex-direction:column; min-width:0; min-height:0; }
+.ui-screen[hidden] { display:none; }
+.ui-button { border-radius:6px; cursor:pointer; }
+.ui-button:disabled { cursor:default; opacity:.5; }
+.ui-button:focus-visible { outline:2px solid var(--focus); outline-offset:2px; }
+.ui-button[role=switch][aria-checked=true],.ui-button[role=tab][aria-selected=true] { background:var(--selected); color:var(--text); }
+.ui-tabs>[role=tablist] { display:flex; gap:4px; }
+.ui-window-list { flex:1; min-height:0; scrollbar-gutter:stable; scrollbar-color:var(--muted) transparent; overflow-y:scroll !important; }
+@keyframes ui-fade-in { from { opacity:0; } to { opacity:1; } }
+@keyframes ui-fade-out { to { opacity:0; } }
+@keyframes ui-float { to { transform:translateY(-4px); } }
+@keyframes ui-rotate { to { transform:rotate(1turn); } }
+@keyframes ui-breathe { to { opacity:.45; } }
+@keyframes ui-scale { from { transform:scale(.96); } to { transform:scale(1); } }
+@keyframes ui-pingpong { from { transform:translateX(-3px); } to { transform:translateX(3px); } }
+[data-motion=fade-in] { animation:ui-fade-in var(--ui-normal) var(--ui-ease-out) both; }
+[data-motion=fade-out] { animation:ui-fade-out var(--ui-fast) var(--ui-ease-in) forwards; }
+[data-motion=float] { animation:ui-float 1s var(--ui-ease-in-out) infinite alternate; }
+[data-motion=rotate] { animation:ui-rotate 1s linear infinite; }
+[data-motion=breathe] { animation:ui-breathe 1.2s var(--ui-ease-in-out) infinite alternate; }
+[data-motion=scale] { animation:ui-scale var(--ui-normal) var(--ui-spring) both; }
+[data-motion=pingpong] { animation:ui-pingpong .8s var(--ui-ease-in-out) infinite alternate; }
+@media (prefers-reduced-motion:reduce) { [data-motion] { animation:none; } [data-motion=fade-out] { opacity:0; } }

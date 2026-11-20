@@ -40,11 +40,16 @@ export class OfficeHistory
     await fs.mkdir(path.join(this.root, id));
   }
 
-  public async Messages(id: string)
+  public async Files(id: string)
+  {
+    return (await fs.readdir(path.join(this.root, id))).filter(file => file.endsWith('.json')).sort();
+  }
+
+  public async Messages(id: string, files?: string[])
   {
     const dir = path.join(this.root, id);
-
-    const files = (await fs.readdir(dir)).filter(file => file.endsWith('.json')).sort();
+    files ??= await this.Files(id);
+    if (files.some(file => !/^[a-zA-Z0-9_-]+\.json$/.test(file))) throw Error('Invalid history file');
 
     type Message =
       {
@@ -63,6 +68,35 @@ export class OfficeHistory
 
     // 早期版本可能只写入助手消息的身份。跳过空记录，保留同轮有效的用户输入。
     return turns.flat().filter(message => typeof message?.text === 'string' && message.text.trim()).map(message => ({ ...message, role: message.role ?? 'user' as const }));
+  }
+
+  /** Cache totals for the immutable prefix independently of the visible transcript. */
+  public async EarlierUsage(id: string, files: string[])
+  {
+    const totals = { elapsed: 0, cost: 0, complete: true };
+    if (!files.length) return totals;
+    const cache = path.join(this.root, id, 'usage-cache');
+    const saved = await readJson<{ through: string; count: number; totals: typeof totals }>(cache).catch(() => undefined);
+    let offset = 0;
+    if (saved && files[saved.count - 1] === saved.through)
+    {
+      Object.assign(totals, saved.totals);
+      offset = saved.count;
+    }
+    if (offset === files.length) return totals;
+    for (; offset < files.length; offset += 32)
+    {
+      const messages = await this.Messages(id, files.slice(offset, offset + 32));
+      for (const message of messages)
+      {
+        if (message.role !== 'assistant') continue;
+        totals.elapsed += message.metrics?.elapsed ?? 0;
+        totals.cost += message.metrics?.cost ?? 0;
+        if (message.metrics?.cost == null) totals.complete = false;
+      }
+    }
+    await atomic(cache, JSON.stringify({ through: files.at(-1), count: files.length, totals })).catch(() => {});
+    return totals;
   }
 
   public async AppendTurn(id: string, input: string, reply: string, metrics: Usage)

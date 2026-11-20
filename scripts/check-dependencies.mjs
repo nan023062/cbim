@@ -27,7 +27,8 @@ const layers = {
   'framework/monitor':['framework/monitor','framework'],
   framework:['framework','core'],
   'logic-new':['logic-new','framework','framework/monitor','core','core/platform/node'],
-  'view-new':['view-new','bridge/contracts'],
+  'framework-ui':['framework-ui'],
+  'view-new':['view-new','framework-ui','bridge/contracts'],
   updater:['updater'],
   logic:['logic','framework/monitor','resource/plugins','framework','core','core/platform/node'],
   view:['view','bridge/client','bridge/contracts','core','core/platform/browser'],
@@ -44,7 +45,7 @@ const layerOf = file => {
   if(['node','page-reader','public-http','browser-proxy'].some(name=>file==='src/core/web/'+name+'.ts'))return 'core/platform/node';
   if(file==='src/core/web/electron.ts')return 'core/platform/electron';
   if(file.startsWith('src/core/platform/'))return file.split('/').slice(1,4).join('/');
-  for(const layer of ['core','engine-plugins','resource/plugins','resource','framework/monitor','framework','logic-new','view-new','updater','logic','view'])if(file.startsWith('src/'+layer+'/'))return layer;
+  for(const layer of ['core','engine-plugins','resource/plugins','resource','framework/monitor','framework','logic-new','view-new','framework-ui','updater','logic','view'])if(file.startsWith('src/'+layer+'/'))return layer;
   return file.split('/').slice(1,3).join('/');
 };
 
@@ -86,8 +87,8 @@ const allowsResourceAccess=(from,to)=>from==='src/logic-new/projects/resources.t
 const agentQuestions='src/framework/cability/agent/questions.ts';
 const agentIdentity='src/framework/cability/agent/identity.ts';
 const moduleBoundaries=[
-  {sources:['src/view-new/desktop/'],allow:['src/view-new/desktop/','src/view-new/office/','src/view-new/settings/','src/view-new/discovery/','src/view-new/extension/','src/view-new/shared/','src/bridge/contracts/']},
-  ...['discovery','extension','monitor','office','settings','shared'].map(name=>({sources:['src/view-new/'+name+'/'],allow:['src/view-new/'+name+'/','src/view-new/shared/','src/bridge/contracts/']})),
+  {sources:['src/view-new/desktop/'],allow:['src/view-new/desktop/','src/view-new/office/','src/view-new/settings/','src/view-new/discovery/','src/view-new/extension/','src/view-new/shared/','src/framework-ui/','src/bridge/contracts/']},
+  ...['discovery','extension','monitor','office','settings','shared'].map(name=>({sources:['src/view-new/'+name+'/'],allow:['src/view-new/'+name+'/','src/view-new/shared/','src/framework-ui/','src/bridge/contracts/']})),
   // 冷壳只持有更新状态和已验证业务入口，不直接装配普通业务服务。
   {sources:['src/bridge/server/bootstrap/'],allow:['src/bridge/server/bootstrap/','src/bridge/server/desktop/main.ts','src/logic/updates/service/']},
   // 视图专属适配可以组合共享 Core，但不反向依赖页面、通信契约或后端实现。

@@ -34,4 +34,10 @@
 .office-chat .office-pickers { align-items: center; flex-wrap: wrap; overflow: visible; max-width: 100%; }
 .office-chat .office-pickers select { background: var(--surface); max-width: min(12em, 32vw); }
 .office-meter { padding-top: 6px; }
+.office-transcript { position:relative; display:flex; flex-direction:column; padding:0; overflow:hidden; }
+.office-message-row { display:flow-root; padding-top:8px; }
+.office-stream { white-space:pre-wrap; }
+.office-jump { position:absolute; bottom:10px; left:50%; transform:translateX(-50%); border:1px solid var(--line); background:var(--raised); color:var(--text); border-radius:50%; width:34px; height:34px; padding:0; opacity:0; pointer-events:none; transition:opacity var(--ui-normal) var(--ui-ease-out); }
+.office-jump[data-visible=true],.office-jump:focus-visible { opacity:1; pointer-events:auto; }
+@media (prefers-reduced-motion:reduce) { .office-jump { transition:none; } }
 

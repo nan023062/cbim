@@ -4,8 +4,11 @@ import { contextBridge, ipcRenderer } from 'electron';
 import type { DesktopMenu, ProcessGroup } from '../contracts/discovery';
 
 const menu: DesktopMenu = {
+  EngineCatalog: () => ipcRenderer.invoke('menu:engine-catalog'),
+
   Engines: (action, target) => ipcRenderer.invoke('menu:engines', { action, target }),
   Model: (action, ...args) => ipcRenderer.invoke('settings:model', { action, input: args[0] }),
+  ReadOfficeTurn: (project, session, file) => ipcRenderer.invoke('office:turn', { project, session, file }),
   OpenOffice: (project, action, session) => ipcRenderer.invoke('office:open', { project, action, session }),
   WatchOffice: listener => { const receive = (_: unknown, value: Parameters<typeof listener>[0]) => listener(value); ipcRenderer.on('office:progress', receive); return () => { ipcRenderer.removeListener('office:progress', receive); }; },
   StopOffice: (project, session) => ipcRenderer.invoke('office:stop', { project, session }),

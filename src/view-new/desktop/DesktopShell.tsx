@@ -38,6 +38,10 @@ export function DesktopShell()
 
   const [office, setOffice] = useState<OfficeConversation>();
 
+  const [sessions, setSessions] = useState<Record<string, OfficeConversation['sessions']>>({});
+
+  const [running, setRunning] = useState<Record<string, number>>({});
+
   const request = useRef(0);
 
   const [drafts, setDrafts] = useState<Record<string, string>>({});
@@ -54,7 +58,12 @@ export function DesktopShell()
 
     setError('');
 
-    window.desktopMenu.OpenOffice(project.id, draft ? 'create' : session ? 'select' : 'latest', session).then(value => { if (sequence === request.current) setOffice(value); }).catch(e => { if (sequence === request.current) setError(String(e)); });
+    window.desktopMenu.OpenOffice(project.id, draft ? 'create' : session ? 'select' : 'latest', session).then(value =>
+    {
+      if (sequence !== request.current) return;
+      setSessions(previous => ({ ...previous, [project.id]: value.sessions }));
+      setOffice(value);
+    }).catch(e => { if (sequence === request.current) setError(String(e)); });
   }
 
   const [search, setSearch] = useState('');
@@ -131,7 +140,11 @@ export function DesktopShell()
           <Icon name="plus" size={16} />
         </button>
       </div>
-      <nav className="workspace-list" aria-label="项目列表">{projects.filter(p => (p.name + ' ' + p.path).toLowerCase().includes(search.toLowerCase())).map(p => <WorkspaceRow key={p.id} project={p} active={selected?.id === p.id && page === 'workspace'} onOpen={openProject} />)}</nav>
+      <nav className="workspace-list" aria-label="项目列表">{projects.filter(p => (p.name + ' ' + p.path).toLowerCase().includes(search.toLowerCase())).map(p => <div key={p.id}>
+        <WorkspaceRow project={p} active={selected?.id === p.id && page === 'workspace'} onOpen={openProject} />
+        {sessions[p.id]?.map(session => <ConversationRow key={session.id} session={session} active={page === 'workspace' && office?.id === session.id}
+          running={!!running[session.id]} onOpen={() => openProject(p, false, session.id)} />)}
+      </div>)}</nav>
       <footer className="sidebar-footer">
         <button className="user-profile-trigger" aria-label="用户菜单" popoverTarget="user-actions">
           <span className="profile-badge">C</span><span className="user-profile-copy"><b>本地用户</b><small>CBIM · 本地使用</small></span>
@@ -149,8 +162,12 @@ export function DesktopShell()
       {page !== 'workspace' ? <DiscoveryView key={page} page={page} title={title} /> : selected ? office ?
           <OfficeView onManageEngines={() => setPage('engines')} key={office.id} conversation={office} project={selected} draft={drafts[office.id] ?? ''}
             onDraft={text => setDrafts(previous => ({ ...previous, [office.id]: text }))}
-            onSelect={id => openProject(selected, false, id)} onCreate={() => openProject(selected, true)}
-            onSaved={messages => setOffice(current => current?.id === office.id ? { ...current, sessions: current.sessions.map(s => s.id === current.id && !current.messages.length ? { ...s, title: messages[0].text.slice(0, 32) } : s), messages: [...current.messages, ...messages] } : current)} />
+            started={running[office.id] ?? 0} onRunning={time => setRunning(previous => ({ ...previous, [office.id]: time }))}
+            onSaved={messages =>
+            {
+              if (!office.messages.length) setSessions(previous => ({ ...previous, [selected.id]: (previous[selected.id] ?? []).map(s => s.id === office.id ? { ...s, title: messages[0].text.slice(0, 32) } : s) }));
+              setOffice(current => current?.id === office.id ? { ...current, messages: [...current.messages, ...messages.filter(m => !current.messages.some(existing => existing.id === m.id))] } : current);
+            }} />
           : <p role="status">{error ? '无法打开 Office 对话' : '正在打开 Office 对话…'}</p> : <section className="workspace-welcome">
         <div className="intro-emblem"><BrandMark size={64} decorative /></div>
         
@@ -162,6 +179,30 @@ export function DesktopShell()
     <ExtensionPanel open={panelOpen} />
     <button className="icon-button panel-switch" aria-label={panelOpen ? '收起扩展面板' : '展开扩展面板'} aria-controls="extension-panel" aria-expanded={panelOpen} onClick={() => setPanelOpen(!panelOpen)}><Icon name="panelRight" size={16} /></button>
   </div></div>;
+}
+
+/** 项目下的对话入口；本机显示名称可通过行末编辑按钮修改。 */
+function ConversationRow({ session, active, running, onOpen }: { session: OfficeConversation['sessions'][number]; active: boolean; running: boolean; onOpen(): void })
+{
+  const key = 'office-title:' + session.id;
+  const [alias, setAlias] = useState(() => localStorage.getItem(key) ?? '');
+  const [editing, setEditing] = useState(false);
+  const title = alias || session.title;
+  return <div className="project-list-row office-session-row" data-active={active || undefined}>
+    {editing ? <form onSubmit={event =>
+    {
+      event.preventDefault();
+      const name = String(new FormData(event.currentTarget).get('title') ?? '').trim();
+      localStorage.setItem(key, name);
+      setAlias(name);
+      setEditing(false);
+    }}><input autoFocus name="title" aria-label="对话名称" maxLength={80} defaultValue={title}
+      onFocus={e => e.target.select()} onKeyDown={e => { if (e.key === 'Escape') setEditing(false); }} />
+      <button type="submit" title="保存名称" aria-label="保存名称"><Icon name="confirm" size={14} /></button></form> : <>
+      <button className="project-select" aria-current={active ? 'page' : undefined} onClick={onOpen} title={title}>
+        <span className={'office-session-icon' + (running ? ' executing' : '')} role="img" aria-label={running ? '正在执行' : '对话'}><Icon name="conversation" size={15} /></span><span>{title}</span></button>
+      <button className="project-action" title="重命名对话" aria-label={'重命名对话 · ' + title} onClick={() => setEditing(true)}><Icon name="edit" size={14} /></button></>}
+  </div>;
 }
 
 /** 同一行的快捷操作和上下文菜单始终绑定当前项目。 */

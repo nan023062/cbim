@@ -37,7 +37,8 @@ try {
     const state = await page.evaluate(() => window.desktopMenu.Engines('list'));
     const item = state.items.find(i => i.kind === kind);
     assert(item?.candidate && !item.active);
-    const card = page.locator('.definition-card').filter({has:page.getByRole('heading',{name:item.label,exact:true})});
+    await page.locator('.engine-list button').filter({has:page.getByText(item.label,{exact:true})}).click();
+    const card = page.getByRole('article',{name:item.label+' 详情'});
     await card.getByRole('button',{name:'下载并安装'}).click();
     await page.waitForFunction(async ({kind, identity}) => (await window.desktopMenu.Engines('list')).items.find(item => item.kind === kind)?.active?.identity === identity, {kind, identity:item.candidate.identity}, {timeout:600000,polling:1500});
     const installed = await page.evaluate(() => window.desktopMenu.Engines('list'));
@@ -52,7 +53,9 @@ try {
   await draft.fill(marker);
   await engine.selectOption(':manage');
   const packageState = await page.evaluate(() => window.desktopMenu.Engines('list'));
-  const codexCard = page.locator('.definition-card').filter({has:page.getByRole('heading',{name:packageState.items.find(item => item.kind === 'codex').label,exact:true})});
+  const codexLabel = packageState.items.find(item => item.kind === 'codex').label;
+  await page.locator('.engine-list button').filter({has:page.getByText(codexLabel,{exact:true})}).click();
+  const codexCard = page.getByRole('article',{name:codexLabel+' 详情'});
   await codexCard.getByRole('button',{name:'停用',exact:true}).click();
   await codexCard.getByRole('button',{name:'启用',exact:true}).click();
   await codexCard.getByRole('button',{name:'停用',exact:true}).waitFor();

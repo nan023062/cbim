@@ -1,9 +1,10 @@
 /** Office 消息记录与贴底输入栏。执行状态由当前会话的模型流驱动。 */
 import { useEffect, useRef, useState } from 'react';
 
-import Markdown from 'react-markdown';
-
-import remarkGfm from 'remark-gfm';
+import { Screen } from '../../framework-ui/screen';
+import { Button } from '../../framework-ui/controls';
+import { WindowList, type ListHandle } from '../../framework-ui/list';
+import { EarlierTurn, Message } from './Transcript';
 
 import type { OfficeConversation, OfficeMessage, OfficeProgress, ProjectItem } from '../../bridge/contracts/discovery';
 
@@ -27,11 +28,12 @@ interface Props
 
   onSaved(messages: OfficeMessage[]): void;
 
-  onSelect(id: string): void;
+  started: number;
+
+  onRunning(started: number): void;
 
   onManageEngines(): void;
 
-  onCreate(): void;
 }
 
 function duration(ms: number)
@@ -41,10 +43,8 @@ function duration(ms: number)
   return s < 60 ? s + 's' : Math.floor(s / 60) + 'm ' + s % 60 + 's';
 }
 
-export function OfficeView({ project, conversation, draft, onDraft, onSaved, onSelect, onCreate, onManageEngines }: Props)
+export function OfficeView({ project, conversation, draft, onDraft, onSaved, started, onRunning, onManageEngines }: Props)
 {
-  const [started, setStarted] = useState(0);
-
   const [now, setNow] = useState(0);
 
   const [sample, setSample] = useState<OfficeProgress>();
@@ -61,7 +61,16 @@ export function OfficeView({ project, conversation, draft, onDraft, onSaved, onS
 
   const [permission, setPermission] = useState<'read' | 'ask' | 'execute'>(() => { const value = localStorage.getItem(pref); return value === 'read' || value === 'execute' ? value : 'ask'; });
 
-  const log = useRef<HTMLDivElement>(null);
+  const log = useRef<ListHandle>(null);
+  const [arrow, setArrow] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  function interact()
+  {
+    setArrow(true);
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => setArrow(false), 3000);
+  }
+  useEffect(() => () => clearTimeout(timer.current), []);
 
   const picker = useRef<HTMLInputElement>(null);
 
@@ -71,15 +80,15 @@ export function OfficeView({ project, conversation, draft, onDraft, onSaved, onS
 
   useEffect(() => { if (!started) return; const timer = setInterval(() => setNow(Date.now()), 500); return () => clearInterval(timer); }, [started]);
 
-  useEffect(() => { if (log.current) log.current.scrollTop = log.current.scrollHeight; }, [conversation.messages.length, started]);
+
 
   const replies = conversation.messages.filter(m => m.role === 'assistant');
 
   const last = replies.at(-1)?.metrics;
 
-  const elapsed = replies.reduce((n, m) => n + (m.metrics?.elapsed ?? 0), 0) + (started ? Math.max(0, now - started) : 0);
+  const elapsed = (conversation.earlierUsage?.elapsed ?? 0) + replies.reduce((n, m) => n + (m.metrics?.elapsed ?? 0), 0) + (started ? Math.max(0, now - started) : 0);
 
-  const cost = replies.length && replies.every(m => m.metrics?.cost != null) ? '$' + replies.reduce((n, m) => n + m.metrics!.cost!, 0).toFixed(5) : '—';
+  const cost = replies.length && conversation.earlierUsage?.complete !== false && replies.every(m => m.metrics?.cost != null) ? '$' + replies.reduce((n, m) => n + m.metrics!.cost!, conversation.earlierUsage?.cost ?? 0).toFixed(5) : '—';
 
   const percent = last?.used != null && last.capacity ? Math.round(100 * last.used / last.capacity) : undefined;
 
@@ -94,7 +103,7 @@ export function OfficeView({ project, conversation, draft, onDraft, onSaved, onS
 
     setNow(Date.now());
 
-    setStarted(Date.now());
+    onRunning(Date.now());
 
     setError('');
 
@@ -110,7 +119,7 @@ export function OfficeView({ project, conversation, draft, onDraft, onSaved, onS
     }
     finally
     {
-      setStarted(0);
+      onRunning(0);
     }
   }
 
@@ -157,17 +166,21 @@ export function OfficeView({ project, conversation, draft, onDraft, onSaved, onS
 
   const phase = started ? ({ connecting: '正在连接模型…', thinking: '正在思考…', writing: '正在生成回复…' }[sample?.phase ?? 'connecting']) : replies.length ? '已完成回复' : '准备就绪';
 
-  return <section className="office-chat" aria-label="Office 对话">
-    <header><strong>Office 对话</strong><select aria-label="项目会话" value={conversation.id} onChange={e => onSelect(e.target.value)}>
-      {conversation.sessions.map(s => <option key={s.id} value={s.id}>{s.title}</option>)}</select>
-      <button onClick={onCreate} title="新建对话" aria-label="新建对话"><Icon name="plus" size={16} /></button></header>
-    <div className="office-transcript" role="log" ref={log}><div className="office-column">
-      {!conversation.messages.length && !started && <h2>在 {project.name} 中开始对话</h2>}
-      {conversation.messages.map(m => <article key={m.id} className={'office-' + m.role}>
-        {m.role === 'assistant' ? <><small><Icon name="clock" size={13} /> {m.metrics ? '已工作 ' + duration(m.metrics.elapsed) : 'Office 主 Agent'}</small><Markdown remarkPlugins={[remarkGfm]} skipHtml components={{ img: ({ alt }) => <span>{alt}</span> }}>{m.text}</Markdown></> : m.text}
-      </article>)}
-      {!!started && <article className="office-user">{draft}</article>}
-    </div></div>
+  const earlier = conversation.earlier ?? [];
+  const persisted = earlier.length + conversation.messages.length;
+  const count = persisted + (started ? sample?.text ? 2 : 1 : 0);
+  return <Screen className="office-chat" aria-label="Office 对话" onPointerMove={interact} onPointerDown={interact}
+    onWheelCapture={interact} onTouchMove={interact} onKeyDownCapture={interact} onFocusCapture={interact} onInputCapture={interact}>
+    <div className="office-transcript">
+      {count ? <WindowList listRef={log} count={count} label="对话记录" initialEnd
+        itemKey={i => earlier[i] ?? conversation.messages[i - earlier.length]?.id ?? ('pending-' + (i - persisted))}
+        render={i => <div className="office-column office-message-row">{i < earlier.length ?
+          <EarlierTurn project={project.id} session={conversation.id} file={earlier[i]} /> :
+          i < persisted ? <Message message={conversation.messages[i - earlier.length]} /> :
+          <article className={i === persisted ? 'office-user' : 'office-assistant office-stream'}>{i === persisted ? draft : sample?.text}</article>}</div>} />
+        : <h2>在 {project.name} 中开始对话</h2>}
+      <Button className="office-jump" data-visible={arrow} aria-label="移动到最下方" title="移动到最下方" onClick={() => log.current?.scrollToEnd()}>↓</Button>
+    </div>
     <div className="office-dock office-column">
       <div className="office-strip" title={project.name}><span role="status" className={started ? 'active' : ''}><Icon name="sparkles" size={14} />{phase}</span>
       <span title="累计工作时间 · 近两秒估算生成速度">{duration(elapsed)} · {started && sample?.rate != null ? '≈' + sample.rate.toFixed(1) : '—'} tok/s</span></div>
@@ -187,5 +200,5 @@ export function OfficeView({ project, conversation, draft, onDraft, onSaved, onS
 
       {error && <small role="alert">{error}</small>}
     </div>
-  </section>;
+  </Screen>;
 }

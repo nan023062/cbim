@@ -97,9 +97,13 @@ export interface OfficeSelection
 
 export interface DesktopMenu
 {
+  EngineCatalog(): Promise<{ id: string; label: string; businessTypes: readonly string[]; supportedApis: readonly string[] }[]>;
+
   Engines(action: 'list' | 'check' | 'install' | 'configure', target?: { kind: string; revision: number; identity: string } | { kind: string; revision: number; action: 'enable' | 'disable' | 'remove' }): Promise<import('./desktop-engines').EnginePackageSettings>;
 
   Model<K extends DesktopModelAction>(action: K, ...args: K extends 'models.list' ? [] : [import('./desktop-models').ModelActionInput<K>]): Promise<import('./desktop-models').ModelActionResults[K]>;
+
+  ReadOfficeTurn(project: string, session: string, file: string): Promise<OfficeMessage[]>;
 
   OpenOffice(project: string, action: 'latest' | 'create' | 'select', session?: string): Promise<OfficeConversation>;
 
@@ -122,6 +126,8 @@ export interface DesktopMenu
 
 export interface OfficeProgress
 {
+  text?: string;
+
   project: string;
 
   session: string;
@@ -163,6 +169,10 @@ export interface OfficeMessage
 
 export interface OfficeConversation
 {
+  earlier?: string[];
+
+  earlierUsage?: { elapsed: number; cost: number; complete: boolean };
+
   id: string;
 
   officeId: string;

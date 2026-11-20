@@ -75,13 +75,33 @@ export async function runOfficePlugin(packages: EnginePackages, profiles: LlmPro
       const goal = messages.at(-1)!.content;
 
       const replies: string[] = [];
+      let partial = '';
+      let lastPaint = 0;
 
       await engine.start({
         runId, directory, task: { taskId: runId, workspaceId: turn.project, mode: 'chat', root: turn.root, goal, acceptance: [], moduleIds: [] },
         engineHandoff: messages.length > 1 ? JSON.stringify(messages.slice(0, -1)) : undefined,
         capabilities: [{ id: 'office-chat', tools, disableNativeTools: true }],
         beforeTool: async () => ({ allow: false, reason: '对话未绑定该工具' }),
-        emit: async event => { if ((event.type === 'message' && event.data.usage) || (event.type === 'engine.status' && event.data.metric === 'run-usage')) usageEvents.push(event); if (event.type === 'engine.status' && event.data.metric === 'context' && typeof event.data.tokens === 'number') contextUsed = event.data.tokens; if (event.type === 'message' && event.data.role === 'assistant' && typeof event.data.text === 'string') replies.push(event.data.text); if (event.type === 'message.delta' || event.type === 'message') progress({ phase: 'writing', model }); },
+        emit: async event =>
+        {
+          if ((event.type === 'message' && event.data.usage) || (event.type === 'engine.status' && event.data.metric === 'run-usage')) usageEvents.push(event);
+          if (event.type === 'engine.status' && event.data.metric === 'context' && typeof event.data.tokens === 'number') contextUsed = event.data.tokens;
+          if (typeof event.data.text !== 'string') return;
+          if (event.type === 'message.delta')
+          {
+            partial += event.data.text;
+            if (Date.now() - lastPaint < 40) return;
+          }
+          else if (event.type === 'message' && event.data.role === 'assistant')
+          {
+            replies.push(event.data.text);
+            partial = '';
+          }
+          else return;
+          lastPaint = Date.now();
+          progress({ phase: 'writing', model, text: [...replies, partial].filter(Boolean).join('\n\n') });
+        },
       });
 
       signal.throwIfAborted();

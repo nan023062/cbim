@@ -29,6 +29,7 @@ export type ChatProgress =
     rate?: number;
 
     estimated?: boolean
+    text?: string
   };
 
 export interface MainAgentSelection
@@ -70,7 +71,7 @@ export class ProjectOffices
 
     const ids = await history.List();
 
-    const sessions = await Promise.all(ids.map(async id => { const messages = await history.Messages(id); return { id, title: messages[0]?.text.slice(0, 32) || '新对话', updated: messages.at(-1)?.created ?? 0 }; }));
+    const sessions = await Promise.all(ids.map(async id => { const files = await history.Files(id); const messages = await history.Messages(id, files.length > 1 ? [files[0], files[files.length - 1]] : files); return { id, title: messages[0]?.text.slice(0, 32) || '新对话', updated: messages.at(-1)?.created ?? 0 }; }));
 
     sessions.sort((a, b) => b.updated - a.updated);
 
@@ -90,7 +91,15 @@ export class ProjectOffices
 
     const office = project.runtime.OpenOffice(projectId, id);
 
-    return { id, officeId: office.id, sessions, messages: await history.Messages(id) };
+    const files = await history.Files(id);
+    const earlier = files.slice(0, -16);
+    return { id, officeId: office.id, sessions, earlier, earlierUsage: await history.EarlierUsage(id, earlier), messages: await history.Messages(id, files.slice(-16)) };
+  }
+
+  public async ReadTurn(projectId: string, id: string, file: string)
+  {
+    const { history } = await this.History(projectId);
+    return history.Messages(id, [file]);
   }
 
   public async Send(projectId: string, id: string, input: string, progress: (sample: ChatProgress) => void = () => { }, permission: 'read' | 'ask' | 'execute' = 'ask', selection: MainAgentSelection)

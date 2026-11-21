@@ -23,24 +23,31 @@
 
 ```mermaid
 classDiagram
-class N_d85f1da60707["AgentRole"]
-click N_d85f1da60707 href "agent.ts"
-class N_83c6f7d14280["runAgentTask"] {
-  <<module>>
+class N_842188750e9e["AgentConfiguration"] {
+  <<boundary>>
 }
-click N_83c6f7d14280 href "execution.ts"
-class N_bd819b1dcf67["AgentTokenUsage"]
-click N_bd819b1dcf67 href "token-usage.ts"
+click N_842188750e9e href "../team.ts"
 class N_70ecbc34f9e1["AgentDescription"] {
   <<interface>>
 }
 click N_70ecbc34f9e1 href "description.ts"
+class N_bd819b1dcf67["AgentTokenUsage"]
+click N_bd819b1dcf67 href "token-usage.ts"
+class N_83c6f7d14280["runAgentTask"] {
+  <<module>>
+}
+click N_83c6f7d14280 href "execution.ts"
+class N_d85f1da60707["AgentRole"]
+click N_d85f1da60707 href "agent.ts"
 class N_edb568872b8c["AgentIdentity"] {
   <<interface>>
 }
 click N_edb568872b8c href "identity.ts"
 N_83c6f7d14280 ..> N_d85f1da60707 : 依赖
+N_842188750e9e <|-- N_70ecbc34f9e1
 ```
+
+外部继承／实现边界：[AgentConfiguration](../team.ts)。
 
 [上层设计](../ARCHITECTURE.md)
 

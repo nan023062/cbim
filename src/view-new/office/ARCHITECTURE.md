@@ -46,37 +46,75 @@ BusinessPanel --> BusinessNodeDialog : 版本化保存
 
 ## 架构关系
 
+### 关系组 1：OfficeView
+
 ```mermaid
 classDiagram
-class OrganizationPanel {
-  <<component>>
-}
-class OrganizationNodeDialog {
-  <<component>>
-}
-class AgentSettingsDialog {
-  <<component>>
-}
-N_47ff8530ce2c --> OrganizationPanel : 组织导航
-OrganizationPanel --> OrganizationNodeDialog : 资料与结构
-OrganizationPanel --> AgentSettingsDialog : 成员能力
-click OrganizationPanel href "OrganizationPanel.tsx"
-click OrganizationNodeDialog href "OrganizationNodeDialog.tsx"
-class BusinessPanel {
-  <<component>>
-}
-click BusinessPanel href "BusinessPanel.tsx"
-N_47ff8530ce2c --> BusinessPanel : 业务架构导航
 class N_47ff8530ce2c["OfficeView"] {
   <<component>>
 }
 click N_47ff8530ce2c href "OfficeView.tsx"
-class PermissionPicker {
+class N_7c8488e29192["BusinessPanel"] {
   <<component>>
 }
-click PermissionPicker href "PermissionPicker.tsx"
-N_47ff8530ce2c ..> PermissionPicker : 权限选择
+click N_7c8488e29192 href "BusinessPanel.tsx"
+class N_c15a3650d04b["OrganizationPanel"] {
+  <<component>>
+}
+click N_c15a3650d04b href "OrganizationPanel.tsx"
+class N_9d1bfcb96dd1["AgentSettingsDialog"] {
+  <<component>>
+}
+click N_9d1bfcb96dd1 href "AgentSettingsDialog.tsx"
+class N_33df8b711739["MainAgentPicker"] {
+  <<component>>
+}
+click N_33df8b711739 href "MainAgentPicker.tsx"
+class N_fee1596bd586["PermissionPicker"] {
+  <<component>>
+}
+click N_fee1596bd586 href "PermissionPicker.tsx"
+N_47ff8530ce2c ..> N_7c8488e29192 : 依赖
+N_47ff8530ce2c ..> N_c15a3650d04b : 依赖
+N_47ff8530ce2c ..> N_9d1bfcb96dd1 : 依赖
+N_47ff8530ce2c ..> N_33df8b711739 : 依赖
+N_47ff8530ce2c ..> N_fee1596bd586 : 依赖
+N_c15a3650d04b ..> N_9d1bfcb96dd1 : 依赖
+N_9d1bfcb96dd1 ..> N_33df8b711739 : 依赖
 ```
+
+### 关系组 2：DataArchitecturePanel
+
+```mermaid
+classDiagram
+class N_30c43870fbeb["DataArchitecturePanel"] {
+  <<component>>
+}
+click N_30c43870fbeb href "DataArchitecturePanel.tsx"
+class N_5ef1448f6d0f["DataNodeDialog"] {
+  <<component>>
+}
+click N_5ef1448f6d0f href "DataNodeDialog.tsx"
+class N_8c7c717c3bc2["BusinessNodeDialog"] {
+  <<component>>
+}
+click N_8c7c717c3bc2 href "BusinessNodeDialog.tsx"
+class N_e18e021820a0["OrganizationNodeDialog"] {
+  <<component>>
+}
+click N_e18e021820a0 href "OrganizationNodeDialog.tsx"
+N_30c43870fbeb ..> N_5ef1448f6d0f : 依赖
+```
+
+### 跨图协作
+
+按引用方归并目标，保留全部跨图关系；分图只用于阅读，不表示新增模块或依赖边界。
+
+| 引用方 | 关系 | 目标 |
+| --- | --- | --- |
+| [OfficeView](OfficeView.tsx)（图 1） | 依赖 | [DataArchitecturePanel](DataArchitecturePanel.tsx)（图 2） |
+| [BusinessPanel](BusinessPanel.tsx)（图 1） | 依赖 | [BusinessNodeDialog](BusinessNodeDialog.tsx)（图 2） |
+| [OrganizationPanel](OrganizationPanel.tsx)（图 1） | 依赖 | [OrganizationNodeDialog](OrganizationNodeDialog.tsx)（图 2） |
 
 [上层设计](../ARCHITECTURE.md)
 

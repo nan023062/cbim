@@ -79,6 +79,10 @@ class N_be04b6eef23f["engine-plugins"] {
   <<virtual>>
 }
 click N_be04b6eef23f href "engine-plugins/ARCHITECTURE.md"
+class N_b3e974f45a66["framework-ui"] {
+  <<virtual>>
+}
+click N_b3e974f45a66 href "framework-ui/ARCHITECTURE.md"
 class N_b572c76539a3["updater"] {
   <<virtual>>
 }
@@ -87,11 +91,7 @@ class N_c755adb87123["view-new"] {
   <<virtual>>
 }
 click N_c755adb87123 href "view-new/ARCHITECTURE.md"
-class FrameworkUI["framework-ui"] {
-  <<virtual>>
-}
-click FrameworkUI href "framework-ui/ARCHITECTURE.md"
-N_c755adb87123 ..> FrameworkUI : 依赖
+N_c755adb87123 ..> N_b3e974f45a66 : 依赖
 ```
 
 ### 跨图协作
@@ -100,8 +100,10 @@ N_c755adb87123 ..> FrameworkUI : 依赖
 
 | 引用方 | 关系 | 目标 |
 | --- | --- | --- |
+| [bridge](bridge/ARCHITECTURE.md)（图 1） | 依赖 | [updater](updater/ARCHITECTURE.md)（图 2） |
 | [engine-plugins](engine-plugins/ARCHITECTURE.md)（图 2） | 依赖 | [core](core/ARCHITECTURE.md)（图 1）、[logic](logic/ARCHITECTURE.md)（图 1） |
 | [logic](logic/ARCHITECTURE.md)（图 1） | 依赖 | [engine-plugins](engine-plugins/ARCHITECTURE.md)（图 2） |
+| [logic-new](logic-new/ARCHITECTURE.md)（图 1） | 依赖 | [engine-plugins](engine-plugins/ARCHITECTURE.md)（图 2）、[updater](updater/ARCHITECTURE.md)（图 2） |
 | [view-new](view-new/ARCHITECTURE.md)（图 2） | 依赖 | [bridge](bridge/ARCHITECTURE.md)（图 1） |
 
 ## 子模块
@@ -112,12 +114,12 @@ N_c755adb87123 ..> FrameworkUI : 依赖
 | [core](core/ARCHITECTURE.md) | 提供不认识工作区、Agent 或任务身份的技术机制，让业务在明确端口上组合算法、文件、网络和平台能力。 |
 | [engine-plugins](engine-plugins/ARCHITECTURE.md) | 将不同供应商和专业循环适配到统一执行协议，隔离会话、工具和传输差异。 |
 | [framework](framework/ARCHITECTURE.md) | Framework 定义 CBIM 的模型能力与 Agent 引擎协议，供 Logic 装配。引擎按能力选择模型；模型目录独立于引擎。 |
+| [framework-ui](framework-ui/ARCHITECTURE.md) | 为桌面页面提供不含业务状态的 React 控件、可见性生命周期和窗口列表。页面通过属性传入内容与交互回调；此层不读取 Bridge、业务服务或项目数据。 |
 | [logic](logic/ARCHITECTURE.md) | 按领域组织业务事实、规则和运行服务，以统一应用生命周期连接各领域，使业务不依赖窗口、IPC 或 Electron。 |
-| [logic-new](logic-new/ARCHITECTURE.md) | 为桌面视图提供按模块组织的业务用例。 |
+| [logic-new](logic-new/ARCHITECTURE.md) | 为当前桌面视图提供业务用例。迁移范围沿新版入口追踪到具体调用和所需契约；历史功能留在旧目录，待产品接入时逐项迁移。 |
 | [resource](resource/ARCHITECTURE.md) | Resource 拥有可共享的资产定义和当前用户的本机资源。公共入口导出的 `resourceInventory` 按这两种范围登记资产。 |
-| [updater](updater/ARCHITECTURE.md) | 为应用外的更新和安装进程预留入口。 |
-| [framework-ui](framework-ui/ARCHITECTURE.md) | 无业务状态的 React 控件、页面可见性和窗口列表。 |
-| [view-new](view-new/ARCHITECTURE.md) | 当前桌面项目导航、Office 对话与架构编辑，通过受限宿主接口读写项目和运行状态。 |
+| [updater](updater/ARCHITECTURE.md) | 桌面宿主通过更新器准备 Windows 安装包。确认安装且业务退出准备完成后，更新器调用 electron-updater，将文件替换和应用重启交给独立 NSIS 安装进程。版本检查和下载期间，适配器在宿主进程内运行。 |
+| [view-new](view-new/ARCHITECTURE.md) | 桌面主框架管理项目、Office 对话和页面导航，通过受限宿主接口读写项目与运行状态。index.html 只挂载本目录入口；旧 src/view 已整体退役，不再保留兼容渲染路径。 |
 
 
 <!-- architecture:generated:end -->

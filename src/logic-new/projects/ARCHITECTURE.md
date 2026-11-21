@@ -53,6 +53,13 @@ DataArchitecture --> ProjectList : 项目身份和存储位置
 DataArchitecture --> DataArchitectureContract : 验证命令及完整快照
 ```
 
+| [BusinessDirectory](business-directory.ts) | 实时业务定义、持久化与共享树更新。 |
+| [业务契约](business-contract.ts) | 版本化业务资料和层级校验。 |
+| [ArchitectureUpdate](architecture-update.ts) | 组织／业务变更及祖先差异计算。 |
+| [OfficeInputs](office-inputs.ts) | 当前任务的追加输入及交付状态。 |
+| [OfficeQueue](office-queue.ts) | 宿主持久接收和串行消费指令，管理重排、立即插入及设置快照。 |
+| [ProjectNavigation](navigation.ts) | 管理项目与对话的名称、置顶、排序及可恢复移除，不加载项目运行时来读取侧栏。 |
+
 ## 当前任务中的架构更新
 
 ArchitectureUpdate 生成带版本的节点差异、删除墓碑、根子节点以及新旧全部祖先的最新子节点列表。OrganizationDirectory 与 BusinessDirectory 提交后调用 ProjectOffices 的项目内通知入口，活动主 Agent 各持自己的 OfficeInputs；其他项目隔离。空闲 Office 不自动启动引擎，下一轮直接获得最新完整组织和业务快照。成员能力配置保存也更新可派发目录并通知主 Agent，已运行实例保留冻结配置。
@@ -61,12 +68,7 @@ ArchitectureUpdate 生成带版本的节点差异、删除墓碑、根子节点�
 
 OfficeInputs 在原生 steer、工具前拦截、工具结果或当前任务续跑这些模型可见边界交付。原生接收与模型已经执行分开；未知交付显示告警且不自动重发。尚未交付的输入在本次生成结束后继续同一个主任务，收尾前同步关闭队列避免尾部遗漏。成功轮次把通知和接收状态保存进工作记录；队列本身为进程内状态，停止、失败或退出不承诺继续执行追加请求，架构定义独立持久化，下一轮完整快照不依赖内存通知恢复。
 
-| 新增组成 | 定位 |
-| --- | --- |
-| [BusinessDirectory](business-directory.ts) | 实时业务定义、持久化与共享树更新。 |
-| [业务契约](business-contract.ts) | 版本化业务资料和层级校验。 |
-| [ArchitectureUpdate](architecture-update.ts) | 组织／业务变更及祖先差异计算。 |
-| [OfficeInputs](office-inputs.ts) | 当前任务的追加输入及交付状态。 |
+
 
 ```mermaid
 classDiagram
@@ -109,10 +111,71 @@ N_0fcbdf6bb4be ..> N_1903d6788542 : 依赖
 N_0fcbdf6bb4be ..> N_592911a42b44 : 依赖
 ```
 
-### 关系组 2：WorkspaceInstanceFactory
+### 关系组 2：AgentSettings
 
 ```mermaid
 classDiagram
+class N_9065dd0da386["AgentSettings"]
+click N_9065dd0da386 href "agent-settings.ts"
+class N_a770cbf054b9["OrganizationDirectory"]
+click N_a770cbf054b9 href "organization-directory.ts"
+class N_1902f5592722["配置契约"] {
+  <<module>>
+}
+click N_1902f5592722 href "agent-configuration.ts"
+class N_4ca83c5d0d3e["ArchitectureUpdate"]
+click N_4ca83c5d0d3e href "architecture-update.ts"
+class N_524c782c06be["组织契约"] {
+  <<module>>
+}
+click N_524c782c06be href "organization-contract.ts"
+class N_49dae00d0fb0["OfficeQueue"]
+click N_49dae00d0fb0 href "office-queue.ts"
+N_9065dd0da386 ..> N_a770cbf054b9 : 依赖
+N_9065dd0da386 ..> N_1902f5592722 : 依赖
+N_9065dd0da386 ..> N_4ca83c5d0d3e : 依赖
+N_9065dd0da386 ..> N_524c782c06be : 依赖
+N_a770cbf054b9 ..> N_524c782c06be : 依赖
+N_a770cbf054b9 ..> N_4ca83c5d0d3e : 依赖
+N_524c782c06be ..> N_1902f5592722 : 依赖
+N_49dae00d0fb0 ..> N_9065dd0da386 : 依赖
+```
+
+### 关系组 3：BusinessDirectory
+
+```mermaid
+classDiagram
+class N_d51f4c2fc5b4["BusinessDirectory"]
+click N_d51f4c2fc5b4 href "business-directory.ts"
+class N_3897041b334f["业务契约"] {
+  <<module>>
+}
+click N_3897041b334f href "business-contract.ts"
+class N_1daa79f37bfc["OfficeDispatch"]
+click N_1daa79f37bfc href "office-dispatch.ts"
+class N_beba5fc89ed7["OfficeOperations"] {
+  <<interface>>
+}
+click N_beba5fc89ed7 href "office-operations.ts"
+class N_f27eb8c6e8f3["DataArchitecture"]
+click N_f27eb8c6e8f3 href "data-architecture.ts"
+class N_065821f60bee["数据契约"] {
+  <<module>>
+}
+click N_065821f60bee href "data-architecture-contract.ts"
+N_1daa79f37bfc ..> N_beba5fc89ed7 : 依赖
+N_f27eb8c6e8f3 ..> N_065821f60bee : 依赖
+N_d51f4c2fc5b4 ..> N_3897041b334f : 依赖
+```
+
+### 关系组 4：ProjectNavigation
+
+```mermaid
+classDiagram
+class N_1d0103f07a4a["ProjectNavigation"]
+click N_1d0103f07a4a href "navigation.ts"
+class N_e43a6baf1bba["OfficeInputs"]
+click N_e43a6baf1bba href "office-inputs.ts"
 class N_c26b7944d23b["WorkspaceInstanceFactory"] {
   <<boundary>>
 }
@@ -125,7 +188,14 @@ click N_c26b7944d23b href "../../framework/business/workspace-instance.ts"
 
 | 引用方 | 关系 | 目标 |
 | --- | --- | --- |
-| [GitWorktrees](git-worktrees.ts)（图 1） | 实现 | [WorkspaceInstanceFactory](../../framework/business/workspace-instance.ts)（图 2） |
+| [GitWorktrees](git-worktrees.ts)（图 1） | 实现 | [WorkspaceInstanceFactory](../../framework/business/workspace-instance.ts)（图 4） |
+| [ProjectOffices](offices.ts)（图 1） | 依赖 | [AgentSettings](agent-settings.ts)（图 2）、[BusinessDirectory](business-directory.ts)（图 3）、[OfficeInputs](office-inputs.ts)（图 4）、[OfficeDispatch](office-dispatch.ts)（图 3）、[OfficeOperations](office-operations.ts)（图 3） |
+| [AgentSettings](agent-settings.ts)（图 2） | 依赖 | [ProjectList](project.ts)（图 1）、[Catalog](index.ts)（图 1）、[Paths](paths.ts)（图 1） |
+| [OrganizationDirectory](organization-directory.ts)（图 2） | 依赖 | [ProjectList](project.ts)（图 1）、[Catalog](index.ts)（图 1）、[Paths](paths.ts)（图 1） |
+| [DataArchitecture](data-architecture.ts)（图 3） | 依赖 | [ProjectList](project.ts)（图 1）、[Catalog](index.ts)（图 1）、[Paths](paths.ts)（图 1） |
+| [BusinessDirectory](business-directory.ts)（图 3） | 依赖 | [ProjectList](project.ts)（图 1）、[Catalog](index.ts)（图 1）、[Paths](paths.ts)（图 1）、[ArchitectureUpdate](architecture-update.ts)（图 2） |
+| [OfficeQueue](office-queue.ts)（图 2） | 依赖 | [ProjectList](project.ts)（图 1）、[ProjectOffices](offices.ts)（图 1）、[Catalog](index.ts)（图 1）、[Paths](paths.ts)（图 1） |
+| [ProjectNavigation](navigation.ts)（图 4） | 依赖 | [ProjectList](project.ts)（图 1）、[OfficeQueue](office-queue.ts)（图 2）、[Catalog](index.ts)（图 1）、[Paths](paths.ts)（图 1） |
 
 外部继承／实现边界：[WorkspaceInstanceFactory](../../framework/business/workspace-instance.ts)。
 

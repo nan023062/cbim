@@ -22,18 +22,22 @@
 
 标注为 `virtual` 的节点是直接子模块的虚拟类封装；内部设计沿下方入口阅读。
 
-### 关系组 1：desktop
+### 关系组 1：shared
 
 ```mermaid
 classDiagram
-class N_3b750e3edb60["desktop"] {
+class N_a94f7ca21bb9["shared"] {
   <<virtual>>
 }
-click N_3b750e3edb60 href "desktop/ARCHITECTURE.md"
+click N_a94f7ca21bb9 href "shared/ARCHITECTURE.md"
 class N_b08560c38277["入口"] {
   <<module>>
 }
 click N_b08560c38277 href "main.ts"
+class N_3b750e3edb60["desktop"] {
+  <<virtual>>
+}
+click N_3b750e3edb60 href "desktop/ARCHITECTURE.md"
 class N_52575372bc39["discovery"] {
   <<virtual>>
 }
@@ -42,6 +46,25 @@ class N_3581845b4caa["extension"] {
   <<virtual>>
 }
 click N_3581845b4caa href "extension/ARCHITECTURE.md"
+class N_c05d0a357d4a["monitor"] {
+  <<virtual>>
+}
+click N_c05d0a357d4a href "monitor/ARCHITECTURE.md"
+N_b08560c38277 ..> N_3b750e3edb60 : 依赖
+N_b08560c38277 ..> N_c05d0a357d4a : 依赖
+N_b08560c38277 ..> N_a94f7ca21bb9 : 依赖
+N_3b750e3edb60 ..> N_52575372bc39 : 依赖
+N_3b750e3edb60 ..> N_3581845b4caa : 依赖
+N_3b750e3edb60 ..> N_a94f7ca21bb9 : 依赖
+N_52575372bc39 ..> N_a94f7ca21bb9 : 依赖
+N_3581845b4caa ..> N_a94f7ca21bb9 : 依赖
+N_c05d0a357d4a ..> N_a94f7ca21bb9 : 依赖
+```
+
+### 关系组 2：office
+
+```mermaid
+classDiagram
 class N_3a7479c3194b["office"] {
   <<virtual>>
 }
@@ -50,26 +73,6 @@ class N_d63ed31fde81["settings"] {
   <<virtual>>
 }
 click N_d63ed31fde81 href "settings/ARCHITECTURE.md"
-N_b08560c38277 ..> N_3b750e3edb60 : 依赖
-N_3b750e3edb60 ..> N_52575372bc39 : 依赖
-N_3b750e3edb60 ..> N_3581845b4caa : 依赖
-N_3b750e3edb60 ..> N_3a7479c3194b : 依赖
-N_3b750e3edb60 ..> N_d63ed31fde81 : 依赖
-```
-
-### 关系组 2：shared
-
-```mermaid
-classDiagram
-class N_a94f7ca21bb9["shared"] {
-  <<virtual>>
-}
-click N_a94f7ca21bb9 href "shared/ARCHITECTURE.md"
-class N_c05d0a357d4a["monitor"] {
-  <<virtual>>
-}
-click N_c05d0a357d4a href "monitor/ARCHITECTURE.md"
-N_c05d0a357d4a ..> N_a94f7ca21bb9 : 依赖
 ```
 
 ### 跨图协作
@@ -78,11 +81,9 @@ N_c05d0a357d4a ..> N_a94f7ca21bb9 : 依赖
 
 | 引用方 | 关系 | 目标 |
 | --- | --- | --- |
-| [入口](main.ts)（图 1） | 依赖 | [monitor](monitor/ARCHITECTURE.md)（图 2）、[shared](shared/ARCHITECTURE.md)（图 2） |
-| [desktop](desktop/ARCHITECTURE.md)（图 1） | 依赖 | [shared](shared/ARCHITECTURE.md)（图 2） |
-| [extension](extension/ARCHITECTURE.md)（图 1） | 依赖 | [shared](shared/ARCHITECTURE.md)（图 2） |
-| [office](office/ARCHITECTURE.md)（图 1） | 依赖 | [shared](shared/ARCHITECTURE.md)（图 2） |
-| [settings](settings/ARCHITECTURE.md)（图 1） | 依赖 | [shared](shared/ARCHITECTURE.md)（图 2） |
+| [desktop](desktop/ARCHITECTURE.md)（图 1） | 依赖 | [office](office/ARCHITECTURE.md)（图 2）、[settings](settings/ARCHITECTURE.md)（图 2） |
+| [office](office/ARCHITECTURE.md)（图 2） | 依赖 | [shared](shared/ARCHITECTURE.md)（图 1） |
+| [settings](settings/ARCHITECTURE.md)（图 2） | 依赖 | [shared](shared/ARCHITECTURE.md)（图 1） |
 
 ## 子模块
 
@@ -94,7 +95,7 @@ N_c05d0a357d4a ..> N_a94f7ca21bb9 : 依赖
 | [monitor](monitor/ARCHITECTURE.md) | 独立渲染 Agent 和进程的资源占用。 |
 | [office](office/ARCHITECTURE.md) | 让用户在项目内选择 Office 会话，查看记录并保存输入。 |
 | [settings](settings/ARCHITECTURE.md) | 在主窗口内提供独立的设置导航与分组内容。 |
-| [shared](shared/ARCHITECTURE.md) | 承载跨界面的图标、品牌及基础样式。 |
+| [shared](shared/ARCHITECTURE.md) | Icon 的组织操作图形包含返回、新增团队和新增成员，复用既有线性图标风格；文字提示和可访问名称由使用它的按钮提供。 |
 
 [上层设计](../ARCHITECTURE.md)
 

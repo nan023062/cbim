@@ -63,7 +63,8 @@
       ],
       "tests": {
         "unit": [
-          "tests/src/framework/connectors/service.test.ts"
+          "tests/src/framework/connectors/service.test.ts",
+          "tests/src/framework/connectors/connector-registry.test.ts"
         ],
         "contract": [],
         "integration": []
@@ -74,9 +75,7 @@
         "src/resource/connections/rules/"
       ],
       "tests": {
-        "unit": [
-          "tests/src/resource/connections/rules/connector-registry.test.ts"
-        ],
+        "unit": [],
         "contract": [],
         "integration": [
           "tests/src/resource/connections/rules/connector-definitions.test.ts"
@@ -1340,9 +1339,7 @@
         "src/logic/engines/packages/"
       ],
       "tests": {
-        "unit": [
-          "tests/src/logic/engines/packages/packages.test.ts"
-        ],
+        "unit": [],
         "contract": [
           "tests/src/logic/engines/packages/engine-cache-retention.test.ts"
         ],
@@ -1520,7 +1517,9 @@
       "directory": ".",
       "roots": [
         "src/logic/application/",
-        "src/bridge/server/application.ts"
+        "src/bridge/server/application.ts",
+        "src/logic-new/projects/",
+        "src/framework/"
       ],
       "tests": {
         "unit": [],
@@ -1535,7 +1534,8 @@
           "tests/main-session-instance-pi.test.ts",
           "tests/pi-loop.test.ts",
           "tests/workspace-lifecycle.test.ts",
-          "tests/workspace.test.ts"
+          "tests/workspace.test.ts",
+          "tests/project-runtime-ownership.test.ts"
         ]
       },
       "cache": false
@@ -1817,11 +1817,11 @@
       ],
       "directory": "src/framework/cability/agent",
       "tests": {
-        "unit": [
-          "tests/src/framework/cability/agent/agent-object.test.ts"
-        ],
+        "unit": [],
         "contract": [],
-        "integration": []
+        "integration": [
+          "tests/src/framework/cability/agent/agent-object.test.ts"
+        ]
       }
     },
     "framework/kernel": {
@@ -1863,6 +1863,32 @@
         ],
         "contract": [],
         "integration": []
+      }
+    },
+    "logic-new/engines/packages": {
+      "directory": "src/logic-new/engines/packages",
+      "roots": [
+        "src/logic-new/engines/packages/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/src/logic-new/engines/packages/packages.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      }
+    },
+    "framework/monitor": {
+      "directory": "src/framework/monitor",
+      "roots": [
+        "src/framework/monitor/"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [],
+        "integration": [
+          "tests/src/framework/monitor/rows.test.ts"
+        ]
       }
     }
   }

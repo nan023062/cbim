@@ -16,4 +16,31 @@
 隐藏页面会清理 useScreenEffect 的订阅，但不代表取消后端任务。任务状态与取消由调用页面通过业务接口管理。
 
 <!-- architecture:generated:start -->
+
+## 架构关系
+
+```mermaid
+classDiagram
+class N_d6cfce102f6a["页签"] {
+  <<component>>
+}
+click N_d6cfce102f6a href "tabs.tsx"
+class N_839af352b600["按钮与开关"] {
+  <<component>>
+}
+click N_839af352b600 href "controls.tsx"
+class N_b7085d8c631d["页面容器"] {
+  <<component>>
+}
+click N_b7085d8c631d href "screen.tsx"
+class N_96f821f2c714["窗口列表"] {
+  <<component>>
+}
+click N_96f821f2c714 href "list.tsx"
+N_d6cfce102f6a ..> N_839af352b600 : 依赖
+N_d6cfce102f6a ..> N_b7085d8c631d : 依赖
+```
+
+[上层设计](../ARCHITECTURE.md)
+
 <!-- architecture:generated:end -->

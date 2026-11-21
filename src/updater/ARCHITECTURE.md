@@ -15,6 +15,17 @@
 
 ## 架构关系
 
-桌面宿主 → NsisUpdateInstaller → electron-updater → NSIS 安装进程
+```mermaid
+classDiagram
+class N_e4a71d2ebb51["发布规则"] {
+  <<module>>
+}
+click N_e4a71d2ebb51 href "release-policy.ts"
+class N_6f12c9f20058["NsisUpdateInstaller"]
+click N_6f12c9f20058 href "index.ts"
+N_6f12c9f20058 ..> N_e4a71d2ebb51 : 依赖
+```
+
+[上层设计](../ARCHITECTURE.md)
 
 <!-- architecture:generated:end -->

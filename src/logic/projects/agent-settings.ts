@@ -1,6 +1,6 @@
 /**
  * 作用定位：本机岗位与会话配置的保存入口；原子写入并用版本号防止覆盖其他窗口编辑。
- * 设计原因：岗位与主会话分别持久化配置，保存影响后续采纳，已启动角色保留冻结快照。
+ * 设计原因：仅组织岗位持久化配置，保存影响后续采纳，已启动角色保留冻结快照。
  */
 import path from 'node:path';
 
@@ -38,9 +38,9 @@ export class AgentSettings
 
   private readonly _applied = new Map<string, number>();
 
-  public constructor(private readonly _projects: ProjectList, private readonly _notify: (project: string, text: string) => void = () => { })
+  public constructor(private readonly _projects: ProjectList, private readonly _notify: (project: string, text: string) => void = () => { }, private readonly _defaultModel: () => Promise<AgentConfiguration['model']> = async () => undefined)
   {
-    this.organization = new OrganizationDirectory(_projects, (project, snapshot) => { if (this._changingProjects.has(project)) throw Error('能力配置正在保存，请稍后重试结构编辑'); return this.Prepare(project, snapshot); }, _notify);
+    this.organization = new OrganizationDirectory(_projects, (project, snapshot) => { if (this._changingProjects.has(project)) throw Error('能力配置正在保存，请稍后重试结构编辑'); return this.Prepare(project, snapshot); }, _notify, _defaultModel);
   }
 
   private async Location(projectId: string, target: AgentSettingsTarget)
@@ -64,21 +64,43 @@ export class AgentSettings
   {
     const { file, member } = await this.Location(projectId, target);
 
+    if (target.kind === 'main') {
+      const { entry } = await this._projects.Open(projectId);
+      const root = await fs.realpath(entry.path);
+      const directory = path.join(root, '.agents', 'skills');
+      const skills = [];
+      try {
+        if (await fs.realpath(directory) === directory) {
+          for (const child of (await fs.readdir(directory, { withFileTypes: true })).sort((a,b) => a.name.localeCompare(b.name))) {
+            if (!child.isDirectory() || child.name.length > 100 || skills.length >= 32) continue;
+            const source = path.join(directory, child.name, 'SKILL.md');
+            const stat = await fs.lstat(source).catch(() => undefined);
+            if (!stat?.isFile() || stat.size > 128000 || await fs.realpath(source) !== source) continue;
+            const content = (await fs.readFile(source, 'utf8')).trim();
+            if (content && content.length <= 32000) skills.push({ id: child.name, name: child.name, content });
+          }
+        }
+      } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
+      return { revision: 0, configuration: agentConfigurationSchema.parse({ skills }) };
+    }
+
     try
     {
-      return savedSchema.parse(JSON.parse(await fs.readFile(file, 'utf8')));
+      const saved = savedSchema.parse(JSON.parse(await fs.readFile(file, 'utf8')));
+      return { ...saved, configuration: { ...saved.configuration, model: saved.configuration.model ?? await this._defaultModel() } };
     }
     catch (error)
     {
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT')
         throw error;
 
-      return { revision: 0, configuration: agentConfigurationSchema.parse(member?.configuration ?? {}) };
+      return { revision: 0, configuration: agentConfigurationSchema.parse({ ...member?.configuration, model: member?.configuration?.model ?? await this._defaultModel() }) };
     }
   }
 
   public async Save(projectId: string, target: AgentSettingsTarget, revision: number, input: AgentConfiguration)
   {
+    if (target.kind === 'main') throw Error('主 Agent 的配置仅在当前对话窗生效');
     const configuration = agentConfigurationSchema.parse(input);
 
     const { file } = await this.Location(projectId, target);
@@ -139,7 +161,9 @@ export class AgentSettings
 
     const settings = new Map(await Promise.all(snapshot.nodes.filter(node => node.kind === 'agent').map(async node => { const file = path.join(this._projects.paths.Project(projectId), 'agent-settings', hash(JSON.stringify({ kind: 'member', id: node.id })) + '.json'); try { return [node.id, savedSchema.parse(JSON.parse(await fs.readFile(file, 'utf8'))).configuration] as const; } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; return [node.id, agentConfigurationSchema.parse(node.configuration ?? {})] as const; } })));
 
-    const replace = (nodes: TeamDescription['children']): TeamDescription['children'] => nodes.map(node => { if (node.kind === 'team') return { ...node, children: replace(node.children) }; const configuration = settings.get(node.id)!; return { ...node, ...configuration, model: configuration.model ?? { engine: '', profileId: '', modelId: '' }, available: !!configuration.model, reason: configuration.model ? undefined : '岗位尚未绑定执行配置' }; });
+    const defaultModel = [...settings.values()].some(config => !config.model) ? await this._defaultModel() : undefined;
+
+    const replace = (nodes: TeamDescription['children']): TeamDescription['children'] => nodes.map(node => { if (node.kind === 'team') return { ...node, children: replace(node.children) }; const configured = settings.get(node.id)!; const configuration = { ...configured, model: configured.model ?? defaultModel }; return { ...node, ...configuration, model: configuration.model ?? { engine: '', profileId: '', modelId: '' }, available: !!configuration.model, reason: configuration.model ? undefined : '岗位尚未绑定执行配置' }; });
 
     const children = replace(this.organization.Describe(snapshot));
 

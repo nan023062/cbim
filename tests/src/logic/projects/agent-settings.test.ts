@@ -7,7 +7,7 @@ import { Paths } from '../../../../src/logic/projects/paths';
 import { ProjectOffices, type OfficeChat } from '../../../../src/logic/projects/offices';
 import { agentConfigurationSchema } from '../../../../src/logic/projects/agent-configuration';
 
-test('主会话与成员独立保存完整能力配置，重开后恢复，启动采用冻结的自身配置', async () => {
+test('主会话不保存配置，成员独立保存并在重开后恢复，启动采用冻结的自身配置', async () => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'agent-settings-'));
   const paths = new Paths(root);
   let projects = new ProjectList(paths);
@@ -26,7 +26,7 @@ test('主会话与成员独立保存完整能力配置，重开后恢复，启�
     const worker = { kind: 'member' as const, id: '.cbim/team/writer' };
     const mainConfig = { model: { engine: 'codex', profileId: 'main-profile', modelId: 'main-model' }, skills: [{ id: 'review', name: 'Review', content: 'MAIN_ONLY_SKILL' }], connectorIds: ['world-clock'] };
     const workerConfig = { model: { engine: 'pi', profileId: 'worker-profile', modelId: 'worker-model' }, skills: [{ id: 'write', name: 'Write', content: 'WORKER_ONLY_SKILL' }], connectorIds: [] };
-    await offices.settings.Save(entry.id, main, 0, mainConfig);
+    await expect(offices.settings.Save(entry.id, main, 0, mainConfig)).rejects.toThrow('当前对话窗');
     await offices.settings.Save(entry.id, worker, 0, workerConfig);
     await expect(offices.settings.Save(entry.id, worker, 0, mainConfig)).rejects.toThrow('已更新');
     expect((await offices.settings.Read(entry.id, {kind:'main',id:second.id})).configuration).toEqual({skills:[],connectorIds:[]});
@@ -34,9 +34,9 @@ test('主会话与成员独立保存完整能力配置，重开后恢复，启�
     await projects.Close();
     projects = new ProjectList(paths);
     offices = new ProjectOffices(projects, chat);
-    expect((await offices.settings.Read(entry.id, main)).configuration).toEqual(mainConfig);
+    expect((await offices.settings.Read(entry.id, main)).configuration).toEqual({ skills: [], connectorIds: [] });
     expect((await offices.settings.Members(entry.id))[0].configuration).toEqual(workerConfig);
-    await offices.Send(entry.id, first.id, 'run', undefined, 'execute', mainConfig.model);
+    await offices.Send(entry.id, first.id, 'run', undefined, 'execute', mainConfig.model, mainConfig);
     expect(prompts[0]).toContain('Review');
     expect(prompts[0]).not.toContain('MAIN_ONLY_SKILL');
     expect(prompts[0]).not.toContain('WORKER_ONLY_SKILL');

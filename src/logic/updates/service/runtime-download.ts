@@ -87,7 +87,10 @@ export async function downloadRuntimePackage(pkg: RuntimePackage, file: string, 
 /** 清单有独立大小限制，内容必须继续经过冷壳公钥验证。 */
 export async function downloadRuntimeManifest(tag: string, name: string, signal: AbortSignal)
 {
-  const combined = AbortSignal.any([signal, AbortSignal.timeout(30000)]);
+  const timeoutMs = 30000;
+  const deadline = AbortSignal.timeout(timeoutMs);
+  const combined = AbortSignal.any([signal, deadline]);
+  try {
 
   const response = await runtimeAssetResponse(runtimePackageUrl({ tag, name }), combined);
 
@@ -109,4 +112,8 @@ export async function downloadRuntimeManifest(tag: string, name: string, signal:
   }
 
   return JSON.parse(Buffer.from(bytes).toString('utf8'));
+  } catch (error) {
+    if (deadline.aborted && combined.reason === deadline.reason) throw Object.assign(new Error('下载运行清单超时', { cause: error }), { name: 'TimeoutError', timeoutMs });
+    throw error;
+  }
 }

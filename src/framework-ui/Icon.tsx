@@ -38,6 +38,7 @@ const paths = {
   archived: <><rect x="3" y="3" width="18" height="5" rx="1" /><path d="M5 8v13h14V8M9 12h6M10 16l2 2 3-3" /></>,
   play: <><path d="m7 4 14 8L7 20Z" /></>,
   pause: <><rect x="5" y="4" width="4" height="16" rx="1" /><rect x="15" y="4" width="4" height="16" rx="1" /></>,
+  stopSolid: <rect x="5" y="5" width="14" height="14" rx="2" fill="currentColor" stroke="none" />,
   stop: <><rect x="5" y="5" width="14" height="14" rx="2" /></>,
   next: <><path d="m5 5 10 7-10 7ZM19 4v16" /></>,
   replay: <><path d="M4 8a9 9 0 1 1 0 8M3 3v6h6M11 8l5 4-5 4Z" /></>,

@@ -64,6 +64,17 @@ const [enabled, setEnabled] = useState(false);
 <Toggle checked={enabled} onChange={setEnabled}>显示预览</Toggle>
 ```
 
+## StateButton：同一个按钮支持多种动作
+
+从 `controls.tsx` 导入。`state` 为当前状态名，`states` 按状态名提供配置，每项必须有无障碍名称 `label`，可传 `children`、`title`、`type`、`disabled`、`onClick`。页面负责切换状态；框架保留同一个按钮和焦点。默认 `type="button"`，表单提交态显式指定 `submit`。
+
+```tsx
+<StateButton state={running ? "stop" : "send"} states={{
+  send: { label: "发送", type: "submit", children: <Icon name="sendSolid" /> },
+  stop: { label: "停止", onClick: stop, children: <Icon name="stopSolid" /> },
+}} />
+```
+
 ## Tabs：受控页签
 
 `label` 为页签组的无障碍名称；`items` 每项包含唯一 `id`、`label: ReactNode`、`content: ReactNode`，以及可选 `buttonProps`。`value` 是选中项 ID；`onChange(id)` 请求切换，由调用方更新 `value`。

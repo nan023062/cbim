@@ -52,6 +52,8 @@ export function OfficeQueuePanel({ snapshot, busy, OnChange, OnAnalyze }: { snap
   return <section className="office-queue" aria-label="待执行指令队列"><header><small>{snapshot.paused ? '队列已暂停' : '按顺序发送'}</small><button type="button" disabled={busy} title={snapshot.paused ? '继续队列' : '暂停队列'} aria-label={snapshot.paused ? '继续队列' : '暂停队列'} onClick={() => void OnChange({ action: snapshot.paused ? 'resume' : 'pause' })}><Icon name={snapshot.paused ? 'play' : 'pause'} size={16} /></button></header>
     <div ref={list} role="list" className="office-queue-list">{items.map((item, index) =>
     {
+      const attempt = snapshot.attempts?.filter(record => record.itemId === item.id).at(-1);
+      const last = attempt?.events.at(-1);
       const editable = !busy && item.status === 'queued';
 
       const source = item.cancelSource ?? (item.status === 'failed' && /^AbortError(?:$|:)/.test(item.error ?? '') ? 'unknown' : undefined);
@@ -67,6 +69,7 @@ export function OfficeQueuePanel({ snapshot, busy, OnChange, OnAnalyze }: { snap
         <button type="button" disabled={busy || ['inserted', 'inserting'].includes(item.status)} onClick={() => void OnChange({ action: 'remove', revision: snapshot.revision, id: item.id })}><Icon name="remove" size={16} />取消发送</button>
         {['failed', 'uncertain'].includes(item.status) && <button type="button" disabled={busy} title="核实上次结果后按原配置重试" onClick={() => void OnChange({ action: 'retry', revision: snapshot.revision, id: item.id })}><Icon name="retry" size={16} />重试</button>}
       </div>
+      {item.error && last && attempt && <small>最后记录：{last.stage}{attempt.ended != null && ' · 本阶段 ' + ((attempt.ended - last.at) / 1000).toFixed(1) + ' 秒 · 本次共 ' + ((attempt.ended - attempt.started) / 1000).toFixed(1) + ' 秒'}{attempt.timeoutMs && ' · 超时上限 ' + attempt.timeoutMs / 1000 + ' 秒'}</small>}
       {item.error && <small role="alert" title={item.error}>{source ? '取消来源：' + ({ 'user-stop': '用户停止', 'app-shutdown': '应用关闭', unknown: '未知' })[source] : item.error}</small>}
       {['failed', 'uncertain'].includes(item.status) && <div className="office-error-actions"><button type="button" disabled={busy} onClick={() => void OnChange({ action: 'retry', revision: snapshot.revision, id: item.id })}><Icon name="retry" size={14} />重试</button>{OnAnalyze && <button type="button" disabled={busy} onClick={() => void OnAnalyze(item)}><Icon name="inspect" size={14} />分析</button>}</div>}
     </div>{editing?.id === item.id && <div className="office-queue-editor"><textarea autoFocus aria-label="编辑排队指令" maxLength={32000} disabled={busy} value={editing.text} onChange={event => setEditing({ ...editing, text: event.target.value })} /><small>保留提交时的引擎、模型、连接器与权限</small><button type="button" disabled={busy || !editing.text.trim()} title="保存编辑" aria-label="保存编辑" onClick={() => void OnChange({ action: 'edit', revision: snapshot.revision, id: item.id, text: editing.text }).then(ok => { if (ok) setEditing(undefined); })}><Icon name="confirm" size={16} /></button><button type="button" disabled={busy} title="取消编辑" aria-label="取消编辑" onClick={() => setEditing(undefined)}><Icon name="close" size={16} /></button></div>}</div>;

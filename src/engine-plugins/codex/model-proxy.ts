@@ -19,7 +19,7 @@ import { RequestBudgetUsageStream } from '../transport/request-budget-usage';
 import type { CodexToolSpec } from './tools';
 
 /** 每次 run 独立创建；目录在生成前冻结，不接受子进程扩大模型、目标地址或工具集合。 */
-export async function openCodexModelProxy(llm: ResolvedLlm, registered: CodexToolSpec[], catalog: CodexToolSpec[], port?: RequestBudgetPort, onCatalog?: () => Promise<void>)
+export async function openCodexModelProxy(llm: ResolvedLlm, registered: CodexToolSpec[], catalog: CodexToolSpec[], port?: RequestBudgetPort, onCatalog?: () => Promise<void>, onNetwork?: (metric: 'provider-request' | 'provider-headers') => Promise<void>)
 {
   llm = structuredClone(llm);
 
@@ -119,7 +119,9 @@ export async function openCodexModelProxy(llm: ResolvedLlm, registered: CodexToo
         else if (llm.profile.auth === 'api-key')
           headers.authorization = 'Bearer ' + llm.apiKey;
 
-        const upstream = await fetch(gate ? gate.url + '/request' : requestBudgetEndpoint(llm), { method: 'POST', headers, body: JSON.stringify(value), signal: abort.signal, redirect: 'error' });
+        const sending = fetch(gate ? gate.url + '/request' : requestBudgetEndpoint(llm), { method: 'POST', headers, body: JSON.stringify(value), signal: abort.signal, redirect: 'error' });
+        const [upstream] = await Promise.all([sending, !gate && onNetwork?.('provider-request')]);
+        if (!gate) await onNetwork?.('provider-headers');
 
         if (!upstream.ok || !upstream.body || !upstream.headers.get('content-type')?.startsWith('text/event-stream'))
         {

@@ -21,7 +21,8 @@
 .business-sources>div {padding:12px 0;border-top:1px solid var(--line)}.business-sources dt {font-size:12px;color:var(--muted)}.business-sources dd {margin:4px 0 12px}.business-empty {padding:48px 12px;text-align:center}.business-page [role=alert] {overflow-wrap:anywhere}
 @media(max-width:600px) {.business-page {padding:12px}.business-layout {grid-template-columns:1fr;gap:12px}.business-tree {max-height:32vh}.business-navigation,.business-detail {padding:12px}}
 .office-add-menu button {display:flex;align-items:center;gap:6px;color:var(--text);background:transparent;border:0;padding:6px 10px;cursor:pointer}
-.office-add-menu {background:var(--raised);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:6px;max-width:calc(100vw - 32px)}
+.office-dock footer > button[popovertarget="office-add-menu"] {anchor-name:--office-add-trigger}
+.office-add-menu {position:fixed;position-anchor:--office-add-trigger;inset:auto;left:anchor(left);bottom:calc(anchor(top) + 6px);margin:0;position-try-fallbacks:flip-block,flip-inline; background:var(--raised);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:6px;max-width:calc(100vw - 32px)}
 .office-chat .office-add-menu button {display:flex;width:100%;justify-content:flex-start;min-height:36px;padding:8px}
 .agent-settings {width:min(640px,calc(100vw - 32px));max-height:85vh;box-sizing:border-box;padding:18px;border:1px solid var(--line);border-radius:14px;background:var(--surface);color:var(--text);overflow:auto}
 .agent-settings::backdrop {background:rgb(0 0 0 / .4)}
@@ -40,7 +41,9 @@
 .office-chat header,.office-chat footer,.office-strip,.office-strip span,.office-assistant small,.office-permission {display:flex;align-items:center;gap:8px}
 .office-chat header {padding:8px 16px;border-bottom:1px solid var(--line)}
 .office-chat header select {margin-left:auto;min-width:0;max-width:60%}
-.office-column {width:100%;max-width:900px;margin-inline:auto;box-sizing:border-box;padding-inline:clamp(12px,3%,40px)}
+.office-chat {container-type:inline-size;--office-gutter:clamp(12px,4cqi,36px)}
+.office-chat:has(.turn-rail) {--office-gutter:max(34px,4cqi)}
+.office-column {width:min(936px,calc(100cqi - 2 * var(--office-gutter)));margin-inline:auto;box-sizing:border-box}
 .office-transcript {flex:1;min-height:0;overflow:auto;padding-block:18px}
 .office-transcript > h2 {margin:12vh auto;text-align:center;font-size:18px}
 .office-transcript article {margin-bottom:26px;overflow-wrap:anywhere;font-size:14px;line-height:1.65}
@@ -71,7 +74,6 @@
 
 .office-chat header { min-height: 40px; padding: 4px 16px; color: var(--muted); }
 .office-chat header select { background: transparent; border: 0; }
-.office-column { max-width: 856px; padding-inline: clamp(12px, 4%, 36px); }
 .office-transcript { padding-block: 24px; }
 .office-transcript article { line-height: 1.75; margin-bottom: 28px; }
 .office-user { background: var(--surface); }
@@ -95,13 +97,10 @@
 .office-assistant :is(h1,h2,h3,h4,h5,h6) {margin:1em 0 .4em;text-align:start;line-height:1.4}
 .office-assistant :is(ul,ol) {padding-inline-start:1.7em}
 .office-assistant > :last-child {margin-bottom:0}
-.office-transcript .ui-window-list {scrollbar-width:thin}
+.office-transcript .ui-window-list {scrollbar-width:thin;scrollbar-gutter:stable both-edges}
 .office-jump { position:absolute; bottom:10px; left:50%; transform:translateX(-50%); border:1px solid var(--line); background:var(--raised); color:var(--text); border-radius:999px; height:32px; padding:0 12px; }
 
 
-.office-chat .engine-choice, .engine-choice::picker(select) { appearance:base-select; }
-.office-chat .engine-choice { background-image:var(--logo); background-size:16px; background-position:3px center; background-repeat:no-repeat; padding-left:22px; }
-.engine-choice option[style]::before { content:''; width:16px; height:16px; background:var(--logo) center/contain no-repeat; }
 
 .office-work-record {margin-bottom:8px;color:var(--muted);font-size:12px}
 .office-work-record button {font:inherit;color:inherit;border:0;background:none;display:inline-flex;align-items:center;gap:4px;width:fit-content;cursor:pointer;padding:3px 0}
@@ -152,7 +151,17 @@
 .turn-rail button {display:flex;justify-content:flex-start;align-items:center;width:100%;height:10px;min-height:0;padding:0 3px;border:0;border-radius:0;background:transparent;color:var(--muted)}
 .turn-rail button[aria-current=location] {color:var(--text)}
 .turn-rail i {display:block;width:22px;height:2px;background:currentColor;transform-origin:left}
-.office-transcript:has(.turn-rail) .office-message-row {padding-inline-start:max(34px,4%)}
 .turn-preview {position:absolute;z-index:2;left:36px;width:min(360px,calc(100% - 48px));padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--raised);box-shadow:0 4px 16px #0003;pointer-events:none;overflow-wrap:anywhere}
 .turn-preview strong,.turn-preview span {display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden;-webkit-line-clamp:1;font-size:12px;line-height:1.6}
 .turn-preview span {-webkit-line-clamp:3;color:var(--muted)}
+.office-dock form footer:has(> .composer-connectors) {flex-wrap:nowrap}
+.composer-connectors {display:flex;align-items:center;flex:1 1 0;min-width:18px;overflow:hidden}
+.connector-slot {min-width:0;flex:0 1 20px;position:relative;height:18px}
+.connector-slot:last-child {flex:0 0 18px}
+.connector-slot b {display:grid;place-items:center;box-sizing:border-box;width:18px;height:18px;border:1px solid var(--surface);border-radius:50%;color:white;font:600 9px/1 sans-serif;letter-spacing:-.3px}
+.office-dock .composer-connectors + .composer-controls {flex:0 1 auto}
+
+.engine-options {position:fixed;inset:auto;margin:0;bottom:calc(anchor(top) + 5px);left:anchor(left);position-try-fallbacks:flip-block,flip-inline;max-height:min(65vh,22rem);overflow:hidden;padding:5px;border:1px solid var(--line);border-radius:8px;background:var(--raised);color:var(--text)}
+.engine-options:popover-open {display:flex;flex-direction:column}.engine-options .picker-list {min-height:0;overflow-y:auto;overscroll-behavior:contain}.office-pickers .engine-options button {display:flex;align-items:center;justify-content:flex-start;width:100%;gap:6px;padding:4px 8px;background:transparent;color:inherit;border:0}.office-pickers .engine-options button:hover {background:var(--hover)}
+.office-pickers {anchor-scope:--engine-picker-trigger}.office-pickers > :is(.composer-engine,.engine-trigger) {anchor-name:--engine-picker-trigger}.office-pickers .engine-options {position-anchor:--engine-picker-trigger}
+.office-pickers {anchor-scope:--engine-picker-trigger,--model-picker-trigger}.office-pickers > .composer-model {anchor-name:--model-picker-trigger;flex-shrink:1;height:auto}.office-pickers .model-options {position-anchor:--model-picker-trigger;left:auto;right:anchor(right);max-width:calc(100vw - 16px)}.office-pickers .engine-options > .picker-settings {flex:none;margin-top:3px;border-top:1px solid var(--line);border-radius:0;text-align:left}

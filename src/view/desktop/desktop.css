@@ -37,9 +37,9 @@
 .sidebar-backdrop {display:none}
 @media(max-width:720px){.sidebar-backdrop{display:block;position:absolute;inset:0;z-index:3;border:0;border-radius:0;background:#0005}.project-navigation .project-action{min-width:30px;min-height:34px}.project-navigation .sidebar-label .icon-button{min-height:32px}.project-heading .project-select{min-height:38px}.project-navigation .project-action{opacity:1!important}.project-navigation .sidebar-label{gap:0}.navigation-menu button{min-height:38px}}
 #application-home .desktop-shell { height: calc(100dvh - 32px); position: relative; }
-.desktop-titlebar { display: flex; align-items: center; gap: 3px; height: 32px; padding-left: 8px; background: #202124; color: #eee; -webkit-app-region: drag; }
+.desktop-titlebar { display: flex; align-items: center; gap: 3px; height: 32px; padding-left: 8px; background: #202124; color: var(--text); -webkit-app-region: drag; }
 .desktop-titlebar button { -webkit-app-region: no-drag; color: inherit; font-size: 12px; height: 26px; padding: 0 6px; }
-.desktop-titlebar button, .desktop-extension header button { background: transparent; border: 0; }
+.desktop-titlebar button, .desktop-extension > header button { background: transparent; border: 0; }
 .desktop-titlebar .title-popup {
   position: fixed; position-anchor: auto;
   inset: anchor(bottom) auto auto anchor(left); margin: 6px 0 0;
@@ -108,8 +108,8 @@
 }
 .desktop-extension { display: flex; flex-direction: column; flex: 0 0 43%; min-width: 0; background: var(--sidebar); border-left: 1px solid var(--line); }
 .desktop-extension[hidden] { display: none; }
-.desktop-extension header { display: flex; align-items: center; gap: 4px; padding: 0 46px 0 14px; height: 48px; flex: none; border-bottom: 1px solid var(--line); }
-.desktop-extension header > button, .extension-address button { width: 28px; height: 28px; padding: 0; flex: none; border: 0; background: transparent; }
+.desktop-extension > header { display: flex; align-items: center; gap: 4px; padding: 0 46px 0 14px; height: 48px; flex: none; border-bottom: 1px solid var(--line); }
+.desktop-extension > header > button, .extension-address button { width: 28px; height: 28px; padding: 0; flex: none; border: 0; background: transparent; }
 .panel-size { margin-left: auto; }
 .menu-page { min-height: 0; overflow-y: auto; }
 .extension-strip { display: flex; gap: 3px; min-width: 0; overflow-x: auto; }
@@ -139,8 +139,8 @@
 .workspace-welcome p { color: var(--muted); margin: 8px 0; }
 .workspace-welcome .solid-button { margin-top: 14px; }
 .desktop-extension { flex-basis: var(--right-pane-width); background: var(--surface); }
-.desktop-extension header { height: 44px; padding-left: 10px; }
-.desktop-extension header button, .extension-address button { min-height: 28px; }
+.desktop-extension > header { height: 44px; padding-left: 10px; }
+.desktop-extension > header button, .extension-address button { min-height: 28px; }
 .extension-strip > div { width: clamp(110px, 12vw, 164px); }
 .menu-page.view-page { max-width: 940px; padding: clamp(18px, 3vw, 38px); }
 .menu-page .view-heading { display: flex; align-items: center; justify-content: space-between; flex-direction: row; margin-bottom: 18px; }
@@ -211,8 +211,8 @@ h2.engine-brand img {width:30px;height:30px;}
 @media(max-width:720px){#application-home .sidebar-backdrop{z-index:11}#application-home .workspace-sidebar{z-index:12}}
 
 /* 项目导航采用设备、目录、任务三级布局；状态和操作共用行尾空间。 */
-#application-home .workspace-sidebar {--sidebar:#101010;--muted:#858588;--selected:#3b3e42;padding:12px 12px 10px}
-:root[data-theme=light] #application-home .workspace-sidebar {--sidebar:#f5f5f5;--muted:#717175;--selected:#dedfe2}
+#application-home .workspace-sidebar {--sidebar:#101010;--selected:#3b3e42;padding:12px 12px 10px}
+:root[data-theme=light] #application-home .workspace-sidebar {--sidebar:#f5f5f5;--selected:#dedfe2}
 #application-home .project-navigation .sidebar-search {height:30px;margin:2px 8px 14px;border-color:transparent;background:transparent;border-radius:8px}
 #application-home .project-navigation .sidebar-search:focus-within,#application-home .project-navigation .sidebar-search:hover {background:var(--hover);border-color:var(--line)}
 #application-home .project-navigation .sidebar-search input {min-height:28px;font-size:var(--font-ui)}
@@ -310,3 +310,5 @@ h2.engine-brand img {width:30px;height:30px;}
 #application-home .project-action[data-archive] svg,.navigation-menu button[data-danger=true] svg {color:var(--danger)}
 
 @media(hover:hover) and (pointer:fine){#application-home .office-session-row:not(:hover):not(:has(:focus-visible)) .project-action {display:none}}
+
+.extension-strip > div {width:auto}.extension-strip button {white-space:nowrap}.extension-body {container-type:inline-size;display:flex;flex-direction:column;flex:1;min-width:0;min-height:0;overflow:auto}.extension-body iframe {flex:1;min-height:0;width:100%;border:0;background:var(--bg)}.extension-console {padding:12px;overflow:auto}.extension-console li {overflow-wrap:anywhere}.extension-types {padding:5px;border:1px solid var(--line);background:var(--raised);color:var(--text);margin:0;inset:auto;top:anchor(bottom);right:anchor(right)}.extension-types button {display:flex;width:100%;justify-content:flex-start}.extension-web[hidden]{display:none}.extension-web{display:flex;flex-direction:column;flex:1;min-height:0}@container(max-width:620px){.extension-body .business-layout {grid-template-columns:minmax(0,1fr)}.extension-body .business-tree {max-height:26vh}.extension-body .business-page {padding:10px}}

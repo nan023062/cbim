@@ -58,7 +58,9 @@ export type ChatProgress =
 
 export type MainAgentSelection = NonNullable<AgentConfiguration['model']>;
 
-export type OfficeChat = (instructions: string, messages: readonly { role: 'user' | 'assistant'; content: string }[], signal: AbortSignal, progress: (sample: ChatProgress) => void, turn: { inputs?: OfficeInputs; ReadPermission(): AgentPermission; ReportTokens(total: number): void; operations: OfficeOperations; selection: MainAgentSelection; configuration?: AgentConfiguration; agentInstanceId?: string; officeId?: string; root: string; session: string; project: string; dataRoot: string }) => Promise<{ text: string; metrics: TurnMetrics }>;
+type ReportStage = import('./office-queue-contract').ReportStage;
+
+export type OfficeChat = (instructions: string, messages: readonly { role: 'user' | 'assistant'; content: string }[], signal: AbortSignal, progress: (sample: ChatProgress) => void, turn: { ReportStage?: ReportStage; inputs?: OfficeInputs; ReadPermission(): AgentPermission; ReportTokens(total: number): void; operations: OfficeOperations; selection: MainAgentSelection; configuration?: AgentConfiguration; agentInstanceId?: string; officeId?: string; root: string; session: string; project: string; dataRoot: string }) => Promise<{ text: string; metrics: TurnMetrics }>;
 
 export class ProjectOffices
 {
@@ -137,9 +139,9 @@ export class ProjectOffices
 
   private readonly busy = new Set<string>();
 
-  public constructor(private readonly projects: ProjectList, private readonly chat?: OfficeChat)
+  public constructor(private readonly projects: ProjectList, private readonly chat?: OfficeChat, defaultModel?: () => Promise<MainAgentSelection | undefined>)
   {
-    this.settings = new AgentSettings(projects, (project, text) => this.Notify(project, text));
+    this.settings = new AgentSettings(projects, (project, text) => this.Notify(project, text), defaultModel);
 
     this.business = new BusinessDirectory(projects, (project, text) => this.Notify(project, text));
   }
@@ -191,7 +193,7 @@ export class ProjectOffices
     return history.Messages(id, [file]);
   }
 
-  public async Send(projectId: string, id: string, input: string, progress: (sample: ChatProgress) => void = () => { }, permission: 'read' | 'ask' | 'execute' = 'ask', selection: MainAgentSelection, frozen?: AgentConfiguration, stopSignal?: AbortSignal)
+  public async Send(projectId: string, id: string, input: string, progress: (sample: ChatProgress) => void = () => { }, permission: 'read' | 'ask' | 'execute' = 'ask', selection: MainAgentSelection, frozen?: AgentConfiguration, stopSignal?: AbortSignal, ReportStage?: ReportStage)
   {
     if (!selection?.profileId?.trim() || !selection.modelId?.trim())
       throw Error('请选择大模型');
@@ -279,7 +281,8 @@ export class ProjectOffices
 
       detach = office.Subscribe(event => { if (event.type !== 'task') return; const task = event.task; const states = { waiting: '等待依赖', blocked: '受阻', queued: '已排队', running: '执行中', completed: '已完成', suspended: '已挂起', cancelled: '已取消' }; record({ id: 'task:' + task.id + ':' + task.attempt + ':' + task.state, label: task.agentId + ' · ' + states[task.state], input: task.goal, result: task.workspaceInstanceId, alert: task.state === 'blocked' || task.state === 'suspended' ? task.error || task.goal : undefined }); publish({ phase: lastPhase, model: selection.modelId }); });
 
-      const goal = JSON.stringify({ project: project.entry.name, workspaceTree, organization: office.organization.children, userRequest: SkillCommands.Expand(input.trim(), configuration.skills) });
+      const projectSkills = configuration.skills?.map(skill => ({ name: skill.name, description: /^description:\s*(.+)$/m.exec(skill.content)?.[1]?.slice(0, 400), source: '.agents/skills/' + skill.id + '/SKILL.md' }));
+      const goal = JSON.stringify({ ...(projectSkills?.length && { availableProjectSkills: projectSkills, skillUsage: '按用户意图与技能用途匹配；命中时可在当前权限内读取对应项目技能文件。用户链接了清单中的技能时优先使用，未命中无需调用。' }), project: project.entry.name, workspaceTree, organization: office.organization.children, userRequest: SkillCommands.Expand(input.trim(), configuration.skills) });
 
       context.push({ role: 'user', content: goal });
 
@@ -292,7 +295,7 @@ export class ProjectOffices
           total: number
         }>();
 
-      const runAgent = (role: AgentRole, messages: Parameters<OfficeChat>[1], root: string, session: string, agentInstanceId: string, signal: AbortSignal, ReadPermission: () => AgentPermission, report: (seq: number, kind: 'message' | 'summary', count: number) => void, operations: OfficeOperations, publish: (sample: ChatProgress) => void) => chat(agentRoleInstructions(role.definition), messages, signal, publish, { inputs: session === id ? inputs : undefined, ReadPermission, ReportTokens: total => { const previous = tokenReports.get(agentInstanceId) ?? { sequence: 0, total: 0 }; const next = { sequence: previous.sequence + 1, total: previous.total + total }; tokenReports.set(agentInstanceId, next); report(next.sequence, 'summary', next.total); }, operations, configuration: role.definition, agentInstanceId, officeId: office.id, selection: role.definition.model!, root, session, project: projectId, dataRoot: this.projects.paths.Project(projectId) });
+      const runAgent = (role: AgentRole, messages: Parameters<OfficeChat>[1], root: string, session: string, agentInstanceId: string, signal: AbortSignal, ReadPermission: () => AgentPermission, report: (seq: number, kind: 'message' | 'summary', count: number) => void, operations: OfficeOperations, publish: (sample: ChatProgress) => void) => chat(agentRoleInstructions(role.definition), messages, signal, publish, { ReportStage: session === id ? ReportStage : undefined, inputs: session === id ? inputs : undefined, ReadPermission, ReportTokens: total => { const previous = tokenReports.get(agentInstanceId) ?? { sequence: 0, total: 0 }; const next = { sequence: previous.sequence + 1, total: previous.total + total }; tokenReports.set(agentInstanceId, next); report(next.sequence, 'summary', next.total); }, operations, configuration: role.definition, agentInstanceId, officeId: office.id, selection: role.definition.model!, root, session, project: projectId, dataRoot: this.projects.paths.Project(projectId) });
 
       const reply = await office.OpenMainAgent({ parameters: controller.signal, CreateEngine: async (signal, agentId, role, report, ReadPermission) => ({ session: () => runAgent(role, context, project.entry.path, id, agentId, signal, ReadPermission, report, dispatch.Operations(), reportProgress), Close: async () => { controller.abort(); }, }) }, (_engine, commands) => { dispatch = new OfficeDispatch(office, project.entry.path, commands, (role, goal, root, taskId, signal, ReadPermission, report, operations, agentId) => runAgent(role, [{ role: 'user', content: SkillCommands.Expand(goal, role.definition.skills) }], root, taskId, agentId, signal, ReadPermission, report, operations, sample => { if (sample.activity) reportProgress(sample); }), controller.signal); return () => { }; }, configuration);
 
@@ -318,6 +321,7 @@ export class ProjectOffices
           result = { text: result.text + '\n\n' + next.text, metrics: { ...next.metrics, elapsed: result.metrics.elapsed + next.metrics.elapsed, output: result.metrics.output != null && next.metrics.output != null ? result.metrics.output + next.metrics.output : undefined, cost: result.metrics.cost != null && next.metrics.cost != null ? result.metrics.cost + next.metrics.cost : undefined } };
         }
 
+        await ReportStage?.('保存回复');
         return await history.AppendTurn(id, input.trim(), result.text, result.metrics, Array.from(workLog.values()));
       }
       finally

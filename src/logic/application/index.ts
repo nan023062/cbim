@@ -14,7 +14,7 @@ import { ProjectNavigation } from '../projects/navigation';
 
 import { OfficeQueue } from '../projects/office-queue';
 
-import { ProjectOffices, type OfficeChat } from '../projects/offices';
+import { ProjectOffices, type OfficeChat, type MainAgentSelection } from '../projects/offices';
 
 import { Paths } from '../projects/paths';
 
@@ -51,7 +51,7 @@ export class Application implements ApplicationEntry
 
   public readonly discovery: ResourceManagement;
 
-  public constructor(paths: ResourceRepositoryPaths, plugins?: PluginSource, chat?: OfficeChat)
+  public constructor(paths: ResourceRepositoryPaths, plugins?: PluginSource, chat?: OfficeChat, defaultModel?: () => Promise<MainAgentSelection | undefined>)
   {
     this.resources = new ResourceRepositories(paths);
 
@@ -59,7 +59,7 @@ export class Application implements ApplicationEntry
 
     this.monitor = createApplicationMonitor(this.projects);
 
-    this.offices = new ProjectOffices(this.projects, chat);
+    this.offices = new ProjectOffices(this.projects, chat, defaultModel);
 
     this.officeQueue = new OfficeQueue(this.projects, this.offices);
 

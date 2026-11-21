@@ -20,7 +20,7 @@ export class OrganizationDirectory
 {
   private readonly _writing = new Set<string>();
 
-  public constructor(private readonly _projects: ProjectList, private readonly _prepare: (project: string, snapshot: OrganizationSnapshot) => Promise<() => void> = async () => () => { }, private readonly _notify: (project: string, text: string) => void = () => { })
+  public constructor(private readonly _projects: ProjectList, private readonly _prepare: (project: string, snapshot: OrganizationSnapshot) => Promise<() => void> = async () => () => { }, private readonly _notify: (project: string, text: string) => void = () => { }, private readonly _defaultModel: () => Promise<NonNullable<OrganizationNode['configuration']>['model']> = async () => undefined)
   {
   }
 
@@ -73,7 +73,7 @@ export class OrganizationDirectory
       let nodes = structuredClone(previous.nodes);
 
       if (change.action === 'create')
-        nodes.push({ id: 'org:' + crypto.randomUUID(), kind: change.kind, parentId: change.parentId, name: change.name, position: change.position });
+        nodes.push({ id: 'org:' + crypto.randomUUID(), kind: change.kind, ...(change.kind === 'agent' && { configuration: { model: await this._defaultModel(), skills: [], connectorIds: [] } }), parentId: change.parentId, name: change.name, position: change.position });
       else
       {
         const node = nodes.find(node => node.id === change.id);

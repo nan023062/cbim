@@ -33,7 +33,7 @@ import { LlmProfiles } from '../../../logic/models/service';
 
 import { systemSecretCipher } from '../../../core/io/electron';
 
-import { modelActionSchemas } from '../../contracts/desktop-models';
+import { modelActionSchemas, selectProviderConnection } from '../../contracts/desktop-models';
 
 import { EnginePackages } from '../../../logic/engines/packages';
 
@@ -86,7 +86,17 @@ export function startDesktop(host?: StartupHost)
     userRoot,
     installRoot: app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath(),
     protectedRoots: host ? [host.cacheRoot] : [],
-  }, host?.engineArtifacts, packages ? (...args) => runOfficePlugin(packages, profiles, ...args, async (call, root, signal) => { signal.throwIfAborted(); if (!window || window.isDestroyed()) return false; const result = await dialog.showMessageBox(window, { type: 'question', title: 'Office 操作审批', message: '允许本次 ' + call.name + ' 操作？', detail: '工作目录：' + root + '\n\n' + JSON.stringify(call.input, null, 2), buttons: ['拒绝', '允许本次'], defaultId: 0, cancelId: 0, noLink: true, signal }); return !signal.aborted && result.response === 1; }, connectorRuntime, app.isPackaged ? undefined : path.join(app.getAppPath(), 'node_modules/.cache/cbim/engine-adapters')) : undefined);
+  }, host?.engineArtifacts, packages ? (...args) => runOfficePlugin(packages, profiles, ...args, async (call, root, signal) => { signal.throwIfAborted(); if (!window || window.isDestroyed()) return false; const result = await dialog.showMessageBox(window, { type: 'question', title: 'Office 操作审批', message: '允许本次 ' + call.name + ' 操作？', detail: '工作目录：' + root + '\n\n' + JSON.stringify(call.input, null, 2), buttons: ['拒绝', '允许本次'], defaultId: 0, cancelId: 0, noLink: true, signal }); return !signal.aborted && result.response === 1; }, connectorRuntime, app.isPackaged ? undefined : path.join(app.getAppPath(), 'node_modules/.cache/cbim/engine-adapters')) : undefined, async () => {
+    if (!packages) return undefined;
+    const items = (await packages.List()).filter(item => item.active || item.candidate || item.installed.length);
+    const engine = items.find(item => item.active && item.enabled) ?? items[0];
+    if (!engine) return undefined;
+    for (const profile of (await profiles.List()).profiles) {
+      const model = profile.models.find(item => item.enabled && selectProviderConnection(profile, engineDescriptor(engine.kind), item.id));
+      if (model) return { engine: engine.kind, profileId: profile.id, modelId: model.id };
+    }
+    return undefined;
+  });
 
   const brands = new Map<string,
     {

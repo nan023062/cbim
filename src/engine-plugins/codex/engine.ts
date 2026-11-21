@@ -195,7 +195,7 @@ export class CodexEngine implements AgentEngine
 
     this.tools = await codexTools({ ...context, emit: event => this.Emit(event) }, port, native, !!this.options.ReadPermission || !!this.options.allowNativeExecution, async () => { await this.proxy!.AssertSettled(); if (this.fatal) throw this.fatal });
 
-    this.proxy = await openCodexModelProxy(llm, this.tools.registered, this.tools.catalog, await this.options.requestBudget?.(), async () => { const names = this.tools!.catalog.map(tool => tool.name); await this.Emit({ type: 'engine.status', data: { metric: 'tool-catalog', stage: 'active', expected: names, active: names, missing: [] } }); });
+    this.proxy = await openCodexModelProxy(llm, this.tools.registered, this.tools.catalog, await this.options.requestBudget?.(), async () => { const names = this.tools!.catalog.map(tool => tool.name); await this.Emit({ type: 'engine.status', data: { metric: 'tool-catalog', stage: 'active', expected: names, active: names, missing: [] } }); }, async metric => { await this.Emit({ type: 'engine.status', data: { metric } }); });
 
     const config: Record<string, any> = {
       model: llm.profile.model, model_provider: 'cbim', model_providers: { cbim: { name: 'CBIM', base_url: this.proxy.url, env_key: 'CBIM_CODEX_API_KEY', wire_api: 'responses', request_max_retries: 0, stream_max_retries: 0, supports_websockets: false } },

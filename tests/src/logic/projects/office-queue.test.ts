@@ -23,17 +23,17 @@ test('宿主 FIFO、配置提交快照、重排、立即插入和提交去重共
  const offices=new ProjectOffices(projects,chat);const queue=new OfficeQueue(projects,offices);
  try{
   await fs.mkdir(path.join(root,'repo'));const project=await projects.Add(path.join(root,'repo'));const session=await offices.Open(project.id,'create');
-  const enqueue=(id:string,text:string,model:string)=>queue.Change(project.id,session.id,{action:'enqueue',id,text,permission:'execute',selection:{engine:model==='m1'?'pi':'codex',profileId:'profile',modelId:model}});
+  let connectorIds:string[]=[];const enqueue=(id:string,text:string,model:string)=>queue.Change(project.id,session.id,{action:'enqueue',id,text,permission:'execute',connectorIds,selection:{engine:model==='m1'?'pi':'codex',profileId:'profile',modelId:model}});
   const first=crypto.randomUUID();await enqueue(first,'first','m1');await expect.poll(()=>calls.length).toBe(1);
-  let settings=await offices.settings.Read(project.id,{kind:'main',id:session.id});await offices.settings.Save(project.id,{kind:'main',id:session.id},settings.revision,{...settings.configuration,connectorIds:['alpha']});
-  const second=crypto.randomUUID();await enqueue(second,'second','m2');settings=await offices.settings.Read(project.id,{kind:'main',id:session.id});await offices.settings.Save(project.id,{kind:'main',id:session.id},settings.revision,{...settings.configuration,connectorIds:['beta']});
+  connectorIds=['alpha'];
+  const second=crypto.randomUUID();await enqueue(second,'second','m2');connectorIds=['beta'];
   const third=crypto.randomUUID();let state=await enqueue(third,'third','m3');
   expect(calls).lengthOf(1);expect(calls[0].config.model.modelId).toBe('m1');expect(calls[0].config.connectorIds).toEqual([]);
   expect(state.items.find(item=>item.id===second)?.configuration).toMatchObject({model:{modelId:'m2'},connectorIds:['alpha']});
   state=await queue.Change(project.id,session.id,{action:'move',revision:state.revision,id:third,beforeId:second});expect(state.items.map(item=>item.text)).toEqual(['first','third','second']);
   await expect(queue.Change(project.id,session.id,{action:'remove',revision:0,id:third})).rejects.toThrow('队列已变化');
   state=await queue.Change(project.id,session.id,{action:'insert',revision:state.revision,id:second});await expect.poll(()=>calls[0].inserted.length).toBe(1);expect(calls[0].inserted).toEqual(['second']);expect(state.items.find(item=>item.id===second)?.status).toBe('inserted');
-  settings=await offices.settings.Read(project.id,{kind:'main',id:session.id});await offices.settings.Save(project.id,{kind:'main',id:session.id},settings.revision,{...settings.configuration,connectorIds:['gamma'],model:{engine:'pi',profileId:'profile',modelId:'later'}});
+  connectorIds=[];
   calls[0].release();await expect.poll(()=>calls.length).toBe(2);expect(calls[1].text).toBe('third');expect(calls[1].config).toMatchObject({model:{engine:'codex',modelId:'m3'},connectorIds:['beta']});
   calls[1].release();await expect.poll(async()=>(await queue.Read(project.id,session.id)).items.length).toBe(0);
   await enqueue(first,'first','m1');await new Promise(resolve=>setTimeout(resolve,10));expect(calls).lengthOf(2);
@@ -56,6 +56,32 @@ test('重开保留顺序和配置，运行标记恢复为未确认且不自动�
 test('slash 技能只在提交后加载选定正文，排队期间设置变化不替换已采纳技能',async()=>{
  const root=await fs.mkdtemp(path.join(os.tmpdir(),'office-skill-'));const projects=new ProjectList(new Paths(root));const calls:any[]=[];
  const offices=new ProjectOffices(projects,async(prompt,messages)=>{calls.push({prompt,goal:JSON.parse(messages.at(-1)!.content)});return{text:'完成',metrics:{elapsed:1,model:'m',capacity:1000}};});const queue=new OfficeQueue(projects,offices);
- try{await fs.mkdir(path.join(root,'repo'));const p=await projects.Add(path.join(root,'repo'));const session=await offices.Open(p.id,'create');let saved=await offices.settings.Read(p.id,{kind:'main',id:session.id});await offices.settings.Save(p.id,{kind:'main',id:session.id},saved.revision,{...saved.configuration,skills:[{id:'a',name:'审核',content:'FROZEN_REVIEW'},{id:'b',name:'发布',content:'NEVER_AUTO_PUBLISH'}]});expect(calls).toHaveLength(0);await queue.Change(p.id,session.id,{action:'pause'});await queue.Change(p.id,session.id,{action:'enqueue',id:crypto.randomUUID(),text:'/skill:审核 检查代码',permission:'read',selection:{engine:'pi',profileId:'p',modelId:'m'}});saved=await offices.settings.Read(p.id,{kind:'main',id:session.id});await offices.settings.Save(p.id,{kind:'main',id:session.id},saved.revision,{...saved.configuration,skills:[]});await queue.Change(p.id,session.id,{action:'resume'});await expect.poll(()=>calls.length).toBe(1);expect(calls[0].prompt).not.toContain('FROZEN_REVIEW');expect(calls[0].prompt).not.toContain('NEVER_AUTO_PUBLISH');const request=JSON.parse(calls[0].goal.userRequest);expect(request.requestedSkills).toEqual([{id:'a',name:'审核',content:'FROZEN_REVIEW'}]);expect(request.userRequest).toBe('检查代码');await expect.poll(async()=>(await queue.Read(p.id,session.id)).items.length).toBe(0);const history=await offices.Open(p.id,'select',session.id);expect(history.messages.find(m=>m.role==='user')?.text).toBe('/skill:审核 检查代码');}
+ try{await fs.mkdir(path.join(root,'repo'));const p=await projects.Add(path.join(root,'repo'));const session=await offices.Open(p.id,'create');for(const [name,body] of [['审核','FROZEN_REVIEW'],['发布','NEVER_AUTO_PUBLISH']]) {const dir=path.join(root,'repo','.agents','skills',name);await fs.mkdir(dir,{recursive:true});await fs.writeFile(path.join(dir,'SKILL.md'),body);}expect(calls).toHaveLength(0);await queue.Change(p.id,session.id,{action:'pause'});await queue.Change(p.id,session.id,{action:'enqueue',id:crypto.randomUUID(),text:'/skill:审核 检查代码',permission:'read',selection:{engine:'pi',profileId:'p',modelId:'m'}});await fs.writeFile(path.join(root,'repo','.agents','skills','审核','SKILL.md'),'UPDATED');await queue.Change(p.id,session.id,{action:'resume'});await expect.poll(()=>calls.length).toBe(1);expect(calls[0].prompt).not.toContain('FROZEN_REVIEW');expect(calls[0].prompt).not.toContain('NEVER_AUTO_PUBLISH');const request=JSON.parse(calls[0].goal.userRequest);expect(request.requestedSkills).toEqual([{id:'审核',name:'审核',content:'FROZEN_REVIEW'}]);expect(request.userRequest).toBe('检查代码');await expect.poll(async()=>(await queue.Read(p.id,session.id)).items.length).toBe(0);const history=await offices.Open(p.id,'select',session.id);expect(history.messages.find(m=>m.role==='user')?.text).toBe('/skill:审核 检查代码');}
  finally{await queue.Close();await projects.Close();await fs.rm(root,{recursive:true,force:true});}
+});
+
+
+test('更新检查超时与后续成功重试分别保留，重开后仍可按指令追溯', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'office-attempt-'));
+  const projects = new ProjectList(new Paths(root));
+  let first = true;
+  const offices = new ProjectOffices(projects, async (_prompt, _messages, _signal, _progress, turn) => {
+    await turn.ReportStage?.('检查引擎更新');
+    if (first) { first = false; throw Object.assign(new Error('fixture timeout'), {name:'TimeoutError', timeoutMs:30000}); }
+    await turn.ReportStage?.('收到首个回复');
+    return {text:'ok',metrics:{elapsed:1,model:'m',capacity:1000}};
+  });
+  let queue = new OfficeQueue(projects, offices);
+  try {
+    await fs.mkdir(path.join(root,'repo')); const p = await projects.Add(path.join(root,'repo')); const s = await offices.Open(p.id,'create'); const id = crypto.randomUUID();
+    await queue.Change(p.id,s.id,{action:'enqueue',id,text:'sensitive fixture prompt',permission:'read',selection:{engine:'pi',profileId:'p',modelId:'m'}});
+    await expect.poll(async () => (await queue.Read(p.id,s.id)).items[0]?.status).toBe('failed');
+    const failed = await queue.Read(p.id,s.id); const original = failed.attempts![0];
+    expect(original).toMatchObject({itemId:id,outcome:'failed',timeoutMs:30000,errorClass:'TimeoutError'}); expect(original.events.at(-1)?.stage).toBe('检查引擎更新');
+    await queue.Change(p.id,s.id,{action:'retry',id,revision:failed.revision});
+    await expect.poll(async () => (await queue.Read(p.id,s.id)).items.length).toBe(0);
+    await queue.Close(); queue = new OfficeQueue(projects, offices);
+    const attempts = (await queue.Read(p.id,s.id)).attempts!;
+    expect(attempts).toHaveLength(2); expect(attempts[0]).toEqual(original); expect(attempts[1].id).not.toBe(original.id); expect(attempts[1]).toMatchObject({itemId:id,outcome:'completed'}); expect(JSON.stringify(attempts)).not.toContain('sensitive fixture prompt');
+  } finally { await queue.Close(); await projects.Close(); await fs.rm(root,{recursive:true,force:true}); }
 });

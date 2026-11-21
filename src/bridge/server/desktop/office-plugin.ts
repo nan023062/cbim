@@ -42,7 +42,9 @@ export async function runOfficePlugin(packages: EnginePackages, profiles: LlmPro
 {
   const started = Date.now();
 
+  await turn.ReportStage?.('检查引擎更新');
   await packages.Check();
+  await turn.ReportStage?.('加载本地引擎');
 
   const kind = loopEngineSchema.parse(turn.selection.engine);
 
@@ -54,6 +56,7 @@ export async function runOfficePlugin(packages: EnginePackages, profiles: LlmPro
   if (!status.candidate || status.active.identity !== status.candidate.identity)
     throw Error('请先更新到最新兼容引擎版本');
 
+  await turn.ReportStage?.('解析模型配置');
   const llm = await new EngineModelProfiles(profiles).Resolve(turn.selection.profileId, turn.selection.modelId, kind);
 
   const model = llm.profile.model;
@@ -68,6 +71,7 @@ export async function runOfficePlugin(packages: EnginePackages, profiles: LlmPro
 
   await mkdir(directory, { recursive: true });
 
+  await turn.ReportStage?.('加载本地引擎');
   const runtime = await packages.ResolveEngine(kind);
 
   if (runtime.identity !== status.candidate.identity)
@@ -85,6 +89,7 @@ export async function runOfficePlugin(packages: EnginePackages, profiles: LlmPro
 
     if (ids.length)
     {
+      await turn.ReportStage?.('连接工具');
       if (!connectors || !turn.agentInstanceId || !turn.officeId)
         throw Error('当前宿主缺少连接器运行身份');
 
@@ -140,12 +145,14 @@ export async function runOfficePlugin(packages: EnginePackages, profiles: LlmPro
 
       let lastPaint = 0;
 
+      let firstReply = true;
+      await turn.ReportStage?.('启动引擎');
       await engine.start({
         runId, directory, task: { taskId: runId, workspaceId: turn.project, mode: 'chat', root: turn.root, goal, acceptance: [], moduleIds: [] },
         engineHandoff: messages.length > 1 ? JSON.stringify(messages.slice(0, -1)) : undefined,
         capabilities: [],
         beforeTool: async call => { const pending = turn.inputs?.Take() ?? []; const decision = pending.length ? { allow: false, reason: '当前任务收到追加输入，本次工具尚未执行。请先依据更新重新评估，再决定是否重新调用：' + JSON.stringify({ officeInputs: pending }) } : await officeTools.Authorize(call); progress({ phase: 'thinking', model, activity: { id: 'tool:' + call.id, label: call.name, input: activityDetail(call.input), ...(decision.allow ? {} : { alert: decision.reason ?? '操作未获批准' }) } }); return decision; },
-        emit: async event => { if (['tool.started', 'tool.updated', 'tool.finished'].includes(event.type) && typeof event.data.id === 'string') { const name = String(event.data.name ?? '工具'); const result = activityDetail(event.data.result); progress({ phase: 'thinking', model, activity: { id: 'tool:' + event.data.id, label: name, ...(result !== undefined && { result }), ...(event.data.isError === true && { alert: name + '执行失败' }) } }); } if ((event.type === 'message' && event.data.usage) || (event.type === 'engine.status' && event.data.metric === 'run-usage')) usageEvents.push(event); if (event.type === 'engine.status' && event.data.metric === 'context' && typeof event.data.tokens === 'number') contextUsed = event.data.tokens; if (typeof event.data.text !== 'string') return; if (event.type === 'message.delta') { partial += event.data.text; if (Date.now() - lastPaint < 40) return; } else if (event.type === 'message' && event.data.role === 'assistant') { replies.push(event.data.text); partial = ''; } else return; lastPaint = Date.now(); progress({ phase: 'writing', model, text: [...replies, partial].filter(Boolean).join('\n\n') }); },
+        emit: async event => { if (event.type === 'engine.status' && event.data.metric === 'provider-request') await turn.ReportStage?.('已发起模型请求'); if (event.type === 'engine.status' && event.data.metric === 'provider-headers') await turn.ReportStage?.('收到供应商响应头'); if (event.type === 'tool.started') await turn.ReportStage?.('执行工具'); if (event.type === 'tool.finished') await turn.ReportStage?.('等待引擎继续'); if (firstReply && (event.type === 'message.delta' || event.type === 'message' && event.data.role === 'assistant') && event.data.text) { firstReply = false; await turn.ReportStage?.('收到首个回复'); } if (['tool.started', 'tool.updated', 'tool.finished'].includes(event.type) && typeof event.data.id === 'string') { const name = String(event.data.name ?? '工具'); const result = activityDetail(event.data.result); progress({ phase: 'thinking', model, activity: { id: 'tool:' + event.data.id, label: name, ...(result !== undefined && { result }), ...(event.data.isError === true && { alert: name + '执行失败' }) } }); } if ((event.type === 'message' && event.data.usage) || (event.type === 'engine.status' && event.data.metric === 'run-usage')) usageEvents.push(event); if (event.type === 'engine.status' && event.data.metric === 'context' && typeof event.data.tokens === 'number') contextUsed = event.data.tokens; if (typeof event.data.text !== 'string') return; if (event.type === 'message.delta') { partial += event.data.text; if (Date.now() - lastPaint < 40) return; } else if (event.type === 'message' && event.data.role === 'assistant') { replies.push(event.data.text); partial = ''; } else return; lastPaint = Date.now(); progress({ phase: 'writing', model, text: [...replies, partial].filter(Boolean).join('\n\n') }); },
       });
 
       signal.throwIfAborted();
@@ -154,6 +161,7 @@ export async function runOfficePlugin(packages: EnginePackages, profiles: LlmPro
 
       const preparedInputs = turn.inputs?.Take() ?? [];
 
+      await turn.ReportStage?.('已交给引擎，等待响应');
       const running = engine.run(goal + (preparedInputs.length ? '\n' + JSON.stringify({ officeInputs: preparedInputs }) : ''));
 
       const disconnect = engine.steer && turn.inputs?.Connect(text => engine.steer!(text, [], signal));

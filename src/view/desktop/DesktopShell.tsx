@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 作用定位：桌面主布局与 Office、发现、设置和扩展页面的组合组件。
  * 设计原因：React 外壳组合各业务页面并持有窗口内导航，后台任务归宿主服务管理。
  */
@@ -6,6 +6,8 @@ import { useEffect, useRef, useState } from 'react';
 
 import type { DiscoveryPage, ProjectItem, OfficeConversation, OfficeSelection } from '../../bridge/contracts/discovery';
 
+import { OrganizationPanel } from '../office/OrganizationPanel';
+import { BusinessPanel } from '../office/BusinessPanel';
 import { OfficeView } from '../office/OfficeView';
 
 import { DiscoveryView } from '../discovery/MenuViews';
@@ -36,12 +38,11 @@ export function DesktopShell()
 
   const [expanded, setExpanded] = useState(() => window.innerWidth > 720);
 
-  const [settings, setSettings] = useState<'通用' | '外观'>();
+  const [settings, setSettings] = useState<'通用' | '外观' | '模型供应商'>();
 
   const [page, setPage] = useState<DiscoveryPage | 'workspace'>('workspace');
 
   /** 项目页内的导航选择与 Office 执行状态独立。 */
-  const [workspaceView, setWorkspaceView] = useState<'office' | 'organization' | 'business'>('office');
 
   const [projects, setProjects] = useState<ProjectItem[]>([]);
 
@@ -59,7 +60,6 @@ export function DesktopShell()
   {
     setPage('workspace');
 
-    setWorkspaceView('office');
 
     if (innerWidth <= 720)
       setExpanded(false);
@@ -90,19 +90,12 @@ export function DesktopShell()
 
     const created = await window.desktopMenu.OpenOffice(project.id, 'create');
 
-    const target = { kind: 'main' as const, id: created.id };
-
-    const settings = await window.desktopMenu.AgentSettings(project.id, target);
-
-    await window.desktopMenu.AgentSettings(project.id, target, { revision: settings.revision, configuration: { model: selection, skills: [], connectorIds: [] } });
-
     localStorage.setItem('office-permission:' + created.id, 'read');
 
     if (sequence === request.current)
     {
       setPage('workspace');
 
-      setWorkspaceView('office');
 
       setSelected(project);
 
@@ -205,7 +198,7 @@ export function DesktopShell()
           {resourceNavigation.map(([icon, label, target]) => <button key={target} onClick={event => { setPage(target); event.currentTarget.parentElement?.hidePopover(); }}><Icon name={icon} size={16} />{label}</button>)}
         </div>
       </nav>
-      <ProjectSidebar reading={page === 'workspace' && workspaceView === 'office' && !settings} activeProject={page === 'workspace' ? selected?.id : undefined} activeSession={page === 'workspace' ? office?.id : undefined} OnOpen={openProject} OnAdd={() => void chooseProject()} OnSnapshot={items => { setProjects(items); setSelected(previous => { const latest = items.find(item => item.id === previous?.id); return latest && previous && (latest.name !== previous.name || latest.path !== previous.path) ? latest : previous; }); }} OnUnavailable={(project, session) => { if (selected?.id === project && (!session || office?.id === session)) { request.current++; localStorage.removeItem('project-last-office'); setOffice(undefined); setSelected(undefined); } }} />
+      <ProjectSidebar reading={page === 'workspace' && !settings} activeProject={page === 'workspace' ? selected?.id : undefined} activeSession={page === 'workspace' ? office?.id : undefined} OnOpen={openProject} OnAdd={() => void chooseProject()} OnSnapshot={items => { setProjects(items); setSelected(previous => { const latest = items.find(item => item.id === previous?.id); return latest && previous && (latest.name !== previous.name || latest.path !== previous.path) ? latest : previous; }); }} OnUnavailable={(project, session) => { if (selected?.id === project && (!session || office?.id === session)) { request.current++; localStorage.removeItem('project-last-office'); setOffice(undefined); setSelected(undefined); } }} />
       <footer className="sidebar-footer">
         <button className="user-profile-trigger" aria-label="用户菜单" popoverTarget="user-actions">
           <span className="profile-badge">C</span><span className="user-profile-copy"><b>本地用户</b><small>CBIM · 本地使用</small></span>
@@ -221,11 +214,10 @@ export function DesktopShell()
     </aside>
     <main className="workspace-main">
       <header className="workspace-topbar">{page !== 'workspace' && <button aria-label="返回工作区" onClick={() => setPage('workspace')}>←</button>}<Icon name="folder" size={16} /><strong className="workspace-project-title" title={title}>{title}</strong>
-        {page === 'workspace' && selected && office && <nav className="workspace-project-nav" aria-label="项目页面">{([['office', '办公室'], ['organization', '组织架构'], ['business', '业务架构']] as const).map(([id, label]) => <button key={id} type="button" aria-current={workspaceView === id ? 'page' : undefined} onClick={() => setWorkspaceView(id)}>{label}</button>)}</nav>}
       </header>
       {error && <p role="alert">{error}</p>}
       {page !== 'workspace' ? <DiscoveryView key={page} page={page} title={title} /> : selected ? office ?
-          <OfficeView onAnalyze={Analyze} view={workspaceView} onOffice={() => setWorkspaceView('office')} onManageEngines={() => setPage('engines')} key={office.id} conversation={office} project={selected} draft={drafts[office.id] ?? ''}
+          <OfficeView onAnalyze={Analyze} onManageModels={() => setSettings('模型供应商')} onManageEngines={() => setPage('engines')} key={office.id} conversation={office} project={selected} draft={drafts[office.id] ?? ''}
             onDraft={text => setDrafts(previous => ({ ...previous, [office.id]: text }))}
             started={running[office.id] ?? 0} onRunning={time => setRunning(previous => ({ ...previous, [office.id]: time }))}
             onSaved={messages => { setOffice(current => current?.id === office.id ? { ...current, messages: [...current.messages, ...messages.filter(m => !current.messages.some(existing => existing.id === m.id))] } : current); }} />
@@ -237,7 +229,7 @@ export function DesktopShell()
         <button className="solid-button" disabled={choosing} onClick={() => void chooseProject()}><Icon name="folder" size={16} />选择目录</button>
       </section>}
     </main>
-    <ExtensionPanel open={panelOpen} />
+    <ExtensionPanel open={panelOpen} project={selected?.id} session={office?.id} business={selected && <BusinessPanel key={selected.id} project={selected.id} OnBack={() => setPanelOpen(false)} />} organization={selected && <OrganizationPanel key={selected.id} project={selected.id} OnBack={() => setPanelOpen(false)} OnManageModels={() => setSettings('模型供应商')} OnManageEngines={() => { setPanelOpen(false); setPage('engines'); }} />} />
     <button className="icon-button panel-switch" aria-label={panelOpen ? '收起扩展面板' : '展开扩展面板'} aria-controls="extension-panel" aria-expanded={panelOpen} onClick={() => setPanelOpen(!panelOpen)}><Icon name="panelRight" size={16} /></button>
   </ThreePaneLayout></div>;
 }

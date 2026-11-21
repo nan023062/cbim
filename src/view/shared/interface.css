@@ -15,7 +15,7 @@
   --bg: #191919; --sidebar: #111111; --surface: #202020;
   --raised: #252525; --hover: #292929; --selected: #37383a;
   --line: #353535; --control-line: #505052;
-  --text: #ededed; --muted: #a1a1a4; --accent: #f0f2f5;
+  --text: #c7c7ca; --muted: #a7a7ab; --accent: #d7d7da;
   --green: #88d0a2; --warning: #f0b575; --danger: #ffaaaa;
   --success: var(--green);
   --focus: #9bbdff;
@@ -30,6 +30,7 @@
   --text: #20242c; --muted: #596270; --accent: #20242c;
   --green: #246642; --warning: #8c4a10; --danger: #b13737; --focus: #2459bc;
 }
+:where(h1,h2,h3,h4,h5,h6) {color:var(--accent)}
 body {line-height: 1.5}
 button {min-height: 32px; border-radius: var(--radius-control); transition: var(--tween-control)}
 button:not(:disabled):active {translate: 0 1px}

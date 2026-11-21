@@ -24,6 +24,7 @@ export function TurnRail({ project, session, earlier, messages, row, jump, live 
   }
   if (live) marks.push({ file: '', index: earlier.length + messages.length, ...live });
 
+  const [pointerInside, setPointerInside] = useState(false);
   const [hover, setHover] = useState<{ i: number; top: number }>();
   const [archive, setArchive] = useState<{ file: string; text: string; result: string }>();
   const tipId = useId();
@@ -38,7 +39,7 @@ export function TurnRail({ project, session, earlier, messages, row, jump, live 
     setHover({ i, top: Math.max(4, Math.min(container.height - 104, button.getBoundingClientRect().top - container.top - 38)) });
   }
   if (!marks.length) return null;
-  return <><nav className="turn-rail" aria-label="历史任务定位" onMouseLeave={() => setHover(undefined)} onBlur={() => setHover(undefined)} onScroll={() => setHover(undefined)} onKeyDown={e => { if (e.key === 'Escape') setHover(undefined); }}>
-    {marks.map((m, i) => <button key={m.file || m.index} type="button" aria-label={'定位第 ' + (i + 1) + ' 个任务'} aria-current={i === active ? 'location' : undefined} aria-describedby={i === hover?.i ? tipId : undefined} onMouseEnter={e => Show(i, e.currentTarget)} onFocus={e => Show(i, e.currentTarget)} onClick={() => jump(m.index)}><i data-motion="turn" style={{ transform: 'scaleX(' + (hover ? markerScale(i - hover.i) : i === active ? 0.65 : 0.23) + ')' }} /></button>)}
+  return <><nav className="turn-rail" aria-label="历史任务定位" onMouseEnter={() => setPointerInside(true)} onMouseLeave={() => { setPointerInside(false); setHover(undefined); }} onBlur={() => setHover(undefined)} onScroll={() => setHover(undefined)} onKeyDown={e => { if (e.key === 'Escape') setHover(undefined); }}>
+    {marks.map((m, i) => <button key={m.file || m.index} type="button" aria-label={'定位第 ' + (i + 1) + ' 个任务'} aria-current={i === active ? 'location' : undefined} aria-describedby={i === hover?.i ? tipId : undefined} onMouseEnter={e => Show(i, e.currentTarget)} onFocus={e => Show(i, e.currentTarget)} onClick={() => jump(m.index)}><i data-motion="turn" style={{ transform: 'scaleX(' + (pointerInside && hover ? markerScale(i - hover.i) : 0.23) + ')' }} /></button>)}
   </nav>{mark && hover && <div className="turn-preview" data-motion="popup" id={tipId} role="tooltip" style={{ top: hover.top }}><strong>{preview?.text || (file ? '正在读取历史任务…' : '任务')}</strong><span>{preview ? preview.result || '暂无执行结果' : ''}</span></div>}</>;
 }

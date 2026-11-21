@@ -18,7 +18,7 @@ function Action({ label, icon, disabled, OnClick }: { label: string; icon: strin
   return <button type="button" title={label} aria-label={label} disabled={disabled} onClick={OnClick}><Icon name={icon} size={18} /></button>;
 }
 
-export function OrganizationPanel({ project, OnBack, OnManageModels, OnManageEngines }: { project: string; OnBack(): void; OnManageModels(): void; OnManageEngines(): void })
+export function OrganizationPanel({ project, OnBack, OnManageModels }: { project: string; OnBack(): void; OnManageModels(): void; })
 {
   const [snapshot, setSnapshot] = useState<OrganizationSnapshot>();
 
@@ -136,6 +136,6 @@ export function OrganizationPanel({ project, OnBack, OnManageModels, OnManageEng
       </> : <p>选择一个团队或成员查看详情。</p>}</article>
     </div>}
     {snapshot && edit && <OrganizationNodeDialog project={project} snapshot={snapshot} edit={edit} OnClose={() => setEdit(undefined)} OnSaved={save} />}
-    {settings && node?.kind === 'agent' && <AgentSettingsDialog project={project} target={{ kind: 'member', id: node.id }} title={node.name + ' · 成员设置'} OnClose={() => setSettings(false)} OnManageModels={OnManageModels} OnManageEngines={OnManageEngines} OnSaved={setConfiguration} />}
+    {settings && node?.kind === 'agent' && <AgentSettingsDialog project={project} target={{ kind: 'member', id: node.id }} title={node.name + ' · 成员设置'} OnClose={() => setSettings(false)} OnManageModels={OnManageModels} OnSaved={setConfiguration} />}
   </section>;
 }

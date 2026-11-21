@@ -200,19 +200,27 @@ export class EngineArtifacts implements EngineArtifactsPort
     return { ...(pkg.plugin ? { plugin: pkg.plugin } : {}), kind: pkg.kind, identity: pkg.package.sha256, version: pkg.adapter!.version, nativeVersion: pkg.version, protocol: pkg.adapter!.protocol, dependencies: structuredClone(pkg.dependencies ?? []) }
   }
 
-  List()
+  private checking?: Promise<void>;
+
+  async List()
   {
-    return this.queue.Run(async () => { await this.Init(); if (!this.seed && !this.head) await this.RefreshIndex(); return { current: [...this.current].map(([kind, id]) => this.Summary(this.available.get(kind + ':' + id)!)), available: [...this.available.values()].map(pkg => this.Summary(pkg)) } })
+    await this.queue.Run(() => this.Init());
+    if (!this.seed && !this.head) await this.Check();
+    return { current: [...this.current].map(([kind, id]) => this.Summary(this.available.get(kind + ':' + id)!)), available: [...this.available.values()].map(pkg => this.Summary(pkg)) };
   }
 
   Check()
   {
-    return this.queue.Run(async () => { await this.Init(); await this.RefreshIndex(); });
+    // Fetch outside the catalog lock so local reads and runtime preparation can proceed.
+    return this.checking ??= this.fetchIndex().then(raw => this.queue.Run(async () => {
+      await this.Init();
+      await this.RefreshIndex(raw);
+    })).finally(() => { this.checking = undefined; });
   }
 
-  private async RefreshIndex()
+  private async RefreshIndex(raw: Awaited<ReturnType<typeof this.fetchIndex>>)
   {
-    const checked = verifyEngineIndex(await this.fetchIndex(), { ...this.store.cold, publicKey: this.store.cold.enginePublicKey ?? this.store.cold.publicKey });
+    const checked = verifyEngineIndex(raw, { ...this.store.cold, publicKey: this.store.cold.enginePublicKey ?? this.store.cold.publicKey });
 
     if (checked.index.sequence < this.head || checked.index.sequence === this.head && checked.digest !== this.digest)
       throw Error('引擎索引回退或同序号冲突');

@@ -30,7 +30,7 @@ type MenuItem =
     danger?: boolean
   };
 
-export function ProjectSidebar({ reading = true, activeProject, activeSession, OnOpen, OnAdd, OnUnavailable, OnSnapshot }: { reading?: boolean; activeProject?: string; activeSession?: string; OnOpen(project: ProjectItem, create?: boolean, session?: string): void; OnAdd(): void; OnUnavailable(project: string, session?: string): void; OnSnapshot(projects: ProjectItem[]): void })
+export function ProjectSidebar({ added, choosing, addingName, reading = true, activeProject, activeSession, OnOpen, OnAdd, OnUnavailable, OnSnapshot }: { added?: {attempt: string; item: ProjectItem}; choosing: boolean; addingName: string; reading?: boolean; activeProject?: string; activeSession?: string; OnOpen(project: ProjectItem, create?: boolean, session?: string): void; OnAdd(): void; OnUnavailable(project: string, session?: string): void; OnSnapshot(projects: ProjectItem[]): void })
 {
   const [snapshot, setSnapshot] = useState<NavigationSnapshot>({ revision: 0, projects: [] });
 
@@ -120,6 +120,29 @@ export function ProjectSidebar({ reading = true, activeProject, activeSession, O
   useEffect(() => { const update = () => setFocused(document.hasFocus() && !document.hidden); window.addEventListener('focus', update); window.addEventListener('blur', update); document.addEventListener('visibilitychange', update); return () => { window.removeEventListener('focus', update); window.removeEventListener('blur', update); document.removeEventListener('visibilitychange', update); }; }, []);
   useEffect(() => { const next = { ...seen }; let changed = false; for (const project of snapshot.projects) for (const session of project.sessions) { const done = session.completedAt ?? 0; if (!(session.id in next) || (reading && focused && session.id === activeSession && done > next[session.id])) { next[session.id] = done; changed = true; } } if (changed) { setSeen(next); localStorage.setItem('office-read-completions', JSON.stringify(next)); } }, [seen, snapshot, activeSession, focused, reading]);
 
+  const generation = useRef(0);
+  const displayed = useRef('');
+  useEffect(() => {
+    if (!added) return;
+    generation.current++;
+    const { item } = added;
+    const previous = current.current;
+    const existing = previous.projects.find(p => p.id === item.id);
+    const project = { pinned: false, sessions: [], ...existing, ...item, removed: false };
+    Apply({ ...previous, projects: existing ? previous.projects.map(p => p.id === item.id ? project : p) : [...previous.projects, project] });
+    setSearch(''); setFilter('active'); setDeviceOpen(true);
+    setCollapsed(old => ({ ...old, [item.id]: false }));
+  }, [added]);
+
+  useEffect(() => {
+    if (!added || activeProject !== added.item.id || displayed.current === added.attempt) return;
+    const row = document.querySelector('[data-project-id="' + added.item.id + '"]');
+    if (!row || !row.getClientRects().length) return;
+    row.scrollIntoView({ block: 'nearest' });
+    displayed.current = added.attempt;
+    void window.desktopMenu.ProjectDisplayed(added.attempt, Date.now()).catch(console.warn);
+  }, [added, snapshot, activeProject, filter, search, deviceOpen]);
+
   function Apply(value: NavigationSnapshot)
   {
     if (value.revision < current.current.revision)
@@ -132,7 +155,7 @@ export function ProjectSidebar({ reading = true, activeProject, activeSession, O
     callbacks.current.OnSnapshot(value.projects.filter(project => !project.removed));
   }
 
-  useEffect(() => { let alive = true; let migrated = false; let timer: ReturnType<typeof setTimeout>; async function Refresh() { try { let value = await window.desktopMenu.Navigation(); if (alive && !migrated) { for (const project of value.projects) for (const session of project.sessions) { const key = 'office-title:' + session.id; const alias = localStorage.getItem(key)?.trim(); if (alive && alias && !session.renamed) value = await window.desktopMenu.Navigation({ revision: value.revision, project: project.id, session: session.id, action: 'rename', name: alias.slice(0, 80) }); if (alive && alias) localStorage.removeItem(key); } migrated = true; } if (alive) Apply(value); } catch (error) { if (alive) setError(String(error)); } finally { if (alive) timer = setTimeout(Refresh, 1500); } } void Refresh(); return () => { alive = false; clearTimeout(timer); }; }, []);
+  useEffect(() => { let alive = true; let migrated = false; let timer: ReturnType<typeof setTimeout>; async function Refresh() { const version = generation.current; try { let value = await window.desktopMenu.Navigation(); if (alive && !migrated) { for (const project of value.projects) for (const session of project.sessions) { const key = 'office-title:' + session.id; const alias = localStorage.getItem(key)?.trim(); if (alive && alias && !session.renamed) value = await window.desktopMenu.Navigation({ revision: value.revision, project: project.id, session: session.id, action: 'rename', name: alias.slice(0, 80) }); if (alive && alias) localStorage.removeItem(key); } migrated = true; } if (alive && version === generation.current) Apply(value); } catch (error) { if (alive) setError(String(error)); } finally { if (alive) timer = setTimeout(Refresh, 1500); } } void Refresh(); return () => { alive = false; clearTimeout(timer); }; }, []);
 
   useEffect(() => { if (editing) dialog.current?.showModal(); }, [editing]);
 
@@ -250,7 +273,8 @@ export function ProjectSidebar({ reading = true, activeProject, activeSession, O
     <div className="sidebar-search"><Icon name="search" size={15} /><input ref={input} type="search" value={search} onChange={event => setSearch(event.target.value)} aria-label="搜索项目和对话" placeholder="搜索项目和对话" /></div>
     <div className="task-section-heading"><button className="task-filter-trigger" popoverTarget="task-list-options" aria-label="本机任务筛选与显示选项">{({ active: '本机任务', running: '运行中任务', archived: '已归档任务', removed: '已移除任务' })[filter]}<Icon name="chevronDown" size={12} /></button></div>
     <div id="task-list-options" className="task-list-options" popover="auto"><label>显示任务<select aria-label="筛选对话" value={filter} onChange={event => setFilter(event.target.value as typeof filter)}><option value="active">全部对话</option><option value="running">运行中</option><option value="archived">已归档</option><option value="removed">已移除</option></select></label><button onClick={() => { setDeviceOpen(true); setCollapsed({}); localStorage.setItem('project-collapsed', '{}'); document.getElementById('task-list-options')?.hidePopover(); }}><Icon name="expand" size={15} />展开全部项目</button><button onClick={() => { const next = Object.fromEntries(projects.map(project => [project.id, true])); setCollapsed(next); localStorage.setItem('project-collapsed', JSON.stringify(next)); document.getElementById('task-list-options')?.hidePopover(); }}><Icon name="collapse" size={15} />收起全部项目</button></div>
-    <div className="local-device-row"><button aria-expanded={deviceOpen} aria-controls="local-project-tree" onClick={() => setDeviceOpen(value => !value)}><Icon name="desktop" size={14} /><span>本机</span><Icon name={deviceOpen ? 'chevronDown' : 'chevronRight'} size={11} /></button><button className="device-add" title="添加项目" aria-label="添加项目" onClick={OnAdd}><Icon name="folderAdd" size={16} /></button></div>
+    <div className="local-device-row"><button aria-expanded={deviceOpen} aria-controls="local-project-tree" onClick={() => setDeviceOpen(value => !value)}><Icon name="desktop" size={14} /><span>本机</span><Icon name={deviceOpen ? 'chevronDown' : 'chevronRight'} size={11} /></button><button className="device-add" title="添加项目" aria-label="添加项目" disabled={choosing} onClick={OnAdd}><Icon name="folderAdd" size={16} /></button></div>
+    {addingName && <div role="status"><Icon name="spinner" motion="rotate" size={14} /> 正在添加：{addingName}</div>}
     <nav id="local-project-tree" hidden={!deviceOpen && !query} className="workspace-list project-tree" aria-label="项目列表">{projects.map(project =>
     {
       const matchesProject = (project.name + ' ' + project.path).toLocaleLowerCase().includes(query);

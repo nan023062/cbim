@@ -31,7 +31,9 @@ const menu: DesktopMenu = {
   SendOffice: (project, session, text, permission, selection) => ipcRenderer.invoke('office:send', { project, session, text, permission, selection }),
   OpenMonitor: () => ipcRenderer.invoke('menu:open-monitor'),
   Projects: () => ipcRenderer.invoke('menu:projects'),
-  AddProject: () => ipcRenderer.invoke('menu:add-project'),
+  PickProject: () => ipcRenderer.invoke('menu:pick-project'),
+  AddProject: attempt => ipcRenderer.invoke('menu:add-project', attempt),
+  ProjectDisplayed: (attempt, at) => ipcRenderer.invoke('menu:project-displayed', { attempt, at }),
   Resources: page => ipcRenderer.invoke('menu:resources', page),
   Monitor: () => ipcRenderer.invoke('menu:monitor'),
 };

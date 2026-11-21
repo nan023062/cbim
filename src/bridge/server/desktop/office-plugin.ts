@@ -42,8 +42,6 @@ export async function runOfficePlugin(packages: EnginePackages, profiles: LlmPro
 {
   const started = Date.now();
 
-  await turn.ReportStage?.('检查引擎更新');
-  await packages.Check();
   await turn.ReportStage?.('加载本地引擎');
 
   const kind = loopEngineSchema.parse(turn.selection.engine);
@@ -52,9 +50,6 @@ export async function runOfficePlugin(packages: EnginePackages, profiles: LlmPro
 
   if (!status?.active || !status.enabled)
     throw Error('请先在执行引擎页安装并启用该引擎');
-
-  if (!status.candidate || status.active.identity !== status.candidate.identity)
-    throw Error('请先更新到最新兼容引擎版本');
 
   await turn.ReportStage?.('解析模型配置');
   const llm = await new EngineModelProfiles(profiles).Resolve(turn.selection.profileId, turn.selection.modelId, kind);
@@ -74,7 +69,7 @@ export async function runOfficePlugin(packages: EnginePackages, profiles: LlmPro
   await turn.ReportStage?.('加载本地引擎');
   const runtime = await packages.ResolveEngine(kind);
 
-  if (runtime.identity !== status.candidate.identity)
+  if (runtime.identity !== status.active.identity)
     throw Error('引擎版本已变更，请重新选择');
 
   const release = runtime.retain?.();

@@ -48,6 +48,23 @@ export class ProjectNavigation
     }
   }
 
+  /** 重新登记只需恢复该项目的显示状态，无需遍历各项目的会话。 */
+  public async RevealRegistered(id: string) {
+    const operation = this._pending.catch(() => {}).then(async () => {
+      const state = await this.State();
+      const meta = state.projects[id];
+      if (meta?.removed) {
+        meta.removed = false;
+        meta.archived = false;
+        state.revision++;
+        await atomic(path.join(this._projects.paths.userRoot, 'navigation.json'), JSON.stringify(stateSchema.parse(state), null, 2));
+      }
+      return meta?.name;
+    });
+    this._pending = operation;
+    return operation;
+  }
+
   /** 只读历史索引，不为侧栏创建空会话或加载项目运行时。 */
   public async Read(): Promise<NavigationSnapshot>
   {

@@ -174,7 +174,9 @@ export interface DesktopMenu
 
   Projects(): Promise<ProjectItem[]>;
 
-  AddProject(): Promise<ProjectItem | null>;
+  PickProject(): Promise<{ attempt: string; name: string } | null>;
+  AddProject(attempt: string): Promise<ProjectItem>;
+  ProjectDisplayed(attempt: string, at: number): Promise<void>;
 
   Resources(page: DiscoveryPage): Promise<DiscoveryResult>;
 

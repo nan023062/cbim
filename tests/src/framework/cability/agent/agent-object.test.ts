@@ -2,7 +2,7 @@ import { Organization, type AgentPermission } from '../../../../../src/framework
 import { CbimRuntime } from '../../../../../src/framework/cbim-runtime';
 import {it,expect,vi} from 'vitest';
 import {Team} from '../../../../../src/framework/cability/team';
-import {AgentRole,runAgentTask,type AgentTaskExecution} from '../../../../../src/framework/cability/agent';
+import {AgentRole,runAgentTask,agentRoleInstructions,type AgentTaskExecution} from '../../../../../src/framework/cability/agent';
 
 it('Office 权限透传主成员引擎、动态变更和后续成员，其他 Office 保持独立', async () => {
   const runtime = new CbimRuntime();
@@ -203,3 +203,5 @@ it('仅在 Token 窗口到期时推送速率，空闲时没有定时任务', asy
     cancel();
   } finally { vi.useRealTimers(); }
 });
+
+it('可用技能只提供目录，不把全部正文当作执行指令',()=>{const prompt=agentRoleInstructions({id:'agent',name:'成员',instructions:'岗位规则',skills:[{id:'review',name:'审核',content:'DO_NOT_AUTO_RUN'}],effectiveSkills:[{skillId:'inherited',ownerId:'team',inherited:true,content:'DO_NOT_INJECT'}]});expect(prompt).toContain('审核');expect(prompt).toContain('inherited');expect(prompt).not.toContain('DO_NOT_AUTO_RUN');expect(prompt).not.toContain('DO_NOT_INJECT');});

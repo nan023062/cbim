@@ -242,8 +242,10 @@ export function auditDependencies(root = process.cwd(), options = {}) {
       const a=layerOf(e.from),b=layerOf(e.to);
       if (a==='view'&&b==='logic') return true;
       if(e.from==='src/bridge/contracts/desktop-models.ts' && e.to==='src/logic/settings/models/index.ts') return false;
-      // Office 通信只具名转接纯 Agent 配置类型；不能引用设置存储或实例服务。
-      if(e.from==='src/bridge/contracts/discovery.ts' && ['src/logic/projects/agent-configuration.ts','src/logic/projects/organization-contract.ts','src/logic/projects/data-architecture-contract.ts','src/logic/projects/business-contract.ts','src/logic/projects/office-queue-contract.ts', 'src/logic/projects/navigation-contract.ts'].includes(e.to) && ['type','import type'].includes(e.kind)) return false;
+      // 斜杠命令共用纯配置规则；只放行这一便携契约，不开放设置存储或实例服务。
+      if(e.from==='src/bridge/contracts/discovery.ts' && e.to==='src/logic/projects/agent-configuration.ts') return false;
+      // 其余 Office 通信只具名转接纯类型。
+      if(e.from==='src/bridge/contracts/discovery.ts' && ['src/logic/projects/agent-configuration.ts','src/logic/projects/organization-contract.ts','src/logic/projects/business-contract.ts','src/logic/projects/office-queue-contract.ts', 'src/logic/projects/navigation-contract.ts'].includes(e.to) && ['type','import type'].includes(e.kind)) return false;
       if(e.to==='src/core/web/electron.ts'&&e.from!=='src/bridge/server/desktop/main.ts')return true;
       // 业务只消费桌面宿主注入的凭据类型；运行时引用仍受 Electron 分层限制。
       const cipherTypeAccess=e.kind==='type'&&e.to==='src/core/io/electron.ts'&&[
@@ -263,8 +265,8 @@ export function auditDependencies(root = process.cwd(), options = {}) {
       // 新桌面复用已验证的受管连接器生命周期，逻辑新层仍不得依赖旧装配。
       const desktopEngineLoader=e.from==='src/bridge/server/desktop/office-plugin.ts'&&e.to==='src/logic/projects/office-engine-loader.ts'||['src/bridge/server/desktop/main.ts','src/bridge/server/desktop/office-plugin.ts'].includes(e.from)&&e.to==='src/logic/resource-management/connector-runtime.ts';
       const updaterAccess=e.from==='src/bridge/server/bootstrap/desktop.ts'&&e.to==='src/updater/index.ts'||e.from==='src/logic/updates/service/desktop-releases.ts'&&e.to==='src/updater/release-policy.ts';
-      const applicationAccess=e.from==='src/logic/application/index.ts'&&(['src/logic/resource-management/index.ts','src/logic/monitor/index.ts'].includes(e.to)||['project.ts','data-architecture.ts','navigation.ts','office-queue.ts','offices.ts','paths.ts'].some(file=>e.to==='src/logic/projects/'+file));
-      const desktopAccess=e.from.startsWith('src/bridge/server/desktop/')&&['src/logic/projects/navigation-contract.ts','src/logic/projects/agent-configuration.ts','src/logic/projects/office-queue-contract.ts','src/logic/projects/business-contract.ts','src/logic/projects/organization-contract.ts','src/logic/projects/data-architecture-contract.ts','src/logic/projects/office-operations.ts','src/logic/projects/offices.ts','src/logic/projects/office-usage.ts','src/logic/resource-management/plugin-installations.ts','src/logic/resource-management/engine-catalog.ts'].includes(e.to);
+      const applicationAccess=e.from==='src/logic/application/index.ts'&&(['src/logic/resource-management/index.ts','src/logic/monitor/index.ts'].includes(e.to)||['project.ts','navigation.ts','office-queue.ts','offices.ts','paths.ts'].some(file=>e.to==='src/logic/projects/'+file));
+      const desktopAccess=e.from.startsWith('src/bridge/server/desktop/')&&['src/logic/projects/navigation-contract.ts','src/logic/projects/agent-configuration.ts','src/logic/projects/office-queue-contract.ts','src/logic/projects/business-contract.ts','src/logic/projects/organization-contract.ts','src/logic/projects/office-operations.ts','src/logic/projects/offices.ts','src/logic/projects/office-usage.ts','src/logic/resource-management/plugin-installations.ts','src/logic/resource-management/engine-catalog.ts'].includes(e.to);
       const artifactContract=e.from.startsWith('src/logic/resource-management/')&&e.to==='src/logic/updates/engine-artifacts.ts';
       const adapterLoader=e.from==='src/logic/projects/office-engine-loader.ts'&&/^src\/engine-plugins\/(pi|claude|codex|memory)\/package\.ts$/.test(e.to)&&e.kind==='generated-dynamic/require';
       const publicAccess=applicationAccess||desktopAccess||artifactContract||adapterLoader||updaterAccess||desktopEngineLoader||connectorContract||adapterAccess||ioErrorAccess||cipherTypeAccess||allowsEngineAccess(e.from,e.to)||allowsModelAccess(e.from,e.to)||allowsFeedbackAccess(e.from,e.to)||allowsResourceAccess(e.from,e.to)||domainAccess||runtimeAccess||serviceAccess;

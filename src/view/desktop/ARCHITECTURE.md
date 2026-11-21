@@ -4,6 +4,8 @@
 
 组合发现页与扩展区，管理工作区导航。
 
+项目名称旁提供办公室、组织架构、业务架构导航；页面选择独立于对话运行状态，选择对话时回到办公室。窄屏允许导航换行，避免挤压标题和窗口操作。
+
 ## 主要组成
 
 | 组成 | 定位 |
@@ -23,6 +25,11 @@ class N_ea19e9368c8b["DesktopShell"] {
   <<component>>
 }
 click N_ea19e9368c8b href "DesktopShell.tsx"
+class N_8043138c284d["ProjectSidebar"] {
+  <<component>>
+}
+click N_8043138c284d href "ProjectSidebar.tsx"
+N_ea19e9368c8b ..> N_8043138c284d : 依赖
 ```
 
 [上层设计](../ARCHITECTURE.md)

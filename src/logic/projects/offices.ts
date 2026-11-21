@@ -22,7 +22,7 @@ import { BusinessDirectory } from './business-directory';
 
 import { OfficeInputs } from './office-inputs';
 
-import type { AgentConfiguration } from './agent-configuration';
+import { SkillCommands, type AgentConfiguration } from './agent-configuration';
 
 export interface TurnMetrics
 {
@@ -68,6 +68,9 @@ export class ProjectOffices
 
   private readonly _inputs = new Map<string, OfficeInputs>();
 
+  /** 当前主运行采纳的可用技能；直接插入按本轮快照解析，不读取漂移配置。 */
+  private readonly _inputSkills = new Map<string, AgentConfiguration['skills']>();
+
   private readonly _idle = new Set<(project: string, session: string) => void>();
 
   public SubscribeIdle(listener: (project: string, session: string) => void): () => void
@@ -100,7 +103,7 @@ export class ProjectOffices
   }
 
   /** 用户追加任务与架构事件使用相同队列，不改变本轮模型或权限。 */
-  public Insert(project: string, session: string, text: string)
+  public Insert(project: string, session: string, text: string, skills?: AgentConfiguration['skills'])
   {
     if (!text.trim() || text.length > 32000)
       throw Error('追加消息长度须为 1 至 32000');
@@ -115,7 +118,7 @@ export class ProjectOffices
     if (!inputs)
       throw Error('当前没有运行中的主任务，请发送新消息');
 
-    return { id: inputs.Push(text.trim()), status: 'queued' as const };
+    return { id: inputs.Push(SkillCommands.Expand(text.trim(), skills ?? this._inputSkills.get(key))), status: 'queued' as const };
   }
 
   private readonly activeEngines = new Map<string, string>();
@@ -250,6 +253,8 @@ export class ProjectOffices
 
       const configuration = { ...saved.configuration, model: selection };
 
+      this._inputSkills.set(key, configuration.skills);
+
       const context = (await history.Messages(id)).map(m => ({ role: m.role, content: m.text }));
 
       const workspaceTree = office.project.DescribeWorkspaces();
@@ -274,7 +279,7 @@ export class ProjectOffices
 
       detach = office.Subscribe(event => { if (event.type !== 'task') return; const task = event.task; const states = { waiting: '等待依赖', blocked: '受阻', queued: '已排队', running: '执行中', completed: '已完成', suspended: '已挂起', cancelled: '已取消' }; record({ id: 'task:' + task.id + ':' + task.attempt + ':' + task.state, label: task.agentId + ' · ' + states[task.state], input: task.goal, result: task.workspaceInstanceId, alert: task.state === 'blocked' || task.state === 'suspended' ? task.error || task.goal : undefined }); publish({ phase: lastPhase, model: selection.modelId }); });
 
-      const goal = JSON.stringify({ project: project.entry.name, workspaceTree, organization: office.organization.children, userRequest: input.trim() });
+      const goal = JSON.stringify({ project: project.entry.name, workspaceTree, organization: office.organization.children, userRequest: SkillCommands.Expand(input.trim(), configuration.skills) });
 
       context.push({ role: 'user', content: goal });
 
@@ -289,7 +294,7 @@ export class ProjectOffices
 
       const runAgent = (role: AgentRole, messages: Parameters<OfficeChat>[1], root: string, session: string, agentInstanceId: string, signal: AbortSignal, ReadPermission: () => AgentPermission, report: (seq: number, kind: 'message' | 'summary', count: number) => void, operations: OfficeOperations, publish: (sample: ChatProgress) => void) => chat(agentRoleInstructions(role.definition), messages, signal, publish, { inputs: session === id ? inputs : undefined, ReadPermission, ReportTokens: total => { const previous = tokenReports.get(agentInstanceId) ?? { sequence: 0, total: 0 }; const next = { sequence: previous.sequence + 1, total: previous.total + total }; tokenReports.set(agentInstanceId, next); report(next.sequence, 'summary', next.total); }, operations, configuration: role.definition, agentInstanceId, officeId: office.id, selection: role.definition.model!, root, session, project: projectId, dataRoot: this.projects.paths.Project(projectId) });
 
-      const reply = await office.OpenMainAgent({ parameters: controller.signal, CreateEngine: async (signal, agentId, role, report, ReadPermission) => ({ session: () => runAgent(role, context, project.entry.path, id, agentId, signal, ReadPermission, report, dispatch.Operations(), reportProgress), Close: async () => { controller.abort(); }, }) }, (_engine, commands) => { dispatch = new OfficeDispatch(office, project.entry.path, commands, (role, goal, root, taskId, signal, ReadPermission, report, operations, agentId) => runAgent(role, [{ role: 'user', content: goal }], root, taskId, agentId, signal, ReadPermission, report, operations, sample => { if (sample.activity) reportProgress(sample); }), controller.signal); return () => { }; }, configuration);
+      const reply = await office.OpenMainAgent({ parameters: controller.signal, CreateEngine: async (signal, agentId, role, report, ReadPermission) => ({ session: () => runAgent(role, context, project.entry.path, id, agentId, signal, ReadPermission, report, dispatch.Operations(), reportProgress), Close: async () => { controller.abort(); }, }) }, (_engine, commands) => { dispatch = new OfficeDispatch(office, project.entry.path, commands, (role, goal, root, taskId, signal, ReadPermission, report, operations, agentId) => runAgent(role, [{ role: 'user', content: SkillCommands.Expand(goal, role.definition.skills) }], root, taskId, agentId, signal, ReadPermission, report, operations, sample => { if (sample.activity) reportProgress(sample); }), controller.signal); return () => { }; }, configuration);
 
       try
       {
@@ -335,6 +340,8 @@ export class ProjectOffices
       this.controllers.delete(key);
 
       this._inputs.delete(key);
+
+      this._inputSkills.delete(key);
 
       stopSignal?.removeEventListener('abort', externalStop);
 

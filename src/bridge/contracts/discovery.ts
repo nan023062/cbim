@@ -9,11 +9,11 @@ export type { OfficeQueueAction, OfficeQueueSnapshot, OfficeQueueItem } from '..
 export type { BusinessSnapshot, BusinessChange } from '../../logic/projects/business-contract';
 
 /** 新桌面菜单只公开显示字段及原生目录选择操作。 */
+export { SkillCommands } from '../../logic/projects/agent-configuration';
+
 export type { AgentConfiguration, AgentSettingsTarget } from '../../logic/projects/agent-configuration';
 
 export type { OrganizationNode, OrganizationSnapshot, OrganizationChange } from '../../logic/projects/organization-contract';
-
-export type { DataDefinition, DataArchitectureNode, DataArchitectureSnapshot, DataArchitectureChange } from '../../logic/projects/data-architecture-contract';
 
 export type DiscoveryPage = 'engines' | 'connectors' | 'talent' | 'templates';
 
@@ -137,8 +137,6 @@ export interface DesktopMenu
   OfficeQueue(project: string, session: string, action?: import('../../logic/projects/office-queue-contract').OfficeQueueAction): Promise<import('../../logic/projects/office-queue-contract').OfficeQueueSnapshot>;
 
   InsertOffice(project: string, session: string, text: string): Promise<{ id: string; status: 'queued' }>;
-
-  DataArchitecture(project: string, change?: import('../../logic/projects/data-architecture-contract').DataArchitectureChange): Promise<import('../../logic/projects/data-architecture-contract').DataArchitectureSnapshot>;
 
   AgentMembers(project: string): Promise<{ id: string; name: string; position: string; revision: number; configuration: import('../../logic/projects/agent-configuration').AgentConfiguration }[]>;
 

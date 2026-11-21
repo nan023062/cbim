@@ -296,3 +296,13 @@ h2.engine-brand img {width:30px;height:30px;}
 @media(prefers-reduced-motion:reduce) {
   #application-home .workspace-sidebar button:active {translate:none}
 }
+
+/* 项目页导航属于窗口顶栏，架构浏览不占用对话内容区。 */
+#application-home .workspace-topbar {height:auto;min-height:44px;flex-wrap:wrap;gap:10px;padding-block:4px;padding-right:48px}
+.workspace-project-title {min-width:0;max-width:35%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.workspace-project-nav {display:flex;gap:4px;align-items:center;flex-wrap:wrap;min-width:0}
+.workspace-project-nav button {background:transparent;border:0;border-radius:6px;padding:5px 10px;min-height:32px;font-size:var(--font-ui);color:var(--muted)}
+.workspace-project-nav button:hover {background:var(--hover);color:var(--text)}
+.workspace-project-nav button[aria-current=page] {background:var(--selected);color:var(--text);font-weight:var(--weight-medium)}
+@media(max-width:600px){.workspace-project-title{max-width:calc(100% - 32px)}.workspace-project-nav{flex-basis:100%;gap:2px}.workspace-project-nav button{flex:1;padding-inline:6px}}
+@media(pointer:coarse){.workspace-project-nav button{min-height:44px}}

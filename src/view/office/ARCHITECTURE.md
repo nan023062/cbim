@@ -2,9 +2,11 @@
 
 ## 设计意图
 
-让用户在项目内选择 Office 会话，查看记录并保存输入。
+让用户在项目内选择 Office 会话，查看记录并保存输入。办公室、组织架构与业务架构由桌面项目顶栏导航；OfficeView 接收页面选择，切换时保留会话与输入状态。对话内容区不再提供重复的架构或主 Agent 设置工具栏，主 Agent 的能力设置仅从输入区进入。
 
-组织架构页面的成员 item 与对话的主 Agent 设置共用 AgentSettingsDialog；引擎/LLM、Skills 和连接器使用同一表单及保存协议。主配置按当前会话保存，成员配置按岗位保存。左下角「＋」包含文本附件、Skills、连接器；能力选择不会自动安装资源或提交任务。运行中主设置禁用，成员设置保存更新后续派发目录并通知活动主 Agent，已运行实例保留冻结配置。
+组织架构页面的成员 item 与对话的主 Agent 设置共用 AgentSettingsDialog；引擎/LLM、Skills 和连接器使用同一表单及保存协议。主配置按当前会话保存，成员配置按岗位保存。左下角「＋」包含文本附件、Skills、连接器；能力选择不会自动安装资源或提交任务。主设置修改用于下一次提交的指令，成员设置保存更新后续派发目录并通知活动主 Agent，已运行实例保留冻结配置。
+
+SkillInput 根据当前主 Agent 可用 Skill 清单提供 `/` 补全，支持名称搜索、方向键、Enter/Tab 选择和 Esc 关闭；中文输入法确认不触发选择或提交。选择只修改草稿，发送后才发起调用；多条技能命令放在消息开头。输入框聚焦及设置保存时刷新清单，空列表、加载和无匹配状态分别展示。连接器勾选只改变可用工具范围，不主动调用工具。
 
 ## 主要组成
 
@@ -14,6 +16,7 @@
 
 | 组成 | 定位 |
 | --- | --- |
+| [SkillInput](SkillInput.tsx) | 可用技能的斜杠命令补全与草稿交互，不负责派发。 |
 | [OfficeView](OfficeView.tsx) | 展示当前会话及其输入框。 |
 | [BusinessPanel](BusinessPanel.tsx) | 当前业务树的层级导航、搜索、详情与编辑入口。 |
 | [BusinessNodeDialog](BusinessNodeDialog.tsx) | 业务资料、来源范围、归属调整与删除确认。 |
@@ -22,19 +25,6 @@
 | [AgentSettingsDialog](AgentSettingsDialog.tsx) | 两种角色共用的能力编辑、版本化保存及错误反馈。 |
 | [MainAgentPicker](MainAgentPicker.tsx) | 保留原组件名，主与成员共用引擎可用性、兼容模型选择及安装入口。 |
 | [PermissionPicker](PermissionPicker.tsx) | 使用书本、手掌、警示图标区分权限，提供说明、选中状态和键盘操作；选择仍交由 OfficeView 保存与发送。 |
-
-数据架构入口与业务／组织并列。DataArchitecturePanel 浏览数据域、实体、字段，支持折叠、按名称／说明／类型查询并保留祖先、路径与下级导航；操作使用带标题及可访问名称的图标。DataNodeDialog 负责新增、编辑、归属调整和删除确认，字段支持逻辑类型、必填与联合主键，移动排除后代；非空节点不能删除。保存失败保留草稿，旧刷新回执不能覆盖新保存。页面明确区分本机结构定义与实际数据库，不暗示已建表或迁移。手机纵向布局沿用架构页面样式。
-
-| 数据页面组成 | 定位 |
-| --- | --- |
-| [DataArchitecturePanel](DataArchitecturePanel.tsx) | 数据树、搜索、选择、刷新和 CRUD 导航。 |
-| [DataNodeDialog](DataNodeDialog.tsx) | 定义草稿、字段约束及删除确认。 |
-
-```mermaid
-classDiagram
-OfficeView --> DataArchitecturePanel : 数据架构入口
-DataArchitecturePanel --> DataNodeDialog : 编辑与确认
-```
 
 ```mermaid
 classDiagram
@@ -54,6 +44,10 @@ class N_c1813d8369a9["OfficeView"] {
   <<component>>
 }
 click N_c1813d8369a9 href "OfficeView.tsx"
+class N_8df9edd80fbe["SkillInput"] {
+  <<component>>
+}
+click N_8df9edd80fbe href "SkillInput.tsx"
 class N_b15395ac4ab4["BusinessPanel"] {
   <<component>>
 }
@@ -70,31 +64,19 @@ class N_344141f2516b["MainAgentPicker"] {
   <<component>>
 }
 click N_344141f2516b href "MainAgentPicker.tsx"
-class N_781427e97d30["PermissionPicker"] {
-  <<component>>
-}
-click N_781427e97d30 href "PermissionPicker.tsx"
+N_c1813d8369a9 ..> N_8df9edd80fbe : 依赖
 N_c1813d8369a9 ..> N_b15395ac4ab4 : 依赖
 N_c1813d8369a9 ..> N_7eea51e09f38 : 依赖
 N_c1813d8369a9 ..> N_0ed9b2051bb7 : 依赖
 N_c1813d8369a9 ..> N_344141f2516b : 依赖
-N_c1813d8369a9 ..> N_781427e97d30 : 依赖
 N_7eea51e09f38 ..> N_0ed9b2051bb7 : 依赖
 N_0ed9b2051bb7 ..> N_344141f2516b : 依赖
 ```
 
-### 关系组 2：DataArchitecturePanel
+### 关系组 2：BusinessNodeDialog
 
 ```mermaid
 classDiagram
-class N_6649156ce5d1["DataArchitecturePanel"] {
-  <<component>>
-}
-click N_6649156ce5d1 href "DataArchitecturePanel.tsx"
-class N_7d49add0bab1["DataNodeDialog"] {
-  <<component>>
-}
-click N_7d49add0bab1 href "DataNodeDialog.tsx"
 class N_edc86e1c0e2b["BusinessNodeDialog"] {
   <<component>>
 }
@@ -103,7 +85,10 @@ class N_ae2d02e6d4c7["OrganizationNodeDialog"] {
   <<component>>
 }
 click N_ae2d02e6d4c7 href "OrganizationNodeDialog.tsx"
-N_6649156ce5d1 ..> N_7d49add0bab1 : 依赖
+class N_781427e97d30["PermissionPicker"] {
+  <<component>>
+}
+click N_781427e97d30 href "PermissionPicker.tsx"
 ```
 
 ### 跨图协作
@@ -112,7 +97,7 @@ N_6649156ce5d1 ..> N_7d49add0bab1 : 依赖
 
 | 引用方 | 关系 | 目标 |
 | --- | --- | --- |
-| [OfficeView](OfficeView.tsx)（图 1） | 依赖 | [DataArchitecturePanel](DataArchitecturePanel.tsx)（图 2） |
+| [OfficeView](OfficeView.tsx)（图 1） | 依赖 | [PermissionPicker](PermissionPicker.tsx)（图 2） |
 | [BusinessPanel](BusinessPanel.tsx)（图 1） | 依赖 | [BusinessNodeDialog](BusinessNodeDialog.tsx)（图 2） |
 | [OrganizationPanel](OrganizationPanel.tsx)（图 1） | 依赖 | [OrganizationNodeDialog](OrganizationNodeDialog.tsx)（图 2） |
 

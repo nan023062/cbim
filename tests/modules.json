@@ -7,7 +7,9 @@
         "src/logic/projects/"
       ],
       "tests": {
-        "unit": [],
+        "unit": [
+          "tests/src/logic/projects/skill-commands.test.ts"
+        ],
         "contract": [
           "tests/src/logic/projects/office-workspace-tree.test.ts",
           "tests/src/logic/projects/office-engine-loader.test.ts"
@@ -16,7 +18,6 @@
           "tests/src/logic/projects/office-dispatch.test.ts",
           "tests/src/logic/projects/agent-settings.test.ts",
           "tests/src/logic/projects/organization-directory.test.ts",
-          "tests/src/logic/projects/data-architecture.test.ts",
           "tests/src/logic/projects/architecture-live.test.ts",
           "tests/src/logic/projects/office-queue.test.ts",
           "tests/src/logic/projects/navigation.test.ts"

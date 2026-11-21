@@ -10,7 +10,6 @@
 | --- | --- |
 | [Application](index.ts) | Application 持有资源仓库和运行时实例。 |
 
-Application 装配并持有 DataArchitecture，使用同一个 ProjectList 验证项目身份；服务负责本机结构目录保存，不参与 Office 的数据库执行或工作流生命周期。
 
 <!-- architecture:generated:start -->
 

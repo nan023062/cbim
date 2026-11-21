@@ -13,7 +13,6 @@ const menu: DesktopMenu = {
   BusinessArchitecture: (project, change) => ipcRenderer.invoke('project:business', { project, change }),
   OfficeQueue: (project, session, action) => ipcRenderer.invoke('office:queue', { project, session, action }),
   InsertOffice: (project, session, text) => ipcRenderer.invoke('office:insert', { project, session, text }),
-  DataArchitecture: (project, change) => ipcRenderer.invoke('project:data-architecture', { project, change }),
   AgentMembers: project => ipcRenderer.invoke('agent:members', project),
   AgentSettings: (project, target, save) => ipcRenderer.invoke('agent:settings', { project, target, save }),
   AgentConnectors: () => ipcRenderer.invoke('agent:connectors'),

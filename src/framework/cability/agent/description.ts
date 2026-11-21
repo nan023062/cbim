@@ -33,11 +33,10 @@ export function agentRoleInstructions(role: AgentDefinition): string
   if (role.references?.length)
     sections.push('岗位参考：\n' + role.references.join('\n'));
 
-  for (const skill of role.effectiveSkills ?? [])
-    sections.push('技能 ' + skill.skillId + '\n' + skill.content);
+  const available = [...(role.effectiveSkills ?? []).map(skill => ({ id: skill.skillId, name: skill.skillId })), ...(role.skills ?? []).map(skill => ({ id: skill.id, name: skill.name }))];
 
-  for (const skill of role.skills ?? [])
-    sections.push('技能 ' + skill.name + '\n' + skill.content);
+  if (available.length)
+    sections.push('可用技能目录（仅表示可用，不是执行指令；不得自动执行全部技能）：\n' + JSON.stringify(available));
 
   return sections.filter(Boolean).join('\n\n');
 }

@@ -4,7 +4,7 @@
 
 桌面主框架管理项目、Office 对话和页面导航，通过受限宿主接口读写项目与运行状态。index.html 只挂载本目录入口；旧 src/view 已整体退役，不再保留兼容渲染路径。
 
-组织、业务和数据架构的编辑以及 Office 输入队列由本目录展示，状态由 logic/projects 持有。此次删除旧界面不代表旧浏览器、终端和自动化面板已迁入新界面；后续能力通过新页面与宿主契约独立接入。
+组织和业务架构的编辑以及 Office 输入队列由本目录展示，状态由 logic/projects 持有。此次删除旧界面不代表旧浏览器、终端和自动化面板已迁入新界面；后续能力通过新页面与宿主契约独立接入。
 
 旧界面专属测试与浏览器夹具随实现退役。跨模块后端测试直接校验公共事件、附件快照、任务状态及持久化回执，不依赖 React 展示投影。
 
@@ -93,7 +93,7 @@ click N_548175957adf href "settings/ARCHITECTURE.md"
 | [discovery](discovery/ARCHITECTURE.md) | 浏览和筛选资源分类。 |
 | [extension](extension/ARCHITECTURE.md) | 维护当前窗口的扩展标签。 |
 | [monitor](monitor/ARCHITECTURE.md) | 独立渲染 Agent 和进程的资源占用。 |
-| [office](office/ARCHITECTURE.md) | 让用户在项目内选择 Office 会话，查看记录并保存输入。 |
+| [office](office/ARCHITECTURE.md) | 让用户在项目内选择 Office 会话，查看记录并保存输入。办公室、组织架构与业务架构由桌面项目顶栏导航；OfficeView 接收页面选择，切换时保留会话与输入状态。对话内容区不再提供重复的架构或主 Agent 设置工具栏，主 Agent 的能力设置仅从输入区进入。 |
 | [settings](settings/ARCHITECTURE.md) | 在主窗口内提供独立的设置导航与分组内容。 |
 | [shared](shared/ARCHITECTURE.md) | Icon 的组织操作图形包含返回、新增团队和新增成员，复用既有线性图标风格；文字提示和可访问名称由使用它的按钮提供。 |
 

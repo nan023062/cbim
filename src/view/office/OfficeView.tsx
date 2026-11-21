@@ -18,6 +18,10 @@ import { EarlierTurn, Message } from './Transcript';
 
 import type { OfficeConversation, OfficeMessage, OfficeProgress, ProjectItem } from '../../bridge/contracts/discovery';
 
+import { SkillInput } from './SkillInput';
+
+import type { AgentConfiguration } from '../../bridge/contracts/discovery';
+
 import { MainAgentPicker } from './MainAgentPicker';
 
 import { PermissionPicker } from './PermissionPicker';
@@ -28,8 +32,6 @@ import { OrganizationPanel } from './OrganizationPanel';
 
 import { BusinessPanel } from './BusinessPanel';
 
-import { DataArchitecturePanel } from './DataArchitecturePanel';
-
 import type { OfficeSelection } from '../../bridge/contracts/discovery';
 
 import { Icon } from '../shared/Icon';
@@ -38,6 +40,11 @@ import './office.css';
 
 interface Props
 {
+  /** 顶部项目导航选择的页面；切换不销毁当前会话状态。 */
+  view: 'office' | 'organization' | 'business';
+
+  onOffice(): void;
+
   project: ProjectItem;
 
   conversation: OfficeConversation;
@@ -62,7 +69,7 @@ function duration(ms: number)
   return s < 60 ? s + 's' : Math.floor(s / 60) + 'm ' + s % 60 + 's';
 }
 
-export function OfficeView({ project, conversation, draft, onDraft, onSaved, started, onRunning, onManageEngines }: Props)
+export function OfficeView({ project, conversation, draft, onDraft, onSaved, started, onRunning, onManageEngines, view, onOffice }: Props)
 {
   const [now, setNow] = useState(0);
 
@@ -93,19 +100,51 @@ export function OfficeView({ project, conversation, draft, onDraft, onSaved, sta
 
   const [settingsTab, setSettingsTab] = useState<'model' | 'skills' | 'connectors'>();
 
-  const [organization, setOrganization] = useState(false);
-
-  const [business, setBusiness] = useState(false);
-
-  const [dataArchitecture, setDataArchitecture] = useState(false);
-
   const [settingsReady, setSettingsReady] = useState(false);
+
+  const [availableSkills, setAvailableSkills] = useState<NonNullable<AgentConfiguration['skills']>>([]);
+
+  const [skillsLoading, setSkillsLoading] = useState(false);
+
+  const skillRefresh = useRef(0);
+
+  /** 聚焦读取可用清单，迟到结果不能覆盖设置弹窗刚保存的配置。 */
+  async function RefreshSkills()
+  {
+    const request = ++skillRefresh.current;
+
+    setSkillsLoading(true);
+
+    try
+    {
+      const saved = await window.desktopMenu.AgentSettings(project.id, { kind: 'main', id: conversation.id });
+
+      if (request === skillRefresh.current)
+        setAvailableSkills(saved.configuration.skills ?? []);
+    }
+    catch (error)
+    {
+      if (request === skillRefresh.current)
+      {
+        setAvailableSkills([]);
+
+        setError(String(error));
+      }
+    }
+    finally
+    {
+      if (request === skillRefresh.current)
+        setSkillsLoading(false);
+    }
+  }
+
+  useEffect(() => () => { skillRefresh.current++; }, []);
 
   const selectionKey = 'office-main-agent:' + conversation.id;
 
   const [selection, setSelection] = useState<OfficeSelection>(() => { try { const stored = JSON.parse(localStorage.getItem(selectionKey) || '{}'); return { ...stored, engine: stored?.engine || 'codex' }; } catch { return { engine: 'codex' }; } });
 
-  useEffect(() => { let current = true; window.desktopMenu.AgentSettings(project.id, { kind: 'main', id: conversation.id }).then(saved => { if (current) { if (saved.configuration.model) setSelection(saved.configuration.model); setSettingsReady(true); } }).catch(error => { if (current) setError(String(error)); }); return () => { current = false; }; }, [project.id, conversation.id]);
+  useEffect(() => { let current = true; window.desktopMenu.AgentSettings(project.id, { kind: 'main', id: conversation.id }).then(saved => { if (current) { setAvailableSkills(saved.configuration.skills ?? []); if (saved.configuration.model) setSelection(saved.configuration.model); setSettingsReady(true); } }).catch(error => { if (current) setError(String(error)); }); return () => { current = false; }; }, [project.id, conversation.id]);
 
   const pref = 'office-permission:' + conversation.id;
 
@@ -272,19 +311,15 @@ export function OfficeView({ project, conversation, draft, onDraft, onSaved, sta
 
   const count = persisted + (started ? 2 : 0);
 
-  if (organization)
-    return <OrganizationPanel project={project.id} OnBack={() => setOrganization(false)} OnManageEngines={onManageEngines} />;
+  if (view === 'organization')
+    return <OrganizationPanel project={project.id} OnBack={onOffice} OnManageEngines={onManageEngines} />;
 
-  if (business)
-    return <BusinessPanel project={project.id} OnBack={() => setBusiness(false)} />;
-
-  if (dataArchitecture)
-    return <DataArchitecturePanel key={project.id} project={project.id} OnBack={() => setDataArchitecture(false)} />;
+  if (view === 'business')
+    return <BusinessPanel project={project.id} OnBack={onOffice} />;
 
   return <Screen className="office-chat" aria-label="Office 对话" onPointerMove={interact} onPointerDown={interact}
     onWheelCapture={interact} onTouchMove={interact} onKeyDownCapture={interact} onFocusCapture={interact} onInputCapture={interact}>
-    <div className="office-agent-toolbar"><button type="button" onClick={() => setBusiness(true)}><Icon name="flow" size={15} />业务架构</button><button type="button" onClick={() => setOrganization(true)}><Icon name="team" size={15} />组织架构</button><button type="button" onClick={() => setDataArchitecture(true)}><Icon name="database" size={15} />数据架构</button><button type="button" disabled={submitting} onClick={() => setSettingsTab('model')}><Icon name="settings" size={15} />主 Agent 设置</button></div>
-    {settingsTab && <AgentSettingsDialog project={project.id} target={{ kind: 'main', id: conversation.id }} title="主 Agent 设置" tab={settingsTab} initialModel={selection} OnClose={() => setSettingsTab(undefined)} OnManageEngines={onManageEngines} OnSaved={configuration => { if (configuration.model) { setSelection(configuration.model); localStorage.setItem(selectionKey, JSON.stringify(configuration.model)); } }} />}
+    {settingsTab && <AgentSettingsDialog project={project.id} target={{ kind: 'main', id: conversation.id }} title="主 Agent 设置" tab={settingsTab} initialModel={selection} OnClose={() => setSettingsTab(undefined)} OnManageEngines={onManageEngines} OnSaved={configuration => { skillRefresh.current++; setSkillsLoading(false); setAvailableSkills(configuration.skills ?? []); if (configuration.model) { setSelection(configuration.model); localStorage.setItem(selectionKey, JSON.stringify(configuration.model)); } }} />}
     <div className="office-transcript">
       {count ? <WindowList listRef={log} count={count} label="对话记录" initialEnd
         itemKey={i => earlier[i] ?? ('message-' + (i - earlier.length))}
@@ -297,8 +332,7 @@ export function OfficeView({ project, conversation, draft, onDraft, onSaved, sta
       <div className="office-strip" title={project.name}><span role="status" className={started ? 'active' : ''}><Icon name="sparkles" size={14} />{phase}</span>
       <span title="累计工作时间 · 近两秒估算生成速度">{duration(elapsed)} · {started && sample?.rate != null ? '≈' + sample.rate.toFixed(1) : '—'} tok/s</span></div>
       <form onSubmit={e => { e.preventDefault(); void submit(); }}>
-        <textarea id="office-message" aria-label="任务目标或补充消息" placeholder={started ? "输入下一条指令，发送后加入队列…" : "继续聊一聊…"} rows={3} maxLength={32000} disabled={submitting} value={draft} onChange={e => onDraft(e.target.value)}
-          onKeyDown={e => { if (!e.nativeEvent.isComposing && e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); void submit(); } }} />
+        <SkillInput value={draft} skills={availableSkills} loading={skillsLoading} disabled={submitting} running={!!started} OnChange={onDraft} OnSubmit={() => void submit()} OnRefresh={() => void RefreshSkills()} />
         <footer><button type="button" disabled={submitting} title="添加附件、Skill 或连接器" aria-label="添加附件或能力" popoverTarget="office-add-menu"><Icon name="plus" size={16} /></button>
           <div id="office-add-menu" className="office-add-menu" popover="auto"><button type="button" popoverTarget="office-add-menu" popoverTargetAction="hide" onClick={() => picker.current?.click()}><Icon name="folder" size={15} />添加文本文件</button><button type="button" popoverTarget="office-add-menu" popoverTargetAction="hide" onClick={() => setSettingsTab('skills')}><Icon name="knowledge" size={15} />Skills</button><button type="button" popoverTarget="office-add-menu" popoverTargetAction="hide" onClick={() => setSettingsTab('connectors')}><Icon name="plug" size={15} />连接器</button></div>
           <input ref={picker} type="file" hidden accept="text/*,.md,.json,.yaml,.csv" onChange={e => { void attach(e.target.files?.[0]); e.target.value = ''; }} />

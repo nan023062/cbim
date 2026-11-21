@@ -39,6 +39,9 @@ export function DesktopShell()
 
   const [page, setPage] = useState<DiscoveryPage | 'workspace'>('workspace');
 
+  /** 项目页内的导航选择与 Office 执行状态独立。 */
+  const [workspaceView, setWorkspaceView] = useState<'office' | 'organization' | 'business'>('office');
+
   const [projects, setProjects] = useState<ProjectItem[]>([]);
 
   const [selected, setSelected] = useState<ProjectItem>();
@@ -54,6 +57,8 @@ export function DesktopShell()
   function openProject(project: ProjectItem, draft = false, session?: string)
   {
     setPage('workspace');
+
+    setWorkspaceView('office');
 
     if (innerWidth <= 720)
       setExpanded(false);
@@ -167,11 +172,12 @@ export function DesktopShell()
       <div className="project-sidebar-resize" role="separator" aria-label="调整项目侧栏宽度" aria-orientation="vertical" aria-valuemin={220} aria-valuemax={420} aria-valuenow={sidebarWidth} tabIndex={0} onKeyDown={event => { if (['ArrowLeft', 'ArrowRight', 'Home'].includes(event.key)) { event.preventDefault(); const next = event.key === 'Home' ? 320 : Math.max(220, Math.min(420, sidebarWidth + (event.key === 'ArrowRight' ? 10 : -10))); setSidebarWidth(next); localStorage.setItem('project-sidebar-width', String(next)); } }} onPointerDown={event => event.currentTarget.setPointerCapture(event.pointerId)} onPointerMove={event => { if (event.currentTarget.hasPointerCapture(event.pointerId)) setSidebarWidth(Math.max(220, Math.min(420, event.clientX))); }} onPointerUp={event => { if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId); localStorage.setItem('project-sidebar-width', String(sidebarWidth)); }} onDoubleClick={() => { setSidebarWidth(320); localStorage.removeItem('project-sidebar-width'); }} />
     </aside>
     <main className="workspace-main">
-      <header className="workspace-topbar">{page !== 'workspace' && <button aria-label="返回工作区" onClick={() => setPage('workspace')}>←</button>}<Icon name="folder" size={16} /><strong>{title}</strong>
+      <header className="workspace-topbar">{page !== 'workspace' && <button aria-label="返回工作区" onClick={() => setPage('workspace')}>←</button>}<Icon name="folder" size={16} /><strong className="workspace-project-title" title={title}>{title}</strong>
+        {page === 'workspace' && selected && office && <nav className="workspace-project-nav" aria-label="项目页面">{([['office', '办公室'], ['organization', '组织架构'], ['business', '业务架构']] as const).map(([id, label]) => <button key={id} type="button" aria-current={workspaceView === id ? 'page' : undefined} onClick={() => setWorkspaceView(id)}>{label}</button>)}</nav>}
       </header>
       {error && <p role="alert">{error}</p>}
       {page !== 'workspace' ? <DiscoveryView key={page} page={page} title={title} /> : selected ? office ?
-          <OfficeView onManageEngines={() => setPage('engines')} key={office.id} conversation={office} project={selected} draft={drafts[office.id] ?? ''}
+          <OfficeView view={workspaceView} onOffice={() => setWorkspaceView('office')} onManageEngines={() => setPage('engines')} key={office.id} conversation={office} project={selected} draft={drafts[office.id] ?? ''}
             onDraft={text => setDrafts(previous => ({ ...previous, [office.id]: text }))}
             started={running[office.id] ?? 0} onRunning={time => setRunning(previous => ({ ...previous, [office.id]: time }))}
             onSaved={messages => { setOffice(current => current?.id === office.id ? { ...current, messages: [...current.messages, ...messages.filter(m => !current.messages.some(existing => existing.id === m.id))] } : current); }} />

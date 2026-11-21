@@ -24,7 +24,6 @@ agent:settings / agent:members 转接项目配置服务；agent:connectors 只�
 | [OfficeTools](office-tools.ts) | 适配原生工具授权和 Office 调用，持有本轮内部调用授权。 |
 | [runOfficePlugin](office-plugin.ts) | 装配受管引擎、工具目录、取消和工作记录。 |
 
-`project:data-architecture` 使用受信窗口校验及严格命令 Schema，转接 Application 持有的 DataArchitecture；只接受项目 ID、资料与预期版本，不接受文件路径、SQL 或数据库凭据。预加载的 DataArchitecture 方法仅返回可序列化目录快照。
 
 office-plugin 将主任务的 OfficeInputs 接到已存在的原生 steer；缺少原生插入能力时，工具执行前发现新输入则拒绝本次旧调用并返回追加上下文，工具完成后发现新输入则随结果返回。已开始的工具不被追溯撤销。生成结束仍有未交付输入时，由 ProjectOffices 在同一主任务内续跑。原生交付不确定会记录告警，不谎称模型已执行或自动重发；成员不消费主队列。
 

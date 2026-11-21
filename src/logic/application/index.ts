@@ -10,8 +10,6 @@ import { createApplicationMonitor } from '../monitor';
 
 import { ProjectList } from '../projects/project';
 
-import { DataArchitecture } from '../projects/data-architecture';
-
 import { ProjectNavigation } from '../projects/navigation';
 
 import { OfficeQueue } from '../projects/office-queue';
@@ -45,9 +43,6 @@ export class Application implements ApplicationEntry
 
   public readonly projects: ProjectList;
 
-  /** 项目数据结构目录，与执行中的业务树分别拥有状态。 */
-  public readonly dataArchitecture: DataArchitecture;
-
   public readonly offices: ProjectOffices;
 
   public readonly officeQueue: OfficeQueue;
@@ -61,8 +56,6 @@ export class Application implements ApplicationEntry
     this.resources = new ResourceRepositories(paths);
 
     this.projects = new ProjectList(new Paths(paths.userRoot, paths.installRoot, paths.protectedRoots));
-
-    this.dataArchitecture = new DataArchitecture(this.projects);
 
     this.monitor = createApplicationMonitor(this.projects);
 

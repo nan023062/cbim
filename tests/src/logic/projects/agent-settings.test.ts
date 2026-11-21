@@ -37,7 +37,8 @@ test('主会话与成员独立保存完整能力配置，重开后恢复，启�
     expect((await offices.settings.Read(entry.id, main)).configuration).toEqual(mainConfig);
     expect((await offices.settings.Members(entry.id))[0].configuration).toEqual(workerConfig);
     await offices.Send(entry.id, first.id, 'run', undefined, 'execute', mainConfig.model);
-    expect(prompts[0]).toContain('MAIN_ONLY_SKILL');
+    expect(prompts[0]).toContain('Review');
+    expect(prompts[0]).not.toContain('MAIN_ONLY_SKILL');
     expect(prompts[0]).not.toContain('WORKER_ONLY_SKILL');
     expect(turns[0].configuration).toMatchObject(mainConfig);
     expect(Object.isFrozen(turns[0].configuration?.skills)).toBe(true);

@@ -1,7 +1,7 @@
 /**
  * 目录归属：engine-plugins/claude；Claude 引擎适配。
  * 作用定位：从 CBIM 自带资源或开发依赖加载固定版本的 Claude Agent SDK。
- * 设计原因：SDK 自带 CLI 与平台二进制保留独立目录，打包后不借用 Cindy 或用户外部 Claude 安装。
+ * 设计原因：SDK 自带 CLI 与平台二进制保留独立目录，打包后不依赖用户另行安装 Claude。
  * 受管安装通过已验证 E 包入口加载 SDK，仍核对当前适配器支持的版本；开发/旧测试保留原解析路径。
  */
 import path from 'node:path';

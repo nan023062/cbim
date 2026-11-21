@@ -135,4 +135,4 @@ pnpm start
 
 `ainative/docs/` 不依赖项目设计或操作记录；项目设计与提交／Issue／PR 中的验证记录依据这些准则维护。
 
-其余旧设计文档已清理，历史内容可用 `git show 812bec16:<原仓库相对路径>` 查阅。旧知识内置加载器已退役；当前 Skill 设置与加载沿 [Office 模块](src/logic/projects/ARCHITECTURE.md) 阅读。Cindy 的 [许可](legal/cindy-LICENSE) 与 [NOTICE](legal/cindy-NOTICE) 归入 `legal/` 并随包分发，NOTICE 中的上游目录说明保留原文。
+其余旧设计文档已清理，历史内容可用 `git show 812bec16:<原仓库相对路径>` 查阅。旧知识内置加载器已退役；当前 Skill 设置与加载沿 [Office 模块](src/logic/projects/ARCHITECTURE.md) 阅读。第三方组件的 [许可](legal/LICENSE) 与 [NOTICE](legal/NOTICE) 归入 `legal/` 并随包分发，NOTICE 中的上游目录说明保留原文。

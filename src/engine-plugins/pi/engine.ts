@@ -415,7 +415,7 @@ export class PiEngine implements AgentEngine
         }
 
         return;
-      // 与 Cindy Pi 适配一致：工具进度、重试、压缩都不是终态，只有 settled 收口。
+      // 工具进度、重试、压缩都不是终态，只有 settled 收口。
       case 'tool_execution_update':
         await emit({ type: 'tool.updated', data: { id: event.toolCallId, name: event.toolName, result: event.partialResult } });
 

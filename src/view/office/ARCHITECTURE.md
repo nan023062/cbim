@@ -112,6 +112,4 @@ click N_781427e97d30 href "PermissionPicker.tsx"
 
 ### Office 指令排队
 
-OfficeView 默认提交到宿主队列，定期读取队列及完成记录；运行期间可选择下一条指令的引擎、模型，并从加号修改连接器。OfficeQueuePanel 展示顺序与配置摘要，支持鼠标/触屏拖柄、Alt+方向键、上下移图标、编辑、移除及单条立即插入。队列与当前任务输入分离，修改不追溯已有排队项。设计对照 Cindy 的 host-owned input queue 与 inline queue section（commit 4e4173743fc2c3cee83d0c4ae2f3aae79a4f2df4），由 CBIM 独立实现。
-
-参考：[Cindy 队列契约](https://github.com/makecindy/cindy/blob/4e4173743fc2c3cee83d0c4ae2f3aae79a4f2df4/apps/desktop/src/shared/agentInputQueue.ts)、[移动端队列呈现](https://github.com/makecindy/cindy/blob/4e4173743fc2c3cee83d0c4ae2f3aae79a4f2df4/apps/mobile/src/session/InlineQueueSection.tsx)。
+OfficeView 默认提交到宿主队列，定期读取队列及完成记录；运行期间可选择下一条指令的引擎、模型，并从加号修改连接器。OfficeQueuePanel 展示顺序与配置摘要，支持鼠标/触屏拖柄、Alt+方向键、上下移图标、编辑、移除及单条立即插入。队列与当前任务输入分离，修改不追溯已有排队项。

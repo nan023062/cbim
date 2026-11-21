@@ -1,9 +1,9 @@
 /**
  * 目录归属：engine-plugins/pi；Pi 引擎适配。
  * 作用定位：将模型容量和工作预算转换为 Pi 原生运行设置，供每轮隔离进程使用。
- * 设计原因：移植 Cindy buildPiSettingsJsonContent 的预算公式与重试配置；
+ * 设计原因：移植上游 buildPiSettingsJsonContent 的预算公式与重试配置；
  * 工作预算只控制压缩时机，不能缩小 model.contextWindow 而意外截断输出。
- * 来源：makecindy/cindy@56b6e9a，Apache-2.0，许可见 legal/cindy-LICENSE。
+ * 来源：上游版本 56b6e9a，Apache-2.0，署名见 legal/NOTICE，许可见 legal/LICENSE。
  */
 import type { LlmModel } from '../../logic/models';
 

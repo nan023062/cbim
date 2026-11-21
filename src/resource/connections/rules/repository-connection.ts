@@ -53,7 +53,7 @@ export const repositoryConnectionUnacceptedInputSchema = z.object({ ...identityS
 export const repositoryConnectionUnacceptedSchema = z.object({ identity, action: z.enum(['commit', 'grant', 'revoke']), id: uuid, unaccepted: z.boolean() }).strict();
 
 const connection = z.object({
-  connectorId: connectorIdSchema, name: z.string(), summary: z.string(), provider: z.enum(['cindy_plugin', 'resource_repository_v1']), definitionHash: hash.optional(), repositoryId: uuid.optional(), grantRevision: revision, grant: repositoryConnectionGrantSchema.optional(),
+  connectorId: connectorIdSchema, name: z.string(), summary: z.string(), provider: z.enum(['external_plugin', 'resource_repository_v1']), definitionHash: hash.optional(), repositoryId: uuid.optional(), grantRevision: revision, grant: repositoryConnectionGrantSchema.optional(),
   status: z.enum(['ready', 'not_shared', 'not_granted', 'definition_changed', 'repository_changed', 'unsupported', 'definition_missing']),
 }).strict();
 

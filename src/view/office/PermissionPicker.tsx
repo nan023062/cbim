@@ -1,5 +1,5 @@
 /**
- * 作用定位：Office 权限选择器；沿用 Cindy 风格的图标、说明行与选中标记，权限状态由 OfficeView 持有。
+ * 作用定位：Office 权限选择器；展示权限图标、说明行与选中标记，权限状态由 OfficeView 持有。
  * 设计原因：受控组件表达三种权限并保留键盘操作，实际工具授权仍由宿主逐次检查。
  */
 import { useEffect, useId, useRef, useState } from 'react';
@@ -9,7 +9,7 @@ import { Icon } from '../../framework-ui/Icon';
 /** 三种权限沿用现有协议值，不因展示调整改变授权。 */
 type Permission = 'read' | 'ask' | 'execute';
 
-/** 与既有 Cindy 风格权限选择器保持一致的图标语义。 */
+/** 权限级别对应的图标。 */
 const options = [
   { value: 'read', label: '只读访问', icon: 'knowledge', description: '仅查看和分析，不修改文件或执行命令' },
   { value: 'ask', label: '默认权限', icon: 'hand', description: '修改文件和执行命令前请求确认' },

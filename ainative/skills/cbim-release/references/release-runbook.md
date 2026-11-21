@@ -23,7 +23,7 @@
 
 当前入口：`pnpm typecheck`、`pnpm check:architecture`（含依赖检查）、`pnpm check:brand`、`pnpm build:website`、相关 `pnpm exec vitest run ...`。测试输出保存在本次唯一证据目录，保留原失败，不覆写为成功。跳过项记录名称和真实前置条件，不能照搬旧版本的测试数量。
 
-在 develop 提交已验证准备工作并冻结干净源码；保留人类作者与 `Assisted-by: Cindy (https://cindy.app)`。记录完整 source SHA。构建期间不能切换 HEAD 或并行改共享 Forge 输出；发现 `build/desktop-signing.lock` 先按锁中的 PID／命令／目录核实是否仍在构建，不能直接删锁重跑。
+在 develop 提交已验证准备工作并冻结干净源码；保留人类作者与真实的协作署名。记录完整 source SHA。构建期间不能切换 HEAD 或并行改共享 Forge 输出；发现 `build/desktop-signing.lock` 先按锁中的 PID／命令／目录核实是否仍在构建，不能直接删锁重跑。
 
 ## 3. 生成并核验唯一候选
 

@@ -43,7 +43,7 @@ pnpm make:desktop --unsigned
 - 资源摘要、PE payload 清单、签名模式、`app-update.yml`、内置日志与版本。
 - `CBIM-Setup-<版本>-x64.exe`、对应 `.exe.blockmap`、`latest.yml`、`SHA256SUMS.txt` 四附件的大小、SHA-256、安装器 SHA-512 元数据。未签名元数据不得伪装 publisherName；签名模式实际重新验签，不仅检查布尔标记。
 
-真实打包 EXE 隔离验证使用 [isolated-node-smoke.mts](../../../../scripts/isolated-node-smoke.mts)。显式将 `CBIM_TEST_EXE` 指向本次 `packagedDirectory` 下的真实主程序，`CBIM_ISOLATION_REPORT` 指向不存在的新报告路径，再执行 `pnpm exec tsx scripts/isolated-node-smoke.mts`，记录 EXE 摘要。不能让默认 `latest-build.json` 选择另一个包。覆盖文件边界、禁网、超时、取消、非零退出、输出限制及自有资源回收；结束后恢复本次设置的环境变量。
+旧 isolated-node-smoke 脚本已随旧宿主退役，不能作为当前 Office 的验收入口。发布前仍须针对本次 `packagedDirectory` 中的真实 EXE，准备并执行适配当前 [Office 工具](../../../../src/bridge/server/desktop/office-tools.ts) 的制品验收，记录 EXE 摘要、权限边界、超时、取消、退出和资源回收结果。缺少适用脚本或真实回执时，该项验收未完成，不能用源码测试代替，也不能沿用旧宿主的隔离或禁网保证。
 
 ## 4. 在草稿中验证候选
 

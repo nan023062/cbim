@@ -8,7 +8,7 @@
 | `contract` | 明确的模块间协议、生产者/消费者约束及架构规则 | 保留必要真实协作，说明两端和断言目标；不能把不相关单元塞入此类以绕过检查 |
 | `integration` | 应用装配、真实进程/平台、端到端生命周期 | 拥有独立目录、进程与清理；保留恢复、未知结果和真实协作证据 |
 
-纯断言与临时目录分别使用 [assertions](scripts/support/assertions.ts) 和 [temp-directory](scripts/support/temp-directory.ts)；领域数据和场景夹具放在相应镜像目录的 `data/` 或 `support/`。[Application 夹具](src/logic/application/support/helpers.ts) 专门负责完整应用生命周期，不混放纯断言。辅助文件不能 import `.test` 文件；测试之间不能传递状态、执行顺序、端口或目录。每个测试清理自己的资源并恢复 mock，禁止依赖前一个测试的产物。
+纯断言与临时目录分别使用 [assertions](scripts/support/assertions.ts) 和 [temp-directory](scripts/support/temp-directory.ts)；领域数据和场景夹具放在相应镜像目录的 `data/` 或 `support/`。旧 Application 生命周期夹具已退役；当前场景夹具随所服务模块维护，例如 [更新资源夹具](src/logic/updates/service/support/runtime-fixture.ts)，不混放纯断言。辅助文件不能 import `.test` 文件；测试之间不能传递状态、执行顺序、端口或目录。每个测试清理自己的资源并恢复 mock，禁止依赖前一个测试的产物。
 
 ## 目录镜像
 

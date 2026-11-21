@@ -52,31 +52,21 @@ const layerOf = file => {
 const foundation='@shared-domain-foundations';
 const foundationEntries=['src/logic/io-errors/json.ts','src/core/io/json.ts','src/core/io/serialization.ts','src/logic/execution/ports/identity.ts'];
 // utility 通用入口只能组合环境无关实现，Node 算法必须显式选用独立入口。
-const utilityPortable=['src/core/utility/index.ts','src/core/utility/json.ts','src/core/utility/async.ts','src/core/utility/strings.ts','src/core/utility/bytes.ts','src/core/utility/graphs.ts'];
+const utilityPortable=['src/core/utility/index.ts','src/core/utility/async.ts','src/core/utility/graphs.ts'];
 const enginePublic='src/logic/engines/index.ts',engineService='src/logic/engines/service/index.ts';
-const allowsEngineAccess=(from,to)=>from==='src/logic/engines/package-status.ts'&&to==='src/logic/updates/engine-artifacts.ts'||to===enginePublic&&(from.startsWith('src/logic/')||from==='src/bridge/contracts/engines.ts')||to===engineService&&(from.startsWith('src/bridge/server/')||isService(from));
+const allowsEngineAccess=(from,to)=>from==='src/logic/engines/package-status.ts'&&to==='src/logic/updates/engine-artifacts.ts'||to===enginePublic&&(from.startsWith('src/logic/'))||to===engineService&&(from.startsWith('src/bridge/server/')||isService(from));
 const modelPublic='src/logic/models/index.ts';
 const modelService='src/logic/models/service/index.ts';
 // 纯模型与有副作用的服务入口分开；引擎和编排的访问权由模块边界进一步收紧。
 export function allowsModelAccess(from,to){
-  if(to===modelPublic)return from.startsWith('src/logic/')||from==='src/bridge/contracts/models.ts';
+  if(to===modelPublic)return from.startsWith('src/logic/');
   return to===modelService&&(from.startsWith('src/bridge/server/')||isService(from));
 }
-// Web 仅按已迁移的纯契约/服务入口放行；Electron 只由桌面入口装配。
-const webPublic='src/logic/web/index.ts';
-const webService='src/logic/web/service/index.ts';
-const allowsWebAccess=(from,to)=>
-  to===webPublic&&(from.startsWith('src/logic/')||from==='src/bridge/contracts/web.ts')||
-  to===webService&&(from.startsWith('src/bridge/server/')||isService(from))||
-  from==='src/bridge/server/main.ts'&&to==='src/core/web/electron.ts';
 // 反馈范围与纯协议由 Logic 拥有，平台服务只向宿主装配开放。
 const feedbackPublic='src/logic/feedback/index.ts';
-const feedbackService='src/logic/feedback/service/index.ts';
-const allowsFeedbackAccess=(from,to)=>
-  to===feedbackPublic&&(from.startsWith('src/logic/')||from==='src/bridge/contracts/github-feedback.ts')||
-  to===feedbackService&&(from.startsWith('src/bridge/server/')||isService(from));
+const allowsFeedbackAccess=(from,to)=>to===feedbackPublic&&from.startsWith('src/logic/');
 const resourcePublic='src/resource/index.ts',resourceService='src/resource/service/index.ts';
-const allowsResourceAccess=(from,to)=>from==='src/logic/models/service/llm-profiles.ts'&&to==='src/resource/models/local-profiles.ts'||['src/logic/resource-management/connector-packages.ts','src/logic/engines/packages/engine-packages.ts'].includes(from)&&to==='src/resource/plugins/index.ts'||from==='src/logic/projects/resources.ts'&&to==='src/resource/project-architecture.ts'||['src/logic/projects/offices.ts','src/logic/projects/navigation.ts'].includes(from)&&to==='src/resource/office-history.ts'||from==='src/logic/resource-management/index.ts'&&[resourcePublic,resourceService].includes(to)||from==='src/logic/application/index.ts'&&to===resourceService||from==='src/logic/models/service/llm-profiles.ts'&&to==='src/resource/models/local-profiles.ts'||to===resourcePublic&&(from.startsWith('src/logic/')||['src/bridge/contracts/resources.ts','src/bridge/contracts/ipc-resources.ts'].includes(from))||to===resourceService&&(from.startsWith('src/bridge/server/')||isService(from));
+const allowsResourceAccess=(from,to)=>from==='src/logic/models/service/llm-profiles.ts'&&to==='src/resource/models/local-profiles.ts'||['src/logic/resource-management/connector-packages.ts','src/logic/engines/packages/engine-packages.ts'].includes(from)&&to==='src/resource/plugins/index.ts'||from==='src/logic/projects/resources.ts'&&to==='src/resource/project-architecture.ts'||['src/logic/projects/offices.ts','src/logic/projects/navigation.ts'].includes(from)&&to==='src/resource/office-history.ts'||from==='src/logic/resource-management/index.ts'&&[resourcePublic,resourceService].includes(to)||from==='src/logic/application/index.ts'&&to===resourceService||from==='src/logic/models/service/llm-profiles.ts'&&to==='src/resource/models/local-profiles.ts'||to===resourcePublic&&(from.startsWith('src/logic/'))||to===resourceService&&(from.startsWith('src/bridge/server/')||isService(from));
 const moduleBoundaries=[
   {sources:['src/view/desktop/'],allow:['src/view/desktop/','src/view/office/','src/view/settings/','src/view/discovery/','src/view/extension/','src/view/shared/','src/framework-ui/','src/bridge/contracts/']},
   ...['discovery','extension','monitor','office','settings','shared'].map(name=>({sources:['src/view/'+name+'/'],allow:['src/view/'+name+'/','src/view/shared/','src/framework-ui/','src/bridge/contracts/']})),
@@ -254,21 +244,18 @@ export function auditDependencies(root = process.cwd(), options = {}) {
       if(e.from==='src/bridge/contracts/desktop-models.ts' && e.to==='src/logic/settings/models/index.ts') return false;
       // Office 通信只具名转接纯 Agent 配置类型；不能引用设置存储或实例服务。
       if(e.from==='src/bridge/contracts/discovery.ts' && ['src/logic/projects/agent-configuration.ts','src/logic/projects/organization-contract.ts','src/logic/projects/data-architecture-contract.ts','src/logic/projects/business-contract.ts','src/logic/projects/office-queue-contract.ts', 'src/logic/projects/navigation-contract.ts'].includes(e.to) && ['type','import type'].includes(e.kind)) return false;
-      if(e.to==='src/core/web/electron.ts'&&e.from!=='src/bridge/server/main.ts')return true;
+      if(e.to==='src/core/web/electron.ts'&&e.from!=='src/bridge/server/desktop/main.ts')return true;
       // 业务只消费桌面宿主注入的凭据类型；运行时引用仍受 Electron 分层限制。
       const cipherTypeAccess=e.kind==='type'&&e.to==='src/core/io/electron.ts'&&[
         'src/resource/models/local-profiles.ts',
         'src/logic/models/index.ts','src/logic/models/index.ts',
-        'src/logic/feedback/service/github-feedback.ts',
-        'src/logic/feedback/service/github-feedback-auth.ts',
-        'src/logic/web/service/web-settings.ts',
       ].includes(e.from);
       if(a==='logic'&&b==='core/platform/electron'&&!cipherTypeAccess)return true;
       if(e.to.startsWith('src/logic/application/')&&!e.from.startsWith('src/logic/application/')&&!e.from.startsWith('src/bridge/server/'))return true;
       const domainAccess=isDomainFile(e.to)&&domainPublicEntries.has(e.to)&&(e.from.startsWith('src/bridge/contracts/')||e.from.startsWith('src/bridge/server/')||e.from.startsWith('src/logic/'));
       const runtimeAccess=runtimePublicEntries.has(e.to)&&(e.from.startsWith('src/bridge/server/')||isService(e.from)||isEngine(e.from)&&isEngine(e.to));
-      const serviceAccess=servicePublicEntries.has(e.to)&&(isService(e.from)||e.from.startsWith('src/bridge/server/'))||businessDataEntries.has(e.to)&&(isService(e.from)||e.from.startsWith('src/bridge/contracts/'))||isService(e.from)&&[modelPublic,enginePublic,webPublic,feedbackPublic,resourcePublic].includes(e.to);
-      const ioErrorAccess=a==='logic'&&['src/logic/io-errors/json.ts','src/logic/io-errors/locking.ts'].includes(e.to);
+      const serviceAccess=servicePublicEntries.has(e.to)&&(isService(e.from)||e.from.startsWith('src/bridge/server/'))||businessDataEntries.has(e.to)&&(isService(e.from)||e.from.startsWith('src/bridge/contracts/'))||isService(e.from)&&[modelPublic,enginePublic,feedbackPublic,resourcePublic].includes(e.to);
+      const ioErrorAccess=a==='logic'&&e.to==='src/logic/io-errors/json.ts';
       const manifestAccess=['src/logic/engines/catalog/supported-engines.ts','src/logic/engines/catalog/supported-engines.ts','src/logic/resource-management/engine-catalog.ts'].includes(e.from)&&/^src\/engine-plugins\/(pi|claude|codex|memory)\/manifest\.ts$/.test(e.to);
       const adapterAccess=manifestAccess|| isEngine(e.from)&&domainPublicEntries.has(e.to);
       if(a==='resource'&&b==='logic')return true;
@@ -280,7 +267,7 @@ export function auditDependencies(root = process.cwd(), options = {}) {
       const desktopAccess=e.from.startsWith('src/bridge/server/desktop/')&&['src/logic/projects/navigation-contract.ts','src/logic/projects/agent-configuration.ts','src/logic/projects/office-queue-contract.ts','src/logic/projects/business-contract.ts','src/logic/projects/organization-contract.ts','src/logic/projects/data-architecture-contract.ts','src/logic/projects/office-operations.ts','src/logic/projects/offices.ts','src/logic/projects/office-usage.ts','src/logic/resource-management/plugin-installations.ts','src/logic/resource-management/engine-catalog.ts'].includes(e.to);
       const artifactContract=e.from.startsWith('src/logic/resource-management/')&&e.to==='src/logic/updates/engine-artifacts.ts';
       const adapterLoader=e.from==='src/logic/projects/office-engine-loader.ts'&&/^src\/engine-plugins\/(pi|claude|codex|memory)\/package\.ts$/.test(e.to)&&e.kind==='generated-dynamic/require';
-      const publicAccess=applicationAccess||desktopAccess||artifactContract||adapterLoader||updaterAccess||desktopEngineLoader||connectorContract||(e.from==='src/bridge/contracts/workspace.ts'&&e.to==='src/framework/monitor/updates.ts')||adapterAccess||ioErrorAccess||cipherTypeAccess||allowsEngineAccess(e.from,e.to)||allowsModelAccess(e.from,e.to)||allowsWebAccess(e.from,e.to)||allowsFeedbackAccess(e.from,e.to)||allowsResourceAccess(e.from,e.to)||domainAccess||runtimeAccess||serviceAccess;
+      const publicAccess=applicationAccess||desktopAccess||artifactContract||adapterLoader||updaterAccess||desktopEngineLoader||connectorContract||adapterAccess||ioErrorAccess||cipherTypeAccess||allowsEngineAccess(e.from,e.to)||allowsModelAccess(e.from,e.to)||allowsFeedbackAccess(e.from,e.to)||allowsResourceAccess(e.from,e.to)||domainAccess||runtimeAccess||serviceAccess;
       if(isService(e.from)&&b==='logic'&&e.from.split('/')[2]!==e.to.split('/')[2]&&!publicAccess)return true;
       if(isEngine(e.to)&&!manifestAccess&&!adapterLoader&&!isEngine(e.from))return true;
       // 领域规则只组合领域与既有纯模型/反馈入口，不借目录迁移取得宿主服务权限。

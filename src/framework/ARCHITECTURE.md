@@ -94,7 +94,7 @@ click N_20ee62e66639 href "kernel/ARCHITECTURE.md"
 | [business](business/ARCHITECTURE.md) | 业务与能力是对偶视图：能力树组织团队和角色，业务树以 Project 为根，其余节点均为 Workspace。每个 Workspace 在拥有子工作区的同时，承载自身业务描述及来源。Logic 从已校验的正式知识快照读取这棵树。 |
 | [cability](cability/ARCHITECTURE.md) | 团队可以为空，以支持先建团队再逐步配置成员。TeamDescription/Team 保留可选显示名称和职责；组织变更按稳定 ID 替换登记，不因改名或移动生成新的岗位身份。 |
 | [connectors](connectors/ARCHITECTURE.md) | 描述可连接的外部服务及其身份，供宿主发现、核实和连接。现有协议覆盖插件与资源仓库。 |
-| [kernel](kernel/ARCHITECTURE.md) | Kernel 是 CBIM 面向大模型厂商和 Agent 工具厂商的兼容层。模型决定一次推理使用的服务，引擎负责驱动 Agent Loop。同一引擎可以支持多种模型，具体组合由 Logic 的兼容清单决定。上层通过配置引用取得执行实例，按轮次提交任务和接收事件。Kernel 的公开类型从 [index.ts](index.ts) 导出。 |
+| [kernel](kernel/ARCHITECTURE.md) | Kernel 是 CBIM 面向大模型厂商和 Agent 工具厂商的兼容层。模型决定一次推理使用的服务，引擎负责驱动 Agent Loop。同一引擎可以支持多种模型，具体组合由 Logic 的兼容清单决定。上层通过配置引用取得执行实例，按轮次提交任务和接收事件。Kernel 的公开类型从本模块的 index.ts 导出。 |
 | [monitor](monitor/ARCHITECTURE.md) | Monitor 单向读取 Framework 的运行实例。Office 管理成员、引擎和工作区的生命周期；应用宿主提供进程采样，模型执行事件提供实际 Token 用量。 |
 | [office](office/ARCHITECTURE.md) | OpenMainAgent 接受与成员相同的 AgentConfiguration，在本次启动中生成冻结角色；内置主角色只提供默认职责，模型、Skill、连接器来自当前对话设置。运行配置编辑不改变已经启动的实例。 |
 | [skills](skills/ARCHITECTURE.md) | 岗位 Skill 与业务 Workflow 共用文字流程声明，以名称及正文引用定位流程。 |

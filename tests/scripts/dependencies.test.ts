@@ -19,13 +19,21 @@ test.each([
   expect(result.violations).toContainEqual(expect.objectContaining({ from, to: expect.stringMatching(/^src\/resource\//) }));
 });
 
-test('View can use a Resource type through the public Bridge contract', () => {
+test('View can use Agent configuration through the current Bridge contract', () => {
   const result = audit({
-    'src/view/settings/example.tsx': "import type { ResourceKind } from '../../bridge/contracts/resources';",
+    'src/view/settings/example.tsx': "import type { AgentConfiguration } from '../../bridge/contracts/discovery';",
+    'src/bridge/contracts/discovery.ts': "export type { AgentConfiguration } from '../../logic/projects/agent-configuration';",
+    'src/logic/projects/agent-configuration.ts': 'export type AgentConfiguration = { engine: string };',
+  });
+  expect(result.ok).toBe(true);
+});
+
+test('retired resource facade no longer grants Bridge access', () => {
+  const result = audit({
     'src/bridge/contracts/resources.ts': "export type { ResourceKind } from '../../resource';",
     'src/resource/index.ts': 'export type ResourceKind = string;',
   });
-  expect(result.ok).toBe(true);
+  expect(result.violations).toContainEqual(expect.objectContaining({from:'src/bridge/contracts/resources.ts',to:'src/resource/index.ts'}));
 });
 
 test.each(["import { value } from '../../resource/plugins';", "import type { Artifact } from '../../resource/plugins';"])('Framework rejects Resource imports: %s', source => {

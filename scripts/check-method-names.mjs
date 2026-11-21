@@ -5,8 +5,6 @@ import ts from 'typescript';
 
 // 只登记由外部调用方决定的方法名；文件、所属声明与方法名共同限制范围。
 export const externalMethodNames = [
-  { file: 'src/bridge/server/platform/controlled-file-child.ts', owner: 'property:parentPort', name: 'on', reason: 'Electron utilityProcess 的原生 parentPort 事件入口。' },
-  { file: 'src/bridge/server/platform/controlled-file-child.ts', owner: 'property:parentPort', name: 'postMessage', reason: 'Electron utilityProcess 的原生 parentPort 发信入口。' },
   { file: 'src/logic/updates/service/runtime-archive.ts', owner: 'new:Transform', name: 'transform', reason: 'Node Transform 构造选项约定，由流运行时调用。' },
   ...[
     ['src/framework/kernel/engines/adapter.ts', 'interface:EngineAdapter', ['create']],

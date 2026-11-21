@@ -2,7 +2,7 @@
 
 ## 设计意图
 
-负责主菜单资源管理。
+负责插件目录、安装意图和连接器会话生命周期。运行时按签名制品加载连接器；升级保留在途租约，释放后再清理旧版本。
 
 ## 主要组成
 
@@ -12,16 +12,22 @@
 
 | [PluginInstallations](plugin-installations.ts) | 保存用户安装意图，重启后按签名目录核验并恢复插件。 |
 
+| [connector-runtime](connector-runtime.ts) | 将已验证制品装配为受管连接器；会话引用、升级和回滚由管理器持有。 |
+
 <!-- architecture:generated:start -->
 
 ## 架构关系
 
 ```mermaid
 classDiagram
-class N_57e27ba95707["PluginInstallations"]
-click N_57e27ba95707 href "plugin-installations.ts"
+class N_a30d46883dff["connector-runtime"] {
+  <<module>>
+}
+click N_a30d46883dff href "connector-runtime.ts"
 class N_57b4c095d27d["ResourceManagement"]
 click N_57b4c095d27d href "index.ts"
+class N_57e27ba95707["PluginInstallations"]
+click N_57e27ba95707 href "plugin-installations.ts"
 ```
 
 [上层设计](../ARCHITECTURE.md)

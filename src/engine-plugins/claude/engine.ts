@@ -22,21 +22,21 @@ import path from 'node:path';
 
 import type { Query, SDKUserMessage, SDKMessage } from '@anthropic-ai/claude-agent-sdk';
 
-import type { AgentEngine, EngineContext, EngineEvent } from '../../logic/execution/rules/types';
+import type { AgentEngine, EngineContext, EngineEvent } from '../../logic-new/execution/rules/types';
 
-import type { ResolvedEngineModel } from '../../logic/engines';
+import type { ResolvedEngineModel } from '../../logic-new/engines';
 
-import type { RequestBudgetPort } from '../../logic/budget/rules/request-budget';
+import type { RequestBudgetPort } from '../../logic-new/budget/rules/request-budget';
 
-import { runtimeEngineTools, type EngineToolsPort } from '../../logic/execution/rules/engine-tools';
+import { runtimeEngineTools, type EngineToolsPort } from '../../logic-new/execution/rules/engine-tools';
 
-import { engineInstructions } from '../../logic/execution/rules/engine-instructions';
+import { engineInstructions } from '../../logic-new/execution/rules/engine-instructions';
 
 import { openRequestBudgetTransport } from '../transport/request-budget-transport';
 
 import { loadClaudeSdk } from './sdk';
 
-import type { EngineRuntimePackage } from '../../logic/execution/rules/engine-runtime';
+import type { EngineRuntimePackage } from '../../logic-new/execution/rules/engine-runtime';
 
 import { claudeTools } from './tools';
 
@@ -59,7 +59,7 @@ export interface ClaudeOptions
 
   llm?: ResolvedEngineModel;
 
-  images?: import('../../logic/execution/rules/types').InputImage[];
+  images?: import('../../logic-new/execution/rules/types').InputImage[];
 
   turnTimeoutMs?: number;
 

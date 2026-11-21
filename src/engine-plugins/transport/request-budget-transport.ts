@@ -8,15 +8,15 @@ import http from 'node:http';
 
 import { randomBytes, timingSafeEqual, createHash } from 'node:crypto';
 
-import { modelRequestUrl, type ResolvedLlm } from '../../logic/models';
+import { modelRequestUrl, type ResolvedLlm } from '../../logic-new/models';
 
-import type { RequestBudgetPort, RequestBudgetTicket, RequestUnknownReason } from '../../logic/budget/rules/request-budget';
+import type { RequestBudgetPort, RequestBudgetTicket, RequestUnknownReason } from '../../logic-new/budget/rules/request-budget';
 
 import { RequestBudgetUsageStream } from './request-budget-usage';
 
-import { requestBudgetReservation, requestBudgetCost } from '../../logic/budget/rules/model-request-budget-rules';
+import { requestBudgetReservation, requestBudgetCost } from '../../logic-new/budget/rules/model-request-budget-rules';
 
-import { workspaceMemberModelHash } from '../../logic/team/rules/workspace-member-rules';
+import { workspaceMemberModelHash } from '../../logic-new/team/rules/workspace-member-rules';
 
 /** 所有引擎共用的实际 API 路径；不接受子进程指定目标或 HTTP 重定向。 */
 export function requestBudgetEndpoint(llm: ResolvedLlm): string

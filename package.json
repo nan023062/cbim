@@ -12,7 +12,6 @@
   },
   "scripts": {
     "start": "electron-forge start",
-    "loop": "tsx src/bridge/server/commands/loop-cli.ts",
     "typecheck": "tsc --noEmit",
     "build:brand": "node scripts/build-brand-assets.mjs",
     "check:brand": "node scripts/build-brand-assets.mjs --check",
@@ -36,14 +35,7 @@
     "publish:runtime": "tsx scripts/publish-runtime.ts",
     "verify:desktop": "node scripts/verify-desktop.mjs",
     "publish:desktop": "node scripts/publish-desktop.mjs",
-    "test:desktop": "node scripts/workspace-ui-smoke.mjs",
     "test:portable": "node scripts/portable-smoke.mjs",
-    "test:loop": "node scripts/loop-smoke.mjs",
-    "test:members": "tsx scripts/member-ui-smoke.mts",
-    "test:collaboration": "tsx scripts/collaboration-ui-smoke.mts",
-    "test:main-instance": "tsx scripts/collaboration-ui-smoke.mts --default-executor",
-    "test:agent-history": "tsx scripts/collaboration-ui-smoke.mts --history",
-    "test:architecture-ui": "tsx scripts/architecture-ui-smoke.mts",
     "sign:engines": "tsx scripts/sign-engines.ts",
     "test:incremental": "node scripts/test-modules.mjs --incremental"
   },

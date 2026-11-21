@@ -1,5 +1,5 @@
 import {createHash} from 'node:crypto';
-import type {ResolvedEngineModel} from '../../../../../src/logic/engines/index';
+import type {ResolvedEngineModel} from '../../../../../src/logic-new/engines';
 /** 纯模型/知识事实；不启动应用、网络或共享可变服务。每次返回新对象。 */
 export function memoryModel(baseUrl='https://memory.example/v1'):ResolvedEngineModel{
   const vector={kind:'embedding' as const,id:'22222222-2222-4222-8222-222222222222',name:'Vector',api:'openai-embeddings' as const,baseUrl,auth:'none' as const,model:'vector',inputTokens:8192,dimensions:2,inputPrice:1};

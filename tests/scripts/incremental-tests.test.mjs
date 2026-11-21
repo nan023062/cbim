@@ -19,14 +19,14 @@ function fixture(explicit = true) {
   const write = (file, text) => { fs.mkdirSync(path.dirname(path.join(root, file)), {recursive: true}); fs.writeFileSync(path.join(root, file), text); };
   const catalog = {version: 1, modules: {}};
   for (const name of ['child', 'parent', 'unrelated']) {
-    const directory = 'src/logic/' + name, file = 'tests/' + directory + '/value.test.ts';
+    const directory = 'src/logic-new/' + name, file = 'tests/' + directory + '/value.test.ts';
     write(directory + '/index.ts', name === 'parent' ? "import {value} from '../child'; export const result=value;" : 'export const value=1;');
     write(file, `import * as subject from '../../../../${directory}'; export const sample=subject;`);
     catalog.modules[name] = {directory, roots: [directory + '/'], tests: {unit: [file], contract: [], integration: []}};
   }
   if (explicit) {
-    write('src/logic/child/contract.ts', 'export interface Value { value: number }');
-    catalog.modules.child.contract = {files: ['src/logic/child/contract.ts'], revision: 'value-v1'};
+    write('src/logic-new/child/contract.ts', 'export interface Value { value: number }');
+    catalog.modules.child.contract = {files: ['src/logic-new/child/contract.ts'], revision: 'value-v1'};
   }
   let environment = {node: 'test-node', platform: 'test'};
   const snapshot = () => {
@@ -65,10 +65,10 @@ it('冷启动建立模块回执，输入未变时不再启动测试进程', () =
 
 it('独立契约不变的实现修改只重跑自身，真实组合契约仍验证新的实现', () => {
   const f = fixture();
-  f.write('tests/src/logic/parent/parent-contract.test.ts', "import * as value from '../../../../src/logic/parent';");
-  f.catalog.modules.parent.tests.contract = ['tests/src/logic/parent/parent-contract.test.ts'];
+  f.write('tests/src/logic-new/parent/parent-contract.test.ts', "import * as value from '../../../../src/logic-new/parent';");
+  f.catalog.modules.parent.tests.contract = ['tests/src/logic-new/parent/parent-contract.test.ts'];
   const before = f.snapshot();
-  f.write('src/logic/child/index.ts', 'export const value=2;');
+  f.write('src/logic-new/child/index.ts', 'export const value=2;');
   expect(changed(planTests(f.snapshot(), passes(before), {kind: 'all'}))).toEqual(['child:unit', 'parent:contract']);
 });
 
@@ -76,31 +76,31 @@ it('契约正文或行为版本变化使消费者受影响，不触发无关模�
   for (const revision of [false, true]) {
     const f = fixture(), before = f.snapshot();
     if (revision) f.catalog.modules.child.contract.revision = 'value-v2';
-    else f.write('src/logic/child/contract.ts', 'export interface Value { value: string }');
+    else f.write('src/logic-new/child/contract.ts', 'export interface Value { value: string }');
     expect(changed(planTests(f.snapshot(), passes(before)))).toEqual(['child:unit', 'parent:unit']);
   }
 });
 
 it('没有独立契约时不把相同类型当作相同行为，保守验证实际消费者', () => {
   const f = fixture(false), before = f.snapshot();
-  f.write('src/logic/child/index.ts', 'export const value=2;');
+  f.write('src/logic-new/child/index.ts', 'export const value=2;');
   expect(changed(planTests(f.snapshot(), passes(before)))).toEqual(['child:unit', 'parent:unit']);
 });
 
 it('测试辅助、显式资源及测试集合变化分别使所属模块失效', () => {
   const f = fixture();
-  f.write('tests/src/logic/child/helper.ts', 'export const data=1;');
-  f.write('tests/src/logic/child/value.test.ts', "import {value} from '../../../../src/logic/child'; import {data} from './helper';");
+  f.write('tests/src/logic-new/child/helper.ts', 'export const data=1;');
+  f.write('tests/src/logic-new/child/value.test.ts', "import {value} from '../../../../src/logic-new/child'; import {data} from './helper';");
   f.write('fixtures/value.json', '{"value":1}');
   f.catalog.modules.child.inputs = ['fixtures/value.json'];
   let before = f.snapshot();
-  f.write('tests/src/logic/child/helper.ts', 'export const data=2;');
+  f.write('tests/src/logic-new/child/helper.ts', 'export const data=2;');
   expect(changed(planTests(f.snapshot(), passes(before)))).toEqual(['child:unit']);
   before = f.snapshot(); f.write('fixtures/value.json', '{"value":2}');
   expect(changed(planTests(f.snapshot(), passes(before)))).toEqual(['child:unit']);
   before = f.snapshot();
-  f.write('tests/src/logic/child/new.test.ts', "import {value} from '../../../../src/logic/child';");
-  f.catalog.modules.child.tests.unit.push('tests/src/logic/child/new.test.ts');
+  f.write('tests/src/logic-new/child/new.test.ts', "import {value} from '../../../../src/logic-new/child';");
+  f.catalog.modules.child.tests.unit.push('tests/src/logic-new/child/new.test.ts');
   expect(changed(planTests(f.snapshot(), passes(before)))).toEqual(['child:unit']);
 });
 
@@ -115,13 +115,13 @@ it('环境、配置和锁文件变化不能复用旧环境的结果', () => {
 
 it('额外读取全仓文件不会把业务模块误判为依赖检查工具', () => {
   const f = fixture();
-  f.catalog.modules.unrelated.inputs = ['src/logic/', 'tests/README.md'];
+  f.catalog.modules.unrelated.inputs = ['src/logic-new/', 'tests/README.md'];
   f.write('tests/README.md', 'test instructions v1');
   let before = f.snapshot();
   f.write('tests/README.md', 'test instructions v2');
   expect(changed(planTests(f.snapshot(), passes(before)))).toEqual(['unrelated:unit']);
   before = f.snapshot();
-  f.write('src/logic/child/index.ts', 'export const value=2;');
+  f.write('src/logic-new/child/index.ts', 'export const value=2;');
   expect(changed(planTests(f.snapshot(), passes(before)))).toEqual(['child:unit', 'unrelated:unit']);
 });
 
@@ -158,7 +158,7 @@ it('同批一个模块失败，其余模块的完整成功回执仍可复用', (
 it('执行期间输入被修改，成功进程也不能更新为已验证', () => {
   const f = fixture();
   expect(f.run({module: 'child', execute: (args, report) => {
-    const result = f.execute(args, report); f.write('src/logic/child/index.ts', 'export const value=3;'); return result;
+    const result = f.execute(args, report); f.write('src/logic-new/child/index.ts', 'export const value=3;'); return result;
   }}).ok).toBe(false);
   expect(readTestState(f.stateFile).records['child:unit'].status).toBe('stale');
 });
@@ -174,15 +174,15 @@ it('残留 running、损坏回执和明确不缓存的模块都会重跑', () =>
 
 it('集成测试不复用本地缓存，受外部状态影响的验收每次真实运行', () => {
   const f = fixture();
-  f.write('tests/src/logic/child/child-integration.test.ts', "import * as subject from '../../../../src/logic/child';");
-  f.catalog.modules.child.tests.integration = ['tests/src/logic/child/child-integration.test.ts'];
+  f.write('tests/src/logic-new/child/child-integration.test.ts', "import * as subject from '../../../../src/logic-new/child';");
+  f.catalog.modules.child.tests.integration = ['tests/src/logic-new/child/child-integration.test.ts'];
   const snapshot = f.snapshot();
   expect(changed(planTests(snapshot, passes(snapshot), {kind: 'integration'}))).toEqual(['child:integration']);
 });
 
 it('零用例、全跳过、重复或遗漏文件与异常终止均不能形成成功回执', () => {
   const root = path.resolve('fixture');
-  const groups = [{files: ['tests/src/logic/a/a.test.ts']}];
+  const groups = [{files: ['tests/src/logic-new/a/a.test.ts']}];
   const file = {name: path.join(root, groups[0].files[0]), status: 'passed', assertionResults: [{status: 'passed'}]};
   const report = {success: true, numFailedTests: 0, testResults: [file]};
   expect(verifyTestReport(root, groups, report, {status: 0})).toBe(true);

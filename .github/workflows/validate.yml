@@ -133,7 +133,7 @@ jobs:
         env:
           TEMP: ${{ runner.temp }}
           TMP: ${{ runner.temp }}
-        run: pnpm exec vitest run tests/src/logic/file-operations/service/scoped-execution-pi.test.ts tests/src/logic/terminal/service/terminal.test.ts --reporter=default --reporter=json --outputFile=test-results/runtime-diagnostic.json
+        run: pnpm exec vitest run tests/src/bridge/server/desktop/office-tools.test.ts tests/src/bridge/server/desktop/office-permission.test.ts --reporter=default --reporter=json --outputFile=test-results/runtime-diagnostic.json
       - name: Preserve test report and discovered coverage
         if: always()
         uses: actions/upload-artifact@v4

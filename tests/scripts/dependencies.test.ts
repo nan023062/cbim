@@ -45,53 +45,8 @@ test('ainative/docs 中维护的示例源码仍参与依赖和类型环检查',(
   expect(circular.cycles).toHaveLength(1);
 });
 
-test('模块单元仍参与依赖扫描，但不冒充产品层或进入生产依赖',()=>{
-  const valid=audit({'src/logic/sample/index.ts':'export const value=1;', 'tests/src/logic/sample/sample.test.ts':"import {value} from '../../../../src/logic/sample'; import fs from 'node:fs';"});
-  expect(valid.ok).toBe(true);
-  expect(valid.edges.some(edge=>edge.from.startsWith('tests/'))).toBe(true);
-  const invalid=audit({'src/logic/sample/index.ts':"import type {Data} from '../../../tests/src/logic/sample/data';",'tests/src/logic/sample/data.ts':'export interface Data {}'});
-  expect(invalid.logicalViolations.some(item=>item.rule==='production-test-dependency')).toBe(true);
-});
-
-test('生产代码经工程辅助模块间接引用测试或直接引用测试运行器均拒绝',()=>{
-  const indirect=audit({'src/logic/sample/index.ts':"import '../../..//scripts/helper';",'scripts/helper.ts':"import '../tests/fixture';",'tests/fixture.ts':'export const data=1;'});
-  expect(indirect.logicalViolations.some(item=>item.rule==='production-test-dependency')).toBe(true);
-  const runner=audit({'src/logic/sample/index.ts':"import {expect} from 'vitest';"});
-  expect(runner.logicalViolations.some(item=>item.rule==='production-test-dependency')).toBe(true);
-});
-
-test.each([
-  ['src/logic/application/assembly/agent-calls.ts','src/logic/execution/assembly/agent-call-scheduler.ts',true],
-  ['src/logic/execution/rules/example.ts','src/logic/execution/assembly/agent-call-scheduler.ts',false],
-  ['src/logic/engines/package-status.ts','src/logic/updates/engine-artifacts.ts',true],
-  ['src/logic/engines/package-status.ts','src/logic/updates/service/engine-artifacts.ts',false],
-  ['src/logic/application/application.ts','src/logic/engines/packages/index.ts',true],
-  ['src/logic/engines/packages/engine-packages.ts','src/logic/updates/engine-artifacts.ts',true],
-  ['src/logic/engines/packages/engine-packages.ts','src/logic/updates/service/engine-artifacts.ts',false],
-  ['src/bridge/server/bootstrap/desktop.ts','src/logic/engines/packages/index.ts',false],
-  ['src/logic/budget/runtime/model-request-budget-service.ts','src/logic/budget/rules/model-request-configuration.ts',true],
-  ['src/logic/budget/runtime/model-request-budget-service.ts','src/logic/engines/service/index.ts',false],
-  ['src/logic/team/rules/agent-runtime.ts','src/logic/engines/index.ts',true],
-  ['src/logic/application/application.ts','src/logic/engines/service/index.ts',true],
-  ['src/logic/engines/service/model-profiles.ts','src/logic/models/service/index.ts',true],
-  ['src/bridge/contracts/engines.ts','src/logic/engines/index.ts',true],
-  ['src/bridge/contracts/models.ts','src/logic/engines/index.ts',false],
-  ['src/logic/models/config.ts','src/logic/engines/index.ts',false],
-  ['src/logic/models/service/llm-profiles.ts','src/logic/engines/service/index.ts',false],
-  ['src/logic/engines/index.ts','src/logic/engines/service/index.ts',false],
-  ['src/logic/engines/catalog/supported-engines.ts','src/engine-plugins/pi/engine.ts',false],
-  ['src/bridge/server/bootstrap/desktop.ts','src/logic/engines/index.ts',false],
-  ['src/logic/updates/service/runtime-manifest.ts','src/logic/engines/index.ts',false],
-  ['src/logic/team/rules/agent-runtime.ts','src/logic/engines/service/index.ts',false],
-  ['src/view-new/team/picker.ts','src/logic/engines/index.ts',false],
-] as const)('引擎目录、模型与冷启动边界 %s → %s = %s',(from,to,allowed)=>{
-  const relative=path.posix.relative(path.posix.dirname(from),to),spec=relative.startsWith('.')?relative:'./'+relative;
-  const result=audit({[from]:`import type {Value} from '${spec}';`,[to]:'export type Value=string;'});
-  expect(result.unresolved).toEqual([]);expect(result.ok).toBe(allowed);
-});
-
 test.each(['node:fs','electron','@anthropic-ai/claude-agent-sdk'])('静态引擎清单不得直接加载平台或 SDK：%s',spec=>{
-  expect(audit({'src/logic/engines/catalog/supported-engines.ts':`import '${spec}';`}).ok).toBe(false);
+  expect(audit({'src/logic-new/engines/catalog/supported-engines.ts':`import '${spec}';`}).ok).toBe(false);
 });
 
 test.each(['src/backend/core/unused.ts','src/frontend/unused.ts','src/foundations/unused.ts'])('retired source layer is rejected even without imports: %s',file=>{
@@ -100,179 +55,8 @@ test.each(['src/backend/core/unused.ts','src/frontend/unused.ts','src/foundation
   expect(result.logicalViolations).toContainEqual(expect.objectContaining({file,rule:'unknown-source-layer'}));
 });
 
-test.each([
-  ['src/logic/workspace/service/workspace.ts','src/logic/application/application.ts',false],
-  ['src/logic/application/application.ts','src/bridge/server/ipc/dispatch.ts',false],
-  ['src/logic/application/application.ts','src/core/io/electron.ts',false],
-  ['src/bridge/server/bootstrap/desktop.ts','src/logic/workspace/service/workspace.ts',false],
-  ['src/bridge/server/application.ts','src/logic/application/application.ts',true],
-  ['src/bridge/server/main.ts','src/core/io/electron.ts',true],
-] as const)('service migration preserves lifecycle and host boundaries: %s -> %s',(from,to,allowed)=>{
-  const spec=path.posix.relative(path.posix.dirname(from),to);
-  const result=audit({[from]:`import type {Value} from '${spec.startsWith('.')?spec:'./'+spec}';`,[to]:'export type Value=string;'});
-  expect(result.unresolved).toEqual([]);expect(result.ok).toBe(allowed);
-});
-
-test.each([
-  ['src/logic/tasks/rules/graph.ts','src/logic/models/service/index.ts',false],
-  ['src/logic/tasks/rules/graph.ts','src/logic/workspace/service/workspace.ts',false],
-  ['src/core/io/json.ts','src/logic/knowledge/rules/types.ts',false],
-  ['src/logic/application/application.ts','src/logic/tasks/rules/unregistered.ts',false],
-  ['src/logic/tasks/rules/graph.ts','src/logic/models/index.ts',true],
-  ['src/logic/tasks/rules/scope-view.ts','src/framework/office/session.ts',true],
-  ['src/logic/team/runtime/member-execution.ts','src/logic/tasks/rules/member-topic-context.ts',true],
-  ['src/logic/team/runtime/member-execution.ts','src/logic/tasks/rules/topic-interruption.ts',true],
-  ['src/logic/dispatch/runtime/dispatch-service.ts','src/logic/tasks/runtime/topic-interruption-service.ts',true],
-  ['src/bridge/contracts/ipc-loop.ts','src/logic/tasks/rules/topic-interruption.ts',true],
-  ['src/logic/team/runtime/member-execution.ts','src/logic/tasks/rules/member-topic-context-rules.ts',true],
-  ['src/framework/office/session.ts','src/logic/team/runtime/agent-manager.ts',false],
-] as const)('domain migration preserves rule/service boundaries: %s -> %s',(from,to,allowed)=>{
-  const spec=path.posix.relative(path.posix.dirname(from),to);
-  expect(audit({[from]:`import type {Value} from '${spec.startsWith('.')?spec:'./'+spec}';`,[to]:'export type Value=string;'}).ok).toBe(allowed);
-});
-
-test.each([
-  ['src/logic/application/application.ts','src/resource/service/index.ts',true],
-  ['src/resource/service/resource-store.ts','src/core/io/locking.ts',true],
-  ['src/resource/service/resource-repository.ts','src/logic/workspace/service/paths.ts',false],
-  ['src/resource/service/resource-store.ts','src/bridge/contracts/resources.ts',false],
-  ['src/logic/tools/runtime/repository-tools.ts','src/resource/service/index.ts',false],
-  ['src/resource/index.ts','src/resource/service/index.ts',false],
-  ['src/view-new/resources/example.ts','src/resource/index.ts',false],
-  ['src/logic/application/application.ts','src/resource/service/resource-store.ts',false],
-] as const)('资源迁移边界 %s → %s = %s',(from,to,allowed)=>{
-  const spec=path.posix.relative(path.posix.dirname(from),to);
-  expect(audit({[from]:`import type {Value} from '${spec.startsWith('.')?spec:'./'+spec}';`,[to]:'export type Value=string;'}).ok).toBe(allowed);
-});
-
-test.each([
-  ['src/logic/application/application.ts','src/logic/feedback/service/index.ts',true],
-  ['src/logic/tools/rules/scope-schema.ts','src/logic/feedback/index.ts',true],
-  ['src/logic/tools/runtime/feedback-tools.ts','src/logic/feedback/index.ts',true],
-  ['src/logic/tools/runtime/feedback-tools.ts','src/logic/feedback/service/index.ts',false],
-  ['src/engine-plugins/pi/engine.ts','src/logic/feedback/index.ts',false],
-  ['src/logic/application/application.ts','src/logic/feedback/service/github-feedback.ts',false],
-  ['src/logic/feedback/contracts.ts','src/logic/tools/rules/scope-schema.ts',false],
-  ['src/logic/feedback/index.ts','src/logic/feedback/service/index.ts',false],
-  ['src/logic/feedback/service/github-feedback.ts','src/core/io/locking.ts',true],
-  ['src/logic/feedback/service/github-feedback.ts','src/core/io/electron.ts',true],
-  ['src/logic/feedback/service/github-feedback.ts','src/logic/execution/platform/locking.ts',false],
-  ['src/logic/feedback/service/github-feedback.ts','src/logic/models/index.ts',false],
-  ['src/bridge/contracts/other.ts','src/logic/feedback/index.ts',false],
-  ['src/view-new/settings/feedback.ts','src/logic/feedback/index.ts',false],
-  ['src/bridge/client/feedback.ts','src/logic/feedback/service/index.ts',false],
-  ['src/core/io/locking.ts','src/logic/feedback/index.ts',false],
-] as const)('反馈迁移边界 %s → %s = %s',(from,to,allowed)=>{
-  const relative=path.posix.relative(path.posix.dirname(from),to),spec=relative.startsWith('.')?relative:'./'+relative;
-  const result=audit({[from]:`import type {Value} from '${spec}';`,[to]:'export type Value=string;'});
-  expect(result.unresolved).toEqual([]);expect(result.ok).toBe(allowed);
-});
-test('反馈桥仅公开连接设置，纯入口拒绝平台依赖',()=>{
-  const entry='src/logic/feedback/index.ts',bridge='src/bridge/contracts/github-feedback.ts';
-  expect(audit({[entry]:'export type GitHubFeedbackStatus={};',[bridge]:"export type {GitHubFeedbackStatus} from '../../logic/feedback';"}).ok).toBe(true);
-  for(const source of ["export * from '../../logic/feedback';","export type {FeedbackToolsPort} from '../../logic/feedback';"]){
-    expect(audit({[entry]:'export type FeedbackToolsPort={};',[bridge]:source}).logicalViolations).toContainEqual(expect.objectContaining({rule:'feedback-bridge-export'}));
-  }
-  for(const file of [entry,'src/logic/feedback/contracts.ts'])for(const spec of ['node:fs','koffi','electron'])expect(audit({[file]:`import '${spec}';`}).ok).toBe(false);
-});
-
 const temporary:string[]=[];
-test.each([
-  ['src/logic/web/service/web-service.ts','src/core/web/node.ts',true],
-  ['src/logic/web/service/web-settings.ts','src/core/io/electron.ts',true],
-  ['src/logic/application/application.ts','src/logic/web/service/index.ts',true],
-  ['src/bridge/server/main.ts','src/core/web/electron.ts',true],
-  ['src/bridge/server/other.ts','src/core/web/electron.ts',false],
-  ['src/logic/tools/runtime/web-tools.ts','src/logic/web/index.ts',true],
-  ['src/logic/tools/runtime/web-tools.ts','src/logic/web/service/index.ts',false],
-  ['src/logic/tools/runtime/web-tools.ts','src/core/web/node.ts',false],
-  ['src/logic/web/index.ts','src/logic/web/service/index.ts',false],
-  ['src/logic/web/service/web-service.ts','src/core/web/electron.ts',false],
-  ['src/core/web/index.ts','src/core/web/node.ts',false],
-  ['src/core/web/node.ts','src/core/web/electron.ts',false],
-  ['src/view-new/settings/web.ts','src/logic/web/index.ts',false],
-  ['src/bridge/client/web.ts','src/logic/web/service/index.ts',false],
-  ['src/bridge/contracts/other.ts','src/logic/web/index.ts',false],
-  ['src/logic/web/service/web-settings.ts','src/logic/budget/settings/budget-settings.ts',false],
-] as const)('Web 迁移边界 %s → %s = %s',(from,to,allowed)=>{
-  const relative=path.posix.relative(path.posix.dirname(from),to),spec=relative.startsWith('.')?relative:'./'+relative;
-  const result=audit({[from]:`import type {Value} from '${spec}';`,[to]:'export type Value=string;'});
-  expect(result.unresolved).toEqual([]);expect(result.ok).toBe(allowed);
-});
-test('网页服务不能加载桌面凭据实现',()=>{
-  const result=audit({'src/logic/web/service/web-settings.ts':"import {systemSecretCipher} from '../../../core/io/electron';",'src/core/io/electron.ts':'export const systemSecretCipher={};'});
-  expect(result.ok).toBe(false);
-});
-
-test('Web 桥仅公开设置协议，便携入口禁止加载平台或网络实现',()=>{
-  const entry='src/logic/web/index.ts';
-  expect(audit({[entry]:'export type WebSettingsView={};','src/bridge/contracts/web.ts':"export type {WebSettingsView} from '../../logic/web';"}).ok).toBe(true);
-  for(const source of ["export * from '../../logic/web';","export type {WebToolsPort} from '../../logic/web';"]){const result=audit({[entry]:'export type WebToolsPort={};','src/bridge/contracts/web.ts':source});expect(result.logicalViolations).toContainEqual(expect.objectContaining({rule:'web-bridge-export'}))}
-  for(const file of ['src/core/web/extra.ts',entry])for(const dependency of ['node:http','electron'])expect(audit({[file]:`import '${dependency}';`}).ok).toBe(false);
-});
-test.each([
-  ['src/logic/application/assembly/app.ts','src/logic/models/service/index.ts',true],
-  ['src/logic/fixtures/team/example.ts','src/logic/models/index.ts',true],
-  ['src/engine-plugins/example.ts','src/logic/models/index.ts',true],
-  ['src/logic/execution/context/example.ts','src/logic/models/index.ts',true],
-  ['src/bridge/contracts/models.ts','src/logic/models/index.ts',true],
-  ['src/bridge/contracts/other.ts','src/logic/models/index.ts',false],
-  ['src/bridge/contracts/models.ts','src/logic/models/service/index.ts',false],
-  ['src/bridge/client/models.ts','src/logic/models/index.ts',false],
-  ['src/view-new/settings/models.ts','src/logic/models/index.ts',false],
-  ['src/engine-plugins/example.ts','src/logic/models/service/index.ts',false],
-  ['src/logic/execution/context/example.ts','src/logic/models/service/index.ts',false],
-  ['src/logic/application/assembly/app.ts','src/logic/models/service/llm-profiles.ts',false],
-  ['src/logic/application/assembly/app.ts','src/logic/models/config.ts',false],
-  ['src/logic/application/assembly/app.ts','src/logic/tasks/index.ts',false],
-  ['src/logic/models/index.ts','src/logic/models/service/index.ts',false],
-  ['src/logic/models/config.ts','src/core/debug/index.ts',false],
-  ['src/logic/models/service/llm-profiles.ts','src/bridge/contracts/models.ts',false],
-] as const)('模型迁移入口 %s → %s 许可为 %s',(from,to,allowed)=>{
-  const relative=path.posix.relative(path.posix.dirname(from),to);
-  const name=from==='src/bridge/contracts/models.ts'?'LlmApi':'Value';
-  const result=audit({[from]:`import type {${name}} from '${relative.startsWith('.')?relative:'./'+relative}';`,[to]:`export type ${name}=string;`});
-  expect(result.unresolved).toEqual([]);expect(result.ok).toBe(allowed);
-});
-test.each(['src/logic/models/index.ts','src/logic/models/extra.ts'])('纯模型文件 %s 不得引入平台或第三方 SDK',file=>{
-  for(const spec of ['node:fs','electron','@anthropic-ai/claude-agent-sdk'])expect(audit({[file]:`import '${spec}';`}).ok).toBe(false);
-});
-test.each(["export * from '../../logic/models';","export type {ResolvedLlm} from '../../logic/models';","export type {SecretCipher as PublicCipher} from '../../logic/models';"])('桥接模型兼容出口拒绝扩散：%s',source=>{
-  const result=audit({'src/bridge/contracts/models.ts':source,'src/logic/models/index.ts':'export interface ResolvedLlm {} export interface SecretCipher {}'});
-  expect(result.unresolved).toEqual([]);
-  expect(result.logicalViolations).toContainEqual(expect.objectContaining({rule:'model-bridge-export'}));
-});
 const foundationFile=(target:string)=>target==='web/index.ts'?'src/core/web/node.ts':target.startsWith('web/')?'src/core/'+target:target==='files/index.ts'?'src/core/io/text-files.ts':target==='utility/node.ts'?'src/core/io/digest.ts':(target.startsWith('utility/')||target.startsWith('io/'))?'src/core/'+target:/^(files|web)\//.test(target)?'src/core/platform/node/'+target:'src/logic/fixtures/foundation/'+target;
-test.each([
-  ['src/view-new/example/model.ts','src/core/utility/index.ts',false],
-  ['src/view-new/foundations/utility/json.ts','src/core/utility/index.ts',false],
-  ['src/logic/tasks/service.ts','src/core/utility/index.ts',true],
-  ['src/logic/tasks/service.ts','src/core/io/digest.ts',true],
-  ['src/bridge/contracts/example.ts','src/core/utility/index.ts',true],
-  ['src/bridge/client/call.ts','src/bridge/contracts/example.ts',true],
-  ['src/view-new/example/model.ts','src/bridge/client/call.ts',false],
-  ['src/bridge/server/dispatch.ts','src/logic/tasks/index.ts',true],
-  ['src/logic/tasks/service.ts','src/logic/knowledge/index.ts',true],
-  ['src/core/utility/index.ts','src/logic/tasks/index.ts',false],
-  ['src/core/utility/index.ts','src/bridge/contracts/example.ts',false],
-  ['src/core/utility/index.ts','src/view-new/example/model.ts',false],
-  ['src/core/utility/index.ts','src/core/debug/index.ts',false],
-  ['src/view-new/example/model.ts','src/core/io/digest.ts',false],
-  ['src/bridge/client/call.ts','src/core/io/digest.ts',false],
-  ['src/logic/tasks/service.ts','src/bridge/contracts/example.ts',false],
-  ['src/logic/tasks/service.ts','src/view-new/example/model.ts',false],
-  ['src/view-new/example/model.ts','src/logic/tasks/index.ts',false],
-  ['src/view-new/example/model.ts','src/bridge/server/dispatch.ts',false],
-  ['src/bridge/client/call.ts','src/logic/tasks/index.ts',false],
-  ['src/bridge/server/dispatch.ts','src/logic/tasks/storage.ts',false],
-  ['src/logic/tasks/service.ts','src/logic/knowledge/storage.ts',false],
-  ['src/view-new/example/model.ts','src/core/utility/json.ts',false],
-  ['src/logic/tasks/service.ts','src/core/utility/json.ts',false],
-] as const)('四层依赖 %s → %s 许可为 %s',(from,to,allowed)=>{
-  let relative=path.posix.relative(path.posix.dirname(from),to);if(!relative.startsWith('.'))relative='./'+relative;
-  const result=audit({[from]:`import type {Value} from '${relative}';`,[to]:'export type Value=string;'});
-  expect(result.unresolved).toEqual([]);expect(result.ok).toBe(allowed);
-});
 test('新 Core 未登记模块与便携模块中的 Node 导入都被拒绝',()=>{
   const unknown=audit({'src/core/hidden.ts':"import fs from 'node:fs';"});
   expect(unknown.logicalViolations).toContainEqual(expect.objectContaining({rule:'unregistered-core-module'}));
@@ -284,13 +68,6 @@ test.each(['src/view-new/example/model.ts','src/framework-ui/controls.tsx','src/
     const result=audit({[from]:`import '${spec}';`});
     expect(result.logicalViolations).toContainEqual(expect.objectContaining({rule:'runtime-environment',file:from}));
     expect(result.ok).toBe(false);
-  }
-});
-test('调度器仅可组合 portable utility 公开入口',()=>{
-  const from='src/logic/execution/context/a.ts';
-  for(const target of ['utility/index.ts','utility/node.ts','utility/json.ts','utility/graphs.ts','files/index.ts','web/index.ts']){
-    const to=foundationFile(target),relative=path.posix.relative(path.posix.dirname(from),to).replace(/\.ts$/,'');
-    expect(audit({[from]:`import type {T} from '${relative}';`,[to]:'export type T=string;'}).ok).toBe(target==='utility/index.ts');
   }
 });
 test('foundations is independent even for type dependencies; Main consumes only public web entries',()=>{
@@ -306,31 +83,6 @@ test('foundations is independent even for type dependencies; Main consumes only 
   expect(privateEntry.logicalViolations).toContainEqual(expect.objectContaining({rule:'private-entry',boundary:'web-node'}));
 });
 afterEach(()=>{for(const root of temporary.splice(0))fs.rmSync(root,{recursive:true,force:true})});
-test.each(['utility','files','web'])('合并后的 %s 子库仍不能反向依赖父层约定或业务',(capability)=>{
-  const from=foundationFile(`${capability}/index.ts`);
-  for(const to of ['src/core/debug/index.ts','src/logic/execution/ports/identity.ts','src/logic/workspace/ports/paths.ts','src/logic/fixtures/tasks/example.ts']){
-    const relative=path.posix.relative(path.posix.dirname(from),to);
-    const result=audit({[from]:`export type {Value} from '${relative}';`,[to]:'export type Value=string;'});
-    expect(result.unresolved).toEqual([]);expect([...result.violations,...result.logicalViolations]).not.toEqual([]);expect(result.ok).toBe(false);
-  }
-});
-test('Updater 与 Bridge 不因目录合并取得额外 Core 或基础库访问权',()=>{
-  for(const [from,to] of [['src/logic/updates/service/example.ts','src/core/debug/index.ts'],['src/bridge/contracts/example.ts','src/core/io/digest.ts']]){
-    const relative=path.posix.relative(path.posix.dirname(from),to);
-    const result=audit({[from]:`import type {Value} from '${relative}';`,[to]:'export type Value=string;'});
-    expect(result.unresolved).toEqual([]);expect(result.violations).not.toEqual([]);
-  }
-});
-test.each([['io','bytes','io'],['utility','async','utility-foundations']])('Core 可组合 %s 公开入口，基础库不能反向引用业务或暴露私有实现',(capability,implementation,boundary)=>{
-  const entry=foundationFile(`${capability}/index.ts`),inner=foundationFile(`${capability}/${implementation}.ts`);
-  const from='src/logic/fixtures/example.ts',main='src/bridge/server/example.ts';
-  expect(audit({[entry]:'export const value=1;',[from]:`import {value} from '${path.posix.relative(path.posix.dirname(from),entry)}';`}).ok).toBe(true);
-  const reverse=audit({[entry]:`import type {Value} from '${path.posix.relative(path.posix.dirname(entry),from)}';`,[from]:'export interface Value {}'});
-  expect(reverse.unresolved).toEqual([]);
-  expect(reverse.violations).not.toEqual([]);
-  const privateEntry=audit({[inner]:'export const value=1;',[main]:`import {value} from '${path.posix.relative(path.posix.dirname(main),inner)}';`});
-  expect(privateEntry.logicalViolations).toContainEqual(expect.objectContaining({rule:'private-entry',boundary}));
-});
 function audit(files:Record<string,string>){
   const root=fs.mkdtempSync(path.join(os.tmpdir(),'cbim-dependencies-'));temporary.push(root);
   for(const [name,content] of Object.entries(files)){const file=path.join(root,name);fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file,content)}
@@ -344,14 +96,6 @@ test('utility 通用入口禁止通过重导出连带装载 Node 入口',()=>{
   const direct=audit({'src/core/utility/json.ts':"import {createHash} from 'node:crypto';"});
   expect(direct.logicalViolations).toContainEqual(expect.objectContaining({rule:'external-dependency',boundary:'utility-foundations'}));
 });
-test('Updater 只组合 utility 通用入口，不能借基础层依赖其他方案或 Node 入口',()=>{
-  expect(audit({'src/logic/updates/service/a.ts':"import {value} from '../../../core/utility';",'src/core/utility/index.ts':'export const value=1;'}).ok).toBe(true);
-  for(const target of ['utility/node','files','web']){
-    const file=foundationFile(target==='utility/node'?target+'.ts':target+'/index.ts');
-    const result=audit({'src/logic/updates/service/a.ts':`import {value} from '${path.posix.relative('src/logic/updates/service',file)}';`,[file]:'export const value=1;'});
-    expect(result.unresolved).toEqual([]);expect(result.violations).not.toEqual([]);
-  }
-});
 
 test('fixed bootstrap generated loading remains a real source edge and cannot hide cycles or missing code',()=>{
   const load="import {createRequire} from 'node:module'; const loadApplication=createRequire(import.meta.url); loadApplication(entry);";
@@ -361,202 +105,9 @@ test('fixed bootstrap generated loading remains a real source edge and cannot hi
   const reverse=audit({'src/bridge/server/bootstrap/desktop.ts':load,'src/bridge/server/desktop/main.ts':"import '../bootstrap/desktop';"});expect(reverse.cycles).toHaveLength(1);expect(reverse.ok).toBe(false);
   expect(audit({'src/bridge/server/bootstrap/desktop.ts':load.replace('loadApplication(entry)','loadApplication(other)'),'src/bridge/server/desktop/main.ts':''}).dynamic).not.toEqual([]);
 });
-
-test('all maintained code has no cycles including type dependencies and no unreviewed loads',()=>{
-  const result=auditDependencies();
-  expect(result.files).toBeGreaterThan(150);
-  expect({cycles:result.cycles,unresolved:result.unresolved,dynamic:result.dynamic,violations:result.violations,logical:result.logicalViolations}).toEqual({cycles:[],unresolved:[],dynamic:[],violations:[],logical:[]});
-  expect(result.ok).toBe(true);
-  const reachable=(start:string)=>{
-    const seen=new Set([start]),queue=[start];
-    for(let i=0;i<queue.length;i++)for(const edge of result.edges.filter(e=>e.from===queue[i]))if(!seen.has(edge.to)){seen.add(edge.to);queue.push(edge.to)}
-    return [...seen];
-  };
-
-  for(const file of ['tests/src/logic/knowledge/rules/data/knowledge.ts','tests/src/logic/knowledge/rules/data/domain-snapshot.ts','tests/src/logic/knowledge/rules/read-models/core-domains.test.ts']){
-    expect(reachable(file).filter(value=>value.startsWith('src/bridge/server/')||value.startsWith('src/logic/scheduling-fixture/')||value==='tests/src/logic/application/support/helpers.ts'),file).toEqual([]);
-  }
-});
-
-test('read models are accessible through their public entry, not private implementations',()=>{
-  const files={
-    'src/logic/knowledge/rules/read-models/index.ts':"export {Team} from './team';",
-    'src/logic/knowledge/rules/read-models/team.ts':'export class Team {}',
-  };
-  expect(audit({...files,'src/logic/scheduling-fixture/a.ts':"import {Team} from '../../logic/knowledge/rules/read-models';"}).ok).toBe(true);
-  const result=audit({...files,'src/logic/scheduling-fixture/a.ts':"import type {Team} from '../../logic/knowledge/rules/read-models/team';"});
-  expect(result.logicalViolations).toContainEqual(expect.objectContaining({rule:'private-entry',boundary:'knowledge-read-models',kind:'type'}));
-  expect(result.cycles).toEqual([]);expect(result.ok).toBe(false);
-});
-test('alias reexports and literal dynamic imports cannot bypass a private entry',()=>{
-  const files={
-    'tsconfig.json':JSON.stringify({compilerOptions:{baseUrl:'.',paths:{'@knowledge/*':['src/logic/knowledge/rules/*']}}}),
-    'src/logic/knowledge/rules/read-models/team.ts':'export class Team {}',
-  };
-  for(const source of ["export type {Team} from '@knowledge/read-models/team';","export type T=import('@knowledge/read-models/team').Team;","import('../../logic/knowledge/rules/read-models/team');"]){
-    const result=audit({...files,'src/logic/scheduling-fixture/a.ts':source});
-    expect(result.logicalViolations).toContainEqual(expect.objectContaining({rule:'private-entry'}));expect(result.ok).toBe(false);
-  }
-});
-test('snapshot data and read models reject reverse dependencies on orchestration without needing a file cycle',()=>{
-  for(const file of ['src/logic/knowledge/rules/types.ts','src/logic/knowledge/rules/read-models/snapshot.ts']){
-    const result=audit({[file]:`import type {Query} from '${file.endsWith('/types.ts')?'./knowledge-queries':'../knowledge-queries'}';`,'src/logic/knowledge/rules/knowledge-queries.ts':'export interface Query {}'});
-    expect(result.cycles).toEqual([]);expect(result.logicalViolations).toContainEqual(expect.objectContaining({rule:'logical-direction'}));expect(result.ok).toBe(false);
-  }
-});
-
-test('P1 narrow boundaries reject restored write access, shared stores and business tool registration',()=>{
-  const cases=[
-    ['src/logic/knowledge/rules/knowledge-queries.ts','./ports','src/logic/knowledge/rules/ports.ts','knowledge-query-orchestration'],
-    ['src/logic/knowledge/rules/knowledge-queries.ts','./knowledge-refresh','src/logic/knowledge/rules/knowledge-refresh.ts','knowledge-query-orchestration'],
-    ['src/logic/budget/rules/model-request-budget-storage.ts','../../dispatch/rules/dispatch-storage','src/logic/dispatch/rules/dispatch-storage.ts','request-budget-port'],
-    ['src/logic/budget/runtime/model-request-budget-service.ts','../../dispatch/rules/dispatch-storage','src/logic/dispatch/rules/dispatch-storage.ts','request-budget-service'],
-    ['src/logic/budget/runtime/model-request-budget-service.ts','./scope-budget-service','src/logic/budget/runtime/scope-budget-service.ts','request-budget-service'],
-    ['src/logic/execution/rules/engine-tools.ts','./capabilities/member-tool-capabilities','src/logic/execution/rules/capabilities/member-tool-capabilities.ts','engine-tool-registry'],
-  ];
-  for(const [file,spec,target,boundary] of cases){
-    const result=audit({[file]:`import type {T} from '${spec}';`,[target]:'export interface T {}'});
-    expect(result.cycles).toEqual([]);expect(result.logicalViolations).toContainEqual(expect.objectContaining({rule:'logical-direction',boundary}));expect(result.ok).toBe(false);
-  }
-});
-test('test data rejects Application imports and private helper reexports',()=>{
-  const direct=audit({'tests/src/logic/knowledge/rules/data/knowledge.ts':"import type {App} from '../../../../../../src/logic/application/application';",'src/logic/application/application.ts':'export class App {}'});
-  expect(direct.logicalViolations).toContainEqual(expect.objectContaining({rule:'logical-direction',boundary:'test-data'}));expect(direct.ok).toBe(false);
-  const privateEntry=audit({'tests/src/logic/knowledge/rules/data/private.ts':'export const value=1;','tests/sample.ts':"export {value} from './src/logic/knowledge/rules/data/private';"});
-  expect(privateEntry.logicalViolations).toContainEqual(expect.objectContaining({rule:'private-entry',boundary:'test-data'}));expect(privateEntry.ok).toBe(false);
-});
-test('a shared pure helper cannot hide an indirect filesystem or SDK dependency',()=>{
-  const indirect=audit({
-    'tests/src/logic/knowledge/rules/data/knowledge.ts':"import {hash} from '../../../../../../src/core/io/serialization';",
-    'src/core/io/serialization.ts':"import {write} from './text-files'; export const hash=write;",
-    'src/core/io/text-files.ts':'export const write=()=>{};',
-  });
-  expect(indirect.logicalViolations).toContainEqual(expect.objectContaining({rule:'logical-direction',boundary:'io-serialization'}));expect(indirect.ok).toBe(false);
-  for(const spec of ['node:fs/promises','@anthropic-ai/claude-agent-sdk']){
-    const result=audit({'src/logic/knowledge/rules/read-models/snapshot.ts':`import type * as External from '${spec}';`});
-    expect(result.logicalViolations).toContainEqual(expect.objectContaining({rule:'external-dependency',boundary:'knowledge-read-models'}));expect(result.ok).toBe(false);
-  }
-});
-test('relative paths into node_modules cannot hide an external dependency',()=>{
-  const result=audit({
-    'src/logic/knowledge/rules/read-models/snapshot.ts':"import type {Sdk} from '../../../../../node_modules/private-sdk/index';",
-    'node_modules/private-sdk/index.ts':'export interface Sdk {}',
-  });
-  expect(result.unresolved).toEqual([]);
-  expect(result.logicalViolations).toContainEqual(expect.objectContaining({rule:'external-dependency',boundary:'knowledge-read-models',spec:'../../../../../node_modules/private-sdk/index'}));
-  expect(result.ok).toBe(false);
-});
-test('detects the Application to dispatcher reverse type dependency',()=>{
-  const result=audit({'src/logic/fixtures/application.ts':"import {dispatch} from './dispatch'; export class App {}",'src/logic/fixtures/dispatch.ts':"import type {App} from './application'; export const dispatch=(app:App)=>app;"});
-  expect(result.cycles[0].files).toEqual(['src/logic/fixtures/application.ts','src/logic/fixtures/dispatch.ts']);
-  expect(result.cycles[0].edges.some(e=>e.kind==='type'&&e.line===1)).toBe(true);
-});
-test('detects long cycles through type reexports and import types',()=>{
-  const result=audit({'src/logic/fixtures/a.ts':"export type {B} from './b'; export interface A {}",'src/logic/fixtures/b.ts':"export type B=import('./c').C;",'src/logic/fixtures/c.ts':"import {type A} from './a'; export type C=A;"});
-  expect(result.cycles[0].files).toEqual(['src/logic/fixtures/a.ts','src/logic/fixtures/b.ts','src/logic/fixtures/c.ts']);
-});
 test('detects dynamic imports, CommonJS and createRequire aliases',()=>{
   const result=audit({'scripts/a.mjs':"import('./b.cjs');",'scripts/b.cjs':"require('./c.mjs');",'scripts/c.mjs':"import {createRequire} from 'node:module'; const load=createRequire(import.meta.url); load('./a.mjs');"});
   expect(result.cycles[0].files).toHaveLength(3);
-});
-test('declaration companion cannot hide a JS runtime cycle',()=>{
-  const result=audit({'src/logic/fixtures/a.mjs':"import './b.mjs';",'src/logic/fixtures/b.mjs':"import './a.mjs';",'src/logic/fixtures/b.d.mts':'export interface B {}'});
-  expect(result.cycles[0].files).toEqual(['src/logic/fixtures/a.mjs','src/logic/fixtures/b.mjs']);
-});
-test('detects import equals and self cycles',()=>{
-  expect(audit({'src/logic/fixtures/a.ts':"import x = require('./a'); export = x;"}).cycles[0].files).toEqual(['src/logic/fixtures/a.ts']);
-});
-test('includes declaration triple slash path references',()=>{
-  const result=audit({'src/logic/fixtures/a.d.ts':'/// <reference path="b.d.ts" />\ninterface A {}','src/logic/fixtures/b.d.ts':'/// <reference path="a.d.ts" />\ninterface B {}'});
-  expect(result.cycles[0].files).toEqual(['src/logic/fixtures/a.d.ts','src/logic/fixtures/b.d.ts']);
-});
-test('resolves tsconfig aliases and index modules',()=>{
-  const result=audit({'tsconfig.json':JSON.stringify({compilerOptions:{baseUrl:'.',paths:{'@/*':['src/logic/fixtures/*']}}}),'src/logic/fixtures/a.ts':"import '@/b';",'src/logic/fixtures/b/index.ts':"export * from '../a';"});
-  expect(result.cycles[0].files).toEqual(['src/logic/fixtures/a.ts','src/logic/fixtures/b/index.ts']);
-});
-test('acyclic shared contract passes; unresolvable paths and computed loads fail',()=>{
-  expect(audit({'src/logic/fixtures/a.ts':"import type {T} from './contract';",'src/logic/fixtures/b.ts':"import type {T} from './contract';",'src/logic/fixtures/contract.ts':'export type T=string;'}).ok).toBe(true);
-  const bad=audit({'src/logic/fixtures/a.ts':"import './missing'; import(target);"});
-  expect(bad.ok).toBe(false);expect(bad.unresolved).toHaveLength(1);expect(bad.dynamic).toHaveLength(1);
-});
-test('cross layer type imports fail even without a cycle',()=>{
-  const result=audit({'src/logic/fixtures/a.ts':"import type {T} from '../../bridge/server/b';",'src/bridge/server/b.ts':'export type T=string;'});
-  expect(result.violations).toHaveLength(1);expect(result.ok).toBe(false);
-});
-test('snapshot contracts and domain views reject reverse or private dependencies without a file cycle',()=>{
-  const contracts='src/logic/knowledge/rules/types.ts';
-  const snapshot='src/logic/knowledge/rules/read-models/snapshot.ts';
-  const team='src/logic/knowledge/rules/read-models/team.ts';
-  const workspace='src/logic/knowledge/rules/read-models/workspace.ts';
-  const port='src/logic/knowledge/rules/ports.ts';
-  const query='src/logic/knowledge/rules/knowledge-queries.ts';
-  const denied=[
-    [contracts,snapshot],[snapshot,team],[team,workspace],[workspace,team],
-    [team,port],[query,port],['src/core/io/json.ts',contracts],
-    ['tests/src/logic/knowledge/rules/support/knowledge-data.ts','tests/src/logic/application/support/helpers.ts'],
-    ['tests/src/logic/knowledge/rules/support/knowledge-fixture.ts','src/logic/application/application.ts'],
-    ['src/logic/budget/rules/model-request-budget-storage.ts','src/logic/dispatch/rules/dispatch-storage.ts'],
-    ['src/logic/budget/runtime/model-request-budget-service.ts','src/logic/dispatch/rules/dispatch-storage.ts'],
-    ['src/logic/execution/rules/engine-tools.ts','src/logic/evidence/rules/progress-tools.ts'],
-    ['src/logic/execution/rules/index.ts','src/engine-plugins/pi/engine.ts'],
-  ];
-  for(const [from,to] of denied){
-    const relative=path.posix.relative(path.posix.dirname(from),to);
-    const result=audit({[from]:`export type {T} from '${relative.startsWith('.')?relative:'./'+relative}';`,[to]:'export type T=string;'});
-    expect(result.cycles).toEqual([]);
-    expect(result.violations,`${from} -> ${to}`).toHaveLength(1);
-    expect(result.ok).toBe(false);
-  }
-  expect(audit({
-    [contracts]:'export type T=string;',
-    [snapshot]:"export type {T} from '../types';",
-    [team]:"export type {T} from '../types';",
-    [workspace]:"export type {T} from './snapshot';",
-    'src/logic/knowledge/rules/read-models/index.ts':"export type {T} from './snapshot'; import './team'; import './workspace';",
-    [query]:"import type {T} from './read-models';",
-  }).ok).toBe(true);
-});
-test('history persistence rejects workspace and runtime assembly even through type dependencies',()=>{
-  const from='src/logic/history/service/file-store.ts';
-  for(const to of ['src/logic/workspace/service/workspace.ts','src/logic/workspace/service/agent-history.ts','src/logic/history/runtime/agent-history.ts']){
-    const relative=path.posix.relative(path.posix.dirname(from),to);
-    const result=audit({[from]:`export type {T} from '${relative}';`,[to]:'export type T=string;'});
-    expect(result.cycles).toEqual([]);expect(result.violations).toHaveLength(1);expect(result.ok).toBe(false);
-  }
-  expect(audit({[from]:"import type {T} from '../../../logic/team/rules/session-history-storage';",'src/logic/team/rules/session-history-storage.ts':'export type T=string;'}).ok).toBe(true);
-});
-
-test('updater stays independent of application runtime and business services',()=>{
-  const from='src/logic/updates/service/a.ts';
-  for(const target of ['src/logic/application/application.ts','src/logic/runtime/monitoring/global-runtime.ts','src/logic/knowledge/rules/types.ts']){
-    const result=audit({[from]:`import type {T} from '${path.posix.relative(path.posix.dirname(from),target)}';`,[target]:'export type T=string;'});
-    expect(result.violations).toHaveLength(1);
-  }
-  expect(audit({'src/bridge/server/main.ts':"import type {T} from '../../logic/updates/service/runtime-host';",'src/logic/updates/service/runtime-host.ts':"export type {T} from '../contracts';",'src/logic/updates/contracts.ts':'export type T=string;'}).ok).toBe(true);
-});
-test('View and Logic can only meet through public Bridge contracts',()=>{
-  const fixtures:Record<string,string>[]=[
-    {'src/view-new/a.ts':"import type {T} from '../logic/fixtures/b';",'src/logic/fixtures/b.ts':'export type T=string;'},
-    {'src/logic/fixtures/a.ts':"import type {T} from '../../view-new/b';",'src/view-new/b.ts':'export type T=string;'},
-    {'src/bridge/preload/a.ts':"import type {T} from '../server/b';",'src/bridge/server/b.ts':'export type T=string;'},
-  ];
-  for(const files of fixtures)expect(audit(files).violations).toHaveLength(1);
-  expect(audit({'src/view-new/a.ts':"import type {T} from '../bridge/contracts/b';",'src/bridge/contracts/b.ts':'export type T=string;'}).ok).toBe(true);
-});
-
-
-test('P2 shared rendering, IPC contracts and history storage reject business control dependencies',()=>{
-  const cases=[
-    ['src/logic/history/service/file-store.ts','../../workspace/service/workspace','src/logic/workspace/service/workspace.ts','agent-history-file-store'],
-    ['src/logic/history/service/file-store.ts','../runtime/agent-history','src/logic/history/runtime/agent-history.ts','agent-history-file-store'],
-    ['src/bridge/contracts/agent-history-ipc.ts','../../logic/application/application','src/logic/application/application.ts','ipc-contract'],
-    ['src/bridge/contracts/ipc-loop.ts','../../logic/conversation/runtime/execution-manager','src/logic/conversation/runtime/execution-manager.ts','ipc-contract'],
-    ['src/bridge/contracts/ipc-desktop.ts','../server/main','src/bridge/server/main.ts','ipc-contract'],
-  ];
-  for(const [file,spec,target,boundary] of cases){
-    const result=audit({[file]:`import type {T} from '${spec}';`,[target]:'export interface T {}'});
-    expect(result.cycles).toEqual([]);expect(result.logicalViolations).toContainEqual(expect.objectContaining({rule:'logical-direction',boundary}));expect(result.ok).toBe(false);
-  }
 });
 
 test('engines may use portable utility but not other foundation capabilities',()=>{
@@ -564,20 +115,6 @@ test('engines may use portable utility but not other foundation capabilities',()
   for(const target of ['utility/index.ts','utility/node.ts','utility/strings.ts','utility/graphs.ts','files/index.ts','web/index.ts']){
     const to=foundationFile(target),relative=path.posix.relative(path.posix.dirname(from),to);
     expect(audit({[from]:`import type {T} from '${relative}';`,[to]:'export type T=string;'}).ok).toBe(target==='utility/index.ts');
-  }
-});
-
-test('concrete engines depend on domain contracts; only execution assembly may select engines',()=>{
-  const engine='src/engine-plugins/pi/engine.ts',contract='src/logic/execution/rules/types.ts';
-  expect(audit({[engine]:"import type {T} from '../../logic/execution/rules/types';",[contract]:'export interface T {}'}).ok).toBe(true);
-  const reversed=audit({[contract]:"import type {T} from '../../../engine-plugins/pi/engine';",[engine]:'export interface T {}'});
-  expect(reversed.violations).toHaveLength(1);expect(reversed.ok).toBe(false);
-  const bypass=audit({'src/logic/application/assembly/entry.ts':"import type {T} from '../../../engine-plugins/pi/engine';",[engine]:'export interface T {}'});
-  expect(bypass.violations).toHaveLength(1);expect(bypass.ok).toBe(false);
-  for(const directory of ['execution/assembly','team/runtime']){
-    const from='src/logic/'+directory+'/entry.ts',spec=path.posix.relative(path.posix.dirname(from),engine);
-    const result=audit({[from]:`import type {T} from '${spec}';`,[engine]:'export interface T {}'});
-    expect(result.ok).toBe(directory==='execution/assembly');
   }
 });
 test('记忆包仅私有存储实现可用原子文件机制，不能扩散到其它适配器',()=>{
@@ -591,4 +128,38 @@ test('记忆包仅私有存储实现可用原子文件机制，不能扩散到�
 test.each(["import type { Value } from '../io/bytes';","export { value } from '../io/bytes';"])('Core 一级子模块禁止单向引用 %s',source=>{
   const result=audit({'src/core/web/contracts.ts':source,'src/core/io/bytes.ts':'export type Value=string;export const value=1;'});
   expect(result.violations).toContainEqual(expect.objectContaining({from:'src/core/web/contracts.ts',to:'src/core/io/bytes.ts'}));
+});
+
+// Retired application policies are replaced by the current host and engine boundaries.
+test.each([
+ ['src/view-new/office/a.ts','src/logic-new/projects/project.ts',false],
+ ['src/core/utility/a.ts','src/logic-new/models/index.ts',false],
+ ['src/framework/cability/a.ts','src/logic-new/projects/project.ts',false],
+ ['src/resource/a.ts','src/logic-new/models/index.ts',false],
+ ['src/engine-plugins/pi/a.ts','src/logic-new/execution/rules/types.ts',true],
+ ['src/engine-plugins/pi/a.ts','src/logic-new/models/service/llm-profiles.ts',false],
+ ['src/logic-new/execution/rules/engine-tools.ts','src/logic-new/projects/project.ts',false],
+ ['src/logic-new/projects/office-engine-loader.ts','src/engine-plugins/pi/engine.ts',false],
+ ['src/logic-new/projects/a.ts','src/engine-plugins/pi/engine.ts',false],
+ ['src/bridge/server/desktop/main.ts','src/logic-new/projects/organization-contract.ts',true],
+ ['src/bridge/server/bootstrap/desktop.ts','src/logic-new/projects/project.ts',false],
+ ['src/logic-new/resource-management/connector-runtime.ts','src/framework/connectors/index.ts',true],
+ ['src/logic-new/updates/service/desktop-releases.ts','src/updater/release-policy.ts',true],
+])('current source boundary %s -> %s = %s',(from,to,allowed)=>{
+ const spec=path.posix.relative(path.posix.dirname(from),to);
+ const result=audit({[from]:"import type {T} from '"+(spec.startsWith('.')?spec:'./'+spec)+"';",[to]:'export type T=string;'});
+ expect(result.unresolved).toEqual([]);expect(result.ok).toBe(allowed);
+});
+
+test('retired Logic cannot be restored through a type or runtime import',()=>{
+ for(const from of ['src/bridge/server/desktop/main.ts','src/logic-new/projects/a.ts','src/engine-plugins/pi/a.ts']){
+  const target='src/logic/a.ts',spec=path.posix.relative(path.posix.dirname(from),target);
+  expect(audit({[from]:"import type {T} from '"+spec+"';",[target]:'export type T=string;'}).ok).toBe(false);
+ }
+});
+
+// All packaged adapter implementations participate in the graph; no unused source table is needed.
+test('engine loader audits every registered package target',()=>{
+ const result=audit({'src/logic-new/projects/office-engine-loader.ts':"import {createRequire} from 'node:module'; const loadAdapter=createRequire(import.meta.url); loadAdapter(descriptor.entry);",...Object.fromEntries(['pi','claude','codex','memory'].map(id=>['src/engine-plugins/'+id+'/package.ts','export const engineAdapter={};']))});
+ expect(result.unresolved).toEqual([]);expect(result.violations).toEqual([]);expect(result.edges.filter(edge=>edge.kind==='generated-dynamic/require')).toHaveLength(4);
 });

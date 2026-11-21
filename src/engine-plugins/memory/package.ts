@@ -6,7 +6,7 @@
  */
 import { manifest } from './manifest';
 
-import type { PublishedEngineAdapter, EngineAdapterOptions } from '../../logic/execution/rules/engine-adapter';
+import type { PublishedEngineAdapter, EngineAdapterOptions } from '../../logic-new/execution/rules/engine-adapter';
 
 import { MemoryEngine } from './engine';
 

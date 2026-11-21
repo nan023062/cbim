@@ -1,4 +1,4 @@
-import type { RunInputSource } from '../logic/execution/rules/input-source';
+import type { RunInputSource } from '../logic-new/execution/rules/input-source';
 
 /** 只有可信调度来源可生成系统转交消息；消息正文始终作为数据。 */
 export function isSystemHandoff(source?: RunInputSource)

@@ -1,215 +1,618 @@
 // 逻辑边界独立于目录层级。只登记本轮已核实的边界；其他模块继续受物理层和文件无环约束。
 // files 是成员归属，public 是允许跨边界读取的入口；新增私有实现必须登记，不能靠换目录绕过。
 export const logicalBoundaries = [
-  {id:'framework-events',files:['src/framework/events.ts'],public:['src/framework/events.ts'],dependencies:[],external:[]},
-  {id:'framework-runtime',files:['src/framework/cbim-runtime.ts'],public:['src/framework/cbim-runtime.ts'],dependencies:['framework-events','framework-office','framework-cability','framework-business'],external:[]},
-  {id:'framework-skill-definition',prefix:'src/framework/skills/',public:['src/framework/skills/index.ts'],dependencies:[],external:[]},
-  {id:'framework-connectors',prefix:'src/framework/connectors/',public:['src/framework/connectors/index.ts'],dependencies:[],external:['zod']},
-  {id:'framework-business',prefix:'src/framework/business/',public:['src/framework/business/index.ts'],dependencies:['framework-events','framework-skill-definition'],external:[]},
-  {id:'framework-office',prefix:'src/framework/office/',public:['src/framework/office/index.ts','src/framework/office/call.ts','src/framework/office/session.ts','src/framework/office/exchange.ts'],dependencies:['framework-events','framework-agent','framework-cability','framework-team','framework-business'],external:['zod']},
-  {id:'framework-cability',files:['src/framework/cability/organization.ts'],public:['src/framework/cability/organization.ts'],dependencies:['framework-events','framework-agent','framework-team'],external:[]},
-  {id:'framework-skills',files:['src/framework/cability/skills.ts'],public:['src/framework/cability/skills.ts'],dependencies:['framework-skill-definition'],external:[]},
-  {id:'framework-team',files:['src/framework/cability/team.ts'],public:['src/framework/cability/team.ts'],dependencies:[],external:['zod']},
-  {id:'framework-agent',prefix:'src/framework/cability/agent/',public:['src/framework/cability/agent/index.ts','src/framework/cability/agent/questions.ts','src/framework/cability/agent/identity.ts'],dependencies:['framework-events','framework-skills','framework-team','execution-kernel'],external:['zod']},
-  {id:'execution-kernel',files:['src/framework/kernel/index.ts','src/framework/kernel/kernel.ts'],public:['src/framework/kernel/index.ts'],dependencies:['framework-models','framework-engines'],external:[]},
-  {id:'framework-models',prefix:'src/framework/kernel/models/',public:['src/framework/kernel/models/index.ts'],dependencies:['utility-foundations'],external:['zod']},
-  {id:'framework-engines',prefix:'src/framework/kernel/engines/',public:['src/framework/kernel/engines/index.ts'],dependencies:['framework-models','io'],external:['zod']},
-  {id:'debug-console',files:['src/core/debug/index.ts'],public:['src/core/debug/index.ts'],dependencies:[],external:[]},
-  {id:'debug-node',files:['src/core/debug/node.ts'],public:['src/core/debug/node.ts'],dependencies:[],external:['node:fs/promises']},
-  {id:'plugin-management',prefix:'src/resource/plugins/',public:['src/resource/plugins/index.ts'],dependencies:['file-foundations','utility-foundations'],external:['zod','node:fs/promises']},
-  {id:'engine-package-service',prefix:'src/logic/engines/packages/',public:['src/logic/engines/packages/index.ts'],dependencies:['plugin-management','engine-catalog','engine-artifact-contract','engine-runtime-contract'],external:[]},
-  {id:'engine-runtime-contract',files:['src/logic/execution/rules/engine-runtime.ts'],public:['src/logic/execution/rules/engine-runtime.ts'],dependencies:[],external:[]},
-  {id:'engine-artifact-contract',files:['src/logic/updates/engine-artifacts.ts'],public:['src/logic/updates/engine-artifacts.ts'],dependencies:[],external:[]},
-  {id:'engine-model-service',prefix:'src/logic/engines/service/',public:['src/logic/engines/service/index.ts'],dependencies:['execution-kernel','engine-catalog','model-rules','model-service','core-errors'],external:[]},
-  {id:'engine-product-manifests',files:['pi','claude','codex','memory'].map(id=>'src/engine-plugins/'+id+'/manifest.ts'),public:['pi','claude','codex','memory'].map(id=>'src/engine-plugins/'+id+'/manifest.ts'),dependencies:[],external:[]},
-  {id:'engine-catalog',prefix:'src/logic/engines/catalog/',files:['src/logic/engines/index.ts','src/logic/engines/package-status.ts'],public:['src/logic/engines/index.ts'],dependencies:['engine-product-manifests','execution-kernel','model-rules','io','engine-artifact-contract'],external:['zod']},
-  {id:'engine-bridge',files:['src/bridge/contracts/engines.ts'],public:['src/bridge/contracts/engines.ts'],dependencies:['engine-catalog'],external:[]},
   {
-    id:'file-foundations',files:['src/core/io/text-files.ts'],public:['src/core/io/text-files.ts'],
-    dependencies:[],external:['node:fs/promises','node:crypto','node:path'],
-  },
-  {id:'io-digest',files:['src/core/io/digest.ts'],public:['src/core/io/digest.ts'],dependencies:[],external:['node:crypto']},
-  {id:'io-node',files:['src/core/io/node.ts'],public:['src/core/io/node.ts'],dependencies:['file-foundations','io-digest'],external:['node:fs/promises','node:path','node:crypto']},
-  {id:'io-electron',files:['src/core/io/electron.ts'],public:['src/core/io/electron.ts'],dependencies:[],external:['electron']},
-  {id:'io-compression',files:['src/core/io/compression.ts'],public:['src/core/io/compression.ts'],dependencies:[],external:['node:zlib']},
-  {id:'io-serialization',files:['src/core/io/serialization.ts'],public:['src/core/io/serialization.ts'],dependencies:['io','io-digest'],external:[]},
-  {id:'kernel-lock',files:['src/core/io/locking.ts'],public:['src/core/io/locking.ts'],dependencies:[],external:['node:module','node:path','node:fs','koffi']},
-  {id:'io-json',files:['src/core/io/json.ts'],public:['src/core/io/json.ts'],dependencies:[],external:['jsonc-parser']},
-  {id:'io',prefix:'src/core/io/',public:['src/core/io/index.ts'],dependencies:['io-json'],external:[]},
-  {id:'material-data',files:['src/logic/materials/contracts.ts'],public:['src/logic/materials/contracts.ts'],dependencies:[],external:[]},
-  {id:'workspace-data',files:['src/logic/workspace/contracts.ts'],public:['src/logic/workspace/contracts.ts'],dependencies:['knowledge-data'],external:[]},
-  {id:'package-data',files:['src/logic/resources/packages/contracts.ts'],public:['src/logic/resources/packages/contracts.ts'],dependencies:['knowledge-data','resource-contract'],external:[]},
-  {id:'update-data',files:['src/logic/updates/contracts.ts'],public:['src/logic/updates/contracts.ts'],dependencies:[],external:[]},
-  {id:'local-model-storage',prefix:'src/resource/models/',public:['src/resource/models/local-profiles.ts'],dependencies:['file-foundations','utility-foundations','io-electron'],external:['node:fs/promises','node:crypto','zod']},
-  {id:'resource-service',prefix:'src/resource/service/',public:['src/resource/service/index.ts'],dependencies:['resource-contract','file-foundations','utility-foundations','io','io-digest','kernel-lock'],external:['zod','node:fs/promises','node:path','node:crypto','node:http','node:net','node:os']},
-  {id:'resource-contract',files:['src/resource/index.ts','src/resource/contracts.ts'],public:['src/resource/index.ts'],dependencies:[],external:[]},
-  {id:'feedback-http',files:['src/logic/feedback/service/github-api.ts'],public:['src/logic/feedback/service/github-api.ts'],dependencies:['io'],external:[]},
-  {id:'feedback-service',prefix:'src/logic/feedback/service/',public:['src/logic/feedback/service/index.ts'],imports:['src/logic/io-errors/locking.ts'],dependencies:['feedback-contract','feedback-http','io-electron','file-foundations','io-digest','kernel-lock'],external:['zod','node:fs/promises','node:path','node:crypto']},
-  {id:'feedback-contract',prefix:'src/logic/feedback/',public:['src/logic/feedback/index.ts'],dependencies:[],external:['zod']},
-  {id:'feedback-bridge-compatibility',files:['src/bridge/contracts/github-feedback.ts'],public:['src/bridge/contracts/github-feedback.ts'],dependencies:['feedback-contract'],external:[]},
-  {id:'web-service',prefix:'src/logic/web/service/',public:['src/logic/web/service/index.ts'],dependencies:['web-contract','web-node','web-portable','io-electron','file-foundations','utility-foundations'],external:['zod','node:fs/promises','node:timers/promises']},
-  {id:'web-contract',prefix:'src/logic/web/',public:['src/logic/web/index.ts'],dependencies:[],external:['zod']},
-  {id:'web-node',files:['src/core/web/node.ts','src/core/web/page-reader.ts','src/core/web/public-http.ts','src/core/web/browser-proxy.ts'],public:['src/core/web/node.ts'],dependencies:['web-portable'],external:['node:zlib','robots-parser','ipaddr.js','node:http','node:https','node:dns/promises','node:net','node:timers/promises']},
-  {id:'web-electron',files:['src/core/web/electron.ts'],public:['src/core/web/electron.ts'],dependencies:['web-portable','web-node'],external:['electron','node:crypto','node:timers/promises','zod']},
-  {id:'web-portable',prefix:'src/core/web/',public:['src/core/web/index.ts'],dependencies:[],external:['zod','parse5']},
-  {id:'web-bridge-compatibility',files:['src/bridge/contracts/web.ts'],public:['src/bridge/contracts/web.ts'],dependencies:['web-contract'],external:[]},
-  {
-    id:'model-service',prefix:'src/logic/models/service/',public:['src/logic/models/service/index.ts'],
-    dependencies:['execution-kernel','model-rules','local-model-storage'],external:['zod'],
-  },
-  {
-    id:'model-rules',prefix:'src/logic/models/',public:['src/logic/models/index.ts'],
-    dependencies:['io-electron'],external:['zod'],
-  },
-  {
-    id:'model-bridge-compatibility',files:['src/bridge/contracts/models.ts'],public:['src/bridge/contracts/models.ts'],
-    dependencies:['model-rules'],imports:['src/logic/execution/rules/model-errors.ts'],external:[],
-  },
-  {
-    id:'utility-foundations',prefix:'src/core/utility/',public:['src/core/utility/index.ts'],
-    dependencies:[],external:[],
-  },
-  {
-    id:'knowledge-data', files:['src/logic/knowledge/rules/types.ts'],
-    public:['src/logic/knowledge/rules/types.ts'], dependencies:['framework-business'], external:[],
-  },
-  {
-    id:'knowledge-read-models',
-    files:['src/logic/knowledge/rules/read-models/index.ts','src/logic/knowledge/rules/read-models/snapshot.ts','src/logic/knowledge/rules/read-models/team.ts','src/logic/knowledge/rules/read-models/workspace.ts'],
-    public:['src/logic/knowledge/rules/read-models/index.ts'],
-    imports:['src/logic/io-errors/json.ts'],dependencies:['io-serialization','io-json','knowledge-data','framework-business'], external:['node:path'],
-  },
-  {
-    id:'knowledge-query-orchestration', files:['src/logic/knowledge/rules/knowledge-queries.ts'],
-    public:['src/logic/knowledge/rules/knowledge-queries.ts'],
-    dependencies:['io-serialization','io-json','knowledge-data','knowledge-read-models'],
-    external:[],
-  },
-  {
-    id:'knowledge-refresh', files:['src/logic/knowledge/rules/knowledge-refresh.ts'],
-    public:['src/logic/knowledge/rules/knowledge-refresh.ts'],
-    dependencies:['io-serialization','io-json','knowledge-data','knowledge-read-models'],
-    imports:['src/logic/knowledge/rules/knowledge-write-input.ts'], external:[],
-  },
-  {
-    id:'request-budget-port', files:['src/logic/budget/rules/model-request-budget-storage.ts'],
-    public:['src/logic/budget/rules/model-request-budget-storage.ts'], dependencies:[],
-    imports:['src/logic/budget/rules/model-request-budget.ts','src/logic/budget/rules/scope-budget.ts'], external:[],
-  },
-  {
-    id:'request-budget-service', files:['src/logic/budget/runtime/model-request-budget-service.ts'],
-    public:['src/logic/budget/runtime/model-request-budget-service.ts'],
-    dependencies:['io-serialization','io-json','request-budget-port','model-rules'],
-    imports:['src/logic/budget/rules/model-request-budget.ts','src/logic/budget/rules/model-request-budget-rules.ts','src/logic/budget/rules/model-request-configuration.ts','src/logic/budget/rules/request-budget.ts','src/logic/team/rules/workspace-member-rules.ts'],external:['node:crypto'],
-  },
-  {
-    id:'engine-tool-registry', files:['src/logic/execution/rules/engine-tools.ts'],
-    public:['src/logic/execution/rules/engine-tools.ts'], dependencies:[], external:[],
-  },
-  {
-    "id": "ipc-contract",
+    "id": "framework-events",
     "files": [
-      "src/bridge/contracts/ipc-call.ts",
-      "src/bridge/contracts/ipc-chat.ts",
-      "src/bridge/contracts/ipc-desktop.ts",
-      "src/bridge/contracts/ipc-dispatch.ts",
-      "src/bridge/contracts/ipc-governance.ts",
-      "src/bridge/contracts/ipc-loop.ts",
-      "src/bridge/contracts/ipc-people.ts",
-      "src/bridge/contracts/ipc-resources.ts",
-      "src/bridge/contracts/ipc-settings.ts",
-      "src/bridge/contracts/ipc-shapes.ts",
-      "src/bridge/contracts/ipc-workspace.ts",
-      "src/bridge/contracts/agent-history-ipc.ts",
-      "src/bridge/contracts/model-actions.ts",
-      "src/bridge/contracts/automation.ts",
-      "src/bridge/contracts/workspace-view.ts"
+      "src/framework/events.ts"
     ],
     "public": [
-      "src/bridge/contracts/ipc-call.ts",
-      "src/bridge/contracts/ipc-chat.ts",
-      "src/bridge/contracts/ipc-desktop.ts",
-      "src/bridge/contracts/ipc-dispatch.ts",
-      "src/bridge/contracts/ipc-governance.ts",
-      "src/bridge/contracts/ipc-loop.ts",
-      "src/bridge/contracts/ipc-people.ts",
-      "src/bridge/contracts/ipc-resources.ts",
-      "src/bridge/contracts/ipc-settings.ts",
-      "src/bridge/contracts/ipc-shapes.ts",
-      "src/bridge/contracts/ipc-workspace.ts",
-      "src/bridge/contracts/agent-history-ipc.ts",
-      "src/bridge/contracts/model-actions.ts",
-      "src/bridge/contracts/automation.ts",
-      "src/bridge/contracts/workspace-view.ts"
+      "src/framework/events.ts"
     ],
-    "dependencies": ["resource-contract",
-      "knowledge-data",
-      "workspace-data"
+    "dependencies": [],
+    "external": []
+  },
+  {
+    "id": "framework-runtime",
+    "files": [
+      "src/framework/cbim-runtime.ts"
     ],
-    "imports": [
-      "src/framework/cability/agent/questions.ts",
-      "src/logic/automation/rules/contracts.ts",
-      "src/logic/team/rules/agent-runtime.ts",
-      "src/bridge/contracts/models.ts",
-      "src/bridge/contracts/engines.ts",
-      "src/logic/execution/rules/types.ts",
-      "src/bridge/contracts/github-feedback.ts",
-      "src/resource/connections/rules/repository-connection.ts",
-      "src/resource/connections/rules/repository-tools.ts",
-      "src/bridge/contracts/web.ts",
-      "src/logic/governance/rules/module-governance.ts",
-      "src/logic/knowledge/rules/object-contract.ts",
-      "src/logic/tools/rules/policy/types.ts",
-      "src/logic/runtime/rules/admission.ts",
-      "src/logic/runtime/rules/types.ts",
-      "src/logic/evidence/rules/artifact-baseline.ts",
-      "src/logic/tasks/rules/command-verification.ts",
-      "src/logic/file-operations/rules/controlled-file-operation.ts",
-      "src/logic/tasks/rules/dispatch-commands.ts",
-      "src/logic/dispatch/rules/dispatch-storage.ts",
-      "src/logic/tasks/rules/effect-observation.ts",
-      "src/logic/tasks/rules/execution-report.ts",
-      "src/logic/tasks/rules/graph-types.ts",
-      "src/logic/tasks/rules/human-continue.ts",
-      "src/logic/tasks/rules/human-decisions.ts",
-      "src/logic/file-operations/rules/isolated-execution-recovery.ts",
-      "src/logic/tasks/rules/member-commands.ts",
-      "src/logic/tasks/rules/member-events.ts",
-      "src/logic/budget/rules/model-request-budget.ts",
-      "src/logic/evidence/rules/output-manifest.ts",
-      "src/logic/tasks/rules/queue.ts",
-      "src/logic/budget/rules/scope-budget.ts",
-      "src/logic/tasks/rules/scope-continuation.ts",
-      "src/logic/tasks/rules/topic-interruption.ts",
-      "src/logic/tasks/rules/scope-recovery.ts",
-      "src/logic/tasks/rules/scope-replan.ts",
-      "src/logic/budget/rules/scope-usage.ts",
-      "src/logic/tasks/rules/scope-view.ts",
-      "src/logic/tasks/rules/types.ts",
-      "src/logic/team/rules/owner-execution-discovery.ts",
-      "src/logic/team/rules/session-history.ts",
-      "src/logic/team/rules/workspace-member.ts",
-      "src/logic/workspace/rules/module-ownership.ts",
-      "src/logic/workspace/rules/source-browser.ts",
-      "src/bridge/contracts/agent-history.ts",
-      "src/bridge/contracts/chat.ts",
-      "src/bridge/contracts/desktop-updates.ts",
-      "src/bridge/contracts/resources.ts"
+    "public": [
+      "src/framework/cbim-runtime.ts"
+    ],
+    "dependencies": [
+      "framework-events",
+      "framework-office",
+      "framework-cability",
+      "framework-business"
+    ],
+    "external": []
+  },
+  {
+    "id": "framework-skill-definition",
+    "prefix": "src/framework/skills/",
+    "public": [
+      "src/framework/skills/index.ts"
+    ],
+    "dependencies": [],
+    "external": []
+  },
+  {
+    "id": "framework-connectors",
+    "prefix": "src/framework/connectors/",
+    "public": [
+      "src/framework/connectors/index.ts"
+    ],
+    "dependencies": [],
+    "external": [
+      "zod"
+    ]
+  },
+  {
+    "id": "framework-business",
+    "prefix": "src/framework/business/",
+    "public": [
+      "src/framework/business/index.ts"
+    ],
+    "dependencies": [
+      "framework-events",
+      "framework-skill-definition"
+    ],
+    "external": []
+  },
+  {
+    "id": "framework-office",
+    "prefix": "src/framework/office/",
+    "public": [
+      "src/framework/office/index.ts",
+      "src/framework/office/call.ts",
+      "src/framework/office/session.ts",
+      "src/framework/office/exchange.ts"
+    ],
+    "dependencies": [
+      "framework-events",
+      "framework-agent",
+      "framework-cability",
+      "framework-team",
+      "framework-business"
     ],
     "external": [
       "zod"
     ]
   },
   {
-    id:'agent-history-file-store', files:['src/logic/history/service/file-store.ts'],
-    public:['src/logic/history/service/file-store.ts'], dependencies:['io-serialization','io-json','file-foundations'],
-    imports:['src/logic/team/rules/session-history-storage.ts'],external:['node:fs/promises','node:path'],
+    "id": "framework-cability",
+    "files": [
+      "src/framework/cability/organization.ts"
+    ],
+    "public": [
+      "src/framework/cability/organization.ts"
+    ],
+    "dependencies": [
+      "framework-events",
+      "framework-agent",
+      "framework-team"
+    ],
+    "external": []
   },
   {
-    id:'test-data', prefix:'tests/src/logic/knowledge/rules/data/',
-    public:['tests/src/logic/knowledge/rules/data/knowledge.ts','tests/src/logic/knowledge/rules/data/domain-snapshot.ts'],
-    dependencies:['io-serialization','io-json','knowledge-data'], external:['node:crypto'],
+    "id": "framework-skills",
+    "files": [
+      "src/framework/cability/skills.ts"
+    ],
+    "public": [
+      "src/framework/cability/skills.ts"
+    ],
+    "dependencies": [
+      "framework-skill-definition"
+    ],
+    "external": []
   },
+  {
+    "id": "framework-team",
+    "files": [
+      "src/framework/cability/team.ts"
+    ],
+    "public": [
+      "src/framework/cability/team.ts"
+    ],
+    "dependencies": [],
+    "external": [
+      "zod"
+    ]
+  },
+  {
+    "id": "framework-agent",
+    "prefix": "src/framework/cability/agent/",
+    "public": [
+      "src/framework/cability/agent/index.ts",
+      "src/framework/cability/agent/questions.ts",
+      "src/framework/cability/agent/identity.ts"
+    ],
+    "dependencies": [
+      "framework-events",
+      "framework-skills",
+      "framework-team",
+      "execution-kernel"
+    ],
+    "external": [
+      "zod"
+    ]
+  },
+  {
+    "id": "execution-kernel",
+    "files": [
+      "src/framework/kernel/index.ts",
+      "src/framework/kernel/kernel.ts"
+    ],
+    "public": [
+      "src/framework/kernel/index.ts"
+    ],
+    "dependencies": [
+      "framework-models",
+      "framework-engines"
+    ],
+    "external": []
+  },
+  {
+    "id": "framework-models",
+    "prefix": "src/framework/kernel/models/",
+    "public": [
+      "src/framework/kernel/models/index.ts"
+    ],
+    "dependencies": [
+      "utility-foundations"
+    ],
+    "external": [
+      "zod"
+    ]
+  },
+  {
+    "id": "framework-engines",
+    "prefix": "src/framework/kernel/engines/",
+    "public": [
+      "src/framework/kernel/engines/index.ts"
+    ],
+    "dependencies": [
+      "framework-models",
+      "io"
+    ],
+    "external": [
+      "zod"
+    ]
+  },
+  {
+    "id": "debug-console",
+    "files": [
+      "src/core/debug/index.ts"
+    ],
+    "public": [
+      "src/core/debug/index.ts"
+    ],
+    "dependencies": [],
+    "external": []
+  },
+  {
+    "id": "debug-node",
+    "files": [
+      "src/core/debug/node.ts"
+    ],
+    "public": [
+      "src/core/debug/node.ts"
+    ],
+    "dependencies": [],
+    "external": [
+      "node:fs/promises"
+    ]
+  },
+  {
+    "id": "plugin-management",
+    "prefix": "src/resource/plugins/",
+    "public": [
+      "src/resource/plugins/index.ts"
+    ],
+    "dependencies": [
+      "file-foundations",
+      "utility-foundations"
+    ],
+    "external": [
+      "zod",
+      "node:fs/promises"
+    ]
+  },
+  {
+    "id": "engine-package-service",
+    "prefix": "src/logic-new/engines/packages/",
+    "public": [
+      "src/logic-new/engines/packages/index.ts"
+    ],
+    "dependencies": [
+      "plugin-management",
+      "engine-catalog",
+      "engine-artifact-contract",
+      "engine-runtime-contract"
+    ],
+    "external": []
+  },
+  {
+    "id": "engine-runtime-contract",
+    "files": [
+      "src/logic-new/execution/rules/engine-runtime.ts"
+    ],
+    "public": [
+      "src/logic-new/execution/rules/engine-runtime.ts"
+    ],
+    "dependencies": [],
+    "external": []
+  },
+  {
+    "id": "engine-artifact-contract",
+    "files": [
+      "src/logic-new/updates/engine-artifacts.ts"
+    ],
+    "public": [
+      "src/logic-new/updates/engine-artifacts.ts"
+    ],
+    "dependencies": [],
+    "external": []
+  },
+  {
+    "id": "engine-model-service",
+    "prefix": "src/logic-new/engines/service/",
+    "public": [
+      "src/logic-new/engines/service/index.ts"
+    ],
+    "dependencies": [
+      "execution-kernel",
+      "engine-catalog",
+      "model-rules",
+      "model-service"
+    ],
+    "external": []
+  },
+  {
+    "id": "engine-product-manifests",
+    "files": [
+      "src/engine-plugins/pi/manifest.ts",
+      "src/engine-plugins/claude/manifest.ts",
+      "src/engine-plugins/codex/manifest.ts",
+      "src/engine-plugins/memory/manifest.ts"
+    ],
+    "public": [
+      "src/engine-plugins/pi/manifest.ts",
+      "src/engine-plugins/claude/manifest.ts",
+      "src/engine-plugins/codex/manifest.ts",
+      "src/engine-plugins/memory/manifest.ts"
+    ],
+    "dependencies": [],
+    "external": []
+  },
+  {
+    "id": "engine-catalog",
+    "prefix": "src/logic-new/engines/catalog/",
+    "files": [
+      "src/logic-new/engines/index.ts",
+      "src/logic-new/engines/package-status.ts"
+    ],
+    "public": [
+      "src/logic-new/engines/index.ts"
+    ],
+    "dependencies": [
+      "engine-product-manifests",
+      "execution-kernel",
+      "model-rules",
+      "io",
+      "engine-artifact-contract"
+    ],
+    "external": [
+      "zod"
+    ]
+  },
+  {
+    "id": "file-foundations",
+    "files": [
+      "src/core/io/text-files.ts"
+    ],
+    "public": [
+      "src/core/io/text-files.ts"
+    ],
+    "dependencies": [],
+    "external": [
+      "node:fs/promises",
+      "node:crypto",
+      "node:path"
+    ]
+  },
+  {
+    "id": "io-digest",
+    "files": [
+      "src/core/io/digest.ts"
+    ],
+    "public": [
+      "src/core/io/digest.ts"
+    ],
+    "dependencies": [],
+    "external": [
+      "node:crypto"
+    ]
+  },
+  {
+    "id": "io-node",
+    "files": [
+      "src/core/io/node.ts"
+    ],
+    "public": [
+      "src/core/io/node.ts"
+    ],
+    "dependencies": [
+      "file-foundations",
+      "io-digest"
+    ],
+    "external": [
+      "node:fs/promises",
+      "node:path",
+      "node:crypto"
+    ]
+  },
+  {
+    "id": "io-electron",
+    "files": [
+      "src/core/io/electron.ts"
+    ],
+    "public": [
+      "src/core/io/electron.ts"
+    ],
+    "dependencies": [],
+    "external": [
+      "electron"
+    ]
+  },
+  {
+    "id": "io-compression",
+    "files": [
+      "src/core/io/compression.ts"
+    ],
+    "public": [
+      "src/core/io/compression.ts"
+    ],
+    "dependencies": [],
+    "external": [
+      "node:zlib"
+    ]
+  },
+  {
+    "id": "io-serialization",
+    "files": [
+      "src/core/io/serialization.ts"
+    ],
+    "public": [
+      "src/core/io/serialization.ts"
+    ],
+    "dependencies": [
+      "io",
+      "io-digest"
+    ],
+    "external": []
+  },
+  {
+    "id": "kernel-lock",
+    "files": [
+      "src/core/io/locking.ts"
+    ],
+    "public": [
+      "src/core/io/locking.ts"
+    ],
+    "dependencies": [],
+    "external": [
+      "node:module",
+      "node:path",
+      "node:fs",
+      "koffi"
+    ]
+  },
+  {
+    "id": "io-json",
+    "files": [
+      "src/core/io/json.ts"
+    ],
+    "public": [
+      "src/core/io/json.ts"
+    ],
+    "dependencies": [],
+    "external": [
+      "jsonc-parser"
+    ]
+  },
+  {
+    "id": "io",
+    "prefix": "src/core/io/",
+    "public": [
+      "src/core/io/index.ts"
+    ],
+    "dependencies": [
+      "io-json"
+    ],
+    "external": []
+  },
+  {
+    "id": "update-data",
+    "files": [
+      "src/logic-new/updates/contracts.ts"
+    ],
+    "public": [
+      "src/logic-new/updates/contracts.ts"
+    ],
+    "dependencies": [],
+    "external": []
+  },
+  {
+    "id": "local-model-storage",
+    "prefix": "src/resource/models/",
+    "public": [
+      "src/resource/models/local-profiles.ts"
+    ],
+    "dependencies": [
+      "file-foundations",
+      "utility-foundations",
+      "io-electron"
+    ],
+    "external": [
+      "node:fs/promises",
+      "node:crypto",
+      "zod"
+    ]
+  },
+  {
+    "id": "resource-service",
+    "prefix": "src/resource/service/",
+    "public": [
+      "src/resource/service/index.ts"
+    ],
+    "dependencies": [
+      "resource-contract",
+      "file-foundations",
+      "utility-foundations",
+      "io",
+      "io-digest",
+      "kernel-lock"
+    ],
+    "external": [
+      "zod",
+      "node:fs/promises",
+      "node:path",
+      "node:crypto",
+      "node:http",
+      "node:net",
+      "node:os"
+    ]
+  },
+  {
+    "id": "resource-contract",
+    "files": [
+      "src/resource/index.ts",
+      "src/resource/contracts.ts"
+    ],
+    "public": [
+      "src/resource/index.ts"
+    ],
+    "dependencies": [],
+    "external": []
+  },
+  {
+    "id": "feedback-contract",
+    "prefix": "src/logic-new/feedback/",
+    "public": [
+      "src/logic-new/feedback/index.ts"
+    ],
+    "dependencies": [],
+    "external": [
+      "zod"
+    ]
+  },
+  {
+    "id": "web-node",
+    "files": [
+      "src/core/web/node.ts",
+      "src/core/web/page-reader.ts",
+      "src/core/web/public-http.ts",
+      "src/core/web/browser-proxy.ts"
+    ],
+    "public": [
+      "src/core/web/node.ts"
+    ],
+    "dependencies": [
+      "web-portable"
+    ],
+    "external": [
+      "node:zlib",
+      "robots-parser",
+      "ipaddr.js",
+      "node:http",
+      "node:https",
+      "node:dns/promises",
+      "node:net",
+      "node:timers/promises"
+    ]
+  },
+  {
+    "id": "web-electron",
+    "files": [
+      "src/core/web/electron.ts"
+    ],
+    "public": [
+      "src/core/web/electron.ts"
+    ],
+    "dependencies": [
+      "web-portable",
+      "web-node"
+    ],
+    "external": [
+      "electron",
+      "node:crypto",
+      "node:timers/promises",
+      "zod"
+    ]
+  },
+  {
+    "id": "web-portable",
+    "prefix": "src/core/web/",
+    "public": [
+      "src/core/web/index.ts"
+    ],
+    "dependencies": [],
+    "external": [
+      "zod",
+      "parse5"
+    ]
+  },
+  {
+    "id": "model-service",
+    "prefix": "src/logic-new/models/service/",
+    "public": [
+      "src/logic-new/models/service/index.ts"
+    ],
+    "dependencies": [
+      "execution-kernel",
+      "model-rules",
+      "local-model-storage"
+    ],
+    "external": [
+      "zod"
+    ]
+  },
+  {
+    "id": "model-rules",
+    "prefix": "src/logic-new/models/",
+    "public": [
+      "src/logic-new/models/index.ts"
+    ],
+    "dependencies": [
+      "io-electron"
+    ],
+    "external": [
+      "zod"
+    ]
+  },
+  {
+    "id": "utility-foundations",
+    "prefix": "src/core/utility/",
+    "public": [
+      "src/core/utility/index.ts"
+    ],
+    "dependencies": [],
+    "external": []
+  },
+  {
+    "id": "engine-tool-registry",
+    "files": [
+      "src/logic-new/execution/rules/engine-tools.ts"
+    ],
+    "public": [
+      "src/logic-new/execution/rules/engine-tools.ts"
+    ],
+    "dependencies": [],
+    "external": []
+  }
 ];
 
 /** 对已解析的真实文件边检查逻辑方向与入口；类型、重导出、别名和字面量加载一视同仁。 */

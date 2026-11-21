@@ -5,7 +5,7 @@
  */
 import { createHash } from 'node:crypto';
 
-import type { EngineEvent } from '../logic/execution/rules/types';
+import type { EngineEvent } from '../logic-new/execution/rules/types';
 
 /** 每轮创建一次；过期或 dispose 后迟到事件不能重新启用计时器。 */
 export class RunInactivityTimer

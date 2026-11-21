@@ -14,7 +14,7 @@
 
 本层没有直接产品实现，由下方子模块组成；每个直接子模块作为一个虚拟封装，只在本层呈现整体职责与协作。
 
-当前桌面入口为 `index.html → view-new/main.ts`。旧 `src/view` 及其专属测试已退役；共享界面控件归 framework-ui，任务与项目状态由 logic-new/projects 管理。旧 Logic 仍服务于现有宿主适配，删除旧界面不改变其业务契约。
+当前桌面入口为 `index.html → view-new/main.ts`。旧 `src/view` 及其专属测试已退役；共享界面控件归 framework-ui，任务与项目状态由 logic-new/projects 管理。旧 src/logic 及其专属宿主、测试已退役；当前连接器运行时和引擎协议保留在 logic-new，独立引擎实现仍归 engine-plugins。
 
 ## 阅读方式
 
@@ -28,14 +28,22 @@
 
 标注为 `virtual` 的节点是直接子模块的虚拟类封装；内部设计沿下方入口阅读。
 
-### 关系组 1：bridge
+### 关系组 1：logic-new
 
 ```mermaid
 classDiagram
+class N_9a23854b4d79["logic-new"] {
+  <<virtual>>
+}
+click N_9a23854b4d79 href "logic-new/ARCHITECTURE.md"
 class N_22a9dc163407["bridge"] {
   <<virtual>>
 }
 click N_22a9dc163407 href "bridge/ARCHITECTURE.md"
+class N_be04b6eef23f["engine-plugins"] {
+  <<virtual>>
+}
+click N_be04b6eef23f href "engine-plugins/ARCHITECTURE.md"
 class N_2ac6ecef0e06["core"] {
   <<virtual>>
 }
@@ -44,49 +52,34 @@ class N_2a213dc873da["framework"] {
   <<virtual>>
 }
 click N_2a213dc873da href "framework/ARCHITECTURE.md"
-class N_8ad7653761f5["logic"] {
-  <<virtual>>
-}
-click N_8ad7653761f5 href "logic/ARCHITECTURE.md"
-class N_9a23854b4d79["logic-new"] {
-  <<virtual>>
-}
-click N_9a23854b4d79 href "logic-new/ARCHITECTURE.md"
 class N_212574dc93ac["resource"] {
   <<virtual>>
 }
 click N_212574dc93ac href "resource/ARCHITECTURE.md"
 N_22a9dc163407 ..> N_2ac6ecef0e06 : 依赖
-N_22a9dc163407 ..> N_2a213dc873da : 依赖
-N_22a9dc163407 ..> N_8ad7653761f5 : 依赖
 N_22a9dc163407 ..> N_9a23854b4d79 : 依赖
-N_22a9dc163407 ..> N_212574dc93ac : 依赖
-N_8ad7653761f5 ..> N_2ac6ecef0e06 : 依赖
-N_8ad7653761f5 ..> N_2a213dc873da : 依赖
-N_8ad7653761f5 ..> N_212574dc93ac : 依赖
+N_be04b6eef23f ..> N_2ac6ecef0e06 : 依赖
+N_be04b6eef23f ..> N_9a23854b4d79 : 依赖
 N_9a23854b4d79 ..> N_2ac6ecef0e06 : 依赖
+N_9a23854b4d79 ..> N_be04b6eef23f : 依赖
 N_9a23854b4d79 ..> N_2a213dc873da : 依赖
 N_9a23854b4d79 ..> N_212574dc93ac : 依赖
 N_212574dc93ac ..> N_2ac6ecef0e06 : 依赖
 N_212574dc93ac ..> N_2a213dc873da : 依赖
 ```
 
-### 关系组 2：engine-plugins
+### 关系组 2：updater
 
 ```mermaid
 classDiagram
-class N_be04b6eef23f["engine-plugins"] {
-  <<virtual>>
-}
-click N_be04b6eef23f href "engine-plugins/ARCHITECTURE.md"
-class N_b3e974f45a66["framework-ui"] {
-  <<virtual>>
-}
-click N_b3e974f45a66 href "framework-ui/ARCHITECTURE.md"
 class N_b572c76539a3["updater"] {
   <<virtual>>
 }
 click N_b572c76539a3 href "updater/ARCHITECTURE.md"
+class N_b3e974f45a66["framework-ui"] {
+  <<virtual>>
+}
+click N_b3e974f45a66 href "framework-ui/ARCHITECTURE.md"
 class N_c755adb87123["view-new"] {
   <<virtual>>
 }
@@ -101,9 +94,7 @@ N_c755adb87123 ..> N_b3e974f45a66 : 依赖
 | 引用方 | 关系 | 目标 |
 | --- | --- | --- |
 | [bridge](bridge/ARCHITECTURE.md)（图 1） | 依赖 | [updater](updater/ARCHITECTURE.md)（图 2） |
-| [engine-plugins](engine-plugins/ARCHITECTURE.md)（图 2） | 依赖 | [core](core/ARCHITECTURE.md)（图 1）、[logic](logic/ARCHITECTURE.md)（图 1） |
-| [logic](logic/ARCHITECTURE.md)（图 1） | 依赖 | [engine-plugins](engine-plugins/ARCHITECTURE.md)（图 2） |
-| [logic-new](logic-new/ARCHITECTURE.md)（图 1） | 依赖 | [engine-plugins](engine-plugins/ARCHITECTURE.md)（图 2）、[updater](updater/ARCHITECTURE.md)（图 2） |
+| [logic-new](logic-new/ARCHITECTURE.md)（图 1） | 依赖 | [updater](updater/ARCHITECTURE.md)（图 2） |
 | [view-new](view-new/ARCHITECTURE.md)（图 2） | 依赖 | [bridge](bridge/ARCHITECTURE.md)（图 1） |
 
 ## 子模块
@@ -115,8 +106,7 @@ N_c755adb87123 ..> N_b3e974f45a66 : 依赖
 | [engine-plugins](engine-plugins/ARCHITECTURE.md) | 将不同供应商和专业循环适配到统一执行协议，隔离会话、工具和传输差异。 |
 | [framework](framework/ARCHITECTURE.md) | Framework 定义 CBIM 的模型能力与 Agent 引擎协议，供 Logic 装配。引擎按能力选择模型；模型目录独立于引擎。 |
 | [framework-ui](framework-ui/ARCHITECTURE.md) | 为桌面页面提供不含业务状态的 React 控件、可见性生命周期和窗口列表。页面通过属性传入内容与交互回调；此层不读取 Bridge、业务服务或项目数据。 |
-| [logic](logic/ARCHITECTURE.md) | 按领域组织业务事实、规则和运行服务，以统一应用生命周期连接各领域，使业务不依赖窗口、IPC 或 Electron。 |
-| [logic-new](logic-new/ARCHITECTURE.md) | 为当前桌面视图提供业务用例。迁移范围沿新版入口追踪到具体调用和所需契约；历史功能留在旧目录，待产品接入时逐项迁移。 |
+| [logic-new](logic-new/ARCHITECTURE.md) | 为当前桌面视图提供业务用例。旧 src/logic 已移除。当前调用仍需的连接器生命周期和引擎协议迁入本层，旧调度、存储及未接入的服务不再保留。协议目录中的类型与纯规则用于兼容独立引擎包，不表示旧产品能力仍在运行。 |
 | [resource](resource/ARCHITECTURE.md) | Resource 拥有可共享的资产定义和当前用户的本机资源。公共入口导出的 `resourceInventory` 按这两种范围登记资产。 |
 | [updater](updater/ARCHITECTURE.md) | 桌面宿主通过更新器准备 Windows 安装包。确认安装且业务退出准备完成后，更新器调用 electron-updater，将文件替换和应用重启交给独立 NSIS 安装进程。版本检查和下载期间，适配器在宿主进程内运行。 |
 | [view-new](view-new/ARCHITECTURE.md) | 桌面主框架管理项目、Office 对话和页面导航，通过受限宿主接口读写项目与运行状态。index.html 只挂载本目录入口；旧 src/view 已整体退役，不再保留兼容渲染路径。 |

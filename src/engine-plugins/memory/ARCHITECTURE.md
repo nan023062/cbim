@@ -28,16 +28,16 @@ class N_0bbb264d2328["MemorySession"]
 click N_0bbb264d2328 href "storage.ts"
 class N_ec6a81a1eba8["MemoryIndexCache"]
 click N_ec6a81a1eba8 href "storage.ts"
-class N_649b8a6ac172["AgentEngine"] {
+class N_7c37851762e9["AgentEngine"] {
   <<boundary>>
 }
-click N_649b8a6ac172 href "../../logic/execution/rules/types.ts"
+click N_7c37851762e9 href "../../logic-new/execution/rules/types.ts"
 N_d590215817ab ..> N_0bbb264d2328 : 依赖
 N_d590215817ab ..> N_ec6a81a1eba8 : 依赖
-N_649b8a6ac172 <|.. N_d590215817ab
+N_7c37851762e9 <|.. N_d590215817ab
 ```
 
-外部继承／实现边界：[AgentEngine](../../logic/execution/rules/types.ts)。
+外部继承／实现边界：[AgentEngine](../../logic-new/execution/rules/types.ts)。
 
 [上层设计](../ARCHITECTURE.md)
 

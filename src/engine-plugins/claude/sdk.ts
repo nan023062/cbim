@@ -12,7 +12,7 @@ import { pathToFileURL } from 'node:url';
 
 import type { query } from '@anthropic-ai/claude-agent-sdk';
 
-import type { EngineRuntimePackage } from '../../logic/execution/rules/engine-runtime';
+import type { EngineRuntimePackage } from '../../logic-new/execution/rules/engine-runtime';
 
 /** 仅加载固定第三方包，入口不来自 IPC、模型或工作区文件。 */
 export async function loadClaudeSdk(runtime?: EngineRuntimePackage): Promise<{ query: typeof query }>

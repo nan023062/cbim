@@ -84,7 +84,7 @@ export function checkTestModules(root=process.cwd(),options={}){
         if(project&&kind!=='integration')errors.push(`Project-wide tests must be integration: ${file}`);
         if(kind!=='unit')continue;
         const dependencies=reachable(file,graph);
-        const assembly=[...dependencies].find(value=>value==='src/logic/application/application.ts'||value==='tests/src/logic/application/support/helpers.ts');
+        const assembly=[...dependencies].find(value=>value==='src/logic-new/application/index.ts');
         if(assembly)errors.push(`Unit loads application: ${file} -> ${assembly}`);
         const foreign=testSubjects(root,file,report.edges).filter(target=>![...definition.roots,...supportRoots].some(prefix=>belongs(target,prefix)));
         if(foreign.length)errors.push(`Unit crosses module: ${file} -> ${foreign.join(', ')}`);

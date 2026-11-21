@@ -4,7 +4,7 @@ import {createHash} from 'node:crypto';
 import {runInNewContext} from 'node:vm';
 import ts from 'typescript';
 import {expect,it,vi} from 'vitest';
-import type {DesktopRuntimeHost} from '../../../../../src/logic/updates/service/runtime-host';
+import type {DesktopRuntimeHost} from '../../../../../src/logic-new/updates/service/runtime-host';
 
 const sourceRoot=path.resolve('src/bridge/server');
 const compile=(file:string)=>ts.transpileModule(readFileSync(path.join(sourceRoot,file),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText;
@@ -12,7 +12,7 @@ const desktopCode=compile('bootstrap/desktop.ts');
 
 // 读取真实业务模块的导出名，但不执行窗口和业务生命周期；错误的入口拼写不能由同名替身掩盖。
 const businessExports:Record<string,unknown>={};
-runInNewContext(compile('main.ts'),{exports:businessExports,require:()=>({})});
+runInNewContext(compile('desktop/main.ts'),{exports:businessExports,require:()=>({})});
 
 function boot(packaged:boolean,failure?:Error){
   const start=vi.fn((_runtime?:DesktopRuntimeHost)=>{if(failure)throw failure});
@@ -32,14 +32,16 @@ function boot(packaged:boolean,failure?:Error){
     'node:crypto':{createHash},
     'node:module':{createRequire:()=>loadApplication},
     './selection':{selectBootResources},
-    '../../../logic/updates/service/runtime-journal':{},
-    '../../../logic/updates/service/runtime-manifest':{},
-    '../../../logic/updates/service/engine-artifacts':{EngineArtifacts:engineArtifacts},
-    '../../../logic/updates/service/runtime-store':{RuntimeStore:runtimeStore},
-    '../../../logic/updates/service/runtime-updates':{},
-    '../../../logic/updates/service/desktop-updates':{},
-    '../../../logic/updates/service/nsis-updater':{},
-    '../../../logic/updates/service/restart-profile':{updateUserRoot:()=>undefined},
+    '../../../logic-new/updates/service/runtime-journal':{},
+    '../../../logic-new/updates/service/runtime-manifest':{},
+    '../../../logic-new/updates/service/engine-artifacts':{EngineArtifacts:engineArtifacts},
+    '../../../logic-new/updates/service/runtime-store':{RuntimeStore:runtimeStore},
+    '../../../logic-new/updates/service/runtime-updates':{RuntimeUpdates:vi.fn()},
+    '../../../logic-new/updates/service/desktop-updates':{DesktopUpdates:vi.fn()},
+    '../../../updater':{NsisUpdateInstaller:vi.fn()},
+    '../../../logic-new/updates/service/engine-index':{officialEnginePublicKey:'key'},
+    '../../../logic-new/updates/service/download-service':{DownloadService:vi.fn()},
+    '../../../logic-new/updates/service/restart-profile':{updateUserRoot:()=>undefined},
   };
   const directory=path.resolve('test-results/bootstrap/build');
   runInNewContext(desktopCode,{
@@ -53,7 +55,7 @@ function boot(packaged:boolean,failure?:Error){
 it('starts development through the actual business export without a packaged runtime',()=>{
   const result=boot(false);
   expect(result.loadApplication).toHaveBeenCalledExactlyOnceWith(path.join(result.directory,'main.js'));
-  expect(result.start).toHaveBeenCalledExactlyOnceWith();
+  expect(result.start).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({cacheRoot:expect.any(String),Confirm:expect.any(Function)}));
   expect(result.selectBootResources).not.toHaveBeenCalled();
   expect(result.dialog.showErrorBox).not.toHaveBeenCalled();
   expect(result.app.exit).not.toHaveBeenCalled();

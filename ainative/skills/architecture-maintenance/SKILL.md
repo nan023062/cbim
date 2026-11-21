@@ -44,7 +44,7 @@ description: "维护 CBIM 源码架构、单向依赖、注释和目录类图，
 四层已经落地，依据 [四层设计](https://github.com/nan023062/cbim/blob/7dcff4142e09fdac1a670438bd3081d6c0341f23/design/four-layer-architecture.md) 和 src 契约维护实际结构，不再保留旧源码层级许可。
 
 - Core → 自身公开技术入口及获准第三方；便携算法不加载 Node/Electron，平台实现独立。
-- Logic 规则 → 明确领域契约与适用 Core；不依赖运行服务或 Application。具体引擎仅由 execution/assembly 选择，编排通过业务端口协作。
+- Logic 规则 → 明确领域契约与适用 Core；不依赖运行服务或 Application。具体引擎由当前 Office 包加载器选择，官方源码入口由 build-engine-adapters 登记，编排通过业务端口协作。
 - Logic 服务/存储/平台 → 领域及公开服务入口与 Node Core；Application 装配唯一业务生命周期，普通服务不得反向依赖它。更新子系统只组合自身、更新契约与便携 utility，不依赖普通应用服务。
 - Bridge server → 通信契约、登记的 Logic 入口与适用 Core。冷壳仅依赖固定业务入口与更新服务，计算式入口仍纳入源码图；Electron 网页由 main.ts 注入。
 - Bridge contracts → 纯协议、便携 Core 和具名业务数据契约；不能加载服务、凭据或平台实现。preload 是当前客户端，不向页面暴露任意 Node/Electron。
@@ -126,17 +126,7 @@ Pi/Codex 的请求关联使用 utility/async.ts 的 PendingRequests；register/t
 
 后端无环判断组合 utility/graphs.ts 的 isDirectedAcyclic，前端分层独立实现；领域入口先核验节点/端点，再选择启用依赖与等待边并保留原错误码。公共图算法不认识任务或授权；独立拓扑测试与领域防环/重放契约分别验证，新增私有类别同步依赖清单。
 
-模型位于 src/logic/models：纯目录/连接/选型入口与 service/index.ts 分开，纯入口不得加载服务。Bridge 仅具名转接公开纯契约。Fault 和锁实现只有 Core 一份；主 Agent 设置位于 logic/team/settings，请求预算归 logic/budget。单元、消费者契约与 SDK 容量验证分别登记。
-
-Web 已迁入 src/logic/web：纯工具契约 index.ts 与 service/index.ts 分开；Core 网页拆为 core/web/portable、core/web/node、core/web/electron.ts。Logic 不依赖旧后端或 Electron，浏览器只由桌面宿主注入；仅 bridge/contracts/web.ts 具名导出原设置 Schema/摘要，不能扩散为服务权限。SecretCipher 归 core/io/electron.ts，平台实现不迁入业务。正文转换、HTTP、页面策略、业务适配、设置单元及真实协作契约分别登记；保留匿名兜底、默认 allow、缓存策略隔离、取消、未知失败与密钥语义。
-
-反馈已迁入 src/logic/feedback：index.ts 拥有输入、正文和可信范围；service/index.ts 提供授权与提交，不能反向导入旧后端或模型业务。旧工具范围仅组合并兼容重导出本域 Schema，Bridge 仅具名公开配置 Schema/状态。Core Node locking.ts 持有唯一原生锁实现，旧锁出口已移除，消费者直接使用同一 Core 构造器；保留锁身份、发送前持久化、未知结果不重发、凭据和退出语义。授权单元、HTTP 单元、提交协作契约与平台/真实 Pi 集成分别登记。
-
-资源仓库已迁入 logic/resources：纯分类/状态与 service 分开，ResourceRepositoryPaths 只注入目录边界，不依赖具体工作区 Paths 实现或 Bridge。保留仓库 CAS、只读授权、共享退役取消及未知写结果；知识包位于 logic/resources/packages，授权连接位于 resource/connections/service。
-
-四层迁移现状：具体引擎与编排已归 Logic；execution/assembly 是具体引擎选择点，规则不能依赖 runtime 服务。继续使用已登记的细粒度公开入口，不能用聚合导出引入类型环。
-
-有状态服务与启动迁移已落地：Logic/Application 持有唯一业务生命周期，Bridge/server 只做通信与可信宿主适配；业务不得反向依赖 IPC/Electron。附件、工作区、资源包和更新类型由 Logic 拥有。构建入口改动须核固定输出名，不能改变用户数据或原恢复语义。
+当前桌面业务由 `src/logic-new` 承担，独立引擎实现归 `src/engine-plugins`。旧 `src/logic` 与旧宿主已退役；迁移保留的协议和纯规则不代表旧服务仍在运行。修改时沿真实消费者核实能力，由源码架构文档维护各模块当前事实。
 
 ## 当前文档与历史证据
 

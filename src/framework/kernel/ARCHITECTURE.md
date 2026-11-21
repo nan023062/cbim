@@ -20,12 +20,12 @@ Kernel 是 CBIM 面向大模型厂商和 Agent 工具厂商的兼容层。模型
 | 配置和所有权 | 引擎描述包含引擎类型与模型配置。服务解析并捕获本次配置，按引用选适配器，持有实例的创建与销毁权。销毁时先关闭引擎，再卸载对应模型。[生命周期实现](kernel.ts) |
 | 模型加载 | 每次成功的 `Load(configuration)` 提供一个带 `runtime` 的模型句柄，服务将对应句柄交给 `Unload(instance)`。调用方通过 `provider` 和 `model` 表达模型选择。[模型契约](models/index.ts) |
 | 轮次与结果 | `Submit(input, context?)` 按提交顺序执行，立即返回 `turnId` 和 `done`。终态区分完成、取消和失败；调用方还应处理 Promise 异常。`Stop(turnId)` 针对指定轮次，停止请求完成后仍应等待轮次结算。[实例契约](engines/instance.ts) |
-| 事件与追加输入 | `Subscribe` 按轮次投递实时事件并返回退订函数。使用 `Append` 前读取 `supportsAppend`，并传入当前轮次 ID 和取消信号。View 的历史补读走运行日志游标。[轮次实现](../../logic/execution/assembly/engine-instance.ts) |
+| 事件与追加输入 | `Subscribe` 按轮次投递实时事件并返回退订函数。使用 `Append` 前读取 `supportsAppend`，并传入当前轮次 ID 和取消信号。View 的历史补读走运行日志游标。[轮次实现](../../logic-new/projects/offices.ts) |
 | 厂商包协议 | protocol 1 的包具名导出 `engineAdapter`，提供包身份、版本和同步工厂 `create(options)`。每次调用创建独立驱动；驱动实现 `start/run/stop/close`。启动和首轮输入分开，启动失败也须支持清理。[工厂](engines/adapter.ts) · [驱动](engines/agent-engine.ts) |
 
 ## 可扩展的部分
 
-- **模型厂商**可以复用已有推理协议，扩充提供方预设、模型目录及连接配置。若厂商引入新的传输协议，还需在 Logic 实现协议和兼容规则。模型加载器的载荷和资源释放方式由宿主提供。[模型实现](../../logic/models/protocol/ARCHITECTURE.md) · [引擎选型](../../logic/engines/catalog/supported-engines.ts)
+- **模型厂商**可以复用已有推理协议，扩充提供方预设、模型目录及连接配置。若厂商引入新的传输协议，还需在 Logic 实现协议和兼容规则。模型加载器的载荷和资源释放方式由宿主提供。[模型实现](../../logic-new/models/protocol/ARCHITECTURE.md) · [引擎选型](../../logic-new/engines/catalog/supported-engines.ts)
 - **Agent 工具厂商**在 Logic 适配 SDK、子进程、会话恢复和原生事件。支持运行中追加时实现 `steer`。能够在工具产生副作用前拦截调用时，才声明 `supportsBeforeToolCall`。宿主要求拦截而包缺少该声明时，服务在创建驱动前拒绝运行。[适配器实现](../../engine-plugins/ARCHITECTURE.md)
 - **可信宿主扩展**可用 `BeforeTurn` 补充上下文或阻止轮次，用 `BeforeToolCall` 否决调用，用 `OnEvent` 观察已保存事件，也可提供工具。工具最终仍由运行时按 Office 权限授权。事件详情随引擎能力变化，View 只展示厂商提供且允许公开的摘要与进度。[扩展契约](engines/extensions.ts)
 
@@ -49,7 +49,7 @@ export const engineAdapter: EngineAdapter = Object.freeze({
 
 1. **绑定模型与会话。** 在 `start(context)` 中使用工厂收到的模型配置准备 CLI 和事件桥；在 `run(message)` 中发送本轮输入，把厂商输出映射为 `context.emit` 事件和统一终态。`stop` 请求取消，`close` 回收进程与监听器。可参考 [Pi 包入口](../../engine-plugins/pi/package.ts) 和 [Pi 驱动](../../engine-plugins/pi/engine.ts)。
 2. **按能力接入工具。** 示例省略工具拦截声明。如果 CLI 支持工具预执行回调，让驱动等待 `context.beforeTool` 的裁决，验证拒绝时工具未执行，再声明拦截能力。每次工具调用沿用同一个调用 ID。
-3. **登记并验证。** 把工厂加入[源码装配表](../../logic/execution/assembly/engine-adapters.ts)；需要发布引擎包时，在[构建入口](../../../scripts/build-engine-adapters.mjs)登记源码映射，按[包管理模块](../../logic/engines/packages/ARCHITECTURE.md)核对制品身份。通过服务按配置创建实例，验证一次输入、实时事件、终态、取消和销毁，以及缺少所需能力时的拒绝行为。[服务契约用例](../../../tests/src/framework/kernel/kernel.test.ts)
+3. **登记并验证。** 在[构建入口](../../../scripts/build-engine-adapters.mjs)登记独立包的源码映射，同时更新依赖检查器的计算式加载目标，按[包管理模块](../../logic-new/engines/packages/ARCHITECTURE.md)核对制品身份。通过服务按配置创建实例，验证一次输入、实时事件、终态、取消和销毁，以及缺少所需能力时的拒绝行为。[服务契约用例](../../../tests/src/framework/kernel/kernel.test.ts)
 
 实例释放回执随创建结果交付，关闭失败可以重试。kernel 管理配置引用，运行实例的登记和释放时机由能力层 Organization 管理。
 

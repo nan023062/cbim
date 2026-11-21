@@ -40,9 +40,9 @@ N_6741bcbdf4f1 ..> N_56e2b9e614cc : 依赖
 
 | 虚拟封装 | 整体职责 |
 | --- | --- |
-| [contracts](contracts/ARCHITECTURE.md) | 定义页面与可信服务端之间可序列化的操作、输入输出和展示事实，使通信消费者不必加载业务服务或平台实现。 |
-| [preload](preload/ARCHITECTURE.md) | 在 Electron 的隔离上下文中提供最小页面调用桥，让界面只使用声明过的操作和文件导入能力。 |
-| [server](server/ARCHITECTURE.md) | 承接 Electron 与 CLI 的可信入口，把外部操作连接到唯一业务应用，并管理桌面窗口与宿主资源。 |
+| [contracts](contracts/ARCHITECTURE.md) | 声明当前桌面与页面之间的数据协议，避免页面加载业务服务、凭据和平台实现。旧 IPC 兼容协议已随旧宿主移除。 |
+| [preload](preload/ARCHITECTURE.md) | 向当前页面提供受限桌面菜单能力。业务请求经当前桌面通信入口传递，不公开任意 Node API。 |
+| [server](server/ARCHITECTURE.md) | 提供当前桌面进程的可信通信和平台边界。业务实例由 logic-new/application 创建，Electron 能力由 desktop 注入；旧 IPC、命令行与应用装配入口已退役。 |
 
 [上层设计](../ARCHITECTURE.md)
 

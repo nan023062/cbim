@@ -2,7 +2,5 @@
 export const desktopBuilds={build:[
   {entry:'src/bridge/server/bootstrap/desktop.ts',config:'vite.bootstrap.config.ts',target:'main' as const},
   {entry:'src/bridge/server/desktop/main.ts',config:'vite.application.config.ts',target:'main' as const},
-  {entry:'src/bridge/server/platform/controlled-file-child.ts',config:'vite.main.config.ts',target:'main' as const},
-  {entry:'src/logic/file-operations/platform/isolation/isolated-node.ts',config:'vite.isolation.config.ts',target:'main' as const},
   {entry:'src/bridge/preload/desktop-menu.ts',config:'vite.preload.config.ts',target:'preload' as const},
 ],renderer:[{name:'main_window',config:'vite.renderer.config.ts'}]};

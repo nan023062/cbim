@@ -16,16 +16,27 @@
 
 ```mermaid
 classDiagram
+class N_48be1b916507["ports"] {
+  <<virtual>>
+}
+click N_48be1b916507 href "ports/ARCHITECTURE.md"
 class N_72507beabc73["rules"] {
   <<virtual>>
 }
 click N_72507beabc73 href "rules/ARCHITECTURE.md"
+class N_a31c0e1885c5["platform"] {
+  <<virtual>>
+}
+click N_a31c0e1885c5 href "platform/ARCHITECTURE.md"
+N_72507beabc73 ..> N_48be1b916507 : 依赖
 ```
 
 ## 子模块
 
 | 虚拟封装 | 整体职责 |
 | --- | --- |
+| [platform](platform/ARCHITECTURE.md) | 保存引擎运行端口及协议适配。平台进程退出和工具回执保持原有契约，Office 生命周期由 projects 的实例编排负责。 |
+| [ports](ports/ARCHITECTURE.md) | 保存引擎运行端口及协议适配。平台进程退出和工具回执保持原有契约，Office 生命周期由 projects 的实例编排负责。 |
 | [rules](rules/ARCHITECTURE.md) | 以固定制品身份、SDK 与适配器入口描述单次装配结果。运行包由可信宿主解析，不能由模型或公开任务参数指定路径；引用只在引擎真正关闭后释放。 |
 
 [上层设计](../ARCHITECTURE.md)

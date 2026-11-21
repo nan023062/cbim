@@ -11,7 +11,7 @@ import type { DesktopRuntimeHost } from '../../../logic-new/updates/service/runt
 
 import { PluginInstallations } from '../../../logic-new/resource-management/plugin-installations';
 
-import { managedConnectorPackages } from '../../../logic/application/assembly/connector-packages';
+import { managedConnectorPackages } from '../../../logic-new/resource-management/connector-runtime';
 
 import { agentConfigurationSchema, agentSettingsTargetSchema } from '../../../logic-new/projects/agent-configuration';
 

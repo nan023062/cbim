@@ -30,16 +30,16 @@ class N_cd8f272293b8["bridge"] {
   <<module>>
 }
 click N_cd8f272293b8 href "bridge.ts"
-class N_649b8a6ac172["AgentEngine"] {
+class N_7c37851762e9["AgentEngine"] {
   <<boundary>>
 }
-click N_649b8a6ac172 href "../../logic/execution/rules/types.ts"
+click N_7c37851762e9 href "../../logic-new/execution/rules/types.ts"
 N_1d6a516288c1 ..> N_3786b0dccee3 : 依赖
 N_1d6a516288c1 ..> N_cd8f272293b8 : 依赖
-N_649b8a6ac172 <|.. N_1d6a516288c1
+N_7c37851762e9 <|.. N_1d6a516288c1
 ```
 
-外部继承／实现边界：[AgentEngine](../../logic/execution/rules/types.ts)。
+外部继承／实现边界：[AgentEngine](../../logic-new/execution/rules/types.ts)。
 
 [上层设计](../ARCHITECTURE.md)
 

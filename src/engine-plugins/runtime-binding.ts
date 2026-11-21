@@ -10,9 +10,9 @@ import { createHash } from 'node:crypto';
 
 import { z } from 'zod';
 
-import type { AgentEngine } from '../logic/execution/rules/types';
+import type { AgentEngine } from '../logic-new/execution/rules/types';
 
-import type { EngineRuntimePackage } from '../logic/execution/rules/engine-runtime';
+import type { EngineRuntimePackage } from '../logic-new/execution/rules/engine-runtime';
 
 const binding = z.object({ schema: z.literal(1), kind: z.string(), sessionId: z.string(), identity: z.string().regex(/^[a-f0-9]{64}$/), version: z.string(), toolsIdentity: z.string().optional(), dependencies: z.record(z.string(), z.string().regex(/^[a-f0-9]{64}$/)).optional() }).strict();
 

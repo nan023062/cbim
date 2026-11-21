@@ -8,7 +8,7 @@
  * 设计原因：PreToolUse 先等模型请求结算再持久化授权；内部调用用一次性原调用 ID 绑定精确参数，禁止依名称放行。
  * 职责边界：SDK MCP 仅为当前进程内传输，不监听端口或提供对外 MCP 服务。未注册工具一律拒绝。
  */
-import { toolFailureResult, runToolResult } from '../../logic/tools/rules/outcome';
+import { toolFailureResult, runToolResult } from '../../logic-new/tools/rules/outcome';
 
 import { isDeepStrictEqual } from 'node:util';
 
@@ -18,11 +18,11 @@ import { ListToolsRequestSchema, CallToolRequestSchema } from '@modelcontextprot
 
 import type { HookCallback, McpSdkServerConfigWithInstance } from '@anthropic-ai/claude-agent-sdk';
 
-import type { EngineContext } from '../../logic/execution/rules/types';
+import type { EngineContext } from '../../logic-new/execution/rules/types';
 
 import { allowedNativeTools } from '../native-tool-policy';
 
-import type { EngineToolsPort } from '../../logic/execution/rules/engine-tools';
+import type { EngineToolsPort } from '../../logic-new/execution/rules/engine-tools';
 
 const nativeNames: Record<string, string> = { Read: 'read', Write: 'write', Edit: 'edit', Bash: 'bash', Glob: 'find', Grep: 'grep' };
 

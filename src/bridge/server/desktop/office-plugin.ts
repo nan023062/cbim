@@ -21,9 +21,9 @@ import { OfficeTools } from './office-tools';
 
 import type { OfficeApproval } from '../../../logic-new/projects/office-operations';
 
-import type { managedConnectorPackages } from '../../../logic/application/assembly/connector-packages';
+import type { managedConnectorPackages } from '../../../logic-new/resource-management/connector-runtime';
 
-import { openAgentConnectors } from '../../../logic/application/assembly/connector-packages';
+import { openAgentConnectors } from '../../../logic-new/resource-management/connector-runtime';
 
 function activityDetail(value: unknown): string | undefined
 {

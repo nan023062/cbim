@@ -44,7 +44,9 @@
         "src/logic/budget/rules/"
       ],
       "tests": {
-        "unit": [],
+        "unit": [
+          "tests/src/logic/budget/rules/role-binding.test.ts"
+        ],
         "contract": [],
         "integration": []
       },

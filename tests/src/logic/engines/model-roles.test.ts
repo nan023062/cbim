@@ -18,7 +18,7 @@ test('额外角色按静态声明确定能力、必填及型号，不因用户�
 
 test('V2 不复制 primary，不接受任意凭据或未知版本，历史缺省保持缺省',()=>{
   expect(modelRolesSelectionSchema.safeParse({version:1,roles:{}}).success).toBe(false);
-  for(const slot of ['primary','function Object() { [native code] }','prototype','[object Object]'])expect(modelRolesSelectionSchema.safeParse({version:2,roles:{[slot]:embedding}}).success).toBe(false);
+  for(const slot of ['primary','constructor','prototype','__proto__'])expect(modelRolesSelectionSchema.safeParse({version:2,roles:{[slot]:embedding}}).success).toBe(false);
   expect(modelRolesSelectionSchema.safeParse({version:2,roles:{memory:{...embedding,apiKey:'secret'}}}).success).toBe(false);
   expect(modelRolesMatch(undefined,undefined)).toBe(true);
   expect(modelRolesMatch(undefined,{version:2,roles:{}})).toBe(false);

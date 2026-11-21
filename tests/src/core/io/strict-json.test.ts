@@ -3,7 +3,7 @@ import {JsonUtils, StrictJsonError} from '../../../../src/core/io';
 
 it('保留数组、标量、对象键和原数值，不加入业务 schema 或危险键裁剪',()=>{
   const value=JsonUtils.ParseStrictJson('{"__proto__":{"kept":true},"constructor":1,"items":[0,false,null,"正文"]}');
-  expect(Object.hasOwn(value,'[object Object]')).toBe(true);expect(value.__proto__).toEqual({kept:true});
+  expect(Object.hasOwn(value,'__proto__')).toBe(true);expect(value.__proto__).toEqual({kept:true});
   expect(value.constructor).toBe(1);expect(value.items).toEqual([0,false,null,'正文']);
   expect(JsonUtils.ParseStrictJson('null')).toBeNull();expect(JsonUtils.ParseStrictJson('false')).toBe(false);
   expect(JsonUtils.ParseStrictJson('[{"id":1},{"id":2}]')).toEqual([{id:1},{id:2}]);

@@ -21,7 +21,7 @@ export const requestBudgetBindingSchema = z.object({ workspaceId: id, rootSessio
 export type RequestBudgetBinding = z.infer<typeof requestBudgetBindingSchema>;
 
 /** 配置指纹绑定完整已解析模型；公开计价分量不包含供应商地址或密钥。 */
-const roleBinding = z.object({ slot: z.string().regex(/^[a-z][a-z0-9_-]{0,47}$/).refine(v => !['primary', 'function Object() { [native code] }', 'prototype', '[object Object]'].includes(v)), bindingHash: hash }).strict();
+const roleBinding = z.object({ slot: z.string().regex(/^[a-z][a-z0-9_-]{0,47}$/).refine(v => !['primary', 'constructor', 'prototype', '__proto__'].includes(v)), bindingHash: hash }).strict();
 
 export const generationBudgetModelSchema = z.object({ profileId: id, modelId: z.string().min(1).max(160), configurationHash: hash, role: roleBinding.optional(), api: z.enum(['openai-completions', 'openai-responses', 'anthropic-messages']), contextWindow: integer.min(1024).max(2000000), maxTokens: integer.min(1).max(2000000), pricing: z.object({ input: money, output: money, cacheRead: money, cacheWrite: money }).strict().optional() }).strict();
 

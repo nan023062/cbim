@@ -11,8 +11,8 @@ it('递归排列对象键，保持数组顺序且不改变原对象',()=>{
 it('比较器决定排序，整数键仍按 JS 枚举；危险名称作为普通数据保留',()=>{
   const input=JSON.parse('{"a":1,"Z":2,"10":10,"2":2,"__proto__":{"x":1}}');
   const result=JsonUtils.OrderJsonValue(input,{compareKeys:(a,b)=>-compareKeys(a,b)}) as object;
-  expect(Object.keys(result)).toEqual(['2','10','a','[object Object]','Z']);
-  expect(Object.hasOwn(result,'[object Object]')).toBe(true);expect(Object.getPrototypeOf(result)).toBe(Object.prototype);
+  expect(Object.keys(result)).toEqual(['2','10','a','__proto__','Z']);
+  expect(Object.hasOwn(result,'__proto__')).toBe(true);expect(Object.getPrototypeOf(result)).toBe(Object.prototype);
 });
 it('undefined 对象字段规则显式选择，数组空位与 undefined 元素不裁剪',()=>{
   const input={b:undefined,a:[,undefined,{b:undefined,a:1}]};

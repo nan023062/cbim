@@ -20,6 +20,8 @@ export interface NavigationSession
 
   updated: number;
 
+  completedAt?: number;
+
   pinned: boolean;
 
   archived: boolean;

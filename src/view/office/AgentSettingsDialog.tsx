@@ -8,7 +8,7 @@ import type { AgentConfiguration, AgentSettingsTarget, OfficeSelection } from '.
 
 import { MainAgentPicker } from './MainAgentPicker';
 
-import { Icon } from '../shared/Icon';
+import { Icon } from '../../framework-ui/Icon';
 
 export function AgentSettingsDialog({ project, target, title, tab = 'model', initialModel, OnClose, OnSaved, OnManageEngines }: { project: string; target: AgentSettingsTarget; title: string; tab?: 'model' | 'skills' | 'connectors'; initialModel?: OfficeSelection; OnClose(): void; OnSaved(configuration: AgentConfiguration): void; OnManageEngines(): void; })
 {

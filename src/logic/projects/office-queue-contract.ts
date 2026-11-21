@@ -6,7 +6,7 @@ import { z } from 'zod';
 
 import { agentConfigurationSchema } from './agent-configuration';
 
-export const officeQueueItemSchema = z.object({ id: z.string().uuid(), text: z.string().trim().min(1).max(32000), created: z.number().nonnegative(), started: z.number().nonnegative().optional(), permission: z.enum(['read', 'ask', 'execute']), configuration: agentConfigurationSchema, status: z.enum(['queued', 'running', 'inserting', 'inserted', 'failed', 'uncertain']), inputId: z.string().uuid().optional(), error: z.string().optional() }).strict();
+export const officeQueueItemSchema = z.object({ id: z.string().uuid(), text: z.string().trim().min(1).max(32000), created: z.number().nonnegative(), started: z.number().nonnegative().optional(), permission: z.enum(['read', 'ask', 'execute']), configuration: agentConfigurationSchema, status: z.enum(['queued', 'running', 'inserting', 'inserted', 'failed', 'uncertain']), cancelSource: z.enum(['user-stop', 'app-shutdown', 'unknown']).optional(), inputId: z.string().uuid().optional(), error: z.string().optional() }).strict();
 
 export const officeQueueStateSchema = z.object({ revision: z.number().int().nonnegative(), paused: z.boolean(), items: z.array(officeQueueItemSchema).max(100), accepted: z.array(z.string().uuid()).max(1000) }).strict();
 

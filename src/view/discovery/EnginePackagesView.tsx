@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 
 import type { EnginePackageSettings, EnginePackageStatus } from '../../bridge/contracts/desktop-engines';
 
-import { Icon } from '../shared/Icon';
+import { Icon } from '../../framework-ui/Icon';
 
 import { useTransfers, TransferProgress } from '../shared/transfers';
 

@@ -2,7 +2,7 @@
  * 作用定位：桌面主布局与 Office、发现、设置和扩展页面的组合组件。
  * 设计原因：React 外壳组合各业务页面并持有窗口内导航，后台任务归宿主服务管理。
  */
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import type { DiscoveryPage, ProjectItem, OfficeConversation, OfficeSelection } from '../../bridge/contracts/discovery';
 
@@ -12,7 +12,9 @@ import { DiscoveryView } from '../discovery/MenuViews';
 
 import { BrandMark } from '../shared/BrandMark';
 
-import { Icon } from '../shared/Icon';
+import { Icon } from '../../framework-ui/Icon';
+
+import { ThreePaneLayout, PaneDivider } from '../../framework-ui/three-pane';
 
 import { ExtensionPanel } from '../extension/ExtensionPanel';
 
@@ -31,7 +33,6 @@ const resourceNavigation = [
 
 export function DesktopShell()
 {
-  const [sidebarWidth, setSidebarWidth] = useState(() => { const stored = Number(localStorage.getItem('project-sidebar-width')); return stored >= 220 && stored <= 420 ? stored : 320; });
 
   const [expanded, setExpanded] = useState(() => window.innerWidth > 720);
 
@@ -172,7 +173,7 @@ export function DesktopShell()
   const sidebarToggle = <button className="icon-button" aria-controls="team-sidebar" aria-expanded={expanded}
     aria-label={expanded ? '收起侧栏' : '展开侧栏'} onClick={() => setExpanded(!expanded)}><Icon name="panelLeft" size={16} /></button>;
 
-  return <div id="application-home" style={{ '--sidebar-width': sidebarWidth + 'px' } as CSSProperties}>
+  return <div id="application-home">
     <header className="desktop-titlebar">
       {sidebarToggle}
       <button onClick={() => void window.desktopMenu.OpenMonitor().catch(e => setError(String(e)))}><Icon name="flow" size={15} />资源监视器</button>
@@ -190,7 +191,7 @@ export function DesktopShell()
       {updateStatus?.phase === 'available' && <button onClick={() => void window.desktopMenu.Update('download').catch(e => setError(String(e)))}>重新下载</button>}
       <button onClick={() => setUpdateOpen(false)}>关闭</button></div>}
     {settings && <SettingsView initial={settings} onBack={() => setSettings(undefined)} />}
-    <div style={settings ? { display: 'none' } : undefined} className={'desktop-shell' + (expanded ? '' : ' sidebar-collapsed')}>
+    <ThreePaneLayout hidden={!!settings} leftOpen={expanded} leftKey="project-sidebar-width" rightKey="extension-panel-width" className={'desktop-shell' + (expanded ? '' : ' sidebar-collapsed')}>
     {expanded && <button className="sidebar-backdrop" aria-label="关闭项目侧栏" onClick={() => setExpanded(false)} />}
     <aside id="team-sidebar" className="workspace-sidebar sidebar-frame">
       <button className="sidebar-new-conversation" onClick={() => selected ? openProject(selected, true) : void chooseProject()}><Icon name="edit" size={16} />新建对话</button>
@@ -204,7 +205,7 @@ export function DesktopShell()
           {resourceNavigation.map(([icon, label, target]) => <button key={target} onClick={event => { setPage(target); event.currentTarget.parentElement?.hidePopover(); }}><Icon name={icon} size={16} />{label}</button>)}
         </div>
       </nav>
-      <ProjectSidebar activeProject={page === 'workspace' ? selected?.id : undefined} activeSession={page === 'workspace' ? office?.id : undefined} OnOpen={openProject} OnAdd={() => void chooseProject()} OnSnapshot={items => { setProjects(items); setSelected(previous => { const latest = items.find(item => item.id === previous?.id); return latest && previous && (latest.name !== previous.name || latest.path !== previous.path) ? latest : previous; }); }} OnUnavailable={(project, session) => { if (selected?.id === project && (!session || office?.id === session)) { request.current++; localStorage.removeItem('project-last-office'); setOffice(undefined); setSelected(undefined); } }} />
+      <ProjectSidebar reading={page === 'workspace' && workspaceView === 'office' && !settings} activeProject={page === 'workspace' ? selected?.id : undefined} activeSession={page === 'workspace' ? office?.id : undefined} OnOpen={openProject} OnAdd={() => void chooseProject()} OnSnapshot={items => { setProjects(items); setSelected(previous => { const latest = items.find(item => item.id === previous?.id); return latest && previous && (latest.name !== previous.name || latest.path !== previous.path) ? latest : previous; }); }} OnUnavailable={(project, session) => { if (selected?.id === project && (!session || office?.id === session)) { request.current++; localStorage.removeItem('project-last-office'); setOffice(undefined); setSelected(undefined); } }} />
       <footer className="sidebar-footer">
         <button className="user-profile-trigger" aria-label="用户菜单" popoverTarget="user-actions">
           <span className="profile-badge">C</span><span className="user-profile-copy"><b>本地用户</b><small>CBIM · 本地使用</small></span>
@@ -216,7 +217,7 @@ export function DesktopShell()
           <button popoverTarget="user-actions" popoverTargetAction="hide" onClick={() => setSettings('通用')}><Icon name="settings" size={16} />设置</button>
         </div>
       </footer>
-      <div className="project-sidebar-resize" role="separator" aria-label="调整项目侧栏宽度" aria-orientation="vertical" aria-valuemin={220} aria-valuemax={420} aria-valuenow={sidebarWidth} tabIndex={0} onKeyDown={event => { if (['ArrowLeft', 'ArrowRight', 'Home'].includes(event.key)) { event.preventDefault(); const next = event.key === 'Home' ? 320 : Math.max(220, Math.min(420, sidebarWidth + (event.key === 'ArrowRight' ? 10 : -10))); setSidebarWidth(next); localStorage.setItem('project-sidebar-width', String(next)); } }} onPointerDown={event => event.currentTarget.setPointerCapture(event.pointerId)} onPointerMove={event => { if (event.currentTarget.hasPointerCapture(event.pointerId)) setSidebarWidth(Math.max(220, Math.min(420, event.clientX))); }} onPointerUp={event => { if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId); localStorage.setItem('project-sidebar-width', String(sidebarWidth)); }} onDoubleClick={() => { setSidebarWidth(320); localStorage.removeItem('project-sidebar-width'); }} />
+      <PaneDivider side="left" label="调整项目侧栏宽度" controls="team-sidebar" />
     </aside>
     <main className="workspace-main">
       <header className="workspace-topbar">{page !== 'workspace' && <button aria-label="返回工作区" onClick={() => setPage('workspace')}>←</button>}<Icon name="folder" size={16} /><strong className="workspace-project-title" title={title}>{title}</strong>
@@ -238,5 +239,5 @@ export function DesktopShell()
     </main>
     <ExtensionPanel open={panelOpen} />
     <button className="icon-button panel-switch" aria-label={panelOpen ? '收起扩展面板' : '展开扩展面板'} aria-controls="extension-panel" aria-expanded={panelOpen} onClick={() => setPanelOpen(!panelOpen)}><Icon name="panelRight" size={16} /></button>
-  </div></div>;
+  </ThreePaneLayout></div>;
 }

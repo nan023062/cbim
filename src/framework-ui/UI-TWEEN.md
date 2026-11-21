@@ -11,11 +11,12 @@
 | Office 聊天记录 | 滚轮滚动时通过 `scrollbarVisible` 显示滚动条；向下滚动且未到底时，通过 `data-ui-fade` 显示「跳到底部」。两者双向过渡均为 200ms，停止滚动 3 秒后隐藏；到达底部时按钮立即开始淡出。 | [OfficeView](../view/office/OfficeView.tsx) · [WindowList](list.tsx) |
 | Office 技能菜单 | 在输入框用 `/` 呼出可用技能清单，菜单使用 `popup` 入场，120ms。 | [SkillInput](../view/office/SkillInput.tsx) · [样式](../view/office/office.css) |
 | 项目与对话列表 | 行背景色变化使用 `highlight`；悬停项目行或用键盘聚焦拖动手柄时，手柄使用 `opacity`。均为 120ms。 | [ProjectSidebar](../view/desktop/ProjectSidebar.tsx) · [样式](../view/desktop/desktop.css) |
+| 对话签运行状态 | 运行时左侧图标使用 `pulse`（单程 1200ms），右侧圆环使用 `rotate`（每圈 1000ms）；有未读结果时改为静态绿点。 | [ProjectSidebar](../view/desktop/ProjectSidebar.tsx) · [样式](../view/desktop/desktop.css) |
 | 侧栏菜单 | 打开项目或对话的操作菜单、任务筛选菜单、用户菜单时，使用 `popup` 入场，120ms。 | [ProjectSidebar](../view/desktop/ProjectSidebar.tsx) · [DesktopShell](../view/desktop/DesktopShell.tsx) · [样式](../view/desktop/desktop.css) |
 | 引擎包管理页 | 已知百分比时，进度条宽度使用 `progress`，250ms；未知百分比时，使用 `sweep` 往返扫动，单程 1400ms。 | [EnginePackagesView](../view/discovery/EnginePackagesView.tsx) · [样式](../view/desktop/desktop.css) |
 | 桌面通用按钮 | 按钮背景、边框或文字颜色变化时，默认使用 `control`，120ms；具体控件可覆盖该过渡。 | [共享按钮样式](../view/shared/interface.css) |
 
-**未计入已接入页面的预设：** `pulse` 已绑定执行中的会话图标，但首页侧栏显式关闭了该动画；`panel`、`menu`、`turn` 在共享样式中有绑定，尚未确认具体页面上的触发点。`fade-in`、`fade-out`、`float`、`rotate`、`breathe`、`scale`、`pingpong` 暂未发现业务页面直接使用这些具名预设。
+**未计入已接入页面的预设：** `panel`、`menu`、`turn` 在共享样式中有绑定，尚未确认具体页面上的触发点。`fade-in`、`fade-out`、`float`、`breathe`、`scale`、`pingpong` 暂未发现业务页面直接使用这些具名预设。
 
 ## 双向显示与隐藏
 

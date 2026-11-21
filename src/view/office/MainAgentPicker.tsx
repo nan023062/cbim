@@ -12,7 +12,7 @@ import type { EnginePackageSettings } from '../../bridge/contracts/desktop-engin
 
 import { selectProviderConnection } from '../../bridge/contracts/desktop-models';
 
-import { Icon } from '../shared/Icon';
+import { Icon } from '../../framework-ui/Icon';
 
 import { useTransfers, TransferProgress } from '../shared/transfers';
 

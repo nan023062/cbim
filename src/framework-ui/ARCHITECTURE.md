@@ -8,6 +8,8 @@
 
 | 组成 | 定位 |
 | --- | --- |
+| [图标目录](Icon.tsx) | `Icon` 通过 `name` 选图；`iconNames` 可枚举，`IconName` 可用于类型提示。`dot`、`circle`、`spinner`、`more`、`rightClick`、`warning`、`chat` 是常用图形。用 `tone` 指定语义颜色，`motion` 指定旋转或呼吸。 |
+| [交互列表项](controls.tsx) | `ListItem` 和 `Button` 接受原生点击、悬停、焦点及右键事件；业务通过 children 组合图标和文字。页签通过每项 `buttonProps` 扩展事件，保留方向键导航。 |
 | [按钮与开关](controls.tsx) | 保留原生按钮的焦点、键盘和禁用语义。 |
 | [基础动效](ui-tween.css) · [使用手册](UI-TWEEN.md) | 元素使用 `data-ui-fade`、滚动容器使用 `data-ui-scrollbar-fade` 切换可见性。保持挂载，双向过渡 200ms，遵循系统减少动态效果偏好；调用方管理交互时机和键盘可用性。 |
 | [窗口列表](list.tsx) | 组合 react-virtuoso，管理可视条目和聊天跟随末尾。 |

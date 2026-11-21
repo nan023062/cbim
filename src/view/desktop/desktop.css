@@ -138,7 +138,7 @@
 .workspace-welcome h1 { margin: 0; }
 .workspace-welcome p { color: var(--muted); margin: 8px 0; }
 .workspace-welcome .solid-button { margin-top: 14px; }
-.desktop-extension { flex-basis: clamp(310px, 32vw, 600px); background: var(--surface); }
+.desktop-extension { flex-basis: var(--right-pane-width); background: var(--surface); }
 .desktop-extension header { height: 44px; padding-left: 10px; }
 .desktop-extension header button, .extension-address button { min-height: 28px; }
 .extension-strip > div { width: clamp(110px, 12vw, 164px); }
@@ -194,8 +194,7 @@
 .engine-brand img {width:20px;height:20px;object-fit:contain;}
 h2.engine-brand img {width:30px;height:30px;}
 
-.workspace-sidebar {position:relative}.project-sidebar-resize{position:absolute;inset:0 -2px 0 auto;width:5px;cursor:col-resize;touch-action:none;z-index:5}.project-sidebar-resize:hover,.project-sidebar-resize:focus-visible{background:var(--line)}
-@media(max-width:720px){.project-sidebar-resize{display:none}}
+.workspace-sidebar {position:relative}
 
 /* 抽屉与桌面侧栏都拥有完整底色；列表独立滚动，底部账户入口保持可见。 */
 #application-home .workspace-sidebar {display:flex;flex-direction:column;min-height:0;box-sizing:border-box;background:var(--sidebar);color:var(--text)}
@@ -246,7 +245,7 @@ h2.engine-brand img {width:30px;height:30px;}
 #application-home .office-session-row[data-active] {background:var(--selected)}
 #application-home .office-session-row[data-active]:hover {background:var(--selected)}
 #application-home .office-session-icon {width:16px;color:var(--muted)}
-#application-home .office-session-icon.executing svg {color:var(--muted);animation:none}
+#application-home .office-session-icon.executing svg {color:var(--danger);animation:var(--tween-pulse)}
 #application-home .session-meta {display:flex;align-items:center;justify-content:flex-end;flex:none;min-width:14px;margin-left:8px;color:var(--muted);font-size:var(--font-ui);font-weight:var(--weight-medium);white-space:nowrap;pointer-events:none}
 #application-home .office-session-row[data-active] .session-meta {color:var(--text)}
 #application-home .navigation-status {width:8px;height:8px;background:var(--success)}
@@ -254,7 +253,7 @@ h2.engine-brand img {width:30px;height:30px;}
 #application-home .project-action:hover {background:var(--raised)}
 @media(hover:hover) and (pointer:fine) {
   #application-home .project-list-row:not(:hover):not(:focus-within) .project-action {display:none}
-  #application-home .office-session-row:hover .session-meta,#application-home .office-session-row:focus-within .session-meta {display:none}
+  #application-home .office-session-row:hover .session-meta,#application-home .office-session-row:has(:focus-visible) .session-meta {display:none}
 }
 #application-home .workspace-sidebar .sidebar-footer {border:1px solid var(--line);background:var(--surface);border-radius:999px;min-height:42px;padding:4px 7px;gap:5px;margin-top:8px}
 #application-home .sidebar-footer .user-profile-trigger {height:30px;gap:9px}
@@ -304,3 +303,10 @@ h2.engine-brand img {width:30px;height:30px;}
 .workspace-project-nav button[aria-current=page] {background:var(--selected);color:var(--text);font-weight:var(--weight-medium)}
 @media(max-width:600px){.workspace-project-title{max-width:calc(100% - 32px)}.workspace-project-nav{flex-basis:100%;gap:2px}.workspace-project-nav button{flex:1;padding-inline:6px}}
 @media(pointer:coarse){.workspace-project-nav button{min-height:44px}}
+
+@media(min-width:960px){.desktop-extension:not([data-maximized=true]){position:relative}}
+@media(max-width:959px){.desktop-extension .ui-pane-divider{display:none}}
+@media(max-width:720px){.workspace-sidebar .ui-pane-divider{display:none}}
+#application-home .project-action[data-archive] svg,.navigation-menu button[data-danger=true] svg {color:var(--danger)}
+
+@media(hover:hover) and (pointer:fine){#application-home .office-session-row:not(:hover):not(:has(:focus-visible)) .project-action {display:none}}

@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import type { OrganizationNode, OrganizationSnapshot } from '../../bridge/contracts/discovery';
 
-import { Icon } from '../shared/Icon';
+import { Icon } from '../../framework-ui/Icon';
 
 export type OrganizationEdit =
   {

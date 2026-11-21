@@ -3,9 +3,13 @@
  * 设计原因：以已确认的 UX 图标母版统一 1.75px 笔画；保留现有调用名，未知名字显示信息标记而不伪装成文件夹。
  * 职责边界：图标只表达调用者给出的语义，可访问名称由按钮或可见文字提供，不推断业务状态。
  */
-import React from 'react';
+import './ui.css';
 
-const paths: Record<string, React.ReactNode> = {
+const paths = {
+  dot: <circle cx="12" cy="12" r="10" fill="currentColor" stroke="none" />,
+  circle: <circle cx="12" cy="12" r="9" />,
+  spinner: <path d="M21 12a9 9 0 1 1-9-9" />,
+  rightClick: <><rect x="5" y="2" width="14" height="20" rx="7" /><path d="M12 2v8h7M12 3a6 6 0 0 1 6 6h-6Z" fill="currentColor" /></>,
   pin: <path d="m9 3 6 0-1 6 4 4v2H6v-2l4-4-1-6ZM12 15v7" />,
   archive: <><rect x="3" y="3" width="18" height="5" rx="1" /><path d="M5 8v13h14V8M9 12h6" /></>,
   chevronDown: <path d="m5 9 7 7 7-7" />,
@@ -101,10 +105,14 @@ const paths: Record<string, React.ReactNode> = {
   'text-plus': <path d="m3 19 5-14 5 14M5 14h6M16 12h6M19 9v6" />,
 };
 
-const aliases: Record<string, string> = { chat: 'conversation', flow: 'workflow', plus: 'add', plug: 'connector', arrow: 'send', check: 'success', trash: 'remove', clock: 'queued' };
+const aliases = { chat: 'conversation', flow: 'workflow', plus: 'add', plug: 'connector', arrow: 'send', check: 'success', trash: 'remove', clock: 'queued' } as const satisfies Record<string, keyof typeof paths>;
 
-/** 所有图形都是装饰；图标按钮必须在按钮上提供 aria-label。 */
-export function Icon({ name, size = 18 }: { name: string; size?: number })
+export type IconName = keyof typeof paths | keyof typeof aliases;
+
+export const iconNames: readonly string[] = Object.freeze([...Object.keys(paths), ...Object.keys(aliases)]);
+
+/** 独立状态图标可提供 label；纯装饰图标由外层控件描述。 */
+export function Icon({ name, size = 18, label, tone, motion }: { name: string; size?: number; label?: string; tone?: 'success' | 'danger' | 'warning'; motion?: 'rotate' | 'pulse' })
 {
-  return <svg className="cbim-icon" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">{paths[aliases[name] ?? name] ?? paths.info}</svg>;
+  return <svg className="cbim-icon" data-motion={motion} style={tone ? { color: `var(--${tone === 'success' ? 'green' : tone})` } : undefined} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden={label ? undefined : true} aria-label={label} role={label ? 'img' : undefined} focusable="false">{Object.hasOwn(aliases, name) ? paths[aliases[name as keyof typeof aliases]] : Object.hasOwn(paths, name) ? paths[name as keyof typeof paths] : paths.info}</svg>;
 }

@@ -4,7 +4,7 @@
  */
 import { useEffect, useId, useRef, useState } from 'react';
 
-import { Icon } from '../shared/Icon';
+import { Icon } from '../../framework-ui/Icon';
 
 /** 三种权限沿用现有协议值，不因展示调整改变授权。 */
 type Permission = 'read' | 'ask' | 'execute';

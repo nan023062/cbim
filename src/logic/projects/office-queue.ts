@@ -161,7 +161,7 @@ export class OfficeQueue
 
     const action = officeQueueActionSchema.parse(raw);
 
-    await this.Locked(project, session, async state => { if ('revision' in action && action.revision !== state.revision) throw Error('队列已变化，请刷新后重试'); const next = structuredClone(state); if (action.action === 'enqueue') { if (next.accepted.includes(action.id)) return; if (next.items.length >= 100) throw Error('队列最多保留 100 条指令'); let saved = await this._offices.settings.Read(project, { kind: 'main', id: session }); if (JSON.stringify(saved.configuration.model) !== JSON.stringify(action.selection)) saved = await this._offices.settings.Save(project, { kind: 'main', id: session }, saved.revision, { ...saved.configuration, model: action.selection }); SkillCommands.Resolve(action.text, saved.configuration.skills); next.items.push({ id: action.id, text: action.text, created: Date.now(), permission: action.permission, configuration: { ...saved.configuration, model: action.selection }, status: 'queued' }); next.accepted = [...next.accepted, action.id].slice(-1000); } else if (action.action === 'pause' || action.action === 'stop') next.paused = true; else if (action.action === 'resume') next.paused = false; else { const item = next.items.find(item => item.id === action.id); if (!item) throw Error('排队指令已被消费或移除'); if (['running', 'inserting', 'inserted'].includes(item.status)) throw Error('指令已开始消费，不能再修改'); if (action.action === 'remove') next.items = next.items.filter(entry => entry.id !== item.id); else if (action.action === 'retry') { item.status = 'queued'; delete item.error; delete item.started; delete item.inputId; next.paused = false; } else if (item.status !== 'queued') throw Error('请先核实失败指令，再明确重试或移除'); else if (action.action === 'start') { if (this._offices.IsRunning(project, session) || next.items.some(entry => entry.status === 'running')) throw Error('已有任务开始执行，请刷新队列'); next.items = [item, ...next.items.filter(entry => entry.id !== item.id)]; next.paused = false; } else if (action.action === 'edit') { SkillCommands.Resolve(action.text, item.configuration.skills); item.text = action.text; } else if (action.action === 'move') { if (action.beforeId === item.id) return; const target = action.beforeId ? next.items.find(entry => entry.id === action.beforeId) : undefined; if (action.beforeId && (!target || target.status !== 'queued')) throw Error('排序目标不再处于排队状态'); next.items = next.items.filter(entry => entry.id !== item.id); next.items.splice(target ? next.items.findIndex(entry => entry.id === target.id) : next.items.length, 0, item); } else if (action.action === 'insert') { if (!this._offices.IsRunning(project, session)) throw Error('当前没有执行中的任务'); item.status = 'inserting'; await this.Save(project, session, next); try { const receipt = this._offices.Insert(project, session, item.text, item.configuration.skills); item.inputId = receipt.id; item.status = 'inserted'; } catch (error) { item.status = 'queued'; await this.Save(project, session, next); Object.assign(state, next); throw error; } } } await this.Save(project, session, next); Object.assign(state, next); if (action.action === 'stop') { this._controllers.get(this.Key(project, session))?.abort(); this._offices.Stop(project, session); } });
+    await this.Locked(project, session, async state => { if ('revision' in action && action.revision !== state.revision) throw Error('队列已变化，请刷新后重试'); const next = structuredClone(state); if (action.action === 'enqueue') { if (next.accepted.includes(action.id)) return; if (next.items.length >= 100) throw Error('队列最多保留 100 条指令'); let saved = await this._offices.settings.Read(project, { kind: 'main', id: session }); if (JSON.stringify(saved.configuration.model) !== JSON.stringify(action.selection)) saved = await this._offices.settings.Save(project, { kind: 'main', id: session }, saved.revision, { ...saved.configuration, model: action.selection }); SkillCommands.Resolve(action.text, saved.configuration.skills); next.items.push({ id: action.id, text: action.text, created: Date.now(), permission: action.permission, configuration: { ...saved.configuration, model: action.selection }, status: 'queued' }); next.accepted = [...next.accepted, action.id].slice(-1000); } else if (action.action === 'pause' || action.action === 'stop') next.paused = true; else if (action.action === 'resume') next.paused = false; else { const item = next.items.find(item => item.id === action.id); if (!item) throw Error('排队指令已被消费或移除'); if (['running', 'inserting', 'inserted'].includes(item.status)) throw Error('指令已开始消费，不能再修改'); if (action.action === 'remove') next.items = next.items.filter(entry => entry.id !== item.id); else if (action.action === 'retry') { item.status = 'queued'; delete item.error; delete item.cancelSource; delete item.started; delete item.inputId; next.paused = false; } else if (item.status !== 'queued') throw Error('请先核实失败指令，再明确重试或移除'); else if (action.action === 'start') { if (this._offices.IsRunning(project, session) || next.items.some(entry => entry.status === 'running')) throw Error('已有任务开始执行，请刷新队列'); next.items = [item, ...next.items.filter(entry => entry.id !== item.id)]; next.paused = false; } else if (action.action === 'edit') { SkillCommands.Resolve(action.text, item.configuration.skills); item.text = action.text; } else if (action.action === 'move') { if (action.beforeId === item.id) return; const target = action.beforeId ? next.items.find(entry => entry.id === action.beforeId) : undefined; if (action.beforeId && (!target || target.status !== 'queued')) throw Error('排序目标不再处于排队状态'); next.items = next.items.filter(entry => entry.id !== item.id); next.items.splice(target ? next.items.findIndex(entry => entry.id === target.id) : next.items.length, 0, item); } else if (action.action === 'insert') { if (!this._offices.IsRunning(project, session)) throw Error('当前没有执行中的任务'); item.status = 'inserting'; await this.Save(project, session, next); try { const receipt = this._offices.Insert(project, session, item.text, item.configuration.skills); item.inputId = receipt.id; item.status = 'inserted'; } catch (error) { item.status = 'queued'; await this.Save(project, session, next); Object.assign(state, next); throw error; } } } await this.Save(project, session, next); Object.assign(state, next); if (action.action === 'stop') { this._controllers.get(this.Key(project, session))?.abort('user-stop'); this._offices.Stop(project, session); } });
 
     this.Schedule(project, session);
 
@@ -191,6 +191,10 @@ export class OfficeQueue
       if (!item)
         return;
 
+      const signal = this._controllers.get(key)!.signal;
+
+      let cancelSource: typeof item.cancelSource;
+
       let failure: string | undefined;
 
       let uncertain = new Set<string>();
@@ -200,20 +204,25 @@ export class OfficeQueue
         if (!item.configuration.model)
           throw Error('该指令未保存完整的引擎与模型');
 
-        const messages = await this._offices.Send(project, session, item.text, sample => this.Progress(project, session, sample), item.permission, item.configuration.model, item.configuration, this._controllers.get(key)!.signal);
+        const messages = await this._offices.Send(project, session, item.text, sample => this.Progress(project, session, sample), item.permission, item.configuration.model, item.configuration, signal);
 
         uncertain = new Set(messages.flatMap(message => message.workLog?.filter(entry => entry.alert).map(entry => entry.id) ?? []));
       }
       catch (error)
       {
         failure = String(error);
+
+        if (signal.aborted)
+          cancelSource = signal.reason === 'user-stop' || signal.reason === 'app-shutdown' ? signal.reason : 'unknown';
+        else if (/^AbortError(?:$|:)/.test(failure))
+          cancelSource = 'unknown';
       }
       finally
       {
         this._controllers.delete(key);
       }
 
-      await this.Locked(project, session, async state => { const next = structuredClone(state); next.items = next.items.filter(entry => { if (entry.id === item.id) { if (!failure) return false; entry.status = 'failed'; entry.error = failure; return true; } if (entry.status === 'inserted' || entry.status === 'inserting') { if (!failure && entry.inputId && !uncertain.has(entry.inputId)) return false; entry.status = 'uncertain'; entry.error = '插入或本轮执行未确认，请核实当前任务后再决定'; } return true; }); await this.Save(project, session, next); Object.assign(state, next); });
+      await this.Locked(project, session, async state => { const next = structuredClone(state); next.items = next.items.filter(entry => { if (entry.id === item.id) { if (!failure) return false; entry.status = 'failed'; entry.error = failure; entry.cancelSource = cancelSource; return true; } if (entry.status === 'inserted' || entry.status === 'inserting') { if (!failure && entry.inputId && !uncertain.has(entry.inputId)) return false; entry.status = 'uncertain'; entry.error = '插入或本轮执行未确认，请核实当前任务后再决定'; } return true; }); await this.Save(project, session, next); Object.assign(state, next); });
     }
   }
 
@@ -225,7 +234,7 @@ export class OfficeQueue
     this._unsubscribe();
 
     for (const controller of this._controllers.values())
-      controller.abort();
+      controller.abort('app-shutdown');
 
     await Promise.allSettled([...this._pumps.values()]);
 

@@ -15,3 +15,9 @@ export function Toggle({ checked, onChange, ...props }: Omit<ButtonHTMLAttribute
 {
   return <Button {...props} role="switch" aria-checked={checked} onClick={() => onChange(!checked)} />;
 }
+
+/** 通用可激活列表项。内容和行为由调用方注入，行内辅助按钮应作为同级元素。 */
+export function ListItem({ className = '', ...props }: ButtonHTMLAttributes<HTMLButtonElement>)
+{
+  return <Button className={'ui-list-item ' + className} {...props} />;
+}

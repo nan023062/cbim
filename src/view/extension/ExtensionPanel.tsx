@@ -2,9 +2,11 @@
  * 作用定位：右侧扩展区持有本窗口的标签列表，折叠时保留当前选择。
  * 设计原因：标签与展开状态属于当前窗口，界面占位不代表已实现外部浏览器自动化。
  */
+import { PaneDivider } from '../../framework-ui/three-pane';
+
 import { useRef, useState } from 'react';
 
-import { Icon } from '../shared/Icon';
+import { Icon } from '../../framework-ui/Icon';
 
 export function ExtensionPanel({ open }: { open: boolean })
 {
@@ -36,6 +38,7 @@ export function ExtensionPanel({ open }: { open: boolean })
   }
 
   return <aside id="extension-panel" className="desktop-extension" data-maximized={maximized} hidden={!open} aria-label="扩展面板">
+    {!maximized && <PaneDivider side="right" label="调整扩展面板宽度" controls="extension-panel" />}
     <header>
       <div className="extension-strip" role="tablist" aria-label="扩展标签">
         {tabs.map(id => <div key={id} className={active === id ? 'chosen' : ''}>

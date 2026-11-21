@@ -8,3 +8,12 @@
 .ui-button[role=switch][aria-checked=true],.ui-button[role=tab][aria-selected=true] { background:var(--selected); color:var(--text); }
 .ui-tabs>[role=tablist] { display:flex; gap:4px; }
 .ui-window-list { flex:1; min-height:0; scrollbar-gutter:stable; scrollbar-color:var(--muted) transparent; overflow-y:scroll !important; }
+.ui-three-pane {display:flex;min-width:0}
+.ui-pane-divider {position:absolute;inset-block:0;width:8px;z-index:5;cursor:col-resize;touch-action:none;user-select:none;outline:0}
+.ui-pane-divider[data-side=left] {right:0}
+.ui-pane-divider[data-side=right] {left:0}
+.ui-pane-divider:is(:hover,:focus-visible,:active)::after {content:'';position:absolute;inset-block:0;width:2px;background:var(--muted)}
+.ui-pane-divider[data-side=left]::after {right:0}
+
+.ui-list-item {display:flex;align-items:center;justify-content:flex-start;text-align:start}
+.ui-list-item:focus-visible {outline:2px solid var(--focus);outline-offset:-2px}

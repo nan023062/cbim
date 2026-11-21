@@ -10,6 +10,8 @@ import './ui.css';
 
 export interface ListHandle
 {
+  scrollToRow(index: number): void
+
   scrollToEnd(): void
 }
 
@@ -21,7 +23,7 @@ export function WindowList({ count, itemKey, render, initialEnd, listRef, label,
 
   const list = useRef<VirtuosoHandle>(null);
 
-  useImperativeHandle(listRef, () => ({ scrollToEnd: () => { following.current = true; list.current?.scrollToIndex({ index: 'LAST', align: 'end' }); } }), []);
+  useImperativeHandle(listRef, () => ({ scrollToRow: index => { following.current = false; list.current?.scrollToIndex({ index, align: 'start' }); }, scrollToEnd: () => { following.current = true; list.current?.scrollToIndex({ index: 'LAST', align: 'end' }); } }), []);
 
   return <Virtuoso ref={list} className="ui-window-list" data-ui-scrollbar-fade={scrollbarVisible} aria-label={label} role={initialEnd ? 'log' : 'region'} aria-live="off"
     onScroll={event => { const el = event.currentTarget; following.current = !!initialEnd && el.scrollHeight - el.clientHeight - el.scrollTop <= 4; }}

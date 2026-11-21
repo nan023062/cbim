@@ -148,3 +148,11 @@
 .office-chat footer .office-action:hover:not(:disabled) {filter:brightness(.9)}
 
 .office-error-actions {display:flex;justify-content:flex-end;gap:6px;flex-basis:100%}.office-error-actions button {border:0;background:transparent;color:var(--muted);font-size:12px;padding:5px 8px}.office-error-actions button:hover:not(:disabled) {background:var(--hover);color:var(--text)}
+.turn-rail {position:absolute;left:3px;top:50%;transform:translateY(-50%);max-height:80%;overflow:auto;scrollbar-width:none;z-index:1;width:28px}
+.turn-rail button {display:flex;justify-content:flex-start;align-items:center;width:100%;height:10px;min-height:0;padding:0 3px;border:0;border-radius:0;background:transparent;color:var(--muted)}
+.turn-rail button[aria-current=location] {color:var(--text)}
+.turn-rail i {display:block;width:22px;height:2px;background:currentColor;transform-origin:left}
+.office-transcript:has(.turn-rail) .office-message-row {padding-inline-start:max(34px,4%)}
+.turn-preview {position:absolute;z-index:2;left:36px;width:min(360px,calc(100% - 48px));padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--raised);box-shadow:0 4px 16px #0003;pointer-events:none;overflow-wrap:anywhere}
+.turn-preview strong,.turn-preview span {display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden;-webkit-line-clamp:1;font-size:12px;line-height:1.6}
+.turn-preview span {-webkit-line-clamp:3;color:var(--muted)}

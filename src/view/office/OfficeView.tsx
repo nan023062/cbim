@@ -14,6 +14,8 @@ import { OfficeQueuePanel } from './OfficeQueuePanel';
 
 import type { OfficeQueueSnapshot, OfficeQueueAction } from '../../bridge/contracts/discovery';
 
+import { TurnRail } from './TurnRail';
+
 import { EarlierTurn, Message } from './Transcript';
 
 import type { OfficeConversation, OfficeMessage, OfficeProgress, ProjectItem } from '../../bridge/contracts/discovery';
@@ -34,7 +36,7 @@ import { BusinessPanel } from './BusinessPanel';
 
 import type { OfficeSelection } from '../../bridge/contracts/discovery';
 
-import { Icon } from '../shared/Icon';
+import { Icon } from '../../framework-ui/Icon';
 
 import './office.css';
 
@@ -318,6 +320,8 @@ export function OfficeView({ project, conversation, draft, onDraft, onSaved, sta
 
   const streamingText = useDeferredValue(sample?.text ?? '');
 
+  const [visibleRow, setVisibleRow] = useState(Number.MAX_SAFE_INTEGER);
+
   const count = persisted + (started ? 2 : 0);
 
   if (view === 'organization')
@@ -330,11 +334,12 @@ export function OfficeView({ project, conversation, draft, onDraft, onSaved, sta
     {settingsTab && <AgentSettingsDialog project={project.id} target={{ kind: 'main', id: conversation.id }} title="主 Agent 设置" tab={settingsTab} initialModel={selection} OnClose={() => setSettingsTab(undefined)} OnManageEngines={onManageEngines} OnSaved={configuration => { skillRefresh.current++; setSkillsLoading(false); setAvailableSkills(configuration.skills ?? []); if (configuration.model) { setSelection(configuration.model); localStorage.setItem(selectionKey, JSON.stringify(configuration.model)); } }} />}
     <div className="office-transcript"
       onWheel={event => { const list = event.currentTarget.querySelector<HTMLElement>('.ui-window-list'); if (!event.ctrlKey && event.deltaY && list?.contains(event.target as Node)) revealScroll(event.deltaY > 0, list); }}
-      onScrollCapture={event => { const list = event.target as HTMLElement; if (list.matches('.ui-window-list') && list.scrollHeight - list.clientHeight - list.scrollTop <= 4) setArrow(false); }}>
+      onScrollCapture={event => { const list = event.target as HTMLElement; if (!list.matches('.ui-window-list')) return; if (list.scrollHeight - list.clientHeight - list.scrollTop <= 4) { setArrow(false); setVisibleRow(Number.MAX_SAFE_INTEGER); } else { const top = list.getBoundingClientRect().top; const visible = Array.from(list.querySelectorAll<HTMLElement>('[data-turn-row]')).find(el => el.getBoundingClientRect().bottom > top + 2); if (visible) setVisibleRow(Number(visible.dataset.turnRow)); } }}>
       {count ? <WindowList scrollbarVisible={scrolling} listRef={log} count={count} label="对话记录" initialEnd
         itemKey={i => earlier[i] ?? ('message-' + (i - earlier.length))}
-        render={i => { const message = conversation.messages[i - earlier.length]; return <div className="office-column office-message-row">{i < earlier.length ? <EarlierTurn project={project.id} session={conversation.id} file={earlier[i]} /> : <Message role={message?.role ?? (i === persisted ? 'user' : 'assistant')} text={message?.text ?? (i === persisted ? queue?.items.find(item => item.status === 'running')?.text ?? '' : streamingText)} messageId={message?.id ?? conversation.id + ':' + started} live={!message && !!started} elapsed={message?.metrics?.elapsed ?? (!message && started ? Math.max(0, now - started) : undefined)} workLog={message ? message.workLog : sample?.workLog} model={message ? message.metrics?.model : sample?.model} />}</div>; }} />
+        render={i => { const message = conversation.messages[i - earlier.length]; return <div data-turn-row={i} className="office-column office-message-row">{i < earlier.length ? <EarlierTurn project={project.id} session={conversation.id} file={earlier[i]} /> : <Message role={message?.role ?? (i === persisted ? 'user' : 'assistant')} text={message?.text ?? (i === persisted ? queue?.items.find(item => item.status === 'running')?.text ?? '' : streamingText)} messageId={message?.id ?? conversation.id + ':' + started} live={!message && !!started} elapsed={message?.metrics?.elapsed ?? (!message && started ? Math.max(0, now - started) : undefined)} workLog={message ? message.workLog : sample?.workLog} model={message ? message.metrics?.model : sample?.model} />}</div>; }} />
         : <h2>在 {project.name} 中开始对话</h2>}
+      <TurnRail key={conversation.id} project={project.id} session={conversation.id} earlier={earlier} messages={conversation.messages} row={visibleRow} jump={index => log.current?.scrollToRow(index)} live={started ? { text: queue?.items.find(i => i.status === 'running')?.text ?? '', result: streamingText } : undefined} />
       <Button className="office-jump" data-ui-fade={arrow} disabled={!arrow} aria-label="移动到最下方" title="移动到最下方" onClick={() => { setArrow(false); log.current?.scrollToEnd(); }}>↓ 跳到底部</Button>
     </div>
     <div className="office-dock office-column">

@@ -1,0 +1,7 @@
+﻿@import '../ui-tween.css';
+.ui-confirm-window {width:min(390px,calc(100vw - 32px));padding:20px;border:1px solid var(--line);border-radius:12px;color:var(--text);background:var(--surface);overflow-wrap:anywhere}
+.ui-confirm-window::backdrop {background:#0006}
+.ui-confirm-window footer {display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
+.ui-confirm-window [role=alert] {color:var(--danger)}
+
+.ui-confirm-window footer button[data-danger] {background:var(--danger);border-color:var(--danger);color:var(--surface);font-weight:600}

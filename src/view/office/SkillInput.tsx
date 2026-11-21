@@ -6,7 +6,7 @@ import { useId, useRef, useState, useEffect } from 'react';
 
 import { SkillCommands, type AgentConfiguration } from '../../bridge/contracts/discovery';
 
-import { Icon } from '../shared/Icon';
+import { Icon } from '../../framework-ui/Icon';
 
 export function SkillInput({ value, skills, loading, disabled, running, OnChange, OnSubmit, OnRefresh }: { value: string; skills: NonNullable<AgentConfiguration['skills']>; loading: boolean; disabled: boolean; running: boolean; OnChange(text: string): void; OnSubmit(): void; OnRefresh(): void })
 {

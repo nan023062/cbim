@@ -312,3 +312,7 @@ h2.engine-brand img {width:30px;height:30px;}
 @media(hover:hover) and (pointer:fine){#application-home .office-session-row:not(:hover):not(:has(:focus-visible)) .project-action {display:none}}
 
 .extension-strip > div {width:auto}.extension-strip button {white-space:nowrap}.extension-body {container-type:inline-size;display:flex;flex-direction:column;flex:1;min-width:0;min-height:0;overflow:auto}.extension-body iframe {flex:1;min-height:0;width:100%;border:0;background:var(--bg)}.extension-console {padding:12px;overflow:auto}.extension-console li {overflow-wrap:anywhere}.extension-types {padding:5px;border:1px solid var(--line);background:var(--raised);color:var(--text);margin:0;inset:auto;top:anchor(bottom);right:anchor(right)}.extension-types button {display:flex;width:100%;justify-content:flex-start}.extension-web[hidden]{display:none}.extension-web{display:flex;flex-direction:column;flex:1;min-height:0}@container(max-width:620px){.extension-body .business-layout {grid-template-columns:minmax(0,1fr)}.extension-body .business-tree {max-height:26vh}.extension-body .business-page {padding:10px}}
+
+.engine-catalog-row { display:flex; align-items:center; min-width:0; gap:4px }
+.engine-catalog-row > button:first-child { flex:1; min-width:0 }
+.engine-list .engine-install-shortcut { padding:4px 8px; white-space:nowrap; border-color:var(--line) }

@@ -81,7 +81,11 @@ export function EnginePackagesView()
 
   const transfers = useTransfers();
 
-  const product = catalog.find(entry => entry.id === selected) ?? catalog[0];
+  // 目录保留尚未安装的产品，签名清单还可以提供额外的可安装引擎。
+  const products = [...catalog, ...(state?.items ?? []).filter(item => !catalog.some(entry => entry.id === item.kind)).map(item => ({
+    id: item.kind, label: item.label, logo: item.logo, businessTypes: [], supportedApis: item.requirement.supportedApis,
+  }))];
+  const product = products.find(entry => entry.id === selected) ?? products[0];
 
   const item = state?.items.find(entry => entry.kind === product?.id);
 
@@ -107,17 +111,18 @@ export function EnginePackagesView()
   return <section className="view-page menu-page engine-page"><header className="view-heading"><h1>执行引擎</h1><button disabled={!!busy || state?.managed === false} onClick={() => void update()}>{busy === 'check' ? '正在检查…' : '检查更新'}</button></header>
     {error && <p role="alert">{error}</p>}
     <div className="engine-layout">
-      <nav className="engine-list" aria-label="支持的执行引擎">{catalog.map(entry =>
+      <nav className="engine-list" aria-label="支持的执行引擎">{products.map(entry =>
       {
         const row = progressFor(entry.id);
+        const status = state?.items.find(item => item.kind === entry.id);
 
-        return <button key={entry.id} type="button" aria-current={entry.id === product?.id ? 'true' : undefined} onClick={() => setSelected(entry.id)}>
+        return <div className="engine-catalog-row" key={entry.id}><button type="button" aria-current={entry.id === product?.id ? 'true' : undefined} onClick={() => setSelected(entry.id)}>
         {row && <span aria-hidden="true" className={'engine-progress-fill' + (row.percent === undefined ? ' pending' : '')} style={{ width: row.percent === undefined ? undefined : row.percent + '%' }} />}
-        <span className="engine-list-title"><strong className="engine-brand"><img src={entry.logo} alt="" />{entry.label}</strong><EngineVersionIcon state={state} kind={entry.id} /></span><small>{entry.businessTypes.join(' · ')}</small>
-      </button>;
+        <span className="engine-list-title"><strong className="engine-brand">{entry.logo ? <img src={entry.logo} alt="" /> : <Icon name="terminal" size={16} />}{entry.label}</strong><EngineVersionIcon state={state} kind={entry.id} /></span><small>{[state?.managed && !status?.active ? '未安装' : '', ...entry.businessTypes].filter(Boolean).join(' · ')}</small>
+      </button>{state?.managed && !status?.active && status?.candidate && <button className="engine-install-shortcut" type="button" disabled={!!busy || status.preparing} aria-label={'安装 ' + entry.label} onClick={() => { setSelected(entry.id); void update(status); }}>{row?.label ?? '安装'}</button>}</div>;
       })}</nav>
       {product && <article className="engine-detail" aria-label={product.label + ' 详情'}>
-        <h2 className="engine-brand"><img src={product.logo} alt="" />{product.label}</h2><p>{product.businessTypes.join(' · ')}</p>
+        <h2 className="engine-brand">{product.logo ? <img src={product.logo} alt="" /> : <Icon name="terminal" size={16} />}{product.label}</h2><p>{product.businessTypes.join(' · ')}</p>
         <dl><dt>支持协议</dt><dd>{product.supportedApis.join(' / ')}</dd>
         <dt>本机状态</dt><dd>{!state ? error ? '状态未知' : '正在读取…' : !state.managed ? '宿主不可用' : item?.active ? item.enabled ? '已启用' : '已停用' : '尚未安装'}</dd>
         <dt>当前版本</dt><dd>{item?.active?.version ?? '—'}</dd>

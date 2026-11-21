@@ -59,6 +59,7 @@ const paths: Record<string, React.ReactNode> = {
   desktop: <><rect x="2" y="3" width="20" height="14" rx="2" /><path d="M8 21h8M12 17v4" /></>,
   chevron: <><path d="m9 5 7 7-7 7" /></>,
   search: <><circle cx="10" cy="10" r="7" /><path d="m15 15 6 6" /></>,
+  task: <><path d="M15 4a7 7 0 1 0 5 8M15 2v5h5M8 11l3 3 4-5" /><path d="m17 3 3 4" /></>,
   conversation: <><path d="M3 4h18v13H9l-6 4ZM7 8h10M7 12h6" /></>,
   team: <><circle cx="9" cy="7" r="3" /><path d="M3 21v-3a6 6 0 0 1 12 0v3M16 4a3 3 0 0 1 0 6M18 14a5 5 0 0 1 3 4v3" /></>,
   office: <><path d="M4 21V3h16v18M2 21h20M8 7h2M14 7h2M8 11h2M14 11h2M10 21v-5h4v5" /></>,

@@ -32,6 +32,28 @@ export function ProjectSidebar({ activeProject, activeSession, OnOpen, OnAdd, On
 
   const [search, setSearch] = useState('');
 
+  const [deviceOpen, setDeviceOpen] = useState(true);
+
+  /** 相对时间随列表轮询刷新，行提示仍显示完整日期。 */
+  function Elapsed(updated: number)
+  {
+    const minutes = Math.max(0, Math.floor((Date.now() - updated) / 60000));
+
+    if (minutes < 1)
+      return '刚刚';
+
+    if (minutes < 60)
+      return minutes + ' 分钟';
+
+    if (minutes < 1440)
+      return Math.floor(minutes / 60) + ' 小时';
+
+    if (minutes < 10080)
+      return Math.floor(minutes / 1440) + ' 天';
+
+    return Math.floor(minutes / 10080) + ' 周';
+  }
+
   const [filter, setFilter] = useState<'active' | 'running' | 'archived' | 'removed'>('active');
 
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => { try { const value = JSON.parse(localStorage.getItem('project-collapsed') || '{}'); return value && typeof value === 'object' && !Array.isArray(value) ? value : {}; } catch { return {}; } });
@@ -217,8 +239,10 @@ export function ProjectSidebar({ activeProject, activeSession, OnOpen, OnAdd, On
 
   return <section className="project-navigation" aria-label="项目与对话">
     <div className="sidebar-search"><Icon name="search" size={15} /><input ref={input} type="search" value={search} onChange={event => setSearch(event.target.value)} aria-label="搜索项目和对话" placeholder="搜索项目和对话" /></div>
-    <div className="sidebar-label"><span>项目</span><select aria-label="筛选对话" value={filter} onChange={event => setFilter(event.target.value as typeof filter)}><option value="active">全部对话</option><option value="running">运行中</option><option value="archived">已归档</option><option value="removed">已移除</option></select><button className="icon-button" title="展开所有项目" aria-label="展开所有项目" onClick={() => { setCollapsed({}); localStorage.setItem('project-collapsed', '{}'); }}><Icon name="down" size={14} /></button><button className="icon-button" title="收起所有项目" aria-label="收起所有项目" onClick={() => { const next = Object.fromEntries(projects.map(project => [project.id, true])); setCollapsed(next); localStorage.setItem('project-collapsed', JSON.stringify(next)); }}><Icon name="up" size={14} /></button><button className="icon-button" title="添加项目" aria-label="添加项目" onClick={OnAdd}><Icon name="plus" size={15} /></button></div>
-    <nav className="workspace-list project-tree" aria-label="项目列表">{projects.map(project =>
+    <div className="task-section-heading"><button className="task-filter-trigger" popoverTarget="task-list-options" aria-label="本机任务筛选与显示选项">{({ active: '本机任务', running: '运行中任务', archived: '已归档任务', removed: '已移除任务' })[filter]}<Icon name="chevronDown" size={12} /></button></div>
+    <div id="task-list-options" className="task-list-options" popover="auto"><label>显示任务<select aria-label="筛选对话" value={filter} onChange={event => setFilter(event.target.value as typeof filter)}><option value="active">全部对话</option><option value="running">运行中</option><option value="archived">已归档</option><option value="removed">已移除</option></select></label><button onClick={() => { setDeviceOpen(true); setCollapsed({}); localStorage.setItem('project-collapsed', '{}'); document.getElementById('task-list-options')?.hidePopover(); }}><Icon name="expand" size={15} />展开全部项目</button><button onClick={() => { const next = Object.fromEntries(projects.map(project => [project.id, true])); setCollapsed(next); localStorage.setItem('project-collapsed', JSON.stringify(next)); document.getElementById('task-list-options')?.hidePopover(); }}><Icon name="collapse" size={15} />收起全部项目</button></div>
+    <div className="local-device-row"><button aria-expanded={deviceOpen} aria-controls="local-project-tree" onClick={() => setDeviceOpen(value => !value)}><Icon name="desktop" size={14} /><span>本机</span><Icon name={deviceOpen ? 'chevronDown' : 'chevronRight'} size={11} /></button><button className="device-add" title="添加项目" aria-label="添加项目" onClick={OnAdd}><Icon name="folderAdd" size={16} /></button></div>
+    <nav id="local-project-tree" hidden={!deviceOpen && !query} className="workspace-list project-tree" aria-label="项目列表">{projects.map(project =>
     {
       const matchesProject = (project.name + ' ' + project.path).toLocaleLowerCase().includes(query);
 
@@ -234,12 +258,13 @@ export function ProjectSidebar({ activeProject, activeSession, OnOpen, OnAdd, On
       return <section className={'sidebar-project' + (over === project.id ? ' navigation-drop' : '')} key={project.id} data-project-id={project.id} aria-label={project.name}>
         <div className="project-list-row project-heading" data-active={activeProject === project.id || undefined} onContextMenu={event => Menu({ project }, event)}>
           <button className="project-grip" aria-label={'拖动项目 · ' + project.name} title="拖动调整项目顺序" disabled={busy || project.removed} onPointerDown={event => { if (event.button !== 0) return; dragging.current = { id: project.id, start: event.clientY, moved: false }; event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={event => { const drag = dragging.current; if (!drag) return; if (Math.abs(event.clientY - drag.start) > 6) drag.moved = true; const hit = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>('[data-project-id]'); if (drag.moved && hit) { const target = projects.find(item => item.id === hit.dataset.projectId); if (target?.pinned === project.pinned) { const peers = projects.filter(item => item.pinned === project.pinned); const index = peers.findIndex(item => item.id === target.id); const after = event.clientY > hit.getBoundingClientRect().top + hit.getBoundingClientRect().height / 2; drag.before = (after ? peers[index + 1]?.id : target.id) ?? ''; setOver(drag.before || 'end'); } const bounds = event.currentTarget.closest('.project-tree')?.getBoundingClientRect(); const list = event.currentTarget.closest('.project-tree'); if (bounds && event.clientY > bounds.bottom - 24) list?.scrollBy(0, 14); if (bounds && event.clientY < bounds.top + 24) list?.scrollBy(0, -14); } }} onPointerUp={event => { const drag = dragging.current; dragging.current = undefined; setOver(undefined); if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId); if (drag?.moved && drag.before !== undefined && drag.before !== drag.id) void Change({ project }, 'move', { before: drag.before || undefined }); }} onPointerCancel={() => { dragging.current = undefined; setOver(undefined); }}><Icon name="grip" size={12} /></button>
-          <button className="project-select" aria-expanded={open} title={project.path} onClick={() => Toggle(project.id)} onDoubleClick={() => Rename({ project })}><Icon name={open ? 'chevronDown' : 'chevronRight'} size={12} /><Icon name="folder" size={15} /><span>{project.name}</span>{project.pinned && <Icon name="pin" size={11} />}{project.sessions.some(session => session.running) && <span className="navigation-status executing" title="项目中有任务运行" aria-label="项目中有任务运行" />}</button>
+          <button className="project-select" aria-expanded={open} title={project.path} onClick={() => Toggle(project.id)} onDoubleClick={() => Rename({ project })}><span className="project-folder"><Icon name="folder" size={15} /><span className="project-chevron"><Icon name={open ? 'chevronDown' : 'chevronRight'} size={13} /></span></span><span>{project.name}</span>{project.pinned && <Icon name="pin" size={11} />}</button>
           <button className="project-action" aria-label={'项目更多 · ' + project.name} title="更多操作" onClick={event => Menu({ project }, event)}><Icon name="more" size={15} /></button>
           <button className="project-action" disabled={project.removed} aria-label={'新建对话 · ' + project.name} title="新建对话" onClick={() => OnOpen(project, true)}><Icon name="edit" size={15} /></button>
         </div>
         {open && <div className="project-conversations">{project.error && <small role="alert">{project.error}</small>}{visible.map(session => <div className="project-list-row office-session-row" key={session.id} data-active={activeSession === session.id || undefined} onContextMenu={event => Menu({ project, session }, event)}>
-          <button className="project-select" disabled={project.removed || session.removed} aria-current={activeSession === session.id ? 'page' : undefined} title={session.title + '\n' + new Date(session.updated).toLocaleString()} onClick={() => OnOpen(project, false, session.id)} onDoubleClick={() => Rename({ project, session })}><span className={'office-session-icon' + (session.running ? ' executing' : '')}><Icon name={session.attention ? 'warning' : session.pinned ? 'pin' : 'conversation'} size={14} /></span><span>{session.title}</span>{session.queued > 0 && <small className="navigation-count" title="排队指令">{session.queued}</small>}</button>
+          <button className="project-select" disabled={project.removed || session.removed} aria-current={activeSession === session.id ? 'page' : undefined} title={session.title + '\n' + new Date(session.updated).toLocaleString()} onClick={() => OnOpen(project, false, session.id)} onDoubleClick={() => Rename({ project, session })}><span className={'office-session-icon' + (session.running ? ' executing' : '')}><Icon name={session.attention ? 'warning' : session.pinned ? 'pin' : 'task'} size={14} /></span><span>{session.title}</span>{session.queued > 0 && <small className="navigation-count" title="排队指令">{session.queued}</small>}</button>
+          <span className="session-meta">{session.attention ? <span title="需要关注" aria-label="需要关注"><Icon name="warning" size={13} /></span> : session.running ? <span className="navigation-status executing" title="正在运行" aria-label="正在运行" /> : <time dateTime={new Date(session.updated).toISOString()}>{Elapsed(session.updated)}</time>}</span>
           <button className="project-action" title="更多操作" aria-label={'对话更多 · ' + session.title} onClick={event => Menu({ project, session }, event)}><Icon name="more" size={15} /></button>
           <button className="project-action" disabled={busy || project.removed} title={session.removed ? '恢复对话' : session.archived ? '取消归档' : '归档对话'} aria-label={(session.removed ? '恢复对话 · ' : session.archived ? '取消归档 · ' : '归档对话 · ') + session.title} onClick={() => void Change({ project, session }, session.removed ? 'restore' : 'archive', { value: !session.archived })}><Icon name={session.removed || session.archived ? 'retry' : 'archive'} size={14} /></button>
         </div>)}{visible.length < sessions.length && <button className="navigation-show-all" onClick={() => setAll(previous => ({ ...previous, [project.id]: true }))}>显示全部 {sessions.length} 条对话</button>}{all[project.id] && sessions.length > 5 && <button className="navigation-show-all" onClick={() => setAll(previous => ({ ...previous, [project.id]: false }))}>收起较早对话</button>}{!sessions.length && !project.error && <small className="navigation-empty">{filter === 'active' ? '暂无对话，点击右侧新建' : '没有符合条件的对话'}</small>}</div>}

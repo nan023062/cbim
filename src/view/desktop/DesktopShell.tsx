@@ -31,7 +31,7 @@ const resourceNavigation = [
 
 export function DesktopShell()
 {
-  const [sidebarWidth, setSidebarWidth] = useState(() => { const stored = Number(localStorage.getItem('project-sidebar-width')); return stored >= 220 && stored <= 420 ? stored : 260; });
+  const [sidebarWidth, setSidebarWidth] = useState(() => { const stored = Number(localStorage.getItem('project-sidebar-width')); return stored >= 220 && stored <= 420 ? stored : 320; });
 
   const [expanded, setExpanded] = useState(() => window.innerWidth > 720);
 
@@ -157,12 +157,14 @@ export function DesktopShell()
         <button className="user-profile-trigger" aria-label="用户菜单" popoverTarget="user-actions">
           <span className="profile-badge">C</span><span className="user-profile-copy"><b>本地用户</b><small>CBIM · 本地使用</small></span>
         </button>
+        <button className="profile-quick-action" title="设置" aria-label="设置" onClick={() => setSettings('通用')}><Icon name="settings" size={13} /></button>
+        <button className="profile-quick-action" title="切换外观" aria-label="切换外观" onClick={() => setSettings('外观')}><Icon name="palette" size={13} /></button>
         <div id="user-actions" popover="auto" role="group" aria-label="用户操作">
           <button popoverTarget="user-actions" popoverTargetAction="hide" onClick={() => { setUpdateOpen(true); void window.desktopMenu.Update('check').catch(e => setError(String(e))); }}><Icon name="retry" size={16} />检查更新</button>
           <button popoverTarget="user-actions" popoverTargetAction="hide" onClick={() => setSettings('通用')}><Icon name="settings" size={16} />设置</button>
         </div>
       </footer>
-      <div className="project-sidebar-resize" role="separator" aria-label="调整项目侧栏宽度" aria-orientation="vertical" aria-valuemin={220} aria-valuemax={420} aria-valuenow={sidebarWidth} tabIndex={0} onKeyDown={event => { if (['ArrowLeft', 'ArrowRight', 'Home'].includes(event.key)) { event.preventDefault(); const next = event.key === 'Home' ? 260 : Math.max(220, Math.min(420, sidebarWidth + (event.key === 'ArrowRight' ? 10 : -10))); setSidebarWidth(next); localStorage.setItem('project-sidebar-width', String(next)); } }} onPointerDown={event => event.currentTarget.setPointerCapture(event.pointerId)} onPointerMove={event => { if (event.currentTarget.hasPointerCapture(event.pointerId)) setSidebarWidth(Math.max(220, Math.min(420, event.clientX))); }} onPointerUp={event => { if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId); localStorage.setItem('project-sidebar-width', String(sidebarWidth)); }} onDoubleClick={() => { setSidebarWidth(260); localStorage.removeItem('project-sidebar-width'); }} />
+      <div className="project-sidebar-resize" role="separator" aria-label="调整项目侧栏宽度" aria-orientation="vertical" aria-valuemin={220} aria-valuemax={420} aria-valuenow={sidebarWidth} tabIndex={0} onKeyDown={event => { if (['ArrowLeft', 'ArrowRight', 'Home'].includes(event.key)) { event.preventDefault(); const next = event.key === 'Home' ? 320 : Math.max(220, Math.min(420, sidebarWidth + (event.key === 'ArrowRight' ? 10 : -10))); setSidebarWidth(next); localStorage.setItem('project-sidebar-width', String(next)); } }} onPointerDown={event => event.currentTarget.setPointerCapture(event.pointerId)} onPointerMove={event => { if (event.currentTarget.hasPointerCapture(event.pointerId)) setSidebarWidth(Math.max(220, Math.min(420, event.clientX))); }} onPointerUp={event => { if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId); localStorage.setItem('project-sidebar-width', String(sidebarWidth)); }} onDoubleClick={() => { setSidebarWidth(320); localStorage.removeItem('project-sidebar-width'); }} />
     </aside>
     <main className="workspace-main">
       <header className="workspace-topbar">{page !== 'workspace' && <button aria-label="返回工作区" onClick={() => setPage('workspace')}>←</button>}<Icon name="folder" size={16} /><strong>{title}</strong>

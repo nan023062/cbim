@@ -1,4 +1,7 @@
-/** WorkspaceInstance 表示一个已打开的 Workspace，供 Office 工位访问该业务目录，并管理本次使用的生命周期。 */
+/**
+ * 作用定位：WorkspaceInstance 表示一个已打开的 Workspace，供 Office 工位访问该业务目录，并管理本次使用的生命周期。
+ * 设计原因：静态业务节点与一次资源使用分开，工位关闭释放本次使用权，底层目录由宿主工厂管理。
+ */
 import { changeEvents } from '../events';
 
 import type { Workspace } from './workspace';

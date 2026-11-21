@@ -1,4 +1,7 @@
-/** 数据定义编辑器：保留失败草稿，按节点类别编辑资料，删除前确认。 */
+/**
+ * 作用定位：数据定义编辑器：保留失败草稿，按节点类别编辑资料，删除前确认。
+ * 设计原因：按节点类别限定可编辑字段并保留失败输入，提交结构定义不执行数据库迁移。
+ */
 import { useEffect, useRef, useState } from 'react';
 
 import type { DataArchitectureSnapshot, DataArchitectureNode, DataDefinition } from '../../bridge/contracts/discovery';

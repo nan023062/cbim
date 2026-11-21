@@ -1,3 +1,7 @@
+/**
+ * 作用定位：引擎流式分片到公共事件的异步转换函数。
+ * 设计原因：有效分片按顺序交付，私有分片仅更新活性；完成状态必须由原生协议确认。
+ */
 import type { EngineEvent } from '../logic/execution/rules/types';
 
 type DeltaKind = 'text' | 'activity' | 'summary' | 'command';

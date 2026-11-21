@@ -1,4 +1,7 @@
-/** 执行引擎的版本、下载安装与更新。 */
+/**
+ * 作用定位：执行引擎的版本、下载安装与更新。
+ * 设计原因：以宿主版本快照驱动安装操作和进度，页面不负责解包、校验或运行版本持有。
+ */
 import { useEffect, useState } from 'react';
 
 import type { EnginePackageSettings, EnginePackageStatus } from '../../bridge/contracts/desktop-engines';

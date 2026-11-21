@@ -1,3 +1,7 @@
+/**
+ * 作用定位：Agent 任务步骤契约与分析、分解、执行、汇总的编排函数。
+ * 设计原因：通过显式派发端口连接办公室；缺少执行条件时返回待处理结果，不把任务规划当作完成。
+ */
 import { readRoleSkill, type AgentDefinition } from './description';
 
 import type { AgentRole, OfficeObservation } from './agent';

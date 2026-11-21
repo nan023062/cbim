@@ -1,4 +1,7 @@
-/** Office 消息记录与贴底输入栏。执行状态由当前会话的模型流驱动。 */
+/**
+ * 作用定位：Office 消息记录与贴底输入栏。执行状态由当前会话的模型流驱动。
+ * 设计原因：界面维护输入草稿、历史与队列展示，发送时采纳设置，后台执行与持久队列由宿主持有。
+ */
 import { useDeferredValue, useEffect, useRef, useState } from 'react';
 
 import { Screen } from '../../framework-ui/screen';

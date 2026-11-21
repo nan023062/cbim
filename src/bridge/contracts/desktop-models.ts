@@ -1,4 +1,7 @@
-/** 新桌面模型设置的公开字段、请求校验与连接预览。 */
+/**
+ * 作用定位：新桌面模型设置的公开字段、请求校验与连接预览。
+ * 设计原因：将表单校验与通信字段集中在便携边界，避免页面加载模型服务或凭据存储。
+ */
 import { z } from 'zod';
 
 import { connectionSchema, definition, llmApiSchema, type LlmSettings, type LlmApi, type DiscoveredModel } from '../../logic/settings/models';

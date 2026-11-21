@@ -1,4 +1,7 @@
-/** 应用入口，供宿主初始化和关闭一套应用实例。 */
+/**
+ * 作用定位：应用入口，供宿主初始化和关闭一套应用实例。
+ * 设计原因：由 Application 实例集中组合项目、资源和队列服务，宿主无需分别管理各业务对象的生命周期。
+ */
 import { ResourceRepositories, type ResourceRepositoryPaths } from '../../resource/service';
 
 import { ResourceManagement, type PluginSource } from '../resource-management';

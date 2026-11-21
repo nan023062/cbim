@@ -1,4 +1,7 @@
-/** 引擎设置与执行入口，提供官方引擎目录及制品兼容规则。 */
+/**
+ * 作用定位：引擎设置与执行入口，提供官方引擎目录及制品兼容规则。
+ * 设计原因：复用通用 PluginManager 的版本引用机制，将引擎特有兼容性和依赖校验留在此适配层。
+ */
 import { PluginManager } from '../../../resource/plugins';
 
 import { registerPackageEngines, supportedEngines, engineDescriptor, loopEngineSchema, type LoopEngine } from '../index';

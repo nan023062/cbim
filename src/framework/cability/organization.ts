@@ -1,4 +1,7 @@
-/** 能力层运行实例管理。岗位可以先准备，只有引擎启动成功才发布运行中的 Agent。 */
+/**
+ * 作用定位：能力层运行实例管理。岗位可以先准备，只有引擎启动成功才发布运行中的 Agent。
+ * 设计原因：将岗位目录与已启动实例区分，所有实例读取同一 Office 权限，避免角色配置各自扩大授权。
+ */
 import { changeEvents } from '../events';
 
 import { Team, type TeamMember, type TeamDescription } from './team';

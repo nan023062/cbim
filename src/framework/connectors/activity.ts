@@ -1,4 +1,7 @@
-/** 汇总本宿主正在使用的连接器实例及其会话。 */
+/**
+ * 作用定位：汇总本宿主正在使用的连接器实例及其会话。
+ * 设计原因：宿主级登记只供资源观测，工具授权与会话释放仍由真实连接器及调用方负责。
+ */
 import type { ConnectorTaskContext } from './connector';
 
 type Device =

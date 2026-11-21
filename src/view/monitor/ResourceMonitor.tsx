@@ -1,4 +1,7 @@
-/** 对照查看 CBIM 运行资源与宿主的真实操作系统进程。 */
+/**
+ * 作用定位：对照查看 CBIM 运行资源与宿主的真实操作系统进程。
+ * 设计原因：只读订阅业务与进程指标并在卸载时清理监听，不把监控列表变成进程控制入口。
+ */
 import { memo, useEffect, useState } from 'react';
 
 import type { ProcessGroup, ProcessRow } from '../../bridge/contracts/discovery';

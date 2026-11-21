@@ -1,4 +1,7 @@
-/** 页面生命周期与公共布局。页面隐藏时释放活动订阅，恢复显示时重新连接。 */
+/**
+ * 作用定位：页面生命周期与公共布局。页面隐藏时释放活动订阅，恢复显示时重新连接。
+ * 设计原因：显示状态控制订阅接入与清理，页面隐藏不意味着取消后台任务。
+ */
 import { createContext, useContext, useEffect, type HTMLAttributes, type EffectCallback, type DependencyList } from 'react';
 
 import './ui.css';

@@ -1,4 +1,7 @@
-/** 单个办公室的团队快照与岗位实例绑定。 */
+/**
+ * 作用定位：单个办公室的团队快照与岗位实例绑定。
+ * 设计原因：共享组织目录与办公室成员绑定分离，连续任务可复用岗位实例而不跨 Office 混用。
+ */
 import { AgentInstances, Organization, type Agent, type AgentEngineFactory } from '../cability/organization';
 
 import type { AgentRole } from '../cability/agent';

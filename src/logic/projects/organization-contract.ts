@@ -1,4 +1,7 @@
-/** 组织编辑只改变节点资料和归属，能力配置由 AgentSettings 独立管理。 */
+/**
+ * 作用定位：组织编辑只改变节点资料和归属，能力配置由 AgentSettings 独立管理。
+ * 设计原因：组织资料编辑与 Agent 能力设置分开校验，节点移动不隐式改变模型或账号。
+ */
 import { z } from 'zod';
 
 import { agentConfigurationSchema } from './agent-configuration';

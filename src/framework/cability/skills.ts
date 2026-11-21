@@ -1,4 +1,7 @@
-/** 能力层的节点技能声明与继承规则。组织关系由调用方提供。 */
+/**
+ * 作用定位：能力层的节点技能声明与继承规则。组织关系由调用方提供。
+ * 设计原因：以静态作用域规则保留技能定义者与继承关系，技能选择不承担引擎创建或工具授权。
+ */
 import type { SkillDefinition } from '../skills';
 
 export type { SkillDefinition } from '../skills';

@@ -1,4 +1,7 @@
-/** Office 权限选择器；沿用 Cindy 风格的图标、说明行与选中标记，权限状态由 OfficeView 持有。 */
+/**
+ * 作用定位：Office 权限选择器；沿用 Cindy 风格的图标、说明行与选中标记，权限状态由 OfficeView 持有。
+ * 设计原因：受控组件表达三种权限并保留键盘操作，实际工具授权仍由宿主逐次检查。
+ */
 import { useEffect, useId, useRef, useState } from 'react';
 
 import { Icon } from '../shared/Icon';

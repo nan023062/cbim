@@ -1,4 +1,7 @@
-/** 按宿主登记的产品 ID 延迟创建实例，按任务获取并归还工具会话。 */
+/**
+ * 作用定位：按宿主登记的产品 ID 延迟创建实例，按任务获取并归还工具会话。
+ * 设计原因：实例复用和任务会话分别管理，获取中途失败时归还已取得资源，避免部分占用泄漏。
+ */
 import type { Connector, ConnectorSession, ConnectorTaskContext } from './connector';
 
 import { registerConnector } from './activity';

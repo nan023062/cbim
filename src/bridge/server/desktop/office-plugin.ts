@@ -1,4 +1,7 @@
-/** 将 Office 的一轮对话交给已安装的引擎，关闭实例后释放固定版本。 */
+/**
+ * 作用定位：将 Office 的一轮对话交给已安装的引擎，关闭实例后释放固定版本。
+ * 设计原因：每轮固定引擎包版本并绑定模型、工具和连接器，防止升级替换正在使用的实例。
+ */
 import { runUsage } from '../../../logic/projects/office-usage';
 
 import path from 'node:path';

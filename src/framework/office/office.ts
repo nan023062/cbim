@@ -1,4 +1,7 @@
-/** 一个主会话的办公室，跨任务保留成员绑定。 */
+/**
+ * 作用定位：一个主会话的办公室，跨任务保留成员绑定。
+ * 设计原因：主会话拥有权限、成员、工位与任务管理，页面切换不重新创建整套办公室状态。
+ */
 import { changeEvents } from '../events';
 
 import { Project, type WorkspaceInstance, type WorkspaceInstanceFactory } from '../business';

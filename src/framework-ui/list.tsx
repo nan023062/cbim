@@ -1,4 +1,7 @@
-/** 可变行高的窗口列表，按可视区域测量条目，聊天模式支持跟随末尾及主动归底。 */
+/**
+ * 作用定位：可变行高的窗口列表，按可视区域测量条目，聊天模式支持跟随末尾及主动归底。
+ * 设计原因：虚拟列表只管理可视条目和滚动位置，历史数据及任务生命周期由上层持有。
+ */
 import { useRef, useImperativeHandle, type ReactNode, type Ref } from 'react';
 
 import { Virtuoso, type VirtuosoHandle } from 'react-virtuoso';

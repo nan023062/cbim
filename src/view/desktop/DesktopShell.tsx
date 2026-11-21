@@ -1,4 +1,7 @@
-/** 桌面主框架只负责布局与侧栏展开状态。业务入口在对应模块接入后启用。 */
+/**
+ * 作用定位：桌面主布局与 Office、发现、设置和扩展页面的组合组件。
+ * 设计原因：React 外壳组合各业务页面并持有窗口内导航，后台任务归宿主服务管理。
+ */
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 
 import type { DiscoveryPage, ProjectItem, OfficeConversation } from '../../bridge/contracts/discovery';

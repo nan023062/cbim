@@ -1,3 +1,7 @@
+/**
+ * 作用定位：引擎适配器的身份、协议与实例工厂契约。
+ * 设计原因：以固定协议和创建工厂隔离供应商实现，不依赖 SDK 包版本推测适配兼容性。
+ */
 export const engineAdapterProtocol = 1 as const;
 
 /** 发布包导出唯一 engineAdapter；create 名称属于 protocol=1。版本由适配器维护，不从 SDK 版本推断。 */

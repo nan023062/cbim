@@ -1,4 +1,7 @@
-/** 新桌面主菜单的隔离桥，仅开放固定操作。 */
+/**
+ * 作用定位：新桌面主菜单的隔离桥，仅开放固定操作。
+ * 设计原因：通过固定 IPC 方法和订阅封装跨进程通信，页面不能取得任意 Node 或 Electron 能力。
+ */
 import { contextBridge, ipcRenderer } from 'electron';
 
 import type { DesktopMenu, ProcessGroup } from '../contracts/discovery';

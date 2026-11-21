@@ -1,4 +1,7 @@
-/** 项目导航组件：持久状态由宿主提供，视图只持有搜索、折叠、菜单和编辑草稿。 */
+/**
+ * 作用定位：项目导航组件：持久状态由宿主提供，视图只持有搜索、折叠、菜单和编辑草稿。
+ * 设计原因：界面草稿与宿主持久导航分离，列表操作不直接修改项目文件或运行对象。
+ */
 import { useEffect, useRef, useState, type MouseEvent } from 'react';
 
 import type { NavigationSnapshot, NavigationChange, NavigationProject, NavigationSession, ProjectItem } from '../../bridge/contracts/discovery';

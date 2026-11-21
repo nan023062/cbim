@@ -1,4 +1,7 @@
-/** Local model configuration storage and credential protection. */
+/**
+ * 作用定位：本机模型配置与凭据保护的 LocalModelProfiles 存储实例。
+ * 设计原因：实例串行保存模型配置，凭据通过注入的加密端口保护，公开配置不直接暴露明文秘密。
+ */
 import fs from 'node:fs/promises';
 
 import { randomUUID } from 'node:crypto';

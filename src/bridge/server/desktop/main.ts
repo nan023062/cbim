@@ -1,3 +1,7 @@
+/**
+ * 作用定位：桌面启动装配函数，连接 Application、主窗口及页面就绪确认。
+ * 设计原因：由可信 Electron 入口统一装配窗口、IPC 与应用生命周期，页面只提交受限命令。
+ */
 import { navigationChangeSchema } from '../../../logic/projects/navigation-contract';
 
 /** 新桌面宿主负责窗口、应用生命周期和启动确认。 */

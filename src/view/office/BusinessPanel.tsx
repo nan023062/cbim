@@ -1,4 +1,7 @@
-/** 业务架构实时编辑视图；页面只持有选择、搜索和折叠状态。 */
+/**
+ * 作用定位：业务架构实时编辑视图；页面只持有选择、搜索和折叠状态。
+ * 设计原因：树展示与持久定义分开，刷新以宿主快照为准，编辑流程由独立弹窗负责。
+ */
 import { useEffect, useState } from 'react';
 
 import { BusinessNodeDialog, type BusinessEdit } from './BusinessNodeDialog';

@@ -1,4 +1,7 @@
-/** 数据架构页面：导航与搜索只持有展示状态，定义修改经版本化 IPC 保存。 */
+/**
+ * 作用定位：数据架构页面：导航与搜索只持有展示状态，定义修改经版本化 IPC 保存。
+ * 设计原因：层级浏览和版本化编辑共享宿主快照，数据目录操作不暗示真实数据库变更。
+ */
 import { useEffect, useRef, useState } from 'react';
 
 import type { DataArchitectureSnapshot } from '../../bridge/contracts/discovery';

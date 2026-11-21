@@ -1,3 +1,7 @@
+/**
+ * 作用定位：按引擎支持范围和本轮能力生成原生工具清单的纯函数。
+ * 设计原因：启动清单只决定候选工具，实际调用仍须经过 beforeTool 授权，不能以清单替代权限检查。
+ */
 import { nativeToolsDisabled, type EngineCapabilities } from '../logic/execution/rules/engine-tools';
 
 import { nativeToolNames } from '../logic/tools/rules/native-tools';

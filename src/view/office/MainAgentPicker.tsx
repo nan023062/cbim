@@ -1,4 +1,7 @@
-/** 主 Agent 与成员设置共用的引擎、兼容模型选择组件。 */
+/**
+ * 作用定位：主 Agent 与成员设置共用的引擎、兼容模型选择组件。
+ * 设计原因：主与成员采用同一兼容性选择规则，页面保存引用而不读取供应商密钥。
+ */
 import { useEffect, useState, type CSSProperties } from 'react';
 
 import type { OfficeSelection } from '../../bridge/contracts/discovery';

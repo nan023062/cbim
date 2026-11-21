@@ -1,4 +1,7 @@
-/** Office 对外工具操作契约；目录、模型与权限身份均由宿主装配。 */
+/**
+ * 作用定位：Office 对外工具操作契约；目录、模型与权限身份均由宿主装配。
+ * 设计原因：将可调用操作与宿主身份绑定分开，模型参数不能替换执行目录、引擎或权限。
+ */
 import { z } from 'zod';
 
 export type { AgentPermission } from '../../framework/cability/organization';

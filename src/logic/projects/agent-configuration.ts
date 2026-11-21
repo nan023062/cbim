@@ -1,4 +1,7 @@
-/** 配置边界只接受能力选择，不接受账号凭据或权限覆盖。 */
+/**
+ * 作用定位：配置边界只接受能力选择，不接受账号凭据或权限覆盖。
+ * 设计原因：严格 Schema 固定模型、技能和连接器选择边界，防止设置请求携带额外执行权。
+ */
 import { z } from 'zod';
 
 export type { AgentConfiguration } from '../../framework/cability/team';

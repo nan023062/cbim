@@ -1,4 +1,7 @@
-/** 两种 Agent 共用设置表单；父页面只决定保存目标及初始标签。 */
+/**
+ * 作用定位：两种 Agent 共用设置表单；父页面只决定保存目标及初始标签。
+ * 设计原因：主会话和岗位共用能力表单但保存身份独立，版本化提交避免覆盖其他窗口编辑。
+ */
 import { useEffect, useRef, useState } from 'react';
 
 import type { AgentConfiguration, AgentSettingsTarget, OfficeSelection } from '../../bridge/contracts/discovery';

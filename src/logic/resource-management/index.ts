@@ -1,4 +1,7 @@
-/** 为发现菜单整理已登记的插件和仓库资源，只返回浏览所需的字段。 */
+/**
+ * 作用定位：为发现菜单整理已登记的插件和仓库资源，只返回浏览所需的字段。
+ * 设计原因：资源浏览投影与执行服务分开，列表结果不泄露内部运行句柄。
+ */
 import { resourceKinds, type ResourceCategory } from '../../resource';
 
 import type { ResourceRepositories } from '../../resource/service';

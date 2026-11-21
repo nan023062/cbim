@@ -1,4 +1,7 @@
-/** 组织资料编辑与删除确认；失败保留输入，成功后刷新父页面快照。 */
+/**
+ * 作用定位：组织资料编辑与删除确认；失败保留输入，成功后刷新父页面快照。
+ * 设计原因：资料修改、父节点选择和删除确认在表单内完成，冲突不会静默丢弃用户草稿。
+ */
 import { useEffect, useRef, useState } from 'react';
 
 import type { OrganizationNode, OrganizationSnapshot } from '../../bridge/contracts/discovery';

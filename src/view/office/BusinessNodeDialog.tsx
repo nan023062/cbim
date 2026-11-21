@@ -1,4 +1,7 @@
-/** 业务结构资料编辑与删除确认；运行中的 Office 不阻止保存。 */
+/**
+ * 作用定位：业务结构资料编辑与删除确认；运行中的 Office 不阻止保存。
+ * 设计原因：组件保存资料草稿并提交版本化命令，结构调整不直接移动工作树文件。
+ */
 import { useEffect, useRef, useState } from 'react';
 
 import type { BusinessSnapshot } from '../../bridge/contracts/discovery';

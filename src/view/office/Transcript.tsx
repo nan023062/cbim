@@ -1,4 +1,7 @@
-/** 可视窗口内的 Office 历史与流式正文，较早的轮次仅在进入窗口时读取。 */
+/**
+ * 作用定位：可视窗口内的 Office 历史与流式正文，较早的轮次仅在进入窗口时读取。
+ * 设计原因：按可视范围读取历史并复用正文渲染，减少长会话开销，不据展示状态推断执行完成。
+ */
 import { memo, useEffect, useState } from 'react';
 
 import Markdown from 'react-markdown';

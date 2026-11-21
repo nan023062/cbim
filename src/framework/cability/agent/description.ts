@@ -1,3 +1,7 @@
+/**
+ * 作用定位：Agent 角色描述、定义以及角色指令和技能正文的读取函数。
+ * 设计原因：角色说明与已采纳技能在运行边界组合，实际文件读取和供应商 SDK 留在外部。
+ */
 import type { AgentConfigurationSnapshot } from './identity';
 
 import type { AgentConfiguration } from '../team';

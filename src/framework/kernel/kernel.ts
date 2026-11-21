@@ -1,3 +1,7 @@
+/**
+ * 作用定位：执行内核的静态装配类，负责配置捕获和引擎、模型句柄组合。
+ * 设计原因：捕获模型配置后通过注入工厂创建资源，销毁引擎后卸载模型，避免配置漂移与资源所有权不明。
+ */
 import type { ModelConfiguration, ModelInstance, ModelLoader } from './models';
 
 import type { AgentEngine, EngineAdapter } from './engines';

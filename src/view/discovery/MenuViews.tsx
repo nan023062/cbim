@@ -1,4 +1,7 @@
-/** 发现页负责展示和筛选资源，运行管理页读取当前应用的监控快照。 */
+/**
+ * 作用定位：发现页负责展示和筛选资源，运行管理页读取当前应用的监控快照。
+ * 设计原因：React 页面只筛选和展示发现结果，资源安装与连接器生命周期由宿主入口处理。
+ */
 import { useEffect, useState } from 'react';
 
 import type { DiscoveryPage, DiscoveryResult } from '../../bridge/contracts/discovery';

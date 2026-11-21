@@ -1,4 +1,7 @@
-/** 一个 Agent 的生命期用量。每次任务独占上报入口，空闲时释放整个速率窗口。 */
+/**
+ * 作用定位：一个 Agent 的生命期用量。每次任务独占上报入口，空闲时释放整个速率窗口。
+ * 设计原因：实例独立累计用量并拥有速率窗口计时器，空闲时清理窗口；此统计不代替费用结算。
+ */
 import { changeEvents } from '../../events';
 
 export type AgentChange = 'executing' | 'idle' | 'tokens' | 'rate';

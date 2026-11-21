@@ -1,4 +1,7 @@
-/** Office 的任务分配与执行队列。任务记录绑定实际 Agent、工位实例和目标。 */
+/**
+ * 作用定位：Office 的任务分配与执行队列。任务记录绑定实际 Agent、工位实例和目标。
+ * 设计原因：对实际 Agent 串行分配任务并维护依赖状态，执行终态不自动等同于业务验收。
+ */
 import { changeEvents } from '../events';
 
 export interface OfficeTask

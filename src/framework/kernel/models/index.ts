@@ -1,4 +1,7 @@
-/** 引擎创建时使用的模型选择和宿主解析的配置。 */
+/**
+ * 作用定位：引擎创建时使用的模型选择和宿主解析的配置。
+ * 设计原因：将模型选择、加载实例与卸载端口分离，引擎不直接拥有配置存储或账号管理。
+ */
 export interface ModelConfiguration<Model = unknown>
 {
   readonly provider: string;

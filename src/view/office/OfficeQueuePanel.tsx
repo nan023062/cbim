@@ -1,4 +1,7 @@
-/** 指令队列展示：拖柄支持鼠标和触屏；键盘与图标操作共用宿主版本化命令。 */
+/**
+ * 作用定位：指令队列展示：拖柄支持鼠标和触屏；键盘与图标操作共用宿主版本化命令。
+ * 设计原因：拖拽状态只属于交互过程，最终顺序和立即插入由宿主版本化队列命令裁定。
+ */
 import { useRef, useState } from 'react';
 
 import type { OfficeQueueSnapshot, OfficeQueueAction } from '../../bridge/contracts/discovery';

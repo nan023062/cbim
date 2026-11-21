@@ -1,3 +1,7 @@
+/**
+ * 作用定位：桌面菜单通信接口及项目、队列和架构快照的公开类型入口。
+ * 设计原因：集中重导出页面所需的数据契约，宿主服务和平台句柄不进入渲染进程。
+ */
 export type { NavigationSnapshot, NavigationChange, NavigationProject, NavigationSession } from '../../logic/projects/navigation-contract';
 
 export type { OfficeQueueAction, OfficeQueueSnapshot, OfficeQueueItem } from '../../logic/projects/office-queue-contract';

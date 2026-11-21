@@ -1,4 +1,7 @@
-/** 为一个 Office 在每个仓库中创建或恢复持久 Git 工作树。 */
+/**
+ * 作用定位：为一个 Office 在每个仓库中创建或恢复持久 Git 工作树。
+ * 设计原因：以 Office 和仓库隔离工作副本；归还使用权保留文件，避免任务清理误删未合并成果。
+ */
 import { execFile } from 'node:child_process';
 
 import fs from 'node:fs/promises';

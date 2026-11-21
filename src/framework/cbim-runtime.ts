@@ -1,4 +1,7 @@
-/** 应用级 AI 工作流运行时，按工作区和主会话拥有办公室。 */
+/**
+ * 作用定位：应用级 AI 工作流运行时，按工作区和主会话拥有办公室。
+ * 设计原因：以实例注册表隔离项目工作区和主会话，Office 的创建与释放不依赖页面挂载。
+ */
 import { Project, type WorkspaceTree, type WorkspaceInstanceFactory } from './business';
 
 import { AgentInstances, Organization } from './cability/organization';

@@ -1,4 +1,7 @@
-/** 单选页签与面板，支持方向键、Home/End 和面板活动订阅。 */
+/**
+ * 作用定位：单选页签与面板，支持方向键、Home/End 和面板活动订阅。
+ * 设计原因：页签选择与键盘焦点在组件边界协作，面板通过 Screen 控制可见期订阅。
+ */
 import { useId, type ReactNode } from 'react';
 
 import { Button } from './controls';

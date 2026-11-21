@@ -1,4 +1,7 @@
-/** 执行插件的包格式与工厂出口。发行方负责签名、归档和安装位置。 */
+/**
+ * 作用定位：执行插件的包格式与工厂出口。发行方负责签名、归档和安装位置。
+ * 设计原因：包结构与工厂出口可独立校验；格式通过不代表已验证签名或安装来源。
+ */
 import { z } from 'zod';
 
 import { engineAdapterProtocol, type EngineAdapter } from './adapter';

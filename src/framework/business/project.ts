@@ -1,4 +1,7 @@
-/** Project 组织整棵 Workspace 树，负责跨节点查找及 Workflow 继承，并提供打开指定工作区的入口。 */
+/**
+ * 作用定位：Project 组织整棵 Workspace 树，负责跨节点查找及 Workflow 继承，并提供打开指定工作区的入口。
+ * 设计原因：由项目实例统一解析业务树与继承范围，实际工作目录的打开方式通过工厂注入。
+ */
 import type { WorkflowDefinition } from '../skills';
 
 import { WorkflowScope } from './workflow';

@@ -1,4 +1,7 @@
-/** 执行引擎页和 Office 选择器使用的宿主快照。 */
+/**
+ * 作用定位：执行引擎页和 Office 选择器使用的宿主快照。
+ * 设计原因：以纯数据契约隔离页面与包管理器，显示版本和依赖不需要取得运行句柄。
+ */
 import type { ModelConnectionRequirement } from './desktop-models';
 
 interface EngineVersion

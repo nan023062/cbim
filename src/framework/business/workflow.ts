@@ -1,4 +1,7 @@
-/** Workspace 声明业务 Workflow；其作用域覆盖所属节点和全部后代。 */
+/**
+ * 作用定位：Workspace 声明业务 Workflow；其作用域覆盖所属节点和全部后代。
+ * 设计原因：静态作用域计算保留祖先来源，避免将无关节点的流程混入当前业务工作区。
+ */
 import type { WorkspaceTree } from './workspace';
 
 export class WorkflowScope

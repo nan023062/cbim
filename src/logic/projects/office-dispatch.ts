@@ -1,4 +1,7 @@
-/** 将本轮模型派发连接到 Office 队列；成员复用岗位身份、动态权限及独立工作树。 */
+/**
+ * 作用定位：将本轮模型派发连接到 Office 队列；成员复用岗位身份、动态权限及独立工作树。
+ * 设计原因：通过成员自己的能力配置执行并共享 Office 权限，限制递归派发并在父任务结束时排空子运行。
+ */
 import path from 'node:path';
 
 import { Office, type MainTaskCommands } from '../../framework/office';

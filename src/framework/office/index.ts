@@ -1,3 +1,7 @@
+/**
+ * 作用定位：Office 公共导出、派发端口以及任务工具和指令的组合函数。
+ * 设计原因：通过运行端口和组合函数连接技能、工具及指令，配置合并不创建底层资源。
+ */
 import type { OfficeMembers } from './members';
 
 import type { AgentRole, AgentConversation, AgentStep, AgentTaskDispatcher } from '../cability/agent';

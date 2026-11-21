@@ -1,4 +1,7 @@
-/** 组织树只持有导航状态，节点资料和能力配置分别通过独立编辑器保存。 */
+/**
+ * 作用定位：组织树只持有导航状态，节点资料和能力配置分别通过独立编辑器保存。
+ * 设计原因：树导航与能力配置分开编辑，视图只消费宿主快照，不直接修改 Agent 实例。
+ */
 import { useEffect, useState } from 'react';
 
 import type { OrganizationSnapshot, AgentConfiguration } from '../../bridge/contracts/discovery';

@@ -1,4 +1,7 @@
-/** 工作区登记身份；path 为规范化实际路径，previousIds 仅关联旧身份历史，不合并数据。 */
+/**
+ * 作用定位：工作区登记身份；path 为规范化实际路径，previousIds 仅关联旧身份历史，不合并数据。
+ * 设计原因：登记身份与实际路径明确分离，历史别名只用于关联，不隐式迁移或合并会话内容。
+ */
 export interface WorkspaceEntry
 {
   id: string;

@@ -1,3 +1,7 @@
+/**
+ * 作用定位：Office 查询、派发和回传工具的名称、校验及约束错误契约。
+ * 设计原因：父运行与工具调用标识限定派发关联，严格输入契约不允许调用者注入任意运行身份。
+ */
 import { z } from 'zod';
 
 export const agentCallToolName = 'cbim_agent_call';

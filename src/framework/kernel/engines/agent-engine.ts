@@ -1,3 +1,7 @@
+/**
+ * 作用定位：底层 Agent 引擎会话及其生命周期端口。
+ * 设计原因：启动、运行、追加、停止及关闭分别表达生命周期；取消请求和真实资源退出不能混为一体。
+ */
 export interface AgentEngine<Context, Image>
 {
   readonly kind: string;

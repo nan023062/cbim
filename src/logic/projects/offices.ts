@@ -1,4 +1,7 @@
-/** 仅为已登记项目打开 Office，将持久会话身份映射到当前运行时实例。 */
+/**
+ * 作用定位：仅为已登记项目打开 Office，将持久会话身份映射到当前运行时实例。
+ * 设计原因：持久历史与内存 Office 分别拥有状态，主 Agent 和成员通过同一运行装配入口获得能力。
+ */
 import path from 'node:path';
 
 import { OfficeHistory, type OfficeActivity } from '../../resource/office-history';

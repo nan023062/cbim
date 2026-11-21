@@ -1,3 +1,7 @@
+/**
+ * 作用定位：供应商模型发现与生成、嵌入协议连接探测函数。
+ * 设计原因：通过实际协议请求检验连接能力，探测结果与配置保存分离，不能将本地形状校验视作连通证明。
+ */
 import { modelRequestUrl, parseModelCatalog, type LlmDefinition, type ResolvedLlm, type ResolvedModelOperation } from '../index';
 
 function headers(api: string, auth: string, key: string)

@@ -1,3 +1,7 @@
+/**
+ * 作用定位：已选引擎与适配器出口的一致性校验函数。
+ * 设计原因：装配前核对适配器身份、协议及描述，包签名和安装真实性仍由制品层验证。
+ */
 import { JsonUtils } from '../../../core/io';
 
 import { engineAdapterProtocol, type EngineAdapter as KernelAdapter } from '../../../framework/kernel';

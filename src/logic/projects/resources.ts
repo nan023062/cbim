@@ -1,4 +1,7 @@
-/** 将项目的静态描述装配为 Framework 的启动契约。 */
+/**
+ * 作用定位：将项目的静态描述装配为 Framework 的启动契约。
+ * 设计原因：由适配层把文件描述转为团队和业务树，框架不依赖具体目录读取方式。
+ */
 import path from 'node:path';
 
 import type { ProjectResources } from '../../framework/cbim-runtime';

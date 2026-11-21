@@ -1,4 +1,7 @@
-/** Office 待执行指令的纯契约；提交时固定能力和权限，排序不改变配置。 */
+/**
+ * 作用定位：Office 待执行指令的纯契约；提交时固定能力和权限，排序不改变配置。
+ * 设计原因：每项指令保存提交时配置，拖动顺序只改变排程，不重新解释用户当时的能力选择。
+ */
 import { z } from 'zod';
 
 import { agentConfigurationSchema } from './agent-configuration';

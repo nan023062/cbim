@@ -1,4 +1,7 @@
-/** 资源监视器窗口由桌面宿主持有。窗口关闭时释放订阅及进程采样器。 */
+/**
+ * 作用定位：资源监视器窗口由桌面宿主持有。窗口关闭时释放订阅及进程采样器。
+ * 设计原因：监控订阅与采样器随独立窗口释放，避免关闭窗口后继续持有观测资源。
+ */
 import { app, BrowserWindow, ipcMain } from 'electron';
 
 import path from 'node:path';

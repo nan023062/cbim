@@ -1,8 +1,8 @@
 import {expect,it,vi} from 'vitest';
 import {claudeTools} from '../../../src/engine-plugins/claude/tools';
 import {codexTools} from '../../../src/engine-plugins/codex/tools';
-import type {EngineContext} from '../../../src/logic-new/execution/rules/types';
-import type {EngineToolsPort} from '../../../src/logic-new/execution/rules/engine-tools';
+import type {EngineContext} from '../../../src/logic/execution/rules/types';
+import type {EngineToolsPort} from '../../../src/logic/execution/rules/engine-tools';
 
 it.each([true,false])('Claude/Codex 按可信能力策略收窄实际目录，关闭原生工具=%s',async disabled=>{
   const internal:EngineToolsPort={list:async()=>[{name:'cbim_business',inputSchema:{type:'object'}}],call:async()=>({content:[{type:'text',text:'{}'}]})};

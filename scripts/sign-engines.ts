@@ -2,8 +2,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {runtimeSigningKey,assertFrozenSource,fileHash} from './runtime-packaging';
 import {signEngineRelease} from './engine-release';
-import {enginePackageSchema,type ColdRuntime} from '../src/logic-new/updates/service/runtime-manifest';
-import {extractRuntimeArchive,verifyRuntimeDirectory} from '../src/logic-new/updates/service/runtime-archive';
+import {enginePackageSchema,type ColdRuntime} from '../src/logic/updates/service/runtime-manifest';
+import {extractRuntimeArchive,verifyRuntimeDirectory} from '../src/logic/updates/service/runtime-archive';
 
 async function main(){
   const [candidate,coldFile,sequenceText,notesFile,previousFile,...extra]=process.argv.slice(2),sequence=Number(sequenceText);

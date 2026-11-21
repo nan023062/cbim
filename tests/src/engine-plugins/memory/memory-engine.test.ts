@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import {MemoryEngine} from '../../../../src/engine-plugins/memory/engine';
-import type {EngineContext,EngineEvent} from '../../../../src/logic-new/execution/rules/types';
+import type {EngineContext,EngineEvent} from '../../../../src/logic/execution/rules/types';
 import {memoryModel,memorySnapshot,memoryEmbeddingReply,memoryChatReply} from './support/memory-engine-data';
 const temporary:string[]=[];
 afterEach(async()=>{vi.unstubAllGlobals();for(const root of temporary.splice(0)){if(path.dirname(root)!==path.resolve(os.tmpdir())||!path.basename(root).startsWith('cbim-memory-unit-'))throw Error('cleanup boundary');await fs.rm(root,{recursive:true,force:true})}});

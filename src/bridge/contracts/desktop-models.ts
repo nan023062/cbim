@@ -1,9 +1,9 @@
 /** 新桌面模型设置的公开字段、请求校验与连接预览。 */
 import { z } from 'zod';
 
-import { connectionSchema, definition, llmApiSchema, type LlmSettings, type LlmApi, type DiscoveredModel } from '../../logic-new/settings/models';
+import { connectionSchema, definition, llmApiSchema, type LlmSettings, type LlmApi, type DiscoveredModel } from '../../logic/settings/models';
 
-export * from '../../logic-new/settings/models';
+export * from '../../logic/settings/models';
 
 const identity = z.object({ id: z.string().uuid() }).strict();
 

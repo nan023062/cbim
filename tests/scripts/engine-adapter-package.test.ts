@@ -4,8 +4,8 @@ import os from 'node:os';
 import path from 'node:path';
 import {createRequire} from 'node:module';
 import {buildEngineAdapter} from '../../scripts/build-engine-adapters.mjs';
-import {packagedEngineAdapter} from '../../src/logic-new/projects/office-engine-loader';
-import {checkedEngineAdapter} from '../../src/logic-new/execution/rules/engine-adapter';
+import {packagedEngineAdapter} from '../../src/logic/projects/office-engine-loader';
+import {checkedEngineAdapter} from '../../src/logic/execution/rules/engine-adapter';
 import {collectEngines} from '../../scripts/runtime-packaging';
 
 test('官方引擎包可独立构建并经统一工厂加载，构建不触发 SDK 或联网',async()=>{

@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {officialEngineBuilders} from './package-pi-runtime.mjs';
 import {assertFrozenSource,collectEngines,collectWorldClock} from './runtime-packaging';
-import {engineDescriptor,loopEngineSchema,builtInEngines} from '../src/logic-new/engines';
+import {engineDescriptor,loopEngineSchema,builtInEngines} from '../src/logic/engines';
 async function main(){
   if(process.platform!=='win32'||process.arch!=='x64')throw Error('引擎包当前固定 Windows x64');
   const [selected,...extra]=process.argv.slice(2);if(extra.length)throw Error('用法：pnpm make:engines [引擎 ID]');

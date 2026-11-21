@@ -42,7 +42,7 @@ N_6741bcbdf4f1 ..> N_56e2b9e614cc : 依赖
 | --- | --- |
 | [contracts](contracts/ARCHITECTURE.md) | 声明当前桌面与页面之间的数据协议，避免页面加载业务服务、凭据和平台实现。旧 IPC 兼容协议已随旧宿主移除。 |
 | [preload](preload/ARCHITECTURE.md) | 向当前页面提供受限桌面菜单能力。业务请求经当前桌面通信入口传递，不公开任意 Node API。 |
-| [server](server/ARCHITECTURE.md) | 提供当前桌面进程的可信通信和平台边界。业务实例由 logic-new/application 创建，Electron 能力由 desktop 注入；旧 IPC、命令行与应用装配入口已退役。 |
+| [server](server/ARCHITECTURE.md) | 提供当前桌面进程的可信通信和平台边界。业务实例由 logic/application 创建，Electron 能力由 desktop 注入；旧 IPC、命令行与应用装配入口已退役。 |
 
 [上层设计](../ARCHITECTURE.md)
 

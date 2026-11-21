@@ -5,8 +5,8 @@ import os from 'node:os';
 import http from 'node:http';
 import {randomUUID} from 'node:crypto';
 import {ClaudeCodeEngine,claudeEnvironment} from '../../../../src/engine-plugins/claude/engine';
-import type {EngineContext,EngineEvent} from '../../../../src/logic-new/execution/rules/types';
-import type {ResolvedEngineModel} from '../../../../src/logic-new/engines';
+import type {EngineContext,EngineEvent} from '../../../../src/logic/execution/rules/types';
+import type {ResolvedEngineModel} from '../../../../src/logic/engines';
 
 const roots:string[]=[];
 test('real Claude stop cancels an in-flight provider request and does not claim completion',async()=>{

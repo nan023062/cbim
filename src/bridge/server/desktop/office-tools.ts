@@ -3,15 +3,15 @@ import fs from 'node:fs/promises';
 
 import path from 'node:path';
 
-import { nativeToolDescriptor } from '../../../logic-new/tools/rules/native-tools';
+import { nativeToolDescriptor } from '../../../logic/tools/rules/native-tools';
 
-import { authorizeRunTool, type RunToolDescriptor } from '../../../logic-new/tools/rules/policy/tool-policy';
+import { authorizeRunTool, type RunToolDescriptor } from '../../../logic/tools/rules/policy/tool-policy';
 
-import { guard } from '../../../logic-new/execution/platform/tool-guard';
+import { guard } from '../../../logic/execution/platform/tool-guard';
 
-import type { ToolCall, ToolDecision } from '../../../logic-new/tools/rules/types';
+import type { ToolCall, ToolDecision } from '../../../logic/tools/rules/types';
 
-import { officeDispatchSchema, type AgentPermission, type OfficeOperations, type OfficeApproval } from '../../../logic-new/projects/office-operations';
+import { officeDispatchSchema, type AgentPermission, type OfficeOperations, type OfficeApproval } from '../../../logic/projects/office-operations';
 
 /** 宿主按实例选择取得的连接器会话。 */
 export interface OfficeConnectors

@@ -1,0 +1,57 @@
+import {expect,test} from 'vitest';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import os from 'node:os';
+import {ProjectList} from '../../../../src/logic/projects/project';
+import {Paths} from '../../../../src/logic/projects/paths';
+import {AgentSettings} from '../../../../src/logic/projects/agent-settings';
+
+test('组织 CRUD 保留成员能力，拒绝循环和过期写，删除不复活，重开后持久恢复',async()=>{
+ const root=await fs.mkdtemp(path.join(os.tmpdir(),'org-directory-'));
+ const paths=new Paths(root);
+ let projects=new ProjectList(paths);
+ let settings=new AgentSettings(projects);
+ try{
+  const repo=path.join(root,'repo');await fs.mkdir(path.join(repo,'.cbim/team/engineering/writer'),{recursive:true});
+  await fs.writeFile(path.join(repo,'.cbim/team/engineering/writer/agent.json'),JSON.stringify({name:'Writer',summary:'write'}));
+  const entry=await projects.Add(repo);const directory=settings.organization;
+  let snapshot=await directory.Read(entry.id);
+  expect(snapshot.nodes.map(node=>node.kind)).toEqual(['team','agent']);
+  const originalTeam=snapshot.nodes[0].id;const originalMember=snapshot.nodes[1].id;
+  snapshot=await directory.Change(entry.id,{action:'create',revision:snapshot.revision,kind:'team',parentId:null,name:'Design',position:'design'});
+  const team=snapshot.nodes.at(-1)!.id;
+  await settings.Apply(entry.id);
+  expect((await projects.Open(entry.id)).runtime.organization!.FindTeam(team)?.children).toEqual([]);
+  await expect(directory.Change(entry.id,{action:'create',revision:0,kind:'agent',parentId:team,name:'Stale',position:''})).rejects.toThrow('已被其他操作更新');
+  snapshot=await directory.Change(entry.id,{action:'create',revision:snapshot.revision,kind:'agent',parentId:team,name:'Artist',position:'draw'});
+  const member=snapshot.nodes.at(-1)!.id;
+  const configuration={model:{engine:'pi',profileId:'p',modelId:'m'},skills:[{id:'paint',name:'paint',content:'PAINT_ONLY'}],connectorIds:['world-clock']};
+  await settings.Save(entry.id,{kind:'member',id:member},0,configuration);
+  await expect(directory.Change(entry.id,{action:'delete',revision:snapshot.revision,id:team})).rejects.toThrow('非空团队');
+  await expect(directory.Change(entry.id,{action:'update',revision:snapshot.revision,id:team,parentId:member,name:'Design',position:''})).rejects.toThrow('组织归属无效');
+  await expect(directory.Change(entry.id,{action:'update',revision:snapshot.revision,id:team,parentId:team,name:'Design',position:''})).rejects.toThrow('循环');
+  snapshot=await directory.Change(entry.id,{action:'update',revision:snapshot.revision,id:member,parentId:originalTeam,name:'Senior artist',position:'review art'});
+  expect((await settings.Read(entry.id,{kind:'member',id:member})).configuration).toEqual(configuration);
+  await settings.Apply(entry.id);
+  expect((await projects.Open(entry.id)).runtime.organization!.FindMember(member)).toMatchObject({name:'Senior artist',position:'review art',available:true,...configuration});
+  await expect(directory.Change(entry.id,{action:'create',revision:snapshot.revision,kind:'agent',parentId:originalTeam,name:'Senior artist',position:''})).rejects.toThrow('同名');
+  const office=(await projects.Open(entry.id)).runtime.OpenOffice(entry.id,'test');
+  await office.OpenMainAgent({parameters:null,CreateEngine:async()=>({session:{},Close:async()=>{}})});
+  snapshot=await directory.Change(entry.id,{action:'delete',revision:snapshot.revision,id:team});
+  expect((await projects.Open(entry.id)).runtime.organization!.FindTeam(team)).toBeUndefined();
+  await office.CloseMainEngine();
+  snapshot=await directory.Change(entry.id,{action:'delete',revision:snapshot.revision,id:originalMember});
+  await settings.Apply(entry.id);
+  expect((await projects.Open(entry.id)).runtime.organization!.FindMember(originalMember)).toBeUndefined();
+  await expect(settings.Read(entry.id,{kind:'member',id:originalMember})).rejects.toThrow('不属于');
+  await projects.Close();projects=new ProjectList(paths);settings=new AgentSettings(projects);
+  expect(await settings.organization.Read(entry.id)).toEqual(snapshot);
+  expect((await settings.Read(entry.id,{kind:'member',id:member})).configuration).toEqual(configuration);
+  await settings.Apply(entry.id);
+  expect((await projects.Open(entry.id)).runtime.organization!.FindMember(originalMember)).toBeUndefined();
+  await fs.writeFile(path.join(paths.Project(entry.id),'organization.json'),'broken');
+  await expect(settings.organization.Read(entry.id)).rejects.toThrow();
+  await expect(settings.organization.Change(entry.id,{action:'delete',revision:snapshot.revision,id:team})).rejects.toThrow();
+  expect(await fs.readFile(path.join(paths.Project(entry.id),'organization.json'),'utf8')).toBe('broken');
+ }finally{await projects.Close();await fs.rm(root,{recursive:true,force:true});}
+});

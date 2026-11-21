@@ -7,15 +7,15 @@ import { createHash } from 'node:crypto';
 
 import { isDeepStrictEqual } from 'node:util';
 
-import type { ResolvedEngineModel } from '../../logic-new/engines';
+import type { ResolvedEngineModel } from '../../logic/engines';
 
-import type { RequestBudgetPort, RequestBudgetTicket, RequestUnknownReason } from '../../logic-new/budget/rules/request-budget';
+import type { RequestBudgetPort, RequestBudgetTicket, RequestUnknownReason } from '../../logic/budget/rules/request-budget';
 
-import { requestBudgetModelFor } from '../../logic-new/budget/rules/model-request-configuration';
+import { requestBudgetModelFor } from '../../logic/budget/rules/model-request-configuration';
 
-import { requestBudgetCost, requestBudgetReservation, requestBudgetInputCapacity } from '../../logic-new/budget/rules/model-request-budget-rules';
+import { requestBudgetCost, requestBudgetReservation, requestBudgetInputCapacity } from '../../logic/budget/rules/model-request-budget-rules';
 
-import { modelRequestUrl, modelEndpointSchema } from '../../logic-new/models';
+import { modelRequestUrl, modelEndpointSchema } from '../../logic/models';
 
 import { modelJsonUsage } from './request-budget-usage';
 

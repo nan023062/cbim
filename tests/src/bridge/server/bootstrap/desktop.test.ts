@@ -4,7 +4,7 @@ import {createHash} from 'node:crypto';
 import {runInNewContext} from 'node:vm';
 import ts from 'typescript';
 import {expect,it,vi} from 'vitest';
-import type {DesktopRuntimeHost} from '../../../../../src/logic-new/updates/service/runtime-host';
+import type {DesktopRuntimeHost} from '../../../../../src/logic/updates/service/runtime-host';
 
 const sourceRoot=path.resolve('src/bridge/server');
 const compile=(file:string)=>ts.transpileModule(readFileSync(path.join(sourceRoot,file),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText;
@@ -32,16 +32,16 @@ function boot(packaged:boolean,failure?:Error){
     'node:crypto':{createHash},
     'node:module':{createRequire:()=>loadApplication},
     './selection':{selectBootResources},
-    '../../../logic-new/updates/service/runtime-journal':{},
-    '../../../logic-new/updates/service/runtime-manifest':{},
-    '../../../logic-new/updates/service/engine-artifacts':{EngineArtifacts:engineArtifacts},
-    '../../../logic-new/updates/service/runtime-store':{RuntimeStore:runtimeStore},
-    '../../../logic-new/updates/service/runtime-updates':{RuntimeUpdates:vi.fn()},
-    '../../../logic-new/updates/service/desktop-updates':{DesktopUpdates:vi.fn()},
+    '../../../logic/updates/service/runtime-journal':{},
+    '../../../logic/updates/service/runtime-manifest':{},
+    '../../../logic/updates/service/engine-artifacts':{EngineArtifacts:engineArtifacts},
+    '../../../logic/updates/service/runtime-store':{RuntimeStore:runtimeStore},
+    '../../../logic/updates/service/runtime-updates':{RuntimeUpdates:vi.fn()},
+    '../../../logic/updates/service/desktop-updates':{DesktopUpdates:vi.fn()},
     '../../../updater':{NsisUpdateInstaller:vi.fn()},
-    '../../../logic-new/updates/service/engine-index':{officialEnginePublicKey:'key'},
-    '../../../logic-new/updates/service/download-service':{DownloadService:vi.fn()},
-    '../../../logic-new/updates/service/restart-profile':{updateUserRoot:()=>undefined},
+    '../../../logic/updates/service/engine-index':{officialEnginePublicKey:'key'},
+    '../../../logic/updates/service/download-service':{DownloadService:vi.fn()},
+    '../../../logic/updates/service/restart-profile':{updateUserRoot:()=>undefined},
   };
   const directory=path.resolve('test-results/bootstrap/build');
   runInNewContext(desktopCode,{

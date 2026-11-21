@@ -8,6 +8,6 @@ import { ClaudeCodeEngine } from './engine';
 
 import { manifest } from './manifest';
 
-import type { PublishedEngineAdapter, EngineAdapterOptions } from '../../logic-new/execution/rules/engine-adapter';
+import type { PublishedEngineAdapter, EngineAdapterOptions } from '../../logic/execution/rules/engine-adapter';
 
 export const engineAdapter: PublishedEngineAdapter = Object.freeze({ protocol: 1, supportsBeforeToolCall: true, id: manifest.id, version: '1.1.1', descriptor: manifest, create: (options: EngineAdapterOptions) => new ClaudeCodeEngine(options) });

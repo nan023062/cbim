@@ -10,7 +10,7 @@ test.each([
   "export { value } from '../../resource';",
   "void import('../../resource');",
 ])('View rejects direct Resource access: %s', source => {
-  const from = 'src/view-new/settings/example.tsx';
+  const from = 'src/view/settings/example.tsx';
   const result = audit({
     [from]: source,
     'src/resource/index.ts': 'export const value = 1;',
@@ -21,7 +21,7 @@ test.each([
 
 test('View can use a Resource type through the public Bridge contract', () => {
   const result = audit({
-    'src/view-new/settings/example.tsx': "import type { ResourceKind } from '../../bridge/contracts/resources';",
+    'src/view/settings/example.tsx': "import type { ResourceKind } from '../../bridge/contracts/resources';",
     'src/bridge/contracts/resources.ts': "export type { ResourceKind } from '../../resource';",
     'src/resource/index.ts': 'export type ResourceKind = string;',
   });
@@ -46,7 +46,7 @@ test('ainative/docs 中维护的示例源码仍参与依赖和类型环检查',(
 });
 
 test.each(['node:fs','electron','@anthropic-ai/claude-agent-sdk'])('静态引擎清单不得直接加载平台或 SDK：%s',spec=>{
-  expect(audit({'src/logic-new/engines/catalog/supported-engines.ts':`import '${spec}';`}).ok).toBe(false);
+  expect(audit({'src/logic/engines/catalog/supported-engines.ts':`import '${spec}';`}).ok).toBe(false);
 });
 
 test.each(['src/backend/core/unused.ts','src/frontend/unused.ts','src/foundations/unused.ts'])('retired source layer is rejected even without imports: %s',file=>{
@@ -63,7 +63,7 @@ test('新 Core 未登记模块与便携模块中的 Node 导入都被拒绝',()=
   const hiddenNode=audit({'src/core/utility/extra.ts':"import fs from 'node:fs';"});
   expect(hiddenNode.logicalViolations).toContainEqual(expect.objectContaining({rule:'external-dependency',boundary:'utility-foundations'}));
 });
-test.each(['src/view-new/example/model.ts','src/framework-ui/controls.tsx','src/bridge/client/call.ts','src/bridge/contracts/example.ts'])('浏览器或纯通信文件 %s 不得直接导入 Node/Electron',from=>{
+test.each(['src/view/example/model.ts','src/framework-ui/controls.tsx','src/bridge/client/call.ts','src/bridge/contracts/example.ts'])('浏览器或纯通信文件 %s 不得直接导入 Node/Electron',from=>{
   for(const spec of ['node:fs','fs/promises','electron','electron/main']){
     const result=audit({[from]:`import '${spec}';`});
     expect(result.logicalViolations).toContainEqual(expect.objectContaining({rule:'runtime-environment',file:from}));
@@ -132,34 +132,34 @@ test.each(["import type { Value } from '../io/bytes';","export { value } from '.
 
 // Retired application policies are replaced by the current host and engine boundaries.
 test.each([
- ['src/view-new/office/a.ts','src/logic-new/projects/project.ts',false],
- ['src/core/utility/a.ts','src/logic-new/models/index.ts',false],
- ['src/framework/cability/a.ts','src/logic-new/projects/project.ts',false],
- ['src/resource/a.ts','src/logic-new/models/index.ts',false],
- ['src/engine-plugins/pi/a.ts','src/logic-new/execution/rules/types.ts',true],
- ['src/engine-plugins/pi/a.ts','src/logic-new/models/service/llm-profiles.ts',false],
- ['src/logic-new/execution/rules/engine-tools.ts','src/logic-new/projects/project.ts',false],
- ['src/logic-new/projects/office-engine-loader.ts','src/engine-plugins/pi/engine.ts',false],
- ['src/logic-new/projects/a.ts','src/engine-plugins/pi/engine.ts',false],
- ['src/bridge/server/desktop/main.ts','src/logic-new/projects/organization-contract.ts',true],
- ['src/bridge/server/bootstrap/desktop.ts','src/logic-new/projects/project.ts',false],
- ['src/logic-new/resource-management/connector-runtime.ts','src/framework/connectors/index.ts',true],
- ['src/logic-new/updates/service/desktop-releases.ts','src/updater/release-policy.ts',true],
+ ['src/view/office/a.ts','src/logic/projects/project.ts',false],
+ ['src/core/utility/a.ts','src/logic/models/index.ts',false],
+ ['src/framework/cability/a.ts','src/logic/projects/project.ts',false],
+ ['src/resource/a.ts','src/logic/models/index.ts',false],
+ ['src/engine-plugins/pi/a.ts','src/logic/execution/rules/types.ts',true],
+ ['src/engine-plugins/pi/a.ts','src/logic/models/service/llm-profiles.ts',false],
+ ['src/logic/execution/rules/engine-tools.ts','src/logic/projects/project.ts',false],
+ ['src/logic/projects/office-engine-loader.ts','src/engine-plugins/pi/engine.ts',false],
+ ['src/logic/projects/a.ts','src/engine-plugins/pi/engine.ts',false],
+ ['src/bridge/server/desktop/main.ts','src/logic/projects/organization-contract.ts',true],
+ ['src/bridge/server/bootstrap/desktop.ts','src/logic/projects/project.ts',false],
+ ['src/logic/resource-management/connector-runtime.ts','src/framework/connectors/index.ts',true],
+ ['src/logic/updates/service/desktop-releases.ts','src/updater/release-policy.ts',true],
 ])('current source boundary %s -> %s = %s',(from,to,allowed)=>{
  const spec=path.posix.relative(path.posix.dirname(from),to);
  const result=audit({[from]:"import type {T} from '"+(spec.startsWith('.')?spec:'./'+spec)+"';",[to]:'export type T=string;'});
  expect(result.unresolved).toEqual([]);expect(result.ok).toBe(allowed);
 });
 
-test('retired Logic cannot be restored through a type or runtime import',()=>{
- for(const from of ['src/bridge/server/desktop/main.ts','src/logic-new/projects/a.ts','src/engine-plugins/pi/a.ts']){
-  const target='src/logic/a.ts',spec=path.posix.relative(path.posix.dirname(from),target);
+test('obsolete suffixed layer cannot be restored through a type or runtime import',()=>{
+ for(const from of ['src/bridge/server/desktop/main.ts','src/logic/projects/a.ts','src/engine-plugins/pi/a.ts']){
+  const target='src/logic-new/a.ts',spec=path.posix.relative(path.posix.dirname(from),target);
   expect(audit({[from]:"import type {T} from '"+spec+"';",[target]:'export type T=string;'}).ok).toBe(false);
  }
 });
 
 // All packaged adapter implementations participate in the graph; no unused source table is needed.
 test('engine loader audits every registered package target',()=>{
- const result=audit({'src/logic-new/projects/office-engine-loader.ts':"import {createRequire} from 'node:module'; const loadAdapter=createRequire(import.meta.url); loadAdapter(descriptor.entry);",...Object.fromEntries(['pi','claude','codex','memory'].map(id=>['src/engine-plugins/'+id+'/package.ts','export const engineAdapter={};']))});
+ const result=audit({'src/logic/projects/office-engine-loader.ts':"import {createRequire} from 'node:module'; const loadAdapter=createRequire(import.meta.url); loadAdapter(descriptor.entry);",...Object.fromEntries(['pi','claude','codex','memory'].map(id=>['src/engine-plugins/'+id+'/package.ts','export const engineAdapter={};']))});
  expect(result.unresolved).toEqual([]);expect(result.violations).toEqual([]);expect(result.edges.filter(edge=>edge.kind==='generated-dynamic/require')).toHaveLength(4);
 });

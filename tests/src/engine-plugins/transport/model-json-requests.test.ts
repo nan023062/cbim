@@ -1,8 +1,8 @@
 import {test,expect,vi,afterEach} from 'vitest';
 import {ModelJsonRequests} from '../../../../src/engine-plugins/transport/model-json-requests';
-import {requestBudgetModelFor} from '../../../../src/logic-new/budget/rules/model-request-configuration';
-import type {ResolvedEngineModel} from '../../../../src/logic-new/engines';
-import type {RequestBudgetTicket} from '../../../../src/logic-new/budget/rules/request-budget';
+import {requestBudgetModelFor} from '../../../../src/logic/budget/rules/model-request-configuration';
+import type {ResolvedEngineModel} from '../../../../src/logic/engines';
+import type {RequestBudgetTicket} from '../../../../src/logic/budget/rules/request-budget';
 const vector={kind:'embedding' as const,id:'22222222-2222-4222-8222-222222222222',name:'Vector',api:'openai-embeddings' as const,baseUrl:'https://vector.example/v1',auth:'api-key' as const,model:'vector',inputTokens:8192,dimensions:2};
 const llm:ResolvedEngineModel={profile:{id:'11111111-1111-4111-8111-111111111111',name:'Chat',api:'openai-completions',baseUrl:'https://chat.example/v1',auth:'api-key',model:'chat',contextWindow:8192,maxTokens:1024,reasoning:false,modelRoles:{version:2,roles:{embedding:{kind:'embedding',profile:vector}}}},apiKey:'chat-key',modelRoles:{embedding:{profile:vector,apiKey:'vector-key'}}};
 const reply=(usage:unknown)=>new Response(JSON.stringify({data:[{index:0,embedding:[1,0]}],usage}),{headers:{'content-type':'application/json'}});

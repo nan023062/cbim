@@ -9,17 +9,17 @@
  */
 import { InFlightOperations } from '../../core/utility';
 
-import { toolFailureResult, toolReturnedResult } from '../../logic-new/tools/rules/outcome';
+import { toolFailureResult, toolReturnedResult } from '../../logic/tools/rules/outcome';
 
-import type { EngineContext } from '../../logic-new/execution/rules/types';
+import type { EngineContext } from '../../logic/execution/rules/types';
 
-import { collectToolRoutes } from '../../logic-new/execution/rules/engine-tools';
+import { collectToolRoutes } from '../../logic/execution/rules/engine-tools';
 
-import type { EngineToolsPort, EngineToolSchema } from '../../logic-new/execution/rules/engine-tools';
+import type { EngineToolsPort, EngineToolSchema } from '../../logic/execution/rules/engine-tools';
 
 import { allowedNativeTools } from '../native-tool-policy';
 
-import { validateToolResult, type ToolResult } from '../../logic-new/tools/rules/results';
+import { validateToolResult, type ToolResult } from '../../logic/tools/rules/results';
 
 export interface CodexToolSpec
 {

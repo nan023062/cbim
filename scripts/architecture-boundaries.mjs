@@ -222,9 +222,9 @@ export const logicalBoundaries = [
   },
   {
     "id": "engine-package-service",
-    "prefix": "src/logic-new/engines/packages/",
+    "prefix": "src/logic/engines/packages/",
     "public": [
-      "src/logic-new/engines/packages/index.ts"
+      "src/logic/engines/packages/index.ts"
     ],
     "dependencies": [
       "plugin-management",
@@ -237,10 +237,10 @@ export const logicalBoundaries = [
   {
     "id": "engine-runtime-contract",
     "files": [
-      "src/logic-new/execution/rules/engine-runtime.ts"
+      "src/logic/execution/rules/engine-runtime.ts"
     ],
     "public": [
-      "src/logic-new/execution/rules/engine-runtime.ts"
+      "src/logic/execution/rules/engine-runtime.ts"
     ],
     "dependencies": [],
     "external": []
@@ -248,19 +248,19 @@ export const logicalBoundaries = [
   {
     "id": "engine-artifact-contract",
     "files": [
-      "src/logic-new/updates/engine-artifacts.ts"
+      "src/logic/updates/engine-artifacts.ts"
     ],
     "public": [
-      "src/logic-new/updates/engine-artifacts.ts"
+      "src/logic/updates/engine-artifacts.ts"
     ],
     "dependencies": [],
     "external": []
   },
   {
     "id": "engine-model-service",
-    "prefix": "src/logic-new/engines/service/",
+    "prefix": "src/logic/engines/service/",
     "public": [
-      "src/logic-new/engines/service/index.ts"
+      "src/logic/engines/service/index.ts"
     ],
     "dependencies": [
       "execution-kernel",
@@ -289,13 +289,13 @@ export const logicalBoundaries = [
   },
   {
     "id": "engine-catalog",
-    "prefix": "src/logic-new/engines/catalog/",
+    "prefix": "src/logic/engines/catalog/",
     "files": [
-      "src/logic-new/engines/index.ts",
-      "src/logic-new/engines/package-status.ts"
+      "src/logic/engines/index.ts",
+      "src/logic/engines/package-status.ts"
     ],
     "public": [
-      "src/logic-new/engines/index.ts"
+      "src/logic/engines/index.ts"
     ],
     "dependencies": [
       "engine-product-manifests",
@@ -437,10 +437,10 @@ export const logicalBoundaries = [
   {
     "id": "update-data",
     "files": [
-      "src/logic-new/updates/contracts.ts"
+      "src/logic/updates/contracts.ts"
     ],
     "public": [
-      "src/logic-new/updates/contracts.ts"
+      "src/logic/updates/contracts.ts"
     ],
     "dependencies": [],
     "external": []
@@ -500,9 +500,9 @@ export const logicalBoundaries = [
   },
   {
     "id": "feedback-contract",
-    "prefix": "src/logic-new/feedback/",
+    "prefix": "src/logic/feedback/",
     "public": [
-      "src/logic-new/feedback/index.ts"
+      "src/logic/feedback/index.ts"
     ],
     "dependencies": [],
     "external": [
@@ -567,9 +567,9 @@ export const logicalBoundaries = [
   },
   {
     "id": "model-service",
-    "prefix": "src/logic-new/models/service/",
+    "prefix": "src/logic/models/service/",
     "public": [
-      "src/logic-new/models/service/index.ts"
+      "src/logic/models/service/index.ts"
     ],
     "dependencies": [
       "execution-kernel",
@@ -582,9 +582,9 @@ export const logicalBoundaries = [
   },
   {
     "id": "model-rules",
-    "prefix": "src/logic-new/models/",
+    "prefix": "src/logic/models/",
     "public": [
-      "src/logic-new/models/index.ts"
+      "src/logic/models/index.ts"
     ],
     "dependencies": [
       "io-electron"
@@ -605,10 +605,10 @@ export const logicalBoundaries = [
   {
     "id": "engine-tool-registry",
     "files": [
-      "src/logic-new/execution/rules/engine-tools.ts"
+      "src/logic/execution/rules/engine-tools.ts"
     ],
     "public": [
-      "src/logic-new/execution/rules/engine-tools.ts"
+      "src/logic/execution/rules/engine-tools.ts"
     ],
     "dependencies": [],
     "external": []

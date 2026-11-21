@@ -14,7 +14,7 @@
 
 ```text
 src/logic/tasks/rules/       → tests/src/logic/tasks/rules/
-src/logic-new/projects/      → tests/src/logic-new/projects/
+src/logic/projects/      → tests/src/logic/projects/
 scripts/desktop-signing/     → tests/scripts/desktop-signing/
 工程整体                     → tests/*.test.ts
 ```

@@ -8,21 +8,21 @@
  */
 import http from 'node:http';
 
-import { toolOutcome, toolReturnedResult, toolFailureResult } from '../../logic-new/tools/rules/outcome';
+import { toolOutcome, toolReturnedResult, toolFailureResult } from '../../logic/tools/rules/outcome';
 
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 
-import type { ToolCall, ToolDecision } from '../../logic-new/execution/rules/types';
+import type { ToolCall, ToolDecision } from '../../logic/execution/rules/types';
 
-import { validateToolResult, type ToolResult } from '../../logic-new/tools/rules/results';
+import { validateToolResult, type ToolResult } from '../../logic/tools/rules/results';
 
 import { isSystemHandoff } from '../message-input';
 
-import { checkedRunInputSource, type RunInputSource } from '../../logic-new/execution/rules/input-source';
+import { checkedRunInputSource, type RunInputSource } from '../../logic/execution/rules/input-source';
 
-import type { EngineToolsPort as KnowledgeBridge } from '../../logic-new/execution/rules/engine-tools';
+import type { EngineToolsPort as KnowledgeBridge } from '../../logic/execution/rules/engine-tools';
 
-export type { EngineToolSchema as KnowledgeToolSchema, EngineToolsPort as KnowledgeBridge } from '../../logic-new/execution/rules/engine-tools';
+export type { EngineToolSchema as KnowledgeToolSchema, EngineToolsPort as KnowledgeBridge } from '../../logic/execution/rules/engine-tools';
 
 /** 临时桥只接受本次实例令牌；工具授权绑定调用 ID、名称和原始参数。 */
 export async function openBridge(knowledge: KnowledgeBridge, beforeTool: (call: ToolCall) => Promise<ToolDecision>, onContext?: (usage: { tokens: number | null; contextWindow: number }) => Promise<void>, onRequestLimit?: (limit: number) => Promise<void>, onTools?: (catalog: { expected: string[]; active: string[]; missing: string[] }) => Promise<void>)

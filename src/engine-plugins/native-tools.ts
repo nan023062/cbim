@@ -15,9 +15,9 @@ import { pathToFileURL } from 'node:url';
 
 import type * as NativeSdk from '@earendil-works/pi-coding-agent';
 
-import type { EngineToolsPort } from '../logic-new/execution/rules/engine-tools';
+import type { EngineToolsPort } from '../logic/execution/rules/engine-tools';
 
-import type { EngineRuntimePackage } from '../logic-new/execution/rules/engine-runtime';
+import type { EngineRuntimePackage } from '../logic/execution/rules/engine-runtime';
 
 /** 只补齐 Windows 单根分隔符路径的盘符；UNC、完整绝对路径、普通相对路径及 POSIX 输入保持原语义。 */
 export function nativeToolInput(name: string, input: Record<string, unknown>, cwd: string, platform: NodeJS.Platform = process.platform): Record<string, unknown>

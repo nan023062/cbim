@@ -1,4 +1,4 @@
-import type { EngineEvent } from '../logic-new/execution/rules/types';
+import type { EngineEvent } from '../logic/execution/rules/types';
 
 type DeltaKind = 'text' | 'activity' | 'summary' | 'command';
 

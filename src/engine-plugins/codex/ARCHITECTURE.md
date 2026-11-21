@@ -30,16 +30,16 @@ class N_2d6b8ec7f7a6["model-proxy"] {
   <<module>>
 }
 click N_2d6b8ec7f7a6 href "model-proxy.ts"
-class N_7c37851762e9["AgentEngine"] {
+class N_649b8a6ac172["AgentEngine"] {
   <<boundary>>
 }
-click N_7c37851762e9 href "../../logic-new/execution/rules/types.ts"
+click N_649b8a6ac172 href "../../logic/execution/rules/types.ts"
 N_73430e682d93 ..> N_28f18d8c70ec : 依赖
 N_73430e682d93 ..> N_2d6b8ec7f7a6 : 依赖
-N_7c37851762e9 <|.. N_73430e682d93
+N_649b8a6ac172 <|.. N_73430e682d93
 ```
 
-外部继承／实现边界：[AgentEngine](../../logic-new/execution/rules/types.ts)。
+外部继承／实现边界：[AgentEngine](../../logic/execution/rules/types.ts)。
 
 [上层设计](../ARCHITECTURE.md)
 

@@ -12,10 +12,10 @@ import { PendingRequests } from '../../core/utility';
 
 import { LineFramer } from '../../core/io';
 
-import type { EngineProcess as PiCommand } from '../../logic-new/execution/rules/engine-adapter';
+import type { EngineProcess as PiCommand } from '../../logic/execution/rules/engine-adapter';
 
 /** 要启动的程序、前置参数和环境覆盖；以 shell:false 隐藏启动并用管道通信。 */
-export type { EngineProcess as PiCommand } from '../../logic-new/execution/rules/engine-adapter';
+export type { EngineProcess as PiCommand } from '../../logic/execution/rules/engine-adapter';
 
 export class PiRpc
 {

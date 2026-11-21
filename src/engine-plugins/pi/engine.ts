@@ -23,25 +23,25 @@ import { assertSendReady, prepareEngineMessage } from '../message-input';
 
 import { StringUtils } from '../../core/io';
 
-import type { EngineRuntimePackage } from '../../logic-new/execution/rules/engine-runtime';
+import type { EngineRuntimePackage } from '../../logic/execution/rules/engine-runtime';
 
 import fs from 'node:fs/promises';
 
-import { runtimeEngineTools } from '../../logic-new/execution/rules/engine-tools';
+import { runtimeEngineTools } from '../../logic/execution/rules/engine-tools';
 
-import { engineInstructions } from '../../logic-new/execution/rules/engine-instructions';
+import { engineInstructions } from '../../logic/execution/rules/engine-instructions';
 
 import path from 'node:path';
 
-import type { AgentEngine, EngineContext, EngineEvent } from '../../logic-new/execution/rules/types';
+import type { AgentEngine, EngineContext, EngineEvent } from '../../logic/execution/rules/types';
 
 import { PiRpc, type PiCommand } from './rpc';
 
 import { openBridge, bridgeExtensionForSource, type KnowledgeBridge } from './bridge';
 
-import type { ResolvedLlm } from '../../logic-new/models';
+import type { ResolvedLlm } from '../../logic/models';
 
-import { modelStopError } from '../../logic-new/execution/rules/model-errors';
+import { modelStopError } from '../../logic/execution/rules/model-errors';
 
 import { buildPiRuntimeSettings, requestedThinkingLevel } from './runtime-config';
 
@@ -49,7 +49,7 @@ import { allowedNativeTools } from '../native-tool-policy';
 
 import { pathToFileURL } from 'node:url';
 
-import type { RequestBudgetPort } from '../../logic-new/budget/rules/request-budget';
+import type { RequestBudgetPort } from '../../logic/budget/rules/request-budget';
 
 import { openRequestBudgetTransport } from '../transport/request-budget-transport';
 
@@ -499,7 +499,7 @@ export class PiEngine implements AgentEngine
   }
 
   /** 发送前取消可明确拒绝；发送后只认原回复，停止不能把 queued 改写成未接收。 */
-  async steer(message: string, images: import('../../logic-new/execution/rules/types').InputImage[], signal: AbortSignal)
+  async steer(message: string, images: import('../../logic/execution/rules/types').InputImage[], signal: AbortSignal)
   {
     const assertReady = () => { if (signal.aborted || this.stopped || this.closing) throw new Error('当前运行已停止插入，原消息仍保留在队列'); if (!this.rpc || !this.settlement) throw new Error('原主运行已结束，原消息仍保留在队列'); };
 

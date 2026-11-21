@@ -5,8 +5,8 @@ import path from 'node:path';
 import { runOfficePlugin } from '../../../../../src/bridge/server/desktop/office-plugin';
 
 const fixture = vi.hoisted(() => ({ create: vi.fn(), resolve: vi.fn() }));
-vi.mock('../../../../../src/logic-new/projects/office-engine-loader', () => ({ packagedEngineAdapter: () => ({ create: fixture.create }) }));
-vi.mock('../../../../../src/logic-new/engines/service', () => ({ EngineModelProfiles: class { Resolve = fixture.resolve; } }));
+vi.mock('../../../../../src/logic/projects/office-engine-loader', () => ({ packagedEngineAdapter: () => ({ create: fixture.create }) }));
+vi.mock('../../../../../src/logic/engines/service', () => ({ EngineModelProfiles: class { Resolve = fixture.resolve; } }));
 
 test.each(['read', 'ask', 'execute'] as const)('桌面引擎接收 %s 权限、原生工具和 Office 工具目录', async initial => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'office-engine-permission-'));

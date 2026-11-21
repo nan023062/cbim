@@ -6,10 +6,10 @@ import {createRequire} from 'node:module';
 import {pipeline} from 'node:stream/promises';
 import {execFileSync} from 'node:child_process';
 import {assertProductionTree} from './production-test-guard.mjs';
-import {enginePackageSchema,validateEnginePackage,runtimeRelativePath,validateRuntimeFiles,verifyRuntimeManifest,type ColdRuntime,type RuntimeFile,type RuntimePackage,type RuntimeManifest,type EnginePackage} from '../src/logic-new/updates/service/runtime-manifest';
+import {enginePackageSchema,validateEnginePackage,runtimeRelativePath,validateRuntimeFiles,verifyRuntimeManifest,type ColdRuntime,type RuntimeFile,type RuntimePackage,type RuntimeManifest,type EnginePackage} from '../src/logic/updates/service/runtime-manifest';
 
-import {engineIndexAsset,officialEnginePublicKey,verifyEngineIndex} from '../src/logic-new/updates/service/engine-index';
-import {downloadRuntimeManifest} from '../src/logic-new/updates/service/runtime-download';
+import {engineIndexAsset,officialEnginePublicKey,verifyEngineIndex} from '../src/logic/updates/service/engine-index';
+import {downloadRuntimeManifest} from '../src/logic/updates/service/runtime-download';
 
 
 

@@ -12,11 +12,11 @@ import { isDeepStrictEqual } from 'node:util';
 
 import { atomic } from '../../core/io/text-files';
 
-import { safeId } from '../../logic-new/execution/ports/identity';
+import { safeId } from '../../logic/execution/ports/identity';
 
-import type { EngineContext } from '../../logic-new/execution/rules/types';
+import type { EngineContext } from '../../logic/execution/rules/types';
 
-import { finishMemoryIndex, type MemoryIndexPlan, type MemoryIndex } from '../../logic-new/knowledge/rules/memory-index';
+import { finishMemoryIndex, type MemoryIndexPlan, type MemoryIndex } from '../../logic/knowledge/rules/memory-index';
 
 import { memoryMessageSchema, type MemoryMessage } from './protocol';
 

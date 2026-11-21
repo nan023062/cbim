@@ -4,7 +4,7 @@
 
 ## 设计意图
 
-提供当前桌面进程的可信通信和平台边界。业务实例由 logic-new/application 创建，Electron 能力由 desktop 注入；旧 IPC、命令行与应用装配入口已退役。
+提供当前桌面进程的可信通信和平台边界。业务实例由 logic/application 创建，Electron 能力由 desktop 注入；旧 IPC、命令行与应用装配入口已退役。
 
 ## 主要组成
 

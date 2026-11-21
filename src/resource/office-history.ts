@@ -8,9 +8,13 @@ import { atomic, readJson } from '../core/io/text-files';
 export interface OfficeActivity
 {
   id: string;
+
   label: string;
+
   input?: string;
+
   result?: string;
+
   alert?: string;
 }
 
@@ -57,8 +61,11 @@ export class OfficeHistory
   public async Messages(id: string, files?: string[])
   {
     const dir = path.join(this.root, id);
+
     files ??= await this.Files(id);
-    if (files.some(file => !/^[a-zA-Z0-9_-]+\.json$/.test(file))) throw Error('Invalid history file');
+
+    if (files.some(file => !/^[a-zA-Z0-9_-]+\.json$/.test(file)))
+      throw Error('Invalid history file');
 
     type Message =
       {
@@ -85,28 +92,53 @@ export class OfficeHistory
   public async EarlierUsage(id: string, files: string[])
   {
     const totals = { elapsed: 0, cost: 0, complete: true };
-    if (!files.length) return totals;
+
+    if (!files.length)
+      return totals;
+
     const cache = path.join(this.root, id, 'usage-cache');
-    const saved = await readJson<{ through: string; count: number; totals: typeof totals }>(cache).catch(() => undefined);
+
+    const saved = await readJson<
+      {
+        through: string;
+
+        count: number;
+
+        totals: typeof totals
+      }>(cache).catch(() => undefined);
+
     let offset = 0;
+
     if (saved && files[saved.count - 1] === saved.through)
     {
       Object.assign(totals, saved.totals);
+
       offset = saved.count;
     }
-    if (offset === files.length) return totals;
+
+    if (offset === files.length)
+      return totals;
+
     for (; offset < files.length; offset += 32)
     {
       const messages = await this.Messages(id, files.slice(offset, offset + 32));
+
       for (const message of messages)
       {
-        if (message.role !== 'assistant') continue;
+        if (message.role !== 'assistant')
+          continue;
+
         totals.elapsed += message.metrics?.elapsed ?? 0;
+
         totals.cost += message.metrics?.cost ?? 0;
-        if (message.metrics?.cost == null) totals.complete = false;
+
+        if (message.metrics?.cost == null)
+          totals.complete = false;
       }
     }
-    await atomic(cache, JSON.stringify({ through: files.at(-1), count: files.length, totals })).catch(() => {});
+
+    await atomic(cache, JSON.stringify({ through: files.at(-1), count: files.length, totals })).catch(() => { });
+
     return totals;
   }
 

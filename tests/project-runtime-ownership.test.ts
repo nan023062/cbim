@@ -4,8 +4,8 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { ProjectList } from '../src/logic-new/projects/project';
-import { Paths } from '../src/logic-new/projects/paths';
+import { ProjectList } from '../src/logic/projects/project';
+import { Paths } from '../src/logic/projects/paths';
 
 test('project startup loads both trees once, isolates Offices, and retries invalid resources', async () => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'cbim-projects-'));

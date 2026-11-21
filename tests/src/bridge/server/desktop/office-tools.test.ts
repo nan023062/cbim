@@ -5,7 +5,7 @@ import os from 'node:os';
 import { OfficeTools } from '../../../../../src/bridge/server/desktop/office-tools';
 import { managedNativeTools } from '../../../../../src/engine-plugins/native-tools';
 import { codexTools } from '../../../../../src/engine-plugins/codex/tools';
-import type { EngineContext } from '../../../../../src/logic-new/execution/rules/types';
+import type { EngineContext } from '../../../../../src/logic/execution/rules/types';
 
 test('每个 Agent 只见自己选定的连接器，外部写遵守权限且授权不可重放', async () => {
   const signal = new AbortController().signal;

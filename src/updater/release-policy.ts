@@ -32,4 +32,3 @@ export function desktopReleaseBase(version: string)
 
   return `${repository}/releases/download/desktop-v${version}/`
 }
-

@@ -84,7 +84,9 @@ export class NsisUpdateInstaller
     this.updater.on('download-progress', value => progress(value.percent));
 
     const updater = this.updater;
+
     const candidate = this.pending;
+
     await this.schedule(async () => { if (this.closed) throw Error('更新已关闭'); await updater.downloadUpdate(candidate.cancellationToken!); });
 
     if (this.error)

@@ -1,15 +1,15 @@
-export type { NavigationSnapshot, NavigationChange, NavigationProject, NavigationSession } from '../../logic-new/projects/navigation-contract';
+export type { NavigationSnapshot, NavigationChange, NavigationProject, NavigationSession } from '../../logic/projects/navigation-contract';
 
-export type { OfficeQueueAction, OfficeQueueSnapshot, OfficeQueueItem } from '../../logic-new/projects/office-queue-contract';
+export type { OfficeQueueAction, OfficeQueueSnapshot, OfficeQueueItem } from '../../logic/projects/office-queue-contract';
 
-export type { BusinessSnapshot, BusinessChange } from '../../logic-new/projects/business-contract';
+export type { BusinessSnapshot, BusinessChange } from '../../logic/projects/business-contract';
 
 /** 新桌面菜单只公开显示字段及原生目录选择操作。 */
-export type { AgentConfiguration, AgentSettingsTarget } from '../../logic-new/projects/agent-configuration';
+export type { AgentConfiguration, AgentSettingsTarget } from '../../logic/projects/agent-configuration';
 
-export type { OrganizationNode, OrganizationSnapshot, OrganizationChange } from '../../logic-new/projects/organization-contract';
+export type { OrganizationNode, OrganizationSnapshot, OrganizationChange } from '../../logic/projects/organization-contract';
 
-export type { DataDefinition, DataArchitectureNode, DataArchitectureSnapshot, DataArchitectureChange } from '../../logic-new/projects/data-architecture-contract';
+export type { DataDefinition, DataArchitectureNode, DataArchitectureSnapshot, DataArchitectureChange } from '../../logic/projects/data-architecture-contract';
 
 export type DiscoveryPage = 'engines' | 'connectors' | 'talent' | 'templates';
 
@@ -122,23 +122,23 @@ export interface TransferState
 
 export interface DesktopMenu
 {
-  Navigation(change?: import('../../logic-new/projects/navigation-contract').NavigationChange): Promise<import('../../logic-new/projects/navigation-contract').NavigationSnapshot>;
+  Navigation(change?: import('../../logic/projects/navigation-contract').NavigationChange): Promise<import('../../logic/projects/navigation-contract').NavigationSnapshot>;
 
   RevealProject(project: string): Promise<void>;
 
-  Organization(project: string, change?: import('../../logic-new/projects/organization-contract').OrganizationChange): Promise<import('../../logic-new/projects/organization-contract').OrganizationSnapshot>;
+  Organization(project: string, change?: import('../../logic/projects/organization-contract').OrganizationChange): Promise<import('../../logic/projects/organization-contract').OrganizationSnapshot>;
 
-  BusinessArchitecture(project: string, change?: import('../../logic-new/projects/business-contract').BusinessChange): Promise<import('../../logic-new/projects/business-contract').BusinessSnapshot>;
+  BusinessArchitecture(project: string, change?: import('../../logic/projects/business-contract').BusinessChange): Promise<import('../../logic/projects/business-contract').BusinessSnapshot>;
 
-  OfficeQueue(project: string, session: string, action?: import('../../logic-new/projects/office-queue-contract').OfficeQueueAction): Promise<import('../../logic-new/projects/office-queue-contract').OfficeQueueSnapshot>;
+  OfficeQueue(project: string, session: string, action?: import('../../logic/projects/office-queue-contract').OfficeQueueAction): Promise<import('../../logic/projects/office-queue-contract').OfficeQueueSnapshot>;
 
   InsertOffice(project: string, session: string, text: string): Promise<{ id: string; status: 'queued' }>;
 
-  DataArchitecture(project: string, change?: import('../../logic-new/projects/data-architecture-contract').DataArchitectureChange): Promise<import('../../logic-new/projects/data-architecture-contract').DataArchitectureSnapshot>;
+  DataArchitecture(project: string, change?: import('../../logic/projects/data-architecture-contract').DataArchitectureChange): Promise<import('../../logic/projects/data-architecture-contract').DataArchitectureSnapshot>;
 
-  AgentMembers(project: string): Promise<{ id: string; name: string; position: string; revision: number; configuration: import('../../logic-new/projects/agent-configuration').AgentConfiguration }[]>;
+  AgentMembers(project: string): Promise<{ id: string; name: string; position: string; revision: number; configuration: import('../../logic/projects/agent-configuration').AgentConfiguration }[]>;
 
-  AgentSettings(project: string, target: import('../../logic-new/projects/agent-configuration').AgentSettingsTarget, save?: { revision: number; configuration: import('../../logic-new/projects/agent-configuration').AgentConfiguration }): Promise<{ revision: number; configuration: import('../../logic-new/projects/agent-configuration').AgentConfiguration }>;
+  AgentSettings(project: string, target: import('../../logic/projects/agent-configuration').AgentSettingsTarget, save?: { revision: number; configuration: import('../../logic/projects/agent-configuration').AgentConfiguration }): Promise<{ revision: number; configuration: import('../../logic/projects/agent-configuration').AgentConfiguration }>;
 
   AgentConnectors(): Promise<{ id: string; name: string; available: boolean }[]>;
 

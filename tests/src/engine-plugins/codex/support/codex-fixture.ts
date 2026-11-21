@@ -4,8 +4,8 @@ import os from 'node:os';
 import http from 'node:http';
 import {randomUUID} from 'node:crypto';
 import {CodexEngine} from '../../../../../src/engine-plugins/codex/engine';
-import type {EngineContext,EngineEvent,ToolCall} from '../../../../../src/logic-new/execution/rules/types';
-import type {ResolvedEngineModel} from '../../../../../src/logic-new/engines';
+import type {EngineContext,EngineEvent,ToolCall} from '../../../../../src/logic/execution/rules/types';
+import type {ResolvedEngineModel} from '../../../../../src/logic/engines';
 
 export function codexResponse(res:http.ServerResponse,call?:{id:string;name:string;input:unknown},incomplete=false){
   res.writeHead(200,{'content-type':'text/event-stream'});let sequence_number=0;const send=(value:any)=>res.write('event: '+value.type+'\ndata: '+JSON.stringify({...value,sequence_number:sequence_number++})+'\n\n');

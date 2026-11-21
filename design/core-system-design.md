@@ -148,5 +148,5 @@ Agent 实例以稳定 ID 累计 Token，执行时计算短窗口速率，空闲�
 
 ### 实现与交互入口
 
-[项目加载](../src/logic-new/projects/project.ts) · [运行时](../src/framework/cbim-runtime.ts) · [Office](../src/framework/office/office.ts) · [任务管理器](../src/framework/office/task-manager.ts) · [桌面对话用例](../src/logic-new/projects/offices.ts) · [引擎适配入口](../src/bridge/server/desktop/office-plugin.ts) · [桌面 UX 规范](desktop-ux-spec.md)
+[项目加载](../src/logic/projects/project.ts) · [运行时](../src/framework/cbim-runtime.ts) · [Office](../src/framework/office/office.ts) · [任务管理器](../src/framework/office/task-manager.ts) · [桌面对话用例](../src/logic/projects/offices.ts) · [引擎适配入口](../src/bridge/server/desktop/office-plugin.ts) · [桌面 UX 规范](desktop-ux-spec.md)
 

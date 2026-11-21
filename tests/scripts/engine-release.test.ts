@@ -1,8 +1,8 @@
 import {test,expect} from 'vitest';
 import {generateKeyPairSync} from 'node:crypto';
 import {signEngineRelease} from '../../scripts/engine-release';
-import {verifyEngineIndex} from '../../src/logic-new/updates/service/engine-index';
-import type {ColdRuntime,EnginePackage} from '../../src/logic-new/updates/service/runtime-manifest';
+import {verifyEngineIndex} from '../../src/logic/updates/service/engine-index';
+import type {ColdRuntime,EnginePackage} from '../../src/logic/updates/service/runtime-manifest';
 const keys=generateKeyPairSync('ed25519'),cold:ColdRuntime={schema:1,codeVersion:'0.1.0',coldFingerprint:'a'.repeat(64),platform:'win32-x64',publicKey:keys.publicKey.export({type:'spki',format:'pem'}).toString()};
 const pkg=(kind:string,version:string,id:string,dependencies?:EnginePackage['dependencies']):EnginePackage=>({kind,version:'1.5.0',entry:'adapter.cjs',adapter:{entry:'adapter.cjs',version,protocol:1},...(dependencies?{dependencies}:{}),package:{tag:'runtime-engines',name:kind+'-'+version+'.zip',bytes:1,sha256:id.repeat(64),files:[{path:'adapter.cjs',bytes:1,sha256:'a'.repeat(64)}]}});
 const input=(engines:EnginePackage[],sequence=1)=>({engines,sequence,notes:'升级说明',sourceCommit:'a'.repeat(40)});

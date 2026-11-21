@@ -2,11 +2,11 @@ import { expect, test, vi } from 'vitest';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { OfficeInputs } from '../../../../../src/logic-new/projects/office-inputs';
+import { OfficeInputs } from '../../../../../src/logic/projects/office-inputs';
 
 const fixture=vi.hoisted(()=>({context:null as any,options:null as any,run:null as any,steer:undefined as any,closed:0}));
-vi.mock('../../../../../src/logic-new/projects/office-engine-loader',()=>({packagedEngineAdapter:()=>({create:(options:any)=>{fixture.options=options;return {start:async(context:any)=>{fixture.context=context;},run:(goal:string)=>fixture.run(goal),steer:fixture.steer,stop:async()=>{},close:async()=>{fixture.closed++;}};}})}));
-vi.mock('../../../../../src/logic-new/engines/service',()=>({EngineModelProfiles:class{async Resolve(){return {profile:{id:'p',model:'m',contextWindow:1000}};}}}));
+vi.mock('../../../../../src/logic/projects/office-engine-loader',()=>({packagedEngineAdapter:()=>({create:(options:any)=>{fixture.options=options;return {start:async(context:any)=>{fixture.context=context;},run:(goal:string)=>fixture.run(goal),steer:fixture.steer,stop:async()=>{},close:async()=>{fixture.closed++;}};}})}));
+vi.mock('../../../../../src/logic/engines/service',()=>({EngineModelProfiles:class{async Resolve(){return {profile:{id:'p',model:'m',contextWindow:1000}};}}}));
 import { runOfficePlugin } from '../../../../../src/bridge/server/desktop/office-plugin';
 
 test('真实 Office 宿主在工具执行前交付变化并阻止旧调用，工具返回同时携带新补充',async()=>{

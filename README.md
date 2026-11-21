@@ -6,9 +6,9 @@
 
 [产品官网](https://nan023062.github.io/cbim/) · [Windows 下载与更新日志](https://nan023062.github.io/cbim/download.html)
 
-[Office 执行编排](src/logic-new/projects/ARCHITECTURE.md)通过统一 Agent 实例连接独立引擎包与模型，处理主对话、成员派发、队列和追加输入。执行结束不等于业务验收通过。开发运行要求 Node.js 22.19+。
+[Office 执行编排](src/logic/projects/ARCHITECTURE.md)通过统一 Agent 实例连接独立引擎包与模型，处理主对话、成员派发、队列和追加输入。执行结束不等于业务验收通过。开发运行要求 Node.js 22.19+。
 
-界面采用工作区侧栏与主会话区：主区域承载 Office 对话、组织架构、业务架构和数据架构。详见 [工作区界面](src/view-new/ARCHITECTURE.md)。
+界面采用工作区侧栏与主会话区：主区域承载 Office 对话、组织架构、业务架构和数据架构。详见 [工作区界面](src/view/ARCHITECTURE.md)。
 
 **CBIM 是本地／多端的 AI Native 工作流工具，当前面向单人使用。** 用户组织 Agent 在具有业务架构、岗位责任和知识的工作区中执行任务与交接；不建设独立账号、多人邀请、在线状态或协作服务。工程团队协作未来通过插件和连接器接入 P4、Git、飞书等工具，多端定位不代表已实现完整同步或远程能力。
 
@@ -22,11 +22,11 @@
 
 Windows x64 当前公开桌面版为 [desktop-v0.1.19](https://github.com/nan023062/cbim/releases/tag/desktop-v0.1.19)，内置资源为 **[C 0.1.19 / R1](https://github.com/nan023062/cbim/releases/tag/runtime-c0.1.19)**。统一图标、状态、表单、帮助提示和明暗主题，改善窄窗口与减少动效体验；页面按需加载，保留未保存输入提示、独立频道草稿及 Agent 工作记录。
 
-本次包含新的基础安装包与 R1，固定新的 Ed25519 资源身份；历史公钥仅兼容本地引擎来源，新引擎索引按公钥隔离，旧通道不变。四个官方 E 包保持原摘要，安装、停用状态及缓存继续保留。实际安装与公开升级范围见 [0.1.19 发布验收](https://github.com/nan023062/cbim/blob/c3178be11e24259d99ed59db60cc4781afb15782/design/verification/desktop-release-0.1.19-public-20261115.md)。更新后台准备，就绪后由用户明确点击安装，普通退出不应用；Windows 安装包未签名、发布者未验证。首次使用未安装的引擎需要联网。实现边界见 [更新模块](src/logic-new/updates/ARCHITECTURE.md)。
+本次包含新的基础安装包与 R1，固定新的 Ed25519 资源身份；历史公钥仅兼容本地引擎来源，新引擎索引按公钥隔离，旧通道不变。四个官方 E 包保持原摘要，安装、停用状态及缓存继续保留。实际安装与公开升级范围见 [0.1.19 发布验收](https://github.com/nan023062/cbim/blob/c3178be11e24259d99ed59db60cc4781afb15782/design/verification/desktop-release-0.1.19-public-20261115.md)。更新后台准备，就绪后由用户明确点击安装，普通退出不应用；Windows 安装包未签名、发布者未验证。首次使用未安装的引擎需要联网。实现边界见 [更新模块](src/logic/updates/ARCHITECTURE.md)。
 
 供应商只管理统一模型列表，模型菜单按接口兼容性筛选；对话栏与团队页面设置同一份主 Agent 配置，项目岗位保留独立配置。Windows 安装包仍未签名，可能显示未知发布者或安全提示；`SHA256SUMS.txt` 与资源清单 Ed25519 签名均不能替代 Windows 可信代码签名。后续取得证书后通过更高版本迁移，不改写已公开附件。旧 `v1.x` 是 Python 内核通道，不是当前桌面 APP。
 
-旧反馈宿主已退役，目前保留引擎工具需要的数据契约。更新程序位于 `src/logic-new/updates/service/`，安装构建用 `pnpm make:desktop`，维护者步骤见 [正式桌面发布](ainative/skills/cbim-release/references/release-runbook.md)。
+旧反馈宿主已退役，目前保留引擎工具需要的数据契约。更新程序位于 `src/logic/updates/service/`，安装构建用 `pnpm make:desktop`，维护者步骤见 [正式桌面发布](ainative/skills/cbim-release/references/release-runbook.md)。
 
 构建目录按北京时间命名：`build/YYYYMMDD-HHmmss/`。Windows 便携程序在其中的 `CBIM Assistant-win32-x64/CBIM.exe`，请保留完整目录。分发包为 `make/zip/win32/x64/CBIM-Assistant-YYYYMMDD-HHmmss-win32-x64-版本.zip`，可按名称排序查找最新构建。
 
@@ -77,11 +77,11 @@ pnpm start
 | 位置 | 内容 |
 |---|---|
 | `src/core/` | 通用算法、错误、文件/网页/锁/加密等基础能力 |
-| `src/logic-new/` | 当前业务生命周期、Office 编排、模型与引擎包协议 |
+| `src/logic/` | 当前业务生命周期、Office 编排、模型与引擎包协议 |
 | `src/engine-plugins/` | 独立引擎适配器与 SDK 集成 |
 | `src/bridge/server/` | 桌面入口、冷启动、通信与可信工具 |
 | `src/bridge/contracts/`、`src/bridge/preload/` | 公开通信契约及受限安全桥 |
-| `src/view-new/` | 当前桌面入口、Office 页面与共享展示组件 |
+| `src/view/` | 当前桌面入口、Office 页面与共享展示组件 |
 | `ainative/docs/` | 01–04 概念设计、05 代码阅读设计及编码规范与 06 架构设计原则和工程结构规范 |
 | `design/` | 产品目标、核心取舍、未落地设计和原型 |
 | `assets/` | 实际使用的品牌图像与生成摘要；运行规范由各业务源码模块维护 |
@@ -94,12 +94,12 @@ pnpm start
 
 实现说明随源码维护，可从以下入口逐层阅读：
 
-- [业务层模块模型与阅读入口](src/logic-new/ARCHITECTURE.md)
-- [执行引擎与生命周期](src/logic-new/execution/rules/ARCHITECTURE.md)
-- [任务规则设计](src/logic-new/tasks/rules/ARCHITECTURE.md)
-- [调度与成员执行](src/logic-new/ARCHITECTURE.md)
-- [Office 与 Agent 实例编排](src/logic-new/projects/ARCHITECTURE.md)
-- [桌面视图与交互](src/view-new/ARCHITECTURE.md)
+- [业务层模块模型与阅读入口](src/logic/ARCHITECTURE.md)
+- [执行引擎与生命周期](src/logic/execution/rules/ARCHITECTURE.md)
+- [任务规则设计](src/logic/tasks/rules/ARCHITECTURE.md)
+- [调度与成员执行](src/logic/ARCHITECTURE.md)
+- [Office 与 Agent 实例编排](src/logic/projects/ARCHITECTURE.md)
+- [桌面视图与交互](src/view/ARCHITECTURE.md)
 - 开发事实、验证证据与限制：查 Git 提交说明及关联 Issue／PR；已退出的资料保留在 Git 历史中。
 
 正式知识仅存于 `<项目根>/.cbim/`；登记和本机项目历史存于 `<用户主目录>/.cbim/`。新应用不创建项目内 `.cbim.local/`。测试全部使用隔离用户目录。
@@ -135,4 +135,4 @@ pnpm start
 
 `ainative/docs/` 不依赖项目设计或操作记录；项目设计与提交／Issue／PR 中的验证记录依据这些准则维护。
 
-其余旧设计文档已清理，历史内容可用 `git show 812bec16:<原仓库相对路径>` 查阅。旧知识内置加载器已退役；当前 Skill 设置与加载沿 [Office 模块](src/logic-new/projects/ARCHITECTURE.md) 阅读。Cindy 的 [许可](legal/cindy-LICENSE) 与 [NOTICE](legal/cindy-NOTICE) 归入 `legal/` 并随包分发，NOTICE 中的上游目录说明保留原文。
+其余旧设计文档已清理，历史内容可用 `git show 812bec16:<原仓库相对路径>` 查阅。旧知识内置加载器已退役；当前 Skill 设置与加载沿 [Office 模块](src/logic/projects/ARCHITECTURE.md) 阅读。Cindy 的 [许可](legal/cindy-LICENSE) 与 [NOTICE](legal/cindy-NOTICE) 归入 `legal/` 并随包分发，NOTICE 中的上游目录说明保留原文。

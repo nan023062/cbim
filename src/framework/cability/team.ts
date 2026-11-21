@@ -27,6 +27,7 @@ export interface TeamDescription
   readonly name?: string;
 
   readonly position?: string;
+
   readonly id: string;
 
   readonly kind: 'team';

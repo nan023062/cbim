@@ -48,7 +48,7 @@ description: "维护 CBIM 源码架构、单向依赖、注释和目录类图，
 - Logic 服务/存储/平台 → 领域及公开服务入口与 Node Core；Application 装配唯一业务生命周期，普通服务不得反向依赖它。更新子系统只组合自身、更新契约与便携 utility，不依赖普通应用服务。
 - Bridge server → 通信契约、登记的 Logic 入口与适用 Core。冷壳仅依赖固定业务入口与更新服务，计算式入口仍纳入源码图；Electron 网页由 main.ts 注入。
 - Bridge contracts → 纯协议、便携 Core 和具名业务数据契约；不能加载服务、凭据或平台实现。preload 是当前客户端，不向页面暴露任意 Node/Electron。
-- View-new → 自身模块、framework-ui 与 Bridge 契约。framework-ui 提供无业务状态的 React 控件，不反向依赖页面或通信；旧 View 已退役。
+- View-new → 自身模块、framework-ui 与 Bridge 契约。framework-ui 提供无业务状态的 React 控件，不反向依赖页面或通信；历史 View 实现已退役。
 
 发现边界问题时记录来源与影响，转 architecture-evolution 形成方案。路径变化同步调用方、构建入口、测试引用和文档导航。
 
@@ -126,7 +126,7 @@ Pi/Codex 的请求关联使用 utility/async.ts 的 PendingRequests；register/t
 
 后端无环判断组合 utility/graphs.ts 的 isDirectedAcyclic，前端分层独立实现；领域入口先核验节点/端点，再选择启用依赖与等待边并保留原错误码。公共图算法不认识任务或授权；独立拓扑测试与领域防环/重放契约分别验证，新增私有类别同步依赖清单。
 
-当前桌面业务由 `src/logic-new` 承担，独立引擎实现归 `src/engine-plugins`。旧 `src/logic` 与旧宿主已退役；迁移保留的协议和纯规则不代表旧服务仍在运行。修改时沿真实消费者核实能力，由源码架构文档维护各模块当前事实。
+当前桌面业务由 `src/logic` 承担，独立引擎实现归 `src/engine-plugins`。历史 Logic 实现与旧宿主已退役；迁移保留的协议和纯规则不代表旧服务仍在运行。修改时沿真实消费者核实能力，由源码架构文档维护各模块当前事实。
 
 ## 当前文档与历史证据
 

@@ -18,21 +18,21 @@ import fs from 'node:fs/promises';
 
 import path from 'node:path';
 
-import type { AgentEngine, EngineContext, EngineEvent } from '../../logic-new/execution/rules/types';
+import type { AgentEngine, EngineContext, EngineEvent } from '../../logic/execution/rules/types';
 
-import type { ResolvedEngineModel } from '../../logic-new/engines';
+import type { ResolvedEngineModel } from '../../logic/engines';
 
-import type { RequestBudgetPort } from '../../logic-new/budget/rules/request-budget';
+import type { RequestBudgetPort } from '../../logic/budget/rules/request-budget';
 
-import { runtimeEngineTools, type EngineToolsPort } from '../../logic-new/execution/rules/engine-tools';
+import { runtimeEngineTools, type EngineToolsPort } from '../../logic/execution/rules/engine-tools';
 
-import { engineInstructions } from '../../logic-new/execution/rules/engine-instructions';
+import { engineInstructions } from '../../logic/execution/rules/engine-instructions';
 
 import { managedNativeTools } from '../native-tools';
 
 import { codexBinary } from './binary';
 
-import type { EngineRuntimePackage } from '../../logic-new/execution/rules/engine-runtime';
+import type { EngineRuntimePackage } from '../../logic/execution/rules/engine-runtime';
 
 import { CodexRpc } from './rpc';
 
@@ -63,7 +63,7 @@ export interface CodexOptions
 
   llm?: ResolvedEngineModel;
 
-  images?: import('../../logic-new/execution/rules/types').InputImage[];
+  images?: import('../../logic/execution/rules/types').InputImage[];
 
   turnTimeoutMs?: number;
 

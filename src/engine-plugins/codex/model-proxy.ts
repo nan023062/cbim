@@ -8,9 +8,9 @@ import http from 'node:http';
 
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 
-import type { ResolvedLlm } from '../../logic-new/models';
+import type { ResolvedLlm } from '../../logic/models';
 
-import type { RequestBudgetPort } from '../../logic-new/budget/rules/request-budget';
+import type { RequestBudgetPort } from '../../logic/budget/rules/request-budget';
 
 import { openRequestBudgetTransport, requestBudgetEndpoint } from '../transport/request-budget-transport';
 

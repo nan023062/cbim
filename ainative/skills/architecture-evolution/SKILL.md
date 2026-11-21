@@ -109,7 +109,7 @@ Pi/Codex 的请求关联使用 utility/async.ts 的 PendingRequests；register/t
 
 后端无环判断组合 utility/graphs.ts 的 isDirectedAcyclic，前端分层独立实现；领域入口先核验节点/端点，再选择启用依赖与等待边并保留原错误码。公共图算法不认识任务或授权；独立拓扑测试与领域防环/重放契约分别验证，新增私有类别同步依赖清单。
 
-当前桌面业务由 `src/logic-new` 承担，独立引擎实现归 `src/engine-plugins`。旧 `src/logic` 与旧宿主已退役；迁移保留的协议和纯规则不代表旧服务仍在运行。修改时沿真实消费者核实能力，由源码架构文档维护各模块当前事实。
+当前桌面业务由 `src/logic` 承担，独立引擎实现归 `src/engine-plugins`。历史 Logic 实现与旧宿主已退役；迁移保留的协议和纯规则不代表旧服务仍在运行。修改时沿真实消费者核实能力，由源码架构文档维护各模块当前事实。
 
 ## 当前文档与历史证据
 

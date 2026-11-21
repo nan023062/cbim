@@ -1,4 +1,4 @@
-import { navigationChangeSchema } from '../../../logic-new/projects/navigation-contract';
+import { navigationChangeSchema } from '../../../logic/projects/navigation-contract';
 
 /** 新桌面宿主负责窗口、应用生命周期和启动确认。 */
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
@@ -7,43 +7,43 @@ import path from 'node:path';
 
 import fs from 'node:fs/promises';
 
-import type { DesktopRuntimeHost } from '../../../logic-new/updates/service/runtime-host';
+import type { DesktopRuntimeHost } from '../../../logic/updates/service/runtime-host';
 
-import { PluginInstallations } from '../../../logic-new/resource-management/plugin-installations';
+import { PluginInstallations } from '../../../logic/resource-management/plugin-installations';
 
-import { managedConnectorPackages } from '../../../logic-new/resource-management/connector-runtime';
+import { managedConnectorPackages } from '../../../logic/resource-management/connector-runtime';
 
-import { agentConfigurationSchema, agentSettingsTargetSchema } from '../../../logic-new/projects/agent-configuration';
+import { agentConfigurationSchema, agentSettingsTargetSchema } from '../../../logic/projects/agent-configuration';
 
-import { officeQueueActionSchema } from '../../../logic-new/projects/office-queue-contract';
+import { officeQueueActionSchema } from '../../../logic/projects/office-queue-contract';
 
-import { businessChangeSchema } from '../../../logic-new/projects/business-contract';
+import { businessChangeSchema } from '../../../logic/projects/business-contract';
 
-import { organizationChangeSchema } from '../../../logic-new/projects/organization-contract';
+import { organizationChangeSchema } from '../../../logic/projects/organization-contract';
 
-import { dataArchitectureChangeSchema } from '../../../logic-new/projects/data-architecture-contract';
+import { dataArchitectureChangeSchema } from '../../../logic/projects/data-architecture-contract';
 
 import { z } from 'zod';
 
-import { Application } from '../../../logic-new/application';
+import { Application } from '../../../logic/application';
 
-import { LlmProfiles } from '../../../logic-new/models/service';
+import { LlmProfiles } from '../../../logic/models/service';
 
 import { systemSecretCipher } from '../../../core/io/electron';
 
 import { modelActionSchemas } from '../../contracts/desktop-models';
 
-import { EnginePackages } from '../../../logic-new/engines/packages';
+import { EnginePackages } from '../../../logic/engines/packages';
 
-import { engineCatalog } from '../../../logic-new/resource-management/engine-catalog';
+import { engineCatalog } from '../../../logic/resource-management/engine-catalog';
 
-import { engineDescriptor, loopEngineSchema } from '../../../logic-new/engines';
+import { engineDescriptor, loopEngineSchema } from '../../../logic/engines';
 
 import { runOfficePlugin } from './office-plugin';
 
 import { createMonitorOpener } from './monitor-window';
 
-import { updateUserRoot } from '../../../logic-new/updates/service/restart-profile';
+import { updateUserRoot } from '../../../logic/updates/service/restart-profile';
 
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string;
 

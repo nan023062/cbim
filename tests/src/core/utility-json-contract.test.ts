@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest';
-import {parseJson} from '../../../src/logic-new/io-errors/json';
+import {parseJson} from '../../../src/logic/io-errors/json';
 import {JsonUtils} from '../../../src/core/io';
 
 it('严格 JSON 解析失败保留具体原因，并抛出原生 Error',()=>{

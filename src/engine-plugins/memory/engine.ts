@@ -10,21 +10,21 @@ import { randomUUID } from 'node:crypto';
 
 import { JsonUtils } from '../../core/io';
 
-import type { AgentEngine, EngineContext, EngineEvent } from '../../logic-new/execution/rules/types';
+import type { AgentEngine, EngineContext, EngineEvent } from '../../logic/execution/rules/types';
 
-import type { EngineAdapterOptions } from '../../logic-new/execution/rules/engine-adapter';
+import type { EngineAdapterOptions } from '../../logic/execution/rules/engine-adapter';
 
-import { runtimeEngineTools, type EngineToolsPort, type EngineToolSchema } from '../../logic-new/execution/rules/engine-tools';
+import { runtimeEngineTools, type EngineToolsPort, type EngineToolSchema } from '../../logic/execution/rules/engine-tools';
 
-import { engineInstructions } from '../../logic-new/execution/rules/engine-instructions';
+import { engineInstructions } from '../../logic/execution/rules/engine-instructions';
 
-import { runToolResult } from '../../logic-new/tools/rules/outcome';
+import { runToolResult } from '../../logic/tools/rules/outcome';
 
-import type { ToolResult } from '../../logic-new/tools/rules/results';
+import type { ToolResult } from '../../logic/tools/rules/results';
 
-import { planMemoryIndex, finishMemoryIndex, searchMemoryIndex, type MemoryIndex } from '../../logic-new/knowledge/rules/memory-index';
+import { planMemoryIndex, finishMemoryIndex, searchMemoryIndex, type MemoryIndex } from '../../logic/knowledge/rules/memory-index';
 
-import { requestBudgetModelFor } from '../../logic-new/budget/rules/model-request-configuration';
+import { requestBudgetModelFor } from '../../logic/budget/rules/model-request-configuration';
 
 import { ModelJsonRequests } from '../transport/model-json-requests';
 

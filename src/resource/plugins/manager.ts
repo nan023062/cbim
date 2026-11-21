@@ -133,12 +133,16 @@ export class PluginManager<Id extends string, Artifact extends PluginArtifact, P
   Install(kind: Id, expected?: { revision: number; identity: string })
   {
     const key = JSON.stringify([kind, expected?.revision, expected?.identity]);
+
     const pending = this.installations.get(key);
+
     if (pending)
       return pending;
 
     const result = this.queue.Run(async () => { await this.Init(); this.AssertRevision(expected?.revision); return this.InstallNow(kind, true, expected?.identity); }).finally(() => this.installations.delete(key));
+
     this.installations.set(key, result);
+
     return result;
   }
 

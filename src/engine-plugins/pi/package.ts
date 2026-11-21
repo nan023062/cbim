@@ -14,7 +14,7 @@ import { PiEngine } from './engine';
 
 import { manifest } from './manifest';
 
-import type { PublishedEngineAdapter, EngineAdapterOptions } from '../../logic-new/execution/rules/engine-adapter';
+import type { PublishedEngineAdapter, EngineAdapterOptions } from '../../logic/execution/rules/engine-adapter';
 
 function command(options: EngineAdapterOptions)
 {

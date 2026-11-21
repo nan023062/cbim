@@ -1,0 +1,137 @@
+/** 执行引擎的版本、下载安装与更新。 */
+import { useEffect, useState } from 'react';
+
+import type { EnginePackageSettings, EnginePackageStatus } from '../../bridge/contracts/desktop-engines';
+
+import { Icon } from '../shared/Icon';
+
+import { useTransfers, TransferProgress } from '../shared/transfers';
+
+function EngineVersionIcon({ state, kind }: { state?: EnginePackageSettings; kind: string })
+{
+  const item = state?.items.find(entry => entry.kind === kind);
+
+  let icon = 'unknown',
+    label = '版本状态未知';
+
+  if (state?.managed && !item?.active)
+  {
+    icon = 'notRun';
+
+    label = '未安装';
+  }
+  else if (state?.managed && item?.active && item.candidate)
+  {
+    const current = item.active.identity === item.candidate.identity;
+
+    icon = current ? 'success' : 'retry';
+
+    label = current ? '已是最新版本' : '可更新';
+  }
+
+  return <span className={'engine-version-icon ' + icon} role="img" aria-label={label} title={label}><Icon name={icon} size={16} /></span>;
+}
+
+export function EnginePackagesView()
+{
+  const [catalog, setCatalog] = useState<Awaited<ReturnType<typeof window.desktopMenu.EngineCatalog>>>([]);
+
+  const [selected, setSelected] = useState('codex');
+
+  useEffect(() => { window.desktopMenu.EngineCatalog().then(setCatalog).catch(e => setError(String(e))); }, []);
+
+  const [state, setState] = useState<EnginePackageSettings>();
+
+  const [busy, setBusy] = useState('');
+
+  const [error, setError] = useState('');
+
+  useEffect(() => { window.desktopMenu.Engines('list').then(setState).catch(e => setError(String(e))); }, []);
+
+  const preparing = !!state?.items.some(entry => entry.preparing);
+
+  const installing = busy.startsWith('install:');
+
+  useEffect(() => { if (!installing && !preparing) return; let active = true; let timer: ReturnType<typeof setTimeout>; async function refresh() { try { const snapshot = await window.desktopMenu.Engines('list'); if (active) setState(snapshot); } catch { /* Keep the current progress until the next snapshot. */ } if (active) timer = setTimeout(refresh, 750); } timer = setTimeout(refresh, 750); return () => { active = false; clearTimeout(timer); }; }, [installing, preparing]);
+
+  async function update(item?: EnginePackageStatus, action?: 'enable' | 'disable' | 'remove')
+  {
+    setError('');
+
+    setBusy(item ? (action ?? 'install') + ':' + item.kind : 'check');
+
+    try
+    {
+      setState(action && item && state ? await window.desktopMenu.Engines('configure', { kind: item.kind, revision: state.revision, action }) : item?.candidate && state ? await window.desktopMenu.Engines('install', { kind: item.kind, revision: state.revision, identity: item.candidate.identity }) : await window.desktopMenu.Engines('check'));
+    }
+    catch (e)
+    {
+      setError(String(e));
+
+      await window.desktopMenu.Engines('list').then(setState).catch(() => { });
+    }
+    finally
+    {
+      setBusy('');
+    }
+  }
+
+  const transfers = useTransfers();
+
+  const product = catalog.find(entry => entry.id === selected) ?? catalog[0];
+
+  const item = state?.items.find(entry => entry.kind === product?.id);
+
+  function progressFor(kind: string)
+  {
+    const engine = state?.items.find(entry => entry.kind === kind);
+
+    const transfer = transfers.find(t => t.identity === (engine?.preparation?.identity ?? engine?.candidate?.identity));
+
+    if (transfer)
+      return { label: { queued: '排队中', downloading: '下载中', verifying: '校验中' }[transfer.phase], percent: Math.floor(100 * transfer.bytes / transfer.total) };
+
+    if (!engine?.preparing && busy !== 'install:' + kind)
+      return;
+
+    const value = engine?.preparation?.progress;
+
+    return { label: engine?.active ? '正在更新' : '正在安装', percent: value === undefined ? undefined : Math.floor(value) };
+  }
+
+  const progress = product && progressFor(product.id);
+
+  return <section className="view-page menu-page engine-page"><header className="view-heading"><h1>执行引擎</h1><button disabled={!!busy || state?.managed === false} onClick={() => void update()}>{busy === 'check' ? '正在检查…' : '检查更新'}</button></header>
+    {error && <p role="alert">{error}</p>}
+    <div className="engine-layout">
+      <nav className="engine-list" aria-label="支持的执行引擎">{catalog.map(entry =>
+      {
+        const row = progressFor(entry.id);
+
+        return <button key={entry.id} type="button" aria-current={entry.id === product?.id ? 'true' : undefined} onClick={() => setSelected(entry.id)}>
+        {row && <span aria-hidden="true" className={'engine-progress-fill' + (row.percent === undefined ? ' pending' : '')} style={{ width: row.percent === undefined ? undefined : row.percent + '%' }} />}
+        <span className="engine-list-title"><strong className="engine-brand"><img src={entry.logo} alt="" />{entry.label}</strong><EngineVersionIcon state={state} kind={entry.id} /></span><small>{entry.businessTypes.join(' · ')}</small>
+      </button>;
+      })}</nav>
+      {product && <article className="engine-detail" aria-label={product.label + ' 详情'}>
+        <h2 className="engine-brand"><img src={product.logo} alt="" />{product.label}</h2><p>{product.businessTypes.join(' · ')}</p>
+        <dl><dt>支持协议</dt><dd>{product.supportedApis.join(' / ')}</dd>
+        <dt>本机状态</dt><dd>{!state ? error ? '状态未知' : '正在读取…' : !state.managed ? '宿主不可用' : item?.active ? item.enabled ? '已启用' : '已停用' : '尚未安装'}</dd>
+        <dt>当前版本</dt><dd>{item?.active?.version ?? '—'}</dd>
+        <dt>可用版本</dt><dd>{item?.candidate?.version ?? (state ? '暂无兼容版本' : '—')}</dd></dl>
+        {item && <>
+          <div className="model-actions">
+          {item.candidate && (item.active?.identity !== item.candidate.identity || item.error) && <button disabled={!!busy || item.preparing} onClick={() => void update(item)}>{progress?.label ?? (item.active ? '更新引擎' : '下载并安装')}</button>}
+          {item.active && <><button disabled={!!busy || item.preparing || item.enabled && item.references > 0} onClick={() => void update(item, item.enabled ? 'disable' : 'enable')}>{item.enabled ? '停用' : '启用'}</button>
+          <button disabled={!!busy || item.preparing || item.references > 0} onClick={() => void update(item, 'remove')}>卸载本机版本</button></>}</div>
+          {progress && <label className="engine-install-progress"><span>{progress.label}</span><span>{progress.percent === undefined ? '准备中…' : progress.percent + '%'}</span>
+            <progress max={100} value={progress.percent} /></label>}
+          {transfers.filter(t => t.identity === (item.preparation?.identity ?? item.candidate?.identity)).map(t => <TransferProgress item={t} key={t.identity} />)}
+          <details><summary>缓存与依赖</summary><p>使用中 · {item.references}</p>
+          {item.installed.map(version => <p key={version.identity}>已缓存 {version.version} · {version.identity.slice(0, 12)}</p>)}
+          {(item.active ?? item.candidate)?.dependencies?.map(ref => <p key={ref.kind}>依赖 <span className="engine-brand"><img src={catalog.find(entry => entry.id === ref.kind)?.logo ?? state?.items.find(entry => entry.kind === ref.kind)?.logo} alt="" />{catalog.find(entry => entry.id === ref.kind)?.label ?? state?.items.find(entry => entry.kind === ref.kind)?.label ?? ref.kind}</span> · {ref.identity.slice(0, 12)}</p>)}</details>
+          {item.error && <p role="alert">{item.error}</p>}
+        </>}
+      </article>}
+    </div></section>;
+}

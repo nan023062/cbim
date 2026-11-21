@@ -1,7 +1,7 @@
 import {createPublicKey,sign,type KeyObject} from 'node:crypto';
-import {enginePackageSchema,type EnginePackage,type ColdRuntime,type SignedRuntimeManifest} from '../src/logic-new/updates/service/runtime-manifest';
-import {verifyEngineIndex,type EngineReleaseIndex} from '../src/logic-new/updates/service/engine-index';
-import {engineDescriptor,loopEngineSchema} from '../src/logic-new/engines';
+import {enginePackageSchema,type EnginePackage,type ColdRuntime,type SignedRuntimeManifest} from '../src/logic/updates/service/runtime-manifest';
+import {verifyEngineIndex,type EngineReleaseIndex} from '../src/logic/updates/service/engine-index';
+import {engineDescriptor,loopEngineSchema} from '../src/logic/engines';
 
 /** 只生成可审阅签名候选，不上传制品或切换公开通道；旧索引必须使用同一信任根。 */
 export function signEngineRelease(input:{engines:EnginePackage[];sequence:number;notes:string;sourceCommit:string;previous?:SignedRuntimeManifest},key:KeyObject,cold:ColdRuntime){

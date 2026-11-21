@@ -1,29 +1,29 @@
 /** 将 Office 的一轮对话交给已安装的引擎，关闭实例后释放固定版本。 */
-import { runUsage } from '../../../logic-new/projects/office-usage';
+import { runUsage } from '../../../logic/projects/office-usage';
 
 import path from 'node:path';
 
 import { mkdir } from 'node:fs/promises';
 
-import type { OfficeChat } from '../../../logic-new/projects/offices';
+import type { OfficeChat } from '../../../logic/projects/offices';
 
-import type { EnginePackages } from '../../../logic-new/engines/packages';
+import type { EnginePackages } from '../../../logic/engines/packages';
 
-import { loopEngineSchema } from '../../../logic-new/engines';
+import { loopEngineSchema } from '../../../logic/engines';
 
-import { EngineModelProfiles } from '../../../logic-new/engines/service';
+import { EngineModelProfiles } from '../../../logic/engines/service';
 
-import type { LlmProfiles } from '../../../logic-new/models/service';
+import type { LlmProfiles } from '../../../logic/models/service';
 
-import { packagedEngineAdapter } from '../../../logic-new/projects/office-engine-loader';
+import { packagedEngineAdapter } from '../../../logic/projects/office-engine-loader';
 
 import { OfficeTools } from './office-tools';
 
-import type { OfficeApproval } from '../../../logic-new/projects/office-operations';
+import type { OfficeApproval } from '../../../logic/projects/office-operations';
 
-import type { managedConnectorPackages } from '../../../logic-new/resource-management/connector-runtime';
+import type { managedConnectorPackages } from '../../../logic/resource-management/connector-runtime';
 
-import { openAgentConnectors } from '../../../logic-new/resource-management/connector-runtime';
+import { openAgentConnectors } from '../../../logic/resource-management/connector-runtime';
 
 function activityDetail(value: unknown): string | undefined
 {

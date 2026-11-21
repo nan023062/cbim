@@ -3,7 +3,7 @@ import { app, BrowserWindow, ipcMain } from 'electron';
 
 import path from 'node:path';
 
-import type { Application } from '../../../logic-new/application';
+import type { Application } from '../../../logic/application';
 
 import type { ProcessGroup } from '../../contracts/discovery';
 
@@ -11,7 +11,7 @@ declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string;
 
 declare const MAIN_WINDOW_VITE_NAME: string;
 
-export function createMonitorOpener(owner: BrowserWindow, application: Application, brand: (kind: string | undefined) => {name: string; logo?: string} | undefined)
+export function createMonitorOpener(owner: BrowserWindow, application: Application, brand: (kind: string | undefined) => { name: string; logo?: string } | undefined)
 {
   let current: BrowserWindow | undefined;
 

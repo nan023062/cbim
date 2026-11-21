@@ -16,27 +16,27 @@ import { createRequire } from 'node:module';
 
 import { selectBootResources } from './selection';
 
-import { RuntimeJournal } from '../../../logic-new/updates/service/runtime-journal';
+import { RuntimeJournal } from '../../../logic/updates/service/runtime-journal';
 
-import { verifyRuntimeManifest, type ColdRuntime } from '../../../logic-new/updates/service/runtime-manifest';
+import { verifyRuntimeManifest, type ColdRuntime } from '../../../logic/updates/service/runtime-manifest';
 
-import { officialEnginePublicKey } from '../../../logic-new/updates/service/engine-index';
+import { officialEnginePublicKey } from '../../../logic/updates/service/engine-index';
 
-import { EngineArtifacts } from '../../../logic-new/updates/service/engine-artifacts';
+import { EngineArtifacts } from '../../../logic/updates/service/engine-artifacts';
 
-import { DownloadService } from '../../../logic-new/updates/service/download-service';
+import { DownloadService } from '../../../logic/updates/service/download-service';
 
-import { RuntimeStore } from '../../../logic-new/updates/service/runtime-store';
+import { RuntimeStore } from '../../../logic/updates/service/runtime-store';
 
-import { RuntimeUpdates } from '../../../logic-new/updates/service/runtime-updates';
+import { RuntimeUpdates } from '../../../logic/updates/service/runtime-updates';
 
-import { DesktopUpdates } from '../../../logic-new/updates/service/desktop-updates';
+import { DesktopUpdates } from '../../../logic/updates/service/desktop-updates';
 
 import { NsisUpdateInstaller } from '../../../updater';
 
-import { updateUserRoot } from '../../../logic-new/updates/service/restart-profile';
+import { updateUserRoot } from '../../../logic/updates/service/restart-profile';
 
-import type { DesktopRuntimeHost } from '../../../logic-new/updates/service/runtime-host';
+import type { DesktopRuntimeHost } from '../../../logic/updates/service/runtime-host';
 
 const loadApplication = createRequire(__filename);
 
@@ -67,7 +67,7 @@ function boot()
 
     const engineArtifacts = new EngineArtifacts(path.join(cacheRoot, 'engine-index.json'), store, undefined, controller.signal);
 
-    implementation.startDesktop({ downloads, engineArtifacts, cacheRoot, StopPreparingEngines: () => controller.abort(), Confirm: () => {} });
+    implementation.startDesktop({ downloads, engineArtifacts, cacheRoot, StopPreparingEngines: () => controller.abort(), Confirm: () => { } });
 
     return;
   }
@@ -151,6 +151,7 @@ function boot()
 
   const host: DesktopRuntimeHost = {
     downloads,
+
     assetsRoot: selection.root,
 
     cacheRoot: cacheIdentityRoot,

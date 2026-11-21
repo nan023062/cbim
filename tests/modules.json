@@ -1,25 +1,25 @@
 {
   "version": 1,
   "modules": {
-    "logic-new/projects": {
-      "directory": "src/logic-new/projects",
+    "logic/projects": {
+      "directory": "src/logic/projects",
       "roots": [
-        "src/logic-new/projects/"
+        "src/logic/projects/"
       ],
       "tests": {
         "unit": [],
         "contract": [
-          "tests/src/logic-new/projects/office-workspace-tree.test.ts",
-          "tests/src/logic-new/projects/office-engine-loader.test.ts"
+          "tests/src/logic/projects/office-workspace-tree.test.ts",
+          "tests/src/logic/projects/office-engine-loader.test.ts"
         ],
         "integration": [
-          "tests/src/logic-new/projects/office-dispatch.test.ts",
-          "tests/src/logic-new/projects/agent-settings.test.ts",
-          "tests/src/logic-new/projects/organization-directory.test.ts",
-          "tests/src/logic-new/projects/data-architecture.test.ts",
-          "tests/src/logic-new/projects/architecture-live.test.ts",
-          "tests/src/logic-new/projects/office-queue.test.ts",
-          "tests/src/logic-new/projects/navigation.test.ts"
+          "tests/src/logic/projects/office-dispatch.test.ts",
+          "tests/src/logic/projects/agent-settings.test.ts",
+          "tests/src/logic/projects/organization-directory.test.ts",
+          "tests/src/logic/projects/data-architecture.test.ts",
+          "tests/src/logic/projects/architecture-live.test.ts",
+          "tests/src/logic/projects/office-queue.test.ts",
+          "tests/src/logic/projects/navigation.test.ts"
         ]
       }
     },
@@ -39,16 +39,16 @@
         ]
       }
     },
-    "logic-new/budget/rules": {
+    "logic/budget/rules": {
       "roots": [
-        "src/logic-new/budget/rules/"
+        "src/logic/budget/rules/"
       ],
       "tests": {
         "unit": [],
         "contract": [],
         "integration": []
       },
-      "directory": "src/logic-new/budget/rules"
+      "directory": "src/logic/budget/rules"
     },
     "framework/connectors": {
       "directory": "src/framework/connectors",
@@ -75,114 +75,114 @@
       },
       "directory": "src/resource/connections/rules"
     },
-    "logic-new/evidence/rules": {
+    "logic/evidence/rules": {
       "roots": [
-        "src/logic-new/evidence/rules/"
+        "src/logic/evidence/rules/"
       ],
       "tests": {
         "unit": [],
         "contract": [],
         "integration": []
       },
-      "directory": "src/logic-new/evidence/rules"
+      "directory": "src/logic/evidence/rules"
     },
-    "logic-new/execution/rules": {
+    "logic/execution/rules": {
       "roots": [
-        "src/logic-new/execution/rules/"
+        "src/logic/execution/rules/"
       ],
       "tests": {
         "unit": [],
         "contract": [],
         "integration": []
       },
-      "directory": "src/logic-new/execution/rules"
+      "directory": "src/logic/execution/rules"
     },
-    "logic-new/file-operations/rules": {
+    "logic/file-operations/rules": {
       "roots": [
-        "src/logic-new/file-operations/rules/"
+        "src/logic/file-operations/rules/"
       ],
       "tests": {
         "unit": [],
         "contract": [],
         "integration": []
       },
-      "directory": "src/logic-new/file-operations/rules"
+      "directory": "src/logic/file-operations/rules"
     },
-    "logic-new/governance/rules": {
+    "logic/governance/rules": {
       "roots": [
-        "src/logic-new/governance/rules/"
+        "src/logic/governance/rules/"
       ],
       "tests": {
         "unit": [
-          "tests/src/logic-new/governance/rules/module-governance-core.test.ts"
+          "tests/src/logic/governance/rules/module-governance-core.test.ts"
         ],
         "contract": [],
         "integration": []
       },
-      "directory": "src/logic-new/governance/rules"
+      "directory": "src/logic/governance/rules"
     },
-    "logic-new/knowledge/rules": {
+    "logic/knowledge/rules": {
       "roots": [
-        "src/logic-new/knowledge/rules/"
+        "src/logic/knowledge/rules/"
       ],
       "tests": {
         "unit": [
-          "tests/src/logic-new/knowledge/rules/memory-index.test.ts"
+          "tests/src/logic/knowledge/rules/memory-index.test.ts"
         ],
         "contract": [],
         "integration": []
       },
-      "directory": "src/logic-new/knowledge/rules"
+      "directory": "src/logic/knowledge/rules"
     },
-    "logic-new/tasks/rules": {
+    "logic/tasks/rules": {
       "roots": [
-        "src/logic-new/tasks/rules/"
+        "src/logic/tasks/rules/"
       ],
       "tests": {
         "unit": [],
         "contract": [],
         "integration": []
       },
-      "directory": "src/logic-new/tasks/rules"
+      "directory": "src/logic/tasks/rules"
     },
-    "logic-new/team/rules": {
+    "logic/team/rules": {
       "roots": [
-        "src/logic-new/team/rules/"
+        "src/logic/team/rules/"
       ],
       "tests": {
         "unit": [],
         "contract": [],
         "integration": []
       },
-      "directory": "src/logic-new/team/rules"
+      "directory": "src/logic/team/rules"
     },
-    "logic-new/tools/rules": {
+    "logic/tools/rules": {
       "roots": [
-        "src/logic-new/tools/rules/"
+        "src/logic/tools/rules/"
       ],
       "tests": {
         "unit": [],
         "contract": [
-          "tests/src/logic-new/tools/rules/tool-results.test.ts"
+          "tests/src/logic/tools/rules/tool-results.test.ts"
         ],
         "integration": []
       },
-      "directory": "src/logic-new/tools/rules"
+      "directory": "src/logic/tools/rules"
     },
-    "logic-new/workspace/rules": {
+    "logic/workspace/rules": {
       "roots": [
-        "src/logic-new/workspace/rules/"
+        "src/logic/workspace/rules/"
       ],
       "tests": {
         "unit": [
-          "tests/src/logic-new/workspace/rules/workflow-contract.test.ts"
+          "tests/src/logic/workspace/rules/workflow-contract.test.ts"
         ],
         "contract": [
-          "tests/src/logic-new/workspace/rules/execution-scope.test.ts"
+          "tests/src/logic/workspace/rules/execution-scope.test.ts"
         ],
         "integration": []
       },
-      "directory": "src/logic-new/workspace/rules"
+      "directory": "src/logic/workspace/rules"
     },
     "engine-plugins": {
       "roots": [
@@ -277,39 +277,39 @@
       },
       "directory": "src/bridge/server/ipc"
     },
-    "logic-new/execution/platform": {
+    "logic/execution/platform": {
       "roots": [
-        "src/logic-new/execution/platform/"
+        "src/logic/execution/platform/"
       ],
       "tests": {
         "unit": [],
         "contract": [],
         "integration": []
       },
-      "directory": "src/logic-new/execution/platform"
+      "directory": "src/logic/execution/platform"
     },
-    "logic-new/updates/service": {
+    "logic/updates/service": {
       "roots": [
-        "src/logic-new/updates/service/"
+        "src/logic/updates/service/"
       ],
       "tests": {
         "unit": [
-          "tests/src/logic-new/updates/service/engine-artifacts.test.ts",
-          "tests/src/logic-new/updates/service/engine-index.test.ts",
-          "tests/src/logic-new/updates/service/release-http.test.ts",
-          "tests/src/logic-new/updates/service/update-restart-profile.test.ts"
+          "tests/src/logic/updates/service/engine-artifacts.test.ts",
+          "tests/src/logic/updates/service/engine-index.test.ts",
+          "tests/src/logic/updates/service/release-http.test.ts",
+          "tests/src/logic/updates/service/update-restart-profile.test.ts"
         ],
         "contract": [
-          "tests/src/logic-new/updates/service/runtime-download.test.ts",
-          "tests/src/logic-new/updates/service/runtime-journal.test.ts",
-          "tests/src/logic-new/updates/service/runtime-manifest.test.ts",
-          "tests/src/logic-new/updates/service/runtime-store.test.ts",
-          "tests/src/logic-new/updates/service/runtime-updates.test.ts",
-          "tests/src/logic-new/updates/service/desktop-updates.test.ts"
+          "tests/src/logic/updates/service/runtime-download.test.ts",
+          "tests/src/logic/updates/service/runtime-journal.test.ts",
+          "tests/src/logic/updates/service/runtime-manifest.test.ts",
+          "tests/src/logic/updates/service/runtime-store.test.ts",
+          "tests/src/logic/updates/service/runtime-updates.test.ts",
+          "tests/src/logic/updates/service/desktop-updates.test.ts"
         ],
         "integration": []
       },
-      "directory": "src/logic-new/updates/service"
+      "directory": "src/logic/updates/service"
     },
     "bridge/contracts": {
       "roots": [
@@ -557,37 +557,37 @@
       },
       "directory": "src/core/utility"
     },
-    "logic-new/models": {
+    "logic/models": {
       "roots": [
-        "src/logic-new/models/index.ts",
-        "src/logic-new/models/protocol/"
+        "src/logic/models/index.ts",
+        "src/logic/models/protocol/"
       ],
       "tests": {
         "unit": [
-          "tests/src/logic-new/models/model-catalog.test.ts",
-          "tests/src/logic-new/models/provider-connections.test.ts"
+          "tests/src/logic/models/model-catalog.test.ts",
+          "tests/src/logic/models/provider-connections.test.ts"
         ],
         "contract": [],
         "integration": []
       },
-      "directory": "src/logic-new/models"
+      "directory": "src/logic/models"
     },
-    "logic-new/models/service": {
+    "logic/models/service": {
       "roots": [
-        "src/logic-new/models/service/",
-        "src/logic-new/models/index.ts"
+        "src/logic/models/service/",
+        "src/logic/models/index.ts"
       ],
       "tests": {
         "unit": [
-          "tests/src/logic-new/models/service/embedding-test.test.ts",
-          "tests/src/logic-new/models/service/llm.test.ts",
-          "tests/src/logic-new/models/service/model-operations.test.ts",
-          "tests/src/logic-new/models/service/owner-model-configuration.test.ts"
+          "tests/src/logic/models/service/embedding-test.test.ts",
+          "tests/src/logic/models/service/llm.test.ts",
+          "tests/src/logic/models/service/model-operations.test.ts",
+          "tests/src/logic/models/service/owner-model-configuration.test.ts"
         ],
         "contract": [],
         "integration": []
       },
-      "directory": "src/logic-new/models/service"
+      "directory": "src/logic/models/service"
     },
     "core/web": {
       "roots": [
@@ -607,19 +607,19 @@
       },
       "directory": "src/core/web"
     },
-    "logic-new/feedback": {
+    "logic/feedback": {
       "roots": [
-        "src/logic-new/feedback/index.ts",
-        "src/logic-new/feedback/contracts.ts"
+        "src/logic/feedback/index.ts",
+        "src/logic/feedback/contracts.ts"
       ],
       "tests": {
         "unit": [
-          "tests/src/logic-new/feedback/feedback-contracts.test.ts"
+          "tests/src/logic/feedback/feedback-contracts.test.ts"
         ],
         "contract": [],
         "integration": []
       },
-      "directory": "src/logic-new/feedback"
+      "directory": "src/logic/feedback"
     },
     "resource/service": {
       "roots": [
@@ -636,35 +636,35 @@
       },
       "directory": "src/resource/service"
     },
-    "logic-new/engines": {
+    "logic/engines": {
       "roots": [
-        "src/logic-new/engines/"
+        "src/logic/engines/"
       ],
       "tests": {
         "unit": [
-          "tests/src/logic-new/engines/catalog.test.ts",
-          "tests/src/logic-new/engines/model-choices.test.ts",
-          "tests/src/logic-new/engines/model-roles.test.ts"
+          "tests/src/logic/engines/catalog.test.ts",
+          "tests/src/logic/engines/model-choices.test.ts",
+          "tests/src/logic/engines/model-roles.test.ts"
         ],
         "contract": [],
         "integration": []
       },
-      "directory": "src/logic-new/engines"
+      "directory": "src/logic/engines"
     },
-    "logic-new/engines/packages": {
+    "logic/engines/packages": {
       "roots": [
-        "src/logic-new/engines/packages/"
+        "src/logic/engines/packages/"
       ],
       "tests": {
         "unit": [
-          "tests/src/logic-new/engines/packages/packages.test.ts"
+          "tests/src/logic/engines/packages/packages.test.ts"
         ],
         "contract": [
-          "tests/src/logic-new/engines/packages/engine-cache-retention.test.ts"
+          "tests/src/logic/engines/packages/engine-cache-retention.test.ts"
         ],
         "integration": []
       },
-      "directory": "src/logic-new/engines/packages"
+      "directory": "src/logic/engines/packages"
     },
     "tooling/engine-release": {
       "roots": [
@@ -731,8 +731,8 @@
     "project": {
       "directory": ".",
       "roots": [
-        "src/logic-new/application/",
-        "src/logic-new/projects/",
+        "src/logic/application/",
+        "src/logic/projects/",
         "src/framework/"
       ],
       "tests": {
@@ -744,10 +744,10 @@
       },
       "cache": false
     },
-    "logic-new/application": {
-      "directory": "src/logic-new/application",
+    "logic/application": {
+      "directory": "src/logic/application",
       "roots": [
-        "src/logic-new/application/"
+        "src/logic/application/"
       ],
       "tests": {
         "unit": [],
@@ -766,10 +766,10 @@
         "integration": []
       }
     },
-    "logic-new/tools/rules/policy": {
-      "directory": "src/logic-new/tools/rules/policy",
+    "logic/tools/rules/policy": {
+      "directory": "src/logic/tools/rules/policy",
       "roots": [
-        "src/logic-new/tools/rules/policy/"
+        "src/logic/tools/rules/policy/"
       ],
       "tests": {
         "unit": [],
@@ -838,10 +838,10 @@
         "integration": []
       }
     },
-    "logic-new/engines/service": {
-      "directory": "src/logic-new/engines/service",
+    "logic/engines/service": {
+      "directory": "src/logic/engines/service",
       "roots": [
-        "src/logic-new/engines/service/"
+        "src/logic/engines/service/"
       ],
       "tests": {
         "unit": [],
@@ -919,15 +919,15 @@
         ]
       }
     },
-    "logic-new/resource-management": {
-      "directory": "src/logic-new/resource-management",
+    "logic/resource-management": {
+      "directory": "src/logic/resource-management",
       "roots": [
-        "src/logic-new/resource-management/"
+        "src/logic/resource-management/"
       ],
       "tests": {
         "unit": [],
         "contract": [
-          "tests/src/logic-new/resource-management/connector-runtime.test.ts"
+          "tests/src/logic/resource-management/connector-runtime.test.ts"
         ],
         "integration": []
       }

@@ -48,7 +48,7 @@ description: "维护 CBIM 源码架构、单向依赖、注释和目录类图，
 - Logic 服务/存储/平台 → 领域及公开服务入口与 Node Core；Application 装配唯一业务生命周期，普通服务不得反向依赖它。更新子系统只组合自身、更新契约与便携 utility，不依赖普通应用服务。
 - Bridge server → 通信契约、登记的 Logic 入口与适用 Core。冷壳仅依赖固定业务入口与更新服务，计算式入口仍纳入源码图；Electron 网页由 main.ts 注入。
 - Bridge contracts → 纯协议、便携 Core 和具名业务数据契约；不能加载服务、凭据或平台实现。preload 是当前客户端，不向页面暴露任意 Node/Electron。
-- View → 视图、Bridge 契约/客户端与便携 Core。view/foundations 是视图适配，不依赖 React、页面或通信；Bridge 不转发工具。
+- View-new → 自身模块、framework-ui 与 Bridge 契约。framework-ui 提供无业务状态的 React 控件，不反向依赖页面或通信；旧 View 已退役。
 
 发现边界问题时记录来源与影响，转 architecture-evolution 形成方案。路径变化同步调用方、构建入口、测试引用和文档导航。
 

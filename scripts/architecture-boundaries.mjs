@@ -66,10 +66,6 @@ export const logicalBoundaries = [
     dependencies:['model-rules'],imports:['src/logic/execution/rules/model-errors.ts'],external:[],
   },
   {
-    id:'frontend-utility',prefix:'src/view/foundations/utility/',public:['src/view/foundations/utility/index.ts'],
-    dependencies:['utility-foundations','io'],external:[],
-  },
-  {
     id:'utility-foundations',prefix:'src/core/utility/',public:['src/core/utility/index.ts'],
     dependencies:[],external:[],
   },
@@ -208,12 +204,6 @@ export const logicalBoundaries = [
     id:'agent-history-file-store', files:['src/logic/history/service/file-store.ts'],
     public:['src/logic/history/service/file-store.ts'], dependencies:['io-serialization','io-json','file-foundations'],
     imports:['src/logic/team/rules/session-history-storage.ts'],external:['node:fs/promises','node:path'],
-  },
-  {
-    id:'execution-view', prefix:'src/view/execution-view/',
-    public:['src/view/execution-view/AgentCallDetails.tsx','src/view/execution-view/team-conversations.ts','src/view/execution-view/WorkStatus.tsx','src/view/execution-view/ToolTimeline.tsx','src/view/execution-view/MarkdownMessage.tsx','src/view/execution-view/transcript.ts','src/view/execution-view/tool-labels.ts','src/view/execution-view/repairStreamingMarkdown.ts','src/view/execution-view/MessageQueue.tsx','src/view/execution-view/QuestionCard.tsx','src/view/execution-view/ComposerAttachments.tsx','src/view/execution-view/knowledge-tool-view.ts'],
-    dependencies:[], imports:['src/bridge/contracts/dispatch.ts','src/bridge/contracts/execution.ts','src/bridge/contracts/models.ts','src/bridge/contracts/chat.ts','src/bridge/contracts/knowledge-transactions.ts','src/view/components/Icon.tsx','src/view/components/RepositoryScopeDetails.tsx'],
-    external:['react','react-markdown','remark-gfm','rehype-highlight'],
   },
   {
     id:'test-data', prefix:'tests/src/logic/knowledge/rules/data/',

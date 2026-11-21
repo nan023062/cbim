@@ -1,11 +1,9 @@
 // logic/tasks/rules: module-owned contract coverage; keep the original scenario and cleanup semantics.
-import {afterEach,expect,test,vi} from 'vitest';
+import {expect,test} from 'vitest';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
-import {createElement} from 'react';
-import {renderToStaticMarkup} from 'react-dom/server';
 import {FileDispatchStore} from '../../../../../src/logic/dispatch/storage/dispatch-store';
 import {effectDispositionCommand,effectDispositionReceipt} from '../../../../../src/logic/tasks/rules/effect-observation-rules';
 import {effectIdentity,effectRootMutation,effectScope,effectRecord,effectTime,effectState} from '../../evidence/rules/support/effect-core-fixture';
@@ -14,10 +12,8 @@ import {projectMainScope,publicDispatchScopeSchema} from '../../../../../src/log
 import type {DispatchScope} from '../../../../../src/logic/tasks/rules/dispatch-scope';
 import type {ScopeRecovery} from '../../../../../src/logic/tasks/rules/scope-recovery';
 import {recoveryRequestSource,recoverySourceSelection} from '../../../../../src/logic/tasks/rules/scope-recovery';
-import {SessionReadProjection,scopeGoalView,type ScopeGoalState} from '../../../../../src/view/tasks/scope-state';
-import {useScopeReplan,type ScopeReplanView} from '../../../../../src/view/tasks/useScopeReplan';
 
-afterEach(()=>vi.unstubAllGlobals());
+
 const profileId='11111111-1111-4111-8111-111111111111';
 function inspection(source?:ScopeRecovery['source'],dispositionId?:string):DispatchScope {
   const scopeId=randomUUID();
@@ -28,22 +24,12 @@ function projectedResponse(scope:DispatchScope):DispatchSessionRead {
   const graph=effectState().graphs[0],snapshot=emptyScopeSnapshot(effectIdentity,graph.cursor.streamId);snapshot.cursor.seq=1;snapshot.scopes=[summarizeScope(scope,snapshot.cursor.streamId,1)];
   return {graph:{mode:'reset',reason:'initial',snapshot:graph,cursor:graph.cursor},scopes:{mode:'reset',reason:'initial',snapshot,cursor:snapshot.cursor},detail:readScopeDetail(snapshot,[scope],scope.scopeId)};
 }
-function viewState(projection:SessionReadProjection):ScopeGoalState {
-  const summary=projection.Selected()!,view=scopeGoalView(summary,projection.graph);
-  return {scopes:projection.scopes!,selectedScopeId:summary.scopeId,selectedScope:projection.Detail(),graph:projection.graph,selectedGoalView:view,currentGoalView:view,loading:false,detailLoading:false,error:'',selectScope:()=>{}};
-}
-function hook(state:ScopeGoalState){
-  const values=new Map<string,string>();vi.stubGlobal('window',{localStorage:{getItem:(key:string)=>values.get(key)??null,setItem:(key:string,value:string)=>values.set(key,value)},cbim:{call:vi.fn(()=>{throw Error('render must not query')})}});
-  let result!:ScopeReplanView;
-  function Probe(){result=useScopeReplan(effectIdentity.workspaceId,effectIdentity.rootSessionId,state,undefined,()=>{},()=>{});return null}
-  renderToStaticMarkup(createElement(Probe));return result;
-}
 
 test('真实详情投影区分新成员与legacy来源，未配置旧字段不补造kind或处置',()=>{
   const legacy:ScopeRecovery['source']={scopeId:'source',taskId:'member',runId:'member-run',reportBasis:'a'.repeat(64),taskRevision:2,planRevision:1,scopeOutcome:'failed',reportExecution:'unknown',logState:'verified',unknownToolCount:1};
   for(const source of [legacy,{...legacy,kind:'member_run' as const,toolCallIds:['write-call']}]){
-    const scope=inspection(source),response=projectedResponse(scope),projection=new SessionReadProjection(effectIdentity);projection.Apply(response);
-    const detail=projection.Detail()!;expect(detail.recovery!.source).toEqual(source);expect(recoverySourceSelection(recoveryRequestSource(detail.recovery!.source))).toEqual('kind' in source?{kind:'member_run',taskId:'member',runId:'member-run',toolCallIds:['write-call']}:{scopeId:'source',taskId:'member',runId:'member-run'});expect(detail.recovery).not.toHaveProperty('dispositionId');noPrivate(detail);
+    const scope=inspection(source),response=projectedResponse(scope);
+    if(response.detail.mode!=='updated')throw Error('missing detail');const detail=response.detail.scope;expect(detail.recovery!.source).toEqual(source);expect(recoverySourceSelection(recoveryRequestSource(detail.recovery!.source))).toEqual('kind' in source?{kind:'member_run',taskId:'member',runId:'member-run',toolCallIds:['write-call']}:{scopeId:'source',taskId:'member',runId:'member-run'});expect(detail.recovery).not.toHaveProperty('dispositionId');noPrivate(detail);
   }
   const plain=projectedResponse(effectScope());expect(plain.detail.mode).toBe('updated');if(plain.detail.mode==='updated'){expect(plain.detail.scope).not.toHaveProperty('recovery');expect(plain.detail.scope).not.toHaveProperty('replan')}
 });

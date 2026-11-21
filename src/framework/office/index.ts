@@ -175,6 +175,8 @@ export { OfficeMembers } from './members';
 
 export { Office } from './office';
 
+export type { MainTaskCommands } from './office';
+
 export type { TeamDescription } from '../cability/team';
 
 export * from './session';

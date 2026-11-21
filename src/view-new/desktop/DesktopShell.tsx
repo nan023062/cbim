@@ -1,5 +1,5 @@
 /** 桌面主框架只负责布局与侧栏展开状态。业务入口在对应模块接入后启用。 */
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 
 import type { DiscoveryPage, ProjectItem, OfficeConversation } from '../../bridge/contracts/discovery';
 
@@ -15,6 +15,8 @@ import { ExtensionPanel } from '../extension/ExtensionPanel';
 
 import { SettingsView } from '../settings/SettingsView';
 
+import { ProjectSidebar } from './ProjectSidebar';
+
 import './desktop.css';
 
 const resourceNavigation = [
@@ -26,6 +28,8 @@ const resourceNavigation = [
 
 export function DesktopShell()
 {
+  const [sidebarWidth, setSidebarWidth] = useState(() => { const stored = Number(localStorage.getItem('project-sidebar-width')); return stored >= 220 && stored <= 420 ? stored : 260; });
+
   const [expanded, setExpanded] = useState(() => window.innerWidth > 720);
 
   const [settings, setSettings] = useState<'通用' | '外观'>();
@@ -38,8 +42,6 @@ export function DesktopShell()
 
   const [office, setOffice] = useState<OfficeConversation>();
 
-  const [sessions, setSessions] = useState<Record<string, OfficeConversation['sessions']>>({});
-
   const [running, setRunning] = useState<Record<string, number>>({});
 
   const request = useRef(0);
@@ -50,6 +52,9 @@ export function DesktopShell()
   {
     setPage('workspace');
 
+    if (innerWidth <= 720)
+      setExpanded(false);
+
     const sequence = ++request.current;
 
     setError('');
@@ -57,38 +62,24 @@ export function DesktopShell()
     if (!draft && session && selected?.id === project.id && office?.id === session)
       return;
 
-    // ?????????????????????????????????
+    // 切换完成前保留当前对话，避免异步返回覆盖新的选择。
     if (!office)
       setSelected(project);
 
-    window.desktopMenu.OpenOffice(project.id, draft ? 'create' : session ? 'select' : 'latest', session).then(value =>
-    {
-      if (sequence !== request.current) return;
-      setSessions(previous => ({ ...previous, [project.id]: value.sessions }));
-      setSelected(project);
-      setOffice(value);
-    }).catch(e => { if (sequence === request.current) setError(String(e)); });
+    window.desktopMenu.OpenOffice(project.id, draft ? 'create' : session ? 'select' : 'latest', session).then(value => { if (sequence !== request.current) return; setSelected(project); setOffice(value); localStorage.setItem('project-last-office', JSON.stringify({ project: project.id, session: value.id })); }).catch(e => { if (sequence === request.current) setError(String(e)); });
   }
 
   const [updateOpen, setUpdateOpen] = useState(false);
-  const [updateStatus, setUpdateStatus] = useState<Awaited<ReturnType<typeof window.desktopMenu.Update>>>();
-  useEffect(() =>
-  {
-    if (!updateOpen) return;
-    let active = true;
-    let timer: ReturnType<typeof setTimeout>;
-    const read = async () => { try { const state = await window.desktopMenu.Update('status'); if (active) setUpdateStatus(state); } catch(e) { if (active) setError(String(e)); } if (active) timer = setTimeout(read, 750); };
-    void read();
-    return () => { active = false; clearTimeout(timer); };
-  }, [updateOpen]);
 
-  const [search, setSearch] = useState('');
+  const [updateStatus, setUpdateStatus] = useState<Awaited<ReturnType<typeof window.desktopMenu.Update>>>();
+
+  useEffect(() => { if (!updateOpen) return; let active = true; let timer: ReturnType<typeof setTimeout>; const read = async () => { try { const state = await window.desktopMenu.Update('status'); if (active) setUpdateStatus(state); } catch (e) { if (active) setError(String(e)); } if (active) timer = setTimeout(read, 750); }; void read(); return () => { active = false; clearTimeout(timer); }; }, [updateOpen]);
 
   const [error, setError] = useState('');
 
   const [choosing, setChoosing] = useState(false);
 
-  useEffect(() => { let current = true; window.desktopMenu?.Projects().then(items => { if (current) setProjects(items); }).catch(e => { if (current) setError(e.message); }); return () => { current = false; }; }, []);
+  useEffect(() => { let current = true; window.desktopMenu.Navigation().then(value => { if (!current) return; const items = value.projects.filter(project => !project.removed); let saved; try { saved = JSON.parse(localStorage.getItem('project-last-office') || 'null'); } catch { return; } const project = items.find(project => project.id === saved?.project); if (request.current === 0 && project?.sessions.some(session => session.id === saved.session && !session.removed)) openProject(project, false, saved.session); }).catch(error => { if (current) setError(String(error)); }); return () => { current = false; }; }, []);
 
   async function chooseProject()
   {
@@ -117,6 +108,8 @@ export function DesktopShell()
     }
   }
 
+  useEffect(() => { function Shortcut(event: KeyboardEvent) { if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'b') { event.preventDefault(); setExpanded(value => !value); } if (event.key === 'Escape' && innerWidth <= 720 && !document.querySelector('dialog[open]')) setExpanded(false); } window.addEventListener('keydown', Shortcut); return () => window.removeEventListener('keydown', Shortcut); }, []);
+
   const title = page === 'workspace' ? selected?.name || '工作区' : resourceNavigation.find(item => item[2] === page)![1];
 
   const [panelOpen, setPanelOpen] = useState(() => window.innerWidth >= 1380);
@@ -124,7 +117,7 @@ export function DesktopShell()
   const sidebarToggle = <button className="icon-button" aria-controls="team-sidebar" aria-expanded={expanded}
     aria-label={expanded ? '收起侧栏' : '展开侧栏'} onClick={() => setExpanded(!expanded)}><Icon name="panelLeft" size={16} /></button>;
 
-  return <div id="application-home">
+  return <div id="application-home" style={{ '--sidebar-width': sidebarWidth + 'px' } as CSSProperties}>
     <header className="desktop-titlebar">
       {sidebarToggle}
       <button onClick={() => void window.desktopMenu.OpenMonitor().catch(e => setError(String(e)))}><Icon name="flow" size={15} />资源监视器</button>
@@ -137,13 +130,15 @@ export function DesktopShell()
         <strong>关于 CBIM Assistant</strong><p>在项目工作区中组织 Agent 团队与工作流。</p>
       </section>
     </header>
-    {updateOpen && <div className="update-notice" role="region" aria-label="应用更新"><strong>应用更新</strong> {({disabled:'当前构建不支持更新',idle:'等待检查',checking:'正在检查',available:'有可用更新',current:'已是最新版',downloading:'正在下载',ready:'已就绪，等待重启',installing:'正在重启安装'} as Record<string,string>)[updateStatus?.phase ?? 'checking']} {updateStatus?.version} {updateStatus?.progress != null && Math.round(updateStatus.progress) + '%'} {updateStatus?.error}
+    {updateOpen && <div className="update-notice" role="region" aria-label="应用更新"><strong>应用更新</strong> {({ disabled: '当前构建不支持更新', idle: '等待检查', checking: '正在检查', available: '有可用更新', current: '已是最新版', downloading: '正在下载', ready: '已就绪，等待重启', installing: '正在重启安装' } as Record<string, string>)[updateStatus?.phase ?? 'checking']} {updateStatus?.version} {updateStatus?.progress != null && Math.round(updateStatus.progress) + '%'} {updateStatus?.error}
       {updateStatus?.phase === 'ready' && <button onClick={() => void window.desktopMenu.Update('install').catch(e => setError(String(e)))}>重启安装</button>}
       {updateStatus?.phase === 'available' && <button onClick={() => void window.desktopMenu.Update('download').catch(e => setError(String(e)))}>重新下载</button>}
       <button onClick={() => setUpdateOpen(false)}>关闭</button></div>}
     {settings && <SettingsView initial={settings} onBack={() => setSettings(undefined)} />}
     <div style={settings ? { display: 'none' } : undefined} className={'desktop-shell' + (expanded ? '' : ' sidebar-collapsed')}>
+    {expanded && <button className="sidebar-backdrop" aria-label="关闭项目侧栏" onClick={() => setExpanded(false)} />}
     <aside id="team-sidebar" className="workspace-sidebar sidebar-frame">
+      <button className="sidebar-new-conversation" onClick={() => selected ? openProject(selected, true) : void chooseProject()}><Icon name="edit" size={16} />新建对话</button>
       <nav className="primary-nav" aria-label="主菜单">
         {resourceNavigation.filter(([, , target]) => target !== 'templates').map(([icon, label, target]) =>
             <button key={target} className={page === target ? 'selected' : undefined} aria-current={page === target ? 'page' : undefined} onClick={() => setPage(target)}>
@@ -154,17 +149,7 @@ export function DesktopShell()
           {resourceNavigation.map(([icon, label, target]) => <button key={target} onClick={event => { setPage(target); event.currentTarget.parentElement?.hidePopover(); }}><Icon name={icon} size={16} />{label}</button>)}
         </div>
       </nav>
-      <div className="sidebar-search"><Icon name="search" size={16} /><input value={search} onChange={event => setSearch(event.target.value)} aria-label="搜索工作区" placeholder="搜索工作区" /></div>
-      <div className="sidebar-label"><span>工作区</span>
-        <button className="icon-button" aria-label="新建工作区" title="新建工作区" disabled={choosing} onClick={() => void chooseProject()}>
-          <Icon name="plus" size={16} />
-        </button>
-      </div>
-      <nav className="workspace-list" aria-label="项目列表">{projects.filter(p => (p.name + ' ' + p.path).toLowerCase().includes(search.toLowerCase())).map(p => <div key={p.id}>
-        <WorkspaceRow project={p} active={selected?.id === p.id && page === 'workspace'} onOpen={openProject} />
-        {sessions[p.id]?.map(session => <ConversationRow key={session.id} session={session} active={page === 'workspace' && office?.id === session.id}
-          running={!!running[session.id]} onOpen={() => openProject(p, false, session.id)} />)}
-      </div>)}</nav>
+      <ProjectSidebar activeProject={page === 'workspace' ? selected?.id : undefined} activeSession={page === 'workspace' ? office?.id : undefined} OnOpen={openProject} OnAdd={() => void chooseProject()} OnSnapshot={items => { setProjects(items); setSelected(previous => { const latest = items.find(item => item.id === previous?.id); return latest && previous && (latest.name !== previous.name || latest.path !== previous.path) ? latest : previous; }); }} OnUnavailable={(project, session) => { if (selected?.id === project && (!session || office?.id === session)) { request.current++; localStorage.removeItem('project-last-office'); setOffice(undefined); setSelected(undefined); } }} />
       <footer className="sidebar-footer">
         <button className="user-profile-trigger" aria-label="用户菜单" popoverTarget="user-actions">
           <span className="profile-badge">C</span><span className="user-profile-copy"><b>本地用户</b><small>CBIM · 本地使用</small></span>
@@ -174,6 +159,7 @@ export function DesktopShell()
           <button popoverTarget="user-actions" popoverTargetAction="hide" onClick={() => setSettings('通用')}><Icon name="settings" size={16} />设置</button>
         </div>
       </footer>
+      <div className="project-sidebar-resize" role="separator" aria-label="调整项目侧栏宽度" aria-orientation="vertical" aria-valuemin={220} aria-valuemax={420} aria-valuenow={sidebarWidth} tabIndex={0} onKeyDown={event => { if (['ArrowLeft', 'ArrowRight', 'Home'].includes(event.key)) { event.preventDefault(); const next = event.key === 'Home' ? 260 : Math.max(220, Math.min(420, sidebarWidth + (event.key === 'ArrowRight' ? 10 : -10))); setSidebarWidth(next); localStorage.setItem('project-sidebar-width', String(next)); } }} onPointerDown={event => event.currentTarget.setPointerCapture(event.pointerId)} onPointerMove={event => { if (event.currentTarget.hasPointerCapture(event.pointerId)) setSidebarWidth(Math.max(220, Math.min(420, event.clientX))); }} onPointerUp={event => { if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId); localStorage.setItem('project-sidebar-width', String(sidebarWidth)); }} onDoubleClick={() => { setSidebarWidth(260); localStorage.removeItem('project-sidebar-width'); }} />
     </aside>
     <main className="workspace-main">
       <header className="workspace-topbar">{page !== 'workspace' && <button aria-label="返回工作区" onClick={() => setPage('workspace')}>←</button>}<Icon name="folder" size={16} /><strong>{title}</strong>
@@ -183,11 +169,7 @@ export function DesktopShell()
           <OfficeView onManageEngines={() => setPage('engines')} key={office.id} conversation={office} project={selected} draft={drafts[office.id] ?? ''}
             onDraft={text => setDrafts(previous => ({ ...previous, [office.id]: text }))}
             started={running[office.id] ?? 0} onRunning={time => setRunning(previous => ({ ...previous, [office.id]: time }))}
-            onSaved={messages =>
-            {
-              if (!office.messages.length) setSessions(previous => ({ ...previous, [selected.id]: (previous[selected.id] ?? []).map(s => s.id === office.id ? { ...s, title: messages[0].text.slice(0, 32) } : s) }));
-              setOffice(current => current?.id === office.id ? { ...current, messages: [...current.messages, ...messages.filter(m => !current.messages.some(existing => existing.id === m.id))] } : current);
-            }} />
+            onSaved={messages => { setOffice(current => current?.id === office.id ? { ...current, messages: [...current.messages, ...messages.filter(m => !current.messages.some(existing => existing.id === m.id))] } : current); }} />
           : <p role="status">{error ? '无法打开 Office 对话' : '正在打开 Office 对话…'}</p> : <section className="workspace-welcome">
         <div className="intro-emblem"><BrandMark size={64} decorative /></div>
         
@@ -199,47 +181,4 @@ export function DesktopShell()
     <ExtensionPanel open={panelOpen} />
     <button className="icon-button panel-switch" aria-label={panelOpen ? '收起扩展面板' : '展开扩展面板'} aria-controls="extension-panel" aria-expanded={panelOpen} onClick={() => setPanelOpen(!panelOpen)}><Icon name="panelRight" size={16} /></button>
   </div></div>;
-}
-
-/** 项目下的对话入口；本机显示名称可通过行末编辑按钮修改。 */
-function ConversationRow({ session, active, running, onOpen }: { session: OfficeConversation['sessions'][number]; active: boolean; running: boolean; onOpen(): void })
-{
-  const key = 'office-title:' + session.id;
-  const [alias, setAlias] = useState(() => localStorage.getItem(key) ?? '');
-  const [editing, setEditing] = useState(false);
-  const title = alias || session.title;
-  return <div className="project-list-row office-session-row" data-active={active || undefined}>
-    {editing ? <form onSubmit={event =>
-    {
-      event.preventDefault();
-      const name = String(new FormData(event.currentTarget).get('title') ?? '').trim();
-      localStorage.setItem(key, name);
-      setAlias(name);
-      setEditing(false);
-    }}><input autoFocus name="title" aria-label="对话名称" maxLength={80} defaultValue={title}
-      onFocus={e => e.target.select()} onKeyDown={e => { if (e.key === 'Escape') setEditing(false); }} />
-      <button type="submit" title="保存名称" aria-label="保存名称"><Icon name="confirm" size={14} /></button></form> : <>
-      <button className="project-select" aria-current={active ? 'page' : undefined} onClick={onOpen} title={title}>
-        <span className={'office-session-icon' + (running ? ' executing' : '')} role="img" aria-label={running ? '正在执行' : '对话'}><Icon name="conversation" size={15} /></span><span>{title}</span></button>
-      <button className="project-action" title="重命名对话" aria-label={'重命名对话 · ' + title} onClick={() => setEditing(true)}><Icon name="edit" size={14} /></button></>}
-  </div>;
-}
-
-/** 同一行的快捷操作和上下文菜单始终绑定当前项目。 */
-function WorkspaceRow({ project, active, onOpen }: { project: ProjectItem; active: boolean; onOpen(project: ProjectItem, draft?: boolean): void })
-{
-  const menu = useRef<HTMLDivElement>(null);
-
-  const menuId = 'workspace-actions-' + project.id;
-
-  return <div className="project-list-row" onContextMenu={event => { event.preventDefault(); const popup = menu.current; if (!popup) return; popup.showPopover(); popup.style.left = Math.max(0, Math.min(event.clientX, innerWidth - popup.offsetWidth)) + 'px'; popup.style.top = Math.max(0, Math.min(event.clientY, innerHeight - popup.offsetHeight)) + 'px'; }}>
-    <button className="project-select" title={project.path} aria-current={active ? 'page' : undefined} onClick={() => onOpen(project)}><Icon name="folder" size={16} /><span>{project.name}</span></button>
-    <button className="project-action" title="更多" aria-label={project.name + ' · 更多'} popoverTarget={menuId}
-      onClick={event => { const rect = event.currentTarget.getBoundingClientRect(); if (menu.current) { menu.current.style.left = Math.max(0, Math.min(rect.left, innerWidth - 90)) + 'px'; menu.current.style.top = Math.min(rect.bottom, innerHeight - 48) + 'px'; } }}><Icon name="more" size={16} /></button>
-    <button className="project-action" title="新建任务" aria-label={project.name + ' · 新建任务'} onClick={() => onOpen(project, true)}><Icon name="edit" size={16} /></button>
-    <div ref={menu} id={menuId} className="project-context" popover="auto" role="group" aria-label={project.name + '的操作'}>
-      <button title="查看工作区" aria-label="查看工作区" popoverTarget={menuId} popoverTargetAction="hide" onClick={() => onOpen(project)}><Icon name="folder" size={16} /></button>
-      <button title="新建任务" aria-label="新建任务" popoverTarget={menuId} popoverTargetAction="hide" onClick={() => onOpen(project, true)}><Icon name="edit" size={16} /></button>
-    </div>
-  </div>;
 }

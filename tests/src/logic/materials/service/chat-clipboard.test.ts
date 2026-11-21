@@ -3,23 +3,18 @@ import {expect,it} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
-import {createElement} from 'react';
-import {renderToStaticMarkup} from 'react-dom/server';
 import {fixture} from '../../application/support/helpers';
 import {ChatInputs} from '../../../../../src/logic/materials/service/chat-inputs';
 import {pastedLocalPaths} from '../../../../../src/bridge/contracts/chat';
-import {pastedImage} from '../../../../../src/view/conversation/pasted-images';
-import {ComposerAttachments} from '../../../../../src/view/execution-view/ComposerAttachments';
 const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j2X8AAAAASUVORK5CYII=','base64');
 it('截图无磁盘路径仍保留字节、名称、来源和时间，预览/视觉/等待补充读同一快照',async()=>{
  const f=await fixture();try{
   const entry=await f.app.Dispatch('add',{path:f.a}),inputs=new ChatInputs(f.app.Workspace(entry.id));
-  const prepared=await pastedImage(new File([png],'截图.png',{type:'image/png'}));expect(prepared.data).toBe(png.toString('base64'));
+  const prepared={name:'截图.png',mimeType:'image/png',data:png.toString('base64')};expect(prepared.data).toBe(png.toString('base64'));
   const attachment=await f.app.Dispatch('chat.image',{id:entry.id,...prepared});expect(attachment.source).toMatch(/^clipboard:\/\/image\//);expect(attachment.name).toBe('截图.png');expect(attachment.note).toMatch(/\d{4}-\d{2}-\d{2}T/);expect(JSON.stringify(attachment)).not.toContain(prepared.data);
   const preview=await f.app.Dispatch('chat.preview',{id:entry.id,attachmentId:attachment.id});expect(preview.image).toEqual({mimeType:'image/png',data:prepared.data});
   expect(await inputs.Images([attachment.id])).toEqual([{type:'image',mimeType:'image/png',data:prepared.data}]);
   const continuation=await inputs.PrepareContinuation('看截图',[attachment.id],new AbortController().signal);expect(continuation.images[0].data).toBe(prepared.data);expect(continuation.message).toContain(attachment.source);expect(continuation.message).not.toContain(prepared.data);
-  const html=renderToStaticMarkup(createElement(ComposerAttachments,{items:[attachment],workspaceId:entry.id,disabled:false,onRemove:()=>{}}));expect(html).toContain('预览附件 截图.png');expect(html).toContain('移除附件 截图.png');expect(html).toContain(attachment.source.replace(/&/g,'&amp;'));
  }finally{await f.cleanup()}
 });
 it('明确路径导入校验存在、文件夹种类与工作区隔离，源修改不改写已保存正文',async()=>{
@@ -40,7 +35,5 @@ it('拒绝伪造类型、非规范 base64、过量图片和未知字段，不保
   for(const request of [{name:'x.png',mimeType:'image/png',data:Buffer.from('not an image').toString('base64')},{name:'x.jpg',mimeType:'image/jpeg',data:png.toString('base64')},{name:'x.png',mimeType:'image/png',data:png.toString('base64')+'\n'},{name:'x.png',mimeType:'image/png',data:Buffer.concat([png,Buffer.alloc(5*1024*1024)]).toString('base64')}])await expect(f.app.Dispatch('chat.image',{id:entry.id,...request} as any)).rejects.toThrow();
   await expect(f.app.Dispatch('chat.image',{id:entry.id,name:'x.svg',mimeType:'image/svg+xml',data:'PHN2Zz4='} as any)).rejects.toThrow();
   await expect(f.app.Dispatch('chat.paths',{id:entry.id,paths:Array(13).fill(f.a)})).rejects.toThrow();
-  await expect(pastedImage(new File(['<svg/>'],'x.svg',{type:'image/svg+xml'}))).rejects.toThrow();
-  await expect(pastedImage(new File([Buffer.alloc(5*1024*1024+1)],'x.png',{type:'image/png'}))).rejects.toThrow();
  }finally{await f.cleanup()}
 });

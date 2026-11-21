@@ -1,6 +1,0 @@
-/** 本视图样式负责原有布局；普通文字改用共享排版令牌，避免容器之间出现不同阅读字号。 */
-/** 外观字号通过共享令牌作用于普通 UI 和全部 Agent 阅读区；代码独立，状态业务语义不变。 */
-:root .chat-message,:root .appearance-reading-preview{font-size:var(--font-ui)}
-:root pre,:root code,:root kbd,:root samp{font-size:var(--font-code)}
-:root[data-reduce-motion=true] *,:root[data-reduce-motion=true] *::before,:root[data-reduce-motion=true] *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
-@media(prefers-reduced-motion:reduce){:root *,:root *::before,:root *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}

@@ -8,12 +8,6 @@ export const externalMethodNames = [
   { file: 'src/bridge/server/platform/controlled-file-child.ts', owner: 'property:parentPort', name: 'on', reason: 'Electron utilityProcess 的原生 parentPort 事件入口。' },
   { file: 'src/bridge/server/platform/controlled-file-child.ts', owner: 'property:parentPort', name: 'postMessage', reason: 'Electron utilityProcess 的原生 parentPort 发信入口。' },
   { file: 'src/logic/updates/service/runtime-archive.ts', owner: 'new:Transform', name: 'transform', reason: 'Node Transform 构造选项约定，由流运行时调用。' },
-  { file: 'src/view/components/DeferredView.tsx', owner: 'class:ViewLoadBoundary', name: 'getDerivedStateFromError', reason: 'React 错误边界静态生命周期约定。' },
-  { file: 'src/view/components/DeferredView.tsx', owner: 'class:ViewLoadBoundary', name: 'render', reason: 'React Component 的渲染入口。' },
-  { file: 'src/view/foundations/utility/storage.ts', owner: 'interface:TextStorage', name: 'getItem', reason: '端口直接接收浏览器 Web Storage，保留标准读取方法。' },
-  { file: 'src/view/foundations/utility/storage.ts', owner: 'interface:TextStorage', name: 'setItem', reason: '端口直接接收浏览器 Web Storage，保留标准写入方法。' },
-  { file: 'src/view/settings/appearance-state.ts', owner: 'interface:PreferenceStorage', name: 'getItem', reason: '外观配置直接注入 localStorage，必须满足浏览器原生契约。' },
-  { file: 'src/view/settings/appearance-state.ts', owner: 'interface:PreferenceStorage', name: 'setItem', reason: '外观配置直接注入 localStorage，必须满足浏览器原生契约。' },
   ...[
     ['src/framework/kernel/engines/adapter.ts', 'interface:EngineAdapter', ['create']],
     ['src/logic/execution/rules/engine-adapter.ts', 'interface:EngineAdapterOptions', ['requestBudget']],

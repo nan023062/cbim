@@ -1,4 +1,16 @@
+export type { NavigationSnapshot, NavigationChange, NavigationProject, NavigationSession } from '../../logic-new/projects/navigation-contract';
+
+export type { OfficeQueueAction, OfficeQueueSnapshot, OfficeQueueItem } from '../../logic-new/projects/office-queue-contract';
+
+export type { BusinessSnapshot, BusinessChange } from '../../logic-new/projects/business-contract';
+
 /** 新桌面菜单只公开显示字段及原生目录选择操作。 */
+export type { AgentConfiguration, AgentSettingsTarget } from '../../logic-new/projects/agent-configuration';
+
+export type { OrganizationNode, OrganizationSnapshot, OrganizationChange } from '../../logic-new/projects/organization-contract';
+
+export type { DataDefinition, DataArchitectureNode, DataArchitectureSnapshot, DataArchitectureChange } from '../../logic-new/projects/data-architecture-contract';
+
 export type DiscoveryPage = 'engines' | 'connectors' | 'talent' | 'templates';
 
 export interface ProjectItem
@@ -98,14 +110,38 @@ export interface OfficeSelection
 export interface TransferState
 {
   identity: string;
+
   name: string;
+
   phase: 'queued' | 'downloading' | 'verifying';
+
   bytes: number;
+
   total: number;
 }
 
 export interface DesktopMenu
 {
+  Navigation(change?: import('../../logic-new/projects/navigation-contract').NavigationChange): Promise<import('../../logic-new/projects/navigation-contract').NavigationSnapshot>;
+
+  RevealProject(project: string): Promise<void>;
+
+  Organization(project: string, change?: import('../../logic-new/projects/organization-contract').OrganizationChange): Promise<import('../../logic-new/projects/organization-contract').OrganizationSnapshot>;
+
+  BusinessArchitecture(project: string, change?: import('../../logic-new/projects/business-contract').BusinessChange): Promise<import('../../logic-new/projects/business-contract').BusinessSnapshot>;
+
+  OfficeQueue(project: string, session: string, action?: import('../../logic-new/projects/office-queue-contract').OfficeQueueAction): Promise<import('../../logic-new/projects/office-queue-contract').OfficeQueueSnapshot>;
+
+  InsertOffice(project: string, session: string, text: string): Promise<{ id: string; status: 'queued' }>;
+
+  DataArchitecture(project: string, change?: import('../../logic-new/projects/data-architecture-contract').DataArchitectureChange): Promise<import('../../logic-new/projects/data-architecture-contract').DataArchitectureSnapshot>;
+
+  AgentMembers(project: string): Promise<{ id: string; name: string; position: string; revision: number; configuration: import('../../logic-new/projects/agent-configuration').AgentConfiguration }[]>;
+
+  AgentSettings(project: string, target: import('../../logic-new/projects/agent-configuration').AgentSettingsTarget, save?: { revision: number; configuration: import('../../logic-new/projects/agent-configuration').AgentConfiguration }): Promise<{ revision: number; configuration: import('../../logic-new/projects/agent-configuration').AgentConfiguration }>;
+
+  AgentConnectors(): Promise<{ id: string; name: string; available: boolean }[]>;
+
   EngineCatalog(): Promise<{ id: string; label: string; logo: string; businessTypes: readonly string[]; supportedApis: readonly string[] }[]>;
 
   Engines(action: 'list' | 'check' | 'install' | 'configure', target?: { kind: string; revision: number; identity: string } | { kind: string; revision: number; action: 'enable' | 'disable' | 'remove' }): Promise<import('./desktop-engines').EnginePackageSettings>;
@@ -115,10 +151,15 @@ export interface DesktopMenu
   ReadOfficeTurn(project: string, session: string, file: string): Promise<OfficeMessage[]>;
 
   Transfers(): Promise<TransferState[]>;
+
   WatchTransfers(listener: () => void): () => void;
+
   CancelTransfer(identity: string): Promise<void>;
+
   Connector(id: string, install: boolean): Promise<{ installed: boolean; identity: string }>;
+
   Update(action: 'status' | 'check' | 'download' | 'install'): Promise<{ phase: string; progress?: number; error?: string; version?: string }>;
+
   OpenOffice(project: string, action: 'latest' | 'create' | 'select', session?: string): Promise<OfficeConversation>;
 
   WatchOffice(listener: (event: OfficeProgress) => void): () => void;
@@ -138,18 +179,49 @@ export interface DesktopMenu
   Monitor(): Promise<MonitorResult>;
 }
 
+/** 业务树只读快照，不包含运行时或文件访问能力。 */
+export interface BusinessArchitecture
+{
+  roots: string[];
+
+  nodes:
+  {
+    id: string;
+
+    name: string;
+
+    summary: string;
+
+    children: string[];
+
+    sources:
+    {
+      location: string;
+
+      scope: string
+    }[];
+
+    virtual: boolean
+  }[];
+}
+
 export interface OfficeActivity
 {
   id: string;
+
   label: string;
+
   input?: string;
+
   result?: string;
+
   alert?: string;
 }
 
 export interface OfficeProgress
 {
   workLog?: OfficeActivity[];
+
   text?: string;
 
   project: string;
@@ -197,7 +269,14 @@ export interface OfficeConversation
 {
   earlier?: string[];
 
-  earlierUsage?: { elapsed: number; cost: number; complete: boolean };
+  earlierUsage?:
+  {
+    elapsed: number;
+
+    cost: number;
+
+    complete: boolean
+  };
 
   id: string;
 

@@ -10,6 +10,8 @@
 
 ## 主要组成
 
+受管连接器入口也供新版桌面复用：openAgentConnectors 只按宿主提供的 ID 与真实实例上下文获取会话，组合 ConnectorService，并在失败时回收已取得资源。每轮释放由调用方负责；包仍沿签名验证、版本固定和保留引用的既有契约，不允许 IPC 指定任意入口。
+
 | 组成 | 定位 |
 | --- | --- |
 | [WorkspaceRuntimeMonitor](runtime-monitor.ts) | 把工作区派发/周期事务、两套运行日志和对话队列接入全局监管，同时维护静态 Agent 的持久化历史归档。 |

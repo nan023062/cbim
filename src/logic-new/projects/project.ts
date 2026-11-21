@@ -78,6 +78,18 @@ export class ProjectList extends Catalog
     return [...this.loaded.values()].flatMap(project => project.runtime.ListOffices());
   }
 
+  /** 页面与 Agent 读取同一份当前业务树；返回独立快照，不暴露运行对象。 */
+  public async Business(projectId: string)
+  {
+    const project = await this.Open(projectId);
+
+    const business = project.runtime.project!;
+
+    const tree = business.DescribeWorkspaces();
+
+    return { roots: tree.roots, nodes: tree.nodes.map(node => { const workspace = business.FindWorkspace(node.id)!; return { ...node, sources: workspace.sources, virtual: workspace.virtual ?? false }; }) };
+  }
+
   public FindOffice(id: string)
   {
     return this.ListOffices().find(office => office.id === id);

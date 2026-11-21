@@ -1,8 +1,42 @@
-import { Organization } from '../../../../../src/framework/cability/organization';
+import { Organization, type AgentPermission } from '../../../../../src/framework/cability/organization';
 import { CbimRuntime } from '../../../../../src/framework/cbim-runtime';
 import {it,expect,vi} from 'vitest';
 import {Team} from '../../../../../src/framework/cability/team';
 import {AgentRole,runAgentTask,type AgentTaskExecution} from '../../../../../src/framework/cability/agent';
+
+it('Office 权限透传主成员引擎、动态变更和后续成员，其他 Office 保持独立', async () => {
+  const runtime = new CbimRuntime();
+  const office = runtime.OpenOffice('project', 'permission');
+  const other = runtime.OpenOffice('project', 'other');
+  office.organization.ReplaceChildren(['writer', 'reviewer'].map(id => ({ kind: 'agent' as const, id, agentId: id, name: id, position: id, available: true, model: { engine: 'pi', profileId: 'p', modelId: 'm' } })));
+  const readers: Array<() => AgentPermission> = [];
+  const factory = { parameters: undefined, CreateEngine: async (_: undefined, _id: string, _role: AgentRole, _report: unknown, ReadPermission: () => AgentPermission) => {
+    readers.push(ReadPermission);
+    return { session: ReadPermission, Close: async () => {} };
+  } };
+  try {
+    office.permission = 'execute';
+    await office.OpenMainAgent(factory);
+    const writer = office.members.ForTask({ workspaceId: 'project', taskId: 'child', memberId: 'writer' });
+    await writer.OpenEngine(new AgentRole({ id: 'writer', name: 'Writer', instructions: '' }, { workspaceId: 'project', taskId: 'child' }), factory);
+    expect(readers.map(read => read())).toEqual(['execute', 'execute']);
+    expect(office.ListActiveAgents().map(agent => agent.permission)).toEqual(['execute', 'execute']);
+    office.permission = 'read';
+    expect(readers.map(read => read())).toEqual(['read', 'read']);
+    expect(office.ListAgents().every(agent => agent.permission === 'read')).toBe(true);
+    expect(other.FindAgent(other.mainAgentId)?.permission).toBe('ask');
+    office.permission = 'ask';
+    const reviewer = office.members.GetMember('reviewer');
+    expect(reviewer.permission).toBe('ask');
+    await reviewer.Open(new AgentRole({ id: 'reviewer', name: 'Reviewer', instructions: '' }, { workspaceId: 'project', taskId: 'later' }), factory);
+    expect(readers.map(read => read())).toEqual(['ask', 'ask', 'ask']);
+    expect(() => { office.permission = 'invalid' as AgentPermission; }).toThrow('无效');
+    expect(readers.every(read => read() === 'ask')).toBe(true);
+    await writer.Close();
+  } finally {
+    await runtime.Close();
+  }
+});
 
 it('Office 内置负责人绑定主会话，并在关闭时释放其引擎', async () => {
   const runtime = new CbimRuntime();
@@ -43,7 +77,7 @@ it('groups office positions by team and observes only the environment supplied f
   expect(organization.FindMember('reviewer')).toEqual(reviewer);
   expect(organization.FindMember('developer')).toBeUndefined();
   expect(engineering.children).toEqual([writer]);
-  expect(()=>new Team('empty',[])).toThrow('团队至少需要一个子节点');
+  expect(new Team('empty',[], '待组建团队').children).toEqual([]);
   const role={id:'developer',name:'Writer',instructions:'',model};
   const environment={organization,modules:[{id:'editor',ownerMemberId:'writer'}]};
   const agent=new AgentRole(role,{workspaceId:'project',taskId:'child'},async()=>environment);

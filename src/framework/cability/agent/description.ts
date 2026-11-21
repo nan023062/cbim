@@ -1,6 +1,8 @@
 import type { AgentConfigurationSnapshot } from './identity';
 
-export interface AgentDescription
+import type { AgentConfiguration } from '../team';
+
+export interface AgentDescription extends AgentConfiguration
 {
   id: string;
 
@@ -15,16 +17,6 @@ export interface AgentDescription
   references: readonly string[];
 
   effectiveSkills: ReadonlyArray<Readonly<AgentConfigurationSnapshot['effectiveSkills'][number]>>;
-
-  /** 已解析、无凭据的执行选择；不允许子调用静默使用另一个模型。 */
-  model?: Readonly<
-    {
-      engine: string;
-
-      profileId: string;
-
-      modelId: string
-    }>;
 }
 
 /** 旧调用可以仅提供指令；新岗位装配必须提供完整描述。 */
@@ -40,13 +32,18 @@ export function agentRoleInstructions(role: AgentDefinition): string
   for (const skill of role.effectiveSkills ?? [])
     sections.push('技能 ' + skill.skillId + '\n' + skill.content);
 
+  for (const skill of role.skills ?? [])
+    sections.push('技能 ' + skill.name + '\n' + skill.content);
+
   return sections.filter(Boolean).join('\n\n');
 }
 
 /** 只从本次运行已采纳的岗位快照取技能，避免读取更新后的目录或其他岗位的配置。 */
 export function readRoleSkill(role: AgentDefinition, skillId: string)
 {
-  const skill = role.effectiveSkills?.find(item => item.skillId === skillId);
+  const own = role.skills?.find(item => item.id === skillId);
+
+  const skill = own ? { skillId: own.id, ownerId: role.id, inherited: false, content: own.content } : role.effectiveSkills?.find(item => item.skillId === skillId);
 
   if (!skill)
     throw new Error('当前岗位没有采用该技能');

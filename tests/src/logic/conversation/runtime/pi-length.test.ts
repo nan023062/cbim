@@ -5,7 +5,6 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fixture} from '../../application/support/helpers';
 import {modelStopError} from '../../../../../src/logic/execution/rules/model-errors';
-import {transcript} from '../../../../../src/view/execution-view/transcript';
 test('real Pi stops on length once and explicitly resumes the same conversation',async()=>{
  const f=await fixture();let requests=0;const toolSets:string[][]=[];const prompts:string[]=[];
  const server=http.createServer(async(req,res)=>{let raw='';for await(const c of req)raw+=c;const body=JSON.parse(raw);prompts.push(JSON.stringify(body.messages));toolSets.push((body.tools||[]).map((t:any)=>t.function.name));requests++;res.writeHead(200,{'Content-Type':'text/event-stream'});for(const [delta,finish] of [[{role:'assistant',content:requests===1?'partial':'resumed'},null],[{},requests===1?'length':'stop']])res.write('data: '+JSON.stringify({id:'length-'+requests,object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason:finish}]})+'\n\n');res.end('data: [DONE]\n\n')});

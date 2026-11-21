@@ -4,7 +4,6 @@ import path from 'node:path';
 import {checkpointServiceFixture} from './support/member-checkpoint-service-fixture';
 import {FileDispatchStore} from '../../../../../src/logic/dispatch/storage/dispatch-store';
 import {memberResumeRequests,currentMemberResumeRequest} from '../../../../../src/logic/tasks/rules/member-checkpoint-chain';
-import {memberCheckpointView} from '../../../../../src/view/tasks/member-checkpoint-state';
 import {validateDispatchExecution} from '../../../../../src/logic/tasks/rules/dispatch-invariants';
 
 type Fixture=Awaited<ReturnType<typeof checkpointServiceFixture>>;
@@ -13,10 +12,10 @@ async function reserve(f:Fixture,commandId:string){const {state,graph,task}=awai
 async function run(f:Fixture,commandId:string){const {task}=await latest(f),receipt=await f.members.Resume({...f.identity,taskId:f.taskId,commandId,expectedRevision:task.revision,options:{permission:'execute'}},f.wait);await f.members.WaitForSettlement({...f.identity,taskId:f.taskId});return receipt}
 async function second(f:Fixture){await f.reserve();await f.resume();await f.members.WaitForSettlement({...f.identity,taskId:f.taskId});const result=await latest(f);expect(result.task.status,JSON.stringify({reason:result.task.waitReason,log:(await f.read(result.state.runs!.at(-1)!)).events.slice(-4)})).toBe('checkpointed');expect(result.task.checkpoints).toHaveLength(2);return result}
 
-it('两次检查点三段原任务，预约只消费一次且原历史重放完整；界面按段选择本段预约',async()=>{
+it('两次检查点三段原任务，预约只消费一次且原历史重放完整；后端保留各段预约',async()=>{
   const f=await checkpointServiceFixture({checkpointCount:2,paths:['checkpoint.txt','second.txt']});try{
     const first=await f.store.Read(),parked=await second(f);expect(parked.task.resumeHistory).toBeUndefined();expect(currentMemberResumeRequest(parked.task)).toBeUndefined();expect(parked.state.runs![0]).toEqual(first.runs![0]);
-    expect(memberCheckpointView(parked.task).phase).toBe('parked');expect(memberCheckpointView(parked.task,parked.task.runIds[0])).toMatchObject({phase:'resumed',segment:1,total:2,request:parked.task.resumeRequest});
+    expect(parked.task.status).toBe('checkpointed');expect(parked.task.runIds).toHaveLength(2);expect(memberResumeRequests(parked.task)).toEqual([parked.task.resumeRequest]);
     const reservations=await Promise.allSettled([reserve(f,'second-reservation'),reserve(f,'competing-reservation')]);expect(reservations.filter(r=>r.status==='fulfilled')).toHaveLength(1);
     const queued=await latest(f),requests=memberResumeRequests(queued.task);expect(requests).toHaveLength(2);expect(queued.task.resumeHistory).toEqual([parked.task.resumeRequest]);expect(queued.task.resumeRequest!.checkpointId).toBe(parked.task.checkpoints![1].checkpointId);
     const started=await run(f,'second-claim'),done=await latest(f);expect(f.starts).toBe(3);expect(done.task.status).toBe('result_ready');expect(done.task.result!.runId).toBe(started.runId);expect(done.task.runIds).toHaveLength(3);expect(done.task.checkpoints).toEqual(parked.task.checkpoints);expect(done.task.resumeHistory).toEqual(queued.task.resumeHistory);
@@ -53,7 +52,7 @@ it('多段重放拒绝删改早期检查点、预约、权限和信封，停止�
       (s:typeof state)=>{s.runs![0].permission='execute'},
       (s:typeof state)=>{s.outbox=s.outbox.filter(m=>m.messageId!==s.runs![0].assignmentMessageId)},
     ]){const damaged=structuredClone(state);mutate(damaged);expect(()=>validateDispatchExecution(state,damaged,{receipt:true},{commandId:'forged',fingerprint:'forged'})).toThrow()}
-    await f.service.CloseScope(f.identity,f.scopeId,'cancelled');const closed=await latest(f);expect(closed.task.status).toBe('cancelled');expect(closed.task.runIds).toEqual(parked.task.runIds);expect(closed.task.checkpoints).toEqual(parked.task.checkpoints);expect(memberCheckpointView(closed.task).phase).toBe('sealed');expect(memberCheckpointView(closed.task,closed.task.runIds[0]).phase).toBe('resumed');expect(f.starts).toBe(2);
+    await f.service.CloseScope(f.identity,f.scopeId,'cancelled');const closed=await latest(f);expect(closed.task.status).toBe('cancelled');expect(closed.task.runIds).toEqual(parked.task.runIds);expect(closed.task.checkpoints).toEqual(parked.task.checkpoints);expect(f.starts).toBe(2);
   }finally{await f.cleanup()}
 });
 
@@ -70,7 +69,6 @@ it.each([false,true])('多段明确放弃只处置最新预约=%s，已消费历
     const input={expectedGraphCursor:{streamId:graph.cursor.streamId,seq:graph.cursor.seq},expectedGoalRevision:2,taskId:task.taskId,expectedRevision:task.revision,expectedPlanRevision:task.planRevision,checkpointId:task.checkpoints!.at(-1)!.checkpointId,expectedResumeRequestId:request?.requestId??null,reason:'只放弃最新未消费段'};
     const receipt=await f.service.AbandonCheckpoint(f.identity,f.scopeId,f.mainRunId,'abandon-chain',input,()=>{}),after=await latest(f);
     expect(receipt.abandonment.resumeRequestId).toBe(request?.requestId??null);expect(after.state.runs).toEqual(state.runs);expect(after.task.checkpoints).toEqual(task.checkpoints);expect(memberResumeRequests(after.task)).toEqual(memberResumeRequests(task));expect(after.state.outbox.filter(m=>m.kind==='assignment').every(m=>m.delivery==='processed')).toBe(true);expect(f.starts).toBe(2);
-    expect(memberCheckpointView(after.task)).toMatchObject({phase:'abandoned',segment:2});expect(memberCheckpointView(after.task,task.runIds[0])).toMatchObject({phase:'resumed',abandonment:undefined,request:memberResumeRequests(task)[0]});
     const reader=new FileDispatchStore(f.directory,f.entry.id);try{expect(await reader.Read()).toEqual(after.state)}finally{await reader.Close()}
   }finally{await f.cleanup()}
 });

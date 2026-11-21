@@ -47,7 +47,7 @@ export class AgentRole
     if (!definition.id || !definition.name || !conversation.taskId || !conversation.workspaceId)
       throw Error('Agent 身份不完整');
 
-    this.definition = Object.freeze({ ...definition, references: Object.freeze([...(definition.references ?? [])]), effectiveSkills: Object.freeze((definition.effectiveSkills ?? []).map(skill => Object.freeze({ ...skill }))), ...(definition.model ? { model: Object.freeze({ ...definition.model }) } : {}) });
+    this.definition = Object.freeze({ ...definition, skills: Object.freeze((definition.skills ?? []).map(skill => Object.freeze({ ...skill }))), connectorIds: Object.freeze([...(definition.connectorIds ?? [])]), references: Object.freeze([...(definition.references ?? [])]), effectiveSkills: Object.freeze((definition.effectiveSkills ?? []).map(skill => Object.freeze({ ...skill }))), ...(definition.model ? { model: Object.freeze({ ...definition.model }) } : {}) });
 
     this.conversation = Object.freeze({ ...conversation });
   }

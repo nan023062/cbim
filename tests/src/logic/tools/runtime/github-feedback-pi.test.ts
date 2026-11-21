@@ -7,7 +7,6 @@ import {fixture} from '../../application/support/helpers';
 import {Application} from '../../../../../src/bridge/server/application';
 import {Paths} from '../../../../../src/logic/workspace/service/paths';
 import {knowledgeContractResult} from './support/knowledge-contract-provider';
-import {transcript} from '../../../../../src/view/execution-view/transcript';
 import type {RunSummary} from '../../../../../src/logic/execution/rules/types';
 
 it.each(['ask','read','unconnected'] as const)('real Pi main invokes feedback Skill and guarded submission (%s)',async mode=>{
@@ -59,8 +58,8 @@ it.each(['ask','read','unconnected'] as const)('real Pi main invokes feedback Sk
     if(mode==='ask'){
       expect(String((issues[0] as any).body).match(/用户未提供/g)).toHaveLength(4);expect(await app.Dispatch('loop.questions',{id:entry.id,taskId:started.taskId})).toEqual([]);
       expect(receipts).toHaveLength(2);for(const receipt of receipts)expect(receipt).toMatchObject({outcome:'succeeded',effects:['external-write'],scope:{kind:'github-feedback',workspaceId:entry.id,owner:'owner',repo:'repo',repositoryId:2}});
-      expect(transcript(summary).some(item=>item.kind==='assistant'&&item.text.includes('FEEDBACK_SUBMITTED_NOT_IMPLEMENTED'))).toBe(true);
-    }else if(mode==='read'){expect(receipts[0].outcome).toBe('denied');expect(transcript(summary).some(item=>item.text==='当前只读，尚未提交')).toBe(true)}else expect(receipts).toEqual([]);
+      expect(summary.events.some(item=>item.type==='message'&&String(item.data.text).includes('FEEDBACK_SUBMITTED_NOT_IMPLEMENTED'))).toBe(true);
+    }else if(mode==='read'){expect(receipts[0].outcome).toBe('denied');expect(summary.events.some(item=>item.type==='message'&&item.data.text==='当前只读，尚未提交')).toBe(true)}else expect(receipts).toEqual([]);
     expect((await workspace.Snapshot()).files).toEqual(before.files);expect((await app.Dispatch('dispatch.graphSnapshot',{identity:{workspaceId:entry.id,rootSessionId:started.taskId}})).tasks).toEqual([]);
   }finally{vi.restoreAllMocks();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));await app.Shutdown();await f.cleanup()}
 },60000);

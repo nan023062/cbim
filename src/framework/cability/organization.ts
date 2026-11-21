@@ -5,9 +5,15 @@ import { Team, type TeamMember, type TeamDescription } from './team';
 
 import { AgentTokenUsage, type AgentChange, type AgentRole } from './agent';
 
+/** Office 统一管理的执行权限；实例及引擎读取当前值，不保存独立副本。 */
+export type AgentPermission = 'read' | 'ask' | 'execute';
+
 /** 一个运行身份持有一个已启动的引擎。 */
 export interface Agent<Engine>
 {
+  /** 所属 Office 当前的执行权限。 */
+  readonly permission: AgentPermission;
+
   readonly Subscribe: AgentTokenUsage['Subscribe'];
 
   readonly id: string;
@@ -24,12 +30,30 @@ export interface AgentEngineFactory<Parameters, Engine>
 {
   readonly parameters: Parameters;
 
-  CreateEngine(parameters: Parameters, id: string, role: AgentRole, report: ReturnType<AgentTokenUsage["Begin"]>): Promise<{ session: Engine; Close(): Promise<void> }>;
+  CreateEngine(parameters: Parameters, id: string, role: AgentRole, report: ReturnType<AgentTokenUsage["Begin"]>, ReadPermission: () => AgentPermission): Promise<{ session: Engine; Close(): Promise<void> }>;
 }
 
 /** Owns agent instances, engine lifecycles and events for one Office. */
 export class AgentInstances
 {
+  /** 仅由拥有这些实例的 Office 绑定权限来源。 */
+  private _readPermission?: () => AgentPermission;
+
+  /** 单个实例集合不能归属两个 Office，避免跨办公室共享授权。 */
+  public BindPermission(ReadPermission: () => AgentPermission): void
+  {
+    if (this._readPermission)
+      throw new Error('Agent 实例已绑定 Office 权限');
+
+    this._readPermission = ReadPermission;
+  }
+
+  /** 未装配 Office 的独立实例默认只读，不能自行获得执行授权。 */
+  private ReadPermission(): AgentPermission
+  {
+    return this._readPermission?.() ?? 'read';
+  }
+
   private readonly changes = changeEvents<
     {
       type: AgentChange | 'allocated' | 'engine-ready' | 'cleared';
@@ -112,7 +136,14 @@ export class AgentInstances
 
     const current = () => { if (!running) throw new Error('Agent 当前没有运行中的任务'); return running; };
 
+    const readPermission = () => this.ReadPermission();
+
     const instance = Object.freeze({
+      get permission()
+      {
+        return readPermission();
+      },
+
       id,
 
       usage,
@@ -150,7 +181,9 @@ export class AgentInstances
 
     const report = usage.Begin();
 
-    const ready = Promise.resolve().then(() => factory.CreateEngine(factory.parameters, id, role, report)).then(resource => ({ agent: Object.freeze({ id, engineInstanceId: crypto.randomUUID(), role, usage, Subscribe: usage.Subscribe, engine: resource.session }), Close: () => resource.Close() }));
+    const readPermission = () => this.ReadPermission();
+
+    const ready = Promise.resolve().then(() => factory.CreateEngine(factory.parameters, id, role, report, readPermission)).then(resource => ({ agent: Object.freeze({ id, engineInstanceId: crypto.randomUUID(), role, usage, Subscribe: usage.Subscribe, engine: resource.session, get permission() { return readPermission(); } }), Close: () => resource.Close() }));
 
     this._instances.set(id, { ready, usage, Unsubscribe: unsubscribe });
 
@@ -219,7 +252,7 @@ export class Organization extends AgentInstances
       seen.add(node.id);
 
       if (node.kind === 'team')
-        return new Team(node.id, node.children.map(build));
+        return new Team(node.id, node.children.map(build), node.name, node.position);
 
       if (assignedAgents.has(node.agentId))
         throw new Error('同一办公室的 Agent 只能绑定一个 Worker');

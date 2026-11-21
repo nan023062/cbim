@@ -1,5 +1,32 @@
+/** 岗位与主会话采用同一种能力配置；账号凭据和执行授权不属于此数据。 */
+export interface AgentConfiguration
+{
+  model?:
+  {
+    engine: string;
+
+    profileId: string;
+
+    modelId: string
+  };
+
+  skills?: readonly
+  {
+    id: string;
+
+    name: string;
+
+    content: string
+  }[];
+
+  connectorIds?: readonly string[];
+}
+
 export interface TeamDescription
 {
+  readonly name?: string;
+
+  readonly position?: string;
   readonly id: string;
 
   readonly kind: 'team';
@@ -8,7 +35,7 @@ export interface TeamDescription
 }
 
 /** 办公室按工作区岗位登记构造组织视图；同一角色可在不同团队任职。 */
-export interface TeamMember
+export interface TeamMember extends AgentConfiguration
 {
   id: string;
 
@@ -20,14 +47,7 @@ export interface TeamMember
 
   position: string;
 
-  model:
-  {
-    engine: string;
-
-    profileId: string;
-
-    modelId: string
-  };
+  model: NonNullable<AgentConfiguration['model']>;
 
   available: boolean;
 
@@ -41,11 +61,8 @@ export class Team
 
   public readonly children: readonly (Team | TeamMember)[];
 
-  public constructor(public readonly id: string, children: readonly (Team | TeamMember)[])
+  public constructor(public readonly id: string, children: readonly (Team | TeamMember)[], public readonly name?: string, public readonly position?: string)
   {
-    if (!children.length)
-      throw new Error('团队至少需要一个子节点');
-
     this.children = Object.freeze(children.map(child => child.kind === 'team' ? child : Object.freeze({ ...child, model: Object.freeze({ ...child.model }) })));
 
     Object.freeze(this);

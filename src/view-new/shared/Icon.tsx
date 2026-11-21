@@ -6,6 +6,21 @@
 import React from 'react';
 
 const paths: Record<string, React.ReactNode> = {
+  pin: <path d="m9 3 6 0-1 6 4 4v2H6v-2l4-4-1-6ZM12 15v7" />,
+  archive: <><rect x="3" y="3" width="18" height="5" rx="1" /><path d="M5 8v13h14V8M9 12h6" /></>,
+  chevronDown: <path d="m5 9 7 7 7-7" />,
+  chevronRight: <path d="m9 5 7 7-7 7" />,
+  up: <path d="M12 21V3m-7 7 7-7 7 7" />,
+  down: <path d="M12 3v18m-7-7 7 7 7-7" />,
+  database: <><ellipse cx="12" cy="5" rx="9" ry="3" /><path d="M3 5v14c0 4 18 4 18 0V5M3 12c0 4 18 4 18 0" /></>,
+  table: <><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 9h18M3 15h18M9 9v12" /></>,
+  field: <><rect x="3" y="7" width="18" height="10" rx="2" /><path d="M9 7v10M13 12h4" /></>,
+  folderAdd: <><path d="M3 20V4h6l3 3h9v6M3 10h18M17 15v8M13 19h8" /></>,
+  tableAdd: <><path d="M11 21H3V3h18v8M3 9h18M9 9v12M17 13v8M13 17h8" /></>,
+  fieldAdd: <><path d="M10 17H3V7h18v3M9 7v10M17 13v8M13 17h8" /></>,
+  back: <path d="m10 5-7 7 7 7M3 12h18" />,
+  personAdd: <><circle cx="9" cy="7" r="3" /><path d="M3 21v-3a6 6 0 0 1 12 0v3M19 8v8M15 12h8" /></>,
+  teamAdd: <><circle cx="8" cy="7" r="3" /><path d="M2 21v-3a6 6 0 0 1 12 0v3M15 4a3 3 0 0 1 0 6M19 13v8M15 17h8" /></>,
   grip: <><circle cx="8" cy="5" r="1" /><circle cx="16" cy="5" r="1" /><circle cx="8" cy="12" r="1" /><circle cx="16" cy="12" r="1" /><circle cx="8" cy="19" r="1" /><circle cx="16" cy="19" r="1" /></>,
   running: <><circle cx="12" cy="12" r="9" /><path d="m10 8 6 4-6 4Z" /></>,
   queued: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,

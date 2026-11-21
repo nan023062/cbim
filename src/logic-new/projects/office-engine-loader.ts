@@ -14,14 +14,24 @@ import type { EngineRuntimePackage } from '../execution/rules/engine-runtime';
 
 import { engineDescriptor, loopEngineSchema } from '../engines';
 
+import type { AgentPermission } from '../../framework/cability/organization';
+
+import type { OfficeToolCall } from './office-operations';
+
 interface ChatTools
 {
-  list(): Promise<readonly never[]>;
-  call(): Promise<never>;
+  list(): Promise<{ name: string; description: string; inputSchema: Record<string, unknown> }[]>;
+  call(name: string, input: Record<string, unknown>, signal: AbortSignal, id?: string): Promise<unknown>;
 }
 
 interface OfficeEngineOptions
 {
+  /** 权限由 Office 提供，工具授权时读取当前值。 */
+  ReadPermission(): AgentPermission;
+
+  /** 启动时的工具能力提示；不替代调用时授权。 */
+  allowNativeExecution: boolean;
+
   runtime: EngineRuntimePackage;
   llm: ResolvedEngineModel;
   provider: string;
@@ -38,7 +48,7 @@ interface OfficeEngineContext
   task: { taskId: string; workspaceId: string; mode: 'chat'; root: string; goal: string; acceptance: string[]; moduleIds: string[] };
   engineHandoff?: string;
   capabilities: { id: string; tools: ChatTools; disableNativeTools: boolean }[];
-  beforeTool(call: { id: string; name: string; input?: unknown }): Promise<{ allow: boolean; reason: string }>;
+  beforeTool(call: OfficeToolCall): Promise<{ allow: boolean; reason?: string }>;
   emit(event: { type: string; data: Record<string, unknown> }): Promise<void>;
 }
 
@@ -62,5 +72,10 @@ export function packagedEngineAdapter(id: string, runtime: EngineRuntimePackage)
       engineAdapter?: unknown
     };
 
-  return checkedEngineAdapter<OfficeEngineOptions, AgentEngine<OfficeEngineContext, never>>(loaded.engineAdapter, { id, version: descriptor.version, descriptor: engineDescriptor(loopEngineSchema.parse(id)) });
+  const adapter = checkedEngineAdapter<OfficeEngineOptions, AgentEngine<OfficeEngineContext, never>>(loaded.engineAdapter, { id, version: descriptor.version, descriptor: engineDescriptor(loopEngineSchema.parse(id)) });
+
+  if (adapter.supportsBeforeToolCall !== true)
+    throw Error('该引擎未声明逐次工具审批能力，不能用于 Office 执行');
+
+  return adapter;
 }

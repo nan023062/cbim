@@ -6,7 +6,6 @@ import os from 'node:os';
 import path from 'node:path';
 import {LoopRuntime,checkedRunInputSource,type AgentEngine,type EngineContext,type TaskSpec,type RunInputSource} from '../../../../src/logic/execution/rules/index';
 import {FileRunStorage} from '../../../../src/logic/execution/storage/run-storage';
-import {transcript} from '../../../../src/view/execution-view/transcript';
 import {openBridge} from '../../../../src/engine-plugins/pi/bridge';
 
 const source=():Extract<RunInputSource,{kind:'member-results'}>=>({kind:'member-results',continuationId:'batch-one',messageIds:['result-one'],taskIds:['member-task']});

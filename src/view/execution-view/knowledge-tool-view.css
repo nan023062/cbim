@@ -1,6 +1,0 @@
-/** 本视图样式负责原有布局；普通文字改用共享排版令牌，避免容器之间出现不同阅读字号。 */
-/* 知识校验属于可修正的诊断，提交回执只表达知识事务完成。 */
-.chat-tool.validation-warning>summary,.knowledge-validation{color:var(--warning)}
-.knowledge-validation ul{padding-left:20px}.knowledge-validation li{margin:8px 0;white-space:pre-wrap;overflow-wrap:anywhere}
-.knowledge-commit{font-size:var(--font-ui);overflow-wrap:anywhere}.knowledge-commit strong{color:var(--success)}
-.tool-observation-controls>summary{color:var(--muted)}

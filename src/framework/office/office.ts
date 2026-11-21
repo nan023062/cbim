@@ -7,7 +7,7 @@ import { Workstation } from './workstation';
 
 import { OfficeTaskManager, type OfficeTask } from './task-manager';
 
-import type { AgentInstances, AgentEngineFactory, Organization } from '../cability/organization';
+import type { AgentInstances, AgentEngineFactory, AgentPermission, Organization } from '../cability/organization';
 
 import { AgentRole } from '../cability/agent';
 
@@ -83,7 +83,22 @@ export class Office
 
   private readonly detachAgents: () => void;
 
-  public permission: 'read' | 'ask' | 'execute' = 'ask';
+  /** 本 Office 所有 Agent 共用的权限事实。 */
+  private _permission: AgentPermission = 'ask';
+
+  /** 主 Agent、已运行和后续分配的成员均读取此值。 */
+  public get permission(): AgentPermission
+  {
+    return this._permission;
+  }
+
+  public set permission(value: AgentPermission)
+  {
+    if (!['read', 'ask', 'execute'].includes(value))
+      throw new Error('无效的 Office 权限');
+
+    this._permission = value;
+  }
 
   public readonly id = crypto.randomUUID();
 
@@ -122,12 +137,14 @@ export class Office
 
   private detachTaskEvents?: () => void;
 
-  public async OpenMainAgent<P, E>(factory: AgentEngineFactory<P, E>, bind?: (engine: E, commands: MainTaskCommands) => (event: OfficeTask) => void | Promise<void>)
+  public async OpenMainAgent<P, E>(factory: AgentEngineFactory<P, E>, bind?: (engine: E, commands: MainTaskCommands) => (event: OfficeTask) => void | Promise<void>, configuration?: import('../cability/team').AgentConfiguration)
   {
     if (this.stopping)
       throw new Error('办公室已关闭');
 
-    const { engine } = await this.principal.Open(this.mainRole, factory);
+    const role = configuration ? new AgentRole({ ...this.mainRole.definition, ...configuration }, this.mainRole.conversation) : this.mainRole;
+
+    const { engine } = await this.principal.Open(role, factory);
 
     if (this.stopping)
       throw Error('Office closed during startup');
@@ -207,6 +224,8 @@ export class Office
 
   public constructor(public readonly workspaceId: string, public readonly rootSessionId: string, public readonly organization: Organization, private readonly _worktrees?: WorkspaceInstanceFactory, public readonly project = new Project({ nodes: {}, roots: [] }), private readonly agents: AgentInstances = organization)
   {
+    this.agents.BindPermission(() => this.permission);
+
     this._members = new OfficeMembers(organization, agents);
 
     this.tasks.Subscribe(task => { if (!this.closed) this.changes.Emit({ type: 'task', task }); });

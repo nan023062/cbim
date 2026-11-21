@@ -8,7 +8,7 @@
 
 [引擎无关执行内核](src/logic/execution/rules/ARCHITECTURE.md)通过注入的存储端口管理执行事件、中断与显式恢复；[具体引擎](src/engine-plugins/ARCHITECTURE.md)由调度装配接入。桌面主对话经调度引擎派发正式业务任务，执行结束不等于业务验收通过。开发运行要求 Node.js 22.19+。
 
-界面采用工作区侧栏与主会话区：中间切换对话与办公室视图，右侧扩展区承载团队架构、业务架构、浏览器与终端。详见 [工作区界面](src/view/ARCHITECTURE.md)。
+界面采用工作区侧栏与主会话区：主区域承载 Office 对话、组织架构、业务架构和数据架构。详见 [工作区界面](src/view-new/ARCHITECTURE.md)。
 
 **CBIM 是本地／多端的 AI Native 工作流工具，当前面向单人使用。** 用户组织 Agent 在具有业务架构、岗位责任和知识的工作区中执行任务与交接；不建设独立账号、多人邀请、在线状态或协作服务。工程团队协作未来通过插件和连接器接入 P4、Git、飞书等工具，多端定位不代表已实现完整同步或远程能力。
 
@@ -85,7 +85,7 @@ pnpm start
 | `src/logic/application/` | 唯一业务应用生命周期及装配 |
 | `src/bridge/server/` | 桌面入口、冷启动、IPC、CLI 与平台传输 |
 | `src/bridge/contracts/`、`src/bridge/preload/` | 公开通信契约及受限安全桥 |
-| `src/view/` | React 页面、控制器、hooks 和视图专属适配 |
+| `src/view-new/` | 当前桌面入口、Office 页面与共享展示组件 |
 | `ainative/docs/` | 01–04 概念设计、05 代码阅读设计及编码规范与 06 架构设计原则和工程结构规范 |
 | `design/` | 产品目标、核心取舍、未落地设计和原型 |
 | `assets/` | 实际使用的品牌图像与生成摘要；运行规范由各业务源码模块维护 |
@@ -103,7 +103,7 @@ pnpm start
 - [任务规则设计](src/logic/tasks/rules/ARCHITECTURE.md)
 - [调度与成员执行](src/logic/ARCHITECTURE.md)
 - [运行统计与准入](src/logic/runtime/rules/ARCHITECTURE.md#contract)
-- [桌面视图与交互](src/view/ARCHITECTURE.md)
+- [桌面视图与交互](src/view-new/ARCHITECTURE.md)
 - 开发事实、验证证据与限制：查 Git 提交说明及关联 Issue／PR；已退出的资料保留在 Git 历史中。
 
 正式知识仅存于 `<项目根>/.cbim/`；登记和本机项目历史存于 `<用户主目录>/.cbim/`。新应用不创建项目内 `.cbim.local/`。测试全部使用隔离用户目录。

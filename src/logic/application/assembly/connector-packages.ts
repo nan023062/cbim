@@ -3,7 +3,7 @@ import { createRequire } from 'node:module';
 
 import path from 'node:path';
 
-import { ConnectorRuntime, type ConnectorTaskContext } from '../../../framework/connectors';
+import { ConnectorRuntime, ConnectorService, type ConnectorTaskContext } from '../../../framework/connectors';
 
 import type { RunToolDescriptor } from '../../tools/rules/policy/tool-policy';
 
@@ -116,4 +116,43 @@ export function managedConnectorPackages(file: string, artifacts: EngineArtifact
       }
     }
   };
+}
+
+/** 主 Agent 和 Worker 按各自的显式选择取得同一套受管连接器会话。 */
+export async function openAgentConnectors(packages: Pick<ReturnType<typeof managedConnectorPackages>, 'Open'>, ids: readonly string[], context: ConnectorTaskContext, signal: AbortSignal)
+{
+  // 父成员可能正在持有同一个独占工具，等待有界，避免嵌套派发永久互锁。
+  const waiting = new AbortController();
+
+  const timeout = setTimeout(() => waiting.abort(Error('连接器仍被其他任务占用，请释放后重试')), 15000);
+
+  const stop = AbortSignal.any([signal, waiting.signal]);
+
+  const leases: Awaited<ReturnType<typeof packages.Open>>[] = [];
+
+  const Release = async () => { const results = await Promise.allSettled(leases.map(lease => lease.Release())); const failures = results.filter(result => result.status === 'rejected').map(result => result.reason); if (failures.length) throw new AggregateError(failures, '连接器释放失败'); };
+
+  try
+  {
+    for (const id of [...new Set(ids)].sort())
+      leases.push(await packages.Open(id, context, stop));
+
+    const service = new ConnectorService(leases.flatMap(lease => lease.sessions));
+
+    for (const tool of service.List())
+      if (!/^cbim_connector_[A-Za-z0-9_]+$/.test(tool.name))
+        throw Error('连接器工具名称无效：' + tool.name);
+
+    return { service, Release };
+  }
+  catch (error)
+  {
+    await Release();
+
+    throw error;
+  }
+  finally
+  {
+    clearTimeout(timeout);
+  }
 }

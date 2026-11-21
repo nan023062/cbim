@@ -5,7 +5,6 @@ import path from 'node:path';
 import http from 'node:http';
 import {fixture} from '../../application/support/helpers';
 import {ChatInputs} from '../../../../../src/logic/materials/service/chat-inputs';
-import {transcript} from '../../../../../src/view/execution-view/transcript';
 
 it.each(['message','images'] as const)('recursive conversation %s validates every saved attachment before sending',async method=>{
  const f=await fixture();try{

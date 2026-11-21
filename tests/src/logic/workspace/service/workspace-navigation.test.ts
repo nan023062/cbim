@@ -1,6 +1,5 @@
 // logic/workspace/service: module-owned integration coverage; keep the original scenario and cleanup semantics.
 import {test,expect} from 'vitest';
-import {initialLayout,mergeConversations} from '../../../../../src/view/shell/tabs';
 import {fixture} from '../../application/support/helpers';
 import fs from 'node:fs/promises';
 test('project rename is persistent display-only, removal does not remove project files',async()=>{

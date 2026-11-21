@@ -7,6 +7,12 @@ import { createApplicationMonitor } from '../monitor';
 
 import { ProjectList } from '../projects/project';
 
+import { DataArchitecture } from '../projects/data-architecture';
+
+import { ProjectNavigation } from '../projects/navigation';
+
+import { OfficeQueue } from '../projects/office-queue';
+
 import { ProjectOffices, type OfficeChat } from '../projects/offices';
 
 import { Paths } from '../projects/paths';
@@ -36,7 +42,14 @@ export class Application implements ApplicationEntry
 
   public readonly projects: ProjectList;
 
+  /** 项目数据结构目录，与执行中的业务树分别拥有状态。 */
+  public readonly dataArchitecture: DataArchitecture;
+
   public readonly offices: ProjectOffices;
+
+  public readonly officeQueue: OfficeQueue;
+
+  public readonly navigation: ProjectNavigation;
 
   public readonly discovery: ResourceManagement;
 
@@ -46,9 +59,15 @@ export class Application implements ApplicationEntry
 
     this.projects = new ProjectList(new Paths(paths.userRoot, paths.installRoot, paths.protectedRoots));
 
+    this.dataArchitecture = new DataArchitecture(this.projects);
+
     this.monitor = createApplicationMonitor(this.projects);
 
     this.offices = new ProjectOffices(this.projects, chat);
+
+    this.officeQueue = new OfficeQueue(this.projects, this.offices);
+
+    this.navigation = new ProjectNavigation(this.projects, this.officeQueue);
 
     this.discovery = new ResourceManagement(this.resources, plugins);
   }
@@ -72,6 +91,8 @@ export class Application implements ApplicationEntry
 
     try
     {
+      await this.officeQueue.Close();
+
       await this.projects.Close();
     }
     finally

@@ -10,7 +10,6 @@ import {DispatchTools} from '../../../../../src/logic/tools/runtime/dispatch-too
 import {mainToolCommandId} from '../../../../../src/logic/tools/runtime/main-tool-contracts';
 import {restoreMainCommand} from '../../../../../src/logic/tasks/runtime/main-command-request';
 import {projectCommandReceipt} from '../../../../../src/logic/tasks/rules/command-verification-output';
-import {memberDependencyRevisionHistory} from '../../../../../src/view/tasks/member-dependency-state';
 import {MemberExecutionManager,type PreparedEngine} from '../../../../../src/logic/team/runtime/member-execution';
 import {LoopRuntime} from '../../../../../src/logic/execution/rules/runtime/runtime';
 import {FileRunStorage} from '../../../../../src/logic/execution/storage/run-storage';
@@ -30,7 +29,6 @@ it('真实Store原子退役一条/新增两条，保留身份信封；同命令�
   const spy=vi.spyOn(f.workspace,'Snapshot');expect(await f.revise()).toEqual(receipt);expect(spy).not.toHaveBeenCalled();spy.mockRestore();
   await expect(f.revise('revise-one',{...f.input,reason:'different'})).rejects.toMatchObject({code:'COMMAND_ID_CONFLICT'});
   const reader=new FileDispatchStore(f.directory,f.entry.id);try{expect(await reader.Read()).toEqual(after)}finally{await reader.Close()}
-  expect(memberDependencyRevisionHistory(target)).toEqual({records:[receipt.revision],invalid:false});expect(memberDependencyRevisionHistory({...target,dependencyRevisions:[{...receipt.revision,scopeId:'other'}]}).invalid).toBe(true);
  }finally{await f.cleanup()}
 });
 
@@ -42,7 +40,7 @@ it('后续删除新增边保留全部历史，最后一条删除才排队，退�
    last=await f.revise('delete-'+i,{...f.input,expectedGraphCursor:{streamId:graph.cursor.streamId,seq:graph.cursor.seq},target:{taskId:target.taskId,expectedRevision:target.revision,expectedPlanRevision:target.planRevision},remove:[{edgeId:edge.edgeId,expectedRevision:1}],add:[]});
    expect(last.status).toBe(i===0?'waiting':'queued');
   }
-  const graph=await f.service.Snapshot(f.identity),target=graph.tasks.find(t=>t.taskId===f.target.taskId)!;expect(target.dependencyRevisions).toHaveLength(3);expect(memberDependencyRevisionHistory(target).invalid).toBe(false);
+  const graph=await f.service.Snapshot(f.identity),target=graph.tasks.find(t=>t.taskId===f.target.taskId)!;expect(target.dependencyRevisions).toHaveLength(3);
   const old=graph.edges.find(e=>e.edgeId===f.edge.edgeId)!;await expect(f.store.Transact({commandId:'resurrect',fingerprint:'resurrect'},async()=>({batch:{version:1,identity:f.identity,streamId:graph.cursor.streamId,seq:graph.cursor.seq+1,eventId:'resurrect',commandId:'resurrect',cause:'dependency.changed',committedAt:new Date().toISOString(),changes:[{type:'edge.upserted',edge:{...old,revision:old.revision+1,enabled:true}}]},receipt:true}))).rejects.toMatchObject({code:'GRAPH_INPUT_INVALID'});
   const reader=new FileDispatchStore(f.directory,f.entry.id);try{expect((await reader.Read()).graphs[0]).toEqual(graph)}finally{await reader.Close()}
  }finally{await f.cleanup()}
@@ -64,7 +62,7 @@ it('通用Store拒绝绕过审计、漏闭包、伪结果、改计划和夹带�
   const original=f.store.Transact.bind(f.store);let command!:DispatchCommand,mutation!:DispatchMutation;
   const spy=vi.spyOn(f.store,'Transact').mockImplementation(async(cmd,prepare)=>{command=cmd;mutation=await prepare(await f.store.Read());throw Error('capture')});
   await expect(f.revise()).rejects.toThrow('capture');spy.mockRestore();const before=await f.store.Read(),bytes=await fs.readFile(path.join(f.directory,'dispatch.jsonl'));
-  const edits:Array<(m:DispatchMutation)=>void>=[m=>{delete taskChange(m).dependencyRevisions},m=>{taskChange(m).dependencyRevisions![0].trackedTaskIds.pop()},m=>{taskChange(m).dependencyRevisions![0].knowledgeRevision='old'},m=>{taskChange(m).dependencyRevisions![0].mainRunId='fake'},m=>{taskChange(m).goal='changed';taskChange(m).planRevision++},m=>{m.members![0].leaseEpoch++},m=>{m.messages=[before.outbox[0]]},m=>{m.batch!.cause='task.created'},m=>{m.receipt={}},m=>{const e=m.batch!.changes.find(c=>c.type==='edge.upserted'&&c.edge.enabled);if(e?.type==='edge.upserted'&&e.edge.kind==='dependency')e.edge.condition.resultId='fake'},m=>{taskChange(m).dependencyRevisions![0].removed[0].sourceTaskRevision++}];
+  const edits:Array<(m:DispatchMutation)=>void>=[m=>{taskChange(m).dependencyRevisions![0].scopeId='other'},m=>{delete taskChange(m).dependencyRevisions},m=>{taskChange(m).dependencyRevisions![0].trackedTaskIds.pop()},m=>{taskChange(m).dependencyRevisions![0].knowledgeRevision='old'},m=>{taskChange(m).dependencyRevisions![0].mainRunId='fake'},m=>{taskChange(m).goal='changed';taskChange(m).planRevision++},m=>{m.members![0].leaseEpoch++},m=>{m.messages=[before.outbox[0]]},m=>{m.batch!.cause='task.created'},m=>{m.receipt={}},m=>{const e=m.batch!.changes.find(c=>c.type==='edge.upserted'&&c.edge.enabled);if(e?.type==='edge.upserted'&&e.edge.kind==='dependency')e.edge.condition.resultId='fake'},m=>{taskChange(m).dependencyRevisions![0].removed[0].sourceTaskRevision++}];
   for(const edit of edits){const bad=structuredClone(mutation);edit(bad);await expect(original(command,async()=>bad)).rejects.toThrow();expect(await f.store.Read()).toEqual(before);expect(await fs.readFile(path.join(f.directory,'dispatch.jsonl'))).toEqual(bytes)}
   expect(await original(command,async()=>mutation)).toMatchObject({taskId:f.target.taskId,status:'waiting'});
  }finally{await f.cleanup()}

@@ -7,7 +7,6 @@ import {fixture} from '../../application/support/helpers';
 import {Application} from '../../../../../src/bridge/server/application';
 import {Paths} from '../../../../../src/logic/workspace/service/paths';
 import {knowledgeContractResult} from './support/knowledge-contract-provider';
-import {transcript} from '../../../../../src/view/execution-view/transcript';
 import type {RunSummary} from '../../../../../src/logic/execution/rules/types';
 
 it.each(['bug','wish'] as const)('refreshes both feedback tools after login when resuming an empty-project conversation (%s)',async kind=>{
@@ -73,7 +72,7 @@ it.each(['bug','wish'] as const)('refreshes both feedback tools after login when
     expect(issues).toHaveLength(1);expect(submitted.toolReceipts?.filter(r=>r.toolName.startsWith('cbim_feedback_')).map(r=>r.outcome)).toEqual(['succeeded','succeeded','succeeded']);
     const manifest=submitted.events.find(event=>event.type==='engine.status'&&event.data.metric==='tool-catalog'&&event.data.stage==='active');
     expect(manifest?.data.missing).toEqual([]);expect(manifest?.data.active).toEqual(expect.arrayContaining(['cbim_feedback_status','cbim_feedback_submit','cbim_feedback_receipt']));
-    expect(transcript(submitted).some(item=>item.kind==='assistant'&&item.text==='Feedback submitted once; the original receipt is available.')).toBe(true);
+    expect(submitted.events.some(item=>item.type==='message'&&item.data.text==='Feedback submitted once; the original receipt is available.')).toBe(true);
     await app.Dispatch('github.feedback.disconnect');phase='disconnected';step=0;
     const third=await app.Dispatch('loop.resume',{id:entry.id,taskId:first.taskId,runId:second.runId,message:'Check feedback availability after disconnecting.',options});await wait(third);
     expect(issues).toHaveLength(1);expect((await workspace.Snapshot()).files).toEqual(before.files);

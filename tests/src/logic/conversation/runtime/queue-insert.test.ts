@@ -3,7 +3,6 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import http from 'node:http';
 import {fixture} from '../../application/support/helpers';
-import {transcript} from '../../../../../src/view/execution-view/transcript';
 import {PiRpc} from '../../../../../src/engine-plugins/pi/rpc';
 import {usageScopes} from '../../budget/runtime/support/scope-usage-fixture';
 
@@ -25,7 +24,7 @@ it('real Pi accepts queued steering without aborting the active request or losin
  expect(result.status,JSON.stringify(result.events.at(-1))).toBe('completed');
  expect(result.events.some(e=>e.type==='tool.finished'&&e.data.id==='original-read')).toBe(true);
  expect(JSON.stringify(bodies.at(-1))).toContain('INSERTED_USER_INSTRUCTION');expect(bodies.at(-1).tools.some((t:any)=>t.function.name==='write')).toBe(false);
- expect(transcript(result).some(x=>x.kind==='user'&&x.text==='INSERTED_USER_INSTRUCTION')).toBe(true);
+ expect(result.events.some(x=>x.type==='engine.status'&&x.data.metric==='insertion'&&x.data.state==='accepted'&&x.data.message==='INSERTED_USER_INSTRUCTION')).toBe(true);
  // 已接受的原 run/queue 返回持久事实，即使原运行已结束，也不重新发送或重复登记目标输入。
  await vi.waitFor(async()=>expect((await usageScopes(f.user,entry.id))[0].status).toBe('closed'));
  const scopes=await usageScopes(f.user,entry.id),canonicalPath=path.join(f.user,entry.id,'loop-engine','tasks',run.taskId,run.runId,'events.jsonl'),canonical=await fs.readFile(canonicalPath,'utf8'),native=await fs.readFile(result.sessionFile!,'utf8'),count=bodies.length;

@@ -8,6 +8,7 @@ import type { TeamMember, TeamDescription } from '../../framework/cability/team'
 import type { Workspace } from '../../framework/business';
 
 import { readArchitectureFiles } from '../../resource/project-architecture';
+import { agentConfigurationSchema } from './agent-configuration';
 
 export async function readProjectResources(projectId: string, root: string): Promise<ProjectResources>
 {
@@ -46,9 +47,17 @@ export async function readProjectResources(projectId: string, root: string): Pro
     if (id === '.cbim/team' || typeof role.summary !== 'string')
       throw Error('无效的角色定义 ' + id);
 
+    const model = role.model;
+
+    if (model !== undefined && (!model || typeof model !== 'object' || !['engine', 'profileId', 'modelId'].every(key => typeof model[key] === 'string' && model[key].trim())))
+      throw Error('岗位模型配置不完整 ' + id);
+
+    const configuration = agentConfigurationSchema.parse({ model, skills: role.skills, connectorIds: role.connectorIds });
+
     group(path.posix.dirname(id)).push({
+      ...configuration,
       kind: 'agent', id, agentId: id, name: role.name ?? path.posix.basename(id), position: role.summary,
-      model: { engine: '', profileId: '', modelId: '' }, available: false, reason: '岗位尚未绑定执行配置',
+      model: model ? { engine: model.engine, profileId: model.profileId, modelId: model.modelId } : { engine: '', profileId: '', modelId: '' }, available: !!model, ...(!model && { reason: '岗位尚未绑定执行配置' }),
     });
   }
 

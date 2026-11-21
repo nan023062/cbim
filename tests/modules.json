@@ -1,6 +1,44 @@
 {
   "version": 1,
   "modules": {
+    "logic-new/projects": {
+      "directory": "src/logic-new/projects",
+      "roots": [
+        "src/logic-new/projects/"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [
+          "tests/src/logic-new/projects/office-workspace-tree.test.ts",
+          "tests/src/logic-new/projects/office-engine-loader.test.ts"
+        ],
+        "integration": [
+          "tests/src/logic-new/projects/office-dispatch.test.ts",
+          "tests/src/logic-new/projects/agent-settings.test.ts",
+          "tests/src/logic-new/projects/organization-directory.test.ts",
+          "tests/src/logic-new/projects/data-architecture.test.ts",
+          "tests/src/logic-new/projects/architecture-live.test.ts",
+          "tests/src/logic-new/projects/office-queue.test.ts",
+          "tests/src/logic-new/projects/navigation.test.ts"
+        ]
+      }
+    },
+    "bridge/server/desktop": {
+      "directory": "src/bridge/server/desktop",
+      "roots": [
+        "src/bridge/server/desktop/"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [
+          "tests/src/bridge/server/desktop/office-permission.test.ts"
+        ],
+        "integration": [
+          "tests/src/bridge/server/desktop/office-tools.test.ts",
+          "tests/src/bridge/server/desktop/office-inputs.test.ts"
+        ]
+      }
+    },
     "logic/budget/rules": {
       "roots": [
         "src/logic/budget/rules/"
@@ -887,265 +925,6 @@
       },
       "directory": "src/bridge/preload"
     },
-    "view/components": {
-      "roots": [
-        "src/view/components/"
-      ],
-      "tests": {
-        "unit": [
-          "tests/src/view/components/deferred-view.test.ts"
-        ],
-        "contract": [
-          "tests/src/view/components/engine-configuration.test.ts",
-          "tests/src/view/components/provider-connections.test.ts",
-          "tests/src/view/components/repository-tools-view.test.ts"
-        ],
-        "integration": []
-      },
-      "directory": "src/view/components"
-    },
-    "view/conversation": {
-      "roots": [
-        "src/view/conversation/"
-      ],
-      "tests": {
-        "unit": [
-          "tests/src/view/conversation/brain-status.test.ts",
-          "tests/src/view/conversation/channel-draft.test.ts",
-          "tests/src/view/conversation/chat-messages.test.ts",
-          "tests/src/view/conversation/conversation-activity.test.ts",
-          "tests/src/view/conversation/conversation-topics.test.ts",
-          "tests/src/view/conversation/thread-recovery-notice.test.ts",
-          "tests/src/view/conversation/topic-interruption-view.test.ts",
-          "tests/src/view/conversation/usage.test.ts"
-        ],
-        "contract": [
-          "tests/src/view/conversation/chat-chrome.test.ts",
-          "tests/src/view/conversation/conversation-waiting.test.ts",
-          "tests/src/view/conversation/interaction-mode-toggle.test.ts",
-          "tests/src/view/conversation/queue-insertion-view.test.ts",
-          "tests/src/view/conversation/queue-sync.test.ts",
-          "tests/src/view/conversation/team-conversation-view.test.ts"
-        ],
-        "integration": [
-          "tests/src/view/conversation/chat-clipboard.test.ts"
-        ]
-      },
-      "directory": "src/view/conversation"
-    },
-    "view/execution-view": {
-      "roots": [
-        "src/view/execution-view/"
-      ],
-      "tests": {
-        "unit": [
-          "tests/src/view/execution-view/agent-call-view.test.ts",
-          "tests/src/view/execution-view/conversation.test.ts",
-          "tests/src/view/execution-view/knowledge-tool-view.test.ts",
-          "tests/src/view/execution-view/markdown.test.ts",
-          "tests/src/view/execution-view/run-view.test.ts",
-          "tests/src/view/execution-view/team-conversations.test.ts"
-        ],
-        "contract": [
-          "tests/src/view/execution-view/inline-conversation.test.ts",
-          "tests/src/view/execution-view/member-continuation.test.ts"
-        ],
-        "integration": [
-          "tests/src/view/execution-view/pi-length.test.ts"
-        ]
-      },
-      "directory": "src/view/execution-view"
-    },
-    "view/governance": {
-      "roots": [
-        "src/view/governance/"
-      ],
-      "tests": {
-        "unit": [
-          "tests/src/view/governance/governance-feedback-view.test.ts",
-          "tests/src/view/governance/governance-origin-view.test.ts",
-          "tests/src/view/governance/governance-pending.test.ts"
-        ],
-        "contract": [],
-        "integration": []
-      },
-      "directory": "src/view/governance"
-    },
-    "view/knowledge": {
-      "roots": [
-        "src/view/knowledge/"
-      ],
-      "tests": {
-        "unit": [
-          "tests/src/view/knowledge/knowledge-file-tree.test.ts",
-          "tests/src/view/knowledge/static-owners.test.ts"
-        ],
-        "contract": [
-          "tests/src/view/knowledge/knowledge-source-view.test.ts"
-        ],
-        "integration": []
-      },
-      "directory": "src/view/knowledge"
-    },
-    "view/resources": {
-      "roots": [
-        "src/view/resources/"
-      ],
-      "tests": {
-        "unit": [
-          "tests/src/view/resources/repository-connection-state.test.ts",
-          "tests/src/view/resources/resource-application.test.ts"
-        ],
-        "contract": [],
-        "integration": []
-      },
-      "directory": "src/view/resources"
-    },
-    "view/runtime": {
-      "roots": [
-        "src/view/runtime/"
-      ],
-      "tests": {
-        "unit": [],
-        "contract": [
-          "tests/src/view/runtime/runtime-feed.test.ts",
-          "tests/src/view/runtime/runtime-view.test.ts"
-        ],
-        "integration": []
-      },
-      "directory": "src/view/runtime"
-    },
-    "view/settings": {
-      "roots": [
-        "src/view/settings/"
-      ],
-      "tests": {
-        "unit": [
-          "tests/src/view/settings/appearance-settings.test.ts",
-          "tests/src/view/settings/budget-settings-view.test.ts",
-          "tests/src/view/settings/engine-overview-view.test.ts",
-          "tests/src/view/settings/settings-navigation.test.ts"
-        ],
-        "contract": [
-          "tests/src/view/settings/model-request-budget-view.test.ts",
-          "tests/src/view/settings/provider-connections.test.ts"
-        ],
-        "integration": []
-      },
-      "directory": "src/view/settings"
-    },
-    "view/shell": {
-      "roots": [
-        "src/view/shell/"
-      ],
-      "tests": {
-        "unit": [
-          "tests/src/view/shell/conversation-tabs.test.ts",
-          "tests/src/view/shell/runtime-navigation.test.ts",
-          "tests/src/view/shell/tabs.test.ts"
-        ],
-        "contract": [],
-        "integration": [
-          "tests/src/view/shell/workspace-navigation.test.ts"
-        ]
-      },
-      "directory": "src/view/shell"
-    },
-    "view/tasks": {
-      "roots": [
-        "src/view/tasks/"
-      ],
-      "tests": {
-        "unit": [
-          "tests/src/view/tasks/artifact-report-view.test.ts",
-          "tests/src/view/tasks/candidate-review.test.ts",
-          "tests/src/view/tasks/command-verification-view.test.ts",
-          "tests/src/view/tasks/continuation-source-view.test.ts",
-          "tests/src/view/tasks/controlled-file-view.test.ts",
-          "tests/src/view/tasks/effect-observation-view.test.ts",
-          "tests/src/view/tasks/execution-recovery-repeat.test.ts",
-          "tests/src/view/tasks/execution-report-view.test.ts",
-          "tests/src/view/tasks/member-cancellation-view.test.ts",
-          "tests/src/view/tasks/member-checkpoint-view.test.ts",
-          "tests/src/view/tasks/member-dependency-addition-view.test.ts",
-          "tests/src/view/tasks/member-dependency-revision-view.test.ts",
-          "tests/src/view/tasks/member-dependency-view.test.ts",
-          "tests/src/view/tasks/member-help-view.test.ts",
-          "tests/src/view/tasks/office-scene.test.ts",
-          "tests/src/view/tasks/output-manifest-view.test.ts",
-          "tests/src/view/tasks/scope-budget-view.test.ts",
-          "tests/src/view/tasks/scope-continuation-view.test.ts",
-          "tests/src/view/tasks/scope-replan-view.test.ts",
-          "tests/src/view/tasks/scope-usage-view.test.ts",
-          "tests/src/view/tasks/session-task-view.test.ts",
-          "tests/src/view/tasks/task-history-view.test.ts"
-        ],
-        "contract": [
-          "tests/src/view/tasks/active-goal-input-view.test.ts",
-          "tests/src/view/tasks/admission-view.test.ts",
-          "tests/src/view/tasks/artifact-transition-evidence.test.ts",
-          "tests/src/view/tasks/conversation-progress.test.ts",
-          "tests/src/view/tasks/dispatch-graph.test.ts",
-          "tests/src/view/tasks/execution-recovery-view.test.ts",
-          "tests/src/view/tasks/human-continuation-view.test.ts",
-          "tests/src/view/tasks/human-decision-view.test.ts",
-          "tests/src/view/tasks/member-event-state.test.ts",
-          "tests/src/view/tasks/member-validation-state.test.ts",
-          "tests/src/view/tasks/model-request-budget-view.test.ts",
-          "tests/src/view/tasks/owner-execution-view.test.ts",
-          "tests/src/view/tasks/scope-detail-recovery.test.ts",
-          "tests/src/view/tasks/scope-goal-view.test.ts",
-          "tests/src/view/tasks/session-graph-state.test.ts"
-        ],
-        "integration": []
-      },
-      "directory": "src/view/tasks"
-    },
-    "view/team": {
-      "roots": [
-        "src/view/team/"
-      ],
-      "tests": {
-        "unit": [
-          "tests/src/view/team/agent-history-view.test.ts",
-          "tests/src/view/team/team-model.test.ts",
-          "tests/src/view/team/workspace-member-view.test.ts"
-        ],
-        "contract": [],
-        "integration": []
-      },
-      "directory": "src/view/team"
-    },
-    "view/updates": {
-      "roots": [
-        "src/view/updates/"
-      ],
-      "tests": {
-        "unit": [
-          "tests/src/view/updates/software-updates-view.test.ts",
-          "tests/src/view/updates/update-button-state.test.ts"
-        ],
-        "contract": [],
-        "integration": []
-      },
-      "directory": "src/view/updates"
-    },
-    "view/workspace": {
-      "roots": [
-        "src/view/workspace/"
-      ],
-      "tests": {
-        "unit": [
-          "tests/src/view/workspace/module-ownership-view.test.ts",
-          "tests/src/view/workspace/module-source-tree.test.ts"
-        ],
-        "contract": [],
-        "integration": [
-          "tests/src/view/workspace/inline-module-ownership.test.ts"
-        ]
-      },
-      "directory": "src/view/workspace"
-    },
     "tooling/check-dependencies": {
       "roots": [
         "scripts/check-dependencies.mjs"
@@ -1339,23 +1118,6 @@
       "inputs": [
         ".github/workflows/validate.yml"
       ]
-    },
-    "view/foundations/utility": {
-      "roots": [
-        "src/view/foundations/utility/"
-      ],
-      "tests": {
-        "unit": [
-          "tests/src/view/foundations/utility/async.test.ts",
-          "tests/src/view/foundations/utility/events.test.ts",
-          "tests/src/view/foundations/utility/graphs.test.ts",
-          "tests/src/view/foundations/utility/json.test.ts",
-          "tests/src/view/foundations/utility/storage.test.ts"
-        ],
-        "contract": [],
-        "integration": []
-      },
-      "directory": "src/view/foundations/utility"
     },
     "core/io": {
       "roots": [
@@ -1647,19 +1409,6 @@
         ]
       },
       "directory": "src/logic/workspace/service"
-    },
-    "view/diagnostics": {
-      "roots": [
-        "src/view/diagnostics/"
-      ],
-      "tests": {
-        "unit": [
-          "tests/src/view/diagnostics/diagnostics-view.test.ts"
-        ],
-        "contract": [],
-        "integration": []
-      },
-      "directory": "src/view/diagnostics"
     },
     "logic/execution/assembly": {
       "roots": [

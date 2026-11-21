@@ -1,4 +1,41 @@
 /* 桌面标题栏使用系统窗口按钮；标签区与工作区各自占用可用宽度。 */
+.project-navigation {display:flex;flex-direction:column;flex:1;min-height:0;min-width:0}
+.project-navigation .sidebar-label {display:flex;align-items:center;gap:2px;flex-wrap:wrap;padding:8px 2px;color:var(--muted);font-size:12px}
+.project-navigation .sidebar-label > span {margin-right:auto}
+.project-navigation .sidebar-label select {min-height:26px;max-width:88px;border:0;background:transparent;color:var(--muted);font:inherit;padding:0}
+.project-navigation .sidebar-label .icon-button {width:24px;min-height:28px;padding:3px}
+.project-navigation .sidebar-search {display:flex;align-items:center;gap:6px;padding:0 8px;flex:none}
+.project-navigation .sidebar-search input {width:100%;min-width:0;border:0;background:transparent;color:var(--text)}
+.project-tree {flex:1;overflow:auto;min-height:0;overscroll-behavior:contain}
+.sidebar-project {margin-bottom:7px}
+.project-heading .project-select {font-size:12px;color:var(--muted);padding:4px 2px;gap:5px}
+.project-heading .project-select > span:first-of-type {flex:1;text-align:left}
+.project-heading[data-active] .project-select {color:var(--text)}
+.project-navigation .project-select {display:flex;align-items:center;min-width:0;text-align:left;gap:6px}
+.project-navigation .project-select > span:not(.office-session-icon):not(.navigation-status) {min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.project-navigation .project-action {flex:none;width:26px;min-height:28px;display:inline-flex;align-items:center;justify-content:center;color:var(--muted)}
+.project-navigation .office-session-row {margin-left:15px;min-height:34px}
+.project-navigation .office-session-row .project-select {padding:5px 4px;color:var(--text);font-size:13px}
+.project-grip {touch-action:none;cursor:grab;color:var(--muted);padding:1px;width:14px;flex:none;display:flex;align-items:center;justify-content:center}
+.navigation-drop {box-shadow:inset 0 2px 0 var(--focus)}
+.navigation-status {width:6px;height:6px;flex:none;border-radius:50%;background:var(--green)}
+.navigation-count {margin-left:auto;font-size:10px;color:var(--muted)}
+.navigation-show-all {font-size:12px;margin:4px 0 6px 28px;padding:4px;border:0;background:none;color:var(--muted)}
+.navigation-empty {display:block;font-size:12px;color:var(--muted);padding:6px 14px}
+.navigation-error {color:var(--danger);overflow-wrap:anywhere;max-height:6em;overflow:auto;font-size:12px}
+.navigation-menu {position:fixed;z-index:30;width:210px;max-width:calc(100vw - 8px);max-height:calc(100dvh - 16px);overflow:auto;padding:5px;background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:9px;box-shadow:0 6px 24px #0003;box-sizing:border-box}
+.navigation-menu button {display:flex;align-items:center;gap:9px;width:100%;padding:7px 9px;border:0;background:transparent;color:inherit;text-align:left;font-size:13px}
+.navigation-menu button:hover,.navigation-menu button:focus-visible {background:var(--hover)}
+.navigation-menu [data-danger] {color:var(--danger)}
+.navigation-dialog {width:min(380px,calc(100vw - 40px));box-sizing:border-box;background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:20px}
+.navigation-dialog::backdrop {background:#0006}
+.navigation-dialog h3 {margin:0 0 16px;font-size:16px}.navigation-dialog p {line-height:1.65}
+.navigation-dialog label {display:grid;gap:8px}.navigation-dialog input {width:100%;min-width:0;box-sizing:border-box;padding:8px;background:var(--bg);color:var(--text);border:1px solid var(--control-line)}
+.navigation-dialog footer {display:flex;justify-content:flex-end;gap:8px;margin-top:20px}.navigation-dialog button {padding:6px 12px;background:var(--raised);color:var(--text);border:1px solid var(--line)}
+.sidebar-new-conversation {display:flex;align-items:center;gap:9px;text-align:left;border:0;background:transparent;color:var(--text);padding:8px;margin:4px 0 8px;font-size:14px}
+.sidebar-new-conversation:hover {background:var(--hover)}
+.sidebar-backdrop {display:none}
+@media(max-width:720px){.sidebar-backdrop{display:block;position:absolute;inset:0;z-index:3;border:0;border-radius:0;background:#0005}.project-navigation .project-action{min-width:30px;min-height:34px}.project-navigation .sidebar-label .icon-button{min-height:32px}.project-heading .project-select{min-height:38px}.project-navigation .project-action{opacity:1!important}.project-navigation .sidebar-label{gap:0}.navigation-menu button{min-height:38px}}
 #application-home .desktop-shell { height: calc(100dvh - 32px); position: relative; }
 .desktop-titlebar { display: flex; align-items: center; gap: 3px; height: 32px; padding-left: 8px; background: #202124; color: #eee; -webkit-app-region: drag; }
 .desktop-titlebar button { -webkit-app-region: no-drag; color: inherit; font-size: 12px; height: 26px; padding: 0 6px; }
@@ -158,3 +195,20 @@
 .engine-brand {display:inline-flex;gap:7px;align-items:center;}
 .engine-brand img {width:20px;height:20px;object-fit:contain;}
 h2.engine-brand img {width:30px;height:30px;}
+
+.workspace-sidebar {position:relative}.project-sidebar-resize{position:absolute;inset:0 -2px 0 auto;width:5px;cursor:col-resize;touch-action:none;z-index:5}.project-sidebar-resize:hover,.project-sidebar-resize:focus-visible{background:var(--line)}
+@media(max-width:720px){.project-sidebar-resize{display:none}}
+
+/* 抽屉与桌面侧栏都拥有完整底色；列表独立滚动，底部账户入口保持可见。 */
+#application-home .workspace-sidebar {display:flex;flex-direction:column;min-height:0;box-sizing:border-box;background:var(--sidebar);color:var(--text)}
+#application-home .workspace-sidebar .primary-nav {display:grid;grid-template-columns:1fr;gap:2px;flex:none;margin-bottom:8px}
+#application-home .workspace-sidebar .primary-nav > button {display:flex;align-items:center;justify-content:flex-start;gap:9px;border:0;background:transparent;color:var(--text);border-radius:6px;text-align:left;padding:6px 8px;min-height:32px;font-size:13px}
+#application-home .workspace-sidebar .primary-nav > button:hover,#application-home .workspace-sidebar .primary-nav > button.selected {background:var(--hover)}
+#application-home .workspace-sidebar .sidebar-footer {flex:none;margin-top:8px;padding:8px;border:0}
+#application-home .project-navigation {flex:1;min-height:0}
+#application-home .project-navigation .sidebar-label {flex:none;min-height:32px}
+#application-home .sidebar-new-conversation {flex:none;min-height:34px;margin:0 0 6px}
+#application-home .desktop-shell.sidebar-collapsed .workspace-sidebar {display:none}
+
+#application-home .sidebar-new-conversation {justify-content:flex-start;padding-inline:8px}
+@media(max-width:720px){#application-home .sidebar-backdrop{z-index:11}#application-home .workspace-sidebar{z-index:12}}

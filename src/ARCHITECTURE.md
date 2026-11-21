@@ -8,11 +8,13 @@
 
 一次桌面请求由 View 经 Bridge 的受限通信入口进入 Logic，业务使用 Core 的技术能力；返回数据与事件沿通信边界展示。Logic 拥有业务状态与应用生命周期，Bridge 拥有窗口和宿主资源，View 只维护展示与交互状态。源码依赖方向与运行时请求／回包方向分别理解。
 
-本层是纯组合容器，四个子目录分别作为虚拟封装。当前仍有部分下层目录混放直接实现与子模块，具体差距记录在各自文档中，不能把这张四层图理解为全部目录已经完成纯容器迁移。架构判断依据 [工程结构规范](../ainative/docs/06-架构设计原则和工程结构规范.md)；产品目标与未落地方案沿 [设计导航](https://github.com/nan023062/cbim/blob/7dcff4142e09fdac1a670438bd3081d6c0341f23/design/README.md) 阅读。
+本层是纯组合容器，各直接子目录分别作为虚拟封装。当前仍有部分下层目录混放直接实现与子模块，具体差距记录在各自文档中，不能把这张四层图理解为全部目录已经完成纯容器迁移。架构判断依据 [工程结构规范](../ainative/docs/06-架构设计原则和工程结构规范.md)；产品目标与未落地方案沿 [设计导航](https://github.com/nan023062/cbim/blob/7dcff4142e09fdac1a670438bd3081d6c0341f23/design/README.md) 阅读。
 
 ## 主要组成
 
 本层没有直接产品实现，由下方子模块组成；每个直接子模块作为一个虚拟封装，只在本层呈现整体职责与协作。
+
+当前桌面入口为 `index.html → view-new/main.ts`。旧 `src/view` 及其专属测试已退役；共享界面控件归 framework-ui，任务与项目状态由 logic-new/projects 管理。旧 Logic 仍服务于现有宿主适配，删除旧界面不改变其业务契约。
 
 ## 阅读方式
 
@@ -81,14 +83,15 @@ class N_b572c76539a3["updater"] {
   <<virtual>>
 }
 click N_b572c76539a3 href "updater/ARCHITECTURE.md"
-class N_eae847246398["view"] {
-  <<virtual>>
-}
-click N_eae847246398 href "view/ARCHITECTURE.md"
 class N_c755adb87123["view-new"] {
   <<virtual>>
 }
 click N_c755adb87123 href "view-new/ARCHITECTURE.md"
+class FrameworkUI["framework-ui"] {
+  <<virtual>>
+}
+click FrameworkUI href "framework-ui/ARCHITECTURE.md"
+N_c755adb87123 ..> FrameworkUI : 依赖
 ```
 
 ### 跨图协作
@@ -99,7 +102,6 @@ click N_c755adb87123 href "view-new/ARCHITECTURE.md"
 | --- | --- | --- |
 | [engine-plugins](engine-plugins/ARCHITECTURE.md)（图 2） | 依赖 | [core](core/ARCHITECTURE.md)（图 1）、[logic](logic/ARCHITECTURE.md)（图 1） |
 | [logic](logic/ARCHITECTURE.md)（图 1） | 依赖 | [engine-plugins](engine-plugins/ARCHITECTURE.md)（图 2） |
-| [view](view/ARCHITECTURE.md)（图 2） | 依赖 | [bridge](bridge/ARCHITECTURE.md)（图 1）、[core](core/ARCHITECTURE.md)（图 1） |
 | [view-new](view-new/ARCHITECTURE.md)（图 2） | 依赖 | [bridge](bridge/ARCHITECTURE.md)（图 1） |
 
 ## 子模块
@@ -114,8 +116,8 @@ click N_c755adb87123 href "view-new/ARCHITECTURE.md"
 | [logic-new](logic-new/ARCHITECTURE.md) | 为桌面视图提供按模块组织的业务用例。 |
 | [resource](resource/ARCHITECTURE.md) | Resource 拥有可共享的资产定义和当前用户的本机资源。公共入口导出的 `resourceInventory` 按这两种范围登记资产。 |
 | [updater](updater/ARCHITECTURE.md) | 为应用外的更新和安装进程预留入口。 |
-| [view](view/ARCHITECTURE.md) | 以页面、局部控制器和共享展示组件呈现业务事实，让界面变化与后端状态机保持独立。 |
-| [view-new](view-new/ARCHITECTURE.md) | 桌面主框架管理页面导航与扩展区，通过桌面菜单接口登记本地工作区、浏览资源和读取运行状态。 |
+| [framework-ui](framework-ui/ARCHITECTURE.md) | 无业务状态的 React 控件、页面可见性和窗口列表。 |
+| [view-new](view-new/ARCHITECTURE.md) | 当前桌面项目导航、Office 对话与架构编辑，通过受限宿主接口读写项目和运行状态。 |
 
 
 <!-- architecture:generated:end -->

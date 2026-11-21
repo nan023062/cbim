@@ -5,7 +5,6 @@ import {renderToStaticMarkup} from 'react-dom/server';
 import {transitionFixture,runTransitions,transitionContracts} from '../../execution/rules/capabilities/support/artifact-transition-fixture';
 import type {StoredEvent} from '../../../../../src/logic/execution/rules/types';
 import {artifactScopeSchema} from '../../../../../src/logic/workspace/rules/artifact-scope';
-import {ArtifactTransitionProofs} from '../../../../../src/view/tasks/ArtifactTransitionProofs';
 
 let f:Awaited<ReturnType<typeof transitionFixture>>,events:StoredEvent[];
 beforeAll(async()=>{f=await transitionFixture(async c=>{await runTransitions(c)});const summary=await(await f.start()).done;expect(summary.status).toBe('completed');events=summary.events});

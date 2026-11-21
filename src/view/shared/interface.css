@@ -22,8 +22,6 @@
   --space-1: 4px; --space-2: 8px; --space-3: 12px;
   --space-4: 16px; --space-6: 24px; --space-8: 32px;
   --radius-small: 6px; --radius-control: 8px; --radius-dialog: 16px;
-  --motion-fast: 120ms; --motion-normal: 180ms; --motion-panel: 220ms;
-  --motion-ease: cubic-bezier(.2,.7,.2,1);
 }
 :root[data-theme=light] {
   --bg: #f7f8fa; --sidebar: #eef0f4; --surface: #ffffff;
@@ -33,7 +31,7 @@
   --green: #246642; --warning: #8c4a10; --danger: #b13737; --focus: #2459bc;
 }
 body {line-height: 1.5}
-button {min-height: 32px; border-radius: var(--radius-control); transition: background-color var(--motion-fast), border-color var(--motion-fast), color var(--motion-fast)}
+button {min-height: 32px; border-radius: var(--radius-control); transition: var(--tween-control)}
 button:not(:disabled):active {translate: 0 1px}
 button:disabled {opacity: .55; cursor: not-allowed}
 button:focus-visible, a:focus-visible, summary:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, [tabindex]:focus-visible {outline: 2px solid var(--focus); outline-offset: 3px}
@@ -88,7 +86,7 @@ button > .cbim-icon {color: inherit}
 .shell-alert {gap: 12px; align-items: flex-start; border-left: 3px solid var(--danger); line-height: 1.65; padding: 12px 16px}
 .shell-alert > button {flex-shrink: 0}
 .shell-alert, [role=alert] {overflow-wrap: anywhere}
-.modal {border: 1px solid var(--line); border-radius: var(--radius-dialog); animation: cbim-panel-in var(--motion-panel) var(--motion-ease)}
+.modal {border: 1px solid var(--line); border-radius: var(--radius-dialog); animation: var(--tween-panel)}
 .modal-frame {padding:0;border:0;overflow:visible;background:transparent;color:var(--text);width:min(900px,calc(100vw - 24px));max-width:calc(100vw - 24px);max-height:calc(100dvh - 24px)}
 .modal-frame::backdrop {background:#0008}
 .modal-frame > .modal {margin:auto;max-height:calc(100dvh - 24px);box-sizing:border-box}
@@ -114,13 +112,13 @@ button > .cbim-icon {color: inherit}
 .view-object-meta dt{color:var(--muted)}
 .view-object-meta dd{margin:0;overflow-wrap:anywhere}
 .view-editor-actions{position:sticky;bottom:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:12px 0;background:var(--surface);border-top:1px solid var(--line);z-index:1}
-.tab-menu, .user-menu {animation: cbim-content-in var(--motion-normal) var(--motion-ease)}
+.tab-menu, .user-menu {animation: var(--tween-menu)}
 .tab-close {min-width: 28px; min-height: 28px}
-details > summary .cbim-icon:last-child {transition: transform var(--motion-fast) var(--motion-ease)}
-@keyframes cbim-content-in {from {opacity: 0; transform: translateY(3px)} to {opacity: 1; transform: translateY(0)}}
-@keyframes cbim-panel-in {from {opacity: 0; transform: translateY(12px)} to {opacity: 1; transform: translateY(0)}}
-.interface-tooltip {position: fixed; z-index: 1000; max-width: min(320px, calc(100vw - 16px)); max-height: calc(100dvh - 16px); overflow: auto; padding: 8px 12px; border: 1px solid var(--control-line); border-radius: var(--radius-small); color: var(--text); background: var(--surface); box-shadow: 0 4px 18px #0003; font-size: var(--font-ui); line-height: 1.6; overflow-wrap: anywhere; animation: cbim-content-in var(--motion-fast) var(--motion-ease)}
-.interface-help-dialog {color: var(--text); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-dialog); width: min(560px, calc(100vw - 24px)); max-height: calc(100dvh - 32px); padding: 24px; animation: cbim-panel-in var(--motion-panel) var(--motion-ease)}
+details > summary .cbim-icon:last-child {transition: var(--tween-turn)}
+
+
+.interface-tooltip {position: fixed; z-index: 1000; max-width: min(320px, calc(100vw - 16px)); max-height: calc(100dvh - 16px); overflow: auto; padding: 8px 12px; border: 1px solid var(--control-line); border-radius: var(--radius-small); color: var(--text); background: var(--surface); box-shadow: 0 4px 18px #0003; font-size: var(--font-ui); line-height: 1.6; overflow-wrap: anywhere; animation: var(--tween-popup)}
+.interface-help-dialog {color: var(--text); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-dialog); width: min(560px, calc(100vw - 24px)); max-height: calc(100dvh - 32px); padding: 24px; animation: var(--tween-panel)}
 .interface-help-dialog::backdrop {background: #0008}
 .interface-help-dialog header {display: flex; justify-content: space-between; align-items: center; gap: 12px}
 .interface-help-dialog h2 {margin: 0}
@@ -159,7 +157,6 @@ details > summary .cbim-icon:last-child {transition: transform var(--motion-fast
   .knowledge-row-actions {grid-template-columns: repeat(3, 44px)}
 }
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {animation: none !important; transition: none !important; scroll-behavior: auto !important}
   button:not(:disabled):active {translate: none}
 }
 

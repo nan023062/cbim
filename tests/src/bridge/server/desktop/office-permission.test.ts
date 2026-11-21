@@ -4,11 +4,11 @@ import os from 'node:os';
 import path from 'node:path';
 import { runOfficePlugin } from '../../../../../src/bridge/server/desktop/office-plugin';
 
-const fixture = vi.hoisted(() => ({ create: vi.fn(), resolve: vi.fn() }));
-vi.mock('../../../../../src/logic/projects/office-engine-loader', () => ({ packagedEngineAdapter: () => ({ create: fixture.create }) }));
+const fixture = vi.hoisted(() => ({ create: vi.fn(), resolve: vi.fn(), load: vi.fn() }));
+vi.mock('../../../../../src/logic/projects/office-engine-loader', () => ({ packagedEngineAdapter: (id: string, runtime: unknown) => { fixture.load(id, runtime); return { create: fixture.create }; } }));
 vi.mock('../../../../../src/logic/engines/service', () => ({ EngineModelProfiles: class { Resolve = fixture.resolve; } }));
 
-test.each(['read', 'ask', 'execute'] as const)('桌面引擎接收 %s 权限、原生工具和 Office 工具目录', async initial => {
+test.each([['read', false], ['ask', false], ['execute', false], ['read', true], ['ask', true], ['execute', true]] as const)('桌面引擎接收 %s 权限、原生工具和 Office 工具目录', async (initial, development) => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'office-engine-permission-'));
   let permission: 'read' | 'ask' | 'execute' = initial;
   const ReadPermission = () => permission;
@@ -25,11 +25,16 @@ test.each(['read', 'ask', 'execute'] as const)('桌面引擎接收 %s 权限、�
     List: async () => [{ kind: 'codex', enabled: true, active: { identity: 'version' }, candidate: { identity: 'version' } }],
     ResolveEngine: async () => ({ identity: 'version', retain: () => release }),
   };
+  const developmentRoot = path.join(root, 'local-adapters');
+  if (development) { await fs.mkdir(path.join(developmentRoot, 'codex'), {recursive:true}); await fs.writeFile(path.join(developmentRoot, 'codex', 'adapter.json'), JSON.stringify({id:'codex',version:'1.1.1',protocol:1,entry:'adapter.cjs'})); }
   try {
     const result = await runOfficePlugin(packages as any, {} as any, '职责', [{ role: 'user', content: '检查' }], new AbortController().signal, () => {}, {
       ReadPermission, ReportTokens: () => {}, operations: { Inspect: () => ({}), Dispatch: async () => ({}) }, selection: { engine: 'codex', profileId: 'profile', modelId: 'fixture' }, root, dataRoot: root, project: 'project', session: 'session',
-    });
+    }, undefined, undefined, development ? developmentRoot : undefined);
+    if (development) expect(fixture.load.mock.lastCall![1]).toMatchObject({root:path.join(developmentRoot,'codex'),adapter:{entry:path.join(developmentRoot,'codex','adapter.cjs')}});
+    else expect(fixture.load.mock.lastCall![1]).not.toHaveProperty('adapter');
     const options = fixture.create.mock.lastCall![0];
+    expect(options.runtime.identity).toBe('version');
     expect(options.ReadPermission).toBe(ReadPermission);
     expect(options.allowNativeExecution).toBe(initial !== 'read');
     permission = initial === 'read' ? 'execute' : 'read';

@@ -9,9 +9,12 @@
 | 组成 | 定位 |
 | --- | --- |
 | [按钮与开关](controls.tsx) | 保留原生按钮的焦点、键盘和禁用语义。 |
+| [基础动效](ui-tween.css) · [使用手册](UI-TWEEN.md) | 元素使用 `data-ui-fade`、滚动容器使用 `data-ui-scrollbar-fade` 切换可见性。保持挂载，双向过渡 200ms，遵循系统减少动态效果偏好；调用方管理交互时机和键盘可用性。 |
 | [窗口列表](list.tsx) | 组合 react-virtuoso，管理可视条目和聊天跟随末尾。 |
 | [页面容器](screen.tsx) | 传递可见性，隐藏或卸载时清理活动订阅。 |
 | [页签](tabs.tsx) | 组合按钮和页面容器，支持受控选择与键盘导航。 |
+
+新页面随 `ui.css` 自动加载动效。元素用 `data-motion="panel"` 或 `data-motion="popup"` 等预设；伪类或子元素可直接引用相同的 `--tween-*` 预设。新增关键帧、时长和缓动统一放入 `ui-tween.css`。
 
 隐藏页面会清理 useScreenEffect 的订阅，但不代表取消后端任务。任务状态与取消由调用页面通过业务接口管理。
 
@@ -33,6 +36,10 @@ class N_b7085d8c631d["页面容器"] {
   <<component>>
 }
 click N_b7085d8c631d href "screen.tsx"
+class N_eb4a81dc8613["基础动效"] {
+  <<module>>
+}
+click N_eb4a81dc8613 href "ui-tween.css"
 class N_96f821f2c714["窗口列表"] {
   <<component>>
 }

@@ -69,7 +69,7 @@ export class OfficeQueue
     {
       state = officeQueueStateSchema.parse(JSON.parse(await fs.readFile(this.File(project, session), 'utf8')));
 
-      if (state.items.length)
+      if (state.items.some(item => ['running', 'inserting', 'inserted'].includes(item.status)))
       {
         state.paused = true;
 
@@ -93,6 +93,9 @@ export class OfficeQueue
     }
 
     this._states.set(key, state);
+
+    if (!state.paused && state.items.some(item => item.status === 'queued'))
+      this.Schedule(project, session);
 
     return state;
   }
@@ -158,7 +161,7 @@ export class OfficeQueue
 
     const action = officeQueueActionSchema.parse(raw);
 
-    await this.Locked(project, session, async state => { if ('revision' in action && action.revision !== state.revision) throw Error('队列已变化，请刷新后重试'); const next = structuredClone(state); if (action.action === 'enqueue') { if (next.accepted.includes(action.id)) return; if (next.items.length >= 100) throw Error('队列最多保留 100 条指令'); let saved = await this._offices.settings.Read(project, { kind: 'main', id: session }); if (JSON.stringify(saved.configuration.model) !== JSON.stringify(action.selection)) saved = await this._offices.settings.Save(project, { kind: 'main', id: session }, saved.revision, { ...saved.configuration, model: action.selection }); SkillCommands.Resolve(action.text, saved.configuration.skills); next.items.push({ id: action.id, text: action.text, created: Date.now(), permission: action.permission, configuration: { ...saved.configuration, model: action.selection }, status: 'queued' }); next.accepted = [...next.accepted, action.id].slice(-1000); } else if (action.action === 'pause' || action.action === 'stop') next.paused = true; else if (action.action === 'resume') next.paused = next.items.some(item => item.status === 'failed' || item.status === 'uncertain'); else { const item = next.items.find(item => item.id === action.id); if (!item) throw Error('排队指令已被消费或移除'); if (['running', 'inserting', 'inserted'].includes(item.status)) throw Error('指令已开始消费，不能再修改'); if (action.action === 'remove') next.items = next.items.filter(entry => entry.id !== item.id); else if (action.action === 'retry') { item.status = 'queued'; delete item.error; delete item.started; delete item.inputId; next.paused = false; } else if (item.status !== 'queued') throw Error('请先核实失败指令，再明确重试或移除'); else if (action.action === 'edit') { SkillCommands.Resolve(action.text, item.configuration.skills); item.text = action.text; } else if (action.action === 'move') { if (action.beforeId === item.id) return; const target = action.beforeId ? next.items.find(entry => entry.id === action.beforeId) : undefined; if (action.beforeId && (!target || target.status !== 'queued')) throw Error('排序目标不再处于排队状态'); next.items = next.items.filter(entry => entry.id !== item.id); next.items.splice(target ? next.items.findIndex(entry => entry.id === target.id) : next.items.length, 0, item); } else if (action.action === 'insert') { if (!this._offices.IsRunning(project, session)) throw Error('当前没有执行中的任务'); item.status = 'inserting'; await this.Save(project, session, next); try { const receipt = this._offices.Insert(project, session, item.text, item.configuration.skills); item.inputId = receipt.id; item.status = 'inserted'; } catch (error) { item.status = 'queued'; await this.Save(project, session, next); Object.assign(state, next); throw error; } } } await this.Save(project, session, next); Object.assign(state, next); if (action.action === 'stop') { this._controllers.get(this.Key(project, session))?.abort(); this._offices.Stop(project, session); } });
+    await this.Locked(project, session, async state => { if ('revision' in action && action.revision !== state.revision) throw Error('队列已变化，请刷新后重试'); const next = structuredClone(state); if (action.action === 'enqueue') { if (next.accepted.includes(action.id)) return; if (next.items.length >= 100) throw Error('队列最多保留 100 条指令'); let saved = await this._offices.settings.Read(project, { kind: 'main', id: session }); if (JSON.stringify(saved.configuration.model) !== JSON.stringify(action.selection)) saved = await this._offices.settings.Save(project, { kind: 'main', id: session }, saved.revision, { ...saved.configuration, model: action.selection }); SkillCommands.Resolve(action.text, saved.configuration.skills); next.items.push({ id: action.id, text: action.text, created: Date.now(), permission: action.permission, configuration: { ...saved.configuration, model: action.selection }, status: 'queued' }); next.accepted = [...next.accepted, action.id].slice(-1000); } else if (action.action === 'pause' || action.action === 'stop') next.paused = true; else if (action.action === 'resume') next.paused = false; else { const item = next.items.find(item => item.id === action.id); if (!item) throw Error('排队指令已被消费或移除'); if (['running', 'inserting', 'inserted'].includes(item.status)) throw Error('指令已开始消费，不能再修改'); if (action.action === 'remove') next.items = next.items.filter(entry => entry.id !== item.id); else if (action.action === 'retry') { item.status = 'queued'; delete item.error; delete item.started; delete item.inputId; next.paused = false; } else if (item.status !== 'queued') throw Error('请先核实失败指令，再明确重试或移除'); else if (action.action === 'start') { if (this._offices.IsRunning(project, session) || next.items.some(entry => entry.status === 'running')) throw Error('已有任务开始执行，请刷新队列'); next.items = [item, ...next.items.filter(entry => entry.id !== item.id)]; next.paused = false; } else if (action.action === 'edit') { SkillCommands.Resolve(action.text, item.configuration.skills); item.text = action.text; } else if (action.action === 'move') { if (action.beforeId === item.id) return; const target = action.beforeId ? next.items.find(entry => entry.id === action.beforeId) : undefined; if (action.beforeId && (!target || target.status !== 'queued')) throw Error('排序目标不再处于排队状态'); next.items = next.items.filter(entry => entry.id !== item.id); next.items.splice(target ? next.items.findIndex(entry => entry.id === target.id) : next.items.length, 0, item); } else if (action.action === 'insert') { if (!this._offices.IsRunning(project, session)) throw Error('当前没有执行中的任务'); item.status = 'inserting'; await this.Save(project, session, next); try { const receipt = this._offices.Insert(project, session, item.text, item.configuration.skills); item.inputId = receipt.id; item.status = 'inserted'; } catch (error) { item.status = 'queued'; await this.Save(project, session, next); Object.assign(state, next); throw error; } } } await this.Save(project, session, next); Object.assign(state, next); if (action.action === 'stop') { this._controllers.get(this.Key(project, session))?.abort(); this._offices.Stop(project, session); } });
 
     this.Schedule(project, session);
 
@@ -172,7 +175,7 @@ export class OfficeQueue
     if (this._closed || this._pumps.has(key))
       return;
 
-    const work = this.Pump(project, session).catch(error => { const state = this._states.get(key); if (state) { state.paused = true; const item = state.items.find(item => ['queued', 'running', 'inserting', 'inserted'].includes(item.status)); if (item) { item.status = 'uncertain'; item.error = '队列存储或执行结果未确认：' + String(error); } } }).finally(() => { this._pumps.delete(key); const state = this._states.get(key); if (state && !state.paused && state.items[0]?.status === 'queued' && !this._offices.IsRunning(project, session)) this.Schedule(project, session); });
+    const work = this.Pump(project, session).catch(error => { const state = this._states.get(key); if (state) { state.paused = true; const item = state.items.find(item => ['queued', 'running', 'inserting', 'inserted'].includes(item.status)); if (item) { item.status = 'uncertain'; item.error = '队列存储或执行结果未确认：' + String(error); } } }).finally(() => { this._pumps.delete(key); const state = this._states.get(key); if (state && !state.paused && state.items.some(entry => entry.status === 'queued') && !this._offices.IsRunning(project, session)) this.Schedule(project, session); });
 
     this._pumps.set(key, work);
   }
@@ -183,7 +186,7 @@ export class OfficeQueue
 
     while (!this._closed)
     {
-      const item = await this.Locked(project, session, async state => { if (state.paused || this._offices.IsRunning(project, session)) return undefined; const head = state.items.find(item => item.status !== 'inserted'); if (!head || head.status !== 'queued') return undefined; const next = structuredClone(state); const claimed = next.items.find(item => item.id === head.id)!; claimed.status = 'running'; claimed.started = Date.now(); await this.Save(project, session, next); Object.assign(state, next); this._controllers.set(key, new AbortController()); return structuredClone(claimed); });
+      const item = await this.Locked(project, session, async state => { if (state.paused || this._offices.IsRunning(project, session)) return undefined; const head = state.items.find(item => item.status === 'queued'); if (!head || head.status !== 'queued') return undefined; const next = structuredClone(state); const claimed = next.items.find(item => item.id === head.id)!; claimed.status = 'running'; claimed.started = Date.now(); await this.Save(project, session, next); Object.assign(state, next); this._controllers.set(key, new AbortController()); return structuredClone(claimed); });
 
       if (!item)
         return;
@@ -210,7 +213,7 @@ export class OfficeQueue
         this._controllers.delete(key);
       }
 
-      await this.Locked(project, session, async state => { const next = structuredClone(state); next.items = next.items.filter(entry => { if (entry.id === item.id) { if (!failure) return false; entry.status = 'failed'; entry.error = failure; return true; } if (entry.status === 'inserted' || entry.status === 'inserting') { if (!failure && entry.inputId && !uncertain.has(entry.inputId)) return false; entry.status = 'uncertain'; entry.error = '插入或本轮执行未确认，请核实当前任务后再决定'; } return true; }); if (failure || next.items.some(entry => entry.status === 'uncertain')) next.paused = true; await this.Save(project, session, next); Object.assign(state, next); });
+      await this.Locked(project, session, async state => { const next = structuredClone(state); next.items = next.items.filter(entry => { if (entry.id === item.id) { if (!failure) return false; entry.status = 'failed'; entry.error = failure; return true; } if (entry.status === 'inserted' || entry.status === 'inserting') { if (!failure && entry.inputId && !uncertain.has(entry.inputId)) return false; entry.status = 'uncertain'; entry.error = '插入或本轮执行未确认，请核实当前任务后再决定'; } return true; }); await this.Save(project, session, next); Object.assign(state, next); });
     }
   }
 

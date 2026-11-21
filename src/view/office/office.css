@@ -51,7 +51,7 @@
 .office-dock {padding-bottom:5px}.office-strip {min-height:24px;justify-content:space-between;gap:6px;font-variant-numeric:tabular-nums}
 .office-strip .active {color:var(--warning,currentColor)}.office-meter {display:flex;justify-content:flex-end;padding:4px 2px 0;align-items:center;flex:none;gap:4px;white-space:nowrap;color:var(--muted);font-size:11px;font-variant-numeric:tabular-nums}.office-meter i {width:12px;height:12px;border-radius:50%;mask:radial-gradient(circle,transparent 46%,black 49%)}
 .office-chat form {padding:4px 6px;background:var(--raised);border:1px solid var(--line);border-radius:13px}
-.office-chat form:focus-within {border-color:var(--muted)}.office-chat textarea {box-sizing:border-box;display:block;border:0;outline:0;background:transparent;color:inherit;width:100%;resize:vertical;min-height:68px;max-height:24vh;padding:3px;font:inherit}
+.office-dock #office-message:focus {outline:none;box-shadow:none}.office-chat textarea {box-sizing:border-box;display:block;border:0;outline:0;background:transparent;color:inherit;width:100%;resize:none;min-height:68px;max-height:24vh;padding:3px;font:inherit}
 .office-chat footer {gap:2px}.office-chat footer button,.office-permission {display:inline-flex;align-items:center;justify-content:center;border:0;background:transparent;color:var(--muted);height:24px;min-width:24px;padding:0 3px;flex-shrink:0}
 .office-permission {position:relative}
 .office-chat footer .office-permission-trigger {gap:5px;padding:0 6px;min-height:30px;border-radius:6px;font:inherit;font-size:12px;cursor:pointer}
@@ -66,7 +66,7 @@
 .office-permission-menu button>span {flex:1;min-width:0}
 .office-permission-menu b {display:block;font-size:12px;font-weight:500}
 .office-permission-menu small {display:block;margin-top:4px;font-size:11px;line-height:1.5;color:var(--muted)}
-.office-chat .office-model {min-width:0;margin-left:auto;margin-right:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.office-chat footer .office-action {border-radius:50%;background:var(--text);color:var(--surface);margin-left:4px}.office-pickers {display:flex;gap:2px}.office-pickers select {min-width:0;max-width:9em;color:inherit;background:var(--raised);font:inherit;border:0}.office-action:disabled {opacity:.45}
+.office-chat .office-model {min-width:0;margin-left:auto;margin-right:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.office-chat footer .office-action {width:32px;height:32px;min-width:32px;padding:0;border-radius:50%;background:var(--text);color:var(--surface);margin-left:6px}.office-pickers {display:flex;gap:2px}.office-pickers select {min-width:0;max-width:9em;color:inherit;background:var(--raised);font:inherit;border:0}.office-action:disabled {opacity:.45}
 
 
 .office-chat header { min-height: 40px; padding: 4px 16px; color: var(--muted); }
@@ -82,16 +82,21 @@
 .office-chat form footer { flex-wrap: wrap; gap: 3px; }
 .office-chat footer button, .office-chat footer select { min-height: 28px; }
 .office-chat .office-pickers { align-items: center; flex-wrap: wrap; overflow: visible; max-width: 100%; }
-.office-chat .office-pickers select { background: var(--surface); max-width: min(12em, 32vw); }
+.office-dock .composer-controls {display:flex;align-items:center;justify-content:flex-end;gap:4px;margin-inline-start:auto;min-width:0;max-width:100%}
+.office-dock .composer-controls .office-pickers {display:flex;justify-content:flex-end;min-width:0;margin:0;white-space:normal}
+.composer-engine,.composer-model {position:relative;display:inline-flex;align-items:center;justify-content:center;min-height:28px;max-width:100%}
+.composer-engine {width:28px;flex:none}.composer-engine img {width:16px;height:16px;object-fit:contain}
+.composer-model {min-width:0;padding:0 4px;text-align:right}.composer-model span {overflow-wrap:anywhere}.composer-model svg {vertical-align:middle}
+.office-dock .composer-controls label select {position:absolute;inset:0;width:100%;height:100%;max-width:none;opacity:0;cursor:pointer}
+.composer-controls label:has(select:focus-visible) {outline:2px solid var(--focus);border-radius:4px}
 .office-meter { padding-top: 6px; }
 .office-transcript { position:relative; display:flex; flex-direction:column; padding:0; overflow:hidden; }
 .office-message-row { display:flow-root; padding-top:8px; }
 .office-assistant :is(h1,h2,h3,h4,h5,h6) {margin:1em 0 .4em;text-align:start;line-height:1.4}
 .office-assistant :is(ul,ol) {padding-inline-start:1.7em}
 .office-assistant > :last-child {margin-bottom:0}
-.office-jump { position:absolute; bottom:10px; left:50%; transform:translateX(-50%); border:1px solid var(--line); background:var(--raised); color:var(--text); border-radius:50%; width:34px; height:34px; padding:0; opacity:0; pointer-events:none; transition:opacity var(--ui-normal) var(--ui-ease-out); }
-.office-jump[data-visible=true],.office-jump:focus-visible { opacity:1; pointer-events:auto; }
-@media (prefers-reduced-motion:reduce) { .office-jump { transition:none; } }
+.office-transcript .ui-window-list {scrollbar-width:thin}
+.office-jump { position:absolute; bottom:10px; left:50%; transform:translateX(-50%); border:1px solid var(--line); background:var(--raised); color:var(--text); border-radius:999px; height:32px; padding:0 12px; }
 
 
 .office-chat .engine-choice, .engine-choice::picker(select) { appearance:base-select; }
@@ -106,16 +111,29 @@
 .office-work-record pre {white-space:pre-wrap;max-height:20rem;overflow:auto}
 .office-assistant .office-work-alert {color:var(--warning,currentColor)}
 .architecture-check {display:flex!important;flex-direction:row!important;align-items:center;gap:8px}.architecture-check input {width:auto!important}
-.office-queue {border:1px solid var(--line);border-radius:10px;margin-bottom:8px;background:var(--surface);min-width:0}
-.office-chat .office-queue header {padding:6px 8px;gap:6px;font-size:12px;flex-wrap:wrap}.office-queue header small {flex:1;color:var(--muted)}
-.office-queue-list {max-height:min(240px,32vh);overflow:auto;overscroll-behavior:contain}.office-queued-item {border-top:1px solid var(--line);padding:6px;min-width:0}.office-queued-item:first-child{border-top:0}.office-queued-row {display:flex;gap:6px;align-items:center;min-width:0;flex-wrap:wrap}
-.office-queue button {display:inline-flex;align-items:center;justify-content:center;min-width:28px;min-height:30px;padding:4px;border:0;background:transparent;color:var(--muted);border-radius:5px}.office-queue button:hover,.office-queue button:focus-visible{background:var(--raised);color:var(--text)}.office-queue button:disabled{opacity:.35}.office-queue .office-queue-grip {touch-action:none;cursor:grab;flex:none}
-.office-queued-copy {flex:1;min-width:100px}.office-queued-copy p{margin:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}.office-queued-copy small{display:block;overflow-wrap:anywhere;color:var(--muted);font-size:11px}.office-queued-copy [role=alert]{color:var(--danger,var(--text))}
-.office-queued-actions {display:flex;flex-wrap:wrap;gap:2px;margin-left:auto}.office-queue .queue-before{box-shadow:inset 0 2px 0 var(--text)}.office-queue-editor{padding:6px;display:flex;gap:5px;flex-wrap:wrap}.office-queue-editor textarea{width:100%;min-height:70px;box-sizing:border-box;color:var(--text);background:var(--raised);border:1px solid var(--line);border-radius:6px;padding:8px}.office-queue-editor small{flex:1;color:var(--muted)}.office-next-settings{display:block;color:var(--muted);font-size:11px}
-@media(max-width:560px){.office-queued-actions{flex-basis:100%;padding-left:34px}.office-queued-actions button{min-width:32px;min-height:32px}.office-queue-list{max-height:25vh}.office-queued-copy{min-width:0}.office-queue header small{display:none}}
+.office-queue {min-width:0;margin-bottom:14px}
+.office-chat .office-queue header {display:flex;justify-content:flex-end;align-items:center;gap:6px;padding:0 0 4px;min-height:24px;color:var(--muted);font-size:12px}
+.office-queue header button {border:0;background:transparent;padding:4px}
+.office-queue-list {max-height:40dvh;overflow:auto;overscroll-behavior:contain;padding:4px 0}
+.office-queued-item {padding:8px 0 12px;min-width:0}
+.office-queued-row {display:flex;justify-content:flex-end;align-items:center;flex-wrap:wrap;gap:6px}
+.office-queue-grip {touch-action:none;border:0;background:transparent;padding:6px;opacity:0;cursor:grab}
+.office-queued-item:hover .office-queue-grip,.office-queue-grip:focus-visible {opacity:1}
+.office-queued-copy {max-width:85%;min-width:0;border:1px solid var(--line);background:var(--surface);border-radius:14px;padding:12px 16px}
+.office-queued-copy p {margin:0;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--text);font-size:var(--font-ui);line-height:1.6}
+.office-queued-status {flex-basis:100%;display:flex;justify-content:flex-end}
+.office-queued-status button {border:0;background:transparent;color:var(--muted);padding:4px;font-size:12px;gap:4px}
+.office-queue-menu {position:fixed;margin:0;width:180px;max-width:calc(100vw - 16px);padding:6px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--text);box-shadow:0 8px 24px #0004}
+.office-queue-menu button {display:flex;justify-content:flex-start;width:100%;min-height:40px;border:0;background:transparent;gap:10px;padding:8px 10px;font-size:var(--font-ui)}
+.office-queue-menu button:hover:not(:disabled) {background:var(--hover)}
+.office-queue .queue-before {box-shadow:inset 0 2px 0 var(--text)}
+.office-queued-row>[role=alert] {flex-basis:100%;text-align:right;color:var(--danger);overflow-wrap:anywhere}
+.office-queue-editor {margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.office-queue-editor textarea {width:100%;min-height:72px;resize:none}.office-queue-editor small{flex:1;color:var(--muted);font-size:12px}.office-next-settings{display:block;color:var(--muted);font-size:11px}
+@media(hover:none){.office-queue-grip{opacity:1}}
 
 .skill-input {position:relative;min-width:0}
-.skill-command-menu {position:absolute;z-index:20;bottom:calc(100% + 8px);left:0;right:0;background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 28px #0004;overflow:hidden;animation:cbim-content-in var(--motion-fast) var(--motion-ease)}
+.skill-command-menu {position:absolute;z-index:20;bottom:calc(100% + 8px);left:0;right:0;background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 28px #0004;overflow:hidden;animation:var(--tween-popup)}
 .skill-command-menu header,.skill-command-menu > footer {display:flex;justify-content:space-between;gap:8px;padding:9px 12px;font-size:var(--font-ui);color:var(--muted);border:0}
 .skill-command-menu [role=listbox] {max-height:min(260px,35dvh);overflow:auto;overscroll-behavior:contain;padding:4px}
 .skill-command-menu [role=option] {display:flex;justify-content:flex-start;gap:10px;min-height:48px;width:100%;padding:7px 10px;border:0;background:transparent;text-align:left;color:var(--text)}
@@ -125,3 +143,8 @@
 .skill-command-menu small,.skill-enter {color:var(--muted)}
 .skill-command-menu p {padding:12px;margin:0}
 @media(max-width:600px){.skill-command-menu header{flex-wrap:wrap}.skill-command-menu > footer{font-size:var(--font-ui)}}
+
+.office-chat footer .office-action svg {color:inherit}
+.office-chat footer .office-action:hover:not(:disabled) {filter:brightness(.9)}
+
+.office-error-actions {display:flex;justify-content:flex-end;gap:6px;flex-basis:100%}.office-error-actions button {border:0;background:transparent;color:var(--muted);font-size:12px;padding:5px 8px}.office-error-actions button:hover:not(:disabled) {background:var(--hover);color:var(--text)}

@@ -1,0 +1,64 @@
+/* Desktop motion primitives and reusable presets. */
+:root {
+  --ui-fast: 160ms; --ui-normal: 240ms;
+  --ui-ease-in: cubic-bezier(.4,0,1,1); --ui-ease-out: cubic-bezier(0,0,.2,1);
+  --ui-ease-in-out: cubic-bezier(.4,0,.2,1); --ui-spring: cubic-bezier(.2,.8,.3,1.2);
+}
+:root {
+  --motion-fast: 120ms; --motion-normal: 180ms; --motion-panel: 220ms;
+  --motion-ease: cubic-bezier(.2,.7,.2,1);
+  --tween-control: background-color var(--motion-fast), border-color var(--motion-fast), color var(--motion-fast);
+  --tween-panel: cbim-panel-in var(--motion-panel) var(--motion-ease);
+  --tween-menu: cbim-content-in var(--motion-normal) var(--motion-ease);
+  --tween-popup: cbim-content-in var(--motion-fast) var(--motion-ease);
+  --tween-turn: transform var(--motion-fast) var(--motion-ease);
+  --tween-progress: width .25s linear;
+  --tween-sweep: engine-progress-sweep 1.4s ease-in-out infinite alternate;
+  --tween-highlight: background-color var(--motion-fast) var(--motion-ease);
+  --tween-opacity: opacity var(--motion-fast) var(--motion-ease);
+  --tween-pulse: ui-breathe 1.2s ease-in-out infinite alternate;
+}
+@keyframes cbim-content-in {from {opacity: 0; transform: translateY(3px)} to {opacity: 1; transform: translateY(0)}}
+@keyframes cbim-panel-in {from {opacity: 0; transform: translateY(12px)} to {opacity: 1; transform: translateY(0)}}
+@keyframes engine-progress-sweep { to { transform: translateX(185%); } }
+@keyframes ui-fade-in { from { opacity:0; } to { opacity:1; } }
+@keyframes ui-fade-out { to { opacity:0; } }
+@keyframes ui-float { to { transform:translateY(-4px); } }
+@keyframes ui-rotate { to { transform:rotate(1turn); } }
+@keyframes ui-breathe { to { opacity:.45; } }
+@keyframes ui-scale { from { transform:scale(.96); } to { transform:scale(1); } }
+@keyframes ui-pingpong { from { transform:translateX(-3px); } to { transform:translateX(3px); } }
+[data-motion=fade-in] { animation:ui-fade-in var(--ui-normal) var(--ui-ease-out) both; }
+[data-motion=fade-out] { animation:ui-fade-out var(--ui-fast) var(--ui-ease-in) forwards; }
+[data-motion=float] { animation:ui-float 1s var(--ui-ease-in-out) infinite alternate; }
+[data-motion=rotate] { animation:ui-rotate 1s linear infinite; }
+[data-motion=breathe] { animation:ui-breathe 1.2s var(--ui-ease-in-out) infinite alternate; }
+[data-motion=scale] { animation:ui-scale var(--ui-normal) var(--ui-spring) both; }
+[data-motion=pingpong] { animation:ui-pingpong .8s var(--ui-ease-in-out) infinite alternate; }
+/* Shared visibility transitions. Keep elements mounted while changing their state. */
+:root { --ui-motion-fade: 200ms ease-in-out; }
+
+[data-ui-fade] { transition: opacity var(--ui-motion-fade); }
+[data-ui-fade="false"], [data-ui-fade="false"]:disabled { opacity: 0; pointer-events: none; }
+[data-ui-fade="true"] { opacity: 1; }
+
+[data-ui-scrollbar-fade][data-ui-scrollbar-fade] {
+  scrollbar-color: transparent transparent;
+  transition: scrollbar-color var(--ui-motion-fade);
+}
+[data-ui-scrollbar-fade="true"][data-ui-scrollbar-fade] { scrollbar-color: var(--muted) transparent; }
+
+[data-motion=control] { transition: var(--tween-control); }
+[data-motion=panel] { animation: var(--tween-panel); }
+[data-motion=menu] { animation: var(--tween-menu); }
+[data-motion=popup] { animation: var(--tween-popup); }
+[data-motion=turn] { transition: var(--tween-turn); }
+[data-motion=progress] { transition: var(--tween-progress); }
+[data-motion=sweep] { animation: var(--tween-sweep); }
+[data-motion=highlight] { transition: var(--tween-highlight); }
+[data-motion=opacity] { transition: var(--tween-opacity); }
+[data-motion=pulse] { animation: var(--tween-pulse); }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation:none !important; transition:none !important; scroll-behavior:auto !important; }
+  [data-motion=fade-out] { opacity:0; }
+}

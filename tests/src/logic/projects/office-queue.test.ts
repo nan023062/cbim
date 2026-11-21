@@ -7,6 +7,15 @@ import { Paths } from '../../../../src/logic/projects/paths';
 import { ProjectOffices, type OfficeChat } from '../../../../src/logic/projects/offices';
 import { OfficeQueue } from '../../../../src/logic/projects/office-queue';
 
+test('空闲时优先执行选中项，失败保留记录且不阻塞其余指令',async()=>{
+ const root=await fs.mkdtemp(path.join(os.tmpdir(),'office-queue-'));const projects=new ProjectList(new Paths(root));const seen:string[]=[];
+ const offices=new ProjectOffices(projects,async(_role,messages)=>{const goal=JSON.parse(messages.at(-1)!.content).userRequest;seen.push(goal);if(goal==='priority')throw Error('fixture failure');return {text:'ok',metrics:{elapsed:1,model:'m',capacity:1000}}});const queue=new OfficeQueue(projects,offices);
+ try{await fs.mkdir(path.join(root,'repo'));const project=await projects.Add(path.join(root,'repo'));const session=await offices.Open(project.id,'create');await queue.Change(project.id,session.id,{action:'pause'});
+ for(const text of ['first','priority','last'])await queue.Change(project.id,session.id,{action:'enqueue',id:crypto.randomUUID(),text,permission:'read',selection:{engine:'pi',profileId:'p',modelId:'m'}});
+ const state=await queue.Read(project.id,session.id);await queue.Change(project.id,session.id,{action:'start',id:state.items[1].id,revision:state.revision});await expect.poll(async()=>(await queue.Read(project.id,session.id)).items.map(item=>item.status)).toEqual(['failed']);expect(seen).toEqual(['priority','first','last']);}
+ finally{await queue.Close();await fs.rm(root,{recursive:true,force:true})}
+});
+
 test('宿主 FIFO、配置提交快照、重排、立即插入和提交去重共用同一 Office',async()=>{
  const root=await fs.mkdtemp(path.join(os.tmpdir(),'office-queue-'));const projects=new ProjectList(new Paths(root));
  const calls:Array<{text:string;config:any;release:()=>void;inserted:string[];instance?:string}>=[];

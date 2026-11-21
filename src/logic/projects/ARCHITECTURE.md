@@ -190,7 +190,7 @@ click N_c26b7944d23b href "../../framework/business/workspace-instance.ts"
 
 ### Office 指令排队
 
-OfficeQueue 按项目与会话独立持久化指令；宿主负责串行接收、FIFO 消费、版本化重排和插入，页面卸载不停止。每次提交保存引擎、模型、Skills、连接器与权限快照；之后的设置修改仅影响后续提交。立即插入沿用当前任务环境，通过 OfficeInputs 传递，不另开重复任务。停止与失败暂停队列，重启将未确认运行标为 uncertain，必须核实后明确重试或移除。接收 ID 保留最近 1000 条去重回执。
+OfficeQueue 按项目与会话独立持久化指令；宿主负责串行接收、FIFO 消费、版本化重排和插入，页面卸载不停止。每次提交保存引擎、模型、Skills、连接器与权限快照；之后的设置修改仅影响后续提交。立即插入沿用当前任务环境，通过 OfficeInputs 传递，不另开重复任务。手动暂停与停止需要显式继续；单条失败不会阻塞后续指令。重开未暂停的会话恢复 FIFO；中断的在途项标为 uncertain 并暂停，继续只消费 queued 项。空闲时可优先执行选中项。接收 ID 保留最近 1000 条去重回执。
 
 ```mermaid
 flowchart TD

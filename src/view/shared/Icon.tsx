@@ -37,6 +37,7 @@ const paths: Record<string, React.ReactNode> = {
   stop: <><rect x="5" y="5" width="14" height="14" rx="2" /></>,
   next: <><path d="m5 5 10 7-10 7ZM19 4v16" /></>,
   replay: <><path d="M4 8a9 9 0 1 1 0 8M3 3v6h6M11 8l5 4-5 4Z" /></>,
+  sendSolid: <path d="M4 4 21 12 4 20l3-7h7v-2H7Z" fill="currentColor" stroke="none" />,
   send: <><path d="m3 3 18 9-18 9 3-9ZM6 12h15" /></>,
   enqueue: <><path d="M4 5h12M4 10h8M4 15h6M17 12v8M13 16h8" /></>,
   edit: <><path d="m4 15 12-12 5 5L9 20l-6 1ZM13 6l5 5M4 15l5 5" /></>,

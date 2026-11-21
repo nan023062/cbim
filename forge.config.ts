@@ -8,6 +8,7 @@ import path from 'node:path';
 import {signingConfig, desktopSigningMode, desktopReleaseNotes, updaterConfigYaml} from './scripts/desktop-signing/config.cjs';
 import {verifyBrandAssets} from './scripts/build-brand-assets.mjs';
 import {runtimeSigningKey,stageColdRuntime} from './scripts/runtime-packaging';
+import {buildEngineAdapter,adapterSources} from './scripts/build-engine-adapters.mjs';
 import {desktopBuilds} from './desktop-builds';
 
 // Keep one timestamp across Forge's package/make phases and any child processes.
@@ -35,6 +36,7 @@ const config: ForgeConfig = {
   packagerConfig: { asar: true, executableName, icon:path.resolve('assets/branding/cbim.ico'), ...(desktopRelease?{appVersion:desktopVersion,buildVersion:desktopVersion}:{}),extraResource: ['assets/branding','legal','node_modules/koffi',...(desktopRelease?[path.join(buildOut,'desktop-release.json'),path.join(buildOut,'app-update.yml')]:[])] },
   makers: [new MakerZIP({}, ['win32'])],
   hooks:{
+    preStart:async()=>{for(const kind of Object.keys(adapterSources))await buildEngineAdapter(kind,path.resolve('node_modules/.cache/cbim/engine-adapters',kind))},
     prePackage:async()=>{await runtimeSigningKey()},
     generateAssets:async()=>{await verifyBrandAssets();await fs.mkdir(buildOut,{recursive:true});if(desktopRelease){await fs.writeFile(path.join(buildOut,'desktop-release.json'),JSON.stringify({channel:'desktop-stable',version:desktopVersion,notes:releaseNotes,signingMode}));await fs.writeFile(path.join(buildOut,'app-update.yml'),updaterConfigYaml(desktopVersion,signing?.publisherName,signingMode))}},
     readPackageJson:async(_config,pkg)=>desktopRelease?{...pkg,version:desktopVersion}:pkg,

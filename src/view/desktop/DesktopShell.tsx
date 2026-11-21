@@ -4,7 +4,7 @@
  */
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 
-import type { DiscoveryPage, ProjectItem, OfficeConversation } from '../../bridge/contracts/discovery';
+import type { DiscoveryPage, ProjectItem, OfficeConversation, OfficeSelection } from '../../bridge/contracts/discovery';
 
 import { OfficeView } from '../office/OfficeView';
 
@@ -75,6 +75,53 @@ export function DesktopShell()
       setSelected(project);
 
     window.desktopMenu.OpenOffice(project.id, draft ? 'create' : session ? 'select' : 'latest', session).then(value => { if (sequence !== request.current) return; setSelected(project); setOffice(value); localStorage.setItem('project-last-office', JSON.stringify({ project: project.id, session: value.id })); }).catch(e => { if (sequence === request.current) setError(String(e)); });
+  }
+
+  /** 诊断在独立只读会话启动，不触碰失败指令和原队列。 */
+  async function Analyze(text: string, selection: Required<OfficeSelection>)
+  {
+    if (!selected)
+      return;
+
+    const project = selected;
+
+    const sequence = ++request.current;
+
+    const created = await window.desktopMenu.OpenOffice(project.id, 'create');
+
+    const target = { kind: 'main' as const, id: created.id };
+
+    const settings = await window.desktopMenu.AgentSettings(project.id, target);
+
+    await window.desktopMenu.AgentSettings(project.id, target, { revision: settings.revision, configuration: { model: selection, skills: [], connectorIds: [] } });
+
+    localStorage.setItem('office-permission:' + created.id, 'read');
+
+    if (sequence === request.current)
+    {
+      setPage('workspace');
+
+      setWorkspaceView('office');
+
+      setSelected(project);
+
+      setOffice(created);
+
+      setDrafts(previous => ({ ...previous, [created.id]: text }));
+
+      localStorage.setItem('project-last-office', JSON.stringify({ project: project.id, session: created.id }));
+    }
+
+    try
+    {
+      await window.desktopMenu.OfficeQueue(project.id, created.id, { action: 'enqueue', id: crypto.randomUUID(), text, permission: 'read', selection });
+
+      setDrafts(previous => ({ ...previous, [created.id]: '' }));
+    }
+    catch (error)
+    {
+      setError('分析指令未提交，已保留在新对话草稿：' + String(error));
+    }
   }
 
   const [updateOpen, setUpdateOpen] = useState(false);
@@ -177,7 +224,7 @@ export function DesktopShell()
       </header>
       {error && <p role="alert">{error}</p>}
       {page !== 'workspace' ? <DiscoveryView key={page} page={page} title={title} /> : selected ? office ?
-          <OfficeView view={workspaceView} onOffice={() => setWorkspaceView('office')} onManageEngines={() => setPage('engines')} key={office.id} conversation={office} project={selected} draft={drafts[office.id] ?? ''}
+          <OfficeView onAnalyze={Analyze} view={workspaceView} onOffice={() => setWorkspaceView('office')} onManageEngines={() => setPage('engines')} key={office.id} conversation={office} project={selected} draft={drafts[office.id] ?? ''}
             onDraft={text => setDrafts(previous => ({ ...previous, [office.id]: text }))}
             started={running[office.id] ?? 0} onRunning={time => setRunning(previous => ({ ...previous, [office.id]: time }))}
             onSaved={messages => { setOffice(current => current?.id === office.id ? { ...current, messages: [...current.messages, ...messages.filter(m => !current.messages.some(existing => existing.id === m.id))] } : current); }} />

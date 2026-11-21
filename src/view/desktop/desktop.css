@@ -79,9 +79,8 @@
 .office-session-row form { display: flex; min-width: 0; width: 100%; }
 .office-session-row input { min-width: 0; flex: 1; }
 .office-session-icon { display: inline-flex; flex: none; }
-.office-session-icon.executing svg { color: var(--green); animation: office-session-pulse 1.2s ease-in-out infinite alternate; }
-@keyframes office-session-pulse { to { opacity: .45; } }
-@media (prefers-reduced-motion: reduce) { .office-session-icon.executing svg { animation: none; } }
+.office-session-icon.executing svg { color: var(--green); animation: var(--tween-pulse); }
+
 @media (hover: hover) {
   .project-list-row:not(:hover):not(:focus-within):not(:has(:popover-open)) .project-action { opacity: 0; }
 }
@@ -169,12 +168,11 @@
 .engine-list button { display: grid; justify-items: start; justify-content: stretch; gap: 3px; text-align: left; padding: 10px 12px; border: 1px solid transparent; background: transparent; }
 .engine-list button:hover { background: var(--hover); }
 .engine-list button { position: relative; isolation: isolate; overflow: hidden; }
-.engine-progress-fill { position: absolute; inset: 0 auto 0 0; z-index: -1; pointer-events: none; background: currentColor; opacity: .16; transition: width .25s linear; }
-.engine-progress-fill.pending { width: 35%; animation: engine-progress-sweep 1.4s ease-in-out infinite alternate; }
-@keyframes engine-progress-sweep { to { transform: translateX(185%); } }
+.engine-progress-fill { position: absolute; inset: 0 auto 0 0; z-index: -1; pointer-events: none; background: currentColor; opacity: .16; transition: var(--tween-progress); }
+.engine-progress-fill.pending { width: 35%; animation: var(--tween-sweep); }
+
 .engine-install-progress { display: grid; grid-template-columns: 1fr auto; gap: 6px; margin-top: 12px; font-size: 12px; font-variant-numeric: tabular-nums; }
 .engine-install-progress progress { grid-column: 1 / -1; width: 100%; height: 8px; }
-@media (prefers-reduced-motion: reduce) { .engine-progress-fill { transition: none; } .engine-progress-fill.pending { animation: none; } }
 .engine-list button[aria-current] { background: var(--selected); border-color: var(--line); }
 .engine-list small, .engine-detail dt, .engine-detail > p { color: var(--muted); font-size: 12px; }
 .engine-detail { min-width: 0; padding: 20px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow-wrap: anywhere; }
@@ -278,13 +276,13 @@ h2.engine-brand img {width:30px;height:30px;}
 #application-home .workspace-sidebar .primary-nav > button,#application-home .sidebar-new-conversation,.navigation-menu button,.navigation-show-all,.navigation-empty,.navigation-error {font-size:var(--font-ui)}
 #application-home .sidebar-footer .user-profile-trigger {height:auto;min-height:30px}
 #application-home .sidebar-footer .user-profile-copy {line-height:1.3}
-#application-home .project-list-row {transition:background-color var(--motion-fast) var(--motion-ease)}
+#application-home .project-list-row {transition:var(--tween-highlight)}
 #application-home .project-select:focus-visible {outline-offset:-2px;border-radius:999px}
 #application-home .project-heading:focus-within .project-chevron {display:flex}
-#application-home .project-grip {transition:opacity var(--motion-fast) var(--motion-ease)}
+#application-home .project-grip {transition:var(--tween-opacity)}
 #application-home .project-tree {padding-inline:3px;scroll-padding-block:8px}
 #application-home .session-meta {font-variant-numeric:tabular-nums}
-.navigation-menu,.task-list-options:popover-open,#user-actions:popover-open {animation:cbim-content-in var(--motion-fast) var(--motion-ease)}
+.navigation-menu,.task-list-options:popover-open,#user-actions:popover-open {animation:var(--tween-popup)}
 @media(pointer:coarse) {
   #application-home .project-navigation button,#application-home .workspace-sidebar .primary-nav > button,#application-home .sidebar-new-conversation {min-height:44px}
   #application-home .project-action,#application-home .local-device-row .device-add,#application-home .project-grip {min-width:44px}

@@ -47,6 +47,17 @@ export class OfficeMembers
     return binding;
   }
 
+  public BoundNames()
+  {
+    const names = new Map<string, string>();
+    for (const worker of this._bindings.values())
+    {
+      const member = this.organization.FindMember(worker.memberId);
+      if (member && member.agentId === worker.agentId) names.set(worker.agent.id, member.name);
+    }
+    return names;
+  }
+
   public ListAgents()
   {
     return this.agents.ListAgents();

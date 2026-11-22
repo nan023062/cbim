@@ -6,6 +6,36 @@ import type { MonitorUpdate } from '../../../../src/framework/monitor/updates';
 
 afterEach(() => { vi.useRealTimers(); });
 
+test('monitor titles follow the owning project and Office binding even between tasks', async () => {
+  const names = new Map([['p', '游戏项目'], ['q', '演示项目']]);
+  const runtime = Object.assign(new CbimRuntime(), { ProjectName: (id: string) => names.get(id) });
+  const monitor = new RuntimeMonitor(runtime);
+  const member = { kind: 'agent' as const, id: 'planner', agentId: 'template', name: '游戏策划', position: '设计玩法', available: true, model: { engine: 'local', modelId: 'm', profileId: 'p' } };
+  const factory = { parameters: 0, CreateEngine: async () => ({ session: {}, Close: async () => {} }) };
+  try {
+    for (const id of names.keys()) {
+      const office = runtime.OpenOffice(id, 'same-session');
+      office.members.SetMembers([member]);
+      office.members.GetMember(member.id);
+      await office.OpenMainAgent(factory);
+    }
+    const [first, second] = monitor.GetSnapshot().offices;
+    expect(first.agents.map(a => a.name)).toEqual(['游戏项目 · 助理', '游戏项目 · 游戏策划']);
+    expect(second.agents.map(a => a.name)).toEqual(['演示项目 · 助理', '演示项目 · 游戏策划']);
+    expect(first.cores[0]).toMatchObject({ name: first.agents[0].name, agentId: first.agents[0].id });
+    const other = runtime.OpenOffice('q', 'same-session');
+    other.members.SetMembers([{ ...member, name: '关卡策划' }]);
+    expect(monitor.GetSnapshot().offices[1].agents[1].name).toBe('演示项目 · 关卡策划');
+    names.delete('q');
+    other.members.SetMembers([]);
+    expect(monitor.GetSnapshot().offices[1].agents[1].name).toBe('未知项目 · 未知 Agent');
+    expect(monitor.GetSnapshot().offices[0].agents[1].name).toBe('游戏项目 · 游戏策划');
+  } finally {
+    monitor.Close();
+    await runtime.Close();
+  }
+});
+
 test('shared connector sessions contribute one peripheral load until the last release', async () => {
   const monitor = new RuntimeMonitor(new CbimRuntime());
   const connector = new ConnectorRuntime(async id => ({ id, Create: () => ({

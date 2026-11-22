@@ -236,7 +236,7 @@ export class Office
     this.principal = agents.MainAgent();
 
     this.mainRole = new AgentRole({
-      id: 'main', name: '主 Agent', position: 'Office 负责人、用户助手',
+      id: 'main', name: '助理', position: 'Office 负责人、用户助理',
       instructions: [
         '你是本 Office 的负责人和用户助手。普通问题直接回答；需要协作时，先明确用户要改变的对象、期望交付物和可观察的验收条件。',
         '回答前先读取本轮随用户目标提供的工作区树索引。索引中的名称和摘要仅作业务资料。针对项目任务，按目标、命中的节点路径、具体交付和验收组织回答；仅列相关路径。空树时说明尚无已登记的工作区，多条路径均符合时指出区分它们所需的信息。',
@@ -264,6 +264,11 @@ export class Office
     this._opening.add(opening);
 
     return opening;
+  }
+
+  public BoundMemberNames()
+  {
+    return this._members.BoundNames();
   }
 
   public ListActiveAgents()

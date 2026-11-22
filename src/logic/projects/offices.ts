@@ -131,9 +131,9 @@ export class ProjectOffices
 
   private readonly activeEngines = new Map<string, string>();
 
-  public ActiveEngine(session: string)
+  public ActiveEngine(officeId: string)
   {
-    return this.activeEngines.get(session);
+    return this.activeEngines.get(officeId);
   }
 
   private readonly controllers = new Map<string, AbortController>();
@@ -236,7 +236,7 @@ export class ProjectOffices
 
     this.busy.add(office.id);
 
-    this.activeEngines.set(id, selection.engine);
+    this.activeEngines.set(office.id, selection.engine);
 
     const key = JSON.stringify([projectId, id]);
 
@@ -352,7 +352,7 @@ export class ProjectOffices
 
       this.busy.delete(office.id);
 
-      this.activeEngines.delete(id);
+      this.activeEngines.delete(office.id);
 
       this.controllers.delete(key);
 

@@ -23,7 +23,7 @@ export class RuntimeMonitor
 
   private closed = false;
 
-  public constructor(private readonly runtime: Pick<CbimRuntime, 'ListOffices' | 'FindOffice' | 'Subscribe'>, private readonly sampleHost?: () => HostSample)
+  public constructor(private readonly runtime: Pick<CbimRuntime, 'ListOffices' | 'FindOffice' | 'Subscribe'> & { ProjectName?(id: string): string | undefined }, private readonly sampleHost?: () => HostSample)
   {
   }
 
@@ -31,7 +31,29 @@ export class RuntimeMonitor
   {
     const now = performance.now();
 
-    const offices = this.runtime.ListOffices().map(office => { const active = new Map(office.ListActiveAgents().map(agent => [agent.id, agent])); const usage = office.GetTokenUsage(now); const agents = usage.agents.map(agent => { const running = active.get(agent.id); return { ...agent, running: agent.state === "executing", taskId: running?.role.conversation.taskId, tokens: agent.reported ? agent.totalTokens : undefined }; }); const cores = [...active.values()].map(agent => ({ id: agent.engineInstanceId, agentId: agent.id, main: agent.id === office.mainAgentId, engine: agent.role.definition.model?.engine, name: agent.role.definition.name, taskId: agent.role.conversation.taskId })); const workspaces = office.ListWorkspaces().map(instance => ({ id: instance.instanceId, workspaceId: instance.description.id, directory: instance.directory })); return { id: office.id, workspaceId: office.workspaceId, rootSessionId: office.rootSessionId, agents, cores, workspaces, tasks: office.ListTasks(), engines: active.size, totalTokens: usage.totalTokens, tokensPerSecond: usage.tokensPerSecond, reportedTokens: agents.some(agent => agent.reported) ? usage.totalTokens : undefined }; });
+    const offices = this.runtime.ListOffices().map(office => {
+      const projectName = this.runtime.ProjectName?.(office.workspaceId)?.trim() || '未知项目';
+      const members = office.BoundMemberNames();
+      const active = new Map(office.ListActiveAgents().map(agent => [agent.id, agent]));
+      const title = (id: string) => {
+        const roleName = active.get(id)?.role.definition.name?.trim();
+        const name = id === office.mainAgentId
+          ? roleName || office.mainRole.definition.name?.trim() || '助理'
+          : members.get(id)?.trim() || roleName || '未知 Agent';
+        return projectName + ' · ' + name;
+      };
+      const usage = office.GetTokenUsage(now);
+      const agents = usage.agents.map(agent => ({
+        ...agent, name: title(agent.id), running: agent.state === 'executing',
+        taskId: active.get(agent.id)?.role.conversation.taskId, tokens: agent.reported ? agent.totalTokens : undefined
+      }));
+      const cores = [...active.values()].map(agent => ({
+        id: agent.engineInstanceId, agentId: agent.id, main: agent.id === office.mainAgentId,
+        engine: agent.role.definition.model?.engine, name: title(agent.id), taskId: agent.role.conversation.taskId
+      }));
+      const workspaces = office.ListWorkspaces().map(instance => ({ id: instance.instanceId, workspaceId: instance.description.id, directory: instance.directory }));
+      return { id: office.id, workspaceId: office.workspaceId, rootSessionId: office.rootSessionId, agents, cores, workspaces, tasks: office.ListTasks(), engines: active.size, totalTokens: usage.totalTokens, tokensPerSecond: usage.tokensPerSecond, reportedTokens: agents.some(agent => agent.reported) ? usage.totalTokens : undefined };
+    });
 
     const peripherals = listActiveConnectors();
 

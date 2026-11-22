@@ -108,6 +108,12 @@ export class ProjectList extends Catalog
     return project;
   }
 
+  /** 从打开项目的登记信息取名，监控采样无需读盘。 */
+  public ProjectName(id: string)
+  {
+    return this.loaded.get(id)?.entry.name;
+  }
+
   public ListOffices()
   {
     return [...this.loaded.values()].flatMap(project => project.runtime.ListOffices());

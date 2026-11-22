@@ -71,6 +71,14 @@ export class OfficeInputs
     return async () => { connected = false; this._listeners.delete(flush); await pending; };
   }
 
+  /** 成员已退出，未领取的广播保留真实的未投递状态。 */
+  public Close(): void
+  {
+    this._closed = true;
+    for (const entry of this._entries.filter(item => item.state === 'pending'))
+      this._report(entry.id, entry.text, '成员已结束，未投递');
+  }
+
   /** 关闭接收与领取余项同步发生，避免终态结算时丢失追加。 */
   public Finish(): { id: string; text: string }[]
   {

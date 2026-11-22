@@ -107,7 +107,8 @@ function ActivityRow({ step, live }: { step: OfficeActivity; live?: boolean })
   const plan = step.id.startsWith('plan:');
   const receipt = step.id.startsWith('receipt:');
   const dispatch = step.label === 'cbim_office_dispatch';
-  const team = plan || receipt || dispatch;
+  const broadcast = step.id.startsWith('broadcast:');
+  const team = plan || receipt || dispatch || broadcast;
   const running = live && step.toolState === 'running' && !step.alert;
   const returned = step.toolState === 'returned' || step.id.startsWith('receipt:') || (step.id.startsWith('tool:') && step.toolState === undefined && step.result !== undefined);
   const title = eventSummary(step).replace(/\s+/g, ' ').trim();
@@ -117,7 +118,7 @@ function ActivityRow({ step, live }: { step: OfficeActivity; live?: boolean })
   return <details open={plan || undefined} className={'office-event' + (team ? ' office-team-event' : '') + (error ? ' office-work-alert' : '')}>
     <summary>{error ? <Icon name={cancelled ? 'stopped' : 'failed'} size={16} label={cancelled ? '已中止' : '执行失败'} /> : running ? <Icon name="spinner" motion="rotate" tone="warning" size={16} label="正在执行" />
       : returned ? <Icon name="check" size={16} label="已收到回执" /> : team ? <span /> : <Icon name={eventIcon(step)} size={16} />}
-      <span className="office-event-copy">{team && <b className="office-team-route"><Icon name={plan ? 'brain' : receipt ? 'teamReceipt' : 'teamDispatch'} size={16} />{plan ? '分析任务' : receipt ? '任务回执' : '派发任务'} · {step.actor}{step.recipient && ' → ' + step.recipient}</b>}
+      <span className="office-event-copy">{team && <b className="office-team-route"><Icon name={broadcast ? 'notification' : plan ? 'brain' : receipt ? 'teamReceipt' : 'teamDispatch'} size={16} />{broadcast ? '环境广播' : plan ? '分析任务' : receipt ? '任务回执' : '派发任务'} · {step.actor}{step.recipient && ' → ' + step.recipient}</b>}
         {!!step.issues?.length && <small>过程反馈 · {step.issues.length} 项</small>}
         {step.workspace && <small><Icon name="folder" size={16} />工作区 · {step.workspace}</small>}
         <span>{!team && step.actor && !step.id.startsWith('receipt:') ? step.actor + ' · ' : ''}{team && step.summary ? step.summary : title}</span>

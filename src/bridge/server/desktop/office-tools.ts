@@ -16,7 +16,7 @@ import type { ToolCall, ToolDecision } from '../../../logic/tools/rules/types';
 
 import { zodToJsonSchema } from 'zod-to-json-schema';
 
-import { projectReads, projectWrites, officePlanSchema, officeDispatchSchema, type AgentPermission, type OfficeOperations, type OfficeApproval } from '../../../logic/projects/office-operations';
+import { projectReads, projectWrites, environmentNotice, officePlanSchema, officeDispatchSchema, type AgentPermission, type OfficeOperations, type OfficeApproval } from '../../../logic/projects/office-operations';
 
 import type { TaskPermission } from '../../../logic/projects/office-operations';
 
@@ -66,6 +66,7 @@ export class OfficeTools
         { name: 'cbim_project_write', description: '项目资源只通过此工具增删改，须传入最近读取的 revision。member 保存已登记岗位的能力；references 只增删改项目对共享制品的引用。组织岗位和业务节点立即登记。settings 为项目工作约定；timers 的 at 是带时区时间，value 是到期投递到本对话的指令。', inputSchema: zodToJsonSchema(projectWrites) },
       ] : []),
       ...(this._connectors?.List() ?? []).map(tool => ({ ...tool, description: tool.description ?? tool.name })),
+      ...(this._operations.BroadcastEnvironment ? [{ name: 'cbim_office_broadcast', description: '向本轮运行中的成员广播经核对的环境事实和适用范围。先 inspect 查看 environmentEvidence，引用实际工具回执 ID。', inputSchema: zodToJsonSchema(environmentNotice) }] : []),
       ...(this._operations.PublishPlan ? [{ name: 'cbim_office_plan', description: '在对话中向团队公布协作计划。按执行顺序列出任务，用前置任务名标明依赖，无依赖填空数组。', inputSchema: zodToJsonSchema(officePlanSchema) }] : []),
       { name: 'cbim_office_inspect', description: '读取当前 Office 的岗位、工作区和任务状态。workspaces.selectable 列出可派发工作区的名称和 ID；派发时使用其中的 id。', inputSchema: { type: 'object', properties: {}, additionalProperties: false } },
       { name: 'cbim_office_dispatch', description: '向已配置岗位派发任务并等待真实结果。成员继承 Office 权限，在 Office Git 工作树中执行；回执包含实际目录，修改不会自动合并回项目。禁止派给自身或祖先。', inputSchema: { type: 'object', properties: { memberId: { type: 'string' }, workspaceId: { type: 'string', description: '从 cbim_office_inspect 的 workspaces.selectable 选择物理工作区 id。' }, directory: { type: 'string', description: '工作树中的业务相对目录，默认 .' }, goal: { type: 'string' } }, required: ['memberId', 'workspaceId', 'goal'], additionalProperties: false } },
@@ -155,9 +156,13 @@ export class OfficeTools
     if (plan && (!this._operations.PublishPlan || !officePlanSchema.safeParse(call.input).success))
       return { allow: false, reason: '仅助理可公布完整的协作计划' };
 
-    const internal = plan || manage || call.name === 'cbim_office_inspect' || call.name === 'cbim_office_dispatch' || connector;
+    const broadcast = call.name === 'cbim_office_broadcast';
+    if (broadcast && (!this._operations.BroadcastEnvironment || !environmentNotice.safeParse(call.input).success))
+      return { allow: false, reason: '仅助理可广播经核对的环境事实' };
 
-    const descriptor = connector ? this._connectors!.Describe(call.name, call.input) : internal ? { native: false, effects: [(plan || call.name === 'cbim_project_read' || call.name === 'cbim_office_inspect') ? 'read' as const : 'business-write' as const] } : nativeToolDescriptor(call.name);
+    const internal = broadcast || plan || manage || call.name === 'cbim_office_inspect' || call.name === 'cbim_office_dispatch' || connector;
+
+    const descriptor = connector ? this._connectors!.Describe(call.name, call.input) : internal ? { native: false, effects: [(broadcast || plan || call.name === 'cbim_project_read' || call.name === 'cbim_office_inspect') ? 'read' as const : 'business-write' as const] } : nativeToolDescriptor(call.name);
 
     if (!descriptor || this._consumed.has(call.id))
       return { allow: false, reason: '未注册工具或已执行的调用身份' };
@@ -213,6 +218,9 @@ export class OfficeTools
 
       if ((name === 'cbim_project_write' || name === 'cbim_office_dispatch' || this._connectors?.Has(name)) && this._readPermission() !== grant.permission)
         throw Error('Office 权限已变更，请重新请求操作');
+
+      if (name === 'cbim_office_broadcast')
+        return { content: [{ type: 'text' as const, text: JSON.stringify(this._operations.BroadcastEnvironment!(environmentNotice.parse(input))) }] };
 
       if (name === 'cbim_office_plan')
       {

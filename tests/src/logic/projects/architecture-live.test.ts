@@ -103,3 +103,51 @@ test('无原生插入的宿主在同一主任务继续处理尾部变化，不�
  try{await fs.mkdir(path.join(root,'repo'));const entry=await projects.Add(path.join(root,'repo'));const session=await offices.Open(entry.id,'create');run=offices.Send(entry.id,session.id,'执行',undefined,'read',{engine:'codex',profileId:'p',modelId:'m'});await expect.poll(()=>calls).toBe(1);await offices.settings.organization.Change(entry.id,{action:'create',revision:0,kind:'team',parentId:null,name:'新团队',position:''});release();const result=await run;expect(calls).toBe(2);expect(prompts[1]).toContain('architecture.changed');expect(result.at(-1).text).toContain('阶段2');expect(result.at(-1).metrics.cost).toBe(2);const office=(await projects.Open(entry.id)).runtime.FindOffice(session.officeId)!;expect(office.ListAgents().find(agent=>agent.usage.totalTokens===20)).toBeTruthy();}
  finally{release?.();await run?.catch(()=>{});await projects.Close();await fs.rm(root,{recursive:true,force:true});}
 });
+
+test('助理引用终端回执向运行中的成员投递一次环境广播', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'office-broadcast-'));
+  const projects = new ProjectList(new Paths(root));
+  const selection = { engine: 'pi', profileId: 'p', modelId: 'm' };
+  let memberId = '', workspaceId = '', ready!: () => void, finish!: () => void;
+  const started = new Promise<void>(resolve => { ready = resolve; });
+  const release = new Promise<void>(resolve => { finish = resolve; });
+  const received: string[] = [];
+  const chat: OfficeChat = async (_role, _messages, signal, progress, turn) => {
+    if (turn.operations.BroadcastEnvironment) {
+      const pending = turn.operations.Dispatch({ memberId, workspaceId, directory: '.', goal: '验证' }, signal);
+      try {
+        await Promise.race([started, pending]);
+        const notice = { evidenceId: 'unknown', finding: '探测命令缺失', scope: '当前终端' };
+        expect(() => turn.operations.BroadcastEnvironment!(notice)).toThrow('回执');
+        progress({ phase: 'thinking', model: 'm', toolFinished: true, activity: { id:'tool:probe', label:'bash', result:'command not found: probe', alert:'bash执行失败' } });
+        const inspection = turn.operations.Inspect() as { environmentEvidence: { id: string }[] };
+        notice.evidenceId = inspection.environmentEvidence[0].id;
+        expect(turn.operations.BroadcastEnvironment!(notice)).toEqual({queuedFor:['成员']});
+        expect(turn.operations.BroadcastEnvironment!(notice)).toEqual({queuedFor:[]});
+        await expect.poll(() => received.length).toBe(1);
+      } finally { finish(); await pending; }
+    } else {
+      const disconnect = turn.inputs!.Connect(async text => { received.push(JSON.parse(JSON.parse(text).officeInput.text).finding); });
+      ready(); await release; await disconnect();
+    }
+    return { text:'完成', metrics:{elapsed:1,model:'m',capacity:1000} };
+  };
+  try {
+    const repo = path.join(root,'repo');
+    await fs.mkdir(repo);
+    const { execFileSync } = await import('node:child_process');
+    execFileSync('git',['-C',repo,'init','-q']);
+    execFileSync('git',['-C',repo,'-c','user.name=Fixture','-c','user.email=t@example.org','commit','--allow-empty','-qm','init']);
+    const project = await projects.Add(repo);
+    const offices = new ProjectOffices(projects,chat);
+    const office = await offices.Open(project.id,'create');
+    let org = await offices.settings.organization.Change(project.id,{action:'create',revision:0,kind:'team',parentId:null,name:'研发',position:''});
+    org = await offices.settings.organization.Change(project.id,{action:'create',revision:org.revision,kind:'agent',parentId:org.nodes[0].id,name:'成员',position:'工程师'});
+    memberId = org.nodes.at(-1)!.id;
+    await offices.settings.Save(project.id,{kind:'member',id:memberId},0,{model:selection,skills:[],connectorIds:[]});
+    workspaceId = (await offices.business.Change(project.id,{action:'create',revision:0,definition:{parentId:null,name:'开发',summary:'',sources:[],virtual:false}})).nodes[0].id;
+    const messages = await offices.Send(project.id,office.id,'验证广播',undefined,'execute',selection);
+    expect(received).toEqual(['探测命令缺失']);
+    expect(messages.at(-1)?.workLog?.find(step=>step.label==='环境广播')).toMatchObject({recipient:'成员',summary:'探测命令缺失 · 引擎已接收追加输入'});
+  } finally { finish(); await projects.Close(); await fs.rm(root,{recursive:true,force:true}); }
+});

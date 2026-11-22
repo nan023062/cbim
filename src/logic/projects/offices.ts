@@ -329,6 +329,22 @@ export class ProjectOffices
         }>();
 
       const active = new Map<string, NonNullable<ChatProgress['runningAction']>>();
+      // 每次用户指令独享收件人和证据；并行 Office 不共享成员邮箱。
+      const members = new Map<string, { actor: string; inbox: OfficeInputs; delivered: Set<string>; signal: AbortSignal }>();
+      const evidence = new Map<string, { actor: string; summary: string }>();
+      const broadcast = (notice: { evidenceId: string; finding: string; scope: string }, except?: string) => {
+        const proof = evidence.get(notice.evidenceId);
+        if (!proof) throw Error('广播需要引用本轮已返回的终端回执');
+        const recipients: string[] = [];
+        const key = JSON.stringify([notice.finding, notice.scope]);
+        for (const [task, member] of members) {
+          if (task === except || member.signal.aborted || member.delivered.has(key)) continue;
+          member.delivered.add(key);
+          member.inbox.Push(JSON.stringify({ type: 'office.environment', ...notice, observedBy: proof.actor }));
+          recipients.push(member.actor);
+        }
+        return { queuedFor: recipients };
+      };
       const runAgent = async (role: AgentRole, messages: Parameters<OfficeChat>[1], root: string, session: string, agentInstanceId: string, signal: AbortSignal, ReadPermission: () => AgentPermission, report: (seq: number, kind: 'message' | 'summary', count: number) => void, operations: OfficeOperations, publish: (sample: ChatProgress) => void) => {
         const issues = new Set<string>();
         const actor = role.definition.name;
@@ -340,6 +356,12 @@ export class ProjectOffices
           if (signal.aborted && session !== id && !controller.signal.aborted) return '成员任务取消信号';
           return '来源未知';
         };
+        const inbox = session === id ? inputs : new OfficeInputs((entryId, text, state) => {
+          const notice = JSON.parse(text);
+          record({ id: 'broadcast:' + entryId, actor: '助理', recipient: actor, label: '环境广播', summary: notice.finding + ' · ' + state, input: text });
+          progress({ phase: lastPhase, model: selection.modelId, workLog: Array.from(workLog.values()) });
+        });
+        if (session !== id) members.set(session, { actor, inbox, delivered: new Set(), signal });
         const base = { actor, action: goal, since: Date.now() };
         active.set(prefix, base);
         const forward = (sample: ChatProgress) => {
@@ -355,6 +377,14 @@ export class ProjectOffices
             if (step.alert) {
               const reason = step.alert === step.label + '执行失败' ? failureText(step.result) || step.alert : step.alert;
               issues.add(actor + ' · ' + step.label + ' · ' + failureSummary(reason).slice(0, 600));
+            }
+            if (sample.toolFinished && step.label === 'bash' && step.result && !step.cancelSource) {
+              const output = failureText(step.result);
+              const summary = (step.alert ? failureSummary(output) : output.trim().split('\n')[0] ?? '').slice(0, 300);
+              evidence.set(step.id, { actor, summary });
+              // Windows 的解释器占位程序有明确签名，助理等待派发回执期间也能通知同批成员。
+              if (step.alert && /^Python was not found; run without arguments to install from the Microsoft Store/im.test(output))
+                broadcast({ evidenceId: step.id, scope: '当前 Office 的 Windows 终端；自定义 PATH 或虚拟环境请单独核对', finding: '成员调用 python 时命中了 Windows 应用执行别名，解释器未启动。选择已验证的工具或先检查当前解释器。' }, session);
             }
             const key = prefix + step.id;
             if (step.label === 'cbim_office_dispatch' && step.input) {
@@ -408,14 +438,15 @@ export class ProjectOffices
             progress({phase:lastPhase,model:selection.modelId,workLog:Array.from(workLog.values()),runningAction:Array.from(active.values()).at(-1)});
             return receipt;
           } };
-          const instructions = agentRoleInstructions(role.definition) + (session === id ? '\n团队协作任务先核对实际业务与组织架构，再用 cbim_office_plan 向团队公布目标、相关业务节点、选岗依据及排序后的任务。每项写明负责人、工作区、预期产物和前置任务。阻塞或改派时更新计划。涉及派发时先展示计划，再按前置任务的真实回执执行。收集成员成果与过程问题，判断已解决项、待协调项和适用范围。下一次派发时把相关结论写入任务目标；需要时邀请合适岗位处理。' : '\n交付时向派发人说明成果、验证、过程中遇到的问题、已采用的解决办法及仍需协助的事项。');
-          const result = await chat(instructions, messages, signal, forward, { shared: project.runtime.shared, ReportStage: session === id ? ReportStage : undefined, inputs: session === id ? inputs : undefined, ReadPermission, ReportTokens: total => { const previous = tokenReports.get(agentInstanceId) ?? { sequence: 0, total: 0 }; const next = { sequence: previous.sequence + 1, total: previous.total + total }; tokenReports.set(agentInstanceId, next); report(next.sequence, 'summary', next.total); }, operations: dispatchOperations, configuration: role.definition, agentInstanceId, officeId: office.id, selection: role.definition.model!, root, session, project: projectId, engineRoot: project.cache.engines });
+          const instructions = agentRoleInstructions(role.definition) + (session === id ? '\n团队协作任务先核对实际业务与组织架构，再用 cbim_office_plan 向团队公布目标、相关业务节点、选岗依据及排序后的任务。每项写明负责人、工作区、预期产物和前置任务。阻塞或改派时更新计划。涉及派发时先展示计划，再按前置任务的真实回执执行。收集成员成果与过程问题，判断已解决项、待协调项和适用范围。运行中已有成员时，先 inspect 核对 environmentEvidence，再调用 cbim_office_broadcast 通知相关环境事实。下一次派发时把相关结论写入任务目标；需要时邀请合适岗位处理。' : '\n交付时向派发人说明成果、验证、过程中遇到的问题、已采用的解决办法及仍需协助的事项。');
+          const result = await chat(instructions, messages, signal, forward, { shared: project.runtime.shared, ReportStage: session === id ? ReportStage : undefined, inputs: inbox, ReadPermission, ReportTokens: total => { const previous = tokenReports.get(agentInstanceId) ?? { sequence: 0, total: 0 }; const next = { sequence: previous.sequence + 1, total: previous.total + total }; tokenReports.set(agentInstanceId, next); report(next.sequence, 'summary', next.total); }, operations: dispatchOperations, configuration: role.definition, agentInstanceId, officeId: office.id, selection: role.definition.model!, root, session, project: projectId, engineRoot: project.cache.engines });
           return { ...result, issues: Array.from(issues) };
         } catch (error) {
           if (session !== id && issues.size && !signal.aborted)
             throw new Error((error instanceof Error ? error.message : String(error)) + '\n成员过程反馈：\n' + Array.from(issues).join('\n'), { cause: error });
           throw error;
         } finally {
+          if (session !== id) { members.delete(session); inbox.Close(); }
           for (const step of workLog.values()) {
             if (step.id.startsWith('tool:' + prefix) && step.toolState === 'running') record({ ...step, toolState: 'stopped', ...(signal.aborted && { cancelSource: cancellationSource(), alert: '执行已中止' }) });
           }
@@ -424,7 +455,7 @@ export class ProjectOffices
         }
       };
 
-      const reply = await office.OpenMainAgent({ parameters: controller.signal, CreateEngine: async (signal, agentId, role, report, ReadPermission) => ({ session: () => runAgent(role, context, project.entry.path, id, agentId, signal, ReadPermission, report, { ...dispatch.Operations(), PublishPlan: plan => {
+      const reply = await office.OpenMainAgent({ parameters: controller.signal, CreateEngine: async (signal, agentId, role, report, ReadPermission) => ({ session: () => runAgent(role, context, project.entry.path, id, agentId, signal, ReadPermission, report, { ...dispatch.Operations(), Inspect: () => ({ ...dispatch.Operations().Inspect() as object, environmentEvidence: Array.from(evidence, ([id, item]) => ({ id, ...item })).slice(-100) }), BroadcastEnvironment: broadcast, PublishPlan: plan => {
         const tasks = plan.tasks.map((task, index) => (index + 1) + '. ' + task.title + ' · ' + task.owner + ' · ' + task.workspace + '\n目的：' + task.purpose + '\n前置：' + (task.dependencies.join('、') || '无，可独立开始'));
         record({ id: 'plan:' + crypto.randomUUID(), label: '协作计划', actor: office.mainRole.definition.name, summary: plan.goal, input: ['岗位分工：' + plan.organization, '业务范围：' + plan.business, ...tasks].join('\n\n') });
         publish({ phase: lastPhase, model: selection.modelId });

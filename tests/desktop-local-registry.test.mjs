@@ -48,3 +48,17 @@ it('engine manager downloads a signed release, upgrades and uninstalls without u
     expect(await client.List()).toHaveLength(2);
   }finally{if(prev===undefined)delete process.env.CBIM_REGISTRY_PORT;else process.env.CBIM_REGISTRY_PORT=prev;await server.close();await f.cleanup();}
 });
+
+it('all four market categories publish and fetch distinct versions with the same resource ID',async()=>{
+  const root=await fs.mkdtemp(path.join(os.tmpdir(),'market-categories-')),token=crypto.randomUUID();
+  const server=await startRegistry({data:path.join(root,'server'),token});
+  try{
+    const port=new URL(server.url).port,client=localRegistry(path.join(root,'cache'),port,token);
+    for(const kind of ['engine','connector','talent','business']){
+      const file=path.join(root,kind);await fs.writeFile(file,kind);
+      await client.Publish({kind,id:'sample',version:'1.0.0'},file);
+    }
+    const list=await client.List();expect(list).toHaveLength(4);
+    for(const row of list)expect(await fs.readFile(await client.Pull(row),'utf8')).toBe(row.kind);
+  }finally{await server.close();await fs.rm(root,{recursive:true,force:true});}
+});

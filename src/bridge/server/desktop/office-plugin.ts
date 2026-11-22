@@ -51,7 +51,7 @@ export async function runOfficePlugin(packages: EnginePackages, profiles: LlmPro
   const status = (await packages.List()).find(item => item.kind === kind);
 
   if (!status?.active || !status.enabled)
-    throw Error('请先在执行引擎页安装并启用该引擎');
+    throw Error('请先在资源商城的引擎分类安装并启用该引擎');
 
   await turn.ReportStage?.('解析模型配置');
 

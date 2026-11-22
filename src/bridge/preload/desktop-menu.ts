@@ -26,7 +26,7 @@ const menu: DesktopMenu = {
   Transfers: () => ipcRenderer.invoke('downloads:list'),
   WatchTransfers: listener => { const receive = () => listener(); ipcRenderer.on('downloads:changed', receive); return () => { ipcRenderer.removeListener('downloads:changed', receive); }; },
   CancelTransfer: identity => ipcRenderer.invoke('downloads:cancel', identity),
-  Connector: (id, install) => ipcRenderer.invoke('menu:connector', { id, install }),
+  Connector: (id, install,digest) => ipcRenderer.invoke('menu:connector', { id, install,digest }),
   Update: action => ipcRenderer.invoke('menu:update', action),
   OpenOffice: (project, action, session) => ipcRenderer.invoke('office:open', { project, action, session }),
   WatchOffice: listener => { const receive = (_: unknown, value: Parameters<typeof listener>[0]) => listener(value); ipcRenderer.on('office:progress', receive); return () => { ipcRenderer.removeListener('office:progress', receive); }; },
@@ -37,7 +37,6 @@ const menu: DesktopMenu = {
   PickProject: () => ipcRenderer.invoke('menu:pick-project'),
   AddProject: attempt => ipcRenderer.invoke('menu:add-project', attempt),
   ProjectDisplayed: (attempt, at) => ipcRenderer.invoke('menu:project-displayed', { attempt, at }),
-  Resources: page => ipcRenderer.invoke('menu:resources', page),
   Monitor: () => ipcRenderer.invoke('menu:monitor'),
 };
 

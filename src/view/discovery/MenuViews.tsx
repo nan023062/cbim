@@ -4,13 +4,15 @@
  */
 import { useEffect, useState } from 'react';
 
-import type { DiscoveryPage, DiscoveryResult, RegistryVersion } from '../../bridge/contracts/discovery';
+import type { DiscoveryPage, RegistryVersion } from '../../bridge/contracts/discovery';
+
+import { Tabs } from '../../framework-ui/tabs';
 
 import { EnginePackagesView } from './EnginePackagesView';
 
 import { useTransfers, TransferProgress } from '../shared/transfers';
 
-function ConnectorInstall({ id }: { id: string })
+function ConnectorInstall({ id, digest }: { id: string; digest:string })
 {
   const [status, setStatus] = useState<
     {
@@ -25,11 +27,12 @@ function ConnectorInstall({ id }: { id: string })
 
   const transfers = useTransfers();
 
-  useEffect(() => { let active = true; window.desktopMenu.Connector(id, false).then(s => { if (active) setStatus(s); }).catch(e => { if (active) setError(String(e)); }); return () => { active = false; }; }, [id]);
+  useEffect(() => { let active = true; window.desktopMenu.Connector(id, false,digest).then(s => { if (active) setStatus(s); }).catch(e => { if (active) setError(String(e)); }); return () => { active = false; }; }, [id,digest]);
 
   const transfer = transfers.find(t => t.identity === status?.identity);
 
-  return <><button disabled={!status || status.installed || busy} onClick={async () => { setError(''); setBusy(true); try { setStatus(await window.desktopMenu.Connector(id, true)); } catch (e) { setError(String(e)); } finally { setBusy(false); } }}>{busy ? '正在安装' : status?.installed ? '已是最新版本' : '下载安装'}</button>
+  if(status && status.identity!==digest)return <small>此版本不在当前签名安装目录中</small>;
+  return <><button disabled={!status || status.installed || busy} onClick={async () => { setError(''); setBusy(true); try { setStatus(await window.desktopMenu.Connector(id, true,digest)); } catch (e) { setError(String(e)); } finally { setBusy(false); } }}>{busy ? '正在安装' : status?.installed ? '已是最新版本' : '下载安装'}</button>
     {transfer && <TransferProgress item={transfer} />} {error && <small role="alert">{error}</small>}</>;
 }
 
@@ -46,46 +49,20 @@ function useMenuData<T>(load: () => Promise<T>)
   return { data, error, refresh: () => setRevision(r => r + 1) };
 }
 
-export function DiscoveryView({ page, title }: { page: DiscoveryPage; title: string })
-{
-  const [local,setLocal]=useState(false);
-  if(local)return <LocalRegistry key={page} page={page} Back={()=>setLocal(false)}/>;
-  const entry=<button onClick={()=>setLocal(true)}>本机资源库</button>;
-  if (page === 'engines')
-    return <><div className="graph-toolbar">{entry}</div><EnginePackagesView /></>;
-
-  return <><div className="graph-toolbar">{entry}</div><ResourceListPage key={page} page={page} title={title} /></>;
-}
-
-function ResourceListPage({ page, title }: { page: DiscoveryPage; title: string })
-{
-  const [load] = useState(() => () => window.desktopMenu.Resources(page));
-
-  const { data, error, refresh } = useMenuData<DiscoveryResult>(load);
-
-  const [query, setQuery] = useState('');
-
-  const [kind, setKind] = useState('');
-
-  const items = data?.items.filter(i => (!kind || i.kind === kind) && (i.name + ' ' + i.summary).toLowerCase().includes(query.toLowerCase()));
-
-  return <section className="view-page menu-page"><header className="view-heading"><h1>{title}</h1><button onClick={refresh}>刷新</button></header>
-    {error && <p role="alert">{error}</p>}
-    {data && <><div className="repository-bar"><strong>{data.source}</strong></div>
-      <div className="graph-toolbar"><input aria-label="搜索资源" placeholder="搜索名称或说明…" value={query} onChange={e => setQuery(e.target.value)} />
-        <select aria-label="资源类型" value={kind} onChange={e => setKind(e.target.value)}><option value="">全部类型</option>{[...new Set(data.items.map(i => i.kind))].map(k => <option key={k}>{k}</option>)}</select></div>
-      <div className="definition-grid">{items?.map(item => <article className="definition-card" key={item.id}><small>{item.kind}</small><h3>{item.name}</h3><p>{item.summary}</p>{page === 'connectors' && <ConnectorInstall id={item.id} />}</article>)}</div>
-      {!items?.length && <p role="status">{query || kind ? '没有匹配的资源' : '暂无可展示的资源'}</p>}</>}
-  </section>;
+export function ResourceMarket(){
+  const [page,setPage]=useState<DiscoveryPage>('engines');
+  return <section className="view-page menu-page resource-market"><Tabs label="资源商城分类" value={page} onChange={id=>setPage(id as DiscoveryPage)}
+    items={(Object.keys(registryKinds) as DiscoveryPage[]).map(id=>({id,label:registryLabels[id],content:page===id?<><LocalRegistry key={id} page={id}/>{id==='engines'&&<EnginePackagesView/>}</>:null}))}/></section>;
 }
 
 const registryKinds={engines:'engine',connectors:'connector',talent:'talent',templates:'business'} as const;
-const registryLabels={engines:'引擎',connectors:'连接器',talent:'人才资产',templates:'业务模板'};
-function LocalRegistry({page,Back}:{page:DiscoveryPage;Back:()=>void}){
+const registryLabels={engines:'引擎',connectors:'连接器',talent:'人力',templates:'业务'};
+function LocalRegistry({page}:{page:DiscoveryPage}){
   const [load]=useState(()=>()=>window.desktopMenu.RegistryList());
   const {data,error,refresh}=useMenuData(load);
   const [id,setId]=useState(''),[version,setVersion]=useState('1.0.0'),[busy,setBusy]=useState(false),[note,setNote]=useState('');
-  const kind=registryKinds[page],rows=data?.filter(row=>row.kind===kind);
+  const [query,setQuery]=useState('');
+  const kind=registryKinds[page],rows=data?.filter(row=>row.kind===kind && (row.id+' '+row.version).includes(query.trim().toLowerCase()));
   async function act(row?:RegistryVersion){
     setBusy(true);setNote('');
     try{
@@ -93,13 +70,14 @@ function LocalRegistry({page,Back}:{page:DiscoveryPage;Back:()=>void}){
       else{const result=await window.desktopMenu.RegistryPublish({kind,id,version});if(result){setNote('已发布 '+result.id+' '+result.version);refresh();}}
     }catch(e){setNote(String(e));}finally{setBusy(false);}
   }
-  return <section className="view-page menu-page"><header className="view-heading"><button onClick={Back}>返回</button><h1>本机资源库 · {registryLabels[page]}</h1><button onClick={refresh} disabled={busy}>刷新</button></header>
+  return <section className="view-page menu-page"><header className="view-heading"><h2>{registryLabels[page]}资源</h2><button onClick={refresh} disabled={busy}>刷新</button></header>
+    <div className="graph-toolbar"><input aria-label="筛选商城资源" placeholder="按资源 ID 或版本筛选" value={query} onChange={e=>setQuery(e.target.value)}/></div>
     <form className="graph-toolbar" onSubmit={e=>{e.preventDefault();void act();}}>
       <label>资源 ID <input required pattern="[a-z][a-z0-9\-]{0,47}" placeholder="例如 planner" value={id} onChange={e=>setId(e.target.value)}/></label>
       <label>版本 <input required pattern={'[0-9]{1,8}\\.[0-9]{1,8}\\.[0-9]{1,8}'} value={version} onChange={e=>setVersion(e.target.value)}/></label>
-      <button disabled={busy}>选择文件并发布</button></form>
+      <button disabled={busy}>上传并发布</button></form>
     {error&&<p role="alert">{error}</p>}{(busy||note)&&<p role="status">{busy?'正在处理…':note}</p>}
-    {!data&&!error&&<p>正在读取本机资源库…</p>}{rows?.length===0&&<p>尚无已发布的{registryLabels[page]}</p>}
-    <div className="definition-grid">{rows?.map(row=><article className="definition-card" key={row.id+'@'+row.version}><h3>{row.id}</h3><p>{row.version} · {row.size.toLocaleString()} 字节</p><button disabled={busy} onClick={()=>void act(row)}>拉取此版本</button></article>)}</div>
+    {!data&&!error&&<p>正在读取商城目录…</p>}{rows?.length===0&&<p>{query?'没有匹配的资源':'尚无已发布的'+registryLabels[page]}</p>}
+    <div className="definition-grid">{rows?.map(row=><article className="definition-card" key={row.id+'@'+row.version}><h3>{row.id}</h3><p>{row.version} · {row.size.toLocaleString()} 字节</p><button disabled={busy} onClick={()=>void act(row)}>下载此版本</button>{page==='connectors'&&<ConnectorInstall id={row.id} digest={row.sha256}/>}</article>)}</div>
   </section>;
 }

@@ -164,7 +164,7 @@ export interface DesktopMenu
 
   CancelTransfer(identity: string): Promise<void>;
 
-  Connector(id: string, install: boolean): Promise<{ installed: boolean; identity: string }>;
+  Connector(id: string, install: boolean,digest:string): Promise<{ installed: boolean; identity: string }>;
 
   Update(action: 'status' | 'check' | 'download' | 'install'): Promise<{ phase: string; progress?: number; error?: string; version?: string }>;
 
@@ -186,7 +186,6 @@ export interface DesktopMenu
 
   ProjectDisplayed(attempt: string, at: number): Promise<void>;
 
-  Resources(page: DiscoveryPage): Promise<DiscoveryResult>;
 
   Monitor(): Promise<MonitorResult>;
 }

@@ -316,3 +316,7 @@ h2.engine-brand img {width:30px;height:30px;}
 .engine-catalog-row { display:flex; align-items:center; min-width:0; gap:4px }
 .engine-catalog-row > button:first-child { flex:1; min-width:0 }
 .engine-list .engine-install-shortcut { padding:4px 8px; white-space:nowrap; border-color:var(--line) }
+
+.resource-market .ui-screen:not([hidden]) {display:block;}
+.resource-market .menu-page.view-page {padding-inline:0;overflow:visible;}
+.resource-market [role=tablist] {flex-wrap:wrap;}

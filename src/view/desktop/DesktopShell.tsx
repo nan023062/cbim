@@ -4,7 +4,7 @@
  */
 import { useEffect, useRef, useState } from 'react';
 
-import type { DiscoveryPage, ProjectItem, OfficeConversation, OfficeSelection } from '../../bridge/contracts/discovery';
+import type { ProjectItem, OfficeConversation, OfficeSelection } from '../../bridge/contracts/discovery';
 
 import { OrganizationPanel } from '../office/OrganizationPanel';
 
@@ -12,7 +12,7 @@ import { BusinessPanel } from '../office/BusinessPanel';
 
 import { OfficeView } from '../office/OfficeView';
 
-import { DiscoveryView } from '../discovery/MenuViews';
+import { ResourceMarket } from '../discovery/MenuViews';
 
 import { BrandMark } from '../shared/BrandMark';
 
@@ -28,12 +28,6 @@ import { ProjectSidebar } from './ProjectSidebar';
 
 import './desktop.css';
 
-const resourceNavigation = [
-  ['sparkles', '执行引擎', 'engines'],
-  ['plug', '链接器', 'connectors'],
-  ['team', '人才市场', 'talent'],
-  ['knowledge', '业务模版', 'templates'],
-] as const;
 
 export function DesktopShell()
 {
@@ -41,7 +35,7 @@ export function DesktopShell()
 
   const [settings, setSettings] = useState<'通用' | '外观' | '模型供应商'>();
 
-  const [page, setPage] = useState<DiscoveryPage | 'workspace'>('workspace');
+  const [page, setPage] = useState<'market' | 'workspace'>('workspace');
 
   /** 项目页内的导航选择与 Office 执行状态独立。 */
   const [addingName, setAddingName] = useState('');
@@ -186,7 +180,7 @@ export function DesktopShell()
 
   useEffect(() => { function Shortcut(event: KeyboardEvent) { if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'b') { event.preventDefault(); setExpanded(value => !value); } if (event.key === 'Escape' && innerWidth <= 720 && !document.querySelector('dialog[open]')) setExpanded(false); } window.addEventListener('keydown', Shortcut); return () => window.removeEventListener('keydown', Shortcut); }, []);
 
-  const title = page === 'workspace' ? selected?.name || '工作区' : resourceNavigation.find(item => item[2] === page)![1];
+  const title = page === 'workspace' ? selected?.name || '工作区' : '资源商城';
 
   const [panelOpen, setPanelOpen] = useState(() => window.innerWidth >= 1380);
 
@@ -216,14 +210,7 @@ export function DesktopShell()
     <aside id="team-sidebar" className="workspace-sidebar sidebar-frame">
       <button className="sidebar-new-conversation" onClick={() => selected ? openProject(selected, true) : void chooseProject()}><Icon name="edit" size={16} />新建对话</button>
       <nav className="primary-nav" aria-label="主菜单">
-        {resourceNavigation.filter(([, , target]) => target !== 'templates').map(([icon, label, target]) =>
-            <button key={target} className={page === target ? 'selected' : undefined} aria-current={page === target ? 'page' : undefined} onClick={() => setPage(target)}>
-            <Icon name={icon} />{label}
-          </button>)}
-        <button className="resource-more" popoverTarget="resource-overflow"><Icon name="more" />发现</button>
-        <div id="resource-overflow" popover="auto" role="group" aria-label="发现资源">
-          {resourceNavigation.map(([icon, label, target]) => <button key={target} onClick={event => { setPage(target); event.currentTarget.parentElement?.hidePopover(); }}><Icon name={icon} size={16} />{label}</button>)}
-        </div>
+        <button className={page==='market'?'selected':undefined} aria-current={page==='market'?'page':undefined} onClick={()=>setPage('market')}><Icon name="knowledge" />资源商城</button>
       </nav>
       <ProjectSidebar added={added} choosing={choosing} addingName={addingName} reading={page === 'workspace' && !settings} activeProject={page === 'workspace' ? selected?.id : undefined} activeSession={page === 'workspace' ? office?.id : undefined} OnOpen={openProject} OnAdd={() => void chooseProject()} OnSnapshot={items => { setSelected(previous => { const latest = items.find(item => item.id === previous?.id); return latest && previous && (latest.name !== previous.name || latest.path !== previous.path) ? latest : previous; }); }} OnUnavailable={(project, session) => { if (selected?.id === project && (!session || office?.id === session)) { request.current++; localStorage.removeItem('project-last-office'); setOffice(undefined); setSelected(undefined); } }} />
       <footer className="sidebar-footer">
@@ -243,7 +230,7 @@ export function DesktopShell()
       <header className="workspace-topbar">{page !== 'workspace' && <button aria-label="返回工作区" onClick={() => setPage('workspace')}>←</button>}<Icon name="folder" size={16} /><strong className="workspace-project-title" title={title}>{title}</strong>
       </header>
       {error && <p role="alert">{error}</p>}
-      {page !== 'workspace' ? <DiscoveryView key={page} page={page} title={title} /> : selected ? office ?
+      {page !== 'workspace' ? <ResourceMarket /> : selected ? office ?
           <OfficeView onAnalyze={Analyze} onManageModels={() => setSettings('模型供应商')} key={office.id} conversation={office} project={selected} draft={drafts[office.id] ?? ''}
             onDraft={text => setDrafts(previous => ({ ...previous, [office.id]: text }))}
             started={running[office.id] ?? 0} onRunning={time => setRunning(previous => ({ ...previous, [office.id]: time }))}

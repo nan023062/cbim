@@ -6,11 +6,11 @@ import { useEffect, useRef, useState, type MouseEvent } from 'react';
 
 import type { NavigationSnapshot, NavigationChange, NavigationProject, NavigationSession, ProjectItem } from '../../bridge/contracts/discovery';
 
-import { ConfirmWindow } from '../../framework-ui/windows/ConfirmWindow';
+import { ConfirmWindow } from '../../framework-ui';
 
-import { ListItem } from '../../framework-ui/controls';
+import { ListItem } from '../../framework-ui';
 
-import { Icon } from '../../framework-ui/Icon';
+import { Icon } from '../../framework-ui';
 
 type Target =
   {

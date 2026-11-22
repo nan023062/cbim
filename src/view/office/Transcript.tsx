@@ -10,7 +10,7 @@ import remarkGfm from 'remark-gfm';
 
 import type { OfficeMessage, OfficeActivity } from '../../bridge/contracts/discovery';
 
-import { Icon } from '../../framework-ui/Icon';
+import { Icon } from '../../framework-ui';
 
 const ReplyBody = memo(function ReplyBody({ text }: { text: string })
 {

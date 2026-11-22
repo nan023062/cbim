@@ -4,9 +4,9 @@
  */
 import { useEffect, useId, useRef, useState } from 'react';
 
-import { PaneDivider } from '../../framework-ui/three-pane';
+import { PaneDivider } from '../../framework-ui';
 
-import { Icon } from '../../framework-ui/Icon';
+import { Icon } from '../../framework-ui';
 
 import type { OfficeQueueSnapshot } from '../../bridge/contracts/discovery';
 

@@ -10,7 +10,7 @@ import { AgentSettingsDialog } from './AgentSettingsDialog';
 
 import { OrganizationNodeDialog, type OrganizationEdit } from './OrganizationNodeDialog';
 
-import { Icon } from '../../framework-ui/Icon';
+import { Icon } from '../../framework-ui';
 
 /** 图标操作始终保留标题和可访问名称。 */
 function Action({ label, icon, disabled, OnClick }: { label: string; icon: string; disabled?: boolean; OnClick(): void })

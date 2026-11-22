@@ -12,7 +12,7 @@ import type { EnginePackageSettings } from '../../bridge/contracts/desktop-engin
 
 import { selectProviderConnection } from '../../bridge/contracts/desktop-models';
 
-import { Icon } from '../../framework-ui/Icon';
+import { Icon } from '../../framework-ui';
 
 export function MainAgentPicker({ value, change, disabled, fail, onReady, onManageModels, compact = false, autoSelect = true }: { autoSelect?: boolean; compact?: boolean; onManageModels: () => void; onReady: (ready: boolean, reason: string, working: boolean) => void; value: OfficeSelection; change: (v: OfficeSelection) => void; disabled: boolean; fail: (error: string) => void })
 {

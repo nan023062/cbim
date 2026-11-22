@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import type { BusinessSnapshot } from '../../bridge/contracts/discovery';
 
-import { Icon } from '../../framework-ui/Icon';
+import { Icon } from '../../framework-ui';
 
 export type BusinessEdit =
   {

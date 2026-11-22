@@ -1,4 +1,4 @@
-﻿@import '../ui-tween.css';
+﻿@import '../../styles/ui-tween.css';
 .ui-confirm-window {width:min(390px,calc(100vw - 32px));padding:20px;border:1px solid var(--line);border-radius:12px;color:var(--text);background:var(--surface);overflow-wrap:anywhere}
 .ui-confirm-window::backdrop {background:#0006}
 .ui-confirm-window footer {display:flex;justify-content:flex-end;gap:8px;margin-top:18px}

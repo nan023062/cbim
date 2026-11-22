@@ -6,7 +6,7 @@ import { useRef, useImperativeHandle, type ReactNode, type Ref } from 'react';
 
 import { Virtuoso, type VirtuosoHandle } from 'react-virtuoso';
 
-import './ui.css';
+import '../styles/ui.css';
 
 export interface ListHandle
 {

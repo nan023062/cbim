@@ -6,7 +6,7 @@ import { memo, useEffect, useState } from 'react';
 
 import type { ProcessGroup, ProcessRow } from '../../bridge/contracts/discovery';
 
-import { Icon } from '../../framework-ui/Icon';
+import { Icon } from '../../framework-ui';
 
 import './monitor.css';
 

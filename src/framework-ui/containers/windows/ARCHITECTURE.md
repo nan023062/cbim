@@ -16,10 +16,10 @@
 
 ```mermaid
 classDiagram
-class N_5110d1918298["确认窗"] {
+class N_da2368ab46d1["确认窗"] {
   <<component>>
 }
-click N_5110d1918298 href "ConfirmWindow.tsx"
+click N_da2368ab46d1 href "ConfirmWindow.tsx"
 ```
 
 [上层设计](../ARCHITECTURE.md)

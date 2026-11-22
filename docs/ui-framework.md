@@ -1,12 +1,12 @@
 ﻿# UI 框架：图标与交互控件使用手册
 
-给编写桌面页面的开发者：控件位于 `src/framework-ui/`，按文件具名导入，没有统一的包入口。下面的相对导入以 `src/view/desktop/` 下的页面为例。控件处理焦点、键盘和显示；当前选项、未读状态、提交和错误处理由页面持有。
+给编写桌面页面的开发者：控件位于 `src/framework-ui/`，由 index.ts 统一导出。下面的相对导入以 `src/view/desktop/` 下的页面为例。控件处理焦点、键盘和显示；当前选项、未读状态、提交和错误处理由页面持有。
 
 ## 快速接入：一行可打开、可预览的对话
 
 ```tsx
-import { Button, ListItem } from '../../framework-ui/controls';
-import { Icon } from '../../framework-ui/Icon';
+import { Button, ListItem } from '../../framework-ui';
+import { Icon } from '../../framework-ui';
 
 function ConversationRow({ title, unread, open, preview, more }: {
   title: string; unread: boolean; open(): void; preview(): void; more(): void;
@@ -40,10 +40,10 @@ function ConversationRow({ title, unread, open, preview, more }: {
 | 更多、右键、对话 | `more`、`rightClick`、`conversation`（别名 `chat`）。`rightClick` 只绘图，右键事件绑定在控件上。 |
 | 常用操作 | `archive`、`copy`、`refresh`、`download`、`settings`。 |
 
-完整名称从 [Icon.tsx](../src/framework-ui/Icon.tsx) 导出的 `iconNames` 获取，包含别名。需要图标选择器时可直接遍历，无需维护第二份清单：
+完整名称从 [Icon.tsx](../src/framework-ui/icons/Icon.tsx) 导出的 `iconNames` 获取，包含别名。需要图标选择器时可直接遍历，无需维护第二份清单：
 
 ```tsx
-import { Icon, iconNames, type IconName } from '../../framework-ui/Icon';
+import { Icon, iconNames, type IconName } from '../../framework-ui';
 const warningIcon: IconName = 'warning';
 const swatches = iconNames.map(name => <span key={name}><Icon name={name} /> {name}</span>);
 ```
@@ -111,10 +111,10 @@ return <Tabs label="工作区视图" value={tab} onChange={setTab} items={[
 
 | API | Props、事件与使用时机 |
 | --- | --- |
-| [`WindowList`](../src/framework-ui/list.tsx) | 长列表必传 `count`、`itemKey(index)`、`render(index)`、`label`。键使用稳定记录 ID。`initialEnd` 初始定位末尾并支持跟随；`scrollbarVisible` 控制滑块显隐；`onStart()` 到达开头时可加载更早记录。`firstIndex` 默认 0；条目回调取得相对索引。 |
+| [`WindowList`](../src/framework-ui/widgets/ViewList.tsx) | 长列表必传 `count`、`itemKey(index)`、`render(index)`、`label`。键使用稳定记录 ID。`initialEnd` 初始定位末尾并支持跟随；`scrollbarVisible` 控制滑块显隐；`onStart()` 到达开头时可加载更早记录。`firstIndex` 默认 0；条目回调取得相对索引。 |
 | `ListHandle` | `listRef` 接收句柄；`ref.current?.scrollToEnd()` 归底，`scrollToRow(index)` 跳到指定行。后者把索引直接传给虚拟列表，使用非零 `firstIndex` 时注意索引口径。 |
-| [`Screen`、`useScreenEffect`](../src/framework-ui/screen.tsx) | `Screen` 支持原生 section 属性和 `active`（默认 `true`）。隐藏不会卸载子树；`useScreenEffect(effect, deps)` 用于只在页面可见时订阅的事件，隐藏或卸载时执行 effect 返回的清理函数。 |
-| [`ThreePaneLayout`](../src/framework-ui/three-pane.tsx) | 传 `children`、`className`、`leftOpen`、`leftKey`、`rightKey`，可选 `hidden`。两个 key 分别保存左右宽度；业务布局消费 `--sidebar-width` 和 `--right-pane-width`，并负责展开或隐藏面板。 |
+| [`Screen`、`useScreenEffect`](../src/framework-ui/containers/Panel.tsx) | `Screen` 支持原生 section 属性和 `active`（默认 `true`）。隐藏不会卸载子树；`useScreenEffect(effect, deps)` 用于只在页面可见时订阅的事件，隐藏或卸载时执行 effect 返回的清理函数。 |
+| [`ThreePaneLayout`](../src/framework-ui/containers/layout/ThreePaneLayout.tsx) | 传 `children`、`className`、`leftOpen`、`leftKey`、`rightKey`，可选 `hidden`。两个 key 分别保存左右宽度；业务布局消费 `--sidebar-width` 和 `--right-pane-width`，并负责展开或隐藏面板。 |
 | `PaneDivider` | 在布局内部对应面板上放置，传 `side="left"` 或 `"right"`、无障碍 `label`、目标面板 ID `controls`。支持指针拖拽、左右键每次移动 10px、Home 或双击复位。 |
 
 实际页面可参照[侧栏列表与确认窗](../src/view/desktop/ProjectSidebar.tsx)、[三栏布局](../src/view/desktop/DesktopShell.tsx)和[聊天虚拟列表](../src/view/office/OfficeView.tsx)。淡入淡出、悬停与循环动效的触发方式和时长见 [ui-tween 手册](UI-TWEEN.md)。

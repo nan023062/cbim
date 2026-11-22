@@ -8,7 +8,7 @@ import { BusinessNodeDialog, type BusinessEdit } from './BusinessNodeDialog';
 
 import type { BusinessArchitecture, BusinessSnapshot } from '../../bridge/contracts/discovery';
 
-import { Icon } from '../../framework-ui/Icon';
+import { Icon } from '../../framework-ui';
 
 export function BusinessPanel({ project, OnBack }: { project: string; OnBack(): void })
 {

@@ -4,7 +4,7 @@
  */
 import { useState, type ReactNode } from 'react';
 
-import { Icon } from '../../framework-ui/Icon';
+import { Icon } from '../../framework-ui';
 
 import './settings.css';
 

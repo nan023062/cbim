@@ -16,9 +16,9 @@ import { ResourceMarket } from '../discovery/MenuViews';
 
 import { BrandMark } from '../shared/BrandMark';
 
-import { Icon } from '../../framework-ui/Icon';
+import { Icon } from '../../framework-ui';
 
-import { ThreePaneLayout, PaneDivider } from '../../framework-ui/three-pane';
+import { ThreePaneLayout, PaneDivider } from '../../framework-ui';
 
 import { ExtensionPanel } from '../extension/ExtensionPanel';
 
@@ -32,6 +32,12 @@ import './desktop.css';
 export function DesktopShell()
 {
   const [expanded, setExpanded] = useState(() => window.innerWidth > 720);
+  const [widths,setWidths] = useState(() => ({left:Number(localStorage.getItem('project-sidebar-width')),right:Number(localStorage.getItem('extension-panel-width'))}));
+  function saveWidth(side:'left'|'right',width:number) {
+    const key=side==='left'?'project-sidebar-width':'extension-panel-width';
+    setWidths(previous=>({...previous,[side]:width}));
+    if(width)localStorage.setItem(key,String(width));else localStorage.removeItem(key);
+  }
 
   const [settings, setSettings] = useState<'通用' | '外观' | '模型供应商'>();
 
@@ -205,7 +211,7 @@ export function DesktopShell()
       {updateStatus?.phase === 'available' && <button onClick={() => void window.desktopMenu.Update('download').catch(e => setError(String(e)))}>重新下载</button>}
       <button onClick={() => setUpdateOpen(false)}>关闭</button></div>}
     {settings && <SettingsView initial={settings} onBack={() => setSettings(undefined)} />}
-    <ThreePaneLayout hidden={!!settings} leftOpen={expanded} leftKey="project-sidebar-width" rightKey="extension-panel-width" className={'desktop-shell' + (expanded ? '' : ' sidebar-collapsed')}>
+    <ThreePaneLayout hidden={!!settings} leftOpen={expanded} widths={widths} onWidthChange={saveWidth} className={'desktop-shell' + (expanded ? '' : ' sidebar-collapsed')}>
     {expanded && <button className="sidebar-backdrop" aria-label="关闭项目侧栏" onClick={() => setExpanded(false)} />}
     <aside id="team-sidebar" className="workspace-sidebar sidebar-frame">
       <button className="sidebar-new-conversation" onClick={() => selected ? openProject(selected, true) : void chooseProject()}><Icon name="edit" size={16} />新建对话</button>

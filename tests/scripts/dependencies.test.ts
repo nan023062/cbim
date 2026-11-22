@@ -71,7 +71,7 @@ test('新 Core 未登记模块与便携模块中的 Node 导入都被拒绝',()=
   const hiddenNode=audit({'src/core/utility/extra.ts':"import fs from 'node:fs';"});
   expect(hiddenNode.logicalViolations).toContainEqual(expect.objectContaining({rule:'external-dependency',boundary:'utility-foundations'}));
 });
-test.each(['src/view/example/model.ts','src/framework-ui/controls.tsx','src/bridge/client/call.ts','src/bridge/contracts/example.ts'])('浏览器或纯通信文件 %s 不得直接导入 Node/Electron',from=>{
+test.each(['src/view/example/model.ts','src/framework-ui/widgets/Button.tsx','src/bridge/client/call.ts','src/bridge/contracts/example.ts'])('浏览器或纯通信文件 %s 不得直接导入 Node/Electron',from=>{
   for(const spec of ['node:fs','fs/promises','electron','electron/main']){
     const result=audit({[from]:`import '${spec}';`});
     expect(result.logicalViolations).toContainEqual(expect.objectContaining({rule:'runtime-environment',file:from}));

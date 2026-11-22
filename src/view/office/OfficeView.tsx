@@ -4,11 +4,11 @@
  */
 import { useCallback, useDeferredValue, useEffect, useRef, useState } from 'react';
 
-import { Screen } from '../../framework-ui/screen';
+import { Screen } from '../../framework-ui';
 
-import { Button, StateButton } from '../../framework-ui/controls';
+import { Button, StateButton } from '../../framework-ui';
 
-import { WindowList, type ListHandle } from '../../framework-ui/list';
+import { WindowList, type ListHandle } from '../../framework-ui';
 
 import { OfficeQueuePanel } from './OfficeQueuePanel';
 
@@ -30,7 +30,7 @@ import { PermissionPicker } from './PermissionPicker';
 
 import type { OfficeSelection } from '../../bridge/contracts/discovery';
 
-import { Icon } from '../../framework-ui/Icon';
+import { Icon } from '../../framework-ui';
 
 import './office.css';
 

@@ -6,11 +6,11 @@ import { useEffect, useState, useRef, useLayoutEffect } from 'react';
 
 import type { ProjectItem, RegistryPublication, RegistryVersion } from '../../bridge/contracts/discovery';
 
-import { Icon } from '../../framework-ui/Icon';
+import { Icon } from '../../framework-ui';
 
-import { ConfirmWindow } from '../../framework-ui/windows/ConfirmWindow';
+import { ConfirmWindow } from '../../framework-ui';
 
-import { Tabs } from '../../framework-ui/tabs';
+import { Tabs } from '../../framework-ui';
 
 import { EnginePackagesView } from './EnginePackagesView';
 

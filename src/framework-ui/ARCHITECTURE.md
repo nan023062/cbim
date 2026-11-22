@@ -8,19 +8,18 @@
 
 ## 主要组成
 
-| 组成 | 定位 |
-| --- | --- |
-| [图标目录](Icon.tsx) | `Icon` 通过 `name` 选图；`iconNames` 可枚举，`IconName` 可用于类型提示。`dot`、`circle`、`spinner`、`more`、`rightClick`、`warning`、`chat` 是常用图形。用 `tone` 指定语义颜色，`motion` 指定旋转或呼吸。 |
-| [交互列表项](controls.tsx) | `ListItem` 和 `Button` 接受原生点击、悬停、焦点及右键事件；业务通过 children 组合图标和文字。页签通过每项 `buttonProps` 扩展事件，保留方向键导航。 |
-| [按钮与开关](controls.tsx) | 保留原生按钮的焦点、键盘和禁用语义。 |
-| [基础动效](ui-tween.css) | 元素使用 `data-ui-fade`、滚动容器使用 `data-ui-scrollbar-fade` 切换可见性。保持挂载，双向过渡 200ms，遵循系统减少动态效果偏好；调用方管理交互时机和键盘可用性。 |
-| [窗口列表](list.tsx) | 组合 react-virtuoso，管理可视条目和聊天跟随末尾。 |
-| [页面容器](screen.tsx) | 传递可见性，隐藏或卸载时清理活动订阅。 |
-| [页签](tabs.tsx) | 组合按钮和页面容器，支持受控选择与键盘导航。 |
+[Framework API](index.ts) exposes widgets and containers; interaction, icons and styles are shared internally.
 
 新页面随 `ui.css` 自动加载动效。元素用 `data-motion="panel"` 或 `data-motion="popup"` 等预设；伪类或子元素可直接引用相同的 `--tween-*` 预设。新增关键帧、时长和缓动统一放入 `ui-tween.css`。
 
 隐藏页面会清理 useScreenEffect 的订阅，但不代表取消后端任务。任务状态与取消由调用页面通过业务接口管理。
+
+| Module | Role |
+| --- | --- |
+| [composition](composition.tsx) | Container exports |
+| [controls](controls.tsx) | Button exports |
+| [elements](elements.ts) | Widget exports |
+| [index](index.ts) | Public component API |
 
 <!-- architecture:generated:start -->
 
@@ -28,58 +27,84 @@
 
 标注为 `virtual` 的节点是直接子模块的虚拟类封装；内部设计沿下方入口阅读。
 
-### 关系组 1：页签
+### 关系组 1：widgets
 
 ```mermaid
 classDiagram
-class N_d6cfce102f6a["页签"] {
-  <<component>>
-}
-click N_d6cfce102f6a href "tabs.tsx"
-class N_287f2641044d["交互列表项"] {
-  <<component>>
-}
-click N_287f2641044d href "controls.tsx"
-class N_839af352b600["按钮与开关"] {
-  <<component>>
-}
-click N_839af352b600 href "controls.tsx"
-class N_b7085d8c631d["页面容器"] {
-  <<component>>
-}
-click N_b7085d8c631d href "screen.tsx"
-class N_a0fdd898c6e7["图标目录"] {
-  <<component>>
-}
-click N_a0fdd898c6e7 href "Icon.tsx"
-class N_eb4a81dc8613["基础动效"] {
-  <<module>>
-}
-click N_eb4a81dc8613 href "ui-tween.css"
-N_d6cfce102f6a ..> N_287f2641044d : 依赖
-N_d6cfce102f6a ..> N_839af352b600 : 依赖
-N_d6cfce102f6a ..> N_b7085d8c631d : 依赖
-```
-
-### 关系组 2：窗口列表
-
-```mermaid
-classDiagram
-class N_96f821f2c714["窗口列表"] {
-  <<component>>
-}
-click N_96f821f2c714 href "list.tsx"
-class N_14375e813ba6["windows"] {
+class N_bbfa01896bb3["widgets"] {
   <<virtual>>
 }
-click N_14375e813ba6 href "windows/ARCHITECTURE.md"
+click N_bbfa01896bb3 href "widgets/ARCHITECTURE.md"
+class N_b168e4b82143["controls"] {
+  <<component>>
+}
+click N_b168e4b82143 href "controls.tsx"
+class N_c0f5b5c6bbcb["elements"] {
+  <<module>>
+}
+click N_c0f5b5c6bbcb href "elements.ts"
+class N_f36918aa9143["index"] {
+  <<module>>
+}
+click N_f36918aa9143 href "index.ts"
+class N_788f2c75b21b["containers"] {
+  <<virtual>>
+}
+click N_788f2c75b21b href "containers/ARCHITECTURE.md"
+class N_3db91ab854e7["icons"] {
+  <<virtual>>
+}
+click N_3db91ab854e7 href "icons/ARCHITECTURE.md"
+N_b168e4b82143 ..> N_bbfa01896bb3 : 依赖
+N_c0f5b5c6bbcb ..> N_b168e4b82143 : 依赖
+N_c0f5b5c6bbcb ..> N_bbfa01896bb3 : 依赖
+N_f36918aa9143 ..> N_c0f5b5c6bbcb : 依赖
+N_f36918aa9143 ..> N_788f2c75b21b : 依赖
+N_f36918aa9143 ..> N_3db91ab854e7 : 依赖
+N_f36918aa9143 ..> N_bbfa01896bb3 : 依赖
+N_788f2c75b21b ..> N_bbfa01896bb3 : 依赖
+N_bbfa01896bb3 ..> N_3db91ab854e7 : 依赖
 ```
+
+### 关系组 2：styles
+
+```mermaid
+classDiagram
+class N_a59843e9a435["styles"] {
+  <<virtual>>
+}
+click N_a59843e9a435 href "styles/ARCHITECTURE.md"
+class N_dfa48aac2ad8["composition"] {
+  <<component>>
+}
+click N_dfa48aac2ad8 href "composition.tsx"
+class N_edb47f0763e2["interaction"] {
+  <<virtual>>
+}
+click N_edb47f0763e2 href "interaction/ARCHITECTURE.md"
+```
+
+### 跨图协作
+
+按引用方归并目标，保留全部跨图关系；分图只用于阅读，不表示新增模块或依赖边界。
+
+| 引用方 | 关系 | 目标 |
+| --- | --- | --- |
+| [composition](composition.tsx)（图 2） | 依赖 | [containers](containers/ARCHITECTURE.md)（图 1） |
+| [index](index.ts)（图 1） | 依赖 | [composition](composition.tsx)（图 2） |
+| [containers](containers/ARCHITECTURE.md)（图 1） | 依赖 | [interaction](interaction/ARCHITECTURE.md)（图 2）、[styles](styles/ARCHITECTURE.md)（图 2） |
+| [icons](icons/ARCHITECTURE.md)（图 1） | 依赖 | [styles](styles/ARCHITECTURE.md)（图 2） |
+| [widgets](widgets/ARCHITECTURE.md)（图 1） | 依赖 | [interaction](interaction/ARCHITECTURE.md)（图 2）、[styles](styles/ARCHITECTURE.md)（图 2） |
 
 ## 子模块
 
 | 虚拟封装 | 整体职责 |
 | --- | --- |
-| [windows](windows/ARCHITECTURE.md) | 统一确认操作的焦点、取消和关闭行为，调用页面负责执行已确认的操作。 |
+| [containers](containers/ARCHITECTURE.md) | 组织面板、页签和窗口的可见内容，不持有页面业务状态。 |
+| [icons](icons/ARCHITECTURE.md) | 共享与业务无关的图形。 |
+| [interaction](interaction/ARCHITECTURE.md) | 复用浏览器的输入与焦点语义。 |
+| [styles](styles/ARCHITECTURE.md) | 统一控件与动效的视觉表现。 |
+| [widgets](widgets/ARCHITECTURE.md) | 封装原生交互和展示，调用方提供数据与动作。 |
 
 [上层设计](../ARCHITECTURE.md)
 

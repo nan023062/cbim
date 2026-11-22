@@ -6,7 +6,7 @@ import { useId, useRef, useState } from 'react';
 
 import type { OfficeQueueSnapshot, OfficeQueueAction, OfficeQueueItem } from '../../bridge/contracts/discovery';
 
-import { Icon } from '../../framework-ui/Icon';
+import { Icon } from '../../framework-ui';
 
 export function OfficeQueuePanel({ snapshot, busy, OnChange, OnAnalyze }: { snapshot: OfficeQueueSnapshot; busy: boolean; OnChange(action: OfficeQueueAction): Promise<boolean>; OnAnalyze?(item: OfficeQueueItem): Promise<void> })
 {

@@ -4,7 +4,7 @@
  */
 import { createContext, useContext, useEffect, type HTMLAttributes, type EffectCallback, type DependencyList } from 'react';
 
-import './ui.css';
+import '../styles/ui.css';
 
 const Visibility = createContext(true);
 

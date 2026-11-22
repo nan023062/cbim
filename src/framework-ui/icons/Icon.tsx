@@ -3,9 +3,10 @@
  * 设计原因：以已确认的 UX 图标母版统一 1.75px 笔画；保留现有调用名，未知名字显示信息标记而不伪装成文件夹。
  * 职责边界：图标只表达调用者给出的语义，可访问名称由按钮或可见文字提供，不推断业务状态。
  */
-import './ui.css';
+import '../styles/ui.css';
 
 const paths = {
+  skillBook: <path d="M12 6C9 4 6 4 2 5v14c4-1 7-1 10 1 3-2 6-2 10-1V5c-4-1-7-1-10 1Zm0 0v14" />,
   dot: <circle cx="12" cy="12" r="10" fill="currentColor" stroke="none" />,
   circle: <circle cx="12" cy="12" r="9" />,
   spinner: <path d="M21 12a9 9 0 1 1-9-9" />,

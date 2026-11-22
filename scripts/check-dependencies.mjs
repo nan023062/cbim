@@ -78,7 +78,7 @@ const moduleBoundaries=[
   // 其它引擎只组合可移植算法，不借此接入 files/web、平台适配或 Node 私有实现。
   {sources:['src/engine-plugins/'],allow:['src/engine-plugins/','@domain-public','src/core/utility/index.ts','src/core/io/index.ts',modelPublic,enginePublic]},
   // 更新子系统仅复用环境无关的数据消费入口，不因此取得 Main 服务或其他基础方案的依赖权。
-  {sources:['src/logic/updates/service/engine-artifacts.ts'],allow:['src/logic/updates/service/','src/logic/updates/engine-artifacts.ts','src/core/utility/index.ts','src/core/io/text-files.ts']},
+  {sources:['src/logic/updates/service/engine-artifacts.ts'],allow:['src/logic/resource-management/registry-origin.ts','src/logic/updates/service/','src/logic/updates/engine-artifacts.ts','src/core/utility/index.ts','src/core/io/text-files.ts']},
   {sources:['src/logic/updates/service/runtime-manifest.ts'],allow:['src/framework/kernel/index.ts']},
   {sources:['src/logic/updates/service/desktop-releases.ts'],allow:['src/logic/updates/service/','src/logic/updates/contracts.ts','src/updater/release-policy.ts']},
   {sources:['src/logic/updates/service/runtime-download.ts'],allow:['src/logic/updates/service/','src/core/io/index.ts','src/core/io/node.ts']},
@@ -278,9 +278,10 @@ export function auditDependencies(root = process.cwd(), options = {}) {
       const updaterAccess=e.from==='src/bridge/server/bootstrap/desktop.ts'&&e.to==='src/updater/index.ts'||e.from==='src/logic/updates/service/desktop-releases.ts'&&e.to==='src/updater/release-policy.ts';
       const applicationAccess=e.from==='src/logic/application/index.ts'&&(['src/logic/resource-management/index.ts','src/logic/monitor/index.ts'].includes(e.to)||['project.ts','navigation.ts','office-queue.ts','offices.ts','paths.ts'].some(file=>e.to==='src/logic/projects/'+file));
       const desktopAccess=e.from.startsWith('src/bridge/server/desktop/')&&['src/logic/projects/navigation-contract.ts','src/logic/projects/agent-configuration.ts','src/logic/projects/office-queue-contract.ts','src/logic/projects/business-contract.ts','src/logic/projects/organization-contract.ts','src/logic/projects/office-operations.ts','src/logic/projects/offices.ts','src/logic/projects/office-usage.ts','src/logic/resource-management/plugin-installations.ts','src/logic/resource-management/engine-catalog.ts'].includes(e.to);
+      const registryEndpointContract=e.from==='src/logic/updates/service/engine-artifacts.ts'&&e.to==='src/logic/resource-management/registry-origin.ts';
       const artifactContract=e.from.startsWith('src/logic/resource-management/')&&e.to==='src/logic/updates/engine-artifacts.ts';
       const adapterLoader=e.from==='src/logic/projects/office-engine-loader.ts'&&/^src\/engine-plugins\/(pi|claude|codex|memory)\/package\.ts$/.test(e.to)&&e.kind==='generated-dynamic/require';
-      const publicAccess=applicationAccess||desktopAccess||artifactContract||adapterLoader||updaterAccess||desktopEngineLoader||connectorContract||adapterAccess||ioErrorAccess||cipherTypeAccess||allowsEngineAccess(e.from,e.to)||allowsModelAccess(e.from,e.to)||allowsFeedbackAccess(e.from,e.to)||allowsResourceAccess(e.from,e.to)||domainAccess||runtimeAccess||serviceAccess;
+      const publicAccess=applicationAccess||desktopAccess||registryEndpointContract||artifactContract||adapterLoader||updaterAccess||desktopEngineLoader||connectorContract||adapterAccess||ioErrorAccess||cipherTypeAccess||allowsEngineAccess(e.from,e.to)||allowsModelAccess(e.from,e.to)||allowsFeedbackAccess(e.from,e.to)||allowsResourceAccess(e.from,e.to)||domainAccess||runtimeAccess||serviceAccess;
       if(isService(e.from)&&b==='logic'&&e.from.split('/')[2]!==e.to.split('/')[2]&&!publicAccess)return true;
       if(isEngine(e.to)&&!manifestAccess&&!adapterLoader&&!isEngine(e.from))return true;
       // 领域规则只组合领域与既有纯模型/反馈入口，不借目录迁移取得宿主服务权限。

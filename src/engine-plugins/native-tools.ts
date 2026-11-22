@@ -22,7 +22,7 @@ import type { EngineRuntimePackage } from '../logic/execution/rules/engine-runti
 /** 只补齐 Windows 单根分隔符路径的盘符；UNC、完整绝对路径、普通相对路径及 POSIX 输入保持原语义。 */
 export function nativeToolInput(name: string, input: Record<string, unknown>, cwd: string, platform: NodeJS.Platform = process.platform): Record<string, unknown>
 {
-  if (platform === 'win32' && ['read', 'write', 'edit', 'find', 'grep', 'ls'].includes(name) && typeof input.path === 'string' && /^[/\\](?![/\\])/.test(input.path))
+  if (platform === 'win32' && ['read', 'write', 'edit', 'find', 'glob', 'grep', 'ls'].includes(name) && typeof input.path === 'string' && /^[/\\](?![/\\])/.test(input.path))
     return { ...input, path: path.win32.resolve(cwd, input.path) };
 
   return input;
@@ -68,7 +68,8 @@ export async function managedNativeTools(cwd: string, runtime?: EngineRuntimePac
 
   const sdk: typeof NativeSdk = await import(pathToFileURL(entry).href);
 
-  const tools = [sdk.createReadTool(cwd), sdk.createWriteTool(cwd), sdk.createEditTool(cwd), sdk.createBashTool(cwd), sdk.createFindTool(cwd), sdk.createGrepTool(cwd), sdk.createLsTool(cwd)];
+  const find = sdk.createFindTool(cwd);
+  const tools = [sdk.createReadTool(cwd), sdk.createWriteTool(cwd), sdk.createEditTool(cwd), sdk.createBashTool(cwd), find, { ...find, name: 'glob' }, sdk.createGrepTool(cwd), sdk.createLsTool(cwd)];
 
   return {
     list: async () => tools.map(tool => ({ name: tool.name, description: tool.description, inputSchema: JSON.parse(JSON.stringify(tool.parameters)) })), call: async (name, args, signal, id) => { const tool = tools.find(tool => tool.name === name); if (!tool || !id) throw Error('本轮未提供该原生工具'); signal.throwIfAborted(); return tool.execute(id, nativeToolInput(name, args, cwd) as never, signal); }

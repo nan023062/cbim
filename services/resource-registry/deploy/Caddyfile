@@ -1,0 +1,4 @@
+# Replace with the DNS name of this registry before enabling.
+registry.example.com {
+    reverse_proxy 127.0.0.1:4179
+}

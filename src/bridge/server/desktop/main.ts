@@ -67,6 +67,8 @@ interface StartupHost
   StopPreparingEngines(): void;
 }
 
+import { OfficeApprovals } from './office-approvals';
+
 export function startDesktop(host?: StartupHost)
 {
   const userRoot = updateUserRoot(process.argv, process.env.CBIM_USER_DATA_ROOT) ?? path.join(app.getPath('home'), '.cbim');
@@ -83,11 +85,11 @@ export function startDesktop(host?: StartupHost)
 
   const connectorRuntime = host?.engineArtifacts && managedConnectorPackages(path.join(userRoot, 'connector-installations.json'), host.engineArtifacts);
 
-  const application = new Application({
+  const application: Application = new Application({
     userRoot,
     installRoot: app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath(),
     protectedRoots: host ? [host.cacheRoot] : [],
-  }, host?.engineArtifacts, packages ? (...args) => runOfficePlugin(packages, profiles, ...args, async (call, root, signal) => { signal.throwIfAborted(); if (!window || window.isDestroyed()) return false; const result = await dialog.showMessageBox(window, { type: 'question', title: 'Office 操作审批', message: '允许本次 ' + call.name + ' 操作？', detail: '工作目录：' + root + '\n\n' + JSON.stringify(call.input, null, 2), buttons: ['拒绝', '允许本次'], defaultId: 0, cancelId: 0, noLink: true, signal }); return !signal.aborted && result.response === 1; }, connectorRuntime, app.isPackaged || process.env.CBIM_REGISTRY_PORT ? undefined : path.join(app.getAppPath(), 'node_modules/.cache/cbim/engine-adapters')) : undefined, async () => { if (!packages) return undefined; const items = (await packages.List()).filter(item => item.active || item.candidate || item.installed.length); const engine = items.find(item => item.active && item.enabled) ?? items[0]; if (!engine) return undefined; for (const profile of (await profiles.List()).profiles) { const model = profile.models.find(item => item.enabled && selectProviderConnection(profile, engineDescriptor(engine.kind), item.id)); if (model) return { engine: engine.kind, profileId: profile.id, modelId: model.id }; } return undefined; });
+  }, host?.engineArtifacts, packages ? (...args) => runOfficePlugin(packages, profiles, ...args, (call, root, signal) => window && !window.isDestroyed() ? approvals.Request(args[4].project, args[4].session, call.name, call.input, root, signal) : Promise.resolve(false), connectorRuntime, app.isPackaged || (process.env.CBIM_REGISTRY_URL !== undefined || process.env.CBIM_REGISTRY_PORT) ? undefined : path.join(app.getAppPath(), 'node_modules/.cache/cbim/engine-adapters')) : undefined, async () => { if (!packages) return undefined; const items = (await packages.List()).filter(item => item.active || item.candidate || item.installed.length); const engine = items.find(item => item.active && item.enabled) ?? items[0]; if (!engine) return undefined; for (const profile of (await profiles.List()).profiles) { const model = profile.models.find(item => item.enabled && selectProviderConnection(profile, engineDescriptor(engine.kind), item.id)); if (model) return { engine: engine.kind, profileId: profile.id, modelId: model.id }; } return undefined; });
 
   const brands = new Map<string,
     {
@@ -121,6 +123,8 @@ export function startDesktop(host?: StartupHost)
     logWrites = logWrites.then(() => fs.appendFile(path.join(userRoot, 'project-add.jsonl'), line + '\n', 'utf8')).catch(error => console.warn('项目计时日志写入失败', error));
   }
 
+  const approvals = new OfficeApprovals((project, session) => application.projects.Cache(project).ApprovalDirectory(session));
+
   let window: BrowserWindow | undefined;
 
   const connectors = connectorRuntime?.manager;
@@ -137,13 +141,16 @@ export function startDesktop(host?: StartupHost)
 
   const installations = new PluginInstallations(path.join(userRoot, 'pending-plugin-installs'), { engine: packages, connector: connectors }, () => closing, changed);
 
-  app.on('before-quit', event => { if (closed) return; event.preventDefault(); if (closing) return; closing = true; unsubscribe?.(); updates?.Close(); host?.StopPreparingEngines(); application.Shutdown().then(() => { closed = true; app.quit(); }).catch(error => { console.error(error); app.exit(1); }); });
+  app.on('before-quit', event => { if (closed) return; event.preventDefault(); if (closing) return; closing = true; approvals.Close(); unsubscribe?.(); updates?.Close(); host?.StopPreparingEngines(); application.Shutdown().then(() => { closed = true; app.quit(); }).catch(error => { console.error(error); app.exit(1); }); });
 
   app.on('window-all-closed', () => app.quit());
 
   app.on('second-instance', () => { if (window?.isMinimized()) window.restore(); window?.focus(); });
 
-  app.whenReady().then(async () => { if (closing) return; app.setAppUserModelId('com.cbim.assistant.desktop'); await application.Init(); if (closing) return; window = new BrowserWindow({ width: 1320, height: 860, title: 'CBIM', autoHideMenuBar: true, ...(process.platform === 'win32' ? { titleBarStyle: 'hidden' as const, titleBarOverlay: { color: '#202124', symbolColor: '#eeeeee', height: 32 } } : {}), webPreferences: { preload: path.join(__dirname, 'preload.js'), sandbox: true, contextIsolation: true, nodeIntegration: false }, }); window.on('closed', () => { window = undefined; }); window.webContents.setWindowOpenHandler(() => ({ action: 'deny' })); window.webContents.on('will-navigate', event => event.preventDefault()); const handle = (channel: string, run: (value: unknown) => unknown) => ipcMain.handle(channel, (event, value) => { if (!window || event.sender !== window.webContents || event.senderFrame !== window.webContents.mainFrame) throw new Error('无效的桌面窗口'); return run(value); }); const registry=()=>localRegistry(path.join(userRoot,'registry-cache'),process.env.CBIM_REGISTRY_PORT,process.env.REGISTRY_TOKEN); handle('registry:list',()=>registry().List()); handle('registry:pull',raw=>registry().Pull(raw)); handle('registry:history',()=>registry().History());
+  app.whenReady().then(async () => { if (closing) return; app.setAppUserModelId('com.cbim.assistant.desktop'); await application.Init(); if (closing) return; window = new BrowserWindow({ width: 1320, height: 860, title: 'CBIM', autoHideMenuBar: true, ...(process.platform === 'win32' ? { titleBarStyle: 'hidden' as const, titleBarOverlay: { color: '#202124', symbolColor: '#eeeeee', height: 32 } } : {}), webPreferences: { preload: path.join(__dirname, 'preload.js'), sandbox: true, contextIsolation: true, nodeIntegration: false }, }); window.on('closed', () => { approvals.Close(); window = undefined; }); window.webContents.setWindowOpenHandler(() => ({ action: 'deny' })); window.webContents.on('will-navigate', event => event.preventDefault()); const handle = (channel: string, run: (value: unknown) => unknown) => ipcMain.handle(channel, (event, value) => { if (!window || event.sender !== window.webContents || event.senderFrame !== window.webContents.mainFrame) throw new Error('无效的桌面窗口'); return run(value); }); const approvalSession = z.object({ project: z.string().regex(/^[a-f0-9]{64}$/), session: z.string().uuid() });
+    handle('office:approvals', raw => { const { project, session } = approvalSession.parse(raw); return approvals.List(project, session); });
+    handle('office:approval-decision', raw => { const { project, session, id, choice } = approvalSession.extend({ id: z.string().uuid(), choice: z.enum(['deny','once','always']) }).parse(raw); approvals.Decide(project, session, id, choice); });
+    const registry=()=>localRegistry(path.join(userRoot,'registry-cache'),undefined,process.env.REGISTRY_TOKEN); handle('registry:list',()=>registry().List()); handle('registry:pull',raw=>registry().Pull(raw)); handle('registry:history',()=>registry().History());
     handle('registry:inventory',async ()=>{
       const entries=[];
       for(const kind of ['engine','connector'] as const){

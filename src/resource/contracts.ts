@@ -18,6 +18,9 @@ export type ResourceCategory = keyof typeof resourceCategories;
 /** 可复用资源的定义，不表示已安装或已应用到任何工作区；updatedAt 为 ISO 时间。 */
 export interface ResourceDefinition
 {
+  /** 此对象自己的展示图，与模板包封面分别保存。 */
+  logo?: string;
+
   id: string;
 
   kind: ResourceKind;

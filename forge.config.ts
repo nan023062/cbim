@@ -37,7 +37,10 @@ const config: ForgeConfig = {
   makers: [new MakerZIP({}, ['win32'])],
   hooks:{
     preStart:async()=>{for(const kind of Object.keys(adapterSources))await buildEngineAdapter(kind,path.resolve('node_modules/.cache/cbim/engine-adapters',kind))},
-    prePackage:async()=>{await runtimeSigningKey()},
+    prePackage:async()=>{
+      if (process.versions.node !== "22.19.0") throw Error("Desktop packaging requires Node 22.19.0 (same as CI); other runtimes may exit while extracting Electron.");
+      await runtimeSigningKey();
+    },
     generateAssets:async()=>{await verifyBrandAssets();await fs.mkdir(buildOut,{recursive:true});if(desktopRelease){await fs.writeFile(path.join(buildOut,'desktop-release.json'),JSON.stringify({channel:'desktop-stable',version:desktopVersion,notes:releaseNotes,signingMode}));await fs.writeFile(path.join(buildOut,'app-update.yml'),updaterConfigYaml(desktopVersion,signing?.publisherName,signingMode))}},
     readPackageJson:async(_config,pkg)=>desktopRelease?{...pkg,version:desktopVersion}:pkg,
     packageAfterPrune:async(_config,appDirectory)=>{

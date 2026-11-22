@@ -24,6 +24,7 @@ agent:settings / agent:members 转接项目配置服务；agent:connectors 只�
 | --- | --- |
 | [??](main.ts) | main.ts 打开新版首页，并在页面就绪后确认启动。 |
 | [OfficeTools](office-tools.ts) | 适配原生工具授权和 Office 调用，持有本轮内部调用授权。 |
+| [OfficeApprovals](office-approvals.ts) | 管理会话内审批请求和持久批准。 |
 | [runOfficePlugin](office-plugin.ts) | 装配受管引擎、工具目录、取消和工作记录。 |
 
 
@@ -35,16 +36,19 @@ office-plugin 将主任务的 OfficeInputs 接到已存在的原生 steer；缺�
 
 ```mermaid
 classDiagram
-class N_0e1acda5b0a0["runOfficePlugin"] {
-  <<module>>
-}
-click N_0e1acda5b0a0 href "office-plugin.ts"
 class N_df9963bd1fa6["??"] {
   <<module>>
 }
 click N_df9963bd1fa6 href "main.ts"
+class N_264195ccbdcb["OfficeApprovals"]
+click N_264195ccbdcb href "office-approvals.ts"
+class N_0e1acda5b0a0["runOfficePlugin"] {
+  <<module>>
+}
+click N_0e1acda5b0a0 href "office-plugin.ts"
 class N_ec8e0fb3490d["OfficeTools"]
 click N_ec8e0fb3490d href "office-tools.ts"
+N_df9963bd1fa6 ..> N_264195ccbdcb : 依赖
 N_df9963bd1fa6 ..> N_0e1acda5b0a0 : 依赖
 N_0e1acda5b0a0 ..> N_ec8e0fb3490d : 依赖
 ```

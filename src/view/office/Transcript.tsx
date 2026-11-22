@@ -14,7 +14,7 @@ import { Icon } from '../../framework-ui';
 
 const ReplyBody = memo(function ReplyBody({ text }: { text: string })
 {
-  return <Markdown remarkPlugins={[remarkGfm]} skipHtml components={{ img: ({ alt }) => <span>{alt}</span> }}>{text}</Markdown>;
+  return <div className="office-prose"><Markdown remarkPlugins={[remarkGfm]} skipHtml components={{ img: ({ alt }) => <span>{alt}</span> }}>{text}</Markdown></div>;
 });
 
 function useDisclosure(key: string)

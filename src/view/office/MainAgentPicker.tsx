@@ -4,7 +4,7 @@
  */
 import { useEffect, useId, useState } from 'react';
 
-import type { OfficeSelection } from '../../bridge/contracts/discovery';
+import { engineLogoLabel, type OfficeSelection } from '../../bridge/contracts/discovery';
 
 import type { ModelActionResults } from '../../bridge/contracts/desktop-models';
 
@@ -12,6 +12,7 @@ import type { EnginePackageSettings } from '../../bridge/contracts/desktop-engin
 
 import { selectProviderConnection } from '../../bridge/contracts/desktop-models';
 
+import { LogoLabel } from '../../framework-ui';
 import { Icon } from '../../framework-ui';
 
 export function MainAgentPicker({ value, change, disabled, fail, onReady, onManageModels, compact = false, autoSelect = true }: { autoSelect?: boolean; compact?: boolean; onManageModels: () => void; onReady: (ready: boolean, reason: string, working: boolean) => void; value: OfficeSelection; change: (v: OfficeSelection) => void; disabled: boolean; fail: (error: string) => void })
@@ -81,11 +82,11 @@ export function MainAgentPicker({ value, change, disabled, fail, onReady, onMana
 
   const modelLabel = choices.find(choice => choice.key === selected)?.label ?? (selected ? value.modelId + '（不可用）' : firstModel?.label ?? '请配置兼容模型');
 
-  return <div className="office-model office-pickers"><button type="button" className={compact ? 'composer-engine' : 'engine-trigger'} disabled={disabled} popoverTarget={menuId} aria-label="选择执行引擎" title={engine?.label || value.engine || '选择执行引擎'}>{logo ? <img width={16} height={16} src={logo} alt="" /> : <Icon name="sparkles" size={16} />}{!compact && (engine?.label || value.engine || '选择执行引擎')}</button>
+  return <div className="office-model office-pickers"><button type="button" className={compact ? 'composer-engine' : 'engine-trigger'} disabled={disabled} popoverTarget={menuId} aria-label="选择执行引擎" title={engine?.label || value.engine || '选择执行引擎'}>{compact ? (logo ? <img width={16} height={16} src={logo} alt="" /> : <Icon name="sparkles" size={16} />) : <LogoLabel data={engineLogoLabel(engine?.kind ?? value.engine ?? '', engine?.label || value.engine || '选择执行引擎', logo)} />}</button>
     <div className="engine-options" id={menuId} popover="auto" aria-label="选择执行引擎">
       <div className="picker-list">
       {!engines.length && <small>{working ? '正在读取…' : '暂无可用引擎'}</small>}
-      {engines.map(item => <button type="button" key={item.kind} aria-pressed={value.engine === item.kind} popoverTarget={menuId} popoverTargetAction="hide" onClick={() => { if (item.kind !== value.engine) change({ engine: item.kind }); }}>{item.logo && <img width={16} height={16} src={item.logo} alt="" />}{item.label}{item.kind === value.engine && <Icon name="check" size={13} />}</button>)}
+      {engines.map(item => <button type="button" key={item.kind} aria-pressed={value.engine === item.kind} popoverTarget={menuId} popoverTargetAction="hide" onClick={() => { if (item.kind !== value.engine) change({ engine: item.kind }); }}><LogoLabel data={engineLogoLabel(item.kind,item.label,item.logo || products.find(product => product.id === item.kind)?.logo)} />{item.kind === value.engine && <Icon name="check" size={13} />}</button>)}
       </div>
     </div>
     <button type="button" className="composer-model" disabled={disabled} popoverTarget={modelMenu} aria-label="Agent 大模型" title={modelLabel} onClick={() => { void window.desktopMenu.Model('models.list').then(setModels).catch(e => fail(String(e))); }}><span>{modelLabel} <Icon name="chevronDown" size={12} /></span></button>

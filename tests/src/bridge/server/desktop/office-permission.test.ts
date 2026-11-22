@@ -52,3 +52,24 @@ test.each([['read', false], ['ask', false], ['execute', false], ['read', true], 
     await fs.rm(root, { recursive: true, force: true });
   }
 });
+
+test('inline decisions persist only the selected scope and conversation', async () => {
+  const { OfficeApprovals } = await import('../../../../../src/bridge/server/desktop/office-approvals');
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(),'office-approvals-'));
+  const create = () => new OfficeApprovals((p,s) => path.join(dir,p,s));
+  let host = create();
+  const controller = new AbortController();
+  const request = (session='A', action='create') => host.Request('project',session,'cbim_project_write',{resource:'organization', change:{action}},dir,controller.signal);
+  try {
+    const once = request(); let id = host.List('project','A')[0].id;
+    expect(()=>host.Decide('project','B',id,'always')).toThrow();
+    host.Decide('project','A',id,'once'); expect(await once).toBe(true);
+    const always = request(); id = host.List('project','A')[0].id;
+    host.Decide('project','A',id,'always'); expect(await always).toBe(true);
+    host = create(); expect(await request()).toBe(true);
+    const changed = request('A','delete'); host.Decide('project','A',host.List('project','A')[0].id,'deny');
+    expect(await changed).toBe(false);
+    const other = request('B'); controller.abort(); expect(await other).toBe(false);
+    expect(host.List('project','B')).toEqual([]);
+  }finally{await fs.rm(dir,{recursive:true,force:true});}
+});

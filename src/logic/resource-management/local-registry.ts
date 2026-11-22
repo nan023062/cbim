@@ -2,6 +2,7 @@
  * 作用定位：通过本机资源服务发布文件，按指定版本及摘要拉取到用户缓存。
  * 设计原因：发布凭据、文件流和缓存路径留在宿主；拉取不会安装或执行资源。
  */
+import { registryOrigin } from './registry-origin';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { createReadStream, openAsBlob } from 'node:fs';
@@ -31,17 +32,17 @@ export const registryVersion = registryPublication
   .strip();
 const version = registryVersion;
 type Key = z.infer<typeof registryKey>;
-export function localRegistry(cache: string, port = '4179', token?: string) {
-  if (!/^\d{1,5}$/.test(port) || Number(port) < 1 || Number(port) > 65535)
-    throw Error('本机资源服务器端口无效');
-  const base = 'http://127.0.0.1:' + port + '/v1/resources';
+export function localRegistry(cache: string, port?: string, token?: string) {
+  // 显式端口用于独立的本机发布/测试实例；桌面宿主通过环境选择资源源。
+  const origin = port === undefined ? registryOrigin() : registryOrigin(null, port);
+  const base = origin + '/v1/resources';
   async function request(route: string, options: RequestInit = {}) {
     const response = await fetch(base + route, {
       ...options,
       redirect: 'error',
       signal: AbortSignal.timeout(300000),
     }).catch(() => {
-      throw Error('无法连接本机资源服务器，请检查服务和端口');
+      throw Error('无法连接资源服务器：' + origin + '，请检查服务和地址');
     });
     if (!response.ok) {
       await response.body?.cancel();

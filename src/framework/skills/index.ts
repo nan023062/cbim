@@ -4,6 +4,8 @@
  */
 export interface SkillDefinition
 {
+  logo?: string;
+
   name: string;
 
   purpose: string;

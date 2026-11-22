@@ -1,0 +1,372 @@
+﻿<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>项目架构 · CBIM</title>
+<style>
+*{box-sizing:border-box}html{color-scheme:light;--canvas:#f4f4f3;--paper:#fff;--soft:#f8f8f7;--line:#dcdcdc;--text:#262627;--muted:#616165;--hover:#ededec;--select:#e4e4e3;--strong:#343436;--inverse:white;--focus:#526d9e}
+html.dark{color-scheme:dark;--canvas:#111;--paper:#191919;--soft:#202020;--line:#353535;--text:#d7d7da;--muted:#a7a7ab;--hover:#292929;--select:#37383a;--strong:#d7d7da;--inverse:#191919;--focus:#a5badb}
+body{margin:0;background:var(--canvas);color:var(--text);font:14px/1.5 system-ui,"Microsoft YaHei",sans-serif}button,input{font:inherit;color:inherit}button{cursor:pointer;display:inline-flex;align-items:center;gap:8px;justify-content:center;border:0;border-radius:6px;background:none;padding:5px 8px;min-height:32px;text-align:left;transition:background 120ms}button:hover{background:var(--hover)}:focus-visible{outline:2px solid var(--focus);outline-offset:2px}button:disabled{opacity:.45;cursor:default}svg{width:16px;height:16px;flex:none;vertical-align:middle}h1,h2,h3,p{margin:0}h1{font-size:20px}h2{font-size:20px}h3{font-size:15px}.muted,small,code{color:var(--muted)}small,code{font-size:12px}code{font-family:ui-monospace,Consolas,monospace;overflow-wrap:anywhere}
+.top,.tabs,.heading,.navhead,.intro,.pair,.row,.foot{display:flex;align-items:center;gap:10px}.top{padding:0 18px;height:38px;border-bottom:1px solid var(--line);background:var(--canvas);font-size:12px;color:var(--muted)}.brand{font:700 14px/1 Arial;letter-spacing:1.2px;color:var(--text)}.separator{border-left:1px solid var(--line);height:14px}.end{margin-left:auto}.desktop{display:flex;min-height:calc(100vh - 38px)}.office{display:none;padding:22px;flex:1;color:var(--muted)}.compact .office{display:block}.panel{background:var(--paper);width:100%;container-type:inline-size}.compact .panel{max-width:408px;border-left:1px solid var(--line)}.tabs{height:44px;border-bottom:1px solid var(--line);background:var(--soft);padding:0 16px;gap:4px}.tabs .tab[aria-current=true]{background:var(--select);font-weight:600}.icon{width:32px;padding:0}.frame{max-width:1160px;margin:auto;padding:0 32px}.heading{padding:29px 0 23px;align-items:flex-start;flex-direction:column;gap:5px;border-bottom:1px solid var(--line)}.heading small{display:flex;align-items:center;gap:7px}.layout{display:grid;grid-template-columns: minmax(200px,26%) minmax(0,1fr);min-height:calc(100dvh - 236px)}aside{padding:22px 20px 22px 0;border-right:1px solid var(--line)}.navhead{justify-content:space-between}.tools{display:flex}.search{display:flex;align-items:center;gap:8px;padding:0 10px;height:34px;border:1px solid var(--line);border-radius:6px;margin:10px 0 14px;background:var(--soft);color:var(--muted)}.search:focus-within{outline:2px solid var(--focus);outline-offset:2px}input{width:100%;min-width:0;border:0;background:none;outline:none}ul{list-style:none;margin:0;padding:0}.tree ul{margin-left:14px;border-left:1px solid var(--line);padding-left:5px}.node{display:flex;align-items:center;border-radius:6px;margin:2px 0}.node.current{background:var(--select);box-shadow:inset 2px 0 var(--strong)}.node .toggle,.indent{min-width:22px;width:22px;padding:0}.toggle[aria-expanded=true] svg{transform:rotate(90deg)}.toggle svg{width:12px}.pick{flex:1;justify-content:flex-start;min-height:36px;padding-left:3px}.empty{color:var(--muted);padding:12px 0}
+article{min-width:0;padding:24px 0 30px 30px}.crumb,.crumb button{font-size:12px;color:var(--muted)}.crumb{display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin-bottom:12px}.crumb button{min-height:24px;padding:0 4px}.card,.listbox{border:1px solid var(--line);border-radius:9px;overflow:hidden}.card{padding:18px 20px;background:var(--soft)}.intro{gap:12px}.mark{display:grid;place-items:center;width:42px;height:42px;border-radius:9px;background:var(--strong);color:var(--inverse)}.mark svg{width:24px;height:24px}.card p{line-height:1.75;margin-top:14px}.pair{justify-content:space-between;border-top:1px solid var(--line);margin-top:14px;padding-top:10px}.pair>span{font-size:12px;color:var(--muted)}.section{margin-top:20px}.section h3{margin-bottom:9px}.count{font:12px ui-monospace,Consolas,monospace;color:var(--muted);margin-left:8px}.row{width:100%;min-height:42px;border-radius:0;justify-content:flex-start;padding:8px 12px}.row+.row{border-top:1px solid var(--line)}.row .end{color:var(--muted)}.source{align-items:flex-start}.source span{min-width:0}.source small{display:block;margin-top:2px}.source svg{margin-top:4px}.skills{display:flex;flex-wrap:wrap;gap:7px}.skills span{border:1px solid var(--line);background:var(--soft);border-radius:6px;padding:4px 9px;font-size:13px}.foot{border-top:1px solid var(--line);padding:10px 0;color:var(--muted);font-size:12px}.mobileback{display:none}.cross{margin:0 0 10px}.detailcontent{animation:enter 180ms ease-out}@keyframes enter{from{opacity:.65;transform:translateY(2px)}}@media(prefers-reduced-motion:reduce){*,*::before{animation:none!important;transition:none!important}}
+@container(max-width:690px){.frame{padding:0 16px}.tabs{padding:0 8px}.heading{padding:18px 0 14px}.layout{display:block;min-height:calc(100dvh - 214px)}aside{border:0;padding:14px 0}article{display:none;padding:12px 0 20px}.panel.show-detail article{display:block}.panel.show-detail aside{display:none}.mobileback{display:inline-flex;margin-bottom:8px}.card{padding:14px}.pair{flex-wrap:wrap}}
+@media(max-width:690px){.compact .office{display:none}.compact .panel{max-width:none;border:0}.sizebtn{display:none}.top{padding:0 12px}}
+@media(pointer:coarse){button,.node .toggle,.tabs button,.crumb button,.pick{min-height:44px}.icon,.node .toggle{min-width:44px}.tabs{height:auto}.tree ul{margin-left:8px}}
+#toggle-all{font-size:12px;color:var(--muted);flex:none;inline-size:calc(4em + 44px);white-space:nowrap;--motion:.2s ease-in-out}
+#toggle-all svg{transform:rotate(0deg);transition:transform var(--motion)}
+#all-label{display:grid}
+#all-label span{grid-area:1/1;transition:opacity var(--motion)}
+#all-collapse,#toggle-all[data-action="collapse"] #all-expand{opacity:0}
+#toggle-all[data-action="collapse"] #all-collapse{opacity:1}
+#toggle-all[data-action="collapse"] svg{transform:rotate(90deg)}
+@media(prefers-reduced-motion:reduce){#toggle-all svg,#all-label span{transition:none}}
+.skill-head,.skill-item,.dialog-actions{display:flex;align-items:center;gap:8px}.skill-head{justify-content:space-between;margin-bottom:8px}.skill-head h3{margin:0}.skill-item{padding:5px 10px}.skill-item+.skill-item{border-top:1px solid var(--line)}.skill-open{flex:1;min-width:0;display:block}.skill-open strong,.skill-open small{display:block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.skill-open strong{font-weight:600}.skill-item>button:last-child{font-size:12px;color:var(--muted)}
+#skill-dialog{width:min(460px,calc(100% - 24px));max-height:calc(100dvh - 32px);overflow:auto;color:var(--text);background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:20px}
+#skill-dialog::backdrop{background:rgb(0 0 0/.42)}#skill-dialog label{display:grid;gap:5px;margin:12px 0}#skill-dialog textarea,#skill-dialog input{background:var(--soft);border:1px solid var(--line);border-radius:6px;width:100%;padding:8px;font:inherit;color:inherit}#skill-dialog textarea{resize:vertical;min-height:100px}#skill-dialog :focus-visible{outline:2px solid var(--focus)}.dialog-actions{justify-content:flex-end;margin-top:16px}#skill-submit{background:var(--strong);color:var(--inverse)}#skill-error{color:var(--text);margin-top:8px}
+#flow-dialog{width:min(520px,calc(100% - 24px));max-height:calc(100dvh - 32px);overflow:auto;border:1px solid var(--line);border-radius:14px;background:var(--paper);color:var(--text);padding:20px}
+#flow-dialog::backdrop{background:rgb(0 0 0/.42)}.step-edit{border:1px solid var(--line);border-radius:8px;margin:12px 0;padding:12px;min-width:0}.step-edit legend,.step-edit label{font-size:12px;color:var(--muted)}.step-edit label{display:block;margin-bottom:6px}.step-edit input,.step-edit select{display:block;width:100%;min-width:0;border:1px solid var(--line);border-radius:6px;background:var(--soft);color:var(--text);padding:6px;font:inherit}.step-edit input:focus-visible{outline:2px solid var(--focus)}#flow-submit{background:var(--strong);color:var(--inverse)}.step-summary{overflow-wrap:anywhere}.step-summary small{margin-left:auto;flex:none}
+#output-dialog{width:min(480px,calc(100% - 24px));max-height:calc(100dvh - 32px);overflow:auto;background:var(--paper);color:var(--text);border:1px solid var(--line);border-radius:14px;padding:20px}
+#output-dialog::backdrop{background:rgb(0 0 0/.42)}#output-fields label{display:block;margin:8px 0;color:var(--muted);font-size:12px}
+#output-fields :is(input,textarea){width:100%;display:block;margin-top:4px;padding:8px;border-radius:6px;background:var(--soft);color:var(--text);border:1px solid var(--line);font:14px/1.5 inherit}#output-submit{background:var(--strong);color:var(--inverse)}
+.output-item{padding:12px;overflow-wrap:anywhere}.output-item+.output-item{border-top:1px solid var(--line)}.output-item ol{padding-left:22px;margin:6px 0}.output-item p{margin:4px 0}
+#exec-dialog{width:min(420px,calc(100% - 24px));max-height:calc(100dvh - 32px);overflow:auto;background:var(--paper);color:var(--text);border:1px solid var(--line);border-radius:14px;padding:20px}#exec-dialog::backdrop{background:rgb(0 0 0/.42)}
+#exec-dialog fieldset{border:1px solid var(--line);border-radius:7px;margin:10px 0;padding:8px 10px;min-width:0}#exec-dialog legend{color:var(--muted);font-size:12px}#exec-dialog label,#exec-dialog summary,.engine-name{display:flex;align-items:center;gap:8px}#exec-dialog summary,#exec-dialog label{cursor:pointer;padding:6px}#exec-dialog input{width:auto}#exec-dialog select{width:100%;padding:6px;font:inherit;background:var(--soft);color:inherit;border:1px solid var(--line);border-radius:6px}#exec-save{background:var(--strong);color:var(--inverse)}
+.connector-logos{display:inline-flex;align-items:center;max-width:100%;gap:2px;flex-wrap:wrap}.connector-logo{position:relative;border:1px solid var(--line);background:var(--paper);border-radius:50%;min-width:29px;min-height:29px;padding:5px}.connector-logo:is(:hover,:focus-visible){z-index:3}.connector-logo:is(:hover,:focus-visible)::after{content:attr(aria-label);position:absolute;z-index:4;bottom:100%;right:0;white-space:nowrap;background:var(--strong);color:var(--inverse);border-radius:4px;padding:3px 6px;font-size:12px}.execution-list{overflow:visible}.model-name,#model-value,#model-options label{white-space:normal;overflow-wrap:anywhere;min-width:0}.model-name{max-width:72%;text-align:right}
+@container(max-width:420px){.connector-logos{gap:0}.connector-logo+.connector-logo{margin-left:-5px}}
+@media(max-width:420px){#exec-dialog .connector-logo+.connector-logo{margin-left:-5px}}
+.logo-frame,.default-logo{display:inline-grid;vertical-align:middle;width:20px;height:20px;color:var(--text)}.logo-frame>*{grid-area:1/1;object-fit:contain}.default-logo[hidden]{display:none}.default-logo svg{width:20px;height:20px}#exec-dialog [hidden]{display:none}
+</style>
+<header class="top"><b class="brand">CBIM</b><span class="separator"></span>客户端项目<span class="end">扩展面板</span></header>
+<div class="desktop"><div class="office">Office 对话</div><main class="panel" id="panel">
+<nav class="tabs" aria-label="扩展标签"><button class="tab" id="business"></button><button class="tab" id="organization"></button><span class="end"></span><button class="icon sizebtn" id="size"></button><button class="icon" id="theme"></button></nav>
+<div class="frame"><header class="heading"><h1></h1><small id="summary"></small></header>
+<div class="layout"><aside><div class="navhead"><h3 id="navtitle"></h3><button id="toggle-all" aria-controls="tree"><span id="all-arrow" aria-hidden="true"></span><span id="all-label" aria-hidden="true"><span id="all-expand">全部展开</span><span id="all-collapse">全部收起</span></span></button></div>
+<label class="search"><span id="searchicon"></span><input type="search" id="search"></label><nav aria-labelledby="navtitle" class="tree" id="tree"></nav></aside><article aria-label="节点详情" id="detail"></article></div>
+<footer class="foot"><span>CBIM 客户端</span><span class="end">本地示例项目</span></footer></div></main></div>
+<dialog id="skill-dialog" aria-labelledby="skill-title"><form id="skill-form">
+<small id="skill-role"></small><h2 id="skill-title"></h2><p id="skill-warning"></p>
+<div id="skill-fields"><div id="skill-logo-editor"></div><label>技能名称<input id="skill-name" required maxlength="100" autocomplete="off"></label>
+<label>用途与执行说明<textarea id="skill-content" rows="5" required maxlength="32000" placeholder="说明何时使用，以及这个岗位应执行哪些步骤"></textarea></label></div>
+<p id="skill-error" role="alert"></p><div class="dialog-actions"><button type="button" id="skill-cancel">取消</button><button id="skill-submit">保存</button></div></form></dialog>
+<dialog id="flow-dialog" aria-labelledby="flow-title"><form id="flow-form">
+<small id="flow-node"></small><h2 id="flow-title">配置本节点工作流</h2><div id="flow-logo-editor"></div><div id="flow-steps"></div>
+<button type="button" id="flow-add">＋ 新增步骤</button><p role="alert" id="flow-error"></p>
+<div class="dialog-actions"><button type="button" id="flow-cancel">取消</button><button id="flow-submit">保存工作流</button></div></form></dialog>
+<dialog id="output-dialog" aria-labelledby="output-title"><form id="output-form"><small id="output-node"></small><h2 id="output-title"></h2><p id="output-prompt"></p>
+<div id="output-fields"><label>产出物名称<input id="output-name" maxlength="160" required></label><label>说明<textarea id="output-description" rows="2" required></textarea></label>
+<label>路径或交付形式（可选）<input id="output-path"></label><label>交付标准（每行一条）<textarea id="output-criteria" rows="4" placeholder="填写可逐条核验的条件"></textarea></label></div>
+<p role="alert" id="output-error"></p><div class="dialog-actions"><button type="button" id="output-cancel">取消</button><button id="output-submit">保存</button></div></form></dialog>
+<dialog id="exec-dialog" aria-labelledby="exec-title"><form id="exec-form"><small id="exec-role"></small><h2 id="exec-title">岗位执行配置</h2>
+<fieldset><legend>执行引擎</legend><details id="engine-picker"><summary id="engine-value"></summary><div id="engine-options"></div></details></fieldset>
+<fieldset><legend>模型</legend><details id="model-picker"><summary id="model-value"></summary><div id="model-options"></div></details></fieldset>
+<fieldset><legend>连接器</legend><div id="connector-selected"></div><div id="connector-picker" hidden></div></fieldset><p role="alert" id="exec-error"></p>
+<div class="dialog-actions"><button type="button" id="exec-cancel">取消</button><button id="exec-save">保存</button></div></form></dialog>
+<script>
+const icons={"workflow":"<rect x=\"3\" y=\"3\" width=\"6\" height=\"6\" rx=\"1\" /><rect x=\"15\" y=\"15\" width=\"6\" height=\"6\" rx=\"1\" /><path d=\"M9 6h9v9M15 12l3 3 3-3M6 9v12h5\" />","folder":"<path d=\"M3 6V4h6l3 3h9v13H3ZM3 10h18\" />","terminal":"<rect x=\"2\" y=\"3\" width=\"20\" height=\"18\" rx=\"2\" /><path d=\"m6 8 4 4-4 4M13 16h5\" />","person":"<circle cx=\"12\" cy=\"7\" r=\"4\" /><path d=\"M4 21v-3a8 8 0 0 1 16 0v3\" />","team":"<circle cx=\"9\" cy=\"7\" r=\"3\" /><path d=\"M3 21v-3a6 6 0 0 1 12 0v3M16 4a3 3 0 0 1 0 6M18 14a5 5 0 0 1 3 4v3\" />","search":"<circle cx=\"10\" cy=\"10\" r=\"7\" /><path d=\"m15 15 6 6\" />","chevron":"<path d=\"m9 5 7 7-7 7\" />","expand":"<path d=\"m7 8 5-5 5 5M7 16l5 5 5-5M4 12h16\" />","collapse":"<path d=\"m7 3 5 5 5-5M7 21l5-5 5 5M4 12h16\" />","code":"<path d=\"m8 5-6 7 6 7M16 5l6 7-6 7M14 3l-4 18\" />","back":"<path d=\"m10 5-7 7 7 7M3 12h18\" />","sun":"<circle cx=\"12\" cy=\"12\" r=\"4\" /><path d=\"M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1 1M18 18l1 1M5 19l1-1M18 6l1-1\" />","moon":"<path d=\"M20 14A9 9 0 0 1 10 3a9 9 0 1 0 10 11Z\" />","panelRight":"<rect x=\"3\" y=\"4\" width=\"18\" height=\"16\" rx=\"3\" /><path d=\"M15 4v16\" />"};
+const icon=name=>'<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">'+icons[name]+'</svg>';
+const $=id=>document.getElementById(id);
+function tool(id,label,glyph){const b=$(id);b.title=label;b.setAttribute('aria-label',label);b.innerHTML=icon(glyph)}
+const business=[
+ ['client','CBIM 客户端',null,'workflow','组织客户端的资源交付与执行引擎能力。','product','src/logic/','客户端业务逻辑'],
+ ['market','资源商城','client','folder','维护资源的发现、分发与安装流程，让项目成员可以找到并使用所需资源。','curator','src/logic/resource-management/','资源目录、安装与本地登记'],
+ ['catalog','资源目录','market','folder','汇集可用资源，维护资源索引及本地登记信息。','curator','src/logic/resource-management/local-registry.ts','本地资源索引'],
+ ['install','资源安装','market','folder','管理资源安装记录，向项目提供可用的扩展能力。','installer','src/logic/resource-management/plugin-installations.ts','插件安装记录'],
+ ['engines','引擎管理','client','terminal','维护执行引擎目录及模型选择，供项目配置执行环境。','operator','src/logic/engines/','引擎目录与配置'],
+ ['choices','模型选择','engines','folder','维护可用模型及其与执行引擎的对应关系。','operator','src/logic/engines/catalog/','模型与引擎映射']
+];
+const organization=[
+ ['project','项目组',null,'team','统筹客户端各团队的设计与交付。'],
+ ['product','项目协调岗','project','person','协调资源与引擎团队的交付计划。','需求梳理','任务分派'],
+ ['resources','资源团队','project','team','负责资源商城目录维护、安装流程与交付验收。'],
+ ['curator','资源维护岗','resources','person','维护商城目录与来源范围，审核资源说明，协同安装维护岗完成交付。','目录维护','资源审核'],
+ ['installer','安装维护岗','resources','person','验证资源安装流程，维护本地安装记录。','安装验证','记录维护'],
+ ['runtime','引擎团队','project','team','负责执行引擎及模型配置。'],
+ ['operator','引擎维护岗','runtime','person','维护引擎目录、模型选择及运行配置。','引擎检查','模型配置']
+];
+const data={business,organization}, names={business:'业务架构',organization:'组织架构'};
+let page=location.hash==='#organization'?'organization':'business', origin=null;
+function initial(id,open){return {id,open:new Set(open),query:'',detail:false,trail:[]}}
+const states={business:initial('market',['client','market','engines']),organization:initial('curator',['project','resources','runtime'])};
+const s=()=>states[page], nodes=()=>data[page], find=id=>nodes().find(n=>n[0]===id), children=id=>nodes().filter(n=>n[2]===id);
+const parents=id=>{const chain=[];let n=find(id);while(n){chain.unshift(n);n=find(n[2])}return chain};
+function narrow(){return $('panel').clientWidth<=690}
+function focus(id){const el=$(id);if(el && el.getClientRects().length)el.focus();else $('search').focus()}
+function tree(){
+ const term=s().query.trim().toLowerCase(), visible=new Set();
+ for(const n of nodes())if(n.slice(0,5).filter((_,i)=>[0,1,4].includes(i)).join(' ').toLowerCase().includes(term))parents(n[0]).forEach(p=>visible.add(p[0]));
+ function branch(id){return children(id).filter(n=>visible.has(n[0])).map(([key,name])=>{
+ const kids=children(key).length>0, open=term||s().open.has(key), glyph=find(key)[3];
+ const toggle=kids?'<button class="toggle" id="toggle-'+key+'" data-toggle="'+key+'" title="'+(open?'收起 ':'展开 ')+name+'" aria-label="'+(open?'收起 ':'展开 ')+name+'" aria-expanded="'+Boolean(open)+'" '+(term?'disabled':'')+'>'+icon('chevron')+'</button>':'<span class="indent"></span>';
+ return '<li><div class="node '+(s().id===key?'current':'')+'">'+toggle+'<button class="pick" id="node-'+key+'" data-pick="'+key+'" aria-current="'+(s().id===key)+'">'+icon(glyph)+name+'</button></div>'+(kids&&open?'<ul>'+branch(key)+'</ul>':'')+'</li>'
+ }).join('')}
+ $('tree').innerHTML=visible.size?'<ul>'+branch(null)+'</ul>':'<p class="empty" role="status">没有匹配的节点。</p>';
+ const branches=new Set(nodes().map(n=>n[2]).filter(Boolean));
+ const allOpen=branches.size>0 && [...branches].every(id=>s().open.has(id));
+ const action=allOpen?'collapse':'expand';
+ const allButton=$('toggle-all');
+ const label=allOpen?'全部收起':'全部展开';
+ allButton.setAttribute('aria-label',label);
+ allButton.title=label;
+ allButton.dataset.action=action;
+ allButton.disabled=!!term || !branches.size;
+ if(term)allButton.title='搜索时自动展开匹配路径';
+}
+function section(title,body,count){return '<section class="section"><h3>'+title+(count===undefined?'':'<span class="count">'+count+'</span>')+'</h3>'+body+'</section>'}
+function linkrow(n){return '<button id="link-'+n[0]+'" class="row" data-link="'+n[0]+'">'+icon(n[3])+n[1]+'<span class="end">'+icon('chevron')+'</span></button>'}
+const book='<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M12 6C9 4 6 4 2 5v14c4-1 7-1 10 1 3-2 6-2 10-1V5c-4-1-7-1-10 1Zm0 0v14"/></svg>';
+function objectLogo(kind,logo){
+ const fallback='<span class="default-logo" aria-hidden="true">'+(kind==='skill'?book:icon('workflow'))+'</span>';
+ return /^data:image\/(png|jpeg|webp);base64,[a-z0-9+/]+=*$/i.test(logo||'')?'<span class="logo-frame">'+fallback+'<img width="20" height="20" alt="" style="visibility:hidden" src="'+logo+'" onload="finishLogo(this)" onerror="this.remove()"></span>':fallback;
+}
+async function finishLogo(img){try{await img.decode();if(img.isConnected){img.previousElementSibling.hidden=true;img.style.visibility='visible'}}catch{img.remove()}}
+function logoEditor(kind,draft){
+ const area=$(kind==='skill'?'skill-logo-editor':'flow-logo-editor');
+ const draw=()=>{area.innerHTML='<div>'+objectLogo(kind,draft.logo)+' <label>自定义 Logo<input type="file" accept="image/png,image/jpeg,image/webp"></label><button type="button">恢复默认图标</button><small role="status"></small></div>';
+ const input=area.querySelector('input');
+ input.onchange=async()=>{const file=input.files[0];if(!file)return;
+ if(file.size>96*1024||!['image/png','image/jpeg','image/webp'].includes(file.type)){area.querySelector('small').textContent='请选择 96 KiB 以内的 PNG、JPEG 或 WebP。';return}
+ const reader=new FileReader();reader.onload=()=>{if(!area.contains(input))return;draft.logo=String(reader.result);draw()};reader.readAsDataURL(file)};
+ area.querySelector('button').onclick=()=>{delete draft.logo;draw();area.querySelector('input').focus()};};draw();
+}
+const initialSkills={curator:[
+ {id:'catalog-review',name:'目录维护',content:'整理资源条目，核对名称、来源和版本。\n发现缺项时记录待补充字段。'},
+ {id:'resource-review',name:'资源审核',content:'检查资源说明与来源范围是否一致，列出需要复核的条目。'}
+]};
+function skillKey(role){return 'cbim.architecture-preview.skills.v1.'+role}
+function roleSkills(role){
+ try{
+   const stored=localStorage.getItem(skillKey(role));
+   if(stored!==null)return JSON.parse(stored);
+ }catch{}
+ return initialSkills[role]||[];
+}
+function safeText(value){const span=document.createElement('span');span.textContent=value;return span.innerHTML}
+function skillSection(role){
+ const ownerType=find(role)[3]==='team'?'团队':'岗位';
+ const skills=roleSkills(role);
+ const rows=skills.map((skill,index)=>'<div class="skill-item"><button class="skill-open" id="skill-edit-'+index+'" data-skill="edit" data-index="'+index+'"><strong>'+objectLogo('skill',skill.logo)+' '+safeText(skill.name)+'</strong><small>'+safeText(skill.content.split('\n')[0])+'</small></button><button id="skill-remove-'+index+'" data-skill="remove" data-index="'+index+'">移除</button></div>').join('');
+ return '<section class="section" aria-labelledby="skills-heading"><div class="skill-head"><h3 id="skills-heading">'+ownerType+'专属技能<span class="count">'+skills.length+'</span></h3><button data-skill="add" id="skill-add" '+(skills.length>=32?'disabled':'')+'>＋ 添加技能</button></div>'+(rows?'<div class="listbox">'+rows+'</div>':'<p class="empty">'+find(role)[1]+'尚未配置'+ownerType+'专属技能。</p>')+'</section>';
+}
+let skillDraft;
+function openSkill(button){
+ const mode=button.dataset.skill,role=s().id,skill=roleSkills(role)[Number(button.dataset.index)],remove=mode==='remove';
+ skillDraft={mode,role,id:skill?.id,logo:skill?.logo,trigger:button.id};logoEditor('skill',skillDraft);
+ $('skill-role').textContent=find(role)[1]+' · 专属技能';
+ $('skill-title').textContent=remove?'移除技能':mode==='add'?'添加技能':'查看与编辑技能';
+ $('skill-warning').textContent=remove?'从「'+find(role)[1]+'」移除「'+skill.name+'」？':'';
+ $('skill-fields').hidden=remove;
+ $('skill-name').disabled=$('skill-content').disabled=remove;
+ $('skill-name').value=skill?.name||'';
+ $('skill-content').value=skill?.content||'';
+ $('skill-error').textContent='';
+ $('skill-submit').textContent=remove?'确认移除':'保存';
+ $('skill-dialog').showModal();
+ $(remove?'skill-cancel':'skill-name').focus();
+}
+function closeSkill(target){
+ $('skill-dialog').close();skillDraft=null;details();focus(target);
+}
+$('skill-cancel').onclick=()=>closeSkill(skillDraft.trigger);
+$('skill-dialog').oncancel=e=>{e.preventDefault();closeSkill(skillDraft.trigger)};
+$('skill-form').onsubmit=e=>{
+ e.preventDefault();
+ const {mode,role,id}=skillDraft,skills=roleSkills(role).slice();
+ let index=skills.findIndex(x=>x.id===id);
+ if(mode!=='add'&&index<0){$('skill-error').textContent='该技能已被移除，请取消并重新选择。';return}
+ if(mode==='remove')skills.splice(index,1);
+ else{
+   const name=$('skill-name').value.trim(),content=$('skill-content').value.trim();
+   if(!name||!content){$('skill-error').textContent='请填写技能名称和执行说明。';return}
+   if(skills.some(x=>x.id!==id&&x.name.toLowerCase()===name.toLowerCase())){$('skill-error').textContent='当前节点已有同名技能。';$('skill-name').focus();return}
+   if(mode==='add'&&skills.length>=32){$('skill-error').textContent='当前节点已配置 32 项技能。';return}
+   if(mode==='add')index=skills.length;
+   skills[index]={id:id||crypto.randomUUID(),name,content,...(skillDraft.logo&&{logo:skillDraft.logo})};
+ }
+ try{localStorage.setItem(skillKey(role),JSON.stringify(skills))}
+ catch{$('skill-error').textContent='浏览器未能保存本地示例，请检查存储权限后重试。';return}
+ closeSkill(mode==='remove'?'skill-add':'skill-edit-'+index);
+};
+const flowKey=id=>'cbim.architecture-preview.workflow.v1.'+id;
+function readSteps(id){
+ try{const saved=localStorage.getItem(flowKey(id));if(saved!==null){const value=JSON.parse(saved);return Array.isArray(value)?value:value.steps}}catch{}
+ return id==='market'?[{name:'核对资源来源',owner:'resources'},{name:'审核目录条目',owner:'curator'}]:[];
+}
+function flowLogo(id){try{return JSON.parse(localStorage.getItem(flowKey(id)))?.logo}catch{return undefined}}
+function flowSection(id){
+ const steps=readSteps(id);
+ const rows=steps.map((step,i)=>'<div class="row step-summary"><span class="count">'+(i+1)+'</span><span>'+safeText(step.name)+'</span><small>'+organization.find(n=>n[0]===step.owner)[1]+'</small></div>').join('');
+ return '<section class="section" id="workflow"><div class="skill-head"><h3>'+objectLogo('workflow',flowLogo(id))+' 本节点工作流<span class="count">'+steps.length+'</span></h3><button id="flow-edit">配置步骤</button></div><small>归属 · '+find(id)[1]+'</small>'+(rows?'<div class="listbox">'+rows+'</div>':'<p class="empty">本节点尚未配置步骤。</p>')+'</section>';
+}
+let flowDraft;
+function drawSteps(){
+ const options=organization.map(n=>'<option value="'+n[0]+'">'+(n[3]==='team'?'团队':'岗位')+' · '+n[1]+'</option>').join('');
+ $('flow-steps').innerHTML=flowDraft.steps.map((step,i)=>'<fieldset class="step-edit" data-step="'+i+'"><legend>步骤 '+(i+1)+'</legend><label>步骤名称<input required maxlength="100" data-field="name"></label><label>负责团队或岗位<select data-field="owner">'+options+'</select></label><button type="button" data-move="-1" '+(i===0?'disabled':'')+'>上移</button><button type="button" data-move="1" '+(i===flowDraft.steps.length-1?'disabled':'')+'>下移</button><button type="button" data-remove>移除</button></fieldset>').join('');
+ [...$('flow-steps').children].forEach((row,i)=>{for(const field of row.querySelectorAll('[data-field]'))field.value=flowDraft.steps[i][field.dataset.field]});
+}
+$('flow-steps').oninput=e=>{if(e.target.dataset.field)flowDraft.steps[e.target.closest('fieldset').dataset.step][e.target.dataset.field]=e.target.value};
+$('flow-steps').onclick=e=>{
+ const button=e.target.closest('button');if(!button)return;
+ const steps=flowDraft.steps,i=Number(button.closest('fieldset').dataset.step);
+ let target=i;
+ if(button.hasAttribute('data-remove'))steps.splice(i,1);
+ else{target=i+Number(button.dataset.move);[steps[i],steps[target]]=[steps[target],steps[i]]}
+ drawSteps();($('flow-steps').children[Math.min(target,steps.length-1)]?.querySelector('input')||$('flow-add')).focus();
+};
+$('flow-add').onclick=()=>{flowDraft.steps.push({name:'',owner:find(flowDraft.node)[5]});drawSteps();$('flow-steps').lastElementChild.querySelector('input').focus()};
+function closeFlow(){$('flow-dialog').close();flowDraft=null;details();focus('flow-edit')}
+$('flow-cancel').onclick=closeFlow;
+$('flow-dialog').oncancel=e=>{e.preventDefault();closeFlow()};
+$('flow-form').onsubmit=e=>{
+ e.preventDefault();
+ const steps=flowDraft.steps.map(step=>({...step,name:step.name.trim()}));
+ if(steps.some(step=>!step.name)){$('flow-error').textContent='请为每个步骤填写名称。';return}
+ try{localStorage.setItem(flowKey(flowDraft.node),JSON.stringify({steps,logo:flowDraft.logo}))}
+ catch{$('flow-error').textContent='浏览器未能保存本地工作流，请检查存储权限。';return}
+ closeFlow();
+};
+const outputKey=id=>'cbim.architecture-preview.outputs.v1.'+id;
+const sampleOutputs={
+ market:[{name:'资源目录清单',description:'记录交付资源及其对应来源。',path:'资源清单文档',criteria:['每项资源均可定位到来源。','清单版本与交付版本一致。']}],
+ engines:[{name:'引擎版本回退报告',description:'记录回退前后版本与恢复过程。',path:'验收报告',criteria:['卸载旧版本后可重新安装指定版本。','客户端重启后仍识别目标版本。']}]
+};
+function readOutputs(id){
+ try{const json=localStorage.getItem(outputKey(id));if(json!==null)return JSON.parse(json)}catch{}
+ return structuredClone(sampleOutputs[id]||[]);
+}
+function outputSection(id){
+ const items=readOutputs(id);
+ const rows=items.map((item,i)=>'<div class="output-item"><strong>'+safeText(item.name)+'</strong><p>'+safeText(item.description)+'</p>'+(item.path?'<small>'+safeText(item.path)+'</small>':'')+'<h4>交付标准</h4>'+(item.criteria.length?'<ol>'+item.criteria.map(c=>'<li>'+safeText(c)+'</li>').join('')+'</ol>':'<small>尚未填写交付标准。</small>')+'<div><button id="output-edit-'+i+'" data-output="edit" data-index="'+i+'">编辑</button><button id="output-remove-'+i+'" data-output="remove" data-index="'+i+'">移除</button></div></div>').join('');
+ return '<section class="section" id="outputs"><div class="skill-head"><h3>产出物和交付标准<span class="count">'+items.length+'</span></h3><button id="output-add" data-output="add">＋ 添加产出物</button></div>'+(rows?'<div class="listbox">'+rows+'</div>':'<p class="empty">本节点尚未配置产出物。</p>')+'</section>';
+}
+let outputDraft;
+function openOutput(button){
+ const node=s().id,mode=button.dataset.output,index=Number(button.dataset.index);
+ const items=readOutputs(node),item=items[index],remove=mode==='remove';
+ outputDraft={node,mode,index,items,trigger:button.id};
+ $('output-node').textContent='业务节点 · '+find(node)[1];
+ $('output-title').textContent=remove?'移除产出物':mode==='add'?'添加产出物':'编辑产出物';
+ $('output-prompt').textContent=remove?'移除「'+item.name+'」及其交付标准？':'';
+ $('output-fields').hidden=remove;
+ for(const field of ['name','description','path','criteria']){
+   const input=$('output-'+field);input.disabled=remove;input.value=field==='criteria'?(item?.criteria||[]).join('\n'):item?.[field]||'';
+ }
+ $('output-error').textContent='';$('output-submit').textContent=remove?'确认移除':'保存';
+ $('output-dialog').showModal();$(remove?'output-cancel':'output-name').focus();
+}
+function closeOutput(target){$('output-dialog').close();outputDraft=null;details();focus(target)}
+$('output-cancel').onclick=()=>closeOutput(outputDraft.trigger);
+$('output-dialog').oncancel=e=>{e.preventDefault();closeOutput(outputDraft.trigger)};
+$('output-form').onsubmit=e=>{
+ e.preventDefault();
+ const {node,mode,index,items}=outputDraft;let target=index;
+ if(mode==='remove')items.splice(index,1);
+ else{
+   const name=$('output-name').value.trim(),description=$('output-description').value.trim();
+   if(!name||!description){$('output-error').textContent='请填写产出物名称与说明。';return}
+   if(mode==='add')target=items.length;
+   items[target]={name,description,path:$('output-path').value.trim(),criteria:$('output-criteria').value.split('\n').map(x=>x.trim()).filter(Boolean)};
+ }
+ try{localStorage.setItem(outputKey(node),JSON.stringify(items))}
+ catch{$('output-error').textContent='浏览器未能保存本地产出物，请检查存储权限。';return}
+ closeOutput(mode==='remove'?'output-add':'output-edit-'+target);
+};
+const previewEngines=[
+ {id:'local',name:'CBIM 本地示例引擎',logo:'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNTYiIGhlaWdodD0iMjU2IiB2aWV3Qm94PSIwIDAgMjU2IDI1NiIgZmlsbD0ibm9uZSI+CiAgPHRpdGxlPkNCSU0gwrcgRmxvdyBDPC90aXRsZT4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iYmx1ZSIgeDE9IjQwIiB5MT0iMjAiIHgyPSIyMjIiIHkyPSIyNTYiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agc3RvcC1jb2xvcj0iIzQyNjVGNSIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMyNTQ1Q0IiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgPC9kZWZzPgogIDxyZWN0IHdpZHRoPSIyNTYiIGhlaWdodD0iMjU2IiByeD0iNTgiIGZpbGw9InVybCgjYmx1ZSkiLz4KICA8cGF0aCBkPSJNMTc4IDYwSDExNUM3NyA2MCA1MCA4OSA1MCAxMjhDNTAgMTY3IDc3IDE5NiAxMTUgMTk2SDE3OEwxNTQgMTY0SDExNUM5NiAxNjQgODIgMTQ5IDgyIDEyOEM4MiAxMDcgOTYgOTIgMTE1IDkySDE1NEwxNzggNjBaIiBmaWxsPSIjRkZGRkZGIi8+CiAgPHBhdGggZD0iTTE1MCAxMDRIMTgyTDIwNiAxMjhMMTgyIDE1MkgxNTBMMTc0IDEyOEwxNTAgMTA0WiIgZmlsbD0iIzkyRjBEQiIvPgo8L3N2Zz4K',active:true,enabled:true,models:['本地配置 / 通用模型','本地配置 / 审核模型']},
+ {id:'review',name:'审核示例引擎',active:true,enabled:true,models:['审核配置 / 复核模型']},
+ {id:'disabled',name:'待启用引擎',active:false,enabled:false,models:[]}
+].filter(x=>x.active&&x.enabled&&!x.error);
+const previewConnectors=[['catalog','本地资源目录',true,'folder'],['records','交付记录',true,'workflow'],['workspace','工作区索引',true,'code'],['archive','历史归档',false,'terminal']];
+const modelName=binding=>binding.split(' / ').at(-1);
+function connectorLogos(ids){
+ if(!ids.length)return '<button type="button" data-connectors>＋ 添加连接器</button>';
+ return '<span class="connector-logos">'+ids.map(id=>{const entry=previewConnectors.find(c=>c[0]===id);return '<button type="button" class="connector-logo" data-connectors title="'+entry[1]+'" aria-label="'+entry[1]+'">'+icon(entry[3])+'</button>'}).join('')+'</span>';
+}
+const executionKey=id=>'cbim.architecture-preview.execution.v1.'+id;
+function execution(id){
+ try{const value=localStorage.getItem(executionKey(id));if(value)return JSON.parse(value)}catch{}
+ return {engine:previewEngines[0].id,model:previewEngines[0].models[0],connectors:id==='curator'?['catalog','records']:[]};
+}
+function engineName(engine){return (engine.logo?'<img width="16" height="16" alt="" src="'+engine.logo+'">':icon('terminal'))+engine.name}
+function executionSection(id){
+ const settings=execution(id),engine=previewEngines.find(e=>e.id===settings.engine);
+ return '<section class="section"><div class="skill-head"><h3>执行配置</h3><button id="exec-edit">配置执行能力</button></div><div class="listbox execution-list">'+[['执行引擎','<span class="engine-name">'+engineName(engine)+'</span>'],['模型','<span class="model-name">'+modelName(settings.model)+'</span>'],['连接器',connectorLogos(settings.connectors)]].map(([label,value])=>'<div class="row">'+label+'<span class="end">'+value+'</span></div>').join('')+'</div></section>';
+}
+let execDraft;
+function drawExecution(){
+ const engine=previewEngines.find(e=>e.id===execDraft.engine);
+ $('engine-value').innerHTML=engineName(engine)+icon('chevron');
+ $('engine-options').innerHTML=previewEngines.map(e=>'<label><input type="radio" name="demo-engine" value="'+e.id+'" '+(e===engine?'checked':'')+'>'+engineName(e)+'</label>').join('');
+ $('model-value').textContent=modelName(execDraft.model);
+ $('model-options').innerHTML=engine.models.map(m=>'<label><input type="radio" name="preview-model" value="'+m+'" '+(m===execDraft.model?'checked':'')+'>'+modelName(m)+'</label>').join('');
+ $('connector-selected').innerHTML=connectorLogos(execDraft.connectors);
+ $('connector-picker').innerHTML=previewConnectors.map(([id,name,available])=>'<label><input type="checkbox" value="'+id+'" '+(execDraft.connectors.includes(id)?'checked':available?'':'disabled')+'>'+name+(available?'':'（未启用）')+'</label>').join('');
+}
+$('engine-options').onchange=e=>{execDraft.engine=e.target.value;execDraft.model=previewEngines.find(x=>x.id===execDraft.engine).models[0];drawExecution();$('engine-picker').open=false;$('engine-value').focus()};
+$('model-options').onchange=e=>{execDraft.model=e.target.value;$('model-value').textContent=modelName(execDraft.model);$('model-picker').open=false;$('model-value').focus()};
+$('connector-picker').onchange=e=>{const {checked,value}=e.target;execDraft.connectors=checked?[...execDraft.connectors,value]:execDraft.connectors.filter(x=>x!==value);$('connector-selected').innerHTML=connectorLogos(execDraft.connectors)};
+function closeExecution(){$('exec-dialog').close();execDraft=null;details();focus('exec-edit')}
+$('exec-cancel').onclick=closeExecution;
+$('exec-dialog').oncancel=e=>{e.preventDefault();closeExecution()};
+$('exec-form').onsubmit=e=>{e.preventDefault();try{localStorage.setItem(executionKey(s().id),JSON.stringify(execDraft))}catch{$('exec-error').textContent='未能保存此岗位的本地执行配置。';return}closeExecution()};
+function details(){
+ const n=find(s().id),[id,name,parent,glyph,description]=n,biz=page==='business',team=glyph==='team',kids=children(id);
+ const crumbs=parents(id).map(x=>x[0]===id?'<span>'+name+'</span>':'<button id="crumb-'+x[0]+'" data-link="'+x[0]+'">'+x[1]+'</button>').join(' / ');
+ const owner=biz&&organization.find(x=>x[0]===n[5]);
+ let pair=biz?'<span>业务负责人</span><button id="owner">'+icon('person')+owner[1]+icon('chevron')+'</button>':'<span>直属上级</span>'+(parent?'<button id="parent" data-link="'+parent+'">'+icon('team')+find(parent)[1]+icon('chevron')+'</button>':'<span>顶层团队</span>');
+ let content='<div class="card"><div class="intro"><span class="mark">'+icon(glyph)+'</span><div><small>'+(biz?'业务工作区':team?'团队':'成员岗位')+'</small><h2 tabindex="-1" id="detailtitle">'+name+'</h2></div></div><p aria-label="职责">'+description+'</p><div class="pair">'+pair+'</div></div>';
+ if(biz)content+=section('来源与范围','<div class="listbox"><div class="row source">'+icon('code')+'<span><code>'+n[6]+'</code><small>'+n[7]+'</small></span></div></div>',1);
+ if(biz||team)content+=section(biz?'子工作区':'直属下级',kids.length?'<div class="listbox">'+kids.map(linkrow).join('')+'</div>':'<small>暂无'+(biz?'子工作区':'下级')+'。</small>',kids.length);
+ else content+=skillSection(id)+executionSection(id);
+ if(biz)content+=flowSection(id)+outputSection(id);
+ if(!biz&&team)content+=skillSection(id);
+ const cross=origin&&page==='organization'?'<button id="returnbiz" class="cross">'+icon('back')+'返回业务 · '+business.find(n=>n[0]===origin.id)[1]+'</button>':'';
+ $('detail').innerHTML='<button id="tolist" class="mobileback">'+icon('back')+'返回'+(biz?'业务目录':'组织目录')+'</button>'+cross+'<div class="detailcontent"><nav class="crumb" aria-label="层级路径">'+crumbs+'</nav>'+content+'</div>';
+}
+function render(){
+ for(const key in names){$(key).innerHTML=icon(key==='business'?'workflow':'team')+names[key];$(key).setAttribute('aria-current',page===key)}
+ const biz=page==='business';
+ document.querySelector('h1').textContent=names[page];
+ $('summary').textContent=biz?'工作区职责、来源范围与归属岗位':'团队层级、岗位职责与执行能力';
+ $('navtitle').textContent=biz?'业务目录':'组织目录';
+ $('search').placeholder=biz?'搜索业务名称、职责或 ID':'搜索团队、岗位或职责';$('search').setAttribute('aria-label',$('search').placeholder);$('search').value=s().query;
+ $('panel').classList.toggle('show-detail',s().detail);
+ tool('size',document.body.classList.contains('compact')?'最大化面板':'恢复窄面板', 'panelRight');
+ tool('theme',document.documentElement.classList.contains('dark')?'切换浅色主题':'切换深色主题',document.documentElement.classList.contains('dark')?'sun':'moon');
+ tree();details()
+}
+function select(id,trigger){s().trail.push({id:s().id,detail:s().detail,trigger});s().id=id;s().detail=true;if(!s().query.trim())parents(id).slice(0,-1).forEach(n=>s().open.add(n[0]));render();focus('detailtitle')}
+function returnBiz(){const old=origin;origin=null;page='business';s().id=old.id;s().detail=true;render();focus('owner')}
+function list(){s().detail=false;s().trail=[];render();focus('node-'+s().id)}
+function back(){const last=s().trail.pop();if(last){s().id=last.id;s().detail=last.detail;render();focus(last.trigger);return}if(origin&&page==='organization')returnBiz();else if(narrow()&&s().detail)list()}
+document.addEventListener('click',e=>{
+ const b=e.target.closest('button');if(!b)return;
+ if(b.hasAttribute('data-connectors')){
+   if(!$('exec-dialog').open)$('exec-edit').click();
+   $('connector-picker').hidden=false;
+   $('connector-picker').querySelector('input:enabled').focus();
+   return;
+ }
+ if(b.dataset.skill){openSkill(b);return}
+ if(b.dataset.output){openOutput(b);return}
+ const {pick,link,toggle}=b.dataset;
+ if(pick||link){select(pick||link,b.id);return}
+ if(toggle){if(s().open.has(toggle))s().open.delete(toggle);else s().open.add(toggle);tree();focus(b.id);return}
+ if(b.id in names){page=b.id;origin=null;render();focus(page);return}
+ switch(b.id){
+ case 'exec-edit':execDraft=execution(s().id);$('exec-role').textContent=find(s().id)[1];$('exec-error').textContent='';$('engine-picker').open=$('model-picker').open=false;$('connector-picker').hidden=true;drawExecution();$('exec-dialog').showModal();break;
+ case 'flow-edit':flowDraft={node:s().id,steps:readSteps(s().id),logo:flowLogo(s().id)};logoEditor('workflow',flowDraft);$('flow-node').textContent='业务节点 · '+find(s().id)[1];$('flow-error').textContent='';drawSteps();$('flow-dialog').showModal();break;
+ case 'owner':{origin={id:s().id};const owner=find(s().id)[5];page='organization';s().id=owner;s().detail=true;s().query='';s().trail=[];parents(owner).forEach(x=>s().open.add(x[0]));render();focus('detailtitle');break}
+ case 'returnbiz':returnBiz();break;
+ case 'tolist':list();break;
+ case 'size':document.body.classList.toggle('compact');render();break;
+ case 'theme':document.documentElement.classList.toggle('dark');render();break;
+ case 'toggle-all':
+   if(b.dataset.action==='collapse')s().open.clear();
+   else s().open=new Set(nodes().map(n=>n[2]).filter(Boolean));
+   tree();
+   break;
+ }
+});
+$('search').oninput=e=>{s().query=e.target.value;tree()};
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!document.querySelector('dialog[open]')){if(document.activeElement===$('search')&&s().query){s().query=$('search').value='';tree()}else back();e.preventDefault()}});
+$('all-arrow').innerHTML=icon('chevron');$('searchicon').innerHTML=icon('search');
+document.documentElement.classList.toggle('dark',matchMedia('(prefers-color-scheme:dark)').matches);render();
+</script></html>

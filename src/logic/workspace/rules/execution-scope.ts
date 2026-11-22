@@ -63,7 +63,7 @@ export function preparedExecutionScope(modules: readonly { contract?: Contract }
     if (contract.artifactScope?.transitions?.some(operation => artifactTransitionPaths(operation).some(path => !executionScopeCovers(scope.write, path))))
       throw Error('EXECUTION_SCOPE_WRITE: 删除/移动两端必须属于本模块冻结写范围');
 
-    if (contract.delivery?.requiredToolEvidence?.some(rule => ['read', 'write', 'edit', 'bash', 'grep', 'find', 'ls'].includes(rule.toolName)))
+    if (contract.delivery?.requiredToolEvidence?.some(rule => ['read', 'write', 'edit', 'bash', 'grep', 'glob', 'find', 'ls'].includes(rule.toolName)))
       throw Error('EXECUTION_SCOPE_NATIVE: 隔离模式不能要求原生工具证据');
 
     if (contract.delivery?.requiredToolEvidence?.some(rule => rule.toolName === 'cbim_scoped_node') && !scope.node)

@@ -20,11 +20,7 @@ import type { RuntimeStore } from './runtime-store';
 
 import { readLocalIndex } from './runtime-download';
 
-function registryOrigin(){
-  const port=process.env.CBIM_REGISTRY_PORT??'4179';
-  if(!/^\d{1,5}$/.test(port)||Number(port)<1||Number(port)>65535)throw Error('本机资源服务器端口无效');
-  return 'http://127.0.0.1:'+port;
-}
+import { registryOrigin } from '../../resource-management/registry-origin';
 
 /** 构造时 seed 已由启动资源验签；stateFile 位于用户状态区，清缓存不清已接纳发布序号。 */
 export class EngineArtifacts implements EngineArtifactsPort

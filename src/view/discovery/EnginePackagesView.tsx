@@ -7,6 +7,8 @@ import { useEffect, useState } from 'react';
 import type { EnginePackageSettings, EnginePackageStatus } from '../../bridge/contracts/desktop-engines';
 
 import { Icon } from '../../framework-ui';
+import { LogoLabel } from '../../framework-ui';
+import { engineLogoLabel } from '../../bridge/contracts/discovery';
 
 import { useTransfers, TransferProgress } from '../shared/transfers';
 
@@ -116,13 +118,13 @@ export function EnginePackagesView()
 
         const status = state?.items.find(item => item.kind === entry.id);
 
-        return <div className="engine-catalog-row" key={entry.id}><button type="button" aria-current={entry.id === product?.id ? 'true' : undefined} onClick={() => setSelected(entry.id)}>
+        return <div className="engine-catalog-row" key={entry.id}><div className="engine-pilot-item">
         {row && <span aria-hidden="true" className={'engine-progress-fill' + (row.percent === undefined ? ' pending' : '')} style={{ width: row.percent === undefined ? undefined : row.percent + '%' }} />}
-        <span className="engine-list-title"><strong className="engine-brand">{entry.logo ? <img src={entry.logo} alt="" /> : <Icon name="terminal" size={16} />}{entry.label}</strong><EngineVersionIcon state={state} kind={entry.id} /></span><small>{[state?.managed && !status?.active ? '未安装' : '', ...entry.businessTypes].filter(Boolean).join(' · ')}</small>
-      </button>{state?.managed && !status?.active && status?.candidate && <button className="engine-install-shortcut" type="button" disabled={!!busy || status.preparing} aria-label={'安装 ' + entry.label} onClick={() => { setSelected(entry.id); void update(status); }}>{row?.label ?? '安装'}</button>}</div>;
+        <span className="engine-list-title"><LogoLabel data={engineLogoLabel(entry.id,entry.label,entry.logo,entry.id===product?.id)} onActivate={setSelected}/><EngineVersionIcon state={state} kind={entry.id} /></span><small>{[state?.managed && !status?.active ? '未安装' : '', ...entry.businessTypes].filter(Boolean).join(' · ')}</small>
+      </div>{state?.managed && !status?.active && status?.candidate && <button className="engine-install-shortcut" type="button" disabled={!!busy || status.preparing} aria-label={'安装 ' + entry.label} onClick={() => { setSelected(entry.id); void update(status); }}>{row?.label ?? '安装'}</button>}</div>;
       })}</nav>
       {product && <article className="engine-detail" aria-label={product.label + ' 详情'}>
-        <h2 className="engine-brand">{product.logo ? <img src={product.logo} alt="" /> : <Icon name="terminal" size={16} />}{product.label}</h2><p>{product.businessTypes.join(' · ')}</p>
+        <h2 className="engine-brand"><LogoLabel data={engineLogoLabel(product.id,product.label,product.logo)} /></h2><p>{product.businessTypes.join(' · ')}</p>
         <dl><dt>支持协议</dt><dd>{product.supportedApis.join(' / ')}</dd>
         <dt>本机状态</dt><dd>{!state ? error ? '状态未知' : '正在读取…' : !state.managed ? '宿主不可用' : item?.active ? item.enabled ? '已启用' : '已停用' : '尚未安装'}</dd>
         <dt>当前版本</dt><dd>{item?.active?.version ?? '—'}</dd>
@@ -137,7 +139,7 @@ export function EnginePackagesView()
           {transfers.filter(t => t.identity === (item.preparation?.identity ?? item.candidate?.identity)).map(t => <TransferProgress item={t} key={t.identity} />)}
           <details><summary>缓存与依赖</summary><p>使用中 · {item.references}</p>
           {item.installed.map(version => <p key={version.identity}>已缓存 {version.version} · {version.identity.slice(0, 12)}</p>)}
-          {(item.active ?? item.candidate)?.dependencies?.map(ref => <p key={ref.kind}>依赖 <span className="engine-brand"><img src={catalog.find(entry => entry.id === ref.kind)?.logo ?? state?.items.find(entry => entry.kind === ref.kind)?.logo} alt="" />{catalog.find(entry => entry.id === ref.kind)?.label ?? state?.items.find(entry => entry.kind === ref.kind)?.label ?? ref.kind}</span> · {ref.identity.slice(0, 12)}</p>)}</details>
+          {(item.active ?? item.candidate)?.dependencies?.map(ref => { const dependency = products.find(entry => entry.id === ref.kind); return <p key={ref.kind}>依赖 <LogoLabel data={engineLogoLabel(ref.kind,dependency?.label ?? ref.kind,dependency?.logo)} /> · {ref.identity.slice(0, 12)}</p>; })}</details>
           {item.error && <p role="alert">{item.error}</p>}
         </>}
       </article>}

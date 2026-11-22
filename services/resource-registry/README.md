@@ -1,4 +1,8 @@
-# CBIM 本机资源服务器
+# CBIM 资源服务器
+
+Windows 客户端用户请看[连接云端商城与排查故障](../../docs/resource-registry-client.md)。
+
+云端部署与客户端地址配置见 [systemd 和 Caddy 部署说明](deploy/README.md)。
 
 人力和业务还支持 `{"nodes":[...]}` 子树包。每个节点有稳定的 `key` 和指向父节点键的 `parent`，唯一根的 `parent` 为 null。人力节点携带 `kind/name/position`，岗位还可含 `skills:[{id,name,content}]`；业务节点携带 `name/summary/sources/virtual`。每次导入分配独立实例及节点身份。更新时按实例和稳定节点键比较，在项目修订号仍匹配时一次提交选定修改。发布商品图片支持 72 KB 以内的 PNG、JPEG、WebP，元数据 `logo` 随版本发布并固定。
 

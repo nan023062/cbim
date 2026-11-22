@@ -12,7 +12,7 @@ type Node=OrganizationNode|BusinessSnapshot['nodes'][number];
 type Origin={id:string;version:string;sha256:string};
 const key=z.string().regex(/^[A-Za-z0-9_-]{1,80}$/);
 const keys={key,parent:key.nullable()};
-const skill= z.object({id:z.string().min(1).max(100),name:z.string().min(1).max(100),content:z.string().min(1).max(32000)}).strict();
+const skill= z.object({logo:z.string().max(132000).optional(),id:z.string().min(1).max(100),name:z.string().min(1).max(100),content:z.string().min(1).max(32000)}).strict();
 const talent=z.object({...keys,kind:z.enum(['team','agent']),name:z.string().trim().min(1).max(160),position:z.string().max(4000),skills:z.array(skill).max(32).default([])}).strict();
 const business=businessDefinitionSchema.omit({parentId:true}).extend(keys).strict();
 type Definition=z.infer<typeof talent>|z.infer<typeof business>;
@@ -35,7 +35,7 @@ function definitions(kind:Kind,raw:unknown):Definition[]{
 }
 function nodeFields(node:Node):Record<string,unknown>{
   if('kind' in node)return {name:node.name,position:node.position,...Object.fromEntries((node.configuration?.skills??[]).map(s=>['skill:'+s.id,s]))};
-  return {name:node.name,summary:node.summary,sources:node.sources,virtual:node.virtual};
+  return {name:node.name,summary:node.summary,sources:node.sources,virtual:node.virtual,...(node.workflows && {workflows:node.workflows})};
 }
 function display(value:unknown){return value===undefined?'（无）':typeof value==='string'?value:JSON.stringify(value)}
 export async function marketTemplate(projects:{settings:{organization:OrganizationDirectory};businessDirectory:BusinessDirectory},project:string,kind:Kind,origin:Origin,raw:unknown,mode:'import'|'preview'|'merge',choice?:TemplateChoice):Promise<TemplatePreview>{
@@ -63,7 +63,7 @@ export async function marketTemplate(projects:{settings:{organization:Organizati
   for(const d of defs){
     const source:MarketSource={resource:origin.id,version:origin.version,digest:origin.sha256,key:d.key,instance};
     const base={id:ids.get(d.key)!,name:d.name,parentId:d.parent===null?null:ids.get(d.parent)!,market:source};
-    const next:Node='kind' in d?{...base,kind:d.kind,position:d.position,...(d.kind==='agent'?{configuration:{skills:d.skills,connectorIds:[]}}:{})}:{...base,summary:d.summary,sources:d.sources,virtual:d.virtual};
+    const next:Node='kind' in d?{...base,kind:d.kind,position:d.position,...(d.kind==='agent'?{configuration:{skills:d.skills,connectorIds:[]}}:{})}:{...base,summary:d.summary,sources:d.sources,virtual:d.virtual,...(d.workflows && {workflows:d.workflows})};
     const previous=local.get(d.key);
     if(!previous){
       if(mode==='import'&&d.parent===null){let seq=1;while(all.some(n=>n.parentId===null&&n.name.toLowerCase()===next.name.toLowerCase())){const suffix=' ('+(++seq)+')';next.name=d.name.slice(0,160-suffix.length)+suffix;}}

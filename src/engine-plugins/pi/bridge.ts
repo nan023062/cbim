@@ -68,6 +68,7 @@ export async function openBridge(knowledge: KnowledgeBridge, beforeTool: (call: 
 
 /** 受控扩展正文；可信回传元数据由生成器写入，普通运行为空，不从用户文字识别“内部消息”。 */
 const bridgeExtensionBody = `
+import { createFindToolDefinition } from '@earendil-works/pi-coding-agent';
 export default async function(pi) {
   const url=process.env.CBIM_LOOP_BRIDGE_URL, token=process.env.CBIM_LOOP_BRIDGE_TOKEN;
   delete process.env.CBIM_LOOP_BRIDGE_URL; delete process.env.CBIM_LOOP_BRIDGE_TOKEN;
@@ -95,6 +96,7 @@ export default async function(pi) {
     if(Number.isInteger(limit)&&limit>0)try{await request('/request-limit',{maxTokens:limit})}catch{}
   });
   pi.on('session_start',reportContext);pi.on('turn_end',reportContext);pi.on('agent_end',reportContext);pi.on('session_compact',reportContext);
+  pi.registerTool({...createFindToolDefinition(process.cwd()),name:'glob',label:'glob'});
   const rejectedCalls=new Set();
   const tools=await request('/catalog');
   for(const tool of tools) pi.registerTool({name:tool.name,label:tool.name,description:tool.description||tool.name,parameters:tool.inputSchema,

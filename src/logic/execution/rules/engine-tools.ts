@@ -47,7 +47,7 @@ export interface EngineTaskPermission
 
   readonly level: 'read' | 'ask' | 'execute';
 
-  readonly commands: 'denied';
+  readonly commands: 'host' | 'denied';
 
   readonly readDirectories: readonly string[];
 

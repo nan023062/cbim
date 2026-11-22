@@ -4,6 +4,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { OfficeTools } from '../../../../../src/bridge/server/desktop/office-tools';
 import { managedNativeTools } from '../../../../../src/engine-plugins/native-tools';
+import { issueTaskPermission } from '../../../../../src/logic/projects/office-operations';
 import { codexTools } from '../../../../../src/engine-plugins/codex/tools';
 import type { EngineContext } from '../../../../../src/logic/execution/rules/types';
 
@@ -34,20 +35,25 @@ test('每个 Agent 只见自己选定的连接器，外部写遵守权限且授�
   expect(approve).toHaveBeenCalledTimes(2);
 });
 
-test('Codex 动态工具桥将真实读写和派发路由至同一 Office 权限门禁', async () => {
+test.each([true, false])('主实例标志 %s 的 Agent 在分配目录通过工具桥读写并推送 Git', async (main) => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'office-codex-tools-'));
   let permission: 'read' | 'execute' = 'execute';
   const signal = new AbortController().signal;
   const dispatch = vi.fn(async () => ({ taskId: 'child', status: 'completed' }));
-  const office = new OfficeTools(root, 'workspace', () => permission, { Inspect: () => ({ permission }), Dispatch: dispatch }, signal);
-  const context: EngineContext = { task: { taskId: 'task', workspaceId: 'workspace', root, mode: 'chat', agentId: 'cbim:main', goal: 'test', acceptance: [], moduleIds: [] }, runId: 'run', directory: root, beforeTool: call => office.Authorize(call), emit: async () => {} };
+  const grant = issueTaskPermission({projectId:'workspace',officeId:'office',agentId:main ? 'main' : 'member',taskId:'task'}, root, main, () => permission, signal);
+  const office = new OfficeTools(root, 'workspace', grant.Current, { Inspect: () => ({ permission }), Dispatch: dispatch }, signal, undefined, undefined, grant.snapshot);
+  const context: EngineContext = { taskPermission: grant.snapshot, task: { taskId: 'task', workspaceId: 'workspace', root, mode: 'chat', agentId: grant.snapshot.agentId, goal: 'test', acceptance: [], moduleIds: [] }, runId: 'run', directory: root, beforeTool: call => office.Authorize(call), emit: async () => {} };
   const bridge = await codexTools(context, { list: () => office.List(), call: (name, input, stop, id) => office.Call(name, input, stop, id) }, await managedNativeTools(root), true, async () => {});
   try {
-    expect(bridge.catalog.map(tool => tool.name)).toEqual(expect.arrayContaining(['cbim_native_read', 'cbim_native_write', 'cbim_native_bash', 'cbim_office_dispatch']));
+    expect(bridge.catalog.map(tool => tool.name)).toEqual(expect.arrayContaining(['cbim_native_read', 'cbim_native_write', 'cbim_native_edit', 'cbim_native_find', 'cbim_native_grep', 'cbim_native_ls', 'cbim_native_bash', 'cbim_office_dispatch']));
     expect(await bridge.Call({ callId: 'write', tool: 'cbim_native_write', arguments: { path: 'actual.txt', content: 'written through bridge' } })).toMatchObject({ success: true });
     expect(await fs.readFile(path.join(root, 'actual.txt'), 'utf8')).toBe('written through bridge');
     expect(await bridge.Call({ callId: 'dispatch', tool: 'cbim_office_dispatch', arguments: { memberId: 'writer', workspaceId: 'module', goal: 'task' } })).toMatchObject({ success: true });
+    const git = await bridge.Call({ callId: 'git', tool: 'cbim_native_bash', arguments: { command: 'git init -b main && git add actual.txt && git -c user.name=Test -c user.email=test@example.org commit -m test && git init --bare remote.git && git push remote.git main' } });
+    expect(git).toMatchObject({ success: true });
+    expect(await fs.readFile(path.join(root, 'remote.git/refs/heads/main'), 'utf8')).toBe(await fs.readFile(path.join(root, '.git/refs/heads/main'), 'utf8'));
     permission = 'read';
+    expect(await bridge.Call({ callId: 'git-denied', tool: 'cbim_native_bash', arguments: { command: 'git status' } })).toMatchObject({ success: false });
     expect(await bridge.Call({ callId: 'denied', tool: 'cbim_native_write', arguments: { path: 'actual.txt', content: 'not allowed' } })).toMatchObject({ success: false });
     expect(await bridge.Call({ callId: 'denied-dispatch', tool: 'cbim_office_dispatch', arguments: { memberId: 'writer', workspaceId: 'module', goal: 'task' } })).toMatchObject({ success: false });
     expect(dispatch).toHaveBeenCalledTimes(1);
@@ -83,6 +89,7 @@ test('真实文件和命令工具遵循 read、ask、execute，保留拒绝和�
     expect(await invoke('write', { path: 'out.txt', content: 'denied' })).toMatchObject({ allow: false });
     expect(await fs.access(path.join(root, 'out.txt')).then(() => true, () => false)).toBe(false);
     allow = true;
+    expect(await invoke('bash', { command: 'echo approved' })).toMatchObject({ content: [{type:'text', text:expect.stringContaining('approved')}] });
     await invoke('write', { path: 'out.txt', content: 'approved' });
     expect(await fs.readFile(path.join(root, 'out.txt'), 'utf8')).toBe('approved');
     permission = 'execute';

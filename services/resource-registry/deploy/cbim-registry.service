@@ -1,0 +1,23 @@
+[Unit]
+Description=CBIM Resource Registry
+After=network.target
+
+[Service]
+Type=simple
+DynamicUser=yes
+StateDirectory=cbim-registry
+WorkingDirectory=/opt/cbim-resource-registry
+Environment=REGISTRY_DATA=/var/lib/cbim-registry
+Environment=PORT=4179
+EnvironmentFile=/etc/cbim-registry.env
+ExecStart=/usr/bin/node /opt/cbim-resource-registry/src-server/main.mjs
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

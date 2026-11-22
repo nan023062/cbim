@@ -6,7 +6,13 @@ import { z } from 'zod';
 
 export type { AgentConfiguration } from '../../framework/cability/team';
 
-export const agentConfigurationSchema = z.object({ model: z.object({ engine: z.string().trim().min(1).max(48), profileId: z.string().trim().min(1).max(160), modelId: z.string().trim().min(1).max(160) }).strict().optional(), skills: z.array(z.object({ id: z.string().min(1).max(100), name: z.string().trim().min(1).max(100), content: z.string().trim().min(1).max(32000) }).strict()).max(32).default([]), connectorIds: z.array(z.string().regex(/^[a-z][a-z0-9-]{0,47}$/)).max(32).default([]), }).strict().superRefine((value, ctx) => { if (new Set(value.skills.map(skill => skill.id)).size !== value.skills.length || new Set(value.connectorIds).size !== value.connectorIds.length) ctx.addIssue({ code: 'custom', message: 'Skill 或连接器身份重复' }); });
+/** 选择项只传递标识和显示状态；调用意图留在视图事件中。 */
+export function engineLogoLabel<Id extends string>(id: Id, name: string, src?: string, selected?: boolean, disabledReason?: string)
+{
+  return Object.freeze({ id, name, logo: Object.freeze({ src, fallbackIcon: 'terminal' }), tooltip: disabledReason || name, selected, disabledReason });
+}
+
+export const agentConfigurationSchema = z.object({ model: z.object({ engine: z.string().trim().min(1).max(48), profileId: z.string().trim().min(1).max(160), modelId: z.string().trim().min(1).max(160) }).strict().optional(), skills: z.array(z.object({ logo: z.string().max(132000).optional(), id: z.string().min(1).max(100), name: z.string().trim().min(1).max(100), content: z.string().trim().min(1).max(32000) }).strict()).max(32).default([]), connectorIds: z.array(z.string().regex(/^[a-z][a-z0-9-]{0,47}$/)).max(32).default([]), }).strict().superRefine((value, ctx) => { if (new Set(value.skills.map(skill => skill.id)).size !== value.skills.length || new Set(value.connectorIds).size !== value.connectorIds.length) ctx.addIssue({ code: 'custom', message: 'Skill 或连接器身份重复' }); });
 
 /** 成员与主会话的独立保存目标。 */
 export const agentSettingsTargetSchema = z.discriminatedUnion('kind', [z.object({ kind: z.literal('member'), id: z.string().min(1).max(2048) }).strict(), z.object({ kind: z.literal('main'), id: z.string().uuid() }).strict()]);

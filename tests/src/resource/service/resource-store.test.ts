@@ -4,6 +4,20 @@ import path from 'node:path';
 import os from 'node:os';
 import {LocalRepository} from '../../../../src/resource/service/index';
 
+it.each(['skill','workflow'])('%s 单项图标可保留、清除并重开仓库',async kind=>{
+  const root=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-item-logo-'));
+  try {
+    const repo=new LocalRepository(root);
+    let state=await repo.Initialize();
+    let id:string|undefined;
+    for(const logo of [undefined,'data:image/png;base64,iVBORw0KGgo=','data:image/png;base64,AAAA',undefined]){
+      state=await repo.Save({repositoryId:state.repositoryId,revision:state.revision,id,item:{kind,name:'示例',summary:'',content:'正文',logo}});
+      id=state.items[0].id;
+      expect((await new LocalRepository(root).Read()).items[0].logo).toBe(logo);
+    }
+  }finally{await fs.rm(root,{recursive:true,force:true})}
+});
+
 it('本地仓库按身份和版本原子更新，失败不改变快照',async()=>{
   const root=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-resource-store-'));
   try{

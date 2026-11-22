@@ -4,6 +4,8 @@
  */
 export { AgentRole, type AgentConversation, type OfficeObservation } from './agent';
 
+export { defaultTools } from './default-tools';
+
 export { runAgentTask, type AgentStep, type AgentStepResult, type AgentTaskExecution, type AgentTaskDispatcher, type AgentTaskResult } from './execution';
 
 export * from './identity';

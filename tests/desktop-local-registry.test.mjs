@@ -1,4 +1,4 @@
-import {it,expect} from 'vitest';
+import {it,expect,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
@@ -20,7 +20,7 @@ it('desktop publisher and read-only desktop pull exact selected bytes from local
   }finally{await server.close();await fs.rm(dir,{recursive:true,force:true});}
 });
 
-it('engine manager downloads a signed release, upgrades and uninstalls without unpublishing',async()=>{
+it('guest downloads, installs and upgrades free signed engines without publishing credentials',async()=>{
   const {runtimeFixture}=await import('./src/logic/updates/service/support/runtime-fixture');
   const {EngineArtifacts}=await import('../src/logic/updates/service/engine-artifacts');
   const {EnginePackages}=await import('../src/resource/engines');
@@ -28,16 +28,18 @@ it('engine manager downloads a signed release, upgrades and uninstalls without u
   const {DownloadService}=await import('../src/logic/updates/service/download-service');
   const {archiveDirectory}=await import('../scripts/runtime-packaging');
   const f=await runtimeFixture(),data=path.join(f.root,'registry'),token=crypto.randomUUID(),server=await startRegistry({data,token});
-  const prev=process.env.CBIM_REGISTRY_PORT,port=new URL(server.url).port;process.env.CBIM_REGISTRY_PORT=port;
+  vi.stubEnv('CBIM_REGISTRY_URL', server.url);vi.stubEnv('CBIM_REGISTRY_PORT','invalid');
   try{
-    const client=localRegistry(f.root,port,token),signal=new AbortController().signal;
+    const publisher=localRegistry(f.root,undefined,token),client=localRegistry(f.root),signal=new AbortController().signal;
     const artifacts=new EngineArtifacts(path.join(f.root,'index.json'),new RuntimeStore(path.join(f.root,'store'),f.cold,new DownloadService(path.join(f.root,'dl'),signal)),undefined,signal);
     const engines=new EnginePackages(path.join(f.root,'state.json'),artifacts);
     for(const sequence of [1,2]){
       const dir=path.join(f.root,'engine'),version='1.0.'+sequence;await fs.writeFile(path.join(dir,'adapter.cjs'),'// adapter '+sequence);
       const pkg=await archiveDirectory(dir,f.output,'runtime-engines','pi-'+sequence);
       const release={...f.manifest.engines[0],package:pkg,adapter:{version,entry:'adapter.cjs',protocol:1}};
-      await client.Publish({kind:'engine',id:'pi',version},path.join(f.output,pkg.name));
+      const row=await publisher.Publish({kind:'engine',id:'pi',version,metadata:{priceCnyFen:0}},path.join(f.output,pkg.name));
+      expect(await client.List()).toContainEqual(row);
+      expect(await fs.readFile(await client.Pull(row))).toEqual(await fs.readFile(path.join(f.output,pkg.name)));
       const index={schema:1,sequence,createdAt:f.manifest.createdAt,expiresAt:f.manifest.expiresAt,sourceCommit:f.manifest.sourceCommit,notes:'test',platform:'win32-x64',releases:[release],current:[{kind:'pi',identity:pkg.sha256}]};
       await fs.writeFile(path.join(data,'signed-engine-index.json'),JSON.stringify(f.envelope(index)));
       await engines.Check();await engines.Install('pi');
@@ -46,7 +48,7 @@ it('engine manager downloads a signed release, upgrades and uninstalls without u
     await engines.SetEnabled('pi',false,true);
     await expect(engines.ResolveEngine('pi')).rejects.toThrow();
     expect(await client.List()).toHaveLength(2);
-  }finally{if(prev===undefined)delete process.env.CBIM_REGISTRY_PORT;else process.env.CBIM_REGISTRY_PORT=prev;await server.close();await f.cleanup();}
+  }finally{vi.unstubAllEnvs();await server.close();await f.cleanup();}
 });
 
 it('all four market categories publish and fetch distinct versions with the same resource ID',async()=>{
@@ -124,4 +126,17 @@ it.each(['business','talent'])('merges chosen fields of a single %s subtree atom
   const reopened=new ProjectList(paths);
   try{expect((await (kind==='talent'?reopened.settings.organization:reopened.businessDirectory).Read(p)).nodes.find(x=>x.id===first.id).market).toEqual(node.market)}finally{await reopened.Close()}
  }finally{await projects.Close();await fs.rm(root,{recursive:true,force:true});}
+});
+
+it('resolves one registry origin without falling back on invalid remote configuration', async()=>{
+  const {registryOrigin}=await import('../src/logic/resource-management/registry-origin');
+  try{
+    vi.stubEnv('CBIM_REGISTRY_URL',undefined);vi.stubEnv('CBIM_REGISTRY_PORT',undefined);
+    expect(registryOrigin()).toBe('http://127.0.0.1:4179');
+    vi.stubEnv('CBIM_REGISTRY_PORT','45123');expect(registryOrigin()).toBe('http://127.0.0.1:45123');
+    vi.stubEnv('CBIM_REGISTRY_URL','https://registry.example.com/');expect(registryOrigin()).toBe('https://registry.example.com');
+    for(const url of ['http://registry.example.com','https://a:b@registry.example.com','https://registry.example.com/v1','not a URL']){
+      vi.stubEnv('CBIM_REGISTRY_URL',url);expect(()=>registryOrigin()).toThrow(/CBIM_REGISTRY_URL/);
+    }
+  }finally{vi.unstubAllEnvs();}
 });

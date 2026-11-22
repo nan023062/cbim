@@ -19,7 +19,7 @@ it('只激活一个严格声明，支持标准围栏长度/换行/缩进并保�
 
 it('两类条件可独立声明，但空条件、未知字段和非首版工具不能降级使用',()=>{
   expect(parseWorkflowContract(block({version:1,beforeEffects:{requirePlan:true}}))).toEqual({version:1,beforeEffects:{requirePlan:true}});
-  for(const toolName of ['read','write','edit','grep','find','ls','bash'])expect(workflowContractSchema.safeParse({version:1,delivery:{requiredToolEvidence:[{id:'valid',toolName}]}}).success).toBe(true);
+  for(const toolName of ['read','write','edit','grep','glob','find','ls','bash'])expect(workflowContractSchema.safeParse({version:1,delivery:{requiredToolEvidence:[{id:'valid',toolName}]}}).success).toBe(true);
   for(const value of [{version:1},{version:2,beforeEffects:{requirePlan:true}},{...contract,unknown:true},{version:1,beforeEffects:{}},{version:1,beforeEffects:{requirePlan:false}},{version:1,beforeEffects:{requirePlan:true,steps:[]}},{version:1,delivery:{requiredToolEvidence:[]}},{...contract,delivery:{requiredToolEvidence:[{id:'verify',toolName:'cbim_knowledge_commit'}]}},{...contract,delivery:{requiredToolEvidence:[{id:'verify',toolName:'read',pass:true}]}}])invalid(block(value));
 });
 

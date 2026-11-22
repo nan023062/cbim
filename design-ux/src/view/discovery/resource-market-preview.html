@@ -1,0 +1,210 @@
+﻿<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>资源商城 · CBIM</title>
+<style>
+/* 自包含设计稿，主题与动效值对应客户端 interface.css、ui-tween.css。 */
+:root{color-scheme:dark;--bg:#191919;--surface:#202020;--raised:#252525;--hover:#292929;--selected:#37383a;--line:#353535;--control-line:#505052;--text:#c7c7ca;--muted:#a7a7ab;--accent:#d7d7da;--warning:#f0b575;--success:#88d0a2;--danger:#faa;--focus:#9bbdff;--motion-fast:120ms;--motion-panel:220ms;--ease:cubic-bezier(.2,.7,.2,1);font:14px/1.55 'Segoe UI','Microsoft YaHei',system-ui,sans-serif}
+:root[data-theme=light]{color-scheme:light;--bg:#f7f8fa;--surface:#fff;--raised:#eceef2;--hover:#e5e9ef;--selected:#dce3ed;--line:#d8dde5;--control-line:#7d8796;--text:#20242c;--muted:#596270;--accent:#20242c;--warning:#8c4a10;--success:#246642;--danger:#b13737;--focus:#2459bc}
+*{box-sizing:border-box} [hidden]{display:none!important} body{margin:0;background:var(--bg);color:var(--text)}
+main{max-width:980px;margin:auto;padding:28px clamp(16px,4vw,38px) 44px}h1,h2,h3,p,ul,ol,figure{margin:0}h1{font-size:20px}h2{font-size:16px}h1,h2,strong{color:var(--accent);font-weight:600}
+header,.bar,footer{display:flex;align-items:center;gap:12px;flex-wrap:wrap}header{justify-content:space-between;margin-bottom:20px}
+button,input,select{color:var(--text);font:inherit;background:var(--surface);border:1px solid var(--control-line);border-radius:7px;padding:5px 10px;min-height:32px}button{cursor:pointer;transition:background-color var(--motion-fast),border-color var(--motion-fast)}button:hover{background:var(--hover)}button:disabled{cursor:default;opacity:.66}
+:focus-visible{outline:2px solid var(--focus);outline-offset:3px}.meta,small,figcaption,dt{color:var(--muted);font-size:12px}
+nav{display:flex;flex-wrap:wrap;gap:4px;border-bottom:1px solid var(--line);padding-bottom:8px}nav button,#back,#publish{background:transparent;border-color:transparent}nav button:hover,#back:hover,#publish:hover{background:var(--hover)}
+nav button[aria-selected=true]{background:var(--selected);box-shadow:inset 0 -2px var(--warning)}
+.search{display:grid;gap:4px;max-width:360px;margin:16px 0}.search input{min-height:36px}
+#cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,270px),1fr));gap:12px}.card{display:grid;grid-template-columns:56px minmax(0,1fr);gap:12px;text-align:left;align-content:start;padding:16px;background:var(--surface);border:1px solid var(--line);min-height:126px;overflow-wrap:anywhere}.card:hover,.card:focus-visible{border-color:var(--control-line)}.card strong,.card span.info{display:block}.card strong{font-size:16px;margin:1px 0 2px}.card .meta{display:block;margin-top:8px}.logo{display:inline-grid;place-items:center;width:56px;height:56px;border-radius:14px;background:var(--raised);border:1px solid var(--line);color:var(--accent);flex:none}.logo svg{width:36px;height:36px}.logo[data-mark=pulse]{background:var(--selected)}
+#back{margin-bottom:16px}#detail{max-width:760px}#detail header{justify-content:flex-start}#detail header p{color:var(--muted)}.section{border-top:1px solid var(--line);padding:16px 0}.section h2{margin-bottom:8px}.section ul,.section ol{padding-left:20px}.preview{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px}.preview span{display:inline-block;border:1px solid var(--line);border-radius:5px;padding:4px 8px;margin:4px}figcaption{margin-top:6px}
+#action,#confirm{background:var(--selected);font-weight:600}.bar{margin:12px 0}.feedback{margin:8px 0;overflow-wrap:anywhere}.feedback[data-state=success]{color:var(--success)}.feedback[data-state=error]{color:var(--danger)}.feedback[data-state=offline]{color:var(--warning)}.feedback[data-state=busy]::before{content:'◷ ';display:inline-block;animation:pulse 1.2s ease-in-out infinite alternate}
+details{margin:12px 0;color:var(--muted)}summary{cursor:pointer}.conditions{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:8px}dialog{width:min(410px,calc(100vw - 32px));color:var(--text);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px}dialog[open]{animation:enter var(--motion-panel) var(--ease)}dialog p{margin:10px 0}dialog::backdrop{background:#0006}footer{justify-content:flex-end}
+@keyframes pulse{to{opacity:.45}}@keyframes enter{from{transform:translateY(6px);opacity:0}to{transform:none;opacity:1}}
+@media(max-width:480px){main{padding:16px}.card{min-height:108px}#detail .bar{align-items:stretch;flex-direction:column}#detail .bar label{display:grid;gap:4px}}@media(pointer:coarse){button,input:not([type=checkbox]),select,summary{min-height:44px}nav button{min-width:44px}}@media(prefers-reduced-motion:reduce){*,*::before{animation:none!important;transition:none!important}}:root[data-reduce=true] *,:root[data-reduce=true] *::before{animation:none!important;transition:none!important}
+.card .badges{grid-column:1/-1;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:5px}.badge{border:1px solid var(--control-line);border-radius:5px;color:var(--text);padding:1px 6px;font-size:12px}.badge.update{color:var(--warning)}
+</style></head><body><main>
+<section id="store"><header><div><h1>资源商城</h1><small>示例商品与安装统计</small></div><button id="publish">发布资源</button></header><nav role="tablist" aria-label="商品分类"></nav>
+<section id="catalog" role="tabpanel"><div class="bar"><label class="search">搜索资源<input id="query" type="search" placeholder="名称、开发者、ID 或版本"></label><label>状态 <select id="filter"><option value="all">全部状态</option><option value="owned">已购</option><option value="removed">已卸载</option><option value="update">可更新</option></select></label></div><p id="storage-note" class="meta" role="status"></p><div id="cards"></div><p id="empty" hidden>没有匹配的资源。<button id="reset">清除筛选</button></p></section></section>
+<section id="detail" hidden><button id="back">‹ 返回商城</button><header><span id="detail-logo"></span><div><span class="meta" id="kind"></span><h1 id="name" tabindex="-1"></h1><p id="summary"></p></div></header>
+<div class="section"><h2>获取与使用</h2><p id="scope"></p><div class="bar"><label>选择版本 <select id="version"></select></label><button id="action"></button></div><p id="status" class="meta"></p><p class="feedback" role="status" id="feedback"></p>
+<button id="uninstall" hidden>卸载所选版本</button>
+<details><summary>演示条件</summary><div class="conditions"><label>操作结果 <select id="scenario"><option value="ok">成功</option><option value="fail">下次失败，可重试</option><option value="offline">商城离线</option></select></label><label><input id="motion" type="checkbox">预览减弱动效</label></div></details></div>
+<section class="section"><h2>功能</h2><ul id="features"></ul></section><section class="section"><h2>预览</h2><figure class="preview"><div id="sample"></div><figcaption id="caption"></figcaption></figure></section>
+<section class="section"><h2>开发者</h2><strong id="developer"></strong><p class="meta" id="identity"></p></section><section class="section"><h2>更新记录</h2><ol id="history"></ol></section></section>
+</main><dialog aria-labelledby="dialog-name"><h2 id="dialog-name"></h2><p id="dialog-body"></p><div id="publish-demo" hidden><label>操作结果 <select id="publish-mode"><option value="ok">成功</option><option value="fail">下次失败，可重试</option><option value="offline">商城离线</option></select></label></div><p id="dialog-note" class="feedback" role="status"></p><footer><button id="cancel">取消</button><button id="confirm"></button></footer></dialog>
+<script>
+const catalog = [
+ {id:'pulse',kind:'引擎',name:'脉冲执行引擎',price:36,purchased:true,mark:'pulse',author:'执行工具组',intro:'按依赖顺序执行项目任务。',features:['按任务依赖排列执行顺序','逐步记录任务结果，可定位失败步骤'],sample:['准备输入','执行任务','核验产物'],caption:'一次执行的阶段示例',changes:['新增失败步骤定位','增加任务运行记录'],installed:'1.1.0'},
+ {id:'folio',kind:'连接器',name:'卷册文档桥',mark:'folio',author:'文档工具组',intro:'在已授权的文档中检索项目资料。',features:['限定授权的文档范围','检索命中段落并保留来源'],sample:['项目手册','检索段落','来源引用'],caption:'授权文档检索示例',changes:['保留段落来源','支持文档检索']},
+ {id:'ux-kit',kind:'人力',name:'交互评审员',mark:'review',author:'体验设计组',intro:'为项目引入可编辑的评审岗位与技能。',price:20,features:['创建独立的评审岗位','附带键盘操作和窄屏检查清单'],sample:['岗位：评审员','技能：界面走查','产物：评审记录'],caption:'导入后形成的项目岗位',changes:['补充窄屏评审清单','提供岗位与基本技能']},
+ {id:'release',kind:'业务',name:'版本交付流程',author:'项目方法组',intro:'从验收、复核到交付的一套业务模板。',features:['生成可编辑的交付工作区','为每个节点指定验收产物'],sample:['需求验收','发布复核','版本交付'],caption:'模板中的三个流程节点',changes:['增加复核节点','提供基础交付流程']},
+ {id:'frames',kind:'引擎',name:'画帧解析器',price:18,mark:'frames',author:'影像工具组',intro:'把图像输入组织为带注释的帧序列。',features:['按顺序读取图像帧','为每帧保留文字注释'],sample:['帧 01','帧 02','帧 03'],caption:'三帧图像索引示例',changes:['新增帧注释','提供图像输入']},
+ {id:'archive',kind:'业务',name:'资料归档工作区',mark:'archive',author:'项目方法组',intro:'整理项目资料、来源与验收记录。',features:['按来源归集项目材料','记录复核与归档状态'],sample:['材料收集','来源核对','归档'],caption:'档案流转示例',changes:['增加来源核对','提供归档清单']}
+];
+const marks={pulse:'M3 18h6l3-10 5 18 4-13 3 5h5',folio:'M6 7h9l3 3 3-3h6v18h-6l-3 2-3-2H6z M18 10v17',review:'M6 7h20v15H15l-6 5v-5H6z M11 14l3 3 6-6',frames:'M5 9h21v17H5z M9 5h20v16 M8 22l5-6 4 4 3-3 3 4',archive:'M5 7h23v6H5z M8 14v13h17V14 M13 18h7',业务:'M5 5h8v8H5z M21 21h8v8h-8z M9 13v12h12',引擎:'M8 8h18v18H8z',连接器:'M6 18h22 M14 10l-8 8 8 8',人力:'M10 27v-4q6-9 12 0v4 M12 12a4 4 0 1 0 8 0a4 4 0 1 0-8 0'};
+const groups=['全部','引擎','连接器','人力','业务'],versions=['1.2.0','1.1.0'];
+const statistics={pulse:12800,folio:2640,'ux-kit':625,release:3100,archive:0};
+const counts=new Intl.NumberFormat('zh-CN',{notation:'compact',maximumFractionDigits:1});
+const sampleHistory=[
+ {...catalog[1],removed:true},
+ {...catalog[4],id:'frame-reader',name:'帧序列阅读器',purchased:true},
+ {...catalog[4],id:'frame-notes',name:'影像注释引擎',purchased:true,removed:true}
+];
+const identity=p=>p.kind+'/'+p.id;
+const prefix='cbim.market.demo.v1/';
+function storageKey(p){return prefix+identity(p)}
+function historyProducts(){
+ const saved=[];
+ try {
+   for(const key of Object.keys(localStorage).filter(k=>k.startsWith(prefix))){
+     let record;
+     try {record=JSON.parse(localStorage.getItem(key))} catch {continue}
+     const p=record?.product;
+     if(!p||key!==storageKey(p)||!groups.slice(1).includes(p.kind)||typeof p.name!=='string')continue;
+     if(record.removed||(p.price&&record.owned))saved.push(p);
+   }
+ } catch {}
+ return saved;
+}
+const productsById=new Map(catalog.map(p=>[identity(p),p]));
+for(const p of [...sampleHistory,...historyProducts()])if(!productsById.has(identity(p)))productsById.set(identity(p),p);
+const products=[...productsById.values()];
+function readState(p){
+ let record;
+ try {record=JSON.parse(localStorage.getItem(storageKey(p)))} catch {}
+ const initial=p.installed?[p.installed]:[];
+ const installed=new Set((Array.isArray(record?.installed)?record.installed:initial).filter(v=>versions.includes(v)));
+ const reference=record?.reference??p.installed;
+ return {installed,reference:installed.has(reference)?reference:'',owned:!p.price||(record?.owned??p.purchased)===true,
+   removed:(record?.removed??sampleHistory.find(item=>identity(item)===identity(p))?.removed)===true,copies:Array.isArray(record?.copies)?record.copies.filter(v=>versions.includes(v)):[],authorized:record?.authorized===true};
+}
+const states=products.map(readState);
+function persist(i){
+ const s=states[i];
+ try {localStorage.setItem(storageKey(products[i]),JSON.stringify({...s,installed:[...s.installed],product:products[i]}))}
+ catch {document.querySelector('#storage-note').textContent='浏览器未能保存演示记录，本次操作仅在当前页面保留。'}
+}
+const $=s=>document.querySelector(s), dialog=$('dialog');
+let category=0,current=0,offset=0,busy=false,mode='';
+const theme=matchMedia('(prefers-color-scheme: light)');
+function setTheme(){document.documentElement.dataset.theme=theme.matches?'light':'dark'}
+setTheme();theme.addEventListener('change',setTheme);
+function logo(p){const mark=Object.hasOwn(marks,p.mark)?p.mark:p.kind;return '<span class="logo" data-mark="'+mark+'" aria-hidden="true"><svg viewBox="0 0 34 34" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="'+marks[mark]+'"/></svg></span>'}
+function shared(p){return p.kind==='引擎'||p.kind==='连接器'}
+function compareVersion(left,right){
+ const a=left.split('.').map(Number),b=right.split('.').map(Number);
+ return a[0]-b[0]||a[1]-b[1]||a[2]-b[2];
+}
+function canUpdate(installed,candidate){
+ return installed.size>0&&[...installed].every(version=>compareVersion(candidate,version)>0);
+}
+function listMeta(p){
+ const count=statistics[p.id];
+ return [p.kind,p.price?'人民币 ¥'+p.price:'免费','最新 v'+versions[0],count===undefined?'安装量暂无统计':'安装量 '+counts.format(count)].join(' · ');
+}
+function list(){
+ const query=$('#query').value.trim().toLowerCase();const cards=$('#cards');cards.replaceChildren();
+ products.forEach((p,i)=>{if((category&&groups[category]!==p.kind)||![p.name,p.author,p.id,...versions].some(x=>x.toLowerCase().includes(query)))return;
+ const state=states[i],removed=state.removed&&state.installed.size===0,owned=Boolean(p.price&&state.owned),update=canUpdate(state.installed,versions[0]);
+ const matches={all:true,removed,owned,update};
+ if(!matches[$('#filter').value])return;
+ const button=document.createElement('button');button.id='card-'+i;button.className='card';button.setAttribute('aria-label','查看'+p.name+'详情');
+ const badges=[];
+ if(owned)badges.push('<span class="badge">已购</span>');
+ if(removed)badges.push('<span class="badge">已卸载</span>');
+ if(update)badges.push('<span class="badge update">可更新</span>');
+ const description='summary-'+i;
+ button.setAttribute('aria-describedby',badges.length?description+' badges-'+i:description);
+ button.innerHTML=logo(p)+'<span><strong></strong><span id="'+description+'"><span class="info"></span><span class="meta"></span></span></span>';
+ button.querySelector('strong').textContent=p.name;
+ button.querySelector('.info').textContent=p.intro;
+ button.querySelector('.meta').textContent=listMeta(p);
+ if(badges.length)button.insertAdjacentHTML('beforeend','<span class="badges" id="badges-'+i+'">'+badges.join(' ')+'</span>');
+ button.onclick=()=>openDetail(i);cards.append(button)});$('#empty').hidden=cards.childElementCount>0;
+}
+function select(i){category=i;tabs.forEach((t,n)=>{t.tabIndex=n===i?0:-1;t.setAttribute('aria-selected',n===i)});$('#catalog').setAttribute('aria-labelledby',tabs[i].id);list()}
+const tabs=groups.map((g,i)=>{const t=document.createElement('button');t.textContent=g;t.id='tab-'+i;t.setAttribute('role','tab');t.setAttribute('aria-controls','catalog');t.onclick=()=>select(i);t.onkeydown=e=>{const next={ArrowRight:(i+1)%groups.length,ArrowLeft:(i+groups.length-1)%groups.length,Home:0,End:groups.length-1}[e.key];if(next!==undefined){e.preventDefault();select(next);tabs[next].focus()}};$('nav').append(t);return t});
+function populate(id,tag,values){const parent=$(id);parent.replaceChildren(...values.map(v=>{const e=document.createElement(tag);e.textContent=v;return e}))}
+function feedback(node,state,message){node.dataset.state=state;node.setAttribute('role',state==='error'?'alert':'status');node.textContent=message}
+function decision(){const p=products[current],s=states[current],v=$('#version').value;
+ if(!s.owned)return ['buy','购买 ¥'+p.price,true];
+ if(!shared(p))return ['copy','导入到示例项目',true];
+ if(!s.installed.has(v)){
+   const verb=canUpdate(s.installed,v)?'更新':'安装';
+   const target=p.kind==='连接器'&&!s.authorized?'到本机':'并在示例项目引用';
+   return ['install',verb+target+' v'+v,true];
+ }
+ if(p.kind==='连接器'&&!s.authorized)return ['authorize','授权并在示例项目引用 v'+v,true];
+ if(s.reference!==v)return ['use','在示例项目引用 v'+v,false];
+ return ['active','示例项目正在引用',false]}
+function sync(){const [key,label,network]=decision(),s=states[current],p=products[current];const offline=network&&$('#scenario').value==='offline';
+ $('#action').textContent=label;$('#action').disabled=busy||key==='active'||offline;
+ $('#uninstall').hidden=!shared(p)||!s.installed.has($('#version').value);
+ $('#status').textContent=shared(p)?'本机安装：'+([...s.installed].join('、')||'无')+' · 项目引用：'+(s.reference||'无'):'示例项目已有 '+s.copies.length+' 份独立副本';
+ if(offline)feedback($('#feedback'),'offline','⚠ 商城离线。恢复连接后可重试。')}
+function openDetail(i){
+ offset=scrollY;current=i;const p=products[i];$('#store').hidden=true;$('#detail').hidden=false;
+ $('#detail-logo').innerHTML=logo(p);$('#kind').textContent=p.kind;$('#name').textContent=p.name;$('#summary').textContent=p.intro;
+ $('#scope').textContent=shared(p)?'安装到本机，项目分别引用指定版本。':'导入后创建独立副本，修改仅影响当前项目。';
+ $('#developer').textContent=p.author;$('#identity').textContent='资源 ID · '+p.id;
+ populate('#features','li',p.features);populate('#sample','span',p.sample);$('#caption').textContent=p.caption;
+ populate('#history','li',p.changes.map((s,n)=>'v'+versions[n]+' · '+s));populate('#version','option',versions);
+ const query=$('#query').value.trim();$('#version').value=versions.find(v=>query&&v.includes(query))||versions[0];
+ feedback($('#feedback'),'','');sync();scrollTo(0,0);$('#name').focus({preventScroll:true})}
+function back(){if(busy)return;$('#detail').hidden=true;$('#store').hidden=false;list();($('#card-'+current)||$('#filter')).focus({preventScroll:true});scrollTo(0,offset)}
+$('#back').onclick=back;document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!dialog.open&&!$('#detail').hidden)back()});
+$('#filter').onchange=list;$('#query').oninput=list;$('#reset').onclick=()=>{$('#query').value='';$('#filter').value='all';select(0);$('#query').focus()};
+function refresh(){feedback($('#feedback'),'','');sync()}
+$('#version').onchange=$('#scenario').onchange=refresh;$('#motion').onchange=()=>document.documentElement.dataset.reduce=$('#motion').checked;
+function openDialog(next,title,body,label){mode=next;$('#dialog-name').textContent=title;$('#dialog-body').textContent=body;$('#confirm').textContent=label;$('#publish-demo').hidden=next!=='publish';$('#publish-mode').value='ok';$('#confirm').disabled=false;feedback($('#dialog-note'),'','');dialog.showModal();$('#cancel').focus()}
+$('#publish').onclick=()=>openDialog('publish','发布资源','核对此次示例包的类别、版本、文件和公开范围后确认上传。','模拟上传并发布');
+$('#publish-mode').onchange=()=>{const offline=$('#publish-mode').value==='offline';$('#confirm').disabled=offline;feedback($('#dialog-note'),offline?'offline':'',offline?'⚠ 商城离线，暂时无法发布。':'')};
+$('#cancel').onclick=()=>dialog.close();dialog.oncancel=e=>{if(busy)e.preventDefault()};
+async function perform(key){
+ const p=products[current],s=states[current],v=$('#version').value,publish=key==='publish',node=publish?$('#dialog-note'):$('#feedback'),scenario=publish?$('#publish-mode'):$('#scenario');
+ if(!publish&&dialog.open)dialog.close(); if(busy)return;busy=true;
+ const controls=publish?['#cancel','#confirm','#publish-mode']:['#action','#version','#scenario','#back','#uninstall'];for(const sel of controls)$(sel).disabled=true;
+ feedback(node,'busy',{buy:'正在确认示例权益…',authorize:'正在确认示例账号…',copy:'正在创建模板副本…',use:'正在保存项目引用…',install:'正在下载并校验版本…',publish:'正在上传示例包…'}[key]);
+ await new Promise(done=>setTimeout(done,650));busy=false;for(const sel of controls)$(sel).disabled=false;
+ if(scenario.value==='fail'){scenario.value='ok';feedback(node,'error','× 操作中断。所选商品和版本已保留，可重试。');const retry=publish?$('#confirm'):$('#action');retry.textContent='重试';retry.focus();return}
+ if(key==='buy')s.owned=true;
+ if(key==='authorize'){s.authorized=true;s.reference=v}
+ if(key==='install'){
+   s.installed.add(v);
+   if(p.kind!=='连接器'||s.authorized)s.reference=v;
+ }
+ if(key==='use')s.reference=v;
+ if(key==='copy')s.copies.push(v);
+ if(!publish)persist(current);
+ if(publish){$('#confirm').disabled=true;$('#cancel').textContent='关闭';$('#cancel').focus()}else sync();
+ feedback(node,'success','✓ '+({buy:'已获得示例使用权',authorize:'已授权，示例项目已引用 v'+v,install:'已安装 v'+v+(s.reference===v?'，示例项目已同步引用':'，请授权后在项目中引用'),use:'项目已引用 v'+v,copy:'已创建项目副本',publish:'示例包已发布'}[key]))}
+$('#action').onclick=()=>{const [key,label]=decision();if(key==='buy'||key==='authorize'){const p=products[current];openDialog(key,label,key==='buy'?p.name+' · 示例价格 ¥'+p.price+'，含本示例两个版本的使用权。本次不会扣款。':'允许示例项目读取所选文档。',key==='buy'?'模拟购买':'确认授权')}else perform(key)};
+function remainingReference(s,v){
+ if(s.reference!==v)return s.reference;
+ return [...s.installed].filter(candidate=>candidate!==v).sort((a,b)=>compareVersion(b,a))[0]||'';
+}
+$('#uninstall').onclick=()=>{
+ const s=states[current],v=$('#version').value,next=remainingReference(s,v);
+ const effect=s.reference!==v?'当前项目没有引用此版本。':next?'示例项目将回退到 v'+next+'。':'这是最后一个可用版本，示例项目将清除引用。';
+ openDialog('uninstall','卸载'+products[current].name+' v'+v,effect+' 已购权益保留。','确认卸载');
+};
+async function uninstallVersion(){
+ if(busy)return;
+ const s=states[current],v=$('#version').value;
+ busy=true;$('#confirm').disabled=$('#cancel').disabled=true;
+ feedback($('#dialog-note'),'busy','正在卸载 v'+v+' 并核对项目引用…');
+ await new Promise(done=>setTimeout(done,650));
+ busy=false;$('#confirm').disabled=$('#cancel').disabled=false;
+ if($('#scenario').value==='fail'){
+   $('#scenario').value='ok';
+   feedback($('#dialog-note'),'error','× 卸载失败，原版本和项目引用已保留。');
+   $('#confirm').textContent='重试卸载';$('#confirm').focus();return;
+ }
+ s.reference=remainingReference(s,v);
+ s.installed.delete(v);
+ s.removed=true;persist(current);
+ sync();dialog.close();
+ feedback($('#feedback'),'success','✓ 已卸载 v'+v+'。'+(s.reference?'当前项目引用 v'+s.reference+'。':'当前项目无版本引用。'));
+}
+$('#confirm').onclick=()=>mode==='uninstall'?uninstallVersion():perform(mode);
+dialog.onclose=()=>{$('#cancel').textContent='取消';if(!busy)(mode==='publish'?$('#publish'):mode==='uninstall'?($('#uninstall').hidden?$('#version'):$('#uninstall')):$('#action')).focus()};
+select(0);
+</script></body></html>

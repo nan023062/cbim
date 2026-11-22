@@ -8,6 +8,8 @@ import { BusinessNodeDialog, type BusinessEdit } from './BusinessNodeDialog';
 
 import type { BusinessArchitecture, BusinessSnapshot } from '../../bridge/contracts/discovery';
 
+import { ResourceLogo } from '../shared/ResourceLogo';
+
 import { Icon } from '../../framework-ui';
 
 export function BusinessPanel({ project, OnBack }: { project: string; OnBack(): void })
@@ -113,6 +115,7 @@ export function BusinessPanel({ project, OnBack }: { project: string; OnBack(): 
       <article className="business-detail" aria-label="业务节点详情">{node ? <>
         <nav className="business-breadcrumbs" aria-label="业务层级路径">{breadcrumbs.map((id, index) => <span key={id}>{index > 0 && ' / '}<button type="button" onClick={() => setSelected(id)}>{nodes.get(id)?.name ?? id}</button></span>)}</nav>
         <div className="org-detail-title"><h3>{node.name}</h3><div className="org-actions"><button type="button" title="编辑业务节点" aria-label="编辑业务节点" disabled={loading} onClick={() => setEdit({ action: 'update', node: snapshot!.nodes.find(item => item.id === node.id)! })}><Icon name="edit" /></button><button type="button" title="新增下级业务节点" aria-label="新增下级业务节点" disabled={loading} onClick={() => setEdit({ action: 'create', parentId: node.id })}><Icon name="folderAdd" /></button><button type="button" title={node.children.length ? '请先移除或调整下级节点' : '删除业务节点'} aria-label="删除业务节点" disabled={loading || !!node.children.length} onClick={() => setEdit({ action: 'delete', node: snapshot!.nodes.find(item => item.id === node.id)! })}><Icon name="remove" /></button></div></div><p className="business-id">{node.id}</p><small>{node.virtual ? '虚拟业务节点' : '业务工作区'}</small>
+        {snapshot?.nodes.find(item => item.id === node.id)?.workflows?.map((flow,index) => <p key={index}><ResourceLogo kind="workflow" name={flow.name} logo={flow.logo} /> {flow.name}</p>)}
         <h4>业务职责</h4><p className="business-summary">{node.summary || '尚未填写职责说明。'}</p>
         <h4>直属子节点（{node.children.length}）</h4>{node.children.length ? <ul>{node.children.map(id => <li key={id}><button type="button" disabled={!nodes.has(id)} onClick={() => setSelected(id)}>{nodes.get(id)?.name ?? id}</button></li>)}</ul> : <p>没有直属子节点。</p>}
         <h4>来源与范围（{node.sources.length}）</h4>{node.sources.length ? <dl className="business-sources">{node.sources.map((source, index) => <div key={index}><dt>来源</dt><dd>{source.location}</dd><dt>范围</dt><dd>{source.scope || '未填写'}</dd></div>)}</dl> : <p>尚未登记来源范围。</p>}

@@ -106,27 +106,28 @@ class N_7792f25b3f44["resource-management"] {
   <<virtual>>
 }
 click N_7792f25b3f44 href "resource-management/ARCHITECTURE.md"
-class N_5aaa8e9daf01["io-errors"] {
-  <<virtual>>
-}
-click N_5aaa8e9daf01 href "io-errors/ARCHITECTURE.md"
-class N_6648e4abd154["knowledge"] {
-  <<virtual>>
-}
-click N_6648e4abd154 href "knowledge/ARCHITECTURE.md"
-N_90eda1f2990a ..> N_68f384d07928 : 依赖
-N_90eda1f2990a ..> N_fb8f32c3f2e2 : 依赖
-N_90eda1f2990a ..> N_7792f25b3f44 : 依赖
-```
-
-### 关系组 4：updates
-
-```mermaid
-classDiagram
 class N_1a718763f256["updates"] {
   <<virtual>>
 }
 click N_1a718763f256 href "updates/ARCHITECTURE.md"
+class N_5aaa8e9daf01["io-errors"] {
+  <<virtual>>
+}
+click N_5aaa8e9daf01 href "io-errors/ARCHITECTURE.md"
+N_90eda1f2990a ..> N_68f384d07928 : 依赖
+N_90eda1f2990a ..> N_fb8f32c3f2e2 : 依赖
+N_90eda1f2990a ..> N_7792f25b3f44 : 依赖
+N_1a718763f256 ..> N_7792f25b3f44 : 依赖
+```
+
+### 关系组 4：knowledge
+
+```mermaid
+classDiagram
+class N_6648e4abd154["knowledge"] {
+  <<virtual>>
+}
+click N_6648e4abd154 href "knowledge/ARCHITECTURE.md"
 class N_5de4d2d0ae38["settings"] {
   <<virtual>>
 }
@@ -144,7 +145,7 @@ click N_fc171a6fbe88 href "user/ARCHITECTURE.md"
 | 引用方 | 关系 | 目标 |
 | --- | --- | --- |
 | [budget](budget/ARCHITECTURE.md)（图 2） | 依赖 | [engines](engines/ARCHITECTURE.md)（图 1） |
-| [engines](engines/ARCHITECTURE.md)（图 1） | 依赖 | [models](models/ARCHITECTURE.md)（图 2）、[updates](updates/ARCHITECTURE.md)（图 4） |
+| [engines](engines/ARCHITECTURE.md)（图 1） | 依赖 | [models](models/ARCHITECTURE.md)（图 2）、[updates](updates/ARCHITECTURE.md)（图 3） |
 | [evidence](evidence/ARCHITECTURE.md)（图 1） | 依赖 | [file-operations](file-operations/ARCHITECTURE.md)（图 2）、[workspace](workspace/ARCHITECTURE.md)（图 2） |
 | [execution](execution/ARCHITECTURE.md)（图 1） | 依赖 | [budget](budget/ARCHITECTURE.md)（图 2）、[tasks](tasks/ARCHITECTURE.md)（图 2）、[team](team/ARCHITECTURE.md)（图 2） |
 | [file-operations](file-operations/ARCHITECTURE.md)（图 2） | 依赖 | [evidence](evidence/ARCHITECTURE.md)（图 1） |

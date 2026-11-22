@@ -165,3 +165,28 @@
 .engine-options:popover-open {display:flex;flex-direction:column}.engine-options .picker-list {min-height:0;overflow-y:auto;overscroll-behavior:contain}.office-pickers .engine-options button {display:flex;align-items:center;justify-content:flex-start;width:100%;gap:6px;padding:4px 8px;background:transparent;color:inherit;border:0}.office-pickers .engine-options button:hover {background:var(--hover)}
 .office-pickers {anchor-scope:--engine-picker-trigger}.office-pickers > :is(.composer-engine,.engine-trigger) {anchor-name:--engine-picker-trigger}.office-pickers .engine-options {position-anchor:--engine-picker-trigger}
 .office-pickers {anchor-scope:--engine-picker-trigger,--model-picker-trigger}.office-pickers > .composer-model {anchor-name:--model-picker-trigger;flex-shrink:1;height:auto}.office-pickers .model-options {position-anchor:--model-picker-trigger;left:auto;right:anchor(right);max-width:calc(100vw - 16px)}.office-pickers .engine-options > .picker-settings {flex:none;margin-top:3px;border-top:1px solid var(--line);border-radius:0;text-align:left}
+
+/* 对话中的文字按内容角色取色、缩放，工作记录不继承 Markdown 的标题与列表样式。 */
+.office-chat { font-family: "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", system-ui, sans-serif; color: var(--text); }
+.office-transcript article, .office-queued-copy p, .office-dock textarea { font-size: var(--font-ui); line-height: 1.72; }
+.office-prose { min-width: 0; color: var(--text); }
+.office-prose :is(h1,h2,h3,h4,h5,h6) { margin: 1.1em 0 .4em; color: var(--accent); font-family: inherit; font-weight: 600; line-height: 1.42; }
+.office-prose h1 { font-size: 1.28em; }
+.office-prose h2 { font-size: 1.18em; }
+.office-prose h3 { font-size: 1.08em; }
+.office-prose :is(h4,h5,h6) { font-size: 1em; }
+.office-prose p, .office-prose :is(ul,ol,pre,table,blockquote) { margin-block: .6em; }
+.office-prose :is(ul,ol) { padding-inline-start: 1.55em; }
+.office-prose li + li { margin-block-start: .2em; }
+.office-prose li > :is(ul,ol,p) { margin-block: .18em; }
+.office-prose li::marker { color: var(--muted); }
+.office-prose strong { font-weight: 600; color: var(--accent); }
+.office-prose a { color: var(--focus); text-underline-offset: .18em; }
+.office-prose blockquote { margin-inline: 0; padding-inline-start: .85em; border-inline-start: 2px solid var(--control-line); color: var(--muted); }
+.office-prose code, .office-prose pre { font-family: Consolas, "SFMono-Regular", "Microsoft YaHei UI", monospace; font-size: var(--font-code); }
+.office-prose :not(pre) > code { padding: .06em .3em; background: var(--raised); border-radius: 4px; color: inherit; overflow-wrap: anywhere; }
+.office-prose pre { max-width: 100%; box-sizing: border-box; line-height: 1.55; }
+.office-prose pre code { font: inherit; }
+.office-prose > :first-child { margin-top: 0; }
+.office-prose > :last-child { margin-bottom: 0; }
+.office-strip [role=status]:not(.active) { color: var(--muted); }

@@ -28,6 +28,11 @@ export class ProjectCache
     return path.join(this.root, 'office-conversations', id);
   }
 
+  ApprovalDirectory(session: string)
+  {
+    return path.join(this.root, 'office-approvals', hash(session));
+  }
+
   Queue(id: string)
   {
     return path.join(this.root, 'office-queues', id + '.json');

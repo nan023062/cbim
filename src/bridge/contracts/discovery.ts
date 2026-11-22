@@ -9,7 +9,7 @@ export type { OfficeQueueAction, OfficeQueueSnapshot, OfficeQueueItem } from '..
 export type { BusinessSnapshot, BusinessChange } from '../../logic/projects/business-contract';
 
 /** 新桌面菜单只公开显示字段及原生目录选择操作。 */
-export { SkillCommands } from '../../logic/projects/agent-configuration';
+export { SkillCommands, engineLogoLabel } from '../../logic/projects/agent-configuration';
 
 export type { AgentConfiguration, AgentSettingsTarget } from '../../logic/projects/agent-configuration';
 
@@ -128,6 +128,15 @@ export interface RegistryKey {kind:'engine'|'connector'|'talent'|'business';id:s
 export interface RegistryPublication extends RegistryKey {metadata?:{name?:string;logo?:string;summary?:string;developer?:string;changes?:string;preview?:string;priceCnyFen?:number}}
 export interface RegistryVersion extends RegistryPublication {sha256:string;size:number}
 
+export interface PendingOfficeApproval {
+  id: string;
+  tool: string;
+  root: string;
+  scope: string;
+  detail: string;
+}
+export type OfficeApprovalChoice = 'deny' | 'once' | 'always';
+
 export interface DesktopMenu
 {
   RegistryList():Promise<RegistryVersion[]>;
@@ -145,6 +154,8 @@ export interface DesktopMenu
 
   BusinessArchitecture(project: string, change?: import('../../logic/projects/business-contract').BusinessChange): Promise<import('../../logic/projects/business-contract').BusinessSnapshot>;
 
+  OfficeApprovals(project: string, session: string): Promise<PendingOfficeApproval[]>;
+  DecideOfficeApproval(project: string, session: string, id: string, choice: OfficeApprovalChoice): Promise<void>;
   OfficeQueue(project: string, session: string, action?: import('../../logic/projects/office-queue-contract').OfficeQueueAction): Promise<import('../../logic/projects/office-queue-contract').OfficeQueueSnapshot>;
 
   InsertOffice(project: string, session: string, text: string): Promise<{ id: string; status: 'queued' }>;

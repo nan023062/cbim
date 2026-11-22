@@ -72,8 +72,8 @@ export class OfficeTools
   /** 核实文件工具真实目标；新文件按最近存在的父目录检查符号链接。 */
   private async Guard(call: ToolCall): Promise<ToolDecision>
   {
-    // 普通命令可间接调用任意文件 API；没有文件系统隔离时不能用字符串过滤保证项目知识边界。
-    if ((this._scope?.commands === 'denied' || this._operations.ProjectRead) && call.name === 'bash')
+    // 宿主 shell 没有文件系统隔离；带范围授权的任务只能使用受限文件工具。
+    if ((this._scope || this._operations.ProjectRead) && call.name === 'bash')
       return { allow: false, reason: '本次任务未获隔离命令权限；项目资源请使用 cbim_project_read/write' };
 
     const reason = guard({ name: call.name === 'find' ? 'Glob' : call.name, input: call.input }, this._root);
@@ -81,7 +81,7 @@ export class OfficeTools
     if (reason)
       return { allow: false, reason };
 
-    if (['read', 'write', 'edit', 'ls', 'find', 'grep'].includes(call.name))
+    if (['read', 'write', 'edit', 'ls', 'find', 'glob', 'grep'].includes(call.name))
     {
       const raw = call.input.path ?? this._root;
 

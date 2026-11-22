@@ -327,3 +327,8 @@ h2.engine-brand img {width:30px;height:30px;}
 .resource-market .market-card img {object-fit:contain}.resource-market .graph-toolbar {flex-wrap:wrap}.resource-market input,.resource-market select {max-width:100%}
 .resource-market section[hidden] {display:none}
 .view-page.menu-page.resource-market {box-sizing:border-box;width:100%;min-width:0;max-width:100%}
+
+.office-approvals { max-height: 36vh; overflow: auto; }
+.office-approvals article { padding: 12px; border: 1px solid var(--border, currentColor); border-radius: 8px; overflow-wrap: anywhere; }
+.office-approvals pre { white-space: pre-wrap; max-height: 10em; overflow: auto; }
+.office-approvals footer { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }

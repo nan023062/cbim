@@ -24,7 +24,7 @@ import { executionScopeSchema, preparedExecutionScope } from './execution-scope'
 export const workflowContractLimits = { requirements: 16, blockBytes: 64 * 1024 } as const;
 
 /** 仅匹配已实现原生或受限业务工具；知识写入、调度或记录工具不能作为此类出口。 */
-export const workflowToolNameSchema = z.enum(['read', 'write', 'edit', 'grep', 'find', 'ls', 'bash', 'cbim_scoped_read', 'cbim_scoped_node', 'cbim_file_write_controlled']);
+export const workflowToolNameSchema = z.enum(['read', 'write', 'edit', 'grep', 'glob', 'find', 'ls', 'bash', 'cbim_scoped_read', 'cbim_scoped_node', 'cbim_file_write_controlled']);
 
 export type WorkflowToolName = z.infer<typeof workflowToolNameSchema>;
 

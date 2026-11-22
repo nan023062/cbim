@@ -110,7 +110,9 @@ export async function runOfficePlugin(packages: EnginePackages, profiles: LlmPro
 
     const tools = { list: () => officeTools.List(), call: async (name: string, input: Record<string, unknown>, stop: AbortSignal, id?: string) => { const result = await officeTools.Call(name, input, stop, id); const pending = turn.inputs?.Take() ?? []; return pending.length ? { toolResult: result, officeInputs: pending } : result; } };
 
-    const prompt = instructions + '\n本轮提供受管文件/命令工具及 cbim_office_inspect、cbim_office_dispatch。先核对实际目录与岗位；有 cbim_project_read/write 时，项目资源必须走工具，禁止用文件或命令直接读写 .cbim；本轮不提供未隔离的 shell。按用户要求实际登记团队、岗位及业务节点，然后查验并派发；文档不能代替登记。只读不写入、不执行命令、不派发；默认权限逐次审批；完全访问仍受工作区与知识目录保护。命令使用宿主账号执行，不是操作系统隔离沙箱。先 inspect 再派发，子任务在 Office Git 工作树执行，回执中的目录才是实际产物位置，不宣称已合并。派发调用会等待结果，不需轮询。浏览器验收工具尚未接入，不得声称已完成浏览器验证。历史中的工具缺失描述不是本轮工具状态。';
+    const commandHint = '本轮任务使用受管文件工具，不提供本机终端。';
+
+    const prompt = instructions + '\n本轮提供受管文件/命令工具及 cbim_office_inspect、cbim_office_dispatch。先核对实际目录与岗位；有 cbim_project_read/write 时，项目资源必须走工具，禁止用文件或命令直接读写 .cbim。' + commandHint + '按用户要求实际登记团队、岗位及业务节点，然后查验并派发；文档不能代替登记。只读不写入、不执行命令、不派发；默认权限逐次审批。先 inspect 再派发，子任务在 Office Git 工作树执行，回执中的目录才是实际产物位置，不宣称已合并。派发调用会等待结果，不需轮询。浏览器验收工具尚未接入，不得声称已完成浏览器验证。历史中的工具缺失描述不是本轮工具状态。';
 
     // 开发适配器来自 Forge preStart 的本地源码构建，SDK 继续使用受管安装包；不改写签名缓存。
     let adapterRuntime = runtime;

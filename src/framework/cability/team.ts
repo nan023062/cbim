@@ -19,6 +19,8 @@ export interface AgentConfiguration
 
     name: string;
 
+    logo?: string;
+
     content: string
   }[];
 

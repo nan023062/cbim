@@ -128,6 +128,6 @@ export async function downloadRuntimeManifest(tag: string, name: string, signal:
 export async function readLocalIndex(origin:string,signal:AbortSignal){
   const stop=AbortSignal.any([signal,AbortSignal.timeout(30000)]);
   const response=await fetch(origin+'/v1/engine-index',{signal:stop,redirect:'error'});
-  if(!response.ok||!response.body)throw Error('本机资源服务器缺少已签名引擎索引');
+  if(!response.ok||!response.body)throw Error('资源服务器缺少已签名引擎索引');
   return JSON.parse(Buffer.from(await ByteUtils.ReadBoundedBytes(response.body,{maxBytes:16*1024*1024,signal:stop})).toString('utf8'));
 }

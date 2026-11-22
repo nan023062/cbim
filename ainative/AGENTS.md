@@ -28,13 +28,13 @@
 
 ## 文档分层
 
-`ainative/docs/` 独立维护概念设计、标准规范与准则，不引用或依赖 `design/` 文件。`design/` 只保存产品目标、核心取舍、未落地设计和原型；开发与发布操作沿现有项目 Skill 和工具入口维护；验证事实记录在 Git 提交及关联 Issue／PR，发布正文由构建显式输入，不另设工程资料目录。已完成的旧切片和历史验证报告按其入口记录的固定 Git 版本追溯，不持续堆积本地副本。运行资产归 `assets/`，可引用 `ainative/docs/`；项目实施细节不得反向成为通用规范的前置依据。当前实现说明仍随 `src/` 维护。
+`ainative/docs/` 独立维护概念设计、标准规范与准则，不引用或依赖 `design/` 文件。`design/` 只保存产品目标、核心取舍、全局未落地设计；模块 UX 说明、配置及原型按源码相对路径归入 `design-ux/`；开发与发布操作沿现有项目 Skill 和工具入口维护；验证事实记录在 Git 提交及关联 Issue／PR，发布正文由构建显式输入，不另设工程资料目录。已完成的旧切片和历史验证报告按其入口记录的固定 Git 版本追溯，不持续堆积本地副本。运行资产归 `assets/`，可引用 `ainative/docs/`；项目实施细节不得反向成为通用规范的前置依据。当前实现说明仍随 `src/` 维护。
 
 `assets/` 只保留实际读取、引用或打包消费的资源，包括品牌图像与生成摘要。内置 Skill、运行规范和 Schema 作为代码常量归入各自业务模块，由代码显式导入并随业务编译发布，不再从 assets 文件加载。资源身份按真实消费者判断，不按扩展名判断；面向维护者的 README、操作说明和开发记录不放在 assets 中，必要入口在根 README、已有项目 Skill 或对应源码说明维护。
 
 ## 工程阅读与操作入口
 
-- 当前实现从 [src 整体架构](../src/ARCHITECTURE.md) 下钻；产品目标与未落地方案从 [design 导航](https://github.com/nan023062/cbim/blob/7dcff4142e09fdac1a670438bd3081d6c0341f23/design/README.md) 阅读。
+- 当前实现从 [src 整体架构](../src/ARCHITECTURE.md) 下钻；产品目标与未落地方案从 [全局设计](../design/) 和[模块 UX 索引](../design-ux/README.md) 阅读。
 - 分层与导入许可核对 [依赖检查器](../scripts/check-dependencies.mjs) 和 [边界登记](../scripts/architecture-boundaries.mjs)；类型引用和动态装配均需纳入实际影响分析。
 - 构建入口调整先核实固定输出名、用户数据和恢复兼容要求；发布与真实升级验收沿 cbim-release 执行。
 

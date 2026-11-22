@@ -25,7 +25,7 @@ import type { ResourceLibrarySnapshot } from '..';
 
 export const MAX_BYTES = 8 * 1024 * 1024;
 
-export const resourceFields = z.object({ kind: z.enum(resourceKindIds), name: z.string().trim().min(1).max(100), summary: z.string().trim().max(1000), content: z.string().min(1).max(2 * 1024 * 1024).refine(value => Buffer.byteLength(value) <= 2 * 1024 * 1024, '单项资源正文不能超过 2 MiB') }).strict();
+export const resourceFields = z.object({ logo: z.string().max(132000).optional(), kind: z.enum(resourceKindIds), name: z.string().trim().min(1).max(100), summary: z.string().trim().max(1000), content: z.string().min(1).max(2 * 1024 * 1024).refine(value => Buffer.byteLength(value) <= 2 * 1024 * 1024, '单项资源正文不能超过 2 MiB') }).strict();
 
 export const itemSchema = resourceFields.extend({ id: z.string().uuid(), updatedAt: z.string().datetime() });
 

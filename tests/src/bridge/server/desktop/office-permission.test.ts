@@ -10,6 +10,9 @@ vi.mock('../../../../../src/logic/engines/service', () => ({ EngineModelProfiles
 
 test.each([['read', false], ['ask', false], ['execute', false], ['read', true], ['ask', true], ['execute', true]] as const)('桌面引擎接收 %s 权限、原生工具和 Office 工具目录', async (initial, development) => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'office-engine-permission-'));
+  const desk = path.join(root, 'qa');
+  await fs.mkdir(desk);
+  await fs.writeFile(path.join(root, 'README.md'), 'project');
   let permission: 'read' | 'ask' | 'execute' = initial;
   const ReadPermission = () => permission;
   let context: any;
@@ -20,7 +23,14 @@ test.each([['read', false], ['ask', false], ['execute', false], ['read', true], 
     run: async () => {
       const options=fixture.create.mock.lastCall![0];
       expect(options.runtime.identity).toBe('version');
-      expect(context.taskPermission).toMatchObject({projectId:'project',officeId:'office',agentId:'agent',taskId:context.task.taskId,commands:initial==='read'?'denied':'host',readDirectories:[root],writeDirectories:initial==='read'?[]:[root]});
+      expect(context.taskPermission).toMatchObject({projectId:'project',officeId:'office',agentId:'agent',taskId:context.task.taskId,commands:initial==='read'?'denied':'host',readDirectories:[root],writeDirectories:initial==='read'?[]:[desk]});
+      for (const name of ['read', 'ls', 'grep', 'glob', 'find']) {
+        const target = name === 'ls' ? '..' : '../README.md';
+        expect((await context.beforeTool({id:name,name,input:{path:target}})).allow).toBe(true);
+      }
+      for (const name of ['write', 'edit'])
+        expect((await context.beforeTool({id:name+'-sibling',name,input:{path:'../README.md'}})).allow).toBe(false);
+      expect((await context.beforeTool({id:'outside',name:'read',input:{path:'../../outside.txt'}})).allow).toBe(false);
       expect(options.allowNativeExecution).toBe(initial!=='read');
       expect((await options.knowledge.list()).map((tool:any)=>tool.name)).toEqual(['cbim_office_inspect','cbim_office_dispatch']);
       permission='read';
@@ -41,7 +51,7 @@ test.each([['read', false], ['ask', false], ['execute', false], ['read', true], 
   if (development) { await fs.mkdir(path.join(developmentRoot, 'codex'), {recursive:true}); await fs.writeFile(path.join(developmentRoot, 'codex', 'adapter.json'), JSON.stringify({id:'codex',version:'1.1.1',protocol:1,entry:'adapter.cjs'})); }
   try {
     const result = await runOfficePlugin(packages as any, {} as any, '职责', [{ role: 'user', content: '检查' }], new AbortController().signal, () => {}, {
-      ReadPermission, ReportTokens: () => {}, operations: { Inspect: () => ({}), Dispatch: async () => ({}) }, selection: { engine: 'codex', profileId: 'profile', modelId: 'fixture' }, root, officeId:'office',agentInstanceId:'agent',engineRoot: root, project: 'project', session: 'session',
+      ReadPermission, ReportTokens: () => {}, operations: { Inspect: () => ({}), Dispatch: async () => ({}) }, selection: { engine: 'codex', profileId: 'profile', modelId: 'fixture' }, root: desk, projectRoot: root, officeId:'office',agentInstanceId:'agent',engineRoot: root, project: 'project', session: 'session',
     }, undefined, undefined, development ? developmentRoot : undefined);
     if (development) expect(fixture.load.mock.lastCall![1]).toMatchObject({root:path.join(developmentRoot,'codex'),adapter:{entry:path.join(developmentRoot,'codex','adapter.cjs')}});
     else expect(fixture.load.mock.lastCall![1]).not.toHaveProperty('adapter');

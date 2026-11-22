@@ -82,7 +82,7 @@ export type MainAgentSelection = NonNullable<AgentConfiguration['model']>;
 
 type ReportStage = import('./office-queue-contract').ReportStage;
 
-export type OfficeChat = (instructions: string, messages: readonly { role: 'user' | 'assistant'; content: string }[], signal: AbortSignal, progress: (sample: ChatProgress) => void, turn: { shared?: ProjectResourceBridge; ReportStage?: ReportStage; inputs?: OfficeInputs; ReadPermission(): AgentPermission; ReportTokens(total: number): void; operations: OfficeOperations; selection: MainAgentSelection; configuration?: AgentConfiguration; agentInstanceId: string; officeId: string; root: string; session: string; project: string; engineRoot: string }) => Promise<{ text: string; metrics: TurnMetrics }>;
+export type OfficeChat = (instructions: string, messages: readonly { role: 'user' | 'assistant'; content: string }[], signal: AbortSignal, progress: (sample: ChatProgress) => void, turn: { shared?: ProjectResourceBridge; ReportStage?: ReportStage; inputs?: OfficeInputs; ReadPermission(): AgentPermission; ReportTokens(total: number): void; operations: OfficeOperations; selection: MainAgentSelection; configuration?: AgentConfiguration; agentInstanceId: string; officeId: string; root: string; projectRoot?: string; session: string; project: string; engineRoot: string }) => Promise<{ text: string; metrics: TurnMetrics }>;
 
 export class ProjectOffices
 {
@@ -345,7 +345,7 @@ export class ProjectOffices
         }
         return { queuedFor: recipients };
       };
-      const runAgent = async (role: AgentRole, messages: Parameters<OfficeChat>[1], root: string, session: string, agentInstanceId: string, signal: AbortSignal, ReadPermission: () => AgentPermission, report: (seq: number, kind: 'message' | 'summary', count: number) => void, operations: OfficeOperations, publish: (sample: ChatProgress) => void) => {
+      const runAgent = async (role: AgentRole, messages: Parameters<OfficeChat>[1], root: string, session: string, agentInstanceId: string, signal: AbortSignal, ReadPermission: () => AgentPermission, report: (seq: number, kind: 'message' | 'summary', count: number) => void, operations: OfficeOperations, publish: (sample: ChatProgress) => void, projectRoot = root) => {
         const issues = new Set<string>();
         const actor = role.definition.name;
         const goal = session === id ? '等待模型响应' : messages.at(-1)?.content.split('\n')[0] || '执行成员任务';
@@ -438,8 +438,8 @@ export class ProjectOffices
             progress({phase:lastPhase,model:selection.modelId,workLog:Array.from(workLog.values()),runningAction:Array.from(active.values()).at(-1)});
             return receipt;
           } };
-          const instructions = agentRoleInstructions(role.definition) + (session === id ? '\n团队协作任务先核对实际业务与组织架构，再用 cbim_office_plan 向团队公布目标、相关业务节点、选岗依据及排序后的任务。每项写明负责人、工作区、预期产物和前置任务。阻塞或改派时更新计划。涉及派发时先展示计划，再按前置任务的真实回执执行。收集成员成果与过程问题，判断已解决项、待协调项和适用范围。运行中已有成员时，先 inspect 核对 environmentEvidence，再调用 cbim_office_broadcast 通知相关环境事实。下一次派发时把相关结论写入任务目标；需要时邀请合适岗位处理。' : '\n交付时向派发人说明成果、验证、过程中遇到的问题、已采用的解决办法及仍需协助的事项。');
-          const result = await chat(instructions, messages, signal, forward, { shared: project.runtime.shared, ReportStage: session === id ? ReportStage : undefined, inputs: inbox, ReadPermission, ReportTokens: total => { const previous = tokenReports.get(agentInstanceId) ?? { sequence: 0, total: 0 }; const next = { sequence: previous.sequence + 1, total: previous.total + total }; tokenReports.set(agentInstanceId, next); report(next.sequence, 'summary', next.total); }, operations: dispatchOperations, configuration: role.definition, agentInstanceId, officeId: office.id, selection: role.definition.model!, root, session, project: projectId, engineRoot: project.cache.engines });
+          const instructions = agentRoleInstructions(role.definition) + (session === id ? '\n团队协作任务先核对实际业务与组织架构，再用 cbim_office_plan 向团队公布目标、相关业务节点、选岗依据及排序后的任务。每项写明负责人、工作区、预期产物和前置任务。阻塞或改派时更新计划。涉及派发时先展示计划，再按前置任务的真实回执执行。收集成员成果与过程问题，判断已解决项、待协调项和适用范围。运行中已有成员时，先 inspect 核对 environmentEvidence，再调用 cbim_office_broadcast 通知相关环境事实。下一次派发时把相关结论写入任务目标；需要时邀请合适岗位处理。' : `\n本轮项目可读目录为 ${projectRoot}，作业目录为 ${root}。相对路径以作业目录为基准，文件修改限于作业目录。交付时向派发人说明成果、验证、过程中遇到的问题、已采用的解决办法及仍需协助的事项。`);
+          const result = await chat(instructions, messages, signal, forward, { shared: project.runtime.shared, ReportStage: session === id ? ReportStage : undefined, inputs: inbox, ReadPermission, ReportTokens: total => { const previous = tokenReports.get(agentInstanceId) ?? { sequence: 0, total: 0 }; const next = { sequence: previous.sequence + 1, total: previous.total + total }; tokenReports.set(agentInstanceId, next); report(next.sequence, 'summary', next.total); }, operations: dispatchOperations, configuration: role.definition, agentInstanceId, officeId: office.id, selection: role.definition.model!, root, projectRoot, session, project: projectId, engineRoot: project.cache.engines });
           return { ...result, issues: Array.from(issues) };
         } catch (error) {
           if (session !== id && issues.size && !signal.aborted)
@@ -459,7 +459,7 @@ export class ProjectOffices
         const tasks = plan.tasks.map((task, index) => (index + 1) + '. ' + task.title + ' · ' + task.owner + ' · ' + task.workspace + '\n目的：' + task.purpose + '\n前置：' + (task.dependencies.join('、') || '无，可独立开始'));
         record({ id: 'plan:' + crypto.randomUUID(), label: '协作计划', actor: office.mainRole.definition.name, summary: plan.goal, input: ['岗位分工：' + plan.organization, '业务范围：' + plan.business, ...tasks].join('\n\n') });
         publish({ phase: lastPhase, model: selection.modelId });
-      }, ProjectWrite: input => project.runtime.ChangeResource(input, { session: id, selection }) }, reportProgress), Close: async () => { controller.abort(); }, }) }, (_engine, commands) => { dispatch = new OfficeDispatch(office, project.entry.path, commands, (role, goal, root, taskId, signal, ReadPermission, report, operations, agentId) => runAgent(role, [{ role: 'user', content: SkillCommands.Expand(goal, role.definition.skills) }], root, taskId, agentId, signal, ReadPermission, report, operations, sample => { if (sample.activity) reportProgress(sample); }), controller.signal); return () => { }; }, configuration);
+      }, ProjectWrite: input => project.runtime.ChangeResource(input, { session: id, selection }) }, reportProgress), Close: async () => { controller.abort(); }, }) }, (_engine, commands) => { dispatch = new OfficeDispatch(office, project.entry.path, commands, (role, goal, root, taskId, signal, ReadPermission, report, operations, agentId, projectRoot) => runAgent(role, [{ role: 'user', content: SkillCommands.Expand(goal, role.definition.skills) }], root, taskId, agentId, signal, ReadPermission, report, operations, sample => { if (sample.activity) reportProgress(sample); }, projectRoot), controller.signal); return () => { }; }, configuration);
 
       try
       {

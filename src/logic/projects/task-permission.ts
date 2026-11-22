@@ -6,9 +6,9 @@ import path from 'node:path';
 
 import type { AgentPermission } from '../../framework/cability/organization';
 
-export function issueTaskPermission(identity: { projectId: string; officeId: string; agentId: string; taskId: string }, root: string, main: boolean, read: () => AgentPermission, parent: AbortSignal)
+export function issueTaskPermission(identity: { projectId: string; officeId: string; agentId: string; taskId: string }, root: string, main: boolean, read: () => AgentPermission, parent: AbortSignal, projectRoot = root)
 {
-  if (Object.values(identity).length !== 4 || Object.values(identity).some(v => typeof v !== 'string' || !v.trim()) || !path.isAbsolute(root))
+  if (Object.values(identity).length !== 4 || Object.values(identity).some(v => typeof v !== 'string' || !v.trim()) || !path.isAbsolute(root) || !path.isAbsolute(projectRoot))
     throw Error('任务授权缺少宿主身份或绝对目录');
 
   const level = read();
@@ -27,7 +27,7 @@ export function issueTaskPermission(identity: { projectId: string; officeId: str
   const dirs = Object.freeze([root]);
 
   const snapshot = Object.freeze({
-    ...identity, level, readDirectories: dirs, writeDirectories: level === 'read' ? Object.freeze([]) : dirs,
+    ...identity, level, readDirectories: Object.freeze([projectRoot]), writeDirectories: level === 'read' ? Object.freeze([]) : dirs,
     excludedDirectories: Object.freeze(['.cbim']), readResources: resources, writeResources: !main || level === 'read' ? Object.freeze([]) : resources,
     commands: level === 'read' ? 'denied' as const : 'host' as const
   });

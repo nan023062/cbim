@@ -79,7 +79,7 @@ export async function runOfficePlugin(packages: EnginePackages, profiles: LlmPro
   if (runtime.identity !== (pinned ?? status.active.identity))
     throw Error('引擎版本已变更，请重新选择');
 
-  const grant = issueTaskPermission({ projectId: turn.project, officeId: turn.officeId, agentId: turn.agentInstanceId, taskId: runId }, turn.root, !!turn.operations.ProjectRead && !!turn.operations.ProjectWrite, turn.ReadPermission, signal);
+  const grant = issueTaskPermission({ projectId: turn.project, officeId: turn.officeId, agentId: turn.agentInstanceId, taskId: runId }, turn.root, !!turn.operations.ProjectRead && !!turn.operations.ProjectWrite, turn.ReadPermission, signal, turn.projectRoot);
 
   const release = runtime.retain?.();
 

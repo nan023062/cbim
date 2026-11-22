@@ -92,19 +92,20 @@ export class OfficeTools
       if (typeof raw !== 'string' || !raw || raw.includes('\0'))
         return { allow: false, reason: '文件路径无效' };
 
-      const root = await fs.realpath(this._root);
+      const cwd = await fs.realpath(this._root);
 
       const allowed = call.name === 'write' || call.name === 'edit' ? this._scope?.writeDirectories : this._scope?.readDirectories;
 
-      if (allowed && !allowed.includes(this._root))
+      if (allowed && !allowed.length)
         return { allow: false, reason: '目录不在本次任务授权范围' };
 
-      let target = path.resolve(root, raw);
+      const root = await fs.realpath(allowed?.[0] ?? this._root);
+      let target = path.resolve(cwd, raw);
 
       const within = (value: string) => { const relative = path.relative(root, value); return relative !== '..' && !relative.startsWith('..' + path.sep) && !path.isAbsolute(relative); };
 
       if (!within(target))
-        return { allow: false, reason: '文件目标必须位于当前工作区' };
+        return { allow: false, reason: call.name === 'write' || call.name === 'edit' ? '仅可修改本次任务的作业目录' : '仅可读取本次任务的项目工作树' };
 
       while (true)
       {

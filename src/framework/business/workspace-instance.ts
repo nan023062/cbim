@@ -48,7 +48,7 @@ export class WorkspaceInstance
 
   private _closing?: Promise<void>;
 
-  private constructor(public readonly instanceId: string, public readonly description: Workspace, public readonly directory: string, private readonly _worktree: WorkspaceWorktree)
+  private constructor(public readonly instanceId: string, public readonly description: Workspace, public readonly directory: string, public readonly projectRoot: string, private readonly _worktree: WorkspaceWorktree)
   {
   }
 
@@ -63,7 +63,7 @@ export class WorkspaceInstance
     {
       const directory = await worktree.ResolveDirectory(context.relativeDirectory);
 
-      return new WorkspaceInstance(crypto.randomUUID(), description, directory, worktree);
+      return new WorkspaceInstance(crypto.randomUUID(), description, directory, context.relativeDirectory === '.' ? directory : await worktree.ResolveDirectory('.'), worktree);
     }
     catch (error)
     {

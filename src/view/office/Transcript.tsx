@@ -2,8 +2,9 @@
  * 作用定位：可视窗口内的 Office 历史与流式正文，较早的轮次仅在进入窗口时读取。
  * 设计原因：按可视范围读取历史并复用正文渲染，减少长会话开销，不据展示状态推断执行完成。
  */
-import { Button, Icon } from '../../framework-ui';
-import { memo, useEffect, useState } from 'react';
+import { failureText, failureSummary, isAbortedReceipt } from '../../bridge/contracts/discovery';
+import { Button, Icon, type IconName } from '../../framework-ui';
+import { Children, isValidElement, memo, useEffect, useState } from 'react';
 
 import Markdown from 'react-markdown';
 
@@ -12,9 +13,38 @@ import remarkGfm from 'remark-gfm';
 import type { OfficeMessage, OfficeActivity } from '../../bridge/contracts/discovery';
 
 
+/** 有些模型用标记为 Markdown 的围栏包住整份回复；仅解开完整文档外层。 */
+function displayMarkdown(text: string): string
+{
+  const source = text.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n');
+  const lines = source.trim().split('\n');
+  const opening = /^(`{3,}|~{3,})[ \t]*(?:markdown|md)[ \t]*$/i.exec(lines[0]);
+  if (!opening) return source;
+  const closing = new RegExp('^ {0,3}' + opening[1][0] + '{' + opening[1].length + ',}[ \\t]*$');
+  const end = lines.findIndex((line, index) => index > 0 && closing.test(line));
+  return end === lines.length - 1 ? lines.slice(1, end).join('\n') : source;
+}
+
+function ReplyMarkdown({ text, allowDetails = true }: { text: string; allowDetails?: boolean })
+{
+  return <Markdown remarkPlugins={[remarkGfm]} skipHtml components={{
+    img: ({ alt }) => <span>{alt}</span>,
+    table: ({ children }) => <div className="office-table-scroll" role="region" aria-label="表格" tabIndex={0}><table>{children}</table></div>,
+    pre: ({ children }) => {
+      const block = Children.toArray(children)[0];
+      if (allowDetails && isValidElement<{ className?: string; children?: string }>(block) && block.props.className === 'language-details' && typeof block.props.children === 'string') {
+        const [label, ...lines] = block.props.children.trimEnd().split('\n');
+        if (label.trim() && lines.length)
+          return <details className="office-reply-detail"><summary>{label}</summary><ReplyMarkdown text={lines.join('\n')} allowDetails={false} /></details>;
+      }
+      return <pre>{children}</pre>;
+    },
+  }}>{text}</Markdown>;
+}
+
 const ReplyBody = memo(function ReplyBody({ text }: { text: string })
 {
-  return <div className="office-prose"><Markdown remarkPlugins={[remarkGfm]} skipHtml components={{ img: ({ alt }) => <span>{alt}</span> }}>{text}</Markdown></div>;
+  return <div className="office-prose"><ReplyMarkdown text={displayMarkdown(text)} /></div>;
 });
 
 function useDisclosure(key: string)
@@ -26,72 +56,101 @@ function useDisclosure(key: string)
   return [choice, toggle] as const;
 }
 
-function ActivityRow({ step, group }: { step: OfficeActivity; group: string })
+const toolIcons: Record<string, IconName> = {
+  cbim_office_plan: 'brain', cbim_office_dispatch: 'teamDispatch', cbim_office_inspect: 'inspect',
+  cbim_project_read: 'knowledge', cbim_project_write: 'edit',
+  bash: 'terminal', read: 'knowledge', edit: 'edit', write: 'edit',
+  glob: 'search', find: 'search', grep: 'search', ls: 'folder',
+};
+
+function eventIcon(step: OfficeActivity): IconName
 {
-  const [open, toggle] = useDisclosure(group + '/' + step.id);
-
-  if (step.input === undefined && step.result === undefined)
-    return <li>{step.label}</li>;
-
-  return <li><Button type="button" aria-expanded={!!open} onClick={() => toggle(!open)}>{open ? '▾' : '▸'} {step.label}</Button>
-    {open && <div>{step.input !== undefined && <><b>输入</b><pre>{step.input}</pre></>}
-      {step.result !== undefined && <><b>结果</b><pre>{step.result}</pre></>}</div>}</li>;
+  if (step.id.startsWith('receipt:')) return 'delivered';
+  if (step.id.startsWith('task:')) {
+    const icons: Record<string, IconName> = {waiting:'queued',queued:'queued',running:'running',completed:'success',blocked:'blocked',suspended:'pause',cancelled:'stopped'};
+    return icons[step.id.split(':').at(-1) ?? ''] ?? 'task';
+  }
+  if (step.id.startsWith('tool:')) return toolIcons[step.label] ?? 'connector';
+  return step.input ? 'notification' : 'workflow';
 }
 
-/** 工具回执可能是纯文本，也可能在 content 文本块内包装结构化错误。 */
-function failureText(value: unknown, depth = 0): string
+function eventSummary(step: OfficeActivity): string
 {
-  if (!value || depth > 12) return '';
-  if (typeof value === 'string')
-  {
-    const text = value.trim();
-    if (text.startsWith('{') || text.startsWith('['))
-    {
-      try { return failureText(JSON.parse(text), depth + 1); } catch { /* 普通命令输出 */ }
-    }
-    return text;
-  }
-  if (Array.isArray(value)) return value.map(item => failureText(item, depth + 1)).filter(Boolean).join('\n');
-  if (typeof value !== 'object') return '';
-  const result = value as Record<string, unknown>;
-  for (const key of ['message', 'error', 'reason', 'stderr', 'content', 'text'])
-  {
-    const text = failureText(result[key], depth + 1);
-    if (text) return text;
-  }
-  return '';
+  if (step.id.startsWith('receipt:')) return '收到' + (step.actor ?? '成员') + '回执 · ' + (step.summary ?? step.result ?? '');
+  if (step.summary) return step.summary;
+  if (!step.input) return step.label;
+  try {
+    const args = JSON.parse(step.input);
+    const target = args.command ?? args.goal ?? args.path ?? args.file_path ?? args.pattern ?? args.resource;
+    return step.label + ' · ' + (typeof target === 'string' ? target : step.input);
+  } catch { return step.label + ' · ' + step.input; }
 }
 
-function FailureDetails({ step }: { step: OfficeActivity })
+/** 历史计划保留原文与换行，仅给约定的段落标题附上语义图标。 */
+function PlanBody({ text }: { text?: string })
 {
-  const reason = step.alert === step.label + '执行失败'
-    ? failureText(step.result) || '工具未返回具体原因'
-    : step.alert || '工具未返回具体原因';
-  const lines = reason.split(/\r?\n/).filter(Boolean);
-  const summary = lines.find(line => /^fatal:|^error:/i.test(line)) || lines[0] || '工具执行失败';
-  return <details className="office-work-alert">
-    <summary>{step.label} · {summary.length > 150 ? summary.slice(0, 150) + '…' : summary}</summary>
-    <pre>{reason}</pre>
-    {step.result && step.result !== reason && <><b>工具回执</b><pre>{step.result}</pre></>}
-  </details>;
+  const labels: Record<string, { title: string; icon: IconName }> = {
+    '业务范围': { title: '匹配业务工作区', icon: 'workspaceSearch' },
+    '岗位分工': { title: '匹配团队和执行者', icon: 'organizationSearch' },
+    '目的': { title: '目的', icon: 'goal' },
+    '前置': { title: '前置', icon: 'workflow' },
+  };
+  return <div className="office-plan-body">{text?.split('\n').map((line, index) => {
+    const label = line.split('：', 1)[0];
+    const field = line.includes('：') && Object.hasOwn(labels, label) ? labels[label] : undefined;
+    return <div className="office-plan-line" key={index}>{field ? <><Icon name={field.icon} size={16} />{field.title}{line.slice(label.length)}</> : line || '\u00a0'}</div>;
+  })}</div>;
+}
+
+function ActivityRow({ step, live }: { step: OfficeActivity; live?: boolean })
+{
+  const plan = step.id.startsWith('plan:');
+  const receipt = step.id.startsWith('receipt:');
+  const dispatch = step.label === 'cbim_office_dispatch';
+  const team = plan || receipt || dispatch;
+  const running = live && step.toolState === 'running' && !step.alert;
+  const returned = step.toolState === 'returned' || step.id.startsWith('receipt:') || (step.id.startsWith('tool:') && step.toolState === undefined && step.result !== undefined);
+  const title = eventSummary(step).replace(/\s+/g, ' ').trim();
+  const reason = step.alert === step.label + '执行失败' ? failureText(step.result) || '工具未返回具体原因' : step.alert;
+  const cancelled = !!step.cancelSource || (!!reason && isAbortedReceipt(reason));
+  const error = cancelled ? '已中止 · ' + (step.cancelSource ?? '来源未知') : reason ? '失败 · ' + failureSummary(reason) : undefined;
+  return <details open={plan || undefined} className={'office-event' + (team ? ' office-team-event' : '') + (error ? ' office-work-alert' : '')}>
+    <summary>{error ? <Icon name={cancelled ? 'stopped' : 'failed'} size={16} label={cancelled ? '已中止' : '执行失败'} /> : running ? <Icon name="spinner" motion="rotate" tone="warning" size={16} label="正在执行" />
+      : returned ? <Icon name="check" size={16} label="已收到回执" /> : team ? <span /> : <Icon name={eventIcon(step)} size={16} />}
+      <span className="office-event-copy">{team && <b className="office-team-route"><Icon name={plan ? 'brain' : receipt ? 'teamReceipt' : 'teamDispatch'} size={16} />{plan ? '分析任务' : receipt ? '任务回执' : '派发任务'} · {step.actor}{step.recipient && ' → ' + step.recipient}</b>}
+        {!!step.issues?.length && <small>过程反馈 · {step.issues.length} 项</small>}
+        {step.workspace && <small><Icon name="folder" size={16} />工作区 · {step.workspace}</small>}
+        <span>{!team && step.actor && !step.id.startsWith('receipt:') ? step.actor + ' · ' : ''}{team && step.summary ? step.summary : title}</span>
+        {error && <strong>{error}</strong>}</span>
+      <Icon name="chevronRight" size={14} /></summary>
+    <div className="office-event-detail">{plan ? <PlanBody text={step.input} /> : <><b>{step.label}</b>
+      {!!step.issues?.length && <><b>成员过程反馈</b><ul>{step.issues.map(issue => <li key={issue}>{issue}</li>)}</ul></>}
+      {step.actor && <div>执行人 · {step.actor}</div>}
+      {reason && <><b>{cancelled ? '中止详情' : '失败原因'}</b><pre>{reason}</pre></>}
+      {step.input !== undefined && <><b>输入</b><pre>{step.input}</pre></>}
+      {step.result !== undefined && <><b>结果</b><pre>{step.result}</pre></>}
+    </>}</div></details>;
 }
 
 function WorkRecord({ steps, group, elapsed, live, model }: { steps: OfficeActivity[]; group: string; elapsed?: number; live?: boolean; model?: string })
 {
   const [open, toggle] = useDisclosure(group);
 
-  const visible = open ? steps : live && open === undefined ? steps.slice(-5) : [];
+  const visible = steps.filter((step, index) => open || step.id.startsWith('plan:') || step.recipient || step.label === 'cbim_office_dispatch' || step.id.startsWith('receipt:') || (live && open === undefined && (step.toolState === 'running' || index >= steps.length - 5)));
+  const seconds = Math.floor((elapsed ?? 0) / 1000);
+  const duration = seconds >= 60 ? Math.floor(seconds / 60) + '分' + seconds % 60 + '秒' : seconds + '秒';
 
   return <>
     <section className="office-work-record">
       <Button type="button" aria-expanded={!!open} onClick={() => toggle(!open)}>
-        <Icon name="clock" size={13} /> {live ? '正在工作' : '已工作'} {Math.floor((elapsed ?? 0) / 1000)} 秒 {open ? '▾' : '▸'}
+        <Icon name="clock" size={14} /> {live ? '正在工作' : '已工作'}{elapsed !== undefined && ' ' + duration}
+        <Icon name={open ? 'chevronDown' : 'chevronRight'} size={14} />
       </Button>
-      {visible.length > 0 && <ol>{visible.map(step => <ActivityRow key={step.id} group={group} step={step} />)}</ol>}
+      {visible.length > 0 && <ol>{visible.map(step => <li key={step.id}><ActivityRow step={step} live={live} /></li>)}</ol>}
       {open && !steps.length && <p>本轮未保存步骤明细</p>}
       {open && model && <div>模型 · {model}</div>}
     </section>
-    {steps.filter(step => step.alert).map(step => <FailureDetails key={step.id} step={step} />)}
+    {steps.filter(step => step.alert && !visible.includes(step)).map(step => <ActivityRow key={step.id} step={step} />)}
   </>;
 }
 
@@ -100,8 +159,8 @@ export const Message = memo(function Message({ role, text, elapsed, workLog, mod
   const group = 'office-work:' + (workLog?.[0]?.id ?? messageId);
 
   return <article className={'office-' + role}>{role === 'assistant' ? <>
-    {elapsed !== undefined || live || workLog?.length ? <WorkRecord key={group} group={group} steps={workLog ?? []} elapsed={elapsed} model={model} live={live} /> : <small>Office 主 Agent</small>}
-    <ReplyBody text={text} />
+    {text && <ReplyBody text={text} />}
+    {(elapsed !== undefined || live || !!workLog?.length) && <WorkRecord key={group} group={group} steps={workLog ?? []} elapsed={elapsed} model={model} live={live} />}
   </> : text}</article>;
 });
 

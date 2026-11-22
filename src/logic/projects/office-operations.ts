@@ -22,6 +22,9 @@ export const projectWrites = z.discriminatedUnion('resource', [z.object({ resour
 
 export type { AgentPermission } from '../../framework/cability/organization';
 
+/** 助理发给团队的公开计划；任务数组按执行顺序排列。 */
+export const officePlanSchema = z.object({ goal: z.string().trim().min(1), business: z.string().trim().min(1), organization: z.string().trim().min(1), tasks: z.array(z.object({ title: z.string().trim().min(1), owner: z.string().trim().min(1), workspace: z.string().trim().min(1), purpose: z.string().trim().min(1), dependencies: z.array(z.string().min(1)) }).strict()).min(1) }).strict();
+
 /** 派发只引用已登记岗位和工作区，不接受权限或任意模型身份。 */
 export const officeDispatchSchema = z.object({ memberId: z.string().min(1).max(2048), workspaceId: z.string().min(1).max(2048), directory: z.string().min(1).max(2048).default('.'), goal: z.string().trim().min(1).max(32000) }).strict();
 
@@ -33,6 +36,8 @@ export interface OfficeOperations
 {
   /** 返回当前办公室的岗位、业务节点和真实任务状态。 */
   Inspect(): unknown;
+
+  PublishPlan?(plan: z.infer<typeof officePlanSchema>): void;
 
   ProjectRead?(input: z.infer<typeof projectReads>): Promise<unknown>;
 

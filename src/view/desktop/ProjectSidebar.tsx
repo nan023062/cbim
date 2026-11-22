@@ -2,7 +2,7 @@
  * 作用定位：项目导航组件：持久状态由宿主提供，视图只持有搜索、折叠、菜单和编辑草稿。
  * 设计原因：界面草稿与宿主持久导航分离，列表操作不直接修改项目文件或运行对象。
  */
-import { IconButton, Button, ConfirmWindow, FieldLabel, Form, Icon, Input, ListItem, ModalWindow, Option, Popover, Select } from '../../framework-ui';
+import { ScrollWindow, IconButton, Button, ConfirmWindow, FieldLabel, Form, Icon, Input, ListItem, ModalWindow, Option, Popover, Select } from '../../framework-ui';
 import { useEffect, useRef, useState, type MouseEvent } from 'react';
 
 import type { NavigationSnapshot, NavigationChange, NavigationProject, NavigationSession, ProjectItem } from '../../bridge/contracts/discovery';
@@ -66,9 +66,7 @@ export function ProjectSidebar({ added, choosing, addingName, reading = true, ac
     {
       target: Target;
 
-      x: number;
-
-      y: number
+      point?: { x: number; y: number }
     }>();
 
   const [editing, setEditing] = useState<Target>();
@@ -143,7 +141,7 @@ export function ProjectSidebar({ added, choosing, addingName, reading = true, ac
   useEffect(() => { let alive = true; let migrated = false; let timer: ReturnType<typeof setTimeout>; async function Refresh() { const version = generation.current; try { let value = await window.desktopMenu.Navigation(); if (alive && !migrated) { for (const project of value.projects) for (const session of project.sessions) { const key = 'office-title:' + session.id; const alias = localStorage.getItem(key)?.trim(); if (alive && alias && !session.renamed) value = await window.desktopMenu.Navigation({ revision: value.revision, project: project.id, session: session.id, action: 'rename', name: alias.slice(0, 80) }); if (alive && alias) localStorage.removeItem(key); } migrated = true; } if (alive && version === generation.current) Apply(value); } catch (error) { if (alive) setError(String(error)); } finally { if (alive) timer = setTimeout(Refresh, 1500); } } void Refresh(); return () => { alive = false; clearTimeout(timer); }; }, []);
 
 
-  useEffect(() => { if (!menu) return; const element = menuElement.current!; const rect = element.getBoundingClientRect(); element.style.left = Math.max(4, Math.min(menu.x, innerWidth - rect.width - 4)) + 'px'; element.style.top = Math.max(4, Math.min(menu.y, innerHeight - rect.height - 4)) + 'px'; element.querySelector<HTMLButtonElement>('button')?.focus(); function Dismiss(event: PointerEvent) { if (!element.contains(event.target as Node)) setMenu(undefined); } document.addEventListener('pointerdown', Dismiss); return () => document.removeEventListener('pointerdown', Dismiss); }, [menu]);
+  useEffect(() => { if (!menu) return; const element = menuElement.current!; element.querySelector<HTMLButtonElement>('button')?.focus(); function Dismiss(event: PointerEvent) { if (!element.contains(event.target as Node)) setMenu(undefined); } document.addEventListener('pointerdown', Dismiss); return () => document.removeEventListener('pointerdown', Dismiss); }, [menu]);
 
   useEffect(() => { function Shortcut(event: KeyboardEvent) { if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); input.current?.focus(); } } window.addEventListener('keydown', Shortcut); return () => window.removeEventListener('keydown', Shortcut); }, []);
 
@@ -212,9 +210,9 @@ export function ProjectSidebar({ added, choosing, addingName, reading = true, ac
 
     returnFocus.current = event.currentTarget;
 
-    const rect = event.currentTarget.getBoundingClientRect();
 
-    setMenu({ target, x: event.clientX || rect.left, y: event.clientY || rect.bottom });
+
+    setMenu({ target, point: event.type === 'contextmenu' && (event.clientX || event.clientY) ? { x: event.clientX, y: event.clientY } : undefined });
   }
 
   function Actions(target: Target): MenuItem[]
@@ -259,7 +257,7 @@ export function ProjectSidebar({ added, choosing, addingName, reading = true, ac
     <Popover id="task-list-options" className="task-list-options"><FieldLabel>显示任务<Select aria-label="筛选对话" value={filter} onChange={event => setFilter(event.target.value as typeof filter)}><Option value="active">全部对话</Option><Option value="running">运行中</Option><Option value="archived">已归档</Option><Option value="removed">已移除</Option></Select></FieldLabel><Button onClick={() => { setDeviceOpen(true); setCollapsed({}); localStorage.setItem('project-collapsed', '{}'); document.getElementById('task-list-options')?.hidePopover(); }}><Icon name="expand" size={15} />展开全部项目</Button><Button onClick={() => { const next = Object.fromEntries(projects.map(project => [project.id, true])); setCollapsed(next); localStorage.setItem('project-collapsed', JSON.stringify(next)); document.getElementById('task-list-options')?.hidePopover(); }}><Icon name="collapse" size={15} />收起全部项目</Button></Popover>
     <div className="local-device-row"><Button aria-expanded={deviceOpen} aria-controls="local-project-tree" onClick={() => setDeviceOpen(value => !value)}><Icon name="desktop" size={14} /><span>本机</span><Icon name={deviceOpen ? 'chevronDown' : 'chevronRight'} size={11} /></Button><IconButton className="device-add" title="添加项目" aria-label="添加项目" disabled={choosing} onClick={OnAdd}><Icon name="folderAdd" size={16} /></IconButton></div>
     {addingName && <div role="status"><Icon name="spinner" motion="rotate" size={14} /> 正在添加：{addingName}</div>}
-    <nav id="local-project-tree" hidden={!deviceOpen && !query} className="workspace-list project-tree" aria-label="项目列表">{projects.map(project =>
+    <nav {...ScrollWindow.native} id="local-project-tree" hidden={!deviceOpen && !query} className="workspace-list project-tree" aria-label="项目列表">{projects.map(project =>
     {
       const matchesProject = (project.name + ' ' + project.path).toLocaleLowerCase().includes(query);
 
@@ -287,8 +285,8 @@ export function ProjectSidebar({ added, choosing, addingName, reading = true, ac
         </div>)}{visible.length < sessions.length && <Button className="navigation-show-all" onClick={() => setAll(previous => ({ ...previous, [project.id]: true }))}>显示全部 {sessions.length} 条对话</Button>}{all[project.id] && sessions.length > 5 && <Button className="navigation-show-all" onClick={() => setAll(previous => ({ ...previous, [project.id]: false }))}>收起较早对话</Button>}{!sessions.length && !project.error && <small className="navigation-empty">{filter === 'active' ? '暂无对话，点击右侧新建' : '没有符合条件的对话'}</small>}</div>}
       </section>;
     })}{projects.length === 0 && <p className="navigation-empty">{snapshot.projects.length ? '没有符合条件的项目或对话' : '添加项目，开始第一条对话'}</p>}</nav>
-    {error && <small role="alert" className="navigation-error">{error}</small>}
-    {menu && <div ref={menuElement} className="navigation-menu" role="menu" aria-label="项目和对话操作" style={{ left: menu.x, top: menu.y }} onKeyDown={event => { const buttons = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('button')); const index = buttons.indexOf(document.activeElement as HTMLButtonElement); if (event.key === 'Escape') { event.stopPropagation(); setMenu(undefined); returnFocus.current?.focus(); } else if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) { event.preventDefault(); buttons[event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1 : (index + (event.key === 'ArrowDown' ? 1 : -1) + buttons.length) % buttons.length]?.focus(); } else if (event.key === 'Tab') setMenu(undefined); }}>{Actions(menu.target).map(action => <Button key={action.label} role="menuitem" disabled={busy} data-danger={action.danger || undefined} onClick={() => { setMenu(undefined); action.Run(); }}><Icon name={action.icon} size={15} />{action.label}</Button>)}</div>}
+    {error && <small {...ScrollWindow.native} role="alert" className="navigation-error">{error}</small>}
+    {menu && <Popover anchorRef={returnFocus} point={menu.point} menuRef={menuElement} className="navigation-menu" role="menu" aria-label="项目和对话操作" onKeyDown={event => { const buttons = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('button')); const index = buttons.indexOf(document.activeElement as HTMLButtonElement); if (event.key === 'Escape') { event.stopPropagation(); setMenu(undefined); returnFocus.current?.focus(); } else if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) { event.preventDefault(); buttons[event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1 : (index + (event.key === 'ArrowDown' ? 1 : -1) + buttons.length) % buttons.length]?.focus(); } else if (event.key === 'Tab') setMenu(undefined); }}>{Actions(menu.target).map(action => <Button key={action.label} role="menuitem" disabled={busy} data-danger={action.danger || undefined} onClick={() => { setMenu(undefined); action.Run(); }}><Icon name={action.icon} size={15} />{action.label}</Button>)}</Popover>}
     {editing && <ModalWindow className="navigation-dialog" aria-label="重命名" onCancel={event => { event.preventDefault(); if (!busy) setEditing(undefined); }}><Form onSubmit={event => { event.preventDefault(); void Change(editing, 'rename', { name }).then(ok => { if (ok) setEditing(undefined); }); }}><h3>重命名</h3><FieldLabel>名称<Input autoFocus maxLength={80} value={name} onFocus={event => event.target.select()} onChange={event => setName(event.target.value)} /></FieldLabel>{error && <p role="alert">{error}</p>}<footer><Button type="button" disabled={busy} onClick={() => setEditing(undefined)}>取消</Button><Button type="submit" disabled={busy || !name.trim()}>保存</Button></footer></Form></ModalWindow>}
     {confirm && <ConfirmWindow danger focusConfirm={confirm.action === 'archive'} busyLabel={confirm.action === 'archive' ? '正在归档…' : '正在移除…'} title={confirm.action === 'archive' ? confirm.target.session ? '归档对话' : '归档全部对话' : '移除确认'} confirmLabel={confirm.action === 'archive' ? '确认归档' : '确认移除'} busy={busy} error={error} onCancel={() => setConfirm(undefined)} onConfirm={() => { void Change(confirm.target, confirm.action, confirm.action === 'archive' ? { value: true } : {}).then(ok => { if (ok) setConfirm(undefined); }); }}>
       {confirm.action === 'archive' ? (confirm.target.session ? '归档对话「' + confirm.target.session.title + '」？' : '归档「' + confirm.target.project.name + '」的全部对话？') + '可在“已归档”中恢复。运行中的任务继续执行。' : confirm.target.session ? '移除后将停止当前任务并暂停排队指令。对话历史保留，可在“已移除”中恢复。' : '从侧栏移出项目，不删除项目文件和对话历史。运行中的任务继续执行，可在“已移除”中恢复。'}

@@ -2,7 +2,7 @@
  * 作用定位：右侧窗口管理浏览器标签和项目工具，切换工具不会卸载中间的对话。
  * 设计原因：独立维护扩展页签可以保留聊天状态。
  */
-import { IconButton, nextFocusIndex, Button, Disclosure, DisclosureSummary, Form, Icon, Input, PaneDivider, Popover } from '../../framework-ui';
+import { ScrollWindow, IconButton, nextFocusIndex, Button, Disclosure, DisclosureSummary, Form, Icon, Input, PaneDivider, Popover } from '../../framework-ui';
 import { useEffect, useId, useRef, useState } from 'react';
 
 
@@ -79,7 +79,7 @@ function ConsoleTab({ project, session, }: { project: string; session: string; }
   useEffect(() => { let alive = true; let timer: ReturnType<typeof setTimeout>; async function read() { try { const value = await window.desktopMenu.OfficeQueue(project, session); if (alive) { setSnapshot(value); setError(''); } } catch (e) { if (alive) setError(String(e)); } if (alive) timer = setTimeout(read, 2000); } void read(); return () => { alive = false; clearTimeout(timer); }; }, [project, session]);
 
   return (
-    <section className="extension-console">
+    <section {...ScrollWindow.native} className="extension-console">
       <h2>控制台</h2>
       {error ? (
         <p role="alert">{error}</p>
@@ -170,7 +170,7 @@ export function ExtensionPanel({ open, project, session, organization, business,
         />
       )}
       <header>
-        <div className="extension-strip" role="tablist" aria-label="扩展标签">
+        <ScrollWindow className="extension-strip" role="tablist" aria-label="扩展标签">
           {tabs.map((t, i) => (
             <div key={t.id} className={active === t.id ? 'chosen' : ''}>
               <Button
@@ -191,7 +191,7 @@ export function ExtensionPanel({ open, project, session, organization, business,
               </IconButton>
             </div>
           ))}
-        </div>
+        </ScrollWindow>
         <IconButton title="新增标签页" aria-label="新增标签页" popoverTarget={menu}>
           <Icon name="plus" size={16} />
         </IconButton>
@@ -216,7 +216,7 @@ export function ExtensionPanel({ open, project, session, organization, business,
           <Icon name={maximized ? 'collapse' : 'expand'} size={15} />
         </IconButton>
       </header>
-      <div
+      <ScrollWindow
         className="extension-body"
         role="tabpanel" id={panelId} aria-labelledby={kind ? panelId + active : undefined}
         aria-label={kind ? types[kind][0] : '扩展内容'}
@@ -248,7 +248,7 @@ export function ExtensionPanel({ open, project, session, organization, business,
             <p>请先打开对话。</p>
           )
         ) : null}
-      </div>
+      </ScrollWindow>
     </aside>
   );
 }

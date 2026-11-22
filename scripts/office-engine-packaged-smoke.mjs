@@ -53,7 +53,7 @@ try {
     console.log('installed',kind,item.candidate.version,item.candidate.identity);
   }
   await page.getByRole('button',{name:'新建工作区',exact:true}).click();
-  const engine = page.getByLabel('主 Agent 执行引擎');
+  const engine = page.getByLabel('助理执行引擎');
   const messages = () => page.locator('.office-transcript article');
   const draft = page.getByLabel('任务目标或补充消息');
   if (managementOnly) {
@@ -68,12 +68,12 @@ try {
   await codexCard.getByRole('button',{name:'停用',exact:true}).waitFor();
   await page.getByRole('button',{name:'返回工作区'}).click();
   assert.equal(await draft.inputValue(),marker);
-  await page.waitForFunction(() => document.querySelector('select[aria-label="主 Agent 执行引擎"]')?.value === 'codex');
+  await page.waitForFunction(() => document.querySelector('select[aria-label="助理执行引擎"]')?.value === 'codex');
     console.log('PASS: install, disable, enable, return to Office with original draft and engine');
   } else {
   async function send(kind, input) {
     await engine.selectOption(kind);
-    const model = page.getByLabel('主 Agent 大模型');
+    const model = page.getByLabel('助理大模型');
     if (!await model.inputValue()) await model.selectOption({ index: 1 });
     const count = await messages().count();
     console.log('sending',kind,await model.locator('option:checked').innerText());
@@ -97,7 +97,7 @@ try {
   await page.getByRole('button',{name:'handoff-project',exact:true}).click();
   await page.locator('.office-assistant').first().waitFor();
   assert.deepEqual(await messages().allTextContents(),after);
-  assert.equal(await page.getByLabel('主 Agent 执行引擎').inputValue(),'codex');
+  assert.equal(await page.getByLabel('助理执行引擎').inputValue(),'codex');
   console.log('PASS: Pi → Codex, recalled '+marker+', all four messages and engine selection survived restart');
   }
 } finally {

@@ -52,7 +52,7 @@ const layerOf = file => {
 const foundation='@shared-domain-foundations';
 const foundationEntries=['src/logic/io-errors/json.ts','src/core/io/json.ts','src/core/io/serialization.ts','src/logic/execution/ports/identity.ts'];
 // utility 通用入口只能组合环境无关实现，Node 算法必须显式选用独立入口。
-const utilityPortable=['src/core/utility/index.ts','src/core/utility/async.ts','src/core/utility/graphs.ts'];
+const utilityPortable=['src/core/utility/index.ts','src/core/utility/async.ts','src/core/utility/graphs.ts','src/core/utility/tool-receipt.ts'];
 const enginePublic='src/logic/engines/index.ts',engineService='src/logic/engines/service/index.ts';
 const allowsEngineAccess=(from,to)=>from==='src/logic/engines/package-status.ts'&&to==='src/logic/updates/engine-artifacts.ts'||to===enginePublic&&(from.startsWith('src/logic/'))||to===engineService&&(from.startsWith('src/bridge/server/')||isService(from));
 const modelPublic='src/logic/models/index.ts';

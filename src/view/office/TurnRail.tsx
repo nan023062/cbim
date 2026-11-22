@@ -2,8 +2,8 @@
  * 作用定位：将对话轮次映射到列表行，提供定位与预览。
  * 设计原因：旧轮次仅在预览时读取，浏览历史不会改变任务状态。
  */
-import { Button } from '../../framework-ui';
-import { useEffect, useId, useState } from 'react';
+import { Popover, ScrollWindow, Button } from '../../framework-ui';
+import { useRef, useEffect, useId, useState } from 'react';
 
 import type { OfficeMessage } from '../../bridge/contracts/discovery';
 
@@ -32,12 +32,8 @@ export function TurnRail({ project, session, earlier, messages, row, jump, live 
 
   const [pointerInside, setPointerInside] = useState(false);
 
-  const [hover, setHover] = useState<
-    {
-      i: number;
-
-      top: number
-    }>();
+  const anchor = useRef<HTMLButtonElement>(null);
+  const [hover, setHover] = useState<{ i: number }>();
 
   const [archive, setArchive] = useState<
     {
@@ -62,15 +58,14 @@ export function TurnRail({ project, session, earlier, messages, row, jump, live 
 
   function Show(i: number, button: HTMLButtonElement)
   {
-    const container = button.closest('.office-transcript')!.getBoundingClientRect();
-
-    setHover({ i, top: Math.max(4, Math.min(container.height - 104, button.getBoundingClientRect().top - container.top - 38)) });
+    anchor.current = button;
+    setHover({ i });
   }
 
   if (!marks.length)
     return null;
 
-  return <><nav className="turn-rail" aria-label="历史任务定位" onMouseEnter={() => setPointerInside(true)} onMouseLeave={() => { setPointerInside(false); setHover(undefined); }} onBlur={() => setHover(undefined)} onScroll={() => setHover(undefined)} onKeyDown={e => { if (e.key === 'Escape') setHover(undefined); const buttons=Array.from(e.currentTarget.querySelectorAll('button'));const i=buttons.indexOf(document.activeElement as HTMLButtonElement);const to=({ArrowDown:i+1,ArrowUp:i-1,Home:0,End:buttons.length-1} as Record<string,number>)[e.key];if(to!==undefined){e.preventDefault();buttons[Math.max(0,Math.min(buttons.length-1,to))]?.focus()} }}>
+  return <><nav {...ScrollWindow.native} className="turn-rail" aria-label="历史任务定位" onMouseEnter={() => setPointerInside(true)} onMouseLeave={() => { setPointerInside(false); setHover(undefined); }} onBlur={() => setHover(undefined)} onScroll={() => setHover(undefined)} onKeyDown={e => { if (e.key === 'Escape') setHover(undefined); const buttons=Array.from(e.currentTarget.querySelectorAll('button'));const i=buttons.indexOf(document.activeElement as HTMLButtonElement);const to=({ArrowDown:i+1,ArrowUp:i-1,Home:0,End:buttons.length-1} as Record<string,number>)[e.key];if(to!==undefined){e.preventDefault();buttons[Math.max(0,Math.min(buttons.length-1,to))]?.focus()} }}>
     {marks.map((m, i) => <Button key={m.file || m.index} type="button" aria-label={'定位第 ' + (i + 1) + ' 个任务'} aria-current={i === active ? 'location' : undefined} aria-describedby={i === hover?.i ? tipId : undefined} onMouseEnter={e => Show(i, e.currentTarget)} onFocus={e => Show(i, e.currentTarget)} onClick={() => jump(m.index)}><i data-motion="turn" style={{ transform: 'scaleX(' + (pointerInside && hover ? markerScale(i - hover.i) : 0.23) + ')' }} /></Button>)}
-  </nav>{mark && hover && <div className="turn-preview" data-motion="popup" id={tipId} role="tooltip" style={{ top: hover.top }}><strong>{preview?.text || (file ? '正在读取历史任务…' : '任务')}</strong><span>{preview ? preview.result || '暂无执行结果' : ''}</span></div>}</>;
+  </nav>{mark && hover && <Popover key={hover.i} anchorRef={anchor} className="turn-preview" data-motion="popup" id={tipId} role="tooltip"><strong>{preview?.text || (file ? '正在读取历史任务…' : '任务')}</strong><span>{preview ? preview.result || '暂无执行结果' : ''}</span></Popover>}</>;
 }

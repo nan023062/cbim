@@ -12,15 +12,25 @@
 .ui-button:focus-visible { outline:2px solid var(--focus); outline-offset:2px; }
 .ui-button[role=switch][aria-checked=true],.ui-button[role=tab][aria-selected=true] { background:var(--selected); color:var(--text); }
 .ui-tabs>[role=tablist] { display:flex; gap:4px; }
-.ui-window-list { flex:1; min-height:0; scrollbar-gutter:stable; scrollbar-color:var(--muted) transparent; overflow-y:scroll !important; }
+.ui-window-list { flex:1; min-height:0; scrollbar-gutter:stable;  overflow-y:scroll !important; }
 .ui-three-pane {display:flex;min-width:0}
 .ui-pane-divider {position:absolute;inset-block:0;width:8px;z-index:5;cursor:col-resize;touch-action:none;user-select:none;outline:0}
 .ui-pane-divider[data-side=left] {right:0}
 .ui-pane-divider[data-side=right] {left:0}
-.ui-pane-divider:is(:hover,:focus-visible,:active)::after {content:'';position:absolute;inset-block:0;width:2px;background:var(--muted)}
+.ui-pane-divider:is(:focus-visible,:active)::after,.ui-pane-divider[data-side=left]:hover::after {content:'';position:absolute;inset-block:0;width:2px;background:var(--muted)}
 .ui-pane-divider[data-side=left]::after {right:0}
 
 .ui-list-item {display:flex;align-items:center;justify-content:flex-start;text-align:start}
 .ui-list-item:focus-visible {outline:2px solid var(--focus);outline-offset:-2px}
 
 .ui-tooltip > button:disabled { pointer-events:none }
+
+/* Shared anchor fallback order: bottom-right, bottom-left, top-left, top-right. */
+:root {--ui-popup-fallbacks:flip-inline, flip-block flip-inline, flip-block, --ui-popup-inside}
+@position-try --ui-popup-inside {position-area:none;inset:5px;margin:auto;justify-self:center;align-self:center}
+.ui-tooltip {--popup-width:320px}
+.ui-tooltip>[role=tooltip] {width:max-content;white-space:normal;overflow-wrap:anywhere;pointer-events:none}
+@supports (appearance:base-select) {
+  select[data-ui-select],select[data-ui-select]::picker(select) {appearance:base-select}
+  select[data-ui-select]::picker(select) {position:fixed;inset:auto;margin:5px 0;position-area:bottom span-right;justify-self:start;position-try-fallbacks:var(--ui-popup-fallbacks);box-sizing:border-box;width:max-content;min-width:min(anchor-size(width),calc(100vw - 10px));max-width:calc(100vw - 10px);max-height:calc(100dvh - 10px);overflow:auto;color:var(--text);background:var(--raised)}
+}

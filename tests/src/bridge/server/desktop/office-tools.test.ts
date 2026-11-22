@@ -154,7 +154,7 @@ test('审批期间权限降级、取消、派发重放和改参均不能执行',
   }
 });
 
-test('主 Agent 用资源工具读写，原生读写和未隔离命令不能操作知识库',async()=>{
+test('助理用资源工具读写，原生读写和未隔离命令不能操作知识库',async()=>{
  const signal=new AbortController().signal,read=vi.fn(async()=>({revision:0})),write=vi.fn(async()=>({revision:1}));
  const tools=new OfficeTools('.', 'project',()=> 'execute',{Inspect:()=>({}),Dispatch:async()=>({}),ProjectRead:read,ProjectWrite:write},signal);
  for(const name of ['read','edit','write','bash']){

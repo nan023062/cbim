@@ -10,6 +10,7 @@ Panel 提供活动期订阅；Tabs 协调选中项与面板；layout 和 windows
 
 | Module | Role |
 | --- | --- |
+| [ScrollWindow](ScrollWindow.tsx) | 滑动容器、横纵滚动条与共享空闲计时。 |
 | [Panel](Panel.tsx) | Panel |
 | [Tabs](Tabs.tsx) | Tabs |
 | [Popover](Popover.tsx) | 共享原生弹出菜单与 Esc 关闭行为。 |
@@ -22,6 +23,18 @@ Panel 提供活动期订阅；Tabs 协调选中项与面板；layout 和 windows
 
 ```mermaid
 classDiagram
+class N_a3efca239e0e["ScrollWindow"] {
+  <<component>>
+}
+click N_a3efca239e0e href "ScrollWindow.tsx"
+class N_f4632fc9d2a6["Popover"] {
+  <<component>>
+}
+click N_f4632fc9d2a6 href "Popover.tsx"
+class N_f17bf08739ff["windows"] {
+  <<virtual>>
+}
+click N_f17bf08739ff href "windows/ARCHITECTURE.md"
 class N_43f602610b5b["Panel"] {
   <<component>>
 }
@@ -30,19 +43,13 @@ class N_f9f8a923a41f["Tabs"] {
   <<component>>
 }
 click N_f9f8a923a41f href "Tabs.tsx"
-class N_f4632fc9d2a6["Popover"] {
-  <<component>>
-}
-click N_f4632fc9d2a6 href "Popover.tsx"
 class N_56bfbeebf250["layout"] {
   <<virtual>>
 }
 click N_56bfbeebf250 href "layout/ARCHITECTURE.md"
-class N_f17bf08739ff["windows"] {
-  <<virtual>>
-}
-click N_f17bf08739ff href "windows/ARCHITECTURE.md"
 N_f9f8a923a41f ..> N_43f602610b5b : 依赖
+N_f4632fc9d2a6 ..> N_a3efca239e0e : 依赖
+N_f17bf08739ff ..> N_a3efca239e0e : 依赖
 ```
 
 ## 子模块

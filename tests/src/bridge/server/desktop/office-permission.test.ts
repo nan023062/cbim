@@ -20,7 +20,7 @@ test.each([['read', false], ['ask', false], ['execute', false], ['read', true], 
     run: async () => {
       const options=fixture.create.mock.lastCall![0];
       expect(options.runtime.identity).toBe('version');
-      expect(context.taskPermission).toMatchObject({projectId:'project',officeId:'office',agentId:'agent',taskId:context.task.taskId,commands:'denied',readDirectories:[root],writeDirectories:initial==='read'?[]:[root]});
+      expect(context.taskPermission).toMatchObject({projectId:'project',officeId:'office',agentId:'agent',taskId:context.task.taskId,commands:initial==='read'?'denied':'host',readDirectories:[root],writeDirectories:initial==='read'?[]:[root]});
       expect(options.allowNativeExecution).toBe(initial!=='read');
       expect((await options.knowledge.list()).map((tool:any)=>tool.name)).toEqual(['cbim_office_inspect','cbim_office_dispatch']);
       permission='read';
@@ -28,7 +28,7 @@ test.each([['read', false], ['ask', false], ['execute', false], ['read', true], 
       permission='execute';
       expect(options.ReadPermission()).toBe(initial);
       expect((await context.beforeTool({id:'write',name:'write',input:{path:'file.txt'}})).allow).toBe(initial==='execute');
-      expect((await context.beforeTool({id:'shell',name:'bash',input:{command:'echo hi'}})).allow).toBe(false);
+      expect((await context.beforeTool({id:'shell',name:'bash',input:{command:'echo hi'}})).allow).toBe(initial==='execute');
       await context.emit({ type: 'message', data: { role: 'assistant', text: '收到' } }); return { status: 'completed' }; },
     close: async () => {}, stop: async () => {},
   }));

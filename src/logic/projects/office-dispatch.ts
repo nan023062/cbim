@@ -13,7 +13,7 @@ import type { AgentPermission } from '../../framework/cability/organization';
 import type { OfficeDispatchInput, OfficeOperations } from './office-operations';
 
 /** 成员引擎由应用注入；子运行使用自己的岗位模型而非模型参数指定的账号。 */
-export type OfficeMemberRunner = (role: AgentRole, goal: string, root: string, taskId: string, signal: AbortSignal, readPermission: () => AgentPermission, report: (seq: number, kind: 'message' | 'summary', count: number) => void, operations: OfficeOperations, agentInstanceId: string) => Promise<{ text: string }>;
+export type OfficeMemberRunner = (role: AgentRole, goal: string, root: string, taskId: string, signal: AbortSignal, readPermission: () => AgentPermission, report: (seq: number, kind: 'message' | 'summary', count: number) => void, operations: OfficeOperations, agentInstanceId: string) => Promise<{ text: string; issues?: string[] }>;
 
 /** 单次主消息的调度桥，限制循环委派并排空取消中的子运行。 */
 export class OfficeDispatch
@@ -59,7 +59,7 @@ export class OfficeDispatch
     const member = this._office.organization.FindMember(input.memberId);
 
     if (!member?.available || !member.model.engine || !member.model.profileId || !member.model.modelId)
-      throw Error(member?.reason ?? '岗位未配置可用引擎和模型；主 Agent 可以在当前工作区直接执行');
+      throw Error(member?.reason ?? '岗位未配置可用引擎和模型；助理可以在当前工作区直接执行');
 
     if (path.isAbsolute(input.directory) || input.directory.split(/[\\/]/).some(part => part === '..' || part.toLowerCase() === '.cbim'))
       throw Error('派发目录必须是工作树中的业务相对路径');
@@ -91,7 +91,7 @@ export class OfficeDispatch
       if (ancestors.length && this._office.ListTasks().some(task => task.agentId === target.id && ['waiting', 'queued', 'running'].includes(task.state)))
         throw Error('目标岗位正在执行其他任务，拒绝嵌套等待以避免成员互相阻塞');
 
-      handle = this._commands.DispatchTask({ memberId: member.id, workspaceInstanceId: workspace.instanceId, goal: input.goal, parentTaskId }, async (task, agent, desk, taskSignal) => { const childSignal = AbortSignal.any([signal, taskSignal]); const role = new AgentRole({ id: member.id, name: member.name, position: member.position, instructions: member.position, model: member.model, skills: member.skills, connectorIds: member.connectorIds }, { workspaceId: this._office.workspaceId, taskId: task.id }); const work = (async () => { try { const { engine } = await agent.Open(role, { parameters: childSignal, CreateEngine: async (stop, id, childRole, report, ReadPermission) => ({ session: () => this._run(childRole, input.goal, desk.directory, task.id, stop, ReadPermission, report, this.Operations([...ancestors, member.id], task.id), id), Close: async () => { } }) }); const result = await engine(); childSignal.throwIfAborted(); return { taskId: task.id, agentId: agent.id, memberId: member.id, directory: desk.directory, status: 'completed', summary: result.text, merged: false }; } finally { await agent.Close(); } })(); running = work; return work; });
+      handle = this._commands.DispatchTask({ memberId: member.id, workspaceInstanceId: workspace.instanceId, goal: input.goal, parentTaskId }, async (task, agent, desk, taskSignal) => { const childSignal = AbortSignal.any([signal, taskSignal]); const role = new AgentRole({ id: member.id, name: member.name, position: member.position, instructions: member.position, model: member.model, skills: member.skills, connectorIds: member.connectorIds }, { workspaceId: this._office.workspaceId, taskId: task.id }); const work = (async () => { try { const { engine } = await agent.Open(role, { parameters: childSignal, CreateEngine: async (stop, id, childRole, report, ReadPermission) => ({ session: () => this._run(childRole, input.goal, desk.directory, task.id, stop, ReadPermission, report, this.Operations([...ancestors, member.id], task.id), id), Close: async () => { } }) }); const result = await engine(); childSignal.throwIfAborted(); return { taskId: task.id, agentId: agent.id, memberId: member.id, directory: desk.directory, status: 'completed', summary: result.text, issues: result.issues ?? [], merged: false }; } finally { await agent.Close(); } })(); running = work; return work; });
 
       const failed = new Promise<never>((_resolve, reject) => { detach = this._office.Subscribe(event => { if (event.type === 'task' && event.task.id === handle?.id && event.task.state === 'suspended') reject(Error(event.task.error ?? '成员执行失败')); }); });
 

@@ -1,3 +1,4 @@
+import { ScrollWindow } from '../ScrollWindow';
 import { useLayoutEffect, useRef, type ComponentPropsWithoutRef } from 'react';
 
 /** Mounting opens a modal; unmounting releases focus back to its opener. */
@@ -8,5 +9,5 @@ export function ModalWindow(props: Omit<ComponentPropsWithoutRef<'dialog'>, 'ope
     dialog.showModal();
     return () => dialog.close();
   }, []);
-  return <dialog {...props} ref={ref} />;
+  return <dialog {...ScrollWindow.native} {...props} ref={ref} />;
 }

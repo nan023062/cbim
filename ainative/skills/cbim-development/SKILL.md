@@ -125,7 +125,7 @@ Pi/Codex 的请求关联使用 utility/async.ts 的 PendingRequests；register/t
 
 后端无环判断组合 utility/graphs.ts 的 isDirectedAcyclic，前端分层独立实现；领域入口先核验节点/端点，再选择启用依赖与等待边并保留原错误码。公共图算法不认识任务或授权；独立拓扑测试与领域防环/重放契约分别验证，新增私有类别同步依赖清单。
 
-模型位于 src/logic/models：纯目录/连接/选型入口与 service/index.ts 分开，纯入口不得加载服务。Bridge 仅具名转接公开纯契约。Fault 和锁实现只有 Core 一份；主 Agent 设置位于 logic/team/settings，请求预算归 logic/budget。单元、消费者契约与 SDK 容量验证分别登记。
+模型位于 src/logic/models：纯目录/连接/选型入口与 service/index.ts 分开，纯入口不得加载服务。Bridge 仅具名转接公开纯契约。Fault 和锁实现只有 Core 一份；助理设置位于 logic/team/settings，请求预算归 logic/budget。单元、消费者契约与 SDK 容量验证分别登记。
 
 Web 已迁入 src/logic/web：纯工具契约 index.ts 与 service/index.ts 分开；Core 网页拆为 core/web/portable、core/web/node、core/web/electron.ts。Logic 不依赖旧后端或 Electron，浏览器只由桌面宿主注入；仅 bridge/contracts/web.ts 具名导出原设置 Schema/摘要，不能扩散为服务权限。SecretCipher 归 core/io/electron.ts，平台实现不迁入业务。正文转换、HTTP、页面策略、业务适配、设置单元及真实协作契约分别登记；保留匿名兜底、默认 allow、缓存策略隔离、取消、未知失败与密钥语义。
 

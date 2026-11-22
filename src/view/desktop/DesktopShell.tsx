@@ -226,7 +226,7 @@ export function DesktopShell()
         </Button>
         <IconButton className="profile-quick-action" title="设置" aria-label="设置" onClick={() => setSettings('通用')}><Icon name="settings" size={13} /></IconButton>
         <IconButton className="profile-quick-action" title="切换外观" aria-label="切换外观" onClick={() => setSettings('外观')}><Icon name="palette" size={13} /></IconButton>
-        <Popover id="user-actions" role="group" aria-label="用户操作">
+        <Popover matchWidth id="user-actions" role="group" aria-label="用户操作">
           <Button popoverTarget="user-actions" popoverTargetAction="hide" onClick={() => { setUpdateOpen(true); void window.desktopMenu.Update('check').catch(e => setError(String(e))); }}><Icon name="retry" size={16} />检查更新</Button>
           <Button popoverTarget="user-actions" popoverTargetAction="hide" onClick={() => setSettings('通用')}><Icon name="settings" size={16} />设置</Button>
         </Popover>

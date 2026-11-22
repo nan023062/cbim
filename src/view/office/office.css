@@ -21,8 +21,7 @@
 .business-sources>div {padding:12px 0;border-top:1px solid var(--line)}.business-sources dt {font-size:12px;color:var(--muted)}.business-sources dd {margin:4px 0 12px}.business-empty {padding:48px 12px;text-align:center}.business-page [role=alert] {overflow-wrap:anywhere}
 @media(max-width:600px) {.business-page {padding:12px}.business-layout {grid-template-columns:1fr;gap:12px}.business-tree {max-height:32vh}.business-navigation,.business-detail {padding:12px}}
 .office-add-menu button {display:flex;align-items:center;gap:6px;color:var(--text);background:transparent;border:0;padding:6px 10px;cursor:pointer}
-.office-dock footer > button[popovertarget="office-add-menu"] {anchor-name:--office-add-trigger}
-.office-add-menu {position:fixed;position-anchor:--office-add-trigger;inset:auto;left:anchor(left);bottom:calc(anchor(top) + 6px);margin:0;position-try-fallbacks:flip-block,flip-inline; background:var(--raised);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:6px;max-width:calc(100vw - 32px)}
+.office-add-menu {background:var(--raised);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:6px;max-width:calc(100vw - 32px)}
 .office-chat .office-add-menu button {display:flex;width:100%;justify-content:flex-start;min-height:36px;padding:8px}
 .agent-settings {width:min(640px,calc(100vw - 32px));max-height:85vh;box-sizing:border-box;padding:18px;border:1px solid var(--line);border-radius:14px;background:var(--surface);color:var(--text);overflow:auto}
 .agent-settings::backdrop {background:rgb(0 0 0 / .4)}
@@ -49,7 +48,7 @@
 .office-transcript article {margin-bottom:26px;overflow-wrap:anywhere;font-size:14px;line-height:1.65}
 .office-user {margin-left:auto;width:fit-content;max-width:85%;background:var(--raised);border:1px solid var(--line);border-radius:12px;padding:10px 15px;white-space:pre-wrap}
 .office-assistant p {margin:.65em 0;color:inherit}.office-assistant small,.office-strip,.office-model {color:var(--muted);font-size:12px}
-.office-assistant table {border-collapse:collapse;display:block;overflow:auto}.office-assistant td,.office-assistant th {padding:5px 12px;border:1px solid var(--line)}
+.office-assistant table {border-collapse:collapse}.office-assistant td,.office-assistant th {padding:5px 12px;border:1px solid var(--line)}
 .office-assistant pre {overflow:auto;padding:10px;background:var(--raised);border-radius:6px}
 .office-dock {padding-bottom:5px}.office-strip {min-height:24px;justify-content:space-between;gap:6px;font-variant-numeric:tabular-nums}
 .office-strip [role=status] {color:var(--warning,currentColor)}.office-meter {display:flex;justify-content:flex-end;padding:4px 2px 0;align-items:center;flex:none;gap:4px;white-space:nowrap;color:var(--muted);font-size:11px;font-variant-numeric:tabular-nums}.office-meter i {width:12px;height:12px;border-radius:50%;mask:radial-gradient(circle,transparent 46%,black 49%)}
@@ -62,7 +61,7 @@
 .office-permission-trigger:hover:not(:disabled) {background:var(--raised)}
 .office-permission-trigger:focus-visible,.office-permission-menu button:focus-visible {outline:2px solid var(--text);outline-offset:2px}
 .office-permission-trigger:disabled {opacity:.45;cursor:default}
-.office-permission-menu {position:absolute;bottom:calc(100% + 9px);left:0;z-index:20;width:min(290px,calc(100vw - 64px));padding:5px;border:1px solid var(--line);border-radius:10px;background:var(--raised);color:var(--text);box-shadow:0 5px 20px #0002}
+.office-permission-menu {width:min(290px,calc(100vw - 64px));padding:5px;border:1px solid var(--line);border-radius:10px;background:var(--raised);color:var(--text);box-shadow:0 5px 20px #0002}
 .office-chat footer .office-permission-menu button {display:flex;justify-content:flex-start;align-items:center;gap:10px;width:100%;height:auto;min-height:58px;padding:9px;border-radius:6px;text-align:left;white-space:normal;color:var(--text);cursor:pointer}
 .office-permission-menu button:hover,.office-permission-menu button[aria-selected=true] {background:var(--surface)}
 .office-permission-menu button>svg {flex-shrink:0}
@@ -111,6 +110,17 @@
 .office-assistant .office-work-alert {color:var(--warning,currentColor)}
 .office-work-alert summary {cursor:pointer;overflow-wrap:anywhere}
 .office-work-alert pre {white-space:pre-wrap;overflow-wrap:anywhere}
+.office-work-record ol {list-style:none;padding-inline-start:8px}
+.office-event {min-width:0}
+.office-event summary {display:grid;grid-template-columns:16px minmax(0,1fr) 14px;align-items:start;gap:8px;padding:6px 4px;min-height:28px;cursor:pointer;list-style:none}
+.office-event summary::-webkit-details-marker {display:none}
+.office-event summary:focus-visible {outline:2px solid currentColor;outline-offset:-2px}
+.office-event-copy {min-width:0;color:var(--text);overflow-wrap:anywhere}
+.office-event-copy>span,.office-event-copy>strong {display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+.office-event-copy>strong {font-weight:500;color:var(--warning,currentColor)}
+.office-event[open]>summary>svg:last-child {transform:rotate(90deg)}
+.office-event-detail {margin:0 0 6px 28px;overflow-wrap:anywhere}
+.office-event-detail pre {white-space:pre-wrap;max-height:20rem;overflow:auto}
 .architecture-check {display:flex!important;flex-direction:row!important;align-items:center;gap:8px}.architecture-check input {width:auto!important}
 .office-queue {min-width:0;margin-bottom:14px}
 .office-chat .office-queue header {display:flex;justify-content:flex-end;align-items:center;gap:6px;padding:0 0 4px;min-height:24px;color:var(--muted);font-size:12px}
@@ -124,7 +134,7 @@
 .office-queued-copy p {margin:0;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--text);font-size:var(--font-ui);line-height:1.6}
 .office-queued-status {flex-basis:100%;display:flex;justify-content:flex-end}
 .office-queued-status button {border:0;background:transparent;color:var(--muted);padding:4px;font-size:12px;gap:4px}
-.office-queue-menu {position:fixed;margin:0;width:180px;max-width:calc(100vw - 16px);padding:6px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--text);box-shadow:0 8px 24px #0004}
+.office-queue-menu {width:180px;max-width:calc(100vw - 16px);padding:6px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--text);box-shadow:0 8px 24px #0004}
 .office-queue-menu button {display:flex;justify-content:flex-start;width:100%;min-height:40px;border:0;background:transparent;gap:10px;padding:8px 10px;font-size:var(--font-ui)}
 .office-queue-menu button:hover:not(:disabled) {background:var(--hover)}
 .office-queue .queue-before {box-shadow:inset 0 2px 0 var(--text)}
@@ -134,7 +144,7 @@
 @media(hover:none){.office-queue-grip{opacity:1}}
 
 .skill-input {position:relative;min-width:0}
-.skill-command-menu {position:absolute;z-index:20;bottom:calc(100% + 8px);left:0;right:0;background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 28px #0004;overflow:hidden;animation:var(--tween-popup)}
+.skill-command-menu {background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 28px #0004;overflow:hidden;animation:var(--tween-popup)}
 .skill-command-menu header,.skill-command-menu > footer {display:flex;justify-content:space-between;gap:8px;padding:9px 12px;font-size:var(--font-ui);color:var(--muted);border:0}
 .skill-command-menu [role=listbox] {max-height:min(260px,35dvh);overflow:auto;overscroll-behavior:contain;padding:4px}
 .skill-command-menu [role=option] {display:flex;justify-content:flex-start;gap:10px;min-height:48px;width:100%;padding:7px 10px;border:0;background:transparent;text-align:left;color:var(--text)}
@@ -149,13 +159,13 @@
 .office-chat footer .office-action:hover:not(:disabled) {filter:brightness(.9)}
 
 .office-error-actions {display:flex;justify-content:flex-end;gap:6px;flex-basis:100%}.office-error-actions button {border:0;background:transparent;color:var(--muted);font-size:12px;padding:5px 8px}.office-error-actions button:hover:not(:disabled) {background:var(--hover);color:var(--text)}
-.turn-rail {position:absolute;left:3px;top:50%;transform:translateY(-50%);max-height:80%;overflow:auto;scrollbar-width:none;z-index:1;width:28px}
+.turn-rail {position:absolute;left:3px;top:50%;transform:translateY(-50%);max-height:80%;overflow:auto;scrollbar-width:thin;z-index:1;width:28px}
 .turn-rail button {display:flex;justify-content:flex-start;align-items:center;width:100%;height:24px;min-height:24px;padding:0 3px;border:0;border-radius:0;background:transparent;color:var(--muted)}
 .business-page>header h2{font-size:16px}
 .business-page .org-detail-title h3{font-size:20px;font-weight:600}
 .turn-rail button[aria-current=location] {color:var(--text)}
 .turn-rail i {display:block;width:22px;height:2px;background:currentColor;transform-origin:left}
-.turn-preview {position:absolute;z-index:2;left:36px;width:min(360px,calc(100% - 48px));padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--raised);box-shadow:0 4px 16px #0003;pointer-events:none;overflow-wrap:anywhere}
+.turn-preview {width:min(360px,calc(100% - 48px));padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--raised);box-shadow:0 4px 16px #0003;pointer-events:none;overflow-wrap:anywhere}
 .turn-preview strong,.turn-preview span {display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden;-webkit-line-clamp:1;font-size:12px;line-height:1.6}
 .turn-preview span {-webkit-line-clamp:3;color:var(--muted)}
 .office-dock form footer:has(> .composer-connectors) {flex-wrap:nowrap}
@@ -165,20 +175,25 @@
 .connector-slot b {display:grid;place-items:center;box-sizing:border-box;width:18px;height:18px;border:1px solid var(--surface);border-radius:50%;color:white;font:600 9px/1 sans-serif;letter-spacing:-.3px}
 .office-dock .composer-connectors + .composer-controls {flex:0 1 auto}
 
-.engine-options {position:fixed;inset:auto;margin:0;bottom:calc(anchor(top) + 5px);left:anchor(left);position-try-fallbacks:flip-block,flip-inline;max-height:min(65vh,22rem);overflow:hidden;padding:5px;border:1px solid var(--line);border-radius:8px;background:var(--raised);color:var(--text)}
+.engine-options {--popover-height:min(65vh,22rem);overflow:hidden;padding:5px;border:1px solid var(--line);border-radius:8px;background:var(--raised);color:var(--text)}
 .engine-options:popover-open {display:flex;flex-direction:column}.engine-options .picker-list {min-height:0;overflow-y:auto;overscroll-behavior:contain}.office-pickers .engine-options button {display:flex;align-items:center;justify-content:flex-start;width:100%;gap:6px;padding:4px 8px;background:transparent;color:inherit;border:0}.office-pickers .engine-options button:hover {background:var(--hover)}
-.office-pickers {anchor-scope:--engine-picker-trigger}.office-pickers > :is(.composer-engine,.engine-trigger) {anchor-name:--engine-picker-trigger}.office-pickers .engine-options {position-anchor:--engine-picker-trigger}
-.office-pickers {anchor-scope:--engine-picker-trigger,--model-picker-trigger}.office-pickers > .composer-model {anchor-name:--model-picker-trigger;flex-shrink:1;height:auto}.office-pickers .model-options {position-anchor:--model-picker-trigger;left:auto;right:anchor(right);max-width:calc(100vw - 16px)}.office-pickers .engine-options > .picker-settings {flex:none;margin-top:3px;border-top:1px solid var(--line);border-radius:0;text-align:left}
+.office-pickers > .composer-model {flex-shrink:1;height:auto}.office-pickers .engine-options > .picker-settings {flex:none;margin-top:3px;border-top:1px solid var(--line);border-radius:0;text-align:left}
 
 /* 对话中的文字按内容角色取色、缩放，工作记录不继承 Markdown 的标题与列表样式。 */
 .office-chat { font-family: "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", system-ui, sans-serif; color: var(--text); }
 .office-transcript article, .office-queued-copy p, .office-dock textarea { font-size: var(--font-ui); line-height: 1.72; }
 .office-prose { min-width: 0; color: var(--text); }
+.office-prose + .office-work-record {margin-top:1.1em}
+.office-reply-detail {margin-block:.7em;padding-inline-start:.8em;border-inline-start:2px solid var(--line)}
+.office-reply-detail>summary {cursor:pointer;font-weight:600;overflow-wrap:anywhere}
+.office-reply-detail>summary:focus-visible {outline:2px solid var(--focus)}
 .office-prose :is(h1,h2,h3,h4,h5,h6) { margin: 1.1em 0 .4em; color: var(--accent); font-family: inherit; font-weight: 600; line-height: 1.42; }
-.office-prose h1 { font-size: 1.28em; }
-.office-prose h2 { font-size: 1.18em; }
-.office-prose h3 { font-size: 1.08em; }
-.office-prose :is(h4,h5,h6) { font-size: 1em; }
+.office-message-row :is(.office-user,.office-prose),
+.office-message-row .office-prose :where(*) { font-size:calc(var(--font-ui,14px) + 1px); }
+.office-message-row .office-prose {color:var(--accent);font-weight:500;line-height:1.65}
+.office-message-row .office-work-record {font-size:max(12px,calc(var(--font-ui,14px) - 1px))}
+.office-work-record>button {width:100%;min-height:32px;gap:6px;font-weight:500;color:var(--muted);justify-content:flex-start}
+.office-work-record>button>svg:last-child {margin-inline-start:auto}
 .office-prose p, .office-prose :is(ul,ol,pre,table,blockquote) { margin-block: .6em; }
 .office-prose :is(ul,ol) { padding-inline-start: 1.55em; }
 .office-prose li + li { margin-block-start: .2em; }
@@ -187,10 +202,22 @@
 .office-prose strong { font-weight: 600; color: var(--accent); }
 .office-prose a { color: var(--focus); text-underline-offset: .18em; }
 .office-prose blockquote { margin-inline: 0; padding-inline-start: .85em; border-inline-start: 2px solid var(--control-line); color: var(--muted); }
-.office-prose code, .office-prose pre { font-family: Consolas, "SFMono-Regular", "Microsoft YaHei UI", monospace; font-size: var(--font-code); }
+.office-prose code, .office-prose pre { font-family: Consolas, "SFMono-Regular", "Microsoft YaHei UI", monospace; }
 .office-prose :not(pre) > code { padding: .06em .3em; background: var(--raised); border-radius: 4px; color: inherit; overflow-wrap: anywhere; }
-.office-prose pre { max-width: 100%; box-sizing: border-box; line-height: 1.55; }
+.office-prose :is(.office-table-scroll,pre) { min-width:0; max-width:100%; box-sizing:border-box; overflow-x:auto; overscroll-behavior-x:contain; }
+.office-prose .office-table-scroll { margin-block:.6em; }
+.office-prose .office-table-scroll table { margin:0; }
+.office-prose pre { white-space:pre; line-height:1.55; }
 .office-prose pre code { font: inherit; }
 .office-prose > :first-child { margin-top: 0; }
 .office-prose > :last-child { margin-bottom: 0; }
+.office-strip [role=status].active {min-width:0;flex:1;white-space:nowrap}.office-strip [role=status] svg {flex:none}
 .office-strip [role=status]:not(.active) { color: var(--muted); }
+
+.office-team-event {margin-block:8px;border:1px solid var(--line);border-inline-start:3px solid var(--accent);border-radius:6px;padding:4px 8px}
+.office-team-route {display:block;color:var(--accent);font-weight:600;overflow-wrap:anywhere}
+.office-team-route svg {vertical-align:text-bottom;margin-inline-end:5px}
+.office-team-event small {display:block;color:var(--muted);font-size:inherit}
+.office-plan-body {white-space:pre-wrap;line-height:1.65;overflow-wrap:anywhere}
+
+.office-plan-line svg,.office-team-event small svg {vertical-align:text-bottom;margin-inline-end:5px;color:var(--muted)}

@@ -38,7 +38,7 @@ export class Project
     return Object.values(this._tree.nodes).filter(node => node.id !== this.id && !node.virtual).map(({ id, name }) => ({ id, name }));
   }
 
-  /** 当前业务树的层级与职责索引，供主 Agent 在每轮任务定位时读取。 */
+  /** 当前业务树的层级与职责索引，供助理在每轮任务定位时读取。 */
   public DescribeWorkspaces()
   {
     return {

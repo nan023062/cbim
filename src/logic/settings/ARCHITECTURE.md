@@ -32,7 +32,7 @@ click N_c43f61696823 href "models/ARCHITECTURE.md"
 
 | 虚拟封装 | 整体职责 |
 | --- | --- |
-| [models](models/ARCHITECTURE.md) | 为新桌面的供应商配置表单与主 Agent 模型选择提供统一的配置校验和连接选择规则。 |
+| [models](models/ARCHITECTURE.md) | 为新桌面的供应商配置表单与助理模型选择提供统一的配置校验和连接选择规则。 |
 
 [上层设计](../ARCHITECTURE.md)
 

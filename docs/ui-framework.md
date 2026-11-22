@@ -2,6 +2,10 @@
 
 给编写桌面页面的开发者：控件位于 `src/framework-ui/`，由 index.ts 统一导出。下面的相对导入以 `src/view/desktop/` 下的页面为例。控件处理焦点、键盘和显示；当前选项、未读状态、提交和错误处理由页面持有。
 
+## 滑动窗
+
+使用 `<ScrollWindow>…</ScrollWindow>` 创建可滚动容器；嵌套列表、宽表格和代码块共享该窗的滚动条可见期。组件接受标准 div 属性，`onIdle` 可用于收起“跳到底部”等页面操作。渲染入口统一安装 `mountScrollWindows(document)`，普通布局使用 ScrollWindow；需要保留 nav、ul、dialog 或原生 ref 的区域，在原元素上展开 `{...ScrollWindow.native}`。聊天虚拟列表、Markdown 表格及代码块继承对话滑动窗，以便横纵滚动共用计时。系统下拉选择器和外部网页内部滚动由各自宿主管理。[桌面交互规范](../design/desktop-ux-spec.md#滑动窗与滚动条)
+
 ## 快速接入：一行可打开、可预览的对话
 
 ```tsx
@@ -111,7 +115,7 @@ return <Tabs label="工作区视图" value={tab} onChange={setTab} items={[
 
 | API | Props、事件与使用时机 |
 | --- | --- |
-| [`WindowList`](../src/framework-ui/widgets/ViewList.tsx) | 长列表必传 `count`、`itemKey(index)`、`render(index)`、`label`。键使用稳定记录 ID。`initialEnd` 初始定位末尾并支持跟随；`scrollbarVisible` 控制滑块显隐；`onStart()` 到达开头时可加载更早记录。`firstIndex` 默认 0；条目回调取得相对索引。 |
+| [`WindowList`](../src/framework-ui/widgets/ViewList.tsx) | 长列表必传 `count`、`itemKey(index)`、`render(index)`、`label`。键使用稳定记录 ID。`initialEnd` 初始定位末尾并支持跟随；滑块由框架滑动窗统一管理；`onStart()` 到达开头时可加载更早记录。`firstIndex` 默认 0；条目回调取得相对索引。 |
 | `ListHandle` | `listRef` 接收句柄；`ref.current?.scrollToEnd()` 归底，`scrollToRow(index)` 跳到指定行。后者把索引直接传给虚拟列表，使用非零 `firstIndex` 时注意索引口径。 |
 | [`Screen`、`useScreenEffect`](../src/framework-ui/containers/Panel.tsx) | `Screen` 支持原生 section 属性和 `active`（默认 `true`）。隐藏不会卸载子树；`useScreenEffect(effect, deps)` 用于只在页面可见时订阅的事件，隐藏或卸载时执行 effect 返回的清理函数。 |
 | [`ThreePaneLayout`](../src/framework-ui/containers/layout/ThreePaneLayout.tsx) | 传 `children`、`className`、`leftOpen`、`leftKey`、`rightKey`，可选 `hidden`。两个 key 分别保存左右宽度；业务布局消费 `--sidebar-width` 和 `--right-pane-width`，并负责展开或隐藏面板。 |
@@ -126,3 +130,33 @@ return <Tabs label="工作区视图" value={tab} onChange={setTab} items={[
 有编辑表单的窗口使用 ModalWindow，由父页面控制挂载，onCancel 处理 Esc。Popover 与触发按钮通过 id / popoverTarget 配对。普通标题、段落和语义布局仍使用 HTML。
 
 工具栏的图标操作使用 IconButton，例如 <IconButton aria-label="刷新" disabled={busy} title={busy ? "正在刷新" : "刷新"} onClick={refresh}><Icon name="refresh" /></IconButton>。操作名保持稳定；title 可说明禁用原因。鼠标悬停或键盘聚焦显示提示，Esc 收起。禁用时保留原生 disabled，不派发操作。
+
+### 下拉选择、操作菜单与自动提示
+
+从框架入口导入控件。表单字段使用 `Select` 和 `Option`，保持受控值、键盘选择、禁用态和表单提交语义。多选和列表模式继续使用可见列表。
+
+```tsx
+<FieldLabel>显示任务
+  <Select value={filter} onChange={event => setFilter(event.target.value)}>
+    <Option value="all">全部任务</Option>
+    <Option value="running">运行中</Option>
+  </Select>
+</FieldLabel>
+```
+
+带操作、图标或自定义内容的菜单使用 `Popover`。每个实例用 `useId()` 生成唯一 ID；打开按钮使用 `popoverTarget`，菜单内需要关闭的操作使用同一目标和 `popoverTargetAction="hide"`。
+
+```tsx
+const menuId = useId();
+return <>
+  <Button popoverTarget={menuId}>更多操作</Button>
+  <Popover id={menuId} aria-label="更多操作">
+    <Button popoverTarget={menuId} popoverTargetAction="hide" onClick={onRename}>重命名</Button>
+  </Popover>
+</>;
+```
+
+受控补全在展开时挂载 Popover，传入输入框的 `anchorRef`，需要与输入框等宽时加 `matchWidth`。右键菜单传入 `point={{x: event.clientX, y: event.clientY}}` 和触发元素引用。简短说明用 Tooltip，富内容悬停预览用受控 Popover。
+
+框架按**右下 → 左下 → 左上 → 右上**尝试布局。右下表示浮层左边与锚点左边对齐并向下展开，左下表示右边对齐。四个方向都放不下时使用窗口可见区域，超长内容在浮层内滚动。页面只负责内容、选择和关闭行为。
+

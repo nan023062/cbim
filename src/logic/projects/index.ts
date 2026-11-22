@@ -36,7 +36,9 @@ export class Catalog
 
     if (!cache)
     {
-      cache = new ProjectCache(this.paths.Project(id), path.join(this.paths.userRoot, 'worktrees'));
+      const root = this.paths.userRoot;
+      const temporary = path.basename(root).toLowerCase() === '.cbim' ? path.join(path.dirname(root), '.cbim_temp') : path.join(root, '.cbim_temp');
+      cache = new ProjectCache(this.paths.Project(id), path.join(temporary, id), path.join(root, 'worktrees'));
 
       this.caches.set(id, cache);
     }

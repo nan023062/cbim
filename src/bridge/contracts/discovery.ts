@@ -234,6 +234,23 @@ export interface BusinessArchitecture
 
 export interface OfficeActivity
 {
+  /** 本次沟通的另一方和业务工作区，随历史消息保存。 */
+  recipient?: string;
+
+  /** 成员交接时单列的过程问题。 */
+  issues?: string[];
+
+  workspace?: string;
+
+  /** 仅对已中止的工具记录触发来源。 */
+  cancelSource?: string;
+
+  toolState?: 'running' | 'returned' | 'stopped';
+
+  actor?: string;
+
+  summary?: string;
+
   id: string;
 
   label: string;
@@ -247,6 +264,7 @@ export interface OfficeActivity
 
 export interface OfficeProgress
 {
+  runningAction?: { actor: string; action: string; since: number };
   workLog?: OfficeActivity[];
 
   text?: string;
@@ -373,3 +391,5 @@ declare global
     desktopMenu: DesktopMenu
   }
 }
+
+export { failureText, failureSummary, isAbortedReceipt } from '../../core/utility';

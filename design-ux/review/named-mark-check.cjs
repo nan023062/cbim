@@ -15,7 +15,7 @@ async function verify() {
       window.desktopMenu={EngineCatalog:async()=>['甲','乙'].map((label,i)=>({id:i?'second':'codex',label,logo:'data:image/png;base64,AAAA',businessTypes:[],supportedApis:[]})),Engines:async()=>({managed:true,items:[]}),Transfers:async()=>[],WatchTransfers:()=>()=>{}};
       window.pilot=()=>root.render(<EnginePackagesView/>);
       const noop=()=>{};
-      function Picker(){const [value,change]=useState({engine:'codex'});return <MainAgentPicker value={value} change={change} disabled={false} fail={noop} onReady={noop} onManageModels={noop}/>;}
+      function Picker(){const [value,change]=useState({engine:'codex'});return <MainAgentPicker compact={Boolean(window.compact)} value={value} change={change} disabled={false} fail={noop} onReady={noop} onManageModels={noop}/>;}
       window.office=()=>{window.desktopMenu.Model=async()=>({profiles:[]});window.desktopMenu.Engines=async()=>({items:[{kind:'codex',label:'甲',enabled:true,active:{}},{kind:'second',label:'乙',enabled:true,active:{}}]});root.render(<Picker/>);};
       window.draw=()=>root.render(<Tooltip text="不可用"><ListItem disabled onClick={()=>window.calls.push('unexpected')}>停用</ListItem></Tooltip>);
     `
@@ -42,6 +42,17 @@ async function verify() {
     await choice.press('Enter');
     await p.waitForFunction(()=>document.querySelector('.engine-trigger')?.textContent==='乙');
     assert.equal(await choice.isVisible(),false);
+    await p.addStyleTag({path:'src/view/office/office.css'});
+    await p.addStyleTag({content:'main {position:fixed;right:10px;bottom:10px}'});
+    await p.evaluate(()=>{window.compact=true;window.office()});
+    for(const width of [390,1320]){
+      await p.setViewportSize({width,height:640});
+      await trigger.click();
+      const a=await trigger.boundingBox(), m=await p.locator('.engine-options:popover-open').boundingBox();
+      assert.ok(m && m.y>0 && Math.abs(m.y+m.height-a.y)<10 && m.x<a.x+a.width && m.x+m.width>a.x && m.x+m.width<=width,JSON.stringify({a,m,width}));
+      await p.keyboard.press('Escape');
+      await p.locator('.engine-options:popover-open').waitFor({state:'hidden'});
+    }
     await p.evaluate(()=>window.draw()); const disabled=p.getByRole('button',{name:'停用'});assert.ok(await disabled.isDisabled());await p.mouse.move(500,400);await disabled.locator('..').hover();await p.getByRole('tooltip',{name:'不可用'}).waitFor();await disabled.evaluate(el=>el.click());assert.deepEqual(await p.evaluate(()=>window.calls),[]);
     console.log('Engine selection, tooltip, disabled row and Office picker PASS');
   } finally {await browser.close()}

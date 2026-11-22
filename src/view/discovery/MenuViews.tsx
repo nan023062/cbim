@@ -2,7 +2,7 @@
  * 作用定位：发现页负责展示和筛选资源，运行管理页读取当前应用的监控快照。
  * 设计原因：React 页面只筛选和展示发现结果，资源安装与连接器生命周期由宿主入口处理。
  */
-import { IconButton, Button, Checkbox, ConfirmWindow, Disclosure, DisclosureSummary, FieldLabel, Form, Icon, Input, Option, Select, Tabs, Tooltip, type IconName } from '../../framework-ui';
+import { ScrollWindow, IconButton, Button, Checkbox, ConfirmWindow, Disclosure, DisclosureSummary, FieldLabel, Form, Icon, Input, Option, Select, Tabs, Tooltip, type IconName } from '../../framework-ui';
 import { useEffect, useState, useRef, useLayoutEffect } from 'react';
 
 import type { ProjectItem, RegistryPublication, RegistryVersion } from '../../bridge/contracts/discovery';
@@ -132,7 +132,7 @@ function useMenuData<T>(load: () => Promise<T>) {
 const kinds = { engine: '引擎', connector: '连接器', talent: '人力', business: '业务' } as const;
 const glyphs = { engine: 'terminal', connector: 'connector', talent: 'teamAdd', business: 'folder' };
 const marketStatusIcons = {
-  '已安装': 'success', '已启用': 'play', '已停用': 'pause', '未安装': 'download',
+  '已安装': 'success', '已启用': 'play', '已禁用': 'pause', '可安装': 'download', '未安装': 'notRun',
   '已卸载': 'remove', '可更新': 'refresh', '本机状态未知': 'warning', '正在读取本机状态…': 'queued',
 } as const satisfies Record<string, IconName>;
 type MarketStatus = keyof typeof marketStatusIcons;
@@ -235,11 +235,13 @@ export function ResourceMarket({ project }: { project?: ProjectItem }) {
   function localStatus(v: RegistryVersion): MarketStatus | '' {
     if (v.kind !== 'engine' && v.kind !== 'connector') return '';
     const engine = v.kind === 'engine' && engines.data?.managed ? engines.data.items.find(x => x.kind === v.id) : undefined;
-    if (engine?.active) return engine.enabled ? '已启用' : '已停用';
+    if (engine?.active) return engine.enabled ? '已启用' : '已禁用';
     if (inventory.error) return '本机状态未知';
     if (!inventory.data) return '正在读取本机状态…';
-    if (inventory.data.some(x => x.kind === v.kind && x.id === v.id && x.installed.length)) return '已安装';
-    return removed(v) ? '已卸载' : '未安装';
+    const local = inventory.data.find(x => x.kind === v.kind && x.id === v.id);
+    if (local?.installed.length) return '已安装';
+    if (removed(v)) return '已卸载';
+    return local?.candidate && local.candidate === v.sha256 ? '可安装' : '未安装';
   }
   const engine = row?.kind === 'engine' ? engines.data?.items.find(x => x.kind === row.id) : undefined;
   function removed(v: RegistryVersion) {
@@ -312,7 +314,7 @@ export function ResourceMarket({ project }: { project?: ProjectItem }) {
                 {kinds[v.kind]} · {price(v)} · 最新 v{v.version} · 安装量暂无统计
               </small>
               {statuses.length > 0 && <span className="market-statuses">
-                {statuses.map(label => <Tooltip key={label} text={label}><span className="market-status" data-status={marketStatusIcons[label]} aria-label={label} role="img"><Icon name={marketStatusIcons[label]} size={16} /></span></Tooltip>)}
+                {statuses.map(label => <Tooltip key={label} text={label}><span className="market-status" data-status={marketStatusIcons[label]} aria-label={label} role="img"><Icon name={marketStatusIcons[label]} size={18} /></span></Tooltip>)}
               </span>}
             </Button>
           );
@@ -321,7 +323,7 @@ export function ResourceMarket({ project }: { project?: ProjectItem }) {
     </>
   );
   return (
-    <section ref={container} className="view-page menu-page resource-market">
+    <section {...ScrollWindow.native} ref={container} className="view-page menu-page resource-market">
       <section hidden={Boolean(key)}>
         <header className="view-heading">
           <h2>资源商城</h2>

@@ -10,6 +10,23 @@ import { atomic, readJson } from '../core/io/text-files';
 
 export interface OfficeActivity
 {
+  /** 本次沟通的另一方和业务工作区，随历史消息保存。 */
+  recipient?: string;
+
+  /** 成员交接时单列的过程问题。 */
+  issues?: string[];
+
+  workspace?: string;
+
+  /** 仅对已中止的工具记录触发来源。 */
+  cancelSource?: string;
+
+  toolState?: 'running' | 'returned' | 'stopped';
+
+  actor?: string;
+
+  summary?: string;
+
   id: string;
 
   label: string;
@@ -88,7 +105,16 @@ export class OfficeHistory
     const turns = await Promise.all(files.map(file => readJson<Message | Message[]>(path.join(dir, file))));
 
     // 早期版本可能只写入助手消息的身份。跳过空记录，保留同轮有效的用户输入。
-    return turns.flat().filter(message => typeof message?.text === 'string' && message.text.trim()).map(message => ({ ...message, role: message.role ?? 'user' as const }));
+    const legacyName = /^主\s*agent$/i;
+    return turns.flat().filter(message => typeof message?.text === 'string' && message.text.trim()).map(message => ({
+      ...message, role: message.role ?? 'user' as const,
+      ...(message.workLog && { workLog: message.workLog.map(step => ({
+        ...step,
+        ...(step.actor && (legacyName.test(step.actor) || (step.actor === '助手' || step.actor === '协调者') && (step.id.startsWith('plan:') || step.id.startsWith('tool:' + id + '/'))) && { actor: '助理' }),
+        ...(step.recipient && (legacyName.test(step.recipient) || (step.recipient === '助手' || step.recipient === '协调者') && step.id.startsWith('receipt:') && message.workLog?.some(call => call.id.startsWith('tool:' + id + '/') && call.label === 'cbim_office_dispatch' && call.result?.includes(step.id.slice(8)))) && { recipient: '助理' }),
+        ...((step.label === '启动主 Agent 执行' || step.label === '启动助手执行') && { label: '开始处理任务' }),
+      })) }),
+    }));
   }
 
   /** Cache totals for the immutable prefix independently of the visible transcript. */
@@ -145,7 +171,7 @@ export class OfficeHistory
     return totals;
   }
 
-  public async AppendTurn(id: string, input: string, reply: string, metrics: Usage, workLog?: OfficeActivity[])
+  public async AppendTurn(id: string, input: string, reply: string, metrics: Usage | undefined, workLog?: OfficeActivity[])
   {
     if (!input?.trim() || !reply?.trim())
       throw Error('无法保存缺少正文的对话');

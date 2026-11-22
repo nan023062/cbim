@@ -22,13 +22,14 @@ export function issueTaskPermission(identity: { projectId: string; officeId: str
 
   const signal = AbortSignal.any([parent, lifetime.signal]);
 
-  const resources = Object.freeze(main ? ['organization', 'business', 'member', 'references', 'settings', 'timers'] : []);
+  const resources = Object.freeze(['organization', 'business', 'member', 'references', 'settings', 'timers']);
 
   const dirs = Object.freeze([root]);
 
   const snapshot = Object.freeze({
     ...identity, level, readDirectories: dirs, writeDirectories: level === 'read' ? Object.freeze([]) : dirs,
-    excludedDirectories: Object.freeze(['.cbim']), readResources: resources, writeResources: level === 'read' ? Object.freeze([]) : resources, commands: 'denied' as const
+    excludedDirectories: Object.freeze(['.cbim']), readResources: resources, writeResources: !main || level === 'read' ? Object.freeze([]) : resources,
+    commands: level === 'read' ? 'denied' as const : 'host' as const
   });
 
   function Current(): AgentPermission

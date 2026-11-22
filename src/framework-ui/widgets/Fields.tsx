@@ -1,3 +1,4 @@
+import { ScrollWindow } from '../containers/ScrollWindow';
 import type { ComponentPropsWithRef } from 'react';
 
 export function Input(props: ComponentPropsWithRef<'input'>) {
@@ -5,11 +6,11 @@ export function Input(props: ComponentPropsWithRef<'input'>) {
 }
 
 export function TextArea(props: ComponentPropsWithRef<'textarea'>) {
-  return <textarea {...props} />;
+  return <textarea {...ScrollWindow.native} {...props} />;
 }
 
 export function Select(props: ComponentPropsWithRef<'select'>) {
-  return <select {...props} />;
+  return <select data-ui-select={props.multiple || (props.size ?? 0) > 1 ? undefined : ''} {...ScrollWindow.native} {...props} />;
 }
 
 export function Option(props: ComponentPropsWithRef<'option'>) {

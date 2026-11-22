@@ -2,7 +2,7 @@
  * 作用定位：对照查看 CBIM 运行资源与宿主的真实操作系统进程。
  * 设计原因：只读订阅业务与进程指标并在卸载时清理监听，不把监控列表变成进程控制入口。
  */
-import { Disclosure, DisclosureSummary, Icon, Progress } from '../../framework-ui';
+import { ScrollWindow, Disclosure, DisclosureSummary, Icon, Progress } from '../../framework-ui';
 import { memo, useEffect, useState } from 'react';
 
 import type { ProcessGroup, ProcessRow } from '../../bridge/contracts/discovery';
@@ -31,7 +31,7 @@ export function ResourceMonitor()
 
   return <main className="process-monitor">
     <header><Icon name="flow" size={16} />资源监视器</header>
-    <div className="process-list">
+    <ScrollWindow className="process-list">
       {runtime && <>
         <div className="load-summary"><div><strong>虚拟总负载</strong><b>{runtime.load.total} / {runtime.load.threshold}</b></div>
           <Progress aria-label="虚拟总负载" max={runtime.load.threshold} value={runtime.load.total} />
@@ -48,6 +48,6 @@ export function ResourceMonitor()
         {processes.map(row => <div key={row.id} className="process-columns"><span className="process-name"><Icon name="desktop" size={15} /><span>{row.name}<small>{row.detail}</small></span></span>
           <span>{row.cpu?.toFixed(1)}%</span><span>{Math.round((row.memoryKiB ?? 0) / 1024)} MB</span><span>{row.pid}</span></div>)}
       </section>
-    </div>
+    </ScrollWindow>
   </main>;
 }

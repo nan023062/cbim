@@ -8,7 +8,7 @@
 
 | 页面或控件 | 触发方式与动效 | 源码入口 |
 | --- | --- | --- |
-| Office 聊天记录 | 滚轮滚动时通过 `scrollbarVisible` 显示滚动条；向下滚动且未到底时，通过 `data-ui-fade` 显示「跳到底部」。两者双向过渡均为 200ms，停止滚动 3 秒后隐藏；到达底部时按钮立即开始淡出。 | [OfficeView](../src/view/office/OfficeView.tsx) · [WindowList](../src/framework-ui/widgets/ViewList.tsx) |
+| 滑动窗 | 横纵滚动条共享 3 秒空闲期；按住时持续显示。Office 的跳到底部按钮随同一窗口收起。 | [滑动窗规范](../design/desktop-ux-spec.md#滑动窗与滚动条) · [框架控件](../src/framework-ui/containers/ScrollWindow.tsx) |
 | Office 技能菜单 | 在输入框用 `/` 呼出可用技能清单，菜单使用 `popup` 入场，120ms。 | [SkillInput](../src/view/office/SkillInput.tsx) · [样式](../src/view/office/office.css) |
 | 项目与对话列表 | 行背景色变化使用 `highlight`；悬停项目行或用键盘聚焦拖动手柄时，手柄使用 `opacity`。均为 120ms。 | [ProjectSidebar](../src/view/desktop/ProjectSidebar.tsx) · [样式](../src/view/desktop/desktop.css) |
 | 对话签运行状态 | 运行时左侧图标使用 `pulse`（单程 1200ms），右侧圆环使用 `rotate`（每圈 1000ms）；有未读结果时改为静态绿点。 | [ProjectSidebar](../src/view/desktop/ProjectSidebar.tsx) · [样式](../src/view/desktop/desktop.css) |
@@ -23,7 +23,7 @@
 | 属性 | 触发方式 | 默认时长与参数 |
 | --- | --- | --- |
 | `data-ui-fade` | 元素保持挂载，将值从 `false` 改为 `true` 淡入，反向淡出。隐藏时阻止指针点击。 | 每个方向 200ms，`ease-in-out`；由 `--ui-motion-fade` 控制 |
-| `data-ui-scrollbar-fade` | 在实际滚动容器上切换布尔值，滑块在透明色与 `--muted` 之间过渡；使用 `WindowList` 时传 `scrollbarVisible`。 | 同上；只改变滑块颜色，内容始终可见 |
+| 滑动窗活动态 | 由框架根据用户操作设置，持续时间见桌面 UX 规范。 | [ScrollWindow](../src/framework-ui/containers/ScrollWindow.tsx) |
 
 ```tsx
 <button data-ui-fade={showJump} disabled={!showJump} onClick={jumpToBottom}>

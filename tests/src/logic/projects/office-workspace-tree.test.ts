@@ -1,4 +1,4 @@
-﻿import { test, expect } from 'vitest';
+import { test, expect } from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
@@ -24,7 +24,7 @@ test('岗位模型必须明确配置，完整配置可派发，未配置不暗�
   }
 });
 
-test('界面提交的三种权限通过主 Agent 工厂传入 OfficeChat，读取器跟随 Office 变更', async () => {
+test('界面提交的三种权限通过助理工厂传入 OfficeChat，读取器跟随 Office 变更', async () => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'office-permission-'));
   const projects = new ProjectList(new Paths(root));
   const readers: Array<Parameters<OfficeChat>[4]['ReadPermission']> = [];
@@ -68,7 +68,7 @@ test('每轮读取所属项目当前的树，并仅将用户原文写入历史',
     const send = () => offices.Send(entry.id, id, '检查镜头', undefined, 'read', { engine: 'pi', profileId: 'local', modelId: 'fixture' });
     expect(await projects.Business(entry.id)).toEqual({roots:[],nodes:[]});
     await send();
-    expect(JSON.parse(captured[0]).workspaceTree).toEqual({ roots: [], nodes: [] });
+    expect(JSON.parse(captured[0]).workspaceTree).toEqual({ roots: [], nodes: [], selectable: [] });
     const project = await projects.Open(entry.id);
     project.runtime.project!.UpdateTree({ roots: ['film'], nodes: {
       film: { id: 'film', kind: 'workspace', name: '影片', summary: '制作', children: ['shot'], sources: [] },

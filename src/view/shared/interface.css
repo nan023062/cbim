@@ -188,7 +188,6 @@ h4,h5,h6{font-size:var(--font-ui)}
 .business-tree-actions [aria-expanded=true] svg {transform:rotate(90deg)}
 .resource-market .view-heading h2 {margin-inline-end:auto}
 .resource-market .view-heading {justify-content:flex-start;gap:8px;flex-direction:row;align-items:center}
-.resource-market .market-status[data-status=refresh] svg {color:var(--focus)}
 @media(pointer:coarse){:root {--ui-action-size:44px;--ui-compact-size:44px;--ui-field-height:44px}}
 @media(prefers-reduced-motion:reduce){.business-tree-actions .ui-icon-button svg {transition:none}}
 

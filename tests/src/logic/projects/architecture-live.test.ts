@@ -20,6 +20,37 @@ test('差异包含新旧父节点、祖先、删除墓碑和根层变化', () =>
   expect(removed.nodes.map((node:any)=>node.id).sort()).toEqual(['b','c','d']);
 });
 
+test('运行摘要显示具体命令，更新保持计时，结束后回到等待模型',async()=>{
+  const root = await fs.mkdtemp(path.join(os.tmpdir(),'office-live-action-'));
+  const projects = new ProjectList(new Paths(root));
+  const states: string[] = [];
+  const seen: {actor:string;action:string;since:number}[] = [];
+  const chat: OfficeChat = async (_role,_messages,_signal,emit) => {
+    const activity = {id:'tool:git',label:'bash'};
+    emit({phase:'thinking',model:'m',activity:{...activity,input:JSON.stringify({command:'cd project && git status'})}});
+    emit({phase:'thinking',model:'m',activity,toolFinished:false});
+    emit({phase:'thinking',model:'m',activity,toolFinished:true});
+    return {text:'完成',metrics:{elapsed:1,model:'m',capacity:1000}};
+  };
+  try {
+    const repo = path.join(root,'repo');
+    await fs.mkdir(repo);
+    const entry = await projects.Add(repo);
+    const offices = new ProjectOffices(projects,chat);
+    const session = await offices.Open(entry.id,'create');
+    await offices.Send(entry.id,session.id,'检查仓库',sample=>{
+      if (sample.activity?.toolState) states.push(sample.activity.toolState);
+      if(sample.runningAction) seen.push({...sample.runningAction});
+    },'execute',{engine:'pi',profileId:'p',modelId:'m'});
+    expect(states).toEqual(['running','returned']);
+    const commands = seen.filter(item=>item.action==='执行 git status');
+    expect(commands).toHaveLength(2);
+    expect(commands[0]).toEqual(commands[1]);
+    expect(commands[0].actor).toBe('助理');
+    expect(seen.at(-1)?.action).toBe('等待模型响应');
+  } finally { await projects.Close(); await fs.rm(root,{recursive:true,force:true}); }
+});
+
 test('追加输入保序，原生交付未知不重发，终态领取与关闭无竞态',async()=>{
   const states:string[]=[];const inputs=new OfficeInputs((_id,_text,state)=>states.push(state));
   inputs.Push('one');inputs.Push('two');

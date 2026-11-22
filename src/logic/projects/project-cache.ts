@@ -16,11 +16,11 @@ export class ProjectCache
 
   readonly worktrees: GitWorktrees;
 
-  constructor(private readonly root: string, legacyWorktrees: string)
+  constructor(private readonly root: string, private readonly temporary: string, legacyWorktrees: string)
   {
     this.history = new OfficeHistory(path.join(root, 'office-conversations'));
 
-    this.worktrees = new GitWorktrees(path.join(root, 'worktrees'), legacyWorktrees);
+    this.worktrees = new GitWorktrees(path.join(temporary, 'worktrees'), path.join(root, 'worktrees'), legacyWorktrees);
   }
 
   Session(id: string)
@@ -65,6 +65,6 @@ export class ProjectCache
 
   get engines()
   {
-    return path.join(this.root, 'office-engines');
+    return path.join(this.temporary, 'office-engines');
   }
 }

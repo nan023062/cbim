@@ -20,6 +20,11 @@ import './shared/interface.css';
 
 import { ResourceMonitor } from './monitor/ResourceMonitor';
 
+import { mountScrollWindows } from '../framework-ui';
+
+const unmountScrollWindows = mountScrollWindows(document);
+window.addEventListener('pagehide', unmountScrollWindows, { once: true });
+
 const root = createRoot(document.getElementById('root')!);
 
 const theme = localStorage.getItem('cbim.desktop.theme');

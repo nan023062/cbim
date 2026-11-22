@@ -125,7 +125,7 @@ export class AgentSettings
   public async Save(projectId: string, target: AgentSettingsTarget, revision: number, input: AgentConfiguration)
   {
     if (target.kind === 'main')
-      throw Error('主 Agent 的配置仅在当前对话窗生效');
+      throw Error('助理的配置仅在当前对话窗生效');
 
     const configuration = agentConfigurationSchema.parse(input);
 

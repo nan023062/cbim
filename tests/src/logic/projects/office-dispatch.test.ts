@@ -39,12 +39,12 @@ test('真实 Office 派发进入队列并在独立 Git 工作树交付，成员�
     await expect(operations.Dispatch(request, signal)).rejects.toThrow('循环');
     await fs.writeFile(path.join(root, 'result.txt'), 'done');
     report(1, 'summary', 10);
-    return { text: 'file created' };
+    return { text: 'file created', issues: ['Python unavailable; verified with Node'] };
   });
   try {
     f.office.permission = 'execute';
     const result: any = await f.dispatch.Operations().Dispatch(request, f.stop.signal);
-    expect(result).toMatchObject({ status: 'completed', merged: false, memberId: 'writer', summary: 'file created' });
+    expect(result).toMatchObject({ status: 'completed', merged: false, memberId: 'writer', summary: 'file created', issues: ['Python unavailable; verified with Node'] });
     expect(result.directory).not.toBe(f.repo);
     expect(await fs.readFile(path.join(result.directory, 'result.txt'), 'utf8')).toBe('done');
     expect(await fs.access(path.join(f.repo, 'result.txt')).then(() => true, () => false)).toBe(false);
@@ -61,10 +61,21 @@ test('只读、未知岗位和目录越界不能创建子任务', async () => {
     f.office.permission = 'read';
     await expect(f.dispatch.Operations().Dispatch(request, f.stop.signal)).rejects.toThrow('只读');
     f.office.permission = 'execute';
+    expect(f.dispatch.Operations().Inspect()).toMatchObject({workspaces:{selectable:[{id:'module',name:'Module'}]}});
+    await expect(f.dispatch.Operations().Dispatch({...request,workspaceId:'project'}, f.stop.signal)).rejects.toThrow('Module (module)');
     await expect(f.dispatch.Operations().Dispatch({ ...request, memberId: 'unknown' }, f.stop.signal)).rejects.toThrow('岗位');
     await expect(f.dispatch.Operations().Dispatch({ ...request, directory: '..' }, f.stop.signal)).rejects.toThrow('相对路径');
     expect(f.office.ListTasks()).toHaveLength(0);
   } finally { await f.Close(); }
+});
+
+test('空仓库派发单独提示缺少本地首次提交', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'office-empty-'));
+  try {
+    const repo = path.join(root, 'repo');
+    await execute('git', ['init', repo]);
+    await expect(new GitWorktrees(path.join(root, 'trees')).OpenWorktree('office', repo)).rejects.toThrow('当前分支缺少首次提交');
+  } finally { await fs.rm(root, { recursive:true, force:true }); }
 });
 
 test('成员失败返回错误并清理实例，不挂起等待或宣称成功', async () => {

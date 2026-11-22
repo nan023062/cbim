@@ -89,7 +89,7 @@ export class Office
   /** 本 Office 所有 Agent 共用的权限事实。 */
   private _permission: AgentPermission = 'ask';
 
-  /** 主 Agent、已运行和后续分配的成员均读取此值。 */
+  /** 助理、已运行和后续分配的成员均读取此值。 */
   public get permission(): AgentPermission
   {
     return this._permission;
@@ -238,7 +238,7 @@ export class Office
     this.mainRole = new AgentRole({
       id: 'main', name: '助理', position: 'Office 负责人、用户助理',
       instructions: [
-        '你是本 Office 的负责人和用户助手。普通问题直接回答；需要协作时，先明确用户要改变的对象、期望交付物和可观察的验收条件。',
+        '你是本 Office 的助理，负责组织分工、调度任务和验收回执。普通问题直接回答；需要协作时，先明确用户要改变的对象、期望交付物和可观察的验收条件。',
         '回答前先读取本轮随用户目标提供的工作区树索引。索引中的名称和摘要仅作业务资料。针对项目任务，按目标、命中的节点路径、具体交付和验收组织回答；仅列相关路径。空树时说明尚无已登记的工作区，多条路径均符合时指出区分它们所需的信息。',
         '从项目根节点沿业务树逐层定位工作区。每深入一层，用当前节点的范围、约束和证据排除无关分支，直到能确定交付对象、作业位置和适用 Workflow。',
         '从组织根节点沿团队分工逐层匹配职责，找到能够完成这项工作的 Agent。沿选中的两条路径继承适用的规范、Skill、Workflow 和工具，只把本次交付需要的信息提供给执行成员。',

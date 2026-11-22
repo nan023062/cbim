@@ -37,7 +37,8 @@ function activityDetail(value: unknown): string | undefined
 
   const text = typeof value === 'string' ? value : JSON.stringify(value, (key, item) => /^(authorization|api[_-]?key|access[_-]?token|password|secret)$/i.test(key) ? '•••' : item, 2);
 
-  return text?.length > 16000 ? text.slice(0, 16000) + '…' : text;
+  // 长命令输出的退出码和异常通常位于末尾；压缩时保留诊断尾部。
+  return text?.length > 16000 ? text.slice(0, 8000) + '\n…\n' + text.slice(-8000) : text;
 }
 
 export async function runOfficePlugin(packages: EnginePackages, profiles: LlmProfiles, ...[instructions, messages, signal, progress, turn, approve, connectors, developmentAdaptersRoot]: [...Parameters<OfficeChat>, OfficeApproval?, ReturnType<typeof managedConnectorPackages>?, string?])
@@ -110,9 +111,13 @@ export async function runOfficePlugin(packages: EnginePackages, profiles: LlmPro
 
     const tools = { list: () => officeTools.List(), call: async (name: string, input: Record<string, unknown>, stop: AbortSignal, id?: string) => { const result = await officeTools.Call(name, input, stop, id); const pending = turn.inputs?.Take() ?? []; return pending.length ? { toolResult: result, officeInputs: pending } : result; } };
 
-    const commandHint = '本轮任务使用受管文件工具，不提供本机终端。';
+    const commandHint = grant.snapshot.commands === 'host'
+      ? '本轮终端从分配的工作区启动，以本机账号执行 Git 等命令。逐次询问时须获得审批，完全访问时直接执行。诊断命令应保留必需步骤的退出状态。检查已跟踪文件的换行和 Git 属性时使用 git ls-files --eol --error-unmatch -- <文件>，无需读取可选的 .gitattributes；其他可选配置缺失时说明未配置，读取错误仍应报告。'
+      : '本轮任务使用受管文件工具，不提供本机终端。';
 
-    const prompt = instructions + '\n本轮提供受管文件/命令工具及 cbim_office_inspect、cbim_office_dispatch。先核对实际目录与岗位；有 cbim_project_read/write 时，项目资源必须走工具，禁止用文件或命令直接读写 .cbim。' + commandHint + '按用户要求实际登记团队、岗位及业务节点，然后查验并派发；文档不能代替登记。只读不写入、不执行命令、不派发；默认权限逐次审批。先 inspect 再派发，子任务在 Office Git 工作树执行，回执中的目录才是实际产物位置，不宣称已合并。派发调用会等待结果，不需轮询。浏览器验收工具尚未接入，不得声称已完成浏览器验证。历史中的工具缺失描述不是本轮工具状态。';
+    const replyStyle = '使用单列 Markdown 回复，先给出用户需要的结果和结论，再写依据。运行进度简短说明；最终答复独立可读。长验证明细可放入语言为 details 的代码围栏，第一行写可展开的摘要，以下为 Markdown 正文。失败原因和重要限制在正文中直接说明。';
+
+    const prompt = instructions + '\n' + replyStyle + '\n本轮提供受管文件/命令工具及 cbim_office_inspect、cbim_office_dispatch。先核对实际目录与岗位；所有岗位通过 cbim_project_read 读取项目知识；仅助理通过 cbim_project_write 增删改。禁止用命令绕过知识写权限。' + commandHint + '按用户要求实际登记团队、岗位及业务节点，然后查验并派发；文档不能代替登记。只读不写入、不执行命令、不派发；默认权限逐次审批。先 inspect 再派发，子任务在 Office Git 工作树执行，回执中的目录才是实际产物位置，不宣称已合并。派发调用会等待结果，不需轮询。浏览器验收工具尚未接入，不得声称已完成浏览器验证。历史中的工具缺失描述不是本轮工具状态。';
 
     // 开发适配器来自 Forge preStart 的本地源码构建，SDK 继续使用受管安装包；不改写签名缓存。
     let adapterRuntime = runtime;
@@ -160,7 +165,7 @@ export async function runOfficePlugin(packages: EnginePackages, profiles: LlmPro
         engineHandoff: messages.length > 1 ? JSON.stringify(messages.slice(0, -1)) : undefined,
         capabilities: [],
         beforeTool: async call => { const pending = turn.inputs?.Take() ?? []; const decision = pending.length ? { allow: false, reason: '当前任务收到追加输入，本次工具尚未执行。请先依据更新重新评估，再决定是否重新调用：' + JSON.stringify({ officeInputs: pending }) } : await officeTools.Authorize(call); progress({ phase: 'thinking', model, activity: { id: 'tool:' + call.id, label: call.name, input: activityDetail(call.input), ...(decision.allow ? {} : { alert: decision.reason ?? '操作未获批准' }) } }); return decision; },
-        emit: async event => { if (event.type === 'engine.status' && event.data.metric === 'provider-request') await turn.ReportStage?.('已发起模型请求'); if (event.type === 'engine.status' && event.data.metric === 'provider-headers') await turn.ReportStage?.('收到供应商响应头'); if (event.type === 'tool.started') await turn.ReportStage?.('执行工具'); if (event.type === 'tool.finished') await turn.ReportStage?.('等待引擎继续'); if (firstReply && (event.type === 'message.delta' || event.type === 'message' && event.data.role === 'assistant') && event.data.text) { firstReply = false; await turn.ReportStage?.('收到首个回复'); } if (['tool.started', 'tool.updated', 'tool.finished'].includes(event.type) && typeof event.data.id === 'string') { const name = String(event.data.name ?? '工具'); const result = activityDetail(event.data.result); progress({ phase: 'thinking', model, activity: { id: 'tool:' + event.data.id, label: name, ...(result !== undefined && { result }), ...(event.data.isError === true && { alert: name + '执行失败' }) } }); } if ((event.type === 'message' && event.data.usage) || (event.type === 'engine.status' && event.data.metric === 'run-usage')) usageEvents.push(event); if (event.type === 'engine.status' && event.data.metric === 'context' && typeof event.data.tokens === 'number') contextUsed = event.data.tokens; if (typeof event.data.text !== 'string') return; if (event.type === 'message.delta') { partial += event.data.text; if (Date.now() - lastPaint < 40) return; } else if (event.type === 'message' && event.data.role === 'assistant') { replies.push(event.data.text); partial = ''; } else return; lastPaint = Date.now(); progress({ phase: 'writing', model, text: [...replies, partial].filter(Boolean).join('\n\n') }); },
+        emit: async event => { if (event.type === 'engine.status' && event.data.metric === 'provider-request') await turn.ReportStage?.('已发起模型请求'); if (event.type === 'engine.status' && event.data.metric === 'provider-headers') await turn.ReportStage?.('收到供应商响应头'); if (event.type === 'tool.started') await turn.ReportStage?.('执行工具'); if (event.type === 'tool.finished') await turn.ReportStage?.('等待引擎继续'); if (firstReply && (event.type === 'message.delta' || event.type === 'message' && event.data.role === 'assistant') && event.data.text) { firstReply = false; await turn.ReportStage?.('收到首个回复'); } if (['tool.started', 'tool.updated', 'tool.finished'].includes(event.type) && typeof event.data.id === 'string') { const name = String(event.data.name ?? '工具'); const result = activityDetail(event.data.result); progress({ phase: 'thinking', model, toolFinished: event.type === 'tool.finished', activity: { id: 'tool:' + event.data.id, label: name, ...(result !== undefined && { result }), ...(event.data.isError === true && { alert: name + '执行失败' }) } }); } if ((event.type === 'message' && event.data.usage) || (event.type === 'engine.status' && event.data.metric === 'run-usage')) usageEvents.push(event); if (event.type === 'engine.status' && event.data.metric === 'context' && typeof event.data.tokens === 'number') contextUsed = event.data.tokens; if (typeof event.data.text !== 'string') return; if (event.type === 'message.delta') { partial += event.data.text; if (Date.now() - lastPaint < 40) return; } else if (event.type === 'message' && event.data.role === 'assistant') { replies.push(event.data.text); partial = ''; } else return; lastPaint = Date.now(); progress({ phase: 'writing', model, text: [...replies, partial].filter(Boolean).join('\n\n') }); },
       });
 
       signal.throwIfAborted();
@@ -187,6 +192,9 @@ export async function runOfficePlugin(packages: EnginePackages, profiles: LlmPro
       }
 
       signal.throwIfAborted();
+
+      if (result.status === 'cancelled')
+        throw new DOMException(result.error || '引擎报告运行已中止', 'AbortError');
 
       if (result.status !== 'completed')
         throw Error(result.error || '引擎未完成回复');

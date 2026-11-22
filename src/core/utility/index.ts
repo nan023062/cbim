@@ -8,3 +8,5 @@ export { SerialQueue, InFlightOperations, PendingRequests, type PendingReply } f
 
 /** 纯有向图结构算法。 */
 export { GraphUtils } from './graphs';
+
+export { failureText, failureSummary, isAbortedReceipt } from './tool-receipt';

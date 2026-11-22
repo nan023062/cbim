@@ -27,7 +27,7 @@ export function guard(call: { name: string; input: unknown }, root: string): str
 
   const within = (p: string) => { const rel = path.relative(protectedRoot, p); return rel === '' || (!rel.startsWith('..') && !path.isAbsolute(rel)) };
 
-  const check = (value: any): boolean => { if (!value || typeof value !== 'object') return false; return Object.entries(value).some(([key, v]) => { if (typeof v === 'string' && /^(file_path|path|cwd|workdir|directory|target|source|destination|notebook_path)$/i.test(key)) { if (knowledgeSegment(v)) return true; let p = path.resolve(root, v); if (within(p)) return true; try { p = fs.realpathSync(p); if (within(p)) return true } catch { } } return typeof v === 'object' && check(v); }); };
+  const check = (value: any): boolean => { if (!value || typeof value !== 'object') return false; return Object.entries(value).some(([key, v]) => { if (typeof v === 'string' && /^(file_path|path|cwd|workdir|directory|target|source|destination|notebook_path)$/i.test(key)) { const scoped = path.isAbsolute(v) ? path.relative(root, v) : v; if (knowledgeSegment(scoped)) return true; let p = path.resolve(root, v); if (within(p)) return true; try { p = fs.realpathSync(p); if (within(p)) return true } catch { } } return typeof v === 'object' && check(v); }); };
 
   if (check(input) || within(path.resolve(root)))
     return '禁止通过路径或链接绕过知识库保护，请使用 cbim_ 知识工具';

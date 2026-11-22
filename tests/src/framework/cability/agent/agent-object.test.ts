@@ -49,7 +49,7 @@ it('Office 内置负责人绑定主会话，并在关闭时释放其引擎', asy
   const factory = { parameters: 0, CreateEngine: async (_: number, id: string, role: AgentRole) => {
     expect(id).toBe(office.mainAgentId);
     expect(role.conversation).toEqual({ workspaceId: 'project', taskId: 'one' });
-    expect(role.definition.position).toBe('Office 负责人、用户助手');
+    expect(role.definition.position).toBe('Office 负责人、用户助理');
     return { session: 'engine', Close: close };
   } };
   expect(await office.OpenMainAgent(factory)).toBe('engine');
@@ -156,7 +156,7 @@ it('同一个 Organization 并行管理不同引擎类型', async () => {
   expect(closed).toEqual(['text', 'counter']);
 });
 
-it('主 Agent 跨轮保留身份与累计值，仅执行中维护两秒速率窗口', async () => {
+it('助理跨轮保留身份与累计值，仅执行中维护两秒速率窗口', async () => {
   const org = new Organization();
   const agent = org.MainAgent();
   const role = new AgentRole({ id: 'main', name: 'Main', instructions: '' }, { workspaceId: 'w', taskId: 't' });

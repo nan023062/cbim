@@ -5,7 +5,7 @@
  * 供应商只维护连接与统一模型目录；执行引擎在对话或 Agent 中独立选择，同一模型可供兼容引擎共用。
  * 接口预设、兼容地址和按接口测试由 ProviderConnections 提供；改接口清空输入中的凭据，保存后才可测试实际配置。
  */
-import { Button, Checkbox, FieldGroup, FieldLabel, FieldLegend, Form, Input, Option, Select } from '../../framework-ui';
+import { ScrollWindow, Button, Checkbox, FieldGroup, FieldLabel, FieldLegend, Form, Input, Option, Select } from '../../framework-ui';
 import { EmbeddingModels } from './EmbeddingModels';
 
 import { useEffect, useRef, useState } from 'react';
@@ -129,7 +129,7 @@ export function ModelSettings({ onDirtyChange }: { onDirtyChange?: (dirty: boole
         {draft.auth === 'api-key' && <FieldLabel>API Key<Input type="password" autoComplete="new-password" value={key} onChange={e => setKey(e.target.value)} placeholder={id ? '留空保留已保存密钥' : '输入 API Key'} /></FieldLabel>}
         {draft.auth === 'api-key' && !state?.secureStorage && <p role="alert">系统凭据加密不可用，暂不能保存 API Key。</p>}
         <h3>生成模型</h3><Button type="button" onClick={() => void perform(async () => { const { name, api: protocol, baseUrl, auth } = draft; const ids: DiscoveredModel[] = await window.desktopMenu.Model('models.discoverDetails', { id, connection: { name, api: protocol, baseUrl, auth }, apiKey: key || undefined }); setFound(ids); setNotice(ids.length ? `获取到 ${ids.length} 个模型，选择需要启用的型号。` : '接口没有返回模型，可手动添加。') })}>获取模型列表</Button>
-        {found.length > 0 && <div className="model-found" aria-label="获取到的模型">{found.map(m => m.id).map(x => <Button type="button" key={x} disabled={draft.models.some(m => m.id === x)} onClick={() => add(x)}>{draft.models.some(m => m.id === x) ? '已添加' : '＋'} {x}</Button>)}</div>}
+        {found.length > 0 && <ScrollWindow className="model-found" aria-label="获取到的模型">{found.map(m => m.id).map(x => <Button type="button" key={x} disabled={draft.models.some(m => m.id === x)} onClick={() => add(x)}>{draft.models.some(m => m.id === x) ? '已添加' : '＋'} {x}</Button>)}</ScrollWindow>}
         <div className="model-actions"><Input aria-label="手动模型 ID" value={modelId} maxLength={160} onChange={e => setModelId(e.target.value)} placeholder="手动输入模型 ID" /><Button type="button" disabled={!modelId.trim() || draft.models.some(m => m.id === modelId.trim())} onClick={() => add(modelId.trim())}>添加模型</Button></div>
         <p className="inline-note">图片输入仅在供应商确认支持视觉时开启；未知能力默认关闭，可手动确认或从目录同步。ID 必须与服务端一致。自动读取目录返回的容量资料；缺失项需手动填写，不能把占位值当作模型真实容量。</p>
         {draft.models.map((m, i) => <div className="model-row" key={m.id}><div className="model-heading"><b>{m.id}</b><Button type="button" onClick={() => drop(i)} aria-label={`移除模型 ${m.id}`}>移除</Button></div><div className="model-grid"><FieldLabel>显示名称<Input value={m.name} maxLength={160} onChange={e => updateModel(i, { name: e.target.value })} /></FieldLabel><FieldLabel>上下文窗口（供应商真实容量）<Input type="number" required min={1024} max={2000000} value={m.contextWindow} onChange={e => updateModel(i, { contextWindow: Number(e.target.value) })} /></FieldLabel><FieldLabel>单次最大输出<Input type="number" required min={64} max={Math.min(m.contextWindow, m.outputLimit ?? 2000000)} value={m.maxTokens} onChange={e => updateModel(i, { maxTokens: Number(e.target.value) })} /></FieldLabel></div><div className="model-grid">

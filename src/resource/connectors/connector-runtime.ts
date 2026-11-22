@@ -123,7 +123,7 @@ export function managedConnectorPackages(file: string, artifacts: EngineArtifact
   };
 }
 
-/** 主 Agent 和 Worker 按各自的显式选择取得同一套受管连接器会话。 */
+/** 助理和 Worker 按各自的显式选择取得同一套受管连接器会话。 */
 export async function openAgentConnectors(packages: Pick<ReturnType<typeof managedConnectorPackages>, 'Open'>, ids: readonly string[], context: ConnectorTaskContext, signal: AbortSignal, pin?: (id: string) => string | undefined)
 {
   // 父成员可能正在持有同一个独占工具，等待有界，避免嵌套派发永久互锁。

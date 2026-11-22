@@ -11,7 +11,7 @@
 | 组成 | 定位 |
 | --- | --- |
 | [module-governance-rules](module-governance-rules.ts) | 模块知识治理的纯事实投影、提案依据、决定追加和知识写入门禁。 |
-| [module-governance-tools](module-governance-tools.ts) | 主 Agent 治理工具的严格输入、真实来源端口和有界业务输出；不承载桌面批准或正式知识实施。 |
+| [module-governance-tools](module-governance-tools.ts) | 助理治理工具的严格输入、真实来源端口和有界业务输出；不承载桌面批准或正式知识实施。 |
 | [module-governance](module-governance.ts) | 单个 Module 正式知识治理的严格输入、不可变提案、本机决定及实施回执协议。 |
 
 <!-- architecture:generated:start -->

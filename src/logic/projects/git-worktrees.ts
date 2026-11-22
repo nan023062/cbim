@@ -40,7 +40,12 @@ export class GitWorktrees implements WorkspaceInstanceFactory
       catch (error)
       {
         if (!await registered())
+        {
+          const status = await this.Git(repository, '--no-optional-locks', 'status', '--porcelain=v2', '--branch', '--untracked-files=no').catch(() => '');
+          if (status.split(/\r?\n/).includes('# branch.oid (initial)'))
+            throw new Error('当前分支缺少首次提交，无法创建成员工作树。请先在本地提交任务需要的文件，再重新派发。');
           throw error;
+        }
       }
     }
 
@@ -56,9 +61,12 @@ export class GitWorktrees implements WorkspaceInstanceFactory
     return actual;
   }
 
-  public constructor(private readonly _storage: string, private readonly legacy?: string)
+  public constructor(private readonly _storage: string, ...legacy: string[])
   {
+    this.legacy = legacy;
   }
+
+  private readonly legacy: string[];
 
   public async OpenWorktree(officeId: string, repositoryRoot: string): Promise<WorkspaceWorktree>
   {
@@ -78,9 +86,17 @@ export class GitWorktrees implements WorkspaceInstanceFactory
 
     const key = hash(JSON.stringify([repository, officeId]));
 
-    const old = this.legacy && path.join(this.legacy, key);
-
-    const target = old && await fs.stat(old).then(() => true, e => { if (e.code === 'ENOENT') return false; throw e; }) ? old : path.join(storage, key);
+    let target = path.join(storage, key);
+    const registered = (await this.Git(repository, 'worktree', 'list', '--porcelain', '-z')).split('\0').filter(field => field.startsWith('worktree ')).map(field => field.slice(9));
+    if (!registered.some(directory => path.relative(directory, target) === '')) {
+      for (const old of this.legacy) {
+        const candidate = path.join(old, key);
+        if (registered.some(directory => path.relative(directory, candidate) === '') && await fs.stat(candidate).then(stat => stat.isDirectory(), error => { if (error.code === 'ENOENT') return false; throw error; })) {
+          target = candidate;
+          break;
+        }
+      }
+    }
 
     let opening = this._opening.get(target);
 

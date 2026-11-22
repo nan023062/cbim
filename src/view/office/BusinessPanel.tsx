@@ -2,7 +2,7 @@
  * 作用定位：业务架构实时编辑视图；页面只持有选择、搜索和折叠状态。
  * 设计原因：树展示与持久定义分开，刷新以宿主快照为准，编辑流程由独立弹窗负责。
  */
-import { IconButton, Button, FieldLabel, Icon, Input, ListItem } from '../../framework-ui';
+import { ScrollWindow, IconButton, Button, FieldLabel, Icon, Input, ListItem } from '../../framework-ui';
 import { useEffect, useState } from 'react';
 
 import { BusinessNodeDialog, type BusinessEdit } from './BusinessNodeDialog';
@@ -103,7 +103,7 @@ export function BusinessPanel({ project, OnBack }: { project: string; OnBack(): 
     breadcrumbs.unshift(id);
   }
 
-  return <section className="business-page" aria-label="业务架构">
+  return <section {...ScrollWindow.native} className="business-page" aria-label="业务架构">
     <header><IconButton type="button" title="返回对话" aria-label="返回对话" onClick={OnBack}><Icon name="back" /></IconButton><h2>业务架构</h2><IconButton type="button" title="新增顶层业务节点" aria-label="新增顶层业务节点" disabled={!snapshot || loading} onClick={() => setEdit({ action: 'create', parentId: null })}><Icon name="folderAdd" /></IconButton><IconButton type="button" title="刷新业务架构" aria-label="刷新业务架构" disabled={loading} onClick={() => setRefresh(value => value + 1)}><Icon name="retry" size={18} /></IconButton></header>
     <p className="business-caption">与 Agent 共用当前业务树 · {tree?.nodes.length ?? 0} 个节点 · {tree?.roots.length ?? 0} 个顶层节点</p>
     {error && <p role="alert">读取失败：{error}{tree && '。下方保留上次读取结果。'}</p>}
@@ -111,7 +111,7 @@ export function BusinessPanel({ project, OnBack }: { project: string; OnBack(): 
       <nav className="business-navigation" aria-label="业务节点">
         <FieldLabel>搜索业务节点<Input type="search" placeholder="名称、职责或节点 ID" value={query} onChange={event => setQuery(event.target.value)} /></FieldLabel>
         <div className="business-tree-actions"><IconButton aria-expanded={expandedAll} aria-label={expandedAll ? "全部收起" : "全部展开"} title={keyword ? "搜索时保持匹配分支展开" : undefined} disabled={!!keyword || !branches.length} onClick={() => setCollapsed(new Set(expandedAll ? branches : []))}><Icon name="chevron" /></IconButton></div>
-        <ul className="business-tree">{rows.map(row => { const item = nodes.get(row.id)!; return <li key={item.id} style={{ paddingInlineStart: Math.min(row.depth, 5) * 12 }}><div>{item.children.length ? <IconButton type="button" className="business-toggle" disabled={!!keyword} aria-label={(collapsed.has(item.id) && !keyword ? '展开 ' : '收起 ') + item.name} aria-expanded={!!keyword || !collapsed.has(item.id)} onClick={() => setCollapsed(previous => { const next = new Set(previous); if (next.has(item.id)) next.delete(item.id); else next.add(item.id); return next; })}>{collapsed.has(item.id) && !keyword ? '▸' : '▾'}</IconButton> : <span className="business-toggle">·</span>}<ListItem type="button" className="business-node" aria-current={selected === item.id ? 'true' : undefined} onClick={() => setSelected(item.id)}><span>{item.name || item.id}</span><small>{item.children.length ? item.children.length + ' 个子节点' : '叶子节点'}</small></ListItem></div></li>; })}</ul>
+        <ul {...ScrollWindow.native} className="business-tree">{rows.map(row => { const item = nodes.get(row.id)!; return <li key={item.id} style={{ paddingInlineStart: Math.min(row.depth, 5) * 12 }}><div>{item.children.length ? <IconButton type="button" className="business-toggle" disabled={!!keyword} aria-label={(collapsed.has(item.id) && !keyword ? '展开 ' : '收起 ') + item.name} aria-expanded={!!keyword || !collapsed.has(item.id)} onClick={() => setCollapsed(previous => { const next = new Set(previous); if (next.has(item.id)) next.delete(item.id); else next.add(item.id); return next; })}>{collapsed.has(item.id) && !keyword ? '▸' : '▾'}</IconButton> : <span className="business-toggle">·</span>}<ListItem type="button" className="business-node" aria-current={selected === item.id ? 'true' : undefined} onClick={() => setSelected(item.id)}><span>{item.name || item.id}</span><small>{item.children.length ? item.children.length + ' 个子节点' : '叶子节点'}</small></ListItem></div></li>; })}</ul>
         {!rows.length && <p role="status">没有匹配的业务节点。</p>}
       </nav>
       <article className="business-detail" aria-label="业务节点详情">{node ? <>

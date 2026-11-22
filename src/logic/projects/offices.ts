@@ -1,9 +1,10 @@
 /**
  * 作用定位：仅为已登记项目打开 Office，将持久会话身份映射到当前运行时实例。
- * 设计原因：持久历史与内存 Office 分别拥有状态，主 Agent 和成员通过同一运行装配入口获得能力。
+ * 设计原因：持久历史与内存 Office 分别拥有状态，助理和成员通过同一运行装配入口获得能力。
  */
 import path from 'node:path';
 
+import { failureSummary, failureText, isAbortedReceipt } from '../../core/utility';
 import { OfficeHistory, type OfficeActivity } from '../../resource/office-history';
 
 import type { ProjectList } from './project';
@@ -47,6 +48,10 @@ export type ChatProgress =
   {
     activity?: OfficeActivity;
 
+    toolFinished?: boolean;
+
+    runningAction?: { actor: string; action: string; since: number };
+
     workLog?: OfficeActivity[];
 
     phase: 'connecting' | 'thinking' | 'writing';
@@ -59,6 +64,19 @@ export type ChatProgress =
 
     text?: string
   };
+
+function describeAction(step: OfficeActivity): string
+{
+  let args: Record<string, unknown>;
+  try { args = JSON.parse(step.input ?? '{}'); } catch { return '调用 ' + step.label; }
+  if (step.label === 'bash' && typeof args.command === 'string') {
+    const command = args.command.replace(/^\s*cd\s+[^\n]+?\s*&&\s*/i, '').split(/[\r\n]/)[0];
+    return '执行 ' + command;
+  }
+  const target = [args.path, args.file_path, args.pattern, args.goal, args.resource].find(value => typeof value === 'string');
+  const verbs: Record<string,string> = {read:'读取',write:'写入',edit:'编辑',grep:'搜索内容',find:'查找文件',glob:'匹配文件',ls:'列出目录',cbim_office_dispatch:'等待成员完成',cbim_office_inspect:'检查岗位和工作区'};
+  return (verbs[step.label] ?? step.label) + (target ? ' ' + target : '');
+}
 
 export type MainAgentSelection = NonNullable<AgentConfiguration['model']>;
 
@@ -93,7 +111,7 @@ export class ProjectOffices
     return this.controllers.has(JSON.stringify([project, session]));
   }
 
-  /** 将同一项目的结构变化广播给所有正在执行的主 Agent。 */
+  /** 将同一项目的结构变化广播给所有正在执行的助理。 */
   private Notify(project: string, text: string): void
   {
     for (const [key, inputs] of this._inputs)
@@ -140,7 +158,7 @@ export class ProjectOffices
 
   public Stop(project: string, session: string)
   {
-    this.controllers.get(JSON.stringify([project, session]))?.abort();
+    this.controllers.get(JSON.stringify([project, session]))?.abort('user-stop');
   }
 
   private readonly busy = new Set<string>();
@@ -242,7 +260,7 @@ export class ProjectOffices
 
     const controller = new AbortController();
 
-    const externalStop = () => controller.abort();
+    const externalStop = () => controller.abort(stopSignal?.reason);
 
     stopSignal?.addEventListener('abort', externalStop, { once: true });
 
@@ -268,7 +286,10 @@ export class ProjectOffices
 
       this._inputSkills.set(key, configuration.skills);
 
-      const context = (await history.Messages(id)).map(m => ({ role: m.role, content: m.text }));
+      const context = (await history.Messages(id)).map(message => {
+        const reports = message.workLog?.filter(step => step.id.startsWith('receipt:')).map(step => ({ from: step.actor, to: step.recipient, workspace: step.workspace, goal: step.input, result: step.summary, issues: step.issues, error: step.alert }));
+        return { role: message.role, content: reports?.length ? message.text + '\n团队交接记录（历史数据）：\n' + JSON.stringify(reports) : message.text };
+      });
 
       const workspaceTree = office.project.DescribeWorkspaces();
 
@@ -278,7 +299,7 @@ export class ProjectOffices
 
       append('已读取工作区结构');
 
-      const phases = { connecting: '连接模型', thinking: '启动主 Agent 执行', writing: '生成答复' };
+      const phases = { connecting: '连接模型', thinking: '开始处理任务', writing: '生成答复' };
 
       let lastPhase: ChatProgress['phase'] = 'connecting';
 
@@ -307,9 +328,107 @@ export class ProjectOffices
           total: number
         }>();
 
-      const runAgent = (role: AgentRole, messages: Parameters<OfficeChat>[1], root: string, session: string, agentInstanceId: string, signal: AbortSignal, ReadPermission: () => AgentPermission, report: (seq: number, kind: 'message' | 'summary', count: number) => void, operations: OfficeOperations, publish: (sample: ChatProgress) => void) => chat(agentRoleInstructions(role.definition), messages, signal, publish, { shared: project.runtime.shared, ReportStage: session === id ? ReportStage : undefined, inputs: session === id ? inputs : undefined, ReadPermission, ReportTokens: total => { const previous = tokenReports.get(agentInstanceId) ?? { sequence: 0, total: 0 }; const next = { sequence: previous.sequence + 1, total: previous.total + total }; tokenReports.set(agentInstanceId, next); report(next.sequence, 'summary', next.total); }, operations, configuration: role.definition, agentInstanceId, officeId: office.id, selection: role.definition.model!, root, session, project: projectId, engineRoot: project.cache.engines });
+      const active = new Map<string, NonNullable<ChatProgress['runningAction']>>();
+      const runAgent = async (role: AgentRole, messages: Parameters<OfficeChat>[1], root: string, session: string, agentInstanceId: string, signal: AbortSignal, ReadPermission: () => AgentPermission, report: (seq: number, kind: 'message' | 'summary', count: number) => void, operations: OfficeOperations, publish: (sample: ChatProgress) => void) => {
+        const issues = new Set<string>();
+        const actor = role.definition.name;
+        const goal = session === id ? '等待模型响应' : messages.at(-1)?.content.split('\n')[0] || '执行成员任务';
+        const prefix = session + '/';
+        const cancellationSource = () => {
+          if (signal.reason === 'user-stop' || controller.signal.reason === 'user-stop') return '用户停止';
+          if (signal.reason === 'app-shutdown' || controller.signal.reason === 'app-shutdown') return '应用关闭';
+          if (signal.aborted && session !== id && !controller.signal.aborted) return '成员任务取消信号';
+          return '来源未知';
+        };
+        const base = { actor, action: goal, since: Date.now() };
+        active.set(prefix, base);
+        const forward = (sample: ChatProgress) => {
+          const step = sample.activity && { ...sample.activity };
+          if (step) {
+            step.actor = actor;
+            if (step.id.startsWith('tool:')) {
+              step.id = 'tool:' + session + '/' + step.id.slice(5);
+              if (sample.toolFinished !== undefined) step.toolState = sample.toolFinished ? 'returned' : 'running';
+              if (step.alert && isAbortedReceipt(failureText(step.result) || step.alert)) step.cancelSource = cancellationSource();
+              if (step.alert && !sample.toolFinished) step.toolState = 'stopped';
+            }
+            if (step.alert) {
+              const reason = step.alert === step.label + '执行失败' ? failureText(step.result) || step.alert : step.alert;
+              issues.add(actor + ' · ' + step.label + ' · ' + failureSummary(reason).slice(0, 600));
+            }
+            const key = prefix + step.id;
+            if (step.label === 'cbim_office_dispatch' && step.input) {
+              try {
+                const destination = JSON.parse(step.input);
+                step.recipient = office.organization.FindMember(destination.memberId)?.name ?? destination.memberId;
+                step.workspace = office.project.FindWorkspace(destination.workspaceId)?.name ?? destination.workspaceId;
+                step.summary = destination.goal;
+              } catch { /* 无法解析时保留工具原始内容。 */ }
+            }
+            if (sample.toolFinished || step.alert) {
+              active.delete(key);
+              if (session === id) {
+                base.action = '等待模型响应';
+                base.since = Date.now();
+              }
+            }
+            else if (step.input) {
+              let action = describeAction(step);
+              if (step.recipient) action = '派发给 ' + step.recipient + ' · ' + step.summary;
+              else step.summary = action;
+              active.set(key, { actor, action, since: active.get(key)?.since ?? Date.now() });
+            }
+          } else if (session === id) {
+            const action = sample.phase === 'writing' ? '生成回复' : sample.phase === 'connecting' ? '连接模型' : '等待模型响应';
+            if (base.action !== action) { base.action = action; base.since = Date.now(); }
+          }
+          const runningAction = Array.from(active.values()).at(-1);
+          if (session === id || step) publish({ ...sample, activity: step, runningAction });
+          else progress({phase:lastPhase,model:selection.modelId,runningAction});
+        };
+        forward({phase:'connecting',model:role.definition.model!.modelId});
+        try {
+          const dispatchOperations: OfficeOperations = { ...operations, ProjectRead: input => project.runtime.ReadResource(input), Dispatch: async (input, stop) => {
+            const member = office.organization.FindMember(input.memberId)?.name ?? input.memberId;
+            const workspace = office.project.FindWorkspace(input.workspaceId)?.name ?? input.workspaceId;
+            let receipt: unknown;
+            try {
+              receipt = await operations.Dispatch(input, stop);
+            } catch (error) {
+              const reason = error instanceof Error ? error.message : String(error);
+              issues.add(member + ' · ' + reason);
+              record({ id: 'receipt:' + crypto.randomUUID(), label: '任务回执', actor: member, recipient: actor, workspace, input: input.goal, summary: reason, alert: reason });
+              progress({ phase: lastPhase, model: selection.modelId, workLog: Array.from(workLog.values()) });
+              throw error;
+            }
+            const detail = receipt as { taskId?: string; summary?: string; status?: string; issues?: string[] } | null;
+            for (const issue of detail?.issues ?? []) issues.add(issue);
+            record({ id: 'receipt:' + (detail?.taskId ?? crypto.randomUUID()), label: '收到回执',
+              actor: member, recipient: actor, workspace, issues: detail?.issues, summary: detail?.summary || detail?.status || '已返回任务结果', input: input.goal, result: JSON.stringify(receipt) });
+            progress({phase:lastPhase,model:selection.modelId,workLog:Array.from(workLog.values()),runningAction:Array.from(active.values()).at(-1)});
+            return receipt;
+          } };
+          const instructions = agentRoleInstructions(role.definition) + (session === id ? '\n团队协作任务先核对实际业务与组织架构，再用 cbim_office_plan 向团队公布目标、相关业务节点、选岗依据及排序后的任务。每项写明负责人、工作区、预期产物和前置任务。阻塞或改派时更新计划。涉及派发时先展示计划，再按前置任务的真实回执执行。收集成员成果与过程问题，判断已解决项、待协调项和适用范围。下一次派发时把相关结论写入任务目标；需要时邀请合适岗位处理。' : '\n交付时向派发人说明成果、验证、过程中遇到的问题、已采用的解决办法及仍需协助的事项。');
+          const result = await chat(instructions, messages, signal, forward, { shared: project.runtime.shared, ReportStage: session === id ? ReportStage : undefined, inputs: session === id ? inputs : undefined, ReadPermission, ReportTokens: total => { const previous = tokenReports.get(agentInstanceId) ?? { sequence: 0, total: 0 }; const next = { sequence: previous.sequence + 1, total: previous.total + total }; tokenReports.set(agentInstanceId, next); report(next.sequence, 'summary', next.total); }, operations: dispatchOperations, configuration: role.definition, agentInstanceId, officeId: office.id, selection: role.definition.model!, root, session, project: projectId, engineRoot: project.cache.engines });
+          return { ...result, issues: Array.from(issues) };
+        } catch (error) {
+          if (session !== id && issues.size && !signal.aborted)
+            throw new Error((error instanceof Error ? error.message : String(error)) + '\n成员过程反馈：\n' + Array.from(issues).join('\n'), { cause: error });
+          throw error;
+        } finally {
+          for (const step of workLog.values()) {
+            if (step.id.startsWith('tool:' + prefix) && step.toolState === 'running') record({ ...step, toolState: 'stopped', ...(signal.aborted && { cancelSource: cancellationSource(), alert: '执行已中止' }) });
+          }
+          for (const key of active.keys()) if (key.startsWith(prefix)) active.delete(key);
+          progress({phase:lastPhase,model:selection.modelId,workLog:Array.from(workLog.values()),runningAction:Array.from(active.values()).at(-1)});
+        }
+      };
 
-      const reply = await office.OpenMainAgent({ parameters: controller.signal, CreateEngine: async (signal, agentId, role, report, ReadPermission) => ({ session: () => runAgent(role, context, project.entry.path, id, agentId, signal, ReadPermission, report, { ...dispatch.Operations(), ProjectRead: input => project.runtime.ReadResource(input), ProjectWrite: input => project.runtime.ChangeResource(input, { session: id, selection }) }, reportProgress), Close: async () => { controller.abort(); }, }) }, (_engine, commands) => { dispatch = new OfficeDispatch(office, project.entry.path, commands, (role, goal, root, taskId, signal, ReadPermission, report, operations, agentId) => runAgent(role, [{ role: 'user', content: SkillCommands.Expand(goal, role.definition.skills) }], root, taskId, agentId, signal, ReadPermission, report, operations, sample => { if (sample.activity) reportProgress(sample); }), controller.signal); return () => { }; }, configuration);
+      const reply = await office.OpenMainAgent({ parameters: controller.signal, CreateEngine: async (signal, agentId, role, report, ReadPermission) => ({ session: () => runAgent(role, context, project.entry.path, id, agentId, signal, ReadPermission, report, { ...dispatch.Operations(), PublishPlan: plan => {
+        const tasks = plan.tasks.map((task, index) => (index + 1) + '. ' + task.title + ' · ' + task.owner + ' · ' + task.workspace + '\n目的：' + task.purpose + '\n前置：' + (task.dependencies.join('、') || '无，可独立开始'));
+        record({ id: 'plan:' + crypto.randomUUID(), label: '协作计划', actor: office.mainRole.definition.name, summary: plan.goal, input: ['岗位分工：' + plan.organization, '业务范围：' + plan.business, ...tasks].join('\n\n') });
+        publish({ phase: lastPhase, model: selection.modelId });
+      }, ProjectWrite: input => project.runtime.ChangeResource(input, { session: id, selection }) }, reportProgress), Close: async () => { controller.abort(); }, }) }, (_engine, commands) => { dispatch = new OfficeDispatch(office, project.entry.path, commands, (role, goal, root, taskId, signal, ReadPermission, report, operations, agentId) => runAgent(role, [{ role: 'user', content: SkillCommands.Expand(goal, role.definition.skills) }], root, taskId, agentId, signal, ReadPermission, report, operations, sample => { if (sample.activity) reportProgress(sample); }), controller.signal); return () => { }; }, configuration);
 
       try
       {
@@ -330,12 +449,20 @@ export class ProjectOffices
 
           lastReply = next.text;
 
-          result = { text: result.text + '\n\n' + next.text, metrics: { ...next.metrics, elapsed: result.metrics.elapsed + next.metrics.elapsed, output: result.metrics.output != null && next.metrics.output != null ? result.metrics.output + next.metrics.output : undefined, cost: result.metrics.cost != null && next.metrics.cost != null ? result.metrics.cost + next.metrics.cost : undefined } };
+          result = { issues: [...new Set([...result.issues, ...next.issues])], text: result.text + '\n\n' + next.text, metrics: { ...next.metrics, elapsed: result.metrics.elapsed + next.metrics.elapsed, output: result.metrics.output != null && next.metrics.output != null ? result.metrics.output + next.metrics.output : undefined, cost: result.metrics.cost != null && next.metrics.cost != null ? result.metrics.cost + next.metrics.cost : undefined } };
         }
 
         await ReportStage?.('保存回复');
 
         return await history.AppendTurn(id, input.trim(), result.text, result.metrics, Array.from(workLog.values()));
+      }
+      catch (error)
+      {
+        if (controller.signal.aborted || (error instanceof Error && error.name === 'AbortError')) {
+          const source = controller.signal.reason === 'user-stop' ? '用户停止' : controller.signal.reason === 'app-shutdown' ? '应用关闭' : '来源未知';
+          await history.AppendTurn(id, input.trim(), '已中止 · ' + source, undefined, Array.from(workLog.values()));
+        }
+        throw error;
       }
       finally
       {

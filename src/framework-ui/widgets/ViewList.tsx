@@ -15,7 +15,7 @@ export interface ListHandle
   scrollToEnd: () => void
 }
 
-export function WindowList({ count, itemKey, render, initialEnd, listRef, label, firstIndex = 0, scrollbarVisible, onStart }: { count: number; itemKey: (index: number) => string; render: (index: number) => ReactNode; initialEnd?: boolean; listRef?: Ref<ListHandle>; label: string; firstIndex?: number; scrollbarVisible?: boolean; onStart?: () => void; })
+export function WindowList({ count, itemKey, render, initialEnd, listRef, label, firstIndex = 0, onStart }: { count: number; itemKey: (index: number) => string; render: (index: number) => ReactNode; initialEnd?: boolean; listRef?: Ref<ListHandle>; label: string; firstIndex?: number; onStart?: () => void; })
 {
   const initial = useRef(initialEnd && count ? { index: count - 1, align: 'end' as const } : 0);
 
@@ -25,7 +25,7 @@ export function WindowList({ count, itemKey, render, initialEnd, listRef, label,
 
   useImperativeHandle(listRef, () => ({ scrollToRow: index => { following.current = false; list.current?.scrollToIndex({ index, align: 'start' }); }, scrollToEnd: () => { following.current = true; list.current?.scrollToIndex({ index: 'LAST', align: 'end' }); } }), []);
 
-  return <Virtuoso ref={list} className="ui-window-list" data-ui-scrollbar-fade={scrollbarVisible} aria-label={label} role={initialEnd ? 'log' : 'region'} aria-live="off"
+  return <Virtuoso ref={list} className="ui-window-list" aria-label={label} role={initialEnd ? 'log' : 'region'} aria-live="off"
     onScroll={event => { const el = event.currentTarget; following.current = !!initialEnd && el.scrollHeight - el.clientHeight - el.scrollTop <= 4; }}
     totalListHeightChanged={() => { if (following.current) list.current?.scrollToIndex({ index: 'LAST', align: 'end' }); }}
     totalCount={count} firstItemIndex={firstIndex} startReached={onStart} increaseViewportBy={400}

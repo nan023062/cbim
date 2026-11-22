@@ -2,7 +2,7 @@
  * 作用定位：执行引擎的版本、下载安装与更新。
  * 设计原因：以宿主版本快照驱动安装操作和进度，页面不负责解包、校验或运行版本持有。
  */
-import { Button, Disclosure, DisclosureSummary, FieldLabel, Icon, ListItem, Progress, Tooltip } from '../../framework-ui';
+import { ScrollWindow, Button, Disclosure, DisclosureSummary, FieldLabel, Icon, ListItem, Progress, Tooltip } from '../../framework-ui';
 import { useEffect, useState } from 'react';
 
 import type { EnginePackageSettings, EnginePackageStatus } from '../../bridge/contracts/desktop-engines';
@@ -108,7 +108,7 @@ export function EnginePackagesView()
 
   const progress = product && progressFor(product.id);
 
-  return <section className="view-page menu-page engine-page"><header className="view-heading"><h1>执行引擎</h1><Button disabled={!!busy || state?.managed === false} onClick={() => void update()}>{busy === 'check' ? '正在检查…' : '检查更新'}</Button></header>
+  return <section {...ScrollWindow.native} className="view-page menu-page engine-page"><header className="view-heading"><h1>执行引擎</h1><Button disabled={!!busy || state?.managed === false} onClick={() => void update()}>{busy === 'check' ? '正在检查…' : '检查更新'}</Button></header>
     {error && <p role="alert">{error}</p>}
     <div className="engine-layout">
       <nav className="engine-list" aria-label="支持的执行引擎">{products.map(entry =>

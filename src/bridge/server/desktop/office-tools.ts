@@ -16,7 +16,7 @@ import type { ToolCall, ToolDecision } from '../../../logic/tools/rules/types';
 
 import { zodToJsonSchema } from 'zod-to-json-schema';
 
-import { projectReads, projectWrites, officeDispatchSchema, type AgentPermission, type OfficeOperations, type OfficeApproval } from '../../../logic/projects/office-operations';
+import { projectReads, projectWrites, officePlanSchema, officeDispatchSchema, type AgentPermission, type OfficeOperations, type OfficeApproval } from '../../../logic/projects/office-operations';
 
 import type { TaskPermission } from '../../../logic/projects/office-operations';
 
@@ -59,22 +59,25 @@ export class OfficeTools
     this._signal.throwIfAborted();
 
     return [
-      ...(this._operations.ProjectRead && this._operations.ProjectWrite ? [
+      ...(this._operations.ProjectRead ? [
         { name: 'cbim_project_read', description: '读取当前项目的组织、业务、岗位能力、共享资源引用、配置或定时任务及 revision。项目知识只通过本工具访问。', inputSchema: zodToJsonSchema(projectReads) },
+      ] : []),
+      ...(this._operations.ProjectWrite ? [
         { name: 'cbim_project_write', description: '项目资源只通过此工具增删改，须传入最近读取的 revision。member 保存已登记岗位的能力；references 只增删改项目对共享制品的引用。组织岗位和业务节点立即登记。settings 为项目工作约定；timers 的 at 是带时区时间，value 是到期投递到本对话的指令。', inputSchema: zodToJsonSchema(projectWrites) },
       ] : []),
       ...(this._connectors?.List() ?? []).map(tool => ({ ...tool, description: tool.description ?? tool.name })),
-      { name: 'cbim_office_inspect', description: '读取当前 Office 的已登记岗位、工作区和任务状态；先核对 available 与模型配置再派发。', inputSchema: { type: 'object', properties: {}, additionalProperties: false } },
-      { name: 'cbim_office_dispatch', description: '向已配置岗位派发任务并等待真实结果。成员继承 Office 权限，在 Office Git 工作树中执行；回执包含实际目录，修改不会自动合并回项目。禁止派给自身或祖先。', inputSchema: { type: 'object', properties: { memberId: { type: 'string' }, workspaceId: { type: 'string' }, directory: { type: 'string', description: '工作树中的业务相对目录，默认 .' }, goal: { type: 'string' } }, required: ['memberId', 'workspaceId', 'goal'], additionalProperties: false } },
+      ...(this._operations.PublishPlan ? [{ name: 'cbim_office_plan', description: '在对话中向团队公布协作计划。按执行顺序列出任务，用前置任务名标明依赖，无依赖填空数组。', inputSchema: zodToJsonSchema(officePlanSchema) }] : []),
+      { name: 'cbim_office_inspect', description: '读取当前 Office 的岗位、工作区和任务状态。workspaces.selectable 列出可派发工作区的名称和 ID；派发时使用其中的 id。', inputSchema: { type: 'object', properties: {}, additionalProperties: false } },
+      { name: 'cbim_office_dispatch', description: '向已配置岗位派发任务并等待真实结果。成员继承 Office 权限，在 Office Git 工作树中执行；回执包含实际目录，修改不会自动合并回项目。禁止派给自身或祖先。', inputSchema: { type: 'object', properties: { memberId: { type: 'string' }, workspaceId: { type: 'string', description: '从 cbim_office_inspect 的 workspaces.selectable 选择物理工作区 id。' }, directory: { type: 'string', description: '工作树中的业务相对目录，默认 .' }, goal: { type: 'string' } }, required: ['memberId', 'workspaceId', 'goal'], additionalProperties: false } },
     ];
   }
 
   /** 核实文件工具真实目标；新文件按最近存在的父目录检查符号链接。 */
   private async Guard(call: ToolCall): Promise<ToolDecision>
   {
-    // 宿主 shell 没有文件系统隔离；带范围授权的任务只能使用受限文件工具。
+    // 宿主终端由本轮授权开放，实际执行仍经过当前权限和审批策略。
     if ((this._scope || this._operations.ProjectRead) && call.name === 'bash')
-      return { allow: false, reason: '本次任务未获隔离命令权限；项目资源请使用 cbim_project_read/write' };
+      return this._scope?.commands === 'host' ? { allow: true } : { allow: false, reason: '本轮任务未获本机终端权限' };
 
     const reason = guard({ name: call.name === 'find' ? 'Glob' : call.name, input: call.input }, this._root);
 
@@ -140,17 +143,21 @@ export class OfficeTools
 
     const manage = call.name === 'cbim_project_read' || call.name === 'cbim_project_write';
 
-    if (manage && (!this._operations.ProjectRead || !this._operations.ProjectWrite || !(call.name === 'cbim_project_read' ? projectReads : projectWrites).safeParse(call.input).success))
-      return { allow: false, reason: '该操作仅供主 Agent 使用，或参数无效' };
+    if (manage && (!(call.name === 'cbim_project_read' ? this._operations.ProjectRead : this._operations.ProjectWrite) || !(call.name === 'cbim_project_read' ? projectReads : projectWrites).safeParse(call.input).success))
+      return { allow: false, reason: '操作未授权或参数无效；项目知识仅助理可修改' };
 
     if (manage && this._scope && !(call.name === 'cbim_project_read' ? this._scope.readResources : this._scope.writeResources).includes(String(call.input.resource)))
       return { allow: false, reason: '项目资源操作不在本次任务授权范围' };
 
     const connector = !manage && !!this._connectors?.Has(call.name);
 
-    const internal = manage || call.name === 'cbim_office_inspect' || call.name === 'cbim_office_dispatch' || connector;
+    const plan = call.name === 'cbim_office_plan';
+    if (plan && (!this._operations.PublishPlan || !officePlanSchema.safeParse(call.input).success))
+      return { allow: false, reason: '仅助理可公布完整的协作计划' };
 
-    const descriptor = connector ? this._connectors!.Describe(call.name, call.input) : internal ? { native: false, effects: [(call.name === 'cbim_project_read' || call.name === 'cbim_office_inspect') ? 'read' as const : 'business-write' as const] } : nativeToolDescriptor(call.name);
+    const internal = plan || manage || call.name === 'cbim_office_inspect' || call.name === 'cbim_office_dispatch' || connector;
+
+    const descriptor = connector ? this._connectors!.Describe(call.name, call.input) : internal ? { native: false, effects: [(plan || call.name === 'cbim_project_read' || call.name === 'cbim_office_inspect') ? 'read' as const : 'business-write' as const] } : nativeToolDescriptor(call.name);
 
     if (!descriptor || this._consumed.has(call.id))
       return { allow: false, reason: '未注册工具或已执行的调用身份' };
@@ -206,6 +213,12 @@ export class OfficeTools
 
       if ((name === 'cbim_project_write' || name === 'cbim_office_dispatch' || this._connectors?.Has(name)) && this._readPermission() !== grant.permission)
         throw Error('Office 权限已变更，请重新请求操作');
+
+      if (name === 'cbim_office_plan')
+      {
+        this._operations.PublishPlan!(officePlanSchema.parse(input));
+        return { content: [{ type: 'text' as const, text: '计划已在对话中展示' }] };
+      }
 
       if (name === 'cbim_project_read' || name === 'cbim_project_write')
       {

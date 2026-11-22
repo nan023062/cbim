@@ -90,7 +90,7 @@ click N_9ab62842ff13 href "monitor/ARCHITECTURE.md"
 | [discovery](discovery/ARCHITECTURE.md) | 统一管理四类资源的发布、版本下载和安装。 |
 | [extension](extension/ARCHITECTURE.md) | 维护当前窗口的扩展标签。 |
 | [monitor](monitor/ARCHITECTURE.md) | 独立渲染 Agent 和进程的资源占用。 |
-| [office](office/ARCHITECTURE.md) | 让用户在项目内选择 Office 会话，查看记录并保存输入。办公室、组织架构与业务架构由桌面项目顶栏导航；OfficeView 接收页面选择，切换时保留会话与输入状态。对话内容区不再提供重复的架构或主 Agent 设置工具栏，主 Agent 的能力设置仅从输入区进入。 |
+| [office](office/ARCHITECTURE.md) | 让用户在项目内选择 Office 会话，查看记录并保存输入。办公室、组织架构与业务架构由桌面项目顶栏导航；OfficeView 接收页面选择，切换时保留会话与输入状态。对话内容区不再提供重复的架构或助理设置工具栏，助理的能力设置仅从输入区进入。 |
 | [settings](settings/ARCHITECTURE.md) | 在主窗口内提供独立的设置导航与分组内容。 |
 | [shared](shared/ARCHITECTURE.md) | Icon 的组织操作图形包含返回、新增团队和新增成员，复用既有线性图标风格；文字提示和可访问名称由使用它的按钮提供。 |
 

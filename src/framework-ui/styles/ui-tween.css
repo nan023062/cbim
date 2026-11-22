@@ -42,11 +42,11 @@
 [data-ui-fade="false"], [data-ui-fade="false"]:disabled { opacity: 0; pointer-events: none; }
 [data-ui-fade="true"] { opacity: 1; }
 
-[data-ui-scrollbar-fade][data-ui-scrollbar-fade] {
-  scrollbar-color: transparent transparent;
-  transition: scrollbar-color var(--ui-motion-fade);
-}
-[data-ui-scrollbar-fade="true"][data-ui-scrollbar-fade] { scrollbar-color: var(--muted) transparent; }
+/* Native scrollbars inherit their window's visibility, including portal content. */
+:root[data-ui-scroll-windows], [data-ui-scroll-window] { scrollbar-color: transparent transparent; }
+[data-ui-scroll-windows] [data-ui-scroll-active], :root[data-ui-scroll-active] { scrollbar-color: var(--muted) transparent; }
+.ui-scroll-window { min-width:0; min-height:0; overflow:auto; }
+[data-ui-scroll-window], [data-ui-scroll-active] { transition:scrollbar-color var(--ui-motion-fade); }
 
 [data-motion=control] { transition: var(--tween-control); }
 [data-motion=panel] { animation: var(--tween-panel); }

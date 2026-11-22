@@ -1,4 +1,5 @@
 import {expect,it,vi} from 'vitest';
+import {allowedNativeTools} from '../../../src/engine-plugins/native-tool-policy';
 import {claudeTools} from '../../../src/engine-plugins/claude/tools';
 import {codexTools} from '../../../src/engine-plugins/codex/tools';
 import type {EngineContext} from '../../../src/logic/execution/rules/types';
@@ -30,4 +31,10 @@ it('read-only catalogs reject a Codex write before invoking the tool', async () 
     expect(await codex.Call({ callId: 'write', tool: 'cbim_native_write', arguments: {} })).toMatchObject({ success: false });
     expect(native.call).not.toHaveBeenCalled();
   } finally { await claude.Close(); await codex.Close(); }
+});
+
+it.each(['pi','claude-code','codex'] as const)('%s 的任务工具目录遵守宿主命令和写入上限',engine=>{
+ const taskPermission={projectId:'p',officeId:'o',agentId:'a',taskId:'t',readDirectories:['/work'],writeDirectories:[],excludedDirectories:['.cbim'],readResources:[],writeResources:[],commands:'denied' as const,level:'read' as const};
+ expect(allowedNativeTools({taskPermission},true,engine)).not.toContain('write');
+ expect(allowedNativeTools({taskPermission:{...taskPermission,level:'execute',writeDirectories:['/work']}},true,engine)).not.toContain('bash');
 });

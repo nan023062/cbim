@@ -2,13 +2,9 @@
  * 作用定位：项目组织的持久编辑服务：保留节点身份，以版本化单文件提交整棵树。
  * 设计原因：稳定身份与版本化提交保护实时编辑，保存更新共享目录并通知主 Agent，已运行角色仍保留快照。
  */
-import fs from 'node:fs/promises';
+import { describeOrganization } from './project-trees';
 
-import path from 'node:path';
-
-import { atomic } from '../../core/io/text-files';
-
-import type { ProjectList } from './project';
+import type { ProjectAccess } from './project-access';
 
 import { ArchitectureUpdate } from './architecture-update';
 
@@ -20,7 +16,7 @@ export class OrganizationDirectory
 {
   private readonly _writing = new Set<string>();
 
-  public constructor(private readonly _projects: ProjectList, private readonly _prepare: (project: string, snapshot: OrganizationSnapshot) => Promise<() => void> = async () => () => { }, private readonly _notify: (project: string, text: string) => void = () => { }, private readonly _defaultModel: () => Promise<NonNullable<OrganizationNode['configuration']>['model']> = async () => undefined)
+  public constructor(private readonly _projects: ProjectAccess, private readonly _prepare: (project: string, snapshot: OrganizationSnapshot) => Promise<() => void> = async () => () => { }, private readonly _notify: (project: string, text: string) => void = () => { }, private readonly _defaultModel: () => Promise<NonNullable<OrganizationNode['configuration']>['model']> = async () => undefined)
   {
   }
 
@@ -33,23 +29,7 @@ export class OrganizationDirectory
   {
     const project = await this._projects.Open(projectId);
 
-    try
-    {
-      return organizationSnapshotSchema.parse(JSON.parse(await fs.readFile(path.join(this._projects.paths.Project(projectId), 'organization.json'), 'utf8')));
-    }
-    catch (error)
-    {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT')
-        throw error;
-    }
-
-    const nodes: OrganizationNode[] = [];
-
-    const visit = (children: TeamDescription['children'], parentId: string | null) => { for (const node of children) { nodes.push(node.kind === 'team' ? { id: node.id, kind: 'team', parentId, name: node.name ?? node.id.split('/').at(-1)!, position: node.position ?? '' } : { id: node.id, kind: 'agent', parentId, name: node.name, position: node.position, configuration: { ...(node.model.engine && { model: node.model }), skills: [...(node.skills ?? [])], connectorIds: [...(node.connectorIds ?? [])] } }); if (node.kind === 'team') visit(node.children, node.id); } };
-
-    visit(project.resources.organization, null);
-
-    return organizationSnapshotSchema.parse({ revision: 0, nodes });
+    return project.trees.Organization();
   }
 
   public async Change(projectId: string, input: OrganizationChange): Promise<OrganizationSnapshot>
@@ -63,7 +43,7 @@ export class OrganizationDirectory
 
     try
     {
-      await this._projects.Open(projectId);
+      const project = await this._projects.Open(projectId);
 
       const previous = await this.Read(projectId);
 
@@ -105,7 +85,7 @@ export class OrganizationDirectory
 
       const apply = await this._prepare(projectId, result);
 
-      await atomic(path.join(this._projects.paths.Project(projectId), 'organization.json'), JSON.stringify(result, null, 2));
+      await project.trees.SaveOrganization(result);
 
       apply();
 
@@ -122,8 +102,6 @@ export class OrganizationDirectory
   /** 转换只改变组织视图；能力配置随后由 AgentSettings 装配。 */
   public Describe(snapshot: OrganizationSnapshot): TeamDescription['children']
   {
-    const children = (parentId: string | null): TeamDescription['children'] => snapshot.nodes.filter(node => node.parentId === parentId).map(node => node.kind === 'team' ? { id: node.id, kind: 'team', name: node.name, position: node.position, children: children(node.id) } : { id: node.id, agentId: node.id, kind: 'agent', name: node.name, position: node.position, ...node.configuration, model: node.configuration?.model ?? { engine: '', profileId: '', modelId: '' }, available: !!node.configuration?.model, reason: node.configuration?.model ? undefined : '岗位尚未绑定执行配置' });
-
-    return children(null);
+    return describeOrganization(snapshot);
   }
 }

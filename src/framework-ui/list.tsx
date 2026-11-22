@@ -10,12 +10,12 @@ import './ui.css';
 
 export interface ListHandle
 {
-  scrollToRow(index: number): void
+  scrollToRow: (index: number) => void
 
-  scrollToEnd(): void
+  scrollToEnd: () => void
 }
 
-export function WindowList({ count, itemKey, render, initialEnd, listRef, label, firstIndex = 0, scrollbarVisible, onStart }: { count: number; itemKey(index: number): string; render(index: number): ReactNode; initialEnd?: boolean; listRef?: Ref<ListHandle>; label: string; firstIndex?: number; scrollbarVisible?: boolean; onStart?(): void; })
+export function WindowList({ count, itemKey, render, initialEnd, listRef, label, firstIndex = 0, scrollbarVisible, onStart }: { count: number; itemKey: (index: number) => string; render: (index: number) => ReactNode; initialEnd?: boolean; listRef?: Ref<ListHandle>; label: string; firstIndex?: number; scrollbarVisible?: boolean; onStart?: () => void; })
 {
   const initial = useRef(initialEnd && count ? { index: count - 1, align: 'end' as const } : 0);
 

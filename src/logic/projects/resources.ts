@@ -4,7 +4,9 @@
  */
 import path from 'node:path';
 
-import type { ProjectResources } from '../../framework/cbim-runtime';
+import { referencesSchema, readProjectReferences } from './project-references';
+
+import type { ProjectResources } from '../../framework/project';
 
 import type { TeamMember, TeamDescription } from '../../framework/cability/team';
 
@@ -14,9 +16,9 @@ import { readArchitectureFiles } from '../../resource/project-architecture';
 
 import { agentConfigurationSchema } from './agent-configuration';
 
-export async function readProjectResources(projectId: string, root: string): Promise<ProjectResources>
+export async function readProjectResources(projectId: string, root: string, org = true, biz = true): Promise<ProjectResources>
 {
-  const { roles, modules } = await readArchitectureFiles(root);
+  const [{ roles, modules }, refs] = await Promise.all([readArchitectureFiles(root, org, biz), readProjectReferences(root)]);
 
   type Children = (TeamMember | TeamDescription)[];
 
@@ -95,5 +97,7 @@ export async function readProjectResources(projectId: string, root: string): Pro
     if (modules.has(path.posix.dirname(id)))
       throw Error('父工作区未声明子节点 ' + id);
 
-  return { projectId, organization: group('.cbim/team'), business: { roots, nodes } };
+  const references = referencesSchema.optional().parse(refs);
+
+  return { projectId, references, organization: group('.cbim/team'), business: { roots, nodes } };
 }

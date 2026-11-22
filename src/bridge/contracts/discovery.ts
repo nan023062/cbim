@@ -124,8 +124,14 @@ export interface TransferState
   total: number;
 }
 
+export interface RegistryKey {kind:'engine'|'connector'|'talent'|'business';id:string;version:string}
+export interface RegistryVersion extends RegistryKey {sha256:string;size:number}
+
 export interface DesktopMenu
 {
+  RegistryList():Promise<RegistryVersion[]>;
+  RegistryPublish(key:RegistryKey):Promise<RegistryVersion|null>;
+  RegistryPull(version:RegistryVersion):Promise<string>;
   Navigation(change?: import('../../logic/projects/navigation-contract').NavigationChange): Promise<import('../../logic/projects/navigation-contract').NavigationSnapshot>;
 
   RevealProject(project: string): Promise<void>;
@@ -175,7 +181,9 @@ export interface DesktopMenu
   Projects(): Promise<ProjectItem[]>;
 
   PickProject(): Promise<{ attempt: string; name: string } | null>;
+
   AddProject(attempt: string): Promise<ProjectItem>;
+
   ProjectDisplayed(attempt: string, at: number): Promise<void>;
 
   Resources(page: DiscoveryPage): Promise<DiscoveryResult>;

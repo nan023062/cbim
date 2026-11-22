@@ -28,6 +28,10 @@ Framework 定义 CBIM 的模型能力与 Agent 引擎协议，供 Logic 装配�
 classDiagram
 class N_30804c3bb3bb["CbimRuntime"]
 click N_30804c3bb3bb href "cbim-runtime.ts"
+class N_d21d5aff65c9["ProjectResources"] {
+  <<module>>
+}
+click N_d21d5aff65c9 href "cbim-runtime.ts"
 class N_b88f3147f97b["office"] {
   <<virtual>>
 }
@@ -36,37 +40,39 @@ class N_4aef7e841596["business"] {
   <<virtual>>
 }
 click N_4aef7e841596 href "business/ARCHITECTURE.md"
-class N_d21d5aff65c9["ProjectResources"] {
-  <<interface>>
+class N_2f15de44b8e6["project"] {
+  <<virtual>>
 }
-click N_d21d5aff65c9 href "cbim-runtime.ts"
+click N_2f15de44b8e6 href "project/ARCHITECTURE.md"
 class N_516fccf1524e["cability"] {
   <<virtual>>
 }
 click N_516fccf1524e href "cability/ARCHITECTURE.md"
+N_d21d5aff65c9 ..> N_30804c3bb3bb : 依赖
+N_d21d5aff65c9 ..> N_4aef7e841596 : 依赖
+N_d21d5aff65c9 ..> N_516fccf1524e : 依赖
+N_d21d5aff65c9 ..> N_b88f3147f97b : 依赖
+N_d21d5aff65c9 ..> N_2f15de44b8e6 : 依赖
+N_30804c3bb3bb ..> N_d21d5aff65c9 : 依赖
+N_30804c3bb3bb ..> N_b88f3147f97b : 依赖
+N_30804c3bb3bb ..> N_4aef7e841596 : 依赖
+N_30804c3bb3bb ..> N_2f15de44b8e6 : 依赖
+N_30804c3bb3bb ..> N_516fccf1524e : 依赖
+N_b88f3147f97b ..> N_4aef7e841596 : 依赖
+N_b88f3147f97b ..> N_516fccf1524e : 依赖
+N_2f15de44b8e6 ..> N_4aef7e841596 : 依赖
+N_2f15de44b8e6 ..> N_516fccf1524e : 依赖
+N_2f15de44b8e6 ..> N_b88f3147f97b : 依赖
+```
+
+### 关系组 2：monitor
+
+```mermaid
+classDiagram
 class N_3c7a2e5c648b["monitor"] {
   <<virtual>>
 }
 click N_3c7a2e5c648b href "monitor/ARCHITECTURE.md"
-N_d21d5aff65c9 ..> N_516fccf1524e : 依赖
-N_d21d5aff65c9 ..> N_4aef7e841596 : 依赖
-N_30804c3bb3bb ..> N_b88f3147f97b : 依赖
-N_30804c3bb3bb ..> N_4aef7e841596 : 依赖
-N_30804c3bb3bb ..> N_d21d5aff65c9 : 依赖
-N_30804c3bb3bb ..> N_516fccf1524e : 依赖
-N_3c7a2e5c648b ..> N_30804c3bb3bb : 依赖
-N_b88f3147f97b ..> N_4aef7e841596 : 依赖
-N_b88f3147f97b ..> N_516fccf1524e : 依赖
-```
-
-### 关系组 2：skills
-
-```mermaid
-classDiagram
-class N_af1b03806bfb["skills"] {
-  <<virtual>>
-}
-click N_af1b03806bfb href "skills/ARCHITECTURE.md"
 class N_0b7ffb6a70f6["connectors"] {
   <<virtual>>
 }
@@ -75,6 +81,11 @@ class N_20ee62e66639["kernel"] {
   <<virtual>>
 }
 click N_20ee62e66639 href "kernel/ARCHITECTURE.md"
+class N_af1b03806bfb["skills"] {
+  <<virtual>>
+}
+click N_af1b03806bfb href "skills/ARCHITECTURE.md"
+N_3c7a2e5c648b ..> N_0b7ffb6a70f6 : 依赖
 ```
 
 ### 跨图协作
@@ -85,7 +96,7 @@ click N_20ee62e66639 href "kernel/ARCHITECTURE.md"
 | --- | --- | --- |
 | [business](business/ARCHITECTURE.md)（图 1） | 依赖 | [skills](skills/ARCHITECTURE.md)（图 2） |
 | [cability](cability/ARCHITECTURE.md)（图 1） | 依赖 | [skills](skills/ARCHITECTURE.md)（图 2） |
-| [monitor](monitor/ARCHITECTURE.md)（图 1） | 依赖 | [connectors](connectors/ARCHITECTURE.md)（图 2） |
+| [monitor](monitor/ARCHITECTURE.md)（图 2） | 依赖 | [ProjectResources](cbim-runtime.ts)（图 1）、[CbimRuntime](cbim-runtime.ts)（图 1） |
 
 ## 子模块
 
@@ -97,6 +108,7 @@ click N_20ee62e66639 href "kernel/ARCHITECTURE.md"
 | [kernel](kernel/ARCHITECTURE.md) | Kernel 是 CBIM 面向大模型厂商和 Agent 工具厂商的兼容层。模型决定一次推理使用的服务，引擎负责驱动 Agent Loop。同一引擎可以支持多种模型，具体组合由 Logic 的兼容清单决定。上层通过配置引用取得执行实例，按轮次提交任务和接收事件。Kernel 的公开类型从本模块的 index.ts 导出。 |
 | [monitor](monitor/ARCHITECTURE.md) | Monitor 单向读取 Framework 的运行实例。Office 管理成员、引擎和工作区的生命周期；应用宿主提供进程采样，模型执行事件提供实际 Token 用量。 |
 | [office](office/ARCHITECTURE.md) | OpenMainAgent 接受与成员相同的 AgentConfiguration，在本次启动中生成冻结角色；内置主角色只提供默认职责，模型、Skill、连接器来自当前对话设置。运行配置编辑不改变已经启动的实例。 |
+| [project](project/ARCHITECTURE.md) | 项目列表为每个打开的项目创建一个 ProjectInstance，由它持有组织树、业务树和按主会话 ID 索引的 Office。两个 Office 共享定义，各自持有成员实例和任务。项目关闭时统一释放 Office，不卸载本机共享包。 |
 | [skills](skills/ARCHITECTURE.md) | 岗位 Skill 与业务 Workflow 共用文字流程声明，以名称及正文引用定位流程。 |
 
 [上层设计](../ARCHITECTURE.md)

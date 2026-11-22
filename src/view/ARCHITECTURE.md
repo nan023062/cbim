@@ -22,22 +22,18 @@
 
 标注为 `virtual` 的节点是直接子模块的虚拟类封装；内部设计沿下方入口阅读。
 
-### 关系组 1：shared
+### 关系组 1：desktop
 
 ```mermaid
 classDiagram
-class N_487081ac23f6["shared"] {
-  <<virtual>>
-}
-click N_487081ac23f6 href "shared/ARCHITECTURE.md"
-class N_c5eba677313b["入口"] {
-  <<module>>
-}
-click N_c5eba677313b href "main.ts"
 class N_40b8b62c92ef["desktop"] {
   <<virtual>>
 }
 click N_40b8b62c92ef href "desktop/ARCHITECTURE.md"
+class N_c5eba677313b["入口"] {
+  <<module>>
+}
+click N_c5eba677313b href "main.ts"
 class N_e18e90529095["discovery"] {
   <<virtual>>
 }
@@ -46,25 +42,6 @@ class N_41f57560b5c0["extension"] {
   <<virtual>>
 }
 click N_41f57560b5c0 href "extension/ARCHITECTURE.md"
-class N_9ab62842ff13["monitor"] {
-  <<virtual>>
-}
-click N_9ab62842ff13 href "monitor/ARCHITECTURE.md"
-N_c5eba677313b ..> N_40b8b62c92ef : 依赖
-N_c5eba677313b ..> N_9ab62842ff13 : 依赖
-N_c5eba677313b ..> N_487081ac23f6 : 依赖
-N_40b8b62c92ef ..> N_e18e90529095 : 依赖
-N_40b8b62c92ef ..> N_41f57560b5c0 : 依赖
-N_40b8b62c92ef ..> N_487081ac23f6 : 依赖
-N_e18e90529095 ..> N_487081ac23f6 : 依赖
-N_41f57560b5c0 ..> N_487081ac23f6 : 依赖
-N_9ab62842ff13 ..> N_487081ac23f6 : 依赖
-```
-
-### 关系组 2：office
-
-```mermaid
-classDiagram
 class N_feddf7accad7["office"] {
   <<virtual>>
 }
@@ -73,6 +50,25 @@ class N_548175957adf["settings"] {
   <<virtual>>
 }
 click N_548175957adf href "settings/ARCHITECTURE.md"
+N_c5eba677313b ..> N_40b8b62c92ef : 依赖
+N_40b8b62c92ef ..> N_e18e90529095 : 依赖
+N_40b8b62c92ef ..> N_41f57560b5c0 : 依赖
+N_40b8b62c92ef ..> N_feddf7accad7 : 依赖
+N_40b8b62c92ef ..> N_548175957adf : 依赖
+```
+
+### 关系组 2：shared
+
+```mermaid
+classDiagram
+class N_487081ac23f6["shared"] {
+  <<virtual>>
+}
+click N_487081ac23f6 href "shared/ARCHITECTURE.md"
+class N_9ab62842ff13["monitor"] {
+  <<virtual>>
+}
+click N_9ab62842ff13 href "monitor/ARCHITECTURE.md"
 ```
 
 ### 跨图协作
@@ -81,9 +77,9 @@ click N_548175957adf href "settings/ARCHITECTURE.md"
 
 | 引用方 | 关系 | 目标 |
 | --- | --- | --- |
-| [desktop](desktop/ARCHITECTURE.md)（图 1） | 依赖 | [office](office/ARCHITECTURE.md)（图 2）、[settings](settings/ARCHITECTURE.md)（图 2） |
-| [office](office/ARCHITECTURE.md)（图 2） | 依赖 | [shared](shared/ARCHITECTURE.md)（图 1） |
-| [settings](settings/ARCHITECTURE.md)（图 2） | 依赖 | [shared](shared/ARCHITECTURE.md)（图 1） |
+| [入口](main.ts)（图 1） | 依赖 | [monitor](monitor/ARCHITECTURE.md)（图 2）、[shared](shared/ARCHITECTURE.md)（图 2） |
+| [desktop](desktop/ARCHITECTURE.md)（图 1） | 依赖 | [shared](shared/ARCHITECTURE.md)（图 2） |
+| [discovery](discovery/ARCHITECTURE.md)（图 1） | 依赖 | [shared](shared/ARCHITECTURE.md)（图 2） |
 
 ## 子模块
 

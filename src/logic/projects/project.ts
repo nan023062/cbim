@@ -2,11 +2,23 @@
  * 作用定位：一个已加载的本地项目持有自己的架构资源与唯一的工作流运行时。
  * 设计原因：项目实例隔离资源与运行时，列表管理加载结果，单个项目故障不等同于所有项目不可用。
  */
-import path from 'node:path';
+import { AgentSettings } from './agent-settings';
 
-import { GitWorktrees } from './git-worktrees';
+import { BusinessDirectory } from './business-directory';
 
-import { CbimRuntime, type ProjectResources } from '../../framework/cbim-runtime';
+import { ProjectWork } from './project-work';
+
+import { projectReads, projectWrites } from './office-operations';
+
+import { ProjectReferenceStore } from './project-references';
+
+import type { ProjectResourceStore } from '../../framework/project';
+
+import { ProjectTrees } from './project-trees';
+
+import { ProjectCache } from './project-cache';
+
+import { ProjectInstance, type ProjectResources } from '../../framework/project';
 
 import { changeEvents } from '../../framework/events';
 
@@ -18,21 +30,31 @@ import type { WorkspaceEntry } from './contracts';
 
 export class Project
 {
-  public readonly runtime: CbimRuntime;
+  public readonly runtime: ProjectInstance;
 
-  public constructor(public readonly entry: WorkspaceEntry, public readonly resources: ProjectResources, worktrees: GitWorktrees)
+  public constructor(public readonly entry: WorkspaceEntry, public readonly resources: ProjectResources, public readonly cache: ProjectCache, public readonly trees: ProjectTrees, store: ProjectResourceStore)
   {
-    this.runtime = new CbimRuntime(worktrees, resources);
+    this.runtime = new ProjectInstance(entry.id, resources, cache.worktrees, cache.history, store);
   }
 }
 
 export class ProjectList extends Catalog
 {
+  ResourceChanged: (id: string, text: string) => void = () => { };
+
+  DefaultModel: NonNullable<ConstructorParameters<typeof AgentSettings>[2]> = async () => undefined;
+
+  readonly settings = new AgentSettings(this, (id, text) => this.ResourceChanged(id, text), () => this.DefaultModel());
+
+  readonly businessDirectory = new BusinessDirectory(this, (id, text) => this.ResourceChanged(id, text));
+
+  readonly work = new ProjectWork(this);
+
   private readonly loaded = new Map<string, Project>();
 
   private readonly opening = new Map<string, Promise<Project>>();
 
-  private readonly changes = changeEvents<Parameters<Parameters<CbimRuntime['Subscribe']>[0]>[0]>();
+  private readonly changes = changeEvents<Parameters<Parameters<ProjectInstance['Subscribe']>[0]>[0]>();
 
   public readonly Subscribe = this.changes.Subscribe;
 
@@ -62,12 +84,19 @@ export class ProjectList extends Catalog
     if (!entry)
       throw Error('项目未登记');
 
-    const resources = await readProjectResources(id, entry.path);
+    const trees = new ProjectTrees(entry.path, this.Cache(id));
+
+    const resources = await trees.Load((org, biz) => readProjectResources(id, entry.path, org, biz));
 
     if (this.closed)
       throw Error('项目列表已关闭');
 
-    const project = new Project(entry, resources, new GitWorktrees(path.join(this.paths.userRoot, 'worktrees')));
+    const references = new ProjectReferenceStore(entry.path);
+
+    const project: Project = new Project(entry, resources, this.Cache(id), trees, {
+      Read: async raw => { const input = projectReads.parse(raw); if (input.resource === 'member') return this.settings.Read(id, { kind: 'member', id: input.id }); if (input.resource === 'references') return references.Read(); if (input.resource === 'organization') return this.settings.organization.Read(id); if (input.resource === 'business') return this.businessDirectory.Read(id); const state = await this.work.Read(id); return { revision: state.revision, items: state[input.resource] }; },
+      Change: async (raw, context) => { const input = projectWrites.parse(raw); if (input.resource === 'references') return references.Change(input.change, value => project.runtime.shared.Replace(value)); if (input.resource === 'member') return this.settings.Save(id, { kind: 'member', id: input.id }, input.revision, input.configuration); if (input.resource === 'organization') return this.settings.organization.Change(id, input.change); if (input.resource === 'business') return this.businessDirectory.Change(id, input.change); return this.work.Change(id, input.resource, input.change, context.session, context.selection); }
+    });
 
     project.runtime.Subscribe(this.changes.Emit);
 
@@ -86,7 +115,7 @@ export class ProjectList extends Catalog
   {
     const project = await this.Open(projectId);
 
-    const business = project.runtime.project!;
+    const business = project.runtime.business;
 
     const tree = business.DescribeWorkspaces();
 

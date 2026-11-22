@@ -41,13 +41,13 @@ async function descriptions(root: string, folder: string, filename: string)
   return result;
 }
 
-export async function readArchitectureFiles(root: string)
+export async function readArchitectureFiles(root: string, org = true, biz = true)
 {
   await fs.access(root);
 
   const [roles, modules] = await Promise.all([
-    descriptions(root, '.cbim/team', 'agent.json'),
-    descriptions(root, '.cbim/workspace', 'module.json'),
+    org ? descriptions(root, '.cbim/team', 'agent.json') : new Map<string, string>(),
+    biz ? descriptions(root, '.cbim/workspace', 'module.json') : new Map<string, string>(),
   ]);
 
   return { roles, modules };

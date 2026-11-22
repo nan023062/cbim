@@ -2,9 +2,9 @@
  * 作用定位：连接器包管理器的装配函数与制品兼容性校验。
  * 设计原因：复用通用插件管理器，单独限制连接器类型、协议及无依赖制品，避免套用引擎兼容规则。
  */
-import { PluginManager } from '../../resource/plugins';
+import { PluginManager } from '../plugins';
 
-import type { EngineArtifactsPort } from '../updates/engine-artifacts';
+import type { EngineArtifactsPort } from '../../logic/updates/engine-artifacts';
 
 export function connectorPackages(file: string, artifacts: EngineArtifactsPort)
 {

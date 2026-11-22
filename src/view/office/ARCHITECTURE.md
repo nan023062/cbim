@@ -52,27 +52,25 @@ class N_8df9edd80fbe["SkillInput"] {
   <<component>>
 }
 click N_8df9edd80fbe href "SkillInput.tsx"
-class N_b15395ac4ab4["BusinessPanel"] {
-  <<component>>
-}
-click N_b15395ac4ab4 href "BusinessPanel.tsx"
-class N_7eea51e09f38["OrganizationPanel"] {
-  <<component>>
-}
-click N_7eea51e09f38 href "OrganizationPanel.tsx"
-class N_0ed9b2051bb7["AgentSettingsDialog"] {
-  <<component>>
-}
-click N_0ed9b2051bb7 href "AgentSettingsDialog.tsx"
 class N_344141f2516b["MainAgentPicker"] {
   <<component>>
 }
 click N_344141f2516b href "MainAgentPicker.tsx"
+class N_781427e97d30["PermissionPicker"] {
+  <<component>>
+}
+click N_781427e97d30 href "PermissionPicker.tsx"
+class N_0ed9b2051bb7["AgentSettingsDialog"] {
+  <<component>>
+}
+click N_0ed9b2051bb7 href "AgentSettingsDialog.tsx"
+class N_7eea51e09f38["OrganizationPanel"] {
+  <<component>>
+}
+click N_7eea51e09f38 href "OrganizationPanel.tsx"
 N_c1813d8369a9 ..> N_8df9edd80fbe : 依赖
-N_c1813d8369a9 ..> N_b15395ac4ab4 : 依赖
-N_c1813d8369a9 ..> N_7eea51e09f38 : 依赖
-N_c1813d8369a9 ..> N_0ed9b2051bb7 : 依赖
 N_c1813d8369a9 ..> N_344141f2516b : 依赖
+N_c1813d8369a9 ..> N_781427e97d30 : 依赖
 N_7eea51e09f38 ..> N_0ed9b2051bb7 : 依赖
 N_0ed9b2051bb7 ..> N_344141f2516b : 依赖
 ```
@@ -85,14 +83,15 @@ class N_edc86e1c0e2b["BusinessNodeDialog"] {
   <<component>>
 }
 click N_edc86e1c0e2b href "BusinessNodeDialog.tsx"
+class N_b15395ac4ab4["BusinessPanel"] {
+  <<component>>
+}
+click N_b15395ac4ab4 href "BusinessPanel.tsx"
 class N_ae2d02e6d4c7["OrganizationNodeDialog"] {
   <<component>>
 }
 click N_ae2d02e6d4c7 href "OrganizationNodeDialog.tsx"
-class N_781427e97d30["PermissionPicker"] {
-  <<component>>
-}
-click N_781427e97d30 href "PermissionPicker.tsx"
+N_b15395ac4ab4 ..> N_edc86e1c0e2b : 依赖
 ```
 
 ### 跨图协作
@@ -101,8 +100,6 @@ click N_781427e97d30 href "PermissionPicker.tsx"
 
 | 引用方 | 关系 | 目标 |
 | --- | --- | --- |
-| [OfficeView](OfficeView.tsx)（图 1） | 依赖 | [PermissionPicker](PermissionPicker.tsx)（图 2） |
-| [BusinessPanel](BusinessPanel.tsx)（图 1） | 依赖 | [BusinessNodeDialog](BusinessNodeDialog.tsx)（图 2） |
 | [OrganizationPanel](OrganizationPanel.tsx)（图 1） | 依赖 | [OrganizationNodeDialog](OrganizationNodeDialog.tsx)（图 2） |
 
 [上层设计](../ARCHITECTURE.md)

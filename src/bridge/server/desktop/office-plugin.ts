@@ -10,7 +10,7 @@ import { mkdir, readFile } from 'node:fs/promises';
 
 import type { OfficeChat } from '../../../logic/projects/offices';
 
-import type { EnginePackages } from '../../../logic/engines/packages';
+import type { EnginePackages } from '../../../resource/engines';
 
 import { loopEngineSchema } from '../../../logic/engines';
 
@@ -24,9 +24,11 @@ import { OfficeTools } from './office-tools';
 
 import type { OfficeApproval } from '../../../logic/projects/office-operations';
 
-import type { managedConnectorPackages } from '../../../logic/resource-management/connector-runtime';
+import type { managedConnectorPackages } from '../../../resource/connectors/connector-runtime';
 
-import { openAgentConnectors } from '../../../logic/resource-management/connector-runtime';
+import { openAgentConnectors } from '../../../resource/connectors/connector-runtime';
+
+import { issueTaskPermission } from '../../../logic/projects/office-operations';
 
 function activityDetail(value: unknown): string | undefined
 {
@@ -52,6 +54,7 @@ export async function runOfficePlugin(packages: EnginePackages, profiles: LlmPro
     throw Error('请先在执行引擎页安装并启用该引擎');
 
   await turn.ReportStage?.('解析模型配置');
+
   const llm = await new EngineModelProfiles(profiles).Resolve(turn.selection.profileId, turn.selection.modelId, kind);
 
   const model = llm.profile.model;
@@ -60,17 +63,22 @@ export async function runOfficePlugin(packages: EnginePackages, profiles: LlmPro
 
   const runId = crypto.randomUUID();
 
-  const agentHome = path.join(turn.dataRoot, 'office-engines', turn.session, kind);
+  const agentHome = path.join(turn.engineRoot, turn.session, kind);
 
   const directory = path.join(agentHome, runId);
 
   await mkdir(directory, { recursive: true });
 
   await turn.ReportStage?.('加载本地引擎');
-  const runtime = await packages.ResolveEngine(kind);
 
-  if (runtime.identity !== status.active.identity)
+  const pinned = turn.shared?.Identity('engines', kind);
+
+  const runtime = await packages.ResolveEngine(kind, pinned);
+
+  if (runtime.identity !== (pinned ?? status.active.identity))
     throw Error('引擎版本已变更，请重新选择');
+
+  const grant = issueTaskPermission({ projectId: turn.project, officeId: turn.officeId, agentId: turn.agentInstanceId, taskId: runId }, turn.root, !!turn.operations.ProjectRead && !!turn.operations.ProjectWrite, turn.ReadPermission, signal);
 
   const release = runtime.retain?.();
 
@@ -85,6 +93,7 @@ export async function runOfficePlugin(packages: EnginePackages, profiles: LlmPro
     if (ids.length)
     {
       await turn.ReportStage?.('连接工具');
+
       if (!connectors || !turn.agentInstanceId || !turn.officeId)
         throw Error('当前宿主缺少连接器运行身份');
 
@@ -94,14 +103,14 @@ export async function runOfficePlugin(packages: EnginePackages, profiles: LlmPro
         if (!installed.some(item => item.kind === id && item.active && item.enabled))
           throw Error('请先安装并启用所选连接器：' + id);
 
-      acquired = await openAgentConnectors(connectors, ids, { officeId: turn.officeId, agentInstanceId: turn.agentInstanceId, workspaceId: turn.project, taskId: runId }, signal);
+      acquired = await openAgentConnectors(connectors, ids, { officeId: turn.officeId, agentInstanceId: turn.agentInstanceId, workspaceId: turn.project, taskId: runId }, signal, id => turn.shared?.Identity('connectors', id));
     }
 
-    const officeTools = new OfficeTools(turn.root, turn.project, turn.ReadPermission, turn.operations, signal, approve, acquired?.service);
+    const officeTools = new OfficeTools(turn.root, turn.project, grant.Current, turn.operations, grant.signal, approve, acquired?.service, grant.snapshot);
 
     const tools = { list: () => officeTools.List(), call: async (name: string, input: Record<string, unknown>, stop: AbortSignal, id?: string) => { const result = await officeTools.Call(name, input, stop, id); const pending = turn.inputs?.Take() ?? []; return pending.length ? { toolResult: result, officeInputs: pending } : result; } };
 
-    const prompt = instructions + '\n本轮提供受管文件/命令工具及 cbim_office_inspect、cbim_office_dispatch。先核对实际目录与岗位；没有可用岗位时直接执行业务，不因缺少成员重复规划。只读不写入、不执行命令、不派发；默认权限逐次审批；完全访问仍受工作区与知识目录保护。命令使用宿主账号执行，不是操作系统隔离沙箱。先 inspect 再派发，子任务在 Office Git 工作树执行，回执中的目录才是实际产物位置，不宣称已合并。派发调用会等待结果，不需轮询。浏览器验收工具尚未接入，不得声称已完成浏览器验证。历史中的工具缺失描述不是本轮工具状态。';
+    const prompt = instructions + '\n本轮提供受管文件/命令工具及 cbim_office_inspect、cbim_office_dispatch。先核对实际目录与岗位；有 cbim_project_read/write 时，项目资源必须走工具，禁止用文件或命令直接读写 .cbim；本轮不提供未隔离的 shell。按用户要求实际登记团队、岗位及业务节点，然后查验并派发；文档不能代替登记。只读不写入、不执行命令、不派发；默认权限逐次审批；完全访问仍受工作区与知识目录保护。命令使用宿主账号执行，不是操作系统隔离沙箱。先 inspect 再派发，子任务在 Office Git 工作树执行，回执中的目录才是实际产物位置，不宣称已合并。派发调用会等待结果，不需轮询。浏览器验收工具尚未接入，不得声称已完成浏览器验证。历史中的工具缺失描述不是本轮工具状态。';
 
     // 开发适配器来自 Forge preStart 的本地源码构建，SDK 继续使用受管安装包；不改写签名缓存。
     let adapterRuntime = runtime;
@@ -118,7 +127,7 @@ export async function runOfficePlugin(packages: EnginePackages, profiles: LlmPro
       adapterRuntime = { ...runtime, root, adapter: { version: metadata.version, protocol: metadata.protocol, entry: path.join(root, metadata.entry) } };
     }
 
-    const engine = packagedEngineAdapter(kind, adapterRuntime).create({ runtime, llm, provider: 'cbim-' + llm.profile.id, model, agentHome, prompt, knowledge: tools, ReadPermission: turn.ReadPermission, allowNativeExecution: turn.ReadPermission() !== 'read' });
+    const engine = packagedEngineAdapter(kind, adapterRuntime).create({ runtime, llm, provider: 'cbim-' + llm.profile.id, model, agentHome, prompt, knowledge: tools, ReadPermission: grant.Current, allowNativeExecution: grant.Current() !== 'read' });
 
     const stop = () => { void engine.stop().catch(() => { }); };
 
@@ -141,9 +150,11 @@ export async function runOfficePlugin(packages: EnginePackages, profiles: LlmPro
       let lastPaint = 0;
 
       let firstReply = true;
+
       await turn.ReportStage?.('启动引擎');
+
       await engine.start({
-        runId, directory, task: { taskId: runId, workspaceId: turn.project, mode: 'chat', root: turn.root, goal, acceptance: [], moduleIds: [] },
+        taskPermission: grant.snapshot, runId, directory, task: { taskId: runId, workspaceId: turn.project, mode: 'chat', root: turn.root, goal, acceptance: [], moduleIds: [] },
         engineHandoff: messages.length > 1 ? JSON.stringify(messages.slice(0, -1)) : undefined,
         capabilities: [],
         beforeTool: async call => { const pending = turn.inputs?.Take() ?? []; const decision = pending.length ? { allow: false, reason: '当前任务收到追加输入，本次工具尚未执行。请先依据更新重新评估，再决定是否重新调用：' + JSON.stringify({ officeInputs: pending }) } : await officeTools.Authorize(call); progress({ phase: 'thinking', model, activity: { id: 'tool:' + call.id, label: call.name, input: activityDetail(call.input), ...(decision.allow ? {} : { alert: decision.reason ?? '操作未获批准' }) } }); return decision; },
@@ -157,6 +168,7 @@ export async function runOfficePlugin(packages: EnginePackages, profiles: LlmPro
       const preparedInputs = turn.inputs?.Take() ?? [];
 
       await turn.ReportStage?.('已交给引擎，等待响应');
+
       const running = engine.run(goal + (preparedInputs.length ? '\n' + JSON.stringify({ officeInputs: preparedInputs }) : ''));
 
       const disconnect = engine.steer && turn.inputs?.Connect(text => engine.steer!(text, [], signal));
@@ -193,6 +205,8 @@ export async function runOfficePlugin(packages: EnginePackages, profiles: LlmPro
     }
     finally
     {
+      grant.Revoke();
+
       signal.removeEventListener('abort', stop);
 
       try
@@ -212,6 +226,8 @@ export async function runOfficePlugin(packages: EnginePackages, profiles: LlmPro
   {
     try
     {
+      grant.Revoke();
+
       await acquired?.Release();
     }
     finally

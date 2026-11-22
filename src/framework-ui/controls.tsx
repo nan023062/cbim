@@ -11,7 +11,7 @@ export function Button({ type = 'button', className = '', ...props }: ButtonHTML
   return <button type={type} className={'ui-button ' + className} {...props} />;
 }
 
-export function Toggle({ checked, onChange, ...props }: Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'onChange' | 'onClick'> & { checked: boolean; onChange(value: boolean): void })
+export function Toggle({ checked, onChange, ...props }: Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'onChange' | 'onClick'> & { checked: boolean; onChange: (value: boolean) => void })
 {
   return <Button {...props} role="switch" aria-checked={checked} onClick={() => onChange(!checked)} />;
 }

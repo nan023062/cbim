@@ -96,6 +96,8 @@ export interface EngineContext
   source?: RunInputSource;
 
   /** 可信装配提供的工具能力；引擎只消费目录、调用与通用策略，不认识具体业务类。 */
+  taskPermission?: import('./engine-tools').EngineTaskPermission;
+
   capabilities?: readonly import('./engine-tools').EngineCapability[];
 
   /** 可信续执行的完整冻结证明复核，Pi 在载入前及载入后配置前调用；同时核实文件、知识、日志和原生指纹。 */

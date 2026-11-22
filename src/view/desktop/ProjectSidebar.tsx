@@ -30,7 +30,7 @@ type MenuItem =
     danger?: boolean
   };
 
-export function ProjectSidebar({ added, choosing, addingName, reading = true, activeProject, activeSession, OnOpen, OnAdd, OnUnavailable, OnSnapshot }: { added?: {attempt: string; item: ProjectItem}; choosing: boolean; addingName: string; reading?: boolean; activeProject?: string; activeSession?: string; OnOpen(project: ProjectItem, create?: boolean, session?: string): void; OnAdd(): void; OnUnavailable(project: string, session?: string): void; OnSnapshot(projects: ProjectItem[]): void })
+export function ProjectSidebar({ added, choosing, addingName, reading = true, activeProject, activeSession, OnOpen, OnAdd, OnUnavailable, OnSnapshot }: { added?: { attempt: string; item: ProjectItem }; choosing: boolean; addingName: string; reading?: boolean; activeProject?: string; activeSession?: string; OnOpen(project: ProjectItem, create?: boolean, session?: string): void; OnAdd(): void; OnUnavailable(project: string, session?: string): void; OnSnapshot(projects: ProjectItem[]): void })
 {
   const [snapshot, setSnapshot] = useState<NavigationSnapshot>({ revision: 0, projects: [] });
 
@@ -116,32 +116,20 @@ export function ProjectSidebar({ added, choosing, addingName, reading = true, ac
   const [over, setOver] = useState<string>();
 
   const [seen, setSeen] = useState<Record<string, number>>(() => { try { return JSON.parse(localStorage.getItem('office-read-completions') || '{}') || {}; } catch { return {}; } });
+
   const [focused, setFocused] = useState(() => document.hasFocus() && !document.hidden);
+
   useEffect(() => { const update = () => setFocused(document.hasFocus() && !document.hidden); window.addEventListener('focus', update); window.addEventListener('blur', update); document.addEventListener('visibilitychange', update); return () => { window.removeEventListener('focus', update); window.removeEventListener('blur', update); document.removeEventListener('visibilitychange', update); }; }, []);
+
   useEffect(() => { const next = { ...seen }; let changed = false; for (const project of snapshot.projects) for (const session of project.sessions) { const done = session.completedAt ?? 0; if (!(session.id in next) || (reading && focused && session.id === activeSession && done > next[session.id])) { next[session.id] = done; changed = true; } } if (changed) { setSeen(next); localStorage.setItem('office-read-completions', JSON.stringify(next)); } }, [seen, snapshot, activeSession, focused, reading]);
 
   const generation = useRef(0);
-  const displayed = useRef('');
-  useEffect(() => {
-    if (!added) return;
-    generation.current++;
-    const { item } = added;
-    const previous = current.current;
-    const existing = previous.projects.find(p => p.id === item.id);
-    const project = { pinned: false, sessions: [], ...existing, ...item, removed: false };
-    Apply({ ...previous, projects: existing ? previous.projects.map(p => p.id === item.id ? project : p) : [...previous.projects, project] });
-    setSearch(''); setFilter('active'); setDeviceOpen(true);
-    setCollapsed(old => ({ ...old, [item.id]: false }));
-  }, [added]);
 
-  useEffect(() => {
-    if (!added || activeProject !== added.item.id || displayed.current === added.attempt) return;
-    const row = document.querySelector('[data-project-id="' + added.item.id + '"]');
-    if (!row || !row.getClientRects().length) return;
-    row.scrollIntoView({ block: 'nearest' });
-    displayed.current = added.attempt;
-    void window.desktopMenu.ProjectDisplayed(added.attempt, Date.now()).catch(console.warn);
-  }, [added, snapshot, activeProject, filter, search, deviceOpen]);
+  const displayed = useRef('');
+
+  useEffect(() => { if (!added) return; generation.current++; const { item } = added; const previous = current.current; const existing = previous.projects.find(p => p.id === item.id); const project = { pinned: false, sessions: [], ...existing, ...item, removed: false }; Apply({ ...previous, projects: existing ? previous.projects.map(p => p.id === item.id ? project : p) : [...previous.projects, project] }); setSearch(''); setFilter('active'); setDeviceOpen(true); setCollapsed(old => ({ ...old, [item.id]: false })); }, [added]);
+
+  useEffect(() => { if (!added || activeProject !== added.item.id || displayed.current === added.attempt) return; const row = document.querySelector('[data-project-id="' + added.item.id + '"]'); if (!row || !row.getClientRects().length) return; row.scrollIntoView({ block: 'nearest' }); displayed.current = added.attempt; void window.desktopMenu.ProjectDisplayed(added.attempt, Date.now()).catch(console.warn); }, [added, snapshot, activeProject, filter, search, deviceOpen]);
 
   function Apply(value: NavigationSnapshot)
   {

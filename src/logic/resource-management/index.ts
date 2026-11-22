@@ -45,3 +45,5 @@ export class ResourceManagement
     };
   }
 }
+
+export { localRegistry,registryKey } from './local-registry';

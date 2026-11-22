@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 作用定位：桌面主布局与 Office、发现、设置和扩展页面的组合组件。
  * 设计原因：React 外壳组合各业务页面并持有窗口内导航，后台任务归宿主服务管理。
  */
@@ -7,7 +7,9 @@ import { useEffect, useRef, useState } from 'react';
 import type { DiscoveryPage, ProjectItem, OfficeConversation, OfficeSelection } from '../../bridge/contracts/discovery';
 
 import { OrganizationPanel } from '../office/OrganizationPanel';
+
 import { BusinessPanel } from '../office/BusinessPanel';
+
 import { OfficeView } from '../office/OfficeView';
 
 import { DiscoveryView } from '../discovery/MenuViews';
@@ -35,7 +37,6 @@ const resourceNavigation = [
 
 export function DesktopShell()
 {
-
   const [expanded, setExpanded] = useState(() => window.innerWidth > 720);
 
   const [settings, setSettings] = useState<'通用' | '外观' | '模型供应商'>();
@@ -43,9 +44,15 @@ export function DesktopShell()
   const [page, setPage] = useState<DiscoveryPage | 'workspace'>('workspace');
 
   /** 项目页内的导航选择与 Office 执行状态独立。 */
-
   const [addingName, setAddingName] = useState('');
-  const [added, setAdded] = useState<{ attempt: string; item: ProjectItem }>();
+
+  const [added, setAdded] = useState<
+    {
+      attempt: string;
+
+      item: ProjectItem
+    }>();
+
   const picking = useRef(false);
 
   const [selected, setSelected] = useState<ProjectItem>();
@@ -61,7 +68,6 @@ export function DesktopShell()
   function openProject(project: ProjectItem, draft = false, session?: string, keepSidebar = false)
   {
     setPage('workspace');
-
 
     if (!keepSidebar && innerWidth <= 720)
       setExpanded(false);
@@ -98,7 +104,6 @@ export function DesktopShell()
     {
       setPage('workspace');
 
-
       setSelected(project);
 
       setOffice(created);
@@ -134,8 +139,11 @@ export function DesktopShell()
 
   async function chooseProject()
   {
-    if (picking.current) return;
+    if (picking.current)
+      return;
+
     picking.current = true;
+
     setChoosing(true);
 
     setError('');
@@ -143,13 +151,23 @@ export function DesktopShell()
     try
     {
       const pick = await window.desktopMenu.PickProject();
-      if (!pick) return;
+
+      if (!pick)
+        return;
+
       setAddingName(pick.name || '项目');
+
       setExpanded(true);
+
       const item = await window.desktopMenu.AddProject(pick.attempt);
+
       setSelected(item);
-      if (selected?.id !== item.id) setOffice(undefined);
+
+      if (selected?.id !== item.id)
+        setOffice(undefined);
+
       setAdded({ attempt: pick.attempt, item });
+
       openProject(item, false, undefined, true);
     }
     catch (e)
@@ -159,7 +177,9 @@ export function DesktopShell()
     finally
     {
       picking.current = false;
+
       setAddingName('');
+
       setChoosing(false);
     }
   }

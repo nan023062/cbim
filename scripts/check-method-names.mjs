@@ -12,6 +12,8 @@ export const externalMethodNames = [
     ['src/framework/kernel/engines/agent-engine.ts', 'interface:AgentEngine', ['start', 'run', 'steer', 'stop', 'close']],
     ['src/logic/execution/rules/types.ts', 'interface:EngineContext', ['assertMemberResume', 'emit', 'beforeTool']],
     ['src/logic/execution/rules/engine-tools.ts', 'interface:EngineToolsPort', ['list', 'call']],
+    ['src/logic/projects/office-engine-loader.ts', 'interface:ChatTools', ['list', 'call']],
+    ['src/logic/projects/office-engine-loader.ts', 'interface:OfficeEngineContext', ['beforeTool', 'emit']],
     ['src/logic/execution/rules/engine-runtime.ts', 'interface:EngineRuntimePackage', ['retain']],
     ['src/logic/budget/rules/request-budget.ts', 'interface:RequestBudgetPort', ['reserve']],
     ['src/logic/budget/rules/request-budget.ts', 'interface:RequestBudgetTicket', ['issue', 'assertSend', 'report', 'unknown', 'notSent']],

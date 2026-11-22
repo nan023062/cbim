@@ -12,7 +12,7 @@ import { atomic } from '../../core/io/text-files';
 
 import { hash } from '../../core/io/serialization';
 
-import type { ProjectList } from './project';
+import type { ProjectAccess } from './project-access';
 
 import { agentConfigurationSchema, agentSettingsTargetSchema, type AgentConfiguration, type AgentSettingsTarget } from './agent-configuration';
 
@@ -38,7 +38,7 @@ export class AgentSettings
 
   private readonly _applied = new Map<string, number>();
 
-  public constructor(private readonly _projects: ProjectList, private readonly _notify: (project: string, text: string) => void = () => { }, private readonly _defaultModel: () => Promise<AgentConfiguration['model']> = async () => undefined)
+  public constructor(private readonly _projects: ProjectAccess, private readonly _notify: (project: string, text: string) => void = () => { }, private readonly _defaultModel: () => Promise<AgentConfiguration['model']> = async () => undefined)
   {
     this.organization = new OrganizationDirectory(_projects, (project, snapshot) => { if (this._changingProjects.has(project)) throw Error('能力配置正在保存，请稍后重试结构编辑'); return this.Prepare(project, snapshot); }, _notify, _defaultModel);
   }
@@ -55,38 +55,61 @@ export class AgentSettings
       throw Error('成员不属于该项目');
 
     if (target.kind === 'main')
-      await fs.access(path.join(this._projects.paths.Project(projectId), 'office-conversations', target.id));
+      await fs.access(project.cache.Session(target.id));
 
-    return { file: path.join(this._projects.paths.Project(projectId), 'agent-settings', hash(JSON.stringify(target)) + '.json'), member };
+    return { file: target.kind === 'member' ? await project.trees.MemberFile(target.id) : '', member };
   }
 
   public async Read(projectId: string, target: AgentSettingsTarget)
   {
     const { file, member } = await this.Location(projectId, target);
 
-    if (target.kind === 'main') {
+    if (target.kind === 'main')
+    {
       const { entry } = await this._projects.Open(projectId);
+
       const root = await fs.realpath(entry.path);
+
       const directory = path.join(root, '.agents', 'skills');
+
       const skills = [];
-      try {
-        if (await fs.realpath(directory) === directory) {
-          for (const child of (await fs.readdir(directory, { withFileTypes: true })).sort((a,b) => a.name.localeCompare(b.name))) {
-            if (!child.isDirectory() || child.name.length > 100 || skills.length >= 32) continue;
+
+      try
+      {
+        if (await fs.realpath(directory) === directory)
+        {
+          for (const child of (await fs.readdir(directory, { withFileTypes: true })).sort((a, b) => a.name.localeCompare(b.name)))
+          {
+            if (!child.isDirectory() || child.name.length > 100 || skills.length >= 32)
+              continue;
+
             const source = path.join(directory, child.name, 'SKILL.md');
+
             const stat = await fs.lstat(source).catch(() => undefined);
-            if (!stat?.isFile() || stat.size > 128000 || await fs.realpath(source) !== source) continue;
+
+            if (!stat?.isFile() || stat.size > 128000 || await fs.realpath(source) !== source)
+              continue;
+
             const content = (await fs.readFile(source, 'utf8')).trim();
-            if (content && content.length <= 32000) skills.push({ id: child.name, name: child.name, content });
+
+            if (content && content.length <= 32000)
+              skills.push({ id: child.name, name: child.name, content });
           }
         }
-      } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
+      }
+      catch (error)
+      {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT')
+          throw error;
+      }
+
       return { revision: 0, configuration: agentConfigurationSchema.parse({ skills }) };
     }
 
     try
     {
       const saved = savedSchema.parse(JSON.parse(await fs.readFile(file, 'utf8')));
+
       return { ...saved, configuration: { ...saved.configuration, model: saved.configuration.model ?? await this._defaultModel() } };
     }
     catch (error)
@@ -100,7 +123,9 @@ export class AgentSettings
 
   public async Save(projectId: string, target: AgentSettingsTarget, revision: number, input: AgentConfiguration)
   {
-    if (target.kind === 'main') throw Error('主 Agent 的配置仅在当前对话窗生效');
+    if (target.kind === 'main')
+      throw Error('主 Agent 的配置仅在当前对话窗生效');
+
     const configuration = agentConfigurationSchema.parse(input);
 
     const { file } = await this.Location(projectId, target);
@@ -159,7 +184,7 @@ export class AgentSettings
   {
     const project = await this._projects.Open(projectId);
 
-    const settings = new Map(await Promise.all(snapshot.nodes.filter(node => node.kind === 'agent').map(async node => { const file = path.join(this._projects.paths.Project(projectId), 'agent-settings', hash(JSON.stringify({ kind: 'member', id: node.id })) + '.json'); try { return [node.id, savedSchema.parse(JSON.parse(await fs.readFile(file, 'utf8'))).configuration] as const; } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; return [node.id, agentConfigurationSchema.parse(node.configuration ?? {})] as const; } })));
+    const settings = new Map(await Promise.all(snapshot.nodes.filter(node => node.kind === 'agent').map(async node => { const file = await project.trees.MemberFile(node.id); try { return [node.id, savedSchema.parse(JSON.parse(await fs.readFile(file, 'utf8'))).configuration] as const; } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; return [node.id, agentConfigurationSchema.parse(node.configuration ?? {})] as const; } })));
 
     const defaultModel = [...settings.values()].some(config => !config.model) ? await this._defaultModel() : undefined;
 

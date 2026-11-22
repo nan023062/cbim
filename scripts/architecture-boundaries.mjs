@@ -21,13 +21,14 @@ export const logicalBoundaries = [
       "src/framework/cbim-runtime.ts"
     ],
     "dependencies": [
-      "framework-events",
+      "framework-project", "framework-events",
       "framework-office",
       "framework-cability",
       "framework-business"
     ],
     "external": []
   },
+  {"id":"framework-project","prefix":"src/framework/project/","public":["src/framework/project/index.ts"],"dependencies":["framework-events","framework-office","framework-cability","framework-business"],"external":[]},
   {
     "id": "framework-skill-definition",
     "prefix": "src/framework/skills/",
@@ -222,9 +223,9 @@ export const logicalBoundaries = [
   },
   {
     "id": "engine-package-service",
-    "prefix": "src/logic/engines/packages/",
+    "prefix": "src/resource/engines/",
     "public": [
-      "src/logic/engines/packages/index.ts"
+      "src/resource/engines/index.ts"
     ],
     "dependencies": [
       "plugin-management",

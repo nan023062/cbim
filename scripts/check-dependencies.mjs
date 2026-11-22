@@ -11,7 +11,7 @@ import {isEngine,runtimePublicEntries} from './logic-runtime-entries.mjs';
 
 // 检查维护中的代码，而非编译后的 JS；类型边和 re-export 同样构成架构依赖。
 // .agents 是宿主提供的 Skill 符号链接入口，实际文件归 .claude 扫描，避免重复遍历。
-export const roots = ['src', 'tests', 'unittest', 'scripts', 'design', 'ainative/docs', '.claude', '.codex'];
+export const roots = ['src', 'services/resource-registry/src-server', 'tests', 'unittest', 'scripts', 'design', 'ainative/docs', '.claude', '.codex'];
 const code = /\.(?:[cm]?[jt]sx?)$/;
 const slash = value => value.replaceAll('\\', '/');
 const key = value => process.platform === 'win32' ? slash(path.resolve(value)).toLowerCase() : path.resolve(value);
@@ -66,7 +66,7 @@ export function allowsModelAccess(from,to){
 const feedbackPublic='src/logic/feedback/index.ts';
 const allowsFeedbackAccess=(from,to)=>to===feedbackPublic&&from.startsWith('src/logic/');
 const resourcePublic='src/resource/index.ts',resourceService='src/resource/service/index.ts';
-const allowsResourceAccess=(from,to)=>from==='src/logic/models/service/llm-profiles.ts'&&to==='src/resource/models/local-profiles.ts'||['src/logic/resource-management/connector-packages.ts','src/logic/engines/packages/engine-packages.ts'].includes(from)&&to==='src/resource/plugins/index.ts'||from==='src/logic/projects/resources.ts'&&to==='src/resource/project-architecture.ts'||['src/logic/projects/offices.ts','src/logic/projects/navigation.ts'].includes(from)&&to==='src/resource/office-history.ts'||from==='src/logic/resource-management/index.ts'&&[resourcePublic,resourceService].includes(to)||from==='src/logic/application/index.ts'&&to===resourceService||from==='src/logic/models/service/llm-profiles.ts'&&to==='src/resource/models/local-profiles.ts'||to===resourcePublic&&(from.startsWith('src/logic/'))||to===resourceService&&(from.startsWith('src/bridge/server/')||isService(from));
+const allowsResourceAccess=(from,to)=>from==='src/logic/models/service/llm-profiles.ts'&&to==='src/resource/models/local-profiles.ts'||['src/resource/connectors/connector-packages.ts','src/resource/engines/engine-packages.ts'].includes(from)&&to==='src/resource/plugins/index.ts'||from==='src/logic/projects/resources.ts'&&to==='src/resource/project-architecture.ts'||['src/logic/projects/project-cache.ts','src/logic/projects/offices.ts','src/logic/projects/navigation.ts'].includes(from)&&to==='src/resource/office-history.ts'||from==='src/logic/resource-management/index.ts'&&[resourcePublic,resourceService].includes(to)||from==='src/logic/application/index.ts'&&to===resourceService||from==='src/logic/models/service/llm-profiles.ts'&&to==='src/resource/models/local-profiles.ts'||to===resourcePublic&&(from.startsWith('src/logic/'))||to===resourceService&&(from.startsWith('src/bridge/server/')||isService(from));
 const moduleBoundaries=[
   {sources:['src/view/desktop/'],allow:['src/view/desktop/','src/view/office/','src/view/settings/','src/view/discovery/','src/view/extension/','src/view/shared/','src/framework-ui/','src/bridge/contracts/']},
   ...['discovery','extension','monitor','office','settings','shared'].map(name=>({sources:['src/view/'+name+'/'],allow:['src/view/'+name+'/','src/view/shared/','src/framework-ui/','src/bridge/contracts/']})),
@@ -99,8 +99,8 @@ const matchesBoundary=(file,entry)=>{
 // 非字面量加载不能静态证明目标，只允许逐项核实的外部依赖；表达式变化必须重新审核。
 export const externalLoads = [
   {file:'src/logic/projects/office-engine-loader.ts',expression:'loadAdapter(descriptor.entry)',reason:'Load the verified immutable engine package entry.'},
-  {file:'src/logic/resource-management/connector-packages.ts',expression:'loadProduct(entry)',reason:'Load the registered connector package entry.'},
-  {file:'src/logic/resource-management/connector-runtime.ts',expression:'loadProduct(entry)',reason:'仅加载宿主按产品 ID 登记的绝对 CJS 入口'},
+  {file:'src/resource/connectors/connector-packages.ts',expression:'loadProduct(entry)',reason:'Load the registered connector package entry.'},
+  {file:'src/resource/connectors/connector-runtime.ts',expression:'loadProduct(entry)',reason:'仅加载宿主按产品 ID 登记的绝对 CJS 入口'},
   {file:'scripts/runtime-build.ts',expression:"require(path.join(plugin,'ViteConfig.js'))",reason:'只从锁定的 @electron-forge/plugin-vite 包路径读取生产配置生成器；与冷包共用构建参数，无运行时用户输入'},
   {file:'src/engine-plugins/native-tools.ts',expression:'import(pathToFileURL(entry).href)',reason:'仅从冷壳验签固定的 E 目录、旧 pi-runtime 或开发依赖加载 1.5.0 的独立文件/命令操作，不接受模型或工作区给定的模块路径'},
   {file:'src/engine-plugins/claude/sdk.ts',expression:'import(pathToFileURL(entry).href)',reason:'仅从固定 CBIM claude-runtime 或开发依赖解析官方 Claude Agent SDK，不接受外部路径'},
@@ -260,10 +260,21 @@ export function auditDependencies(root = process.cwd(), options = {}) {
       const ioErrorAccess=a==='logic'&&e.to==='src/logic/io-errors/json.ts';
       const manifestAccess=['src/logic/engines/catalog/supported-engines.ts','src/logic/engines/catalog/supported-engines.ts','src/logic/resource-management/engine-catalog.ts'].includes(e.from)&&/^src\/engine-plugins\/(pi|claude|codex|memory)\/manifest\.ts$/.test(e.to);
       const adapterAccess=manifestAccess|| isEngine(e.from)&&domainPublicEntries.has(e.to);
-      if(a==='resource'&&b==='logic')return true;
+      // Host adapters consume the engine catalog and narrowly scoped runtime contracts.
+      if (['src/resource/connectors/runtime.ts','src/resource/connectors/service.ts'].includes(e.from) && e.to==='src/framework/connectors/index.ts') return false;
+      if (e.from==='src/resource/connectors/connector-runtime.ts' && ['src/framework/connectors/index.ts','src/resource/plugins/index.ts'].includes(e.to)) return false;
+      if(a==='resource'&&b==='logic'){
+        if (['src/resource/engines/index.ts','src/resource/engines/engine-packages.ts'].includes(e.from) && e.to==='src/logic/engines/index.ts') return false;
+        if (e.kind==='type' && (
+          e.from==='src/resource/engines/engine-packages.ts' && ['src/logic/updates/engine-artifacts.ts','src/logic/execution/rules/engine-runtime.ts'].includes(e.to) ||
+          ['src/resource/connectors/connector-packages.ts','src/resource/connectors/connector-runtime.ts'].includes(e.from) && e.to==='src/logic/updates/engine-artifacts.ts' ||
+          e.from==='src/resource/connectors/connector-runtime.ts' && e.to==='src/logic/tools/rules/policy/tool-policy.ts'
+        )) return false;
+        return true;
+      }
       const connectorContract=e.from.startsWith('src/resource/connections/')&&e.to==='src/framework/connectors/index.ts';
       // 新桌面复用已验证的受管连接器生命周期，逻辑新层仍不得依赖旧装配。
-      const desktopEngineLoader=e.from==='src/bridge/server/desktop/office-plugin.ts'&&e.to==='src/logic/projects/office-engine-loader.ts'||['src/bridge/server/desktop/main.ts','src/bridge/server/desktop/office-plugin.ts'].includes(e.from)&&e.to==='src/logic/resource-management/connector-runtime.ts';
+      const desktopEngineLoader=e.from==='src/bridge/server/desktop/office-plugin.ts'&&e.to==='src/logic/projects/office-engine-loader.ts'||['src/bridge/server/desktop/main.ts','src/bridge/server/desktop/office-plugin.ts'].includes(e.from)&&e.to==='src/resource/connectors/connector-runtime.ts';
       const updaterAccess=e.from==='src/bridge/server/bootstrap/desktop.ts'&&e.to==='src/updater/index.ts'||e.from==='src/logic/updates/service/desktop-releases.ts'&&e.to==='src/updater/release-policy.ts';
       const applicationAccess=e.from==='src/logic/application/index.ts'&&(['src/logic/resource-management/index.ts','src/logic/monitor/index.ts'].includes(e.to)||['project.ts','navigation.ts','office-queue.ts','offices.ts','paths.ts'].some(file=>e.to==='src/logic/projects/'+file));
       const desktopAccess=e.from.startsWith('src/bridge/server/desktop/')&&['src/logic/projects/navigation-contract.ts','src/logic/projects/agent-configuration.ts','src/logic/projects/office-queue-contract.ts','src/logic/projects/business-contract.ts','src/logic/projects/organization-contract.ts','src/logic/projects/office-operations.ts','src/logic/projects/offices.ts','src/logic/projects/office-usage.ts','src/logic/resource-management/plugin-installations.ts','src/logic/resource-management/engine-catalog.ts'].includes(e.to);

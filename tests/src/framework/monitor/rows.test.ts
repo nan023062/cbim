@@ -1,7 +1,7 @@
 import { afterEach, expect, test, vi } from 'vitest';
 import { CbimRuntime } from '../../../../src/framework/cbim-runtime';
 import { RuntimeMonitor } from '../../../../src/framework/monitor';
-import { ConnectorRuntime } from '../../../../src/framework/connectors';
+import { ConnectorRuntime } from '../../../../src/resource/connectors';
 import type { MonitorUpdate } from '../../../../src/framework/monitor/updates';
 
 afterEach(() => { vi.useRealTimers(); });

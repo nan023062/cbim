@@ -30,10 +30,6 @@ class N_9bb8d52e2465["execution"] {
   <<virtual>>
 }
 click N_9bb8d52e2465 href "execution/ARCHITECTURE.md"
-class N_7792f25b3f44["resource-management"] {
-  <<virtual>>
-}
-click N_7792f25b3f44 href "resource-management/ARCHITECTURE.md"
 class N_dc98898e0b75["engines"] {
   <<virtual>>
 }
@@ -42,14 +38,17 @@ class N_f3f055d56704["feedback"] {
   <<virtual>>
 }
 click N_f3f055d56704 href "feedback/ARCHITECTURE.md"
-N_dc98898e0b75 ..> N_9bb8d52e2465 : 依赖
+class N_46ab6b5c4908["governance"] {
+  <<virtual>>
+}
+click N_46ab6b5c4908 href "governance/ARCHITECTURE.md"
 N_b34c155e1489 ..> N_40cc50f98509 : 依赖
 N_9bb8d52e2465 ..> N_dc98898e0b75 : 依赖
 N_9bb8d52e2465 ..> N_b34c155e1489 : 依赖
 N_9bb8d52e2465 ..> N_40cc50f98509 : 依赖
-N_7792f25b3f44 ..> N_40cc50f98509 : 依赖
 N_40cc50f98509 ..> N_dc98898e0b75 : 依赖
 N_40cc50f98509 ..> N_f3f055d56704 : 依赖
+N_40cc50f98509 ..> N_46ab6b5c4908 : 依赖
 ```
 
 ### 关系组 2：team
@@ -103,10 +102,10 @@ class N_fb8f32c3f2e2["projects"] {
   <<virtual>>
 }
 click N_fb8f32c3f2e2 href "projects/ARCHITECTURE.md"
-class N_46ab6b5c4908["governance"] {
+class N_7792f25b3f44["resource-management"] {
   <<virtual>>
 }
-click N_46ab6b5c4908 href "governance/ARCHITECTURE.md"
+click N_7792f25b3f44 href "resource-management/ARCHITECTURE.md"
 class N_5aaa8e9daf01["io-errors"] {
   <<virtual>>
 }
@@ -117,6 +116,7 @@ class N_6648e4abd154["knowledge"] {
 click N_6648e4abd154 href "knowledge/ARCHITECTURE.md"
 N_90eda1f2990a ..> N_68f384d07928 : 依赖
 N_90eda1f2990a ..> N_fb8f32c3f2e2 : 依赖
+N_90eda1f2990a ..> N_7792f25b3f44 : 依赖
 ```
 
 ### 关系组 4：updates
@@ -143,16 +143,14 @@ click N_fc171a6fbe88 href "user/ARCHITECTURE.md"
 
 | 引用方 | 关系 | 目标 |
 | --- | --- | --- |
-| [application](application/ARCHITECTURE.md)（图 3） | 依赖 | [resource-management](resource-management/ARCHITECTURE.md)（图 1） |
 | [budget](budget/ARCHITECTURE.md)（图 2） | 依赖 | [engines](engines/ARCHITECTURE.md)（图 1） |
 | [engines](engines/ARCHITECTURE.md)（图 1） | 依赖 | [models](models/ARCHITECTURE.md)（图 2）、[updates](updates/ARCHITECTURE.md)（图 4） |
 | [evidence](evidence/ARCHITECTURE.md)（图 1） | 依赖 | [file-operations](file-operations/ARCHITECTURE.md)（图 2）、[workspace](workspace/ARCHITECTURE.md)（图 2） |
 | [execution](execution/ARCHITECTURE.md)（图 1） | 依赖 | [budget](budget/ARCHITECTURE.md)（图 2）、[tasks](tasks/ARCHITECTURE.md)（图 2）、[team](team/ARCHITECTURE.md)（图 2） |
 | [file-operations](file-operations/ARCHITECTURE.md)（图 2） | 依赖 | [evidence](evidence/ARCHITECTURE.md)（图 1） |
 | [projects](projects/ARCHITECTURE.md)（图 3） | 依赖 | [engines](engines/ARCHITECTURE.md)（图 1）、[execution](execution/ARCHITECTURE.md)（图 1） |
-| [resource-management](resource-management/ARCHITECTURE.md)（图 1） | 依赖 | [updates](updates/ARCHITECTURE.md)（图 4） |
 | [team](team/ARCHITECTURE.md)（图 2） | 依赖 | [engines](engines/ARCHITECTURE.md)（图 1） |
-| [tools](tools/ARCHITECTURE.md)（图 1） | 依赖 | [governance](governance/ARCHITECTURE.md)（图 3）、[team](team/ARCHITECTURE.md)（图 2）、[workspace](workspace/ARCHITECTURE.md)（图 2） |
+| [tools](tools/ARCHITECTURE.md)（图 1） | 依赖 | [team](team/ARCHITECTURE.md)（图 2）、[workspace](workspace/ARCHITECTURE.md)（图 2） |
 | [workspace](workspace/ARCHITECTURE.md)（图 2） | 依赖 | [io-errors](io-errors/ARCHITECTURE.md)（图 3）、[tools](tools/ARCHITECTURE.md)（图 1） |
 
 ## 子模块

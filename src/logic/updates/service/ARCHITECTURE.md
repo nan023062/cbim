@@ -6,7 +6,7 @@
 
 实现独立于普通业务的版本发现、制品准备、激活与恢复，保护用户数据和原运行选择。
 
-`DesktopUpdates` 与 `NsisUpdateInstaller` 管理安装通道，`RuntimeUpdates` 组合资源存储和激活日志，`EngineArtifacts` 提供签名引擎制品，固定运行包解析由 [EnginePackages](../../engines/packages/ARCHITECTURE.md) 承担。后台准备不改变活动版本；明确应用后等待业务关闭，恢复依据原日志与数据访问阶段。
+`DesktopUpdates` 与 `NsisUpdateInstaller` 管理安装通道，`RuntimeUpdates` 组合资源存储和激活日志，`EngineArtifacts` 提供签名引擎制品，固定运行包解析由 [EnginePackages](../../../resource/engines/ARCHITECTURE.md) 承担。后台准备不改变活动版本；明确应用后等待业务关闭，恢复依据原日志与数据访问阶段。
 
 安装适配由独立的 [Updater](../../../updater/ARCHITECTURE.md) 提供，属于外部协作边界，不是本目录实现。
 

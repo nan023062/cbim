@@ -256,7 +256,7 @@ export class PluginManager<Id extends string, Artifact extends PluginArtifact, P
   }
 
   /** 每次装配固定活动版本及其准确依赖。升级不会改变已返回地址；缺包明确失败，不改选 latest。 */
-  async Resolve(raw: string)
+  async Resolve(raw: string, pinned?: string)
   {
     const kind = this.catalog.ParseId(raw);
 
@@ -266,6 +266,9 @@ export class PluginManager<Id extends string, Artifact extends PluginArtifact, P
 
     if (item?.enabled === false)
       throw Error('插件已停用，请在插件设置中启用');
+
+    if (pinned && !item?.installed.includes(pinned))
+      throw Error('项目锁定的插件版本未安装：' + kind);
 
     if (!item?.active)
     {
@@ -277,7 +280,7 @@ export class PluginManager<Id extends string, Artifact extends PluginArtifact, P
     if (!item?.enabled || !item.active)
       throw Error('插件尚未启用');
 
-    const identity = item.active,
+    const identity = pinned ?? item.active,
       versions = await this.artifacts.List(),
       artifact = versions.available.find(value => value.kind === kind && value.identity === identity);
 

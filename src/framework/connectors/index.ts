@@ -4,12 +4,10 @@
  */
 export * from './definition';
 
-export { listActiveConnectors, subscribeConnectorActivity } from './activity';
-
-export { ConnectorRuntime, type ConnectorProduct } from './runtime';
+export { registerConnector, listActiveConnectors, subscribeConnectorActivity } from './activity';
 
 export { ExclusiveConnector, ConcurrentConnector, type Connector, type ConnectorSession, type ConnectorTaskContext } from './connector';
 
 export { ConnectorRegistry } from './registry';
 
-export { ConnectorService, type ConnectorServer, type ConnectorTool } from './service';
+export type { ConnectorServer, ConnectorTool } from './service';

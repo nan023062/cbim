@@ -120,8 +120,11 @@ export async function openCodexModelProxy(llm: ResolvedLlm, registered: CodexToo
           headers.authorization = 'Bearer ' + llm.apiKey;
 
         const sending = fetch(gate ? gate.url + '/request' : requestBudgetEndpoint(llm), { method: 'POST', headers, body: JSON.stringify(value), signal: abort.signal, redirect: 'error' });
+
         const [upstream] = await Promise.all([sending, !gate && onNetwork?.('provider-request')]);
-        if (!gate) await onNetwork?.('provider-headers');
+
+        if (!gate)
+          await onNetwork?.('provider-headers');
 
         if (!upstream.ok || !upstream.body || !upstream.headers.get('content-type')?.startsWith('text/event-stream'))
         {

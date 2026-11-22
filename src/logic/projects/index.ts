@@ -12,6 +12,8 @@ import { promisify } from 'node:util';
 
 import { KernelLock, KernelLockError } from '../../core/io/locking';
 
+import { ProjectCache } from './project-cache';
+
 import { Paths } from './paths';
 
 import { atomic, exists, readJson } from '../../core/io/text-files';
@@ -26,6 +28,22 @@ const empty = (): Data => ({ version: 1, entries: [], recent: [] });
 
 export class Catalog
 {
+  private readonly caches = new Map<string, ProjectCache>();
+
+  Cache(id: string)
+  {
+    let cache = this.caches.get(id);
+
+    if (!cache)
+    {
+      cache = new ProjectCache(this.paths.Project(id), path.join(this.paths.userRoot, 'worktrees'));
+
+      this.caches.set(id, cache);
+    }
+
+    return cache;
+  }
+
   warning = '';
 
   constructor(readonly paths: Paths)
@@ -128,7 +146,7 @@ export class Catalog
 
     await this.Update(data => { entry = data.entries.find(x => x.id === identity.id)!; if (!entry) { entry = { ...identity, name: path.basename(identity.path) }; data.entries.push(entry) } });
 
-    const mapping = path.join(this.paths.Project(entry.id), 'identity.json');
+    const mapping = this.Cache(entry.id).identity;
 
     if (await exists(mapping))
     {

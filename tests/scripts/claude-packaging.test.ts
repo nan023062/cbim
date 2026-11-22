@@ -18,4 +18,5 @@ test('Claude runtime copy includes the SDK, current platform binary and resolvab
     expect(versions).toContain('@anthropic-ai/claude-agent-sdk@0.3.322');expect(versions.some((s:string)=>s.startsWith('@anthropic-ai/claude-agent-sdk-'+process.platform+'-'+process.arch+'@'))).toBe(true);
     expect(require.resolve('zod/v4').startsWith(root+path.sep)).toBe(true);expect(require.resolve('@modelcontextprotocol/sdk/server/mcp.js').startsWith(root+path.sep)).toBe(true);
   }finally{if(original===undefined)delete (process as any).resourcesPath;else (process as any).resourcesPath=original;if(path.dirname(root)!==path.resolve(os.tmpdir())||!path.basename(root).startsWith('cbim-cc-package-'))throw Error('unexpected cleanup');await fs.rm(root,{recursive:true,force:true})}
-},60000);
+// 真实复制并清理完整 SDK 和平台二进制；Windows 文件扫描也计入此预算。
+},180000);

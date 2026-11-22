@@ -12,7 +12,6 @@
 
 | [PluginInstallations](plugin-installations.ts) | 保存用户安装意图，重启后按签名目录核验并恢复插件。 |
 
-| [connector-runtime](connector-runtime.ts) | 将已验证制品装配为受管连接器；会话引用、升级和回滚由管理器持有。 |
 
 <!-- architecture:generated:start -->
 
@@ -20,14 +19,10 @@
 
 ```mermaid
 classDiagram
-class N_3dd5f5cb2b14["connector-runtime"] {
-  <<module>>
-}
-click N_3dd5f5cb2b14 href "connector-runtime.ts"
-class N_0666ba67e6b7["ResourceManagement"]
-click N_0666ba67e6b7 href "index.ts"
 class N_7114dce71c65["PluginInstallations"]
 click N_7114dce71c65 href "plugin-installations.ts"
+class N_0666ba67e6b7["ResourceManagement"]
+click N_0666ba67e6b7 href "index.ts"
 ```
 
 [上层设计](../ARCHITECTURE.md)

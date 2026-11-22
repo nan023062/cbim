@@ -2,15 +2,15 @@
  * 作用定位：引擎设置与执行入口，提供官方引擎目录及制品兼容规则。
  * 设计原因：复用通用 PluginManager 的版本引用机制，将引擎特有兼容性和依赖校验留在此适配层。
  */
-import { PluginManager } from '../../../resource/plugins';
+import { PluginManager } from '../plugins';
 
-import { registerPackageEngines, supportedEngines, engineDescriptor, loopEngineSchema, type LoopEngine } from '../index';
+import { registerPackageEngines, supportedEngines, engineDescriptor, loopEngineSchema, type LoopEngine } from '../../logic/engines/index';
 
-import type { EngineArtifact, EngineArtifactsPort, PreparedEngineArtifact } from '../../updates/engine-artifacts';
+import type { EngineArtifact, EngineArtifactsPort, PreparedEngineArtifact } from '../../logic/updates/engine-artifacts';
 
-import type { EngineRuntimePackage, EngineRuntimeResolver } from '../../execution/rules/engine-runtime';
+import type { EngineRuntimePackage, EngineRuntimeResolver } from '../../logic/execution/rules/engine-runtime';
 
-import type { EnginePackageSettings } from '../index';
+import type { EnginePackageSettings } from '../../logic/engines/index';
 
 export class EnginePackages implements EngineRuntimeResolver
 {
@@ -66,12 +66,12 @@ export class EnginePackages implements EngineRuntimeResolver
     return this.manager.SetEnabled(kind, enabled, remove, revision);
   }
 
-  async ResolveEngine(raw: string): Promise<EngineRuntimePackage>
+  async ResolveEngine(raw: string, pinned?: string): Promise<EngineRuntimePackage>
   {
     if (!supportedEngines.some(engine => engine.id === raw))
       await this.Init();
 
-    const { root, dependencies, retain } = await this.manager.Resolve(raw);
+    const { root, dependencies, retain } = await this.manager.Resolve(raw, pinned);
 
     return { ...root, dependencies, retain };
   }

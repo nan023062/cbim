@@ -6,13 +6,15 @@ import { createRequire } from 'node:module';
 
 import path from 'node:path';
 
-import { ConnectorRuntime, ConnectorService, type ConnectorTaskContext } from '../../framework/connectors';
+import { ConnectorRuntime, ConnectorService } from './index';
 
-import type { RunToolDescriptor } from '../tools/rules/policy/tool-policy';
+import type { ConnectorTaskContext } from '../../framework/connectors';
 
-import { PluginManager } from '../../resource/plugins';
+import type { RunToolDescriptor } from '../../logic/tools/rules/policy/tool-policy';
 
-import type { EngineArtifactsPort } from '../updates/engine-artifacts';
+import { PluginManager } from '../plugins';
+
+import type { EngineArtifactsPort } from '../../logic/updates/engine-artifacts';
 
 const loadProduct = createRequire(typeof __filename === 'string' ? __filename : import.meta.url);
 
@@ -72,11 +74,11 @@ export function managedConnectorPackages(file: string, artifacts: EngineArtifact
   return {
     manager,
 
-    async Open(id: string, context: ConnectorTaskContext, signal: AbortSignal)
+    async Open(id: string, context: ConnectorTaskContext, signal: AbortSignal, pinned?: string)
     {
       signal.throwIfAborted();
 
-      const { root, retain } = await manager.Resolve(id);
+      const { root, retain } = await manager.Resolve(id, pinned);
 
       signal.throwIfAborted();
 
@@ -122,7 +124,7 @@ export function managedConnectorPackages(file: string, artifacts: EngineArtifact
 }
 
 /** 主 Agent 和 Worker 按各自的显式选择取得同一套受管连接器会话。 */
-export async function openAgentConnectors(packages: Pick<ReturnType<typeof managedConnectorPackages>, 'Open'>, ids: readonly string[], context: ConnectorTaskContext, signal: AbortSignal)
+export async function openAgentConnectors(packages: Pick<ReturnType<typeof managedConnectorPackages>, 'Open'>, ids: readonly string[], context: ConnectorTaskContext, signal: AbortSignal, pin?: (id: string) => string | undefined)
 {
   // 父成员可能正在持有同一个独占工具，等待有界，避免嵌套派发永久互锁。
   const waiting = new AbortController();
@@ -138,7 +140,7 @@ export async function openAgentConnectors(packages: Pick<ReturnType<typeof manag
   try
   {
     for (const id of [...new Set(ids)].sort())
-      leases.push(await packages.Open(id, context, stop));
+      leases.push(await packages.Open(id, context, stop, pin?.(id)));
 
     const service = new ConnectorService(leases.flatMap(lease => lease.sessions));
 

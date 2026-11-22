@@ -49,7 +49,7 @@ export class OfficeQueue
 
   private File(project: string, session: string): string
   {
-    return path.join(this._projects.paths.Project(project), 'office-queues', session + '.json');
+    return this._projects.Cache(project).Queue(session);
   }
 
   private async Load(project: string, session: string): Promise<OfficeQueueState>
@@ -72,7 +72,10 @@ export class OfficeQueue
       if (state.items.some(item => ['running', 'inserting', 'inserted'].includes(item.status)))
       {
         state.paused = true;
-        for (const attempt of state.attempts ?? []) if (attempt.outcome === 'running') attempt.outcome = 'interrupted';
+
+        for (const attempt of state.attempts ?? [])
+          if (attempt.outcome === 'running')
+            attempt.outcome = 'interrupted';
 
         for (const item of state.items)
           if (['running', 'inserting', 'inserted'].includes(item.status))
@@ -187,7 +190,7 @@ export class OfficeQueue
 
     while (!this._closed)
     {
-      const item = await this.Locked(project, session, async state => { if (state.paused || this._offices.IsRunning(project, session)) return undefined; const head = state.items.find(item => item.status === 'queued'); if (!head || head.status !== 'queued') return undefined; const next = structuredClone(state); const claimed = next.items.find(item => item.id === head.id)!; claimed.status = 'running'; claimed.started = Date.now(); next.attempts = [...(next.attempts ?? []).slice(-99), { id: crypto.randomUUID(), itemId: claimed.id, started: claimed.started, outcome: 'running', events: [{stage: '准备会话', at: claimed.started}] }]; await this.Save(project, session, next); Object.assign(state, next); this._controllers.set(key, new AbortController()); return structuredClone(claimed); });
+      const item = await this.Locked(project, session, async state => { if (state.paused || this._offices.IsRunning(project, session)) return undefined; const head = state.items.find(item => item.status === 'queued'); if (!head || head.status !== 'queued') return undefined; const next = structuredClone(state); const claimed = next.items.find(item => item.id === head.id)!; claimed.status = 'running'; claimed.started = Date.now(); next.attempts = [...(next.attempts ?? []).slice(-99), { id: crypto.randomUUID(), itemId: claimed.id, started: claimed.started, outcome: 'running', events: [{ stage: '准备会话', at: claimed.started }] }]; await this.Save(project, session, next); Object.assign(state, next); this._controllers.set(key, new AbortController()); return structuredClone(claimed); });
 
       if (!item)
         return;
@@ -195,15 +198,13 @@ export class OfficeQueue
       const signal = this._controllers.get(key)!.signal;
 
       const attemptId = this._states.get(key)!.attempts!.at(-1)!.id;
-      const reportStage: import('./office-queue-contract').ReportStage = stage => this.Locked(project, session, async state => {
-        const record = state.attempts?.find(attempt => attempt.id === attemptId);
-        if (!record || record.outcome !== 'running' || record.events.at(-1)?.stage === stage) return;
-        if (record.events.length === 48) record.events.splice(16, 1);
-        record.events.push({ stage, at: Date.now() });
-        await this.Save(project, session, state);
-      });
+
+      const reportStage: import('./office-queue-contract').ReportStage = stage => this.Locked(project, session, async state => { const record = state.attempts?.find(attempt => attempt.id === attemptId); if (!record || record.outcome !== 'running' || record.events.at(-1)?.stage === stage) return; if (record.events.length === 48) record.events.splice(16, 1); record.events.push({ stage, at: Date.now() }); await this.Save(project, session, state); });
+
       let errorClass: string | undefined;
+
       let timeoutMs: number | undefined;
+
       let cancelSource: typeof item.cancelSource;
 
       let failure: string | undefined;
@@ -222,10 +223,15 @@ export class OfficeQueue
       catch (error)
       {
         failure = String(error);
+
         const cause = error instanceof Error ? error.cause : undefined;
-        const known = (value: unknown) => value instanceof Error && ['TimeoutError','AbortError','TypeError','RangeError','Error'].includes(value.name) ? value.name : 'UnknownError';
+
+        const known = (value: unknown) => value instanceof Error && ['TimeoutError', 'AbortError', 'TypeError', 'RangeError', 'Error'].includes(value.name) ? value.name : 'UnknownError';
+
         errorClass = cause ? known(error) + ': ' + known(cause) : known(error);
-        if (error instanceof Error && 'timeoutMs' in error && typeof error.timeoutMs === 'number') timeoutMs = error.timeoutMs;
+
+        if (error instanceof Error && 'timeoutMs' in error && typeof error.timeoutMs === 'number')
+          timeoutMs = error.timeoutMs;
 
         if (signal.aborted)
           cancelSource = signal.reason === 'user-stop' || signal.reason === 'app-shutdown' ? signal.reason : 'unknown';

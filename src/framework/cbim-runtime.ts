@@ -10,14 +10,9 @@ import { changeEvents } from './events';
 
 import { Office } from './office';
 
-export interface ProjectResources
-{
-  readonly projectId: string;
+import type { ProjectResources } from './project';
 
-  readonly organization: Parameters<Organization['ReplaceChildren']>[0];
-
-  readonly business: WorkspaceTree;
-}
+export type { ProjectResources };
 
 export class CbimRuntime
 {

@@ -7,6 +7,9 @@ import { contextBridge, ipcRenderer } from 'electron';
 import type { DesktopMenu, ProcessGroup } from '../contracts/discovery';
 
 const menu: DesktopMenu = {
+  RegistryList:()=>ipcRenderer.invoke('registry:list'),
+  RegistryPublish:key=>ipcRenderer.invoke('registry:publish',key),
+  RegistryPull:version=>ipcRenderer.invoke('registry:pull',version),
   Navigation: change => ipcRenderer.invoke('menu:navigation', change),
   RevealProject: project => ipcRenderer.invoke('project:reveal', project),
   Organization: (project, change) => ipcRenderer.invoke('project:organization', { project, change }),

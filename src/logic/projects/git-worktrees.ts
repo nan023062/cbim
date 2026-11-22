@@ -56,7 +56,7 @@ export class GitWorktrees implements WorkspaceInstanceFactory
     return actual;
   }
 
-  public constructor(private readonly _storage: string)
+  public constructor(private readonly _storage: string, private readonly legacy?: string)
   {
   }
 
@@ -76,7 +76,11 @@ export class GitWorktrees implements WorkspaceInstanceFactory
 
     const storage = await fs.realpath(this._storage);
 
-    const target = path.join(storage, hash(JSON.stringify([repository, officeId])));
+    const key = hash(JSON.stringify([repository, officeId]));
+
+    const old = this.legacy && path.join(this.legacy, key);
+
+    const target = old && await fs.stat(old).then(() => true, e => { if (e.code === 'ENOENT') return false; throw e; }) ? old : path.join(storage, key);
 
     let opening = this._opening.get(target);
 

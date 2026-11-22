@@ -10,6 +10,8 @@ import type { ProjectList } from './project';
 
 import type { AgentPermission } from '../../framework/cability/organization';
 
+import type { ProjectResourceBridge } from '../../framework/project';
+
 import type { OfficeOperations } from './office-operations';
 
 import { OfficeDispatch } from './office-dispatch';
@@ -17,6 +19,8 @@ import { OfficeDispatch } from './office-dispatch';
 import { agentRoleInstructions, type AgentRole } from '../../framework/cability/agent';
 
 import { AgentSettings } from './agent-settings';
+
+import { ProjectWork } from './project-work';
 
 import { BusinessDirectory } from './business-directory';
 
@@ -60,11 +64,13 @@ export type MainAgentSelection = NonNullable<AgentConfiguration['model']>;
 
 type ReportStage = import('./office-queue-contract').ReportStage;
 
-export type OfficeChat = (instructions: string, messages: readonly { role: 'user' | 'assistant'; content: string }[], signal: AbortSignal, progress: (sample: ChatProgress) => void, turn: { ReportStage?: ReportStage; inputs?: OfficeInputs; ReadPermission(): AgentPermission; ReportTokens(total: number): void; operations: OfficeOperations; selection: MainAgentSelection; configuration?: AgentConfiguration; agentInstanceId?: string; officeId?: string; root: string; session: string; project: string; dataRoot: string }) => Promise<{ text: string; metrics: TurnMetrics }>;
+export type OfficeChat = (instructions: string, messages: readonly { role: 'user' | 'assistant'; content: string }[], signal: AbortSignal, progress: (sample: ChatProgress) => void, turn: { shared?: ProjectResourceBridge; ReportStage?: ReportStage; inputs?: OfficeInputs; ReadPermission(): AgentPermission; ReportTokens(total: number): void; operations: OfficeOperations; selection: MainAgentSelection; configuration?: AgentConfiguration; agentInstanceId: string; officeId: string; root: string; session: string; project: string; engineRoot: string }) => Promise<{ text: string; metrics: TurnMetrics }>;
 
 export class ProjectOffices
 {
   public readonly settings: AgentSettings;
+
+  public readonly work: ProjectWork;
 
   public readonly business: BusinessDirectory;
 
@@ -141,23 +147,30 @@ export class ProjectOffices
 
   public constructor(private readonly projects: ProjectList, private readonly chat?: OfficeChat, defaultModel?: () => Promise<MainAgentSelection | undefined>)
   {
-    this.settings = new AgentSettings(projects, (project, text) => this.Notify(project, text), defaultModel);
+    projects.ResourceChanged = (id, text) => this.Notify(id, text);
 
-    this.business = new BusinessDirectory(projects, (project, text) => this.Notify(project, text));
+    if (defaultModel)
+      projects.DefaultModel = defaultModel;
+
+    this.work = projects.work;
+
+    this.settings = projects.settings;
+
+    this.business = projects.businessDirectory;
   }
 
   private async History(projectId: string)
   {
     const project = await this.projects.Open(projectId);
 
-    return { project, history: new OfficeHistory(path.join(this.projects.paths.Project(projectId), 'office-conversations')) };
+    return { project, history: project.cache.history };
   }
 
   public async Open(projectId: string, action: 'latest' | 'create' | 'select', selected?: string)
   {
     const { project, history } = await this.History(projectId);
 
-    const ids = await history.List();
+    const ids = await project.runtime.ListOfficeRecords();
 
     const sessions = await Promise.all(ids.map(async id => { const files = await history.Files(id); const messages = await history.Messages(id, files.length > 1 ? [files[0], files[files.length - 1]] : files); return { id, title: messages[0]?.text.slice(0, 32) || '新对话', updated: messages.at(-1)?.created ?? 0 }; }));
 
@@ -170,14 +183,12 @@ export class ProjectOffices
 
     if (!id || action === 'create')
     {
-      id = crypto.randomUUID();
-
-      await history.Create(id);
+      id = await project.runtime.CreateOfficeRecord();
 
       sessions.unshift({ id, title: '新对话', updated: Date.now() });
     }
 
-    const office = project.runtime.OpenOffice(projectId, id);
+    const office = project.runtime.OpenOffice(id);
 
     const files = await history.Files(id);
 
@@ -214,7 +225,7 @@ export class ProjectOffices
     if (!chat)
       throw Error('当前宿主未提供执行引擎插件');
 
-    const office = project.runtime.OpenOffice(projectId, id);
+    const office = project.runtime.OpenOffice(id);
 
     stopSignal?.throwIfAborted();
 
@@ -282,7 +293,8 @@ export class ProjectOffices
       detach = office.Subscribe(event => { if (event.type !== 'task') return; const task = event.task; const states = { waiting: '等待依赖', blocked: '受阻', queued: '已排队', running: '执行中', completed: '已完成', suspended: '已挂起', cancelled: '已取消' }; record({ id: 'task:' + task.id + ':' + task.attempt + ':' + task.state, label: task.agentId + ' · ' + states[task.state], input: task.goal, result: task.workspaceInstanceId, alert: task.state === 'blocked' || task.state === 'suspended' ? task.error || task.goal : undefined }); publish({ phase: lastPhase, model: selection.modelId }); });
 
       const projectSkills = configuration.skills?.map(skill => ({ name: skill.name, description: /^description:\s*(.+)$/m.exec(skill.content)?.[1]?.slice(0, 400), source: '.agents/skills/' + skill.id + '/SKILL.md' }));
-      const goal = JSON.stringify({ ...(projectSkills?.length && { availableProjectSkills: projectSkills, skillUsage: '按用户意图与技能用途匹配；命中时可在当前权限内读取对应项目技能文件。用户链接了清单中的技能时优先使用，未命中无需调用。' }), project: project.entry.name, workspaceTree, organization: office.organization.children, userRequest: SkillCommands.Expand(input.trim(), configuration.skills) });
+
+      const goal = JSON.stringify({ projectSettings: (await this.work.Read(projectId)).settings, ...(projectSkills?.length && { availableProjectSkills: projectSkills, skillUsage: '按用户意图与技能用途匹配；命中时可在当前权限内读取对应项目技能文件。用户链接了清单中的技能时优先使用，未命中无需调用。' }), project: project.entry.name, workspaceTree, organization: office.organization.children, userRequest: SkillCommands.Expand(input.trim(), configuration.skills) });
 
       context.push({ role: 'user', content: goal });
 
@@ -295,9 +307,9 @@ export class ProjectOffices
           total: number
         }>();
 
-      const runAgent = (role: AgentRole, messages: Parameters<OfficeChat>[1], root: string, session: string, agentInstanceId: string, signal: AbortSignal, ReadPermission: () => AgentPermission, report: (seq: number, kind: 'message' | 'summary', count: number) => void, operations: OfficeOperations, publish: (sample: ChatProgress) => void) => chat(agentRoleInstructions(role.definition), messages, signal, publish, { ReportStage: session === id ? ReportStage : undefined, inputs: session === id ? inputs : undefined, ReadPermission, ReportTokens: total => { const previous = tokenReports.get(agentInstanceId) ?? { sequence: 0, total: 0 }; const next = { sequence: previous.sequence + 1, total: previous.total + total }; tokenReports.set(agentInstanceId, next); report(next.sequence, 'summary', next.total); }, operations, configuration: role.definition, agentInstanceId, officeId: office.id, selection: role.definition.model!, root, session, project: projectId, dataRoot: this.projects.paths.Project(projectId) });
+      const runAgent = (role: AgentRole, messages: Parameters<OfficeChat>[1], root: string, session: string, agentInstanceId: string, signal: AbortSignal, ReadPermission: () => AgentPermission, report: (seq: number, kind: 'message' | 'summary', count: number) => void, operations: OfficeOperations, publish: (sample: ChatProgress) => void) => chat(agentRoleInstructions(role.definition), messages, signal, publish, { shared: project.runtime.shared, ReportStage: session === id ? ReportStage : undefined, inputs: session === id ? inputs : undefined, ReadPermission, ReportTokens: total => { const previous = tokenReports.get(agentInstanceId) ?? { sequence: 0, total: 0 }; const next = { sequence: previous.sequence + 1, total: previous.total + total }; tokenReports.set(agentInstanceId, next); report(next.sequence, 'summary', next.total); }, operations, configuration: role.definition, agentInstanceId, officeId: office.id, selection: role.definition.model!, root, session, project: projectId, engineRoot: project.cache.engines });
 
-      const reply = await office.OpenMainAgent({ parameters: controller.signal, CreateEngine: async (signal, agentId, role, report, ReadPermission) => ({ session: () => runAgent(role, context, project.entry.path, id, agentId, signal, ReadPermission, report, dispatch.Operations(), reportProgress), Close: async () => { controller.abort(); }, }) }, (_engine, commands) => { dispatch = new OfficeDispatch(office, project.entry.path, commands, (role, goal, root, taskId, signal, ReadPermission, report, operations, agentId) => runAgent(role, [{ role: 'user', content: SkillCommands.Expand(goal, role.definition.skills) }], root, taskId, agentId, signal, ReadPermission, report, operations, sample => { if (sample.activity) reportProgress(sample); }), controller.signal); return () => { }; }, configuration);
+      const reply = await office.OpenMainAgent({ parameters: controller.signal, CreateEngine: async (signal, agentId, role, report, ReadPermission) => ({ session: () => runAgent(role, context, project.entry.path, id, agentId, signal, ReadPermission, report, { ...dispatch.Operations(), ProjectRead: input => project.runtime.ReadResource(input), ProjectWrite: input => project.runtime.ChangeResource(input, { session: id, selection }) }, reportProgress), Close: async () => { controller.abort(); }, }) }, (_engine, commands) => { dispatch = new OfficeDispatch(office, project.entry.path, commands, (role, goal, root, taskId, signal, ReadPermission, report, operations, agentId) => runAgent(role, [{ role: 'user', content: SkillCommands.Expand(goal, role.definition.skills) }], root, taskId, agentId, signal, ReadPermission, report, operations, sample => { if (sample.activity) reportProgress(sample); }), controller.signal); return () => { }; }, configuration);
 
       try
       {
@@ -322,6 +334,7 @@ export class ProjectOffices
         }
 
         await ReportStage?.('保存回复');
+
         return await history.AppendTurn(id, input.trim(), result.text, result.metrics, Array.from(workLog.values()));
       }
       finally

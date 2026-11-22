@@ -26,6 +26,10 @@ AgentSettings 保存本机项目下的能力设置，主配置以会话 ID 隔�
 
 | 组成 | 定位 |
 | --- | --- |
+| [ProjectCache](project-cache.ts) | 定位项目本机记录和兼容缓存。 |
+| [ProjectTrees](project-trees.ts) | 校验并持久化组织和业务快照。 |
+| [ProjectReferenceStore](project-references.ts) | 带版本校验地修改共享资源引用。 |
+| [ProjectWork](project-work.ts) | 维护项目设置和定时任务。 |
 | [Project](project.ts) | 持有项目资源和该项目独立的运行时。 |
 | [ProjectList](project.ts) | 按登记身份加载项目，聚合 Office 监控事件。 |
 | [GitWorktrees](git-worktrees.ts) | Opens a separate Git worktree for each Office and repository. |
@@ -73,16 +77,36 @@ BusinessDirectory --> ArchitectureUpdate
 
 ## 架构关系
 
-### 关系组 1：ProjectOffices
+### 关系组 1：ProjectList
+
+```mermaid
+classDiagram
+class N_edd7d8b0ed1e["ProjectList"]
+click N_edd7d8b0ed1e href "project.ts"
+class N_0220cf8dfba9["Catalog"]
+click N_0220cf8dfba9 href "index.ts"
+class N_38697857182f["AgentSettings"]
+click N_38697857182f href "agent-settings.ts"
+class N_c2cf86ba4226["BusinessDirectory"]
+click N_c2cf86ba4226 href "business-directory.ts"
+class N_1d96f1fb55b3["ProjectWork"]
+click N_1d96f1fb55b3 href "project-work.ts"
+class N_04b72d19bcdf["Project"]
+click N_04b72d19bcdf href "project.ts"
+N_1d96f1fb55b3 ..> N_0220cf8dfba9 : 依赖
+N_0220cf8dfba9 <|-- N_edd7d8b0ed1e
+N_edd7d8b0ed1e ..> N_38697857182f : 依赖
+N_edd7d8b0ed1e ..> N_c2cf86ba4226 : 依赖
+N_edd7d8b0ed1e ..> N_1d96f1fb55b3 : 依赖
+N_edd7d8b0ed1e ..> N_04b72d19bcdf : 依赖
+```
+
+### 关系组 2：ProjectOffices
 
 ```mermaid
 classDiagram
 class N_ca623181cbca["ProjectOffices"]
 click N_ca623181cbca href "offices.ts"
-class N_38697857182f["AgentSettings"]
-click N_38697857182f href "agent-settings.ts"
-class N_c2cf86ba4226["BusinessDirectory"]
-click N_c2cf86ba4226 href "business-directory.ts"
 class N_64258a8e666e["OfficeInputs"]
 click N_64258a8e666e href "office-inputs.ts"
 class N_4572655b68e5["SkillCommands"]
@@ -91,41 +115,20 @@ class N_2eafc332813f["配置契约"] {
   <<module>>
 }
 click N_2eafc332813f href "agent-configuration.ts"
-N_ca623181cbca ..> N_38697857182f : 依赖
-N_ca623181cbca ..> N_c2cf86ba4226 : 依赖
+class N_2cbdfe74880b["OfficeDispatch"]
+click N_2cbdfe74880b href "office-dispatch.ts"
+class N_01ca12d270e4["OfficeOperations"] {
+  <<interface>>
+}
+click N_01ca12d270e4 href "office-operations.ts"
 N_ca623181cbca ..> N_64258a8e666e : 依赖
 N_ca623181cbca ..> N_4572655b68e5 : 依赖
 N_ca623181cbca ..> N_2eafc332813f : 依赖
-N_38697857182f ..> N_2eafc332813f : 依赖
+N_ca623181cbca ..> N_2cbdfe74880b : 依赖
+N_ca623181cbca ..> N_01ca12d270e4 : 依赖
 N_4572655b68e5 ..> N_2eafc332813f : 依赖
 N_2eafc332813f ..> N_4572655b68e5 : 依赖
-```
-
-### 关系组 2：ProjectList
-
-```mermaid
-classDiagram
-class N_edd7d8b0ed1e["ProjectList"]
-click N_edd7d8b0ed1e href "project.ts"
-class N_0220cf8dfba9["Catalog"]
-click N_0220cf8dfba9 href "index.ts"
-class N_04b72d19bcdf["Project"]
-click N_04b72d19bcdf href "project.ts"
-class N_0783345f8553["GitWorktrees"]
-click N_0783345f8553 href "git-worktrees.ts"
-class N_d7d68021be97["Paths"]
-click N_d7d68021be97 href "paths.ts"
-class N_4486515099c0["OrganizationDirectory"]
-click N_4486515099c0 href "organization-directory.ts"
-N_04b72d19bcdf ..> N_0783345f8553 : 依赖
-N_0220cf8dfba9 <|-- N_edd7d8b0ed1e
-N_edd7d8b0ed1e ..> N_04b72d19bcdf : 依赖
-N_edd7d8b0ed1e ..> N_0783345f8553 : 依赖
-N_edd7d8b0ed1e ..> N_d7d68021be97 : 依赖
-N_0220cf8dfba9 ..> N_d7d68021be97 : 依赖
-N_4486515099c0 ..> N_edd7d8b0ed1e : 依赖
-N_4486515099c0 ..> N_0220cf8dfba9 : 依赖
-N_4486515099c0 ..> N_d7d68021be97 : 依赖
+N_2cbdfe74880b ..> N_01ca12d270e4 : 依赖
 ```
 
 ### 关系组 3：OfficeQueue
@@ -136,34 +139,44 @@ class N_40641b84f8ba["OfficeQueue"]
 click N_40641b84f8ba href "office-queue.ts"
 class N_69c6c3829baf["ProjectNavigation"]
 click N_69c6c3829baf href "navigation.ts"
+class N_d7d68021be97["Paths"]
+click N_d7d68021be97 href "paths.ts"
+class N_0badbc3d1595["ProjectCache"]
+click N_0badbc3d1595 href "project-cache.ts"
+class N_9b95372d22d6["ProjectTrees"]
+click N_9b95372d22d6 href "project-trees.ts"
+class N_98cd573d4873["ProjectReferenceStore"]
+click N_98cd573d4873 href "project-references.ts"
+N_9b95372d22d6 ..> N_0badbc3d1595 : 依赖
+N_69c6c3829baf ..> N_40641b84f8ba : 依赖
+N_69c6c3829baf ..> N_d7d68021be97 : 依赖
+```
+
+### 关系组 4：组织契约
+
+```mermaid
+classDiagram
 class N_7a3c42967149["组织契约"] {
   <<module>>
 }
 click N_7a3c42967149 href "organization-contract.ts"
-class N_2cbdfe74880b["OfficeDispatch"]
-click N_2cbdfe74880b href "office-dispatch.ts"
-class N_01ca12d270e4["OfficeOperations"] {
-  <<interface>>
-}
-click N_01ca12d270e4 href "office-operations.ts"
+class N_4486515099c0["OrganizationDirectory"]
+click N_4486515099c0 href "organization-directory.ts"
+class N_0894698bbef1["ArchitectureUpdate"]
+click N_0894698bbef1 href "architecture-update.ts"
+class N_0783345f8553["GitWorktrees"]
+click N_0783345f8553 href "git-worktrees.ts"
 class N_348660f3a092["业务契约"] {
   <<module>>
 }
 click N_348660f3a092 href "business-contract.ts"
-N_2cbdfe74880b ..> N_01ca12d270e4 : 依赖
-N_69c6c3829baf ..> N_40641b84f8ba : 依赖
-```
-
-### 关系组 4：ArchitectureUpdate
-
-```mermaid
-classDiagram
-class N_0894698bbef1["ArchitectureUpdate"]
-click N_0894698bbef1 href "architecture-update.ts"
 class N_c26b7944d23b["WorkspaceInstanceFactory"] {
   <<boundary>>
 }
 click N_c26b7944d23b href "../../framework/business/workspace-instance.ts"
+N_c26b7944d23b <|.. N_0783345f8553
+N_4486515099c0 ..> N_7a3c42967149 : 依赖
+N_4486515099c0 ..> N_0894698bbef1 : 依赖
 ```
 
 ### 跨图协作
@@ -172,14 +185,17 @@ click N_c26b7944d23b href "../../framework/business/workspace-instance.ts"
 
 | 引用方 | 关系 | 目标 |
 | --- | --- | --- |
-| [GitWorktrees](git-worktrees.ts)（图 2） | 实现 | [WorkspaceInstanceFactory](../../framework/business/workspace-instance.ts)（图 4） |
-| [ProjectOffices](offices.ts)（图 1） | 依赖 | [ProjectList](project.ts)（图 2）、[Catalog](index.ts)（图 2）、[Paths](paths.ts)（图 2）、[OfficeDispatch](office-dispatch.ts)（图 3）、[OfficeOperations](office-operations.ts)（图 3） |
-| [AgentSettings](agent-settings.ts)（图 1） | 依赖 | [OrganizationDirectory](organization-directory.ts)（图 2）、[ProjectList](project.ts)（图 2）、[Catalog](index.ts)（图 2）、[Paths](paths.ts)（图 2）、[ArchitectureUpdate](architecture-update.ts)（图 4）、[组织契约](organization-contract.ts)（图 3） |
-| [OrganizationDirectory](organization-directory.ts)（图 2） | 依赖 | [组织契约](organization-contract.ts)（图 3）、[ArchitectureUpdate](architecture-update.ts)（图 4） |
-| [组织契约](organization-contract.ts)（图 3） | 依赖 | [配置契约](agent-configuration.ts)（图 1） |
-| [BusinessDirectory](business-directory.ts)（图 1） | 依赖 | [ProjectList](project.ts)（图 2）、[业务契约](business-contract.ts)（图 3）、[Catalog](index.ts)（图 2）、[Paths](paths.ts)（图 2）、[ArchitectureUpdate](architecture-update.ts)（图 4） |
-| [OfficeQueue](office-queue.ts)（图 3） | 依赖 | [ProjectList](project.ts)（图 2）、[ProjectOffices](offices.ts)（图 1）、[Catalog](index.ts)（图 2）、[Paths](paths.ts)（图 2）、[AgentSettings](agent-settings.ts)（图 1）、[SkillCommands](agent-configuration.ts)（图 1）、[配置契约](agent-configuration.ts)（图 1） |
-| [ProjectNavigation](navigation.ts)（图 3） | 依赖 | [ProjectList](project.ts)（图 2）、[Catalog](index.ts)（图 2）、[Paths](paths.ts)（图 2） |
+| [ProjectCache](project-cache.ts)（图 3） | 依赖 | [GitWorktrees](git-worktrees.ts)（图 4） |
+| [ProjectTrees](project-trees.ts)（图 3） | 依赖 | [组织契约](organization-contract.ts)（图 4）、[业务契约](business-contract.ts)（图 4）、[配置契约](agent-configuration.ts)（图 2） |
+| [Project](project.ts)（图 1） | 依赖 | [ProjectCache](project-cache.ts)（图 3）、[ProjectTrees](project-trees.ts)（图 3） |
+| [ProjectList](project.ts)（图 1） | 依赖 | [ProjectTrees](project-trees.ts)（图 3）、[ProjectReferenceStore](project-references.ts)（图 3）、[OrganizationDirectory](organization-directory.ts)（图 4） |
+| [Catalog](index.ts)（图 1） | 依赖 | [ProjectCache](project-cache.ts)（图 3）、[Paths](paths.ts)（图 3） |
+| [ProjectOffices](offices.ts)（图 2） | 依赖 | [AgentSettings](agent-settings.ts)（图 1）、[ProjectWork](project-work.ts)（图 1）、[BusinessDirectory](business-directory.ts)（图 1）、[ProjectList](project.ts)（图 1） |
+| [AgentSettings](agent-settings.ts)（图 1） | 依赖 | [OrganizationDirectory](organization-directory.ts)（图 4）、[配置契约](agent-configuration.ts)（图 2）、[ArchitectureUpdate](architecture-update.ts)（图 4）、[组织契约](organization-contract.ts)（图 4） |
+| [组织契约](organization-contract.ts)（图 4） | 依赖 | [配置契约](agent-configuration.ts)（图 2） |
+| [BusinessDirectory](business-directory.ts)（图 1） | 依赖 | [业务契约](business-contract.ts)（图 4）、[ArchitectureUpdate](architecture-update.ts)（图 4） |
+| [OfficeQueue](office-queue.ts)（图 3） | 依赖 | [ProjectList](project.ts)（图 1）、[ProjectOffices](offices.ts)（图 2）、[Catalog](index.ts)（图 1）、[AgentSettings](agent-settings.ts)（图 1）、[配置契约](agent-configuration.ts)（图 2）、[SkillCommands](agent-configuration.ts)（图 2） |
+| [ProjectNavigation](navigation.ts)（图 3） | 依赖 | [ProjectList](project.ts)（图 1）、[Catalog](index.ts)（图 1） |
 
 外部继承／实现边界：[WorkspaceInstanceFactory](../../framework/business/workspace-instance.ts)。
 

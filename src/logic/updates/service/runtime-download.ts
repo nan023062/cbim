@@ -88,32 +88,46 @@ export async function downloadRuntimePackage(pkg: RuntimePackage, file: string, 
 export async function downloadRuntimeManifest(tag: string, name: string, signal: AbortSignal)
 {
   const timeoutMs = 30000;
+
   const deadline = AbortSignal.timeout(timeoutMs);
+
   const combined = AbortSignal.any([signal, deadline]);
-  try {
-
-  const response = await runtimeAssetResponse(runtimePackageUrl({ tag, name }), combined);
-
-  if (!response.body)
-    throw Error('更新清单为空');
-
-  let bytes: Uint8Array;
 
   try
   {
-    bytes = await ByteUtils.ReadBoundedBytes(response.body, { maxBytes: 16 * 1024 * 1024, signal: combined })
+    const response = await runtimeAssetResponse(runtimePackageUrl({ tag, name }), combined);
+
+    if (!response.body)
+      throw Error('更新清单为空');
+
+    let bytes: Uint8Array;
+
+    try
+    {
+      bytes = await ByteUtils.ReadBoundedBytes(response.body, { maxBytes: 16 * 1024 * 1024, signal: combined })
+    }
+    catch (error)
+    {
+      if (error instanceof ByteLimitError)
+        throw Error('更新清单超过上限');
+
+      throw error
+    }
+
+    return JSON.parse(Buffer.from(bytes).toString('utf8'));
   }
   catch (error)
   {
-    if (error instanceof ByteLimitError)
-      throw Error('更新清单超过上限');
+    if (deadline.aborted && combined.reason === deadline.reason)
+      throw Object.assign(new Error('下载运行清单超时', { cause: error }), { name: 'TimeoutError', timeoutMs });
 
-    throw error
-  }
-
-  return JSON.parse(Buffer.from(bytes).toString('utf8'));
-  } catch (error) {
-    if (deadline.aborted && combined.reason === deadline.reason) throw Object.assign(new Error('下载运行清单超时', { cause: error }), { name: 'TimeoutError', timeoutMs });
     throw error;
   }
+}
+
+export async function readLocalIndex(origin:string,signal:AbortSignal){
+  const stop=AbortSignal.any([signal,AbortSignal.timeout(30000)]);
+  const response=await fetch(origin+'/v1/engine-index',{signal:stop,redirect:'error'});
+  if(!response.ok||!response.body)throw Error('本机资源服务器缺少已签名引擎索引');
+  return JSON.parse(Buffer.from(await ByteUtils.ReadBoundedBytes(response.body,{maxBytes:16*1024*1024,signal:stop})).toString('utf8'));
 }

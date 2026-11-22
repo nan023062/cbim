@@ -117,4 +117,4 @@ return <Tabs label="工作区视图" value={tab} onChange={setTab} items={[
 | [`ThreePaneLayout`](../src/framework-ui/three-pane.tsx) | 传 `children`、`className`、`leftOpen`、`leftKey`、`rightKey`，可选 `hidden`。两个 key 分别保存左右宽度；业务布局消费 `--sidebar-width` 和 `--right-pane-width`，并负责展开或隐藏面板。 |
 | `PaneDivider` | 在布局内部对应面板上放置，传 `side="left"` 或 `"right"`、无障碍 `label`、目标面板 ID `controls`。支持指针拖拽、左右键每次移动 10px、Home 或双击复位。 |
 
-实际页面可参照[侧栏列表与确认窗](../src/view/desktop/ProjectSidebar.tsx)、[三栏布局](../src/view/desktop/DesktopShell.tsx)和[聊天虚拟列表](../src/view/office/OfficeView.tsx)。淡入淡出、悬停与循环动效的触发方式和时长见 [ui-tween 手册](../src/framework-ui/UI-TWEEN.md)。
+实际页面可参照[侧栏列表与确认窗](../src/view/desktop/ProjectSidebar.tsx)、[三栏布局](../src/view/desktop/DesktopShell.tsx)和[聊天虚拟列表](../src/view/office/OfficeView.tsx)。淡入淡出、悬停与循环动效的触发方式和时长见 [ui-tween 手册](UI-TWEEN.md)。

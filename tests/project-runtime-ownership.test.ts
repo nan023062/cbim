@@ -12,7 +12,6 @@ test('project startup loads both trees once, isolates Offices, and retries inval
   const projects = new ProjectList(new Paths(root));
   try {
     const entries = ['a', 'b'].map(id => ({ id, name: id, path: path.join(root, id) }));
-    await fs.writeFile(path.join(root, 'workspaces.json'), JSON.stringify({ version: 1, entries, recent: [] }));
     const workspace = '.cbim/workspace/site';
     const role = '.cbim/team/design/artist';
     for (const entry of entries) {
@@ -20,24 +19,25 @@ test('project startup loads both trees once, isolates Offices, and retries inval
       await fs.mkdir(path.join(entry.path, role), { recursive: true });
       await fs.writeFile(path.join(entry.path, role, 'agent.json'), JSON.stringify({ summary: entry.id }));
     }
+    const [aId,bId]=await Promise.all(entries.map(async entry=>(await projects.Add(entry.path)).id));
     const moduleFile = (id: string) => path.join(root, id, workspace, 'module.json');
     const moduleText = (name: string) => JSON.stringify({ id: workspace, name, summary: name, children: [], sources: [] });
     await fs.writeFile(moduleFile('a'), moduleText('a'));
     await fs.writeFile(moduleFile('b'), 'invalid');
-    await expect(projects.Open('b')).rejects.toThrow();
+    await expect(projects.Open(bId)).rejects.toThrow();
     await fs.writeFile(moduleFile('b'), moduleText('b'));
-    const [a, again, b] = await Promise.all(['a', 'a', 'b'].map(id => projects.Open(id)));
+    const [a, again, b] = await Promise.all([aId,aId,bId].map(id => projects.Open(id)));
     expect(a).toBe(again);
     expect(a.runtime).not.toBe(b.runtime);
     expect(a.runtime.organization?.FindMember(role)?.position).toBe('a');
     expect(b.runtime.project?.FindWorkspace(workspace)?.name).toBe('b');
-    expect(() => a.runtime.OpenOffice('b', 'same')).toThrow();
-    const first = a.runtime.OpenOffice('a', 'same');
-    const second = b.runtime.OpenOffice('b', 'same');
+    expect(() => a.runtime.OpenOffice(bId, 'same')).toThrow();
+    const first = a.runtime.OpenOffice(aId, 'same');
+    const second = b.runtime.OpenOffice(bId, 'same');
     expect(first.organization.FindMember(role)?.position).toBe('a');
     expect(second.project.FindWorkspace(workspace)?.name).toBe('b');
     expect(new Set(projects.ListOffices())).toEqual(new Set([first, second]));
-    const sibling = a.runtime.OpenOffice('a', 'another-session');
+    const sibling = a.runtime.OpenOffice(aId, 'another-session');
     expect(sibling.organization).toBe(first.organization);
     expect(sibling.project).toBe(first.project);
     expect(sibling.project).toBe(a.runtime.project);
@@ -149,7 +149,7 @@ test('project startup loads both trees once, isolates Offices, and retries inval
     expect(sibling.organization.FindMember(role)?.available).toBe(true);
     await projects.Close();
     expect(first.closed && second.closed).toBe(true);
-    await expect(projects.Open('a')).rejects.toThrow();
+    await expect(projects.Open(aId)).rejects.toThrow();
   } finally {
     await projects.Close();
     await fs.rm(root, { recursive: true, force: true });

@@ -14,21 +14,15 @@ import { selectProviderConnection } from '../../bridge/contracts/desktop-models'
 
 import { Icon } from '../../framework-ui/Icon';
 
-
-
-export function MainAgentPicker({ value, change, disabled, fail, onReady, onManageModels, compact = false, autoSelect = true }: { autoSelect?: boolean; compact?: boolean; onManageModels(): void; onReady: (ready: boolean, reason: string, working: boolean) => void; value: OfficeSelection; change(v: OfficeSelection): void; disabled: boolean; fail(error: string): void })
+export function MainAgentPicker({ value, change, disabled, fail, onReady, onManageModels, compact = false, autoSelect = true }: { autoSelect?: boolean; compact?: boolean; onManageModels: () => void; onReady: (ready: boolean, reason: string, working: boolean) => void; value: OfficeSelection; change: (v: OfficeSelection) => void; disabled: boolean; fail: (error: string) => void })
 {
   const [catalog, setCatalog] = useState<EnginePackageSettings>();
 
   const [models, setModels] = useState<ModelActionResults['models.list']>();
+
   const [failed, setFailed] = useState(false);
-  useEffect(() => {
-    let active = true;
-    Promise.all([window.desktopMenu.Engines('list'), window.desktopMenu.Model('models.list')])
-      .then(([local, list]) => { if (active) { setCatalog(local); setModels(list); } })
-      .catch(error => { if (active) { setFailed(true); fail(String(error)); } });
-    return () => { active = false; };
-  }, [fail]);
+
+  useEffect(() => { let active = true; Promise.all([window.desktopMenu.Engines('list'), window.desktopMenu.Model('models.list')]).then(([local, list]) => { if (active) { setCatalog(local); setModels(list); } }).catch(error => { if (active) { setFailed(true); fail(String(error)); } }); return () => { active = false; }; }, [fail]);
 
   const [products, setProducts] = useState<Awaited<ReturnType<typeof window.desktopMenu.EngineCatalog>>>([]);
 
@@ -37,8 +31,11 @@ export function MainAgentPicker({ value, change, disabled, fail, onReady, onMana
   const engines = catalog?.items.filter(item => item.enabled && item.active && !item.error) ?? [];
 
   const menuId = useId();
+
   const modelMenu = useId();
+
   const first = engines[0];
+
   useEffect(() => { if (autoSelect && !value.engine && first) change({ ...value, engine: first.kind }); }, [autoSelect, value, first, change]);
 
   const engine = engines.find(item => item.kind === value.engine);
@@ -48,20 +45,36 @@ export function MainAgentPicker({ value, change, disabled, fail, onReady, onMana
   const selected = value.profileId ? JSON.stringify([value.profileId, value.modelId]) : '';
 
   const working = !failed && (!catalog || !models);
-  function blockedReason(): string {
-    if (failed) return '无法读取本机引擎或模型列表';
-    if (working) return '正在读取本机引擎和模型…';
-    if (!engines.length) return '本机没有可用引擎，请前往「执行引擎」页安装或启用';
-    if (!engine) return '请选择可用的执行引擎';
-    if (!choices.length) return '没有兼容的模型，请打开大模型设置';
-    if (!choices.some(choice => choice.key === selected)) return '请选择兼容的模型';
+
+  function blockedReason(): string
+  {
+    if (failed)
+      return '无法读取本机引擎或模型列表';
+
+    if (working)
+      return '正在读取本机引擎和模型…';
+
+    if (!engines.length)
+      return '本机没有可用引擎，请前往「执行引擎」页安装或启用';
+
+    if (!engine)
+      return '请选择可用的执行引擎';
+
+    if (!choices.length)
+      return '没有兼容的模型，请打开大模型设置';
+
+    if (!choices.some(choice => choice.key === selected))
+      return '请选择兼容的模型';
+
     return '';
   }
+
   const reason = blockedReason();
 
   useEffect(() => { onReady(!reason, reason, working); }, [reason, working, onReady]);
 
   const firstModel = choices[0];
+
   useEffect(() => { if (autoSelect && engine && !value.profileId && !value.modelId && firstModel) change({ engine: engine.kind, profileId: firstModel.profileId, modelId: firstModel.modelId }); }, [autoSelect, engine, value, firstModel?.key, change]);
 
   const logo = engine?.logo || products.find(product => product.id === engine?.kind)?.logo;

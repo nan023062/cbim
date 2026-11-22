@@ -4,4 +4,4 @@
  */
 export { EnginePackages } from './engine-packages';
 
-export type { EnginePackageStatus, EnginePackageSettings } from '../index';
+export type { EnginePackageStatus, EnginePackageSettings } from '../../logic/engines/index';

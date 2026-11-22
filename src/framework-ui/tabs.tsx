@@ -8,7 +8,7 @@ import { Button } from './controls';
 
 import { Screen } from './screen';
 
-export function Tabs({ label, items, value, onChange }: { label: string; items: readonly { id: string; label: ReactNode; content: ReactNode; buttonProps?: Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'disabled' | 'role' | 'id' | 'tabIndex'> }[]; value: string; onChange(id: string): void })
+export function Tabs({ label, items, value, onChange }: { label: string; items: readonly { id: string; label: ReactNode; content: ReactNode; buttonProps?: Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'disabled' | 'role' | 'id' | 'tabIndex'> }[]; value: string; onChange: (id: string) => void })
 {
   const group = useId();
 

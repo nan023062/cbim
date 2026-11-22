@@ -98,21 +98,21 @@ export class RuntimeStore
   }
 
   /** download / extract / verify 均在后台完成；完整成功后目录才进入内容寻址缓存。 */
-  Prepare(pkg: RuntimePackage, signal: AbortSignal, progress: (percent: number) => void = () => { }): Promise<string>
+  Prepare(pkg: RuntimePackage, signal: AbortSignal, progress: (percent: number) => void = () => { }, localUrl?:URL): Promise<string>
   {
     const current = this.preparing.get(pkg.sha256);
 
     if (current)
       return current;
 
-    const job = this.PreparePackage(pkg, signal, progress).finally(() => { if (this.preparing.get(pkg.sha256) === job) this.preparing.delete(pkg.sha256) });
+    const job = this.PreparePackage(pkg, signal, progress,localUrl).finally(() => { if (this.preparing.get(pkg.sha256) === job) this.preparing.delete(pkg.sha256) });
 
     this.preparing.set(pkg.sha256, job);
 
     return job;
   }
 
-  private async PreparePackage(pkg: RuntimePackage, signal: AbortSignal, progress: (percent: number) => void)
+  private async PreparePackage(pkg: RuntimePackage, signal: AbortSignal, progress: (percent: number) => void,localUrl?:URL)
   {
     signal.throwIfAborted();
 
@@ -178,7 +178,7 @@ export class RuntimeStore
         if (typeof this.download === 'function')
           await this.download(pkg, archive, signal, report);
         else
-          verifiedArchive = await this.download.Acquire(pkg, report);
+          verifiedArchive = await this.download.Acquire(pkg, report, localUrl);
 
         await extractRuntimeArchive(verifiedArchive, expanded, pkg.files, signal, value => progress(70 + value * .25));
       }

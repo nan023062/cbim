@@ -4,6 +4,22 @@
  */
 import { z } from 'zod';
 
+import { organizationChangeSchema } from './organization-contract';
+
+import { businessChangeSchema } from './business-contract';
+
+import { agentConfigurationSchema } from './agent-configuration';
+
+import { referenceChange } from './project-references';
+
+import { settingsChange, timerChange } from './project-work';
+
+export { issueTaskPermission, type TaskPermission } from './task-permission';
+
+export const projectReads = z.union([z.object({ resource: z.enum(['organization', 'business', 'settings', 'timers', 'references']) }).strict(), z.object({ resource: z.literal('member'), id: z.string().min(1).max(2048) }).strict()]);
+
+export const projectWrites = z.discriminatedUnion('resource', [z.object({ resource: z.literal('organization'), change: organizationChangeSchema }).strict(), z.object({ resource: z.literal('business'), change: businessChangeSchema }).strict(), z.object({ resource: z.literal('member'), id: z.string().min(1).max(2048), revision: z.number().int().nonnegative(), configuration: agentConfigurationSchema }).strict(), z.object({ resource: z.literal('references'), change: referenceChange }).strict(), z.object({ resource: z.literal('settings'), change: settingsChange }).strict(), z.object({ resource: z.literal('timers'), change: timerChange }).strict(),]);
+
 export type { AgentPermission } from '../../framework/cability/organization';
 
 /** 派发只引用已登记岗位和工作区，不接受权限或任意模型身份。 */
@@ -17,6 +33,10 @@ export interface OfficeOperations
 {
   /** 返回当前办公室的岗位、业务节点和真实任务状态。 */
   Inspect(): unknown;
+
+  ProjectRead?(input: z.infer<typeof projectReads>): Promise<unknown>;
+
+  ProjectWrite?(input: z.infer<typeof projectWrites>): Promise<unknown>;
 
   /** 等待真实子运行，返回结果及实际工作树目录，不自动合并到项目。 */
   Dispatch(input: OfficeDispatchInput, signal: AbortSignal): Promise<unknown>;

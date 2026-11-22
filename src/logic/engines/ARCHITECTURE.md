@@ -31,10 +31,6 @@ class N_36c40847e267["catalog"] {
   <<virtual>>
 }
 click N_36c40847e267 href "catalog/ARCHITECTURE.md"
-class N_e36725470015["packages"] {
-  <<virtual>>
-}
-click N_e36725470015 href "packages/ARCHITECTURE.md"
 class N_c89715d50249["service"] {
   <<virtual>>
 }
@@ -42,7 +38,6 @@ click N_c89715d50249 href "service/ARCHITECTURE.md"
 N_865c43bba56b ..> N_f3ea3edeafac : 依赖
 N_865c43bba56b ..> N_36c40847e267 : 依赖
 N_f3ea3edeafac ..> N_36c40847e267 : 依赖
-N_e36725470015 ..> N_865c43bba56b : 依赖
 N_c89715d50249 ..> N_865c43bba56b : 依赖
 ```
 
@@ -51,7 +46,6 @@ N_c89715d50249 ..> N_865c43bba56b : 依赖
 | 虚拟封装 | 整体职责 |
 | --- | --- |
 | [catalog](catalog/ARCHITECTURE.md) | 依据引擎声明选择模型协议和额外角色，供设置预览与执行准备共用。兼容列表只是静态筛选，不能替代真实连接验证；本模块不下载制品、不读取凭据。 |
-| [packages](packages/ARCHITECTURE.md) | 把官方引擎声明接到资源插件管理器，统一安装、活动版本、依赖和运行引用。执行取得固定包及 retain 释放函数，运行期间不重新选择最新版；制品准备通过注入端口完成。 |
 | [service](service/ARCHITECTURE.md) | 将 Agent 的引擎选型转换为模型服务的连接需求，复用模型服务的配置队列捕获主模型与额外角色。公开快照不包含凭据，延迟解析受回调生命周期约束；不管理安装或自动重试。 |
 
 [上层设计](../ARCHITECTURE.md)

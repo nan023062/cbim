@@ -58,6 +58,7 @@ class N_212574dc93ac["resource"] {
 click N_212574dc93ac href "resource/ARCHITECTURE.md"
 N_22a9dc163407 ..> N_2ac6ecef0e06 : 依赖
 N_22a9dc163407 ..> N_8ad7653761f5 : 依赖
+N_22a9dc163407 ..> N_212574dc93ac : 依赖
 N_be04b6eef23f ..> N_2ac6ecef0e06 : 依赖
 N_be04b6eef23f ..> N_8ad7653761f5 : 依赖
 N_8ad7653761f5 ..> N_2ac6ecef0e06 : 依赖
@@ -66,6 +67,7 @@ N_8ad7653761f5 ..> N_2a213dc873da : 依赖
 N_8ad7653761f5 ..> N_212574dc93ac : 依赖
 N_212574dc93ac ..> N_2ac6ecef0e06 : 依赖
 N_212574dc93ac ..> N_2a213dc873da : 依赖
+N_212574dc93ac ..> N_8ad7653761f5 : 依赖
 ```
 
 ### 关系组 2：updater

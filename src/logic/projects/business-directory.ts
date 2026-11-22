@@ -2,13 +2,9 @@
  * 作用定位：业务架构实时编辑服务：原子保存定义、更新项目共享树，再向所有活动主 Agent 发布变化。
  * 设计原因：定义持久化、共享运行树与通知按提交顺序衔接，结构修改不以任务空闲为前提。
  */
-import fs from 'node:fs/promises';
+import { describeBusiness } from './project-trees';
 
-import path from 'node:path';
-
-import { atomic } from '../../core/io/text-files';
-
-import type { ProjectList } from './project';
+import type { ProjectAccess } from './project-access';
 
 import type { WorkspaceTree } from '../../framework/business';
 
@@ -22,27 +18,13 @@ export class BusinessDirectory
 
   private readonly _applied = new Map<string, number>();
 
-  public constructor(private readonly _projects: ProjectList, private readonly _notify: (project: string, text: string) => void = () => { })
+  public constructor(private readonly _projects: ProjectAccess, private readonly _notify: (project: string, text: string) => void = () => { })
   {
   }
 
   public async Read(projectId: string): Promise<BusinessSnapshot>
   {
-    await this._projects.Open(projectId);
-
-    try
-    {
-      return businessSnapshotSchema.parse(JSON.parse(await fs.readFile(path.join(this._projects.paths.Project(projectId), 'business.json'), 'utf8')));
-    }
-    catch (error)
-    {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT')
-        throw error;
-    }
-
-    const tree = await this._projects.Business(projectId);
-
-    return businessSnapshotSchema.parse({ revision: 0, nodes: tree.nodes.map(node => ({ id: node.id, parentId: tree.nodes.find(parent => parent.children.includes(node.id))?.id ?? null, name: node.name, summary: node.summary, sources: node.sources, virtual: node.virtual })) });
+    return (await this._projects.Open(projectId)).trees.Business();
   }
 
   /** 保存前后身份固定；删除仅移除架构定义，既有工作树与任务实例继续保留。 */
@@ -88,7 +70,7 @@ export class BusinessDirectory
 
       const result = businessSnapshotSchema.parse({ revision: previous.revision + 1, nodes });
 
-      await atomic(path.join(this._projects.paths.Project(projectId), 'business.json'), JSON.stringify(result, null, 2));
+      await project.trees.SaveBusiness(result);
 
       project.runtime.project!.UpdateTree(this.Tree(result));
 
@@ -107,7 +89,7 @@ export class BusinessDirectory
   /** 页面与执行共享相同的最新定义。 */
   public Tree(snapshot: BusinessSnapshot): WorkspaceTree
   {
-    return { roots: snapshot.nodes.filter(node => node.parentId === null).map(node => node.id), nodes: Object.fromEntries(snapshot.nodes.map(node => [node.id, { id: node.id, kind: 'workspace', name: node.name, summary: node.summary, sources: node.sources, virtual: node.virtual, children: snapshot.nodes.filter(child => child.parentId === node.id).map(child => child.id) }])) };
+    return describeBusiness(snapshot);
   }
 
   public async Apply(projectId: string): Promise<void>

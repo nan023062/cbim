@@ -1,6 +1,11 @@
-﻿/** 右侧窗口管理浏览器标签和项目工具，切换工具不会卸载中间的对话。 */
+/**
+ * 作用定位：右侧窗口管理浏览器标签和项目工具，切换工具不会卸载中间的对话。
+ * 设计原因：独立维护扩展页签可以保留聊天状态。
+ */
 import { useEffect, useId, useRef, useState } from 'react';
+
 import { PaneDivider } from '../../framework-ui/three-pane';
+
 import { Icon } from '../../framework-ui/Icon';
 
 import type { OfficeQueueSnapshot } from '../../bridge/contracts/discovery';
@@ -12,38 +17,26 @@ const types = {
   schedule: ['定时任务', 'clock'],
   console: ['控制台', 'terminal'],
 } as const;
+
 type Kind = keyof typeof types;
+
 const choices = Object.keys(types) as Kind[];
 
-function WebTab({ hidden }: { hidden: boolean }) {
+function WebTab({ hidden }: { hidden: boolean })
+{
   const [address, setAddress] = useState('');
+
   const [url, setUrl] = useState('');
+
   const [error, setError] = useState('');
+
   const [revision, refresh] = useState(0);
+
   return (
     <section className="extension-web" hidden={hidden}>
       <form
         className="extension-address"
-        onSubmit={(e) => {
-          e.preventDefault();
-          try {
-            const target = new URL(
-              address.includes(':') ? address : 'https://' + address,
-            );
-            if (
-              !['http:', 'https:'].includes(target.protocol) ||
-              target.username ||
-              target.password
-            )
-              throw Error();
-            setUrl(target.href);
-            setAddress(target.href);
-            setError('');
-            refresh((v) => v + 1);
-          } catch {
-            setError('请输入有效的 HTTP 或 HTTPS 网址');
-          }
-        }}
+        onSubmit={(e) => { e.preventDefault(); try { const target = new URL(address.includes(':') ? address : 'https://' + address,); if (!['http:', 'https:'].includes(target.protocol) || target.username || target.password) throw Error(); setUrl(target.href); setAddress(target.href); setError(''); refresh((v) => v + 1); } catch { setError('请输入有效的 HTTP 或 HTTPS 网址'); } }}
       >
         <input
           placeholder="输入网址"
@@ -78,36 +71,14 @@ function WebTab({ hidden }: { hidden: boolean }) {
   );
 }
 
-function ConsoleTab({
-  project,
-  session,
-}: {
-  project: string;
-  session: string;
-}) {
+function ConsoleTab({ project, session, }: { project: string; session: string; })
+{
   const [snapshot, setSnapshot] = useState<OfficeQueueSnapshot>();
+
   const [error, setError] = useState('');
-  useEffect(() => {
-    let alive = true;
-    let timer: ReturnType<typeof setTimeout>;
-    async function read() {
-      try {
-        const value = await window.desktopMenu.OfficeQueue(project, session);
-        if (alive) {
-          setSnapshot(value);
-          setError('');
-        }
-      } catch (e) {
-        if (alive) setError(String(e));
-      }
-      if (alive) timer = setTimeout(read, 2000);
-    }
-    void read();
-    return () => {
-      alive = false;
-      clearTimeout(timer);
-    };
-  }, [project, session]);
+
+  useEffect(() => { let alive = true; let timer: ReturnType<typeof setTimeout>; async function read() { try { const value = await window.desktopMenu.OfficeQueue(project, session); if (alive) { setSnapshot(value); setError(''); } } catch (e) { if (alive) setError(String(e)); } if (alive) timer = setTimeout(read, 2000); } void read(); return () => { alive = false; clearTimeout(timer); }; }, [project, session]);
+
   return (
     <section className="extension-console">
       <h2>控制台</h2>
@@ -148,43 +119,41 @@ function ConsoleTab({
   );
 }
 
-export function ExtensionPanel({
-  open,
-  project,
-  session,
-  organization,
-  business,
-}: {
-  open: boolean;
-  project?: string;
-  session?: string;
-  organization: React.ReactNode;
-  business: React.ReactNode;
-}) {
-  const [tabs, setTabs] = useState(() =>
-    choices.map((kind, id) => ({ kind, id })),
+export function ExtensionPanel({ open, project, session, organization, business, }: { open: boolean; project?: string; session?: string; organization: React.ReactNode; business: React.ReactNode; })
+{
+  const [tabs, setTabs] = useState(() => choices.map((kind, id) => ({ kind, id })),
   );
+
   const [active, setActive] = useState(0);
+
   const [maximized, setMaximized] = useState(false);
+
   const next = useRef(choices.length);
+
   const menu = useId();
+
   const kind = tabs.find((t) => t.id === active)?.kind;
-  function add(kind: Kind) {
+
+  function add(kind: Kind)
+  {
     const existing = kind !== 'web' && tabs.find((t) => t.kind === kind);
-    if (existing) {
+
+    if (existing)
+    {
       setActive(existing.id);
+
       return;
     }
+
     const id = next.current++;
+
     setTabs([...tabs, { id, kind }]);
+
     setActive(id);
   }
-  useEffect(() => {
-    if (open)
-      document
-        .querySelector('#extension-panel [aria-selected="true"]')
-        ?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-  }, [active, open]);
+
+  useEffect(() => { if (open) document.querySelector('#extension-panel [aria-selected="true"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }, [active, open]);
+
   return (
     <aside
       id="extension-panel"
@@ -214,12 +183,7 @@ export function ExtensionPanel({
               </button>
               <button
                 aria-label={'关闭' + types[t.kind][0]}
-                onClick={() => {
-                  const rest = tabs.filter((v) => v.id !== t.id);
-                  setTabs(rest);
-                  if (active === t.id)
-                    setActive(rest[Math.max(0, i - 1)]?.id ?? -1);
-                }}
+                onClick={() => { const rest = tabs.filter((v) => v.id !== t.id); setTabs(rest); if (active === t.id) setActive(rest[Math.max(0, i - 1)]?.id ?? -1); }}
               >
                 <Icon name="close" size={12} />
               </button>
@@ -257,9 +221,7 @@ export function ExtensionPanel({
       >
         {tabs
           .filter((t) => t.kind === 'web')
-          .map((t) => (
-            <WebTab key={t.id} hidden={active !== t.id} />
-          ))}
+          .map((t) => (<WebTab key={t.id} hidden={active !== t.id} />))}
         {!kind ? (
           <p>暂无标签页，点击＋添加。</p>
         ) : kind === 'schedule' ? (

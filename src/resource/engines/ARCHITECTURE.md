@@ -17,21 +17,21 @@
 
 ```mermaid
 classDiagram
-class N_cae085e09fcd["EnginePackages"]
-click N_cae085e09fcd href "engine-packages.ts"
-class N_769570edea05["服务入口"] {
+class N_1470ef04815f["EnginePackages"]
+click N_1470ef04815f href "engine-packages.ts"
+class N_4c3d1158b669["服务入口"] {
   <<module>>
 }
-click N_769570edea05 href "index.ts"
+click N_4c3d1158b669 href "index.ts"
 class N_bece42afd05a["EngineRuntimeResolver"] {
   <<boundary>>
 }
-click N_bece42afd05a href "../../execution/rules/engine-runtime.ts"
-N_769570edea05 ..> N_cae085e09fcd : 依赖
-N_bece42afd05a <|.. N_cae085e09fcd
+click N_bece42afd05a href "../../logic/execution/rules/engine-runtime.ts"
+N_4c3d1158b669 ..> N_1470ef04815f : 依赖
+N_bece42afd05a <|.. N_1470ef04815f
 ```
 
-外部继承／实现边界：[EngineRuntimeResolver](../../execution/rules/engine-runtime.ts)。
+外部继承／实现边界：[EngineRuntimeResolver](../../logic/execution/rules/engine-runtime.ts)。
 
 [上层设计](../ARCHITECTURE.md)
 

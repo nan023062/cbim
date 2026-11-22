@@ -4,7 +4,7 @@
  */
 import { useEffect, useState } from 'react';
 
-import type { DiscoveryPage, DiscoveryResult } from '../../bridge/contracts/discovery';
+import type { DiscoveryPage, DiscoveryResult, RegistryVersion } from '../../bridge/contracts/discovery';
 
 import { EnginePackagesView } from './EnginePackagesView';
 
@@ -48,10 +48,13 @@ function useMenuData<T>(load: () => Promise<T>)
 
 export function DiscoveryView({ page, title }: { page: DiscoveryPage; title: string })
 {
+  const [local,setLocal]=useState(false);
+  if(local)return <LocalRegistry key={page} page={page} Back={()=>setLocal(false)}/>;
+  const entry=<button onClick={()=>setLocal(true)}>本机资源库</button>;
   if (page === 'engines')
-    return <EnginePackagesView />;
+    return <><div className="graph-toolbar">{entry}</div><EnginePackagesView /></>;
 
-  return <ResourceListPage key={page} page={page} title={title} />;
+  return <><div className="graph-toolbar">{entry}</div><ResourceListPage key={page} page={page} title={title} /></>;
 }
 
 function ResourceListPage({ page, title }: { page: DiscoveryPage; title: string })
@@ -73,5 +76,30 @@ function ResourceListPage({ page, title }: { page: DiscoveryPage; title: string 
         <select aria-label="资源类型" value={kind} onChange={e => setKind(e.target.value)}><option value="">全部类型</option>{[...new Set(data.items.map(i => i.kind))].map(k => <option key={k}>{k}</option>)}</select></div>
       <div className="definition-grid">{items?.map(item => <article className="definition-card" key={item.id}><small>{item.kind}</small><h3>{item.name}</h3><p>{item.summary}</p>{page === 'connectors' && <ConnectorInstall id={item.id} />}</article>)}</div>
       {!items?.length && <p role="status">{query || kind ? '没有匹配的资源' : '暂无可展示的资源'}</p>}</>}
+  </section>;
+}
+
+const registryKinds={engines:'engine',connectors:'connector',talent:'talent',templates:'business'} as const;
+const registryLabels={engines:'引擎',connectors:'连接器',talent:'人才资产',templates:'业务模板'};
+function LocalRegistry({page,Back}:{page:DiscoveryPage;Back:()=>void}){
+  const [load]=useState(()=>()=>window.desktopMenu.RegistryList());
+  const {data,error,refresh}=useMenuData(load);
+  const [id,setId]=useState(''),[version,setVersion]=useState('1.0.0'),[busy,setBusy]=useState(false),[note,setNote]=useState('');
+  const kind=registryKinds[page],rows=data?.filter(row=>row.kind===kind);
+  async function act(row?:RegistryVersion){
+    setBusy(true);setNote('');
+    try{
+      if(row)setNote('已校验并保存到：'+await window.desktopMenu.RegistryPull(row));
+      else{const result=await window.desktopMenu.RegistryPublish({kind,id,version});if(result){setNote('已发布 '+result.id+' '+result.version);refresh();}}
+    }catch(e){setNote(String(e));}finally{setBusy(false);}
+  }
+  return <section className="view-page menu-page"><header className="view-heading"><button onClick={Back}>返回</button><h1>本机资源库 · {registryLabels[page]}</h1><button onClick={refresh} disabled={busy}>刷新</button></header>
+    <form className="graph-toolbar" onSubmit={e=>{e.preventDefault();void act();}}>
+      <label>资源 ID <input required pattern="[a-z][a-z0-9\-]{0,47}" placeholder="例如 planner" value={id} onChange={e=>setId(e.target.value)}/></label>
+      <label>版本 <input required pattern={'[0-9]{1,8}\\.[0-9]{1,8}\\.[0-9]{1,8}'} value={version} onChange={e=>setVersion(e.target.value)}/></label>
+      <button disabled={busy}>选择文件并发布</button></form>
+    {error&&<p role="alert">{error}</p>}{(busy||note)&&<p role="status">{busy?'正在处理…':note}</p>}
+    {!data&&!error&&<p>正在读取本机资源库…</p>}{rows?.length===0&&<p>尚无已发布的{registryLabels[page]}</p>}
+    <div className="definition-grid">{rows?.map(row=><article className="definition-card" key={row.id+'@'+row.version}><h3>{row.id}</h3><p>{row.version} · {row.size.toLocaleString()} 字节</p><button disabled={busy} onClick={()=>void act(row)}>拉取此版本</button></article>)}</div>
   </section>;
 }

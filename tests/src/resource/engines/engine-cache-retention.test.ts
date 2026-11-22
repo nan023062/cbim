@@ -2,11 +2,11 @@ import {it,expect,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {generateKeyPairSync,sign} from 'node:crypto';
-import {runtimeFixture,digest} from '../../updates/service/support/runtime-fixture';
-import {archiveDirectory} from '../../../../../scripts/runtime-packaging';
-import {RuntimeStore} from '../../../../../src/logic/updates/service/runtime-store';
-import {EngineArtifacts} from '../../../../../src/logic/updates/service/engine-artifacts';
-import {EnginePackages} from '../../../../../src/logic/engines/packages';
+import {runtimeFixture,digest} from '../../logic/updates/service/support/runtime-fixture';
+import {archiveDirectory} from '../../../../scripts/runtime-packaging';
+import {RuntimeStore} from '../../../../src/logic/updates/service/runtime-store';
+import {EngineArtifacts} from '../../../../src/logic/updates/service/engine-artifacts';
+import {EnginePackages} from '../../../../src/resource/engines';
 
 it.each([false,true])('CBIM 更换冷版本和资源（换钥=%s）后，原安装/停用选择及引擎缓存离线复用',async rotate=>{
   const f=await runtimeFixture();try{

@@ -18,7 +18,19 @@ import { verifyRuntimeManifest, type EnginePackage, type SignedRuntimeManifest }
 
 import type { RuntimeStore } from './runtime-store';
 
-import { downloadRuntimeManifest } from './runtime-download';
+import { downloadRuntimeManifest, readLocalIndex } from './runtime-download';
+
+function registryOrigin(){
+  const port=process.env.CBIM_REGISTRY_PORT;
+  if(!port)return undefined;
+  if(!/^\d{1,5}$/.test(port)||Number(port)<1||Number(port)>65535)throw Error('本机资源服务器端口无效');
+  return 'http://127.0.0.1:'+port;
+}
+async function readIndex(store:RuntimeStore,signal:AbortSignal){
+  const origin=registryOrigin();
+  if(!origin)return downloadRuntimeManifest('runtime-engines',engineIndexAsset(store.cold.enginePublicKey??store.cold.publicKey),signal);
+  return readLocalIndex(origin,signal);
+}
 
 /** 构造时 seed 已由启动资源验签；stateFile 位于用户状态区，清缓存不清已接纳发布序号。 */
 export class EngineArtifacts implements EngineArtifactsPort
@@ -40,7 +52,7 @@ export class EngineArtifacts implements EngineArtifactsPort
   private digest = '';
 
   /** historicalKeys 由可信冷宿主固定，不能来自用户状态或网络；只用于重验已保存的历史来源。 */
-  constructor(private readonly stateFile: string, private readonly store: RuntimeStore, private readonly seed: SignedRuntimeManifest | undefined, private readonly signal: AbortSignal, private readonly fetchIndex = () => downloadRuntimeManifest('runtime-engines', engineIndexAsset(store.cold.enginePublicKey ?? store.cold.publicKey), signal), private readonly progress: (kind: string, version: string, progress?: number, error?: string) => void = () => { }, private readonly historicalKeys: readonly string[] = [])
+  constructor(private readonly stateFile: string, private readonly store: RuntimeStore, private readonly seed: SignedRuntimeManifest | undefined, private readonly signal: AbortSignal, private readonly fetchIndex = () => readIndex(store,signal), private readonly progress: (kind: string, version: string, progress?: number, error?: string) => void = () => { }, private readonly historicalKeys: readonly string[] = [])
   {
   }
 
@@ -205,17 +217,17 @@ export class EngineArtifacts implements EngineArtifactsPort
   async List()
   {
     await this.queue.Run(() => this.Init());
-    if (!this.seed && !this.head) await this.Check();
+
+    if (!this.seed && !this.head)
+      await this.Check();
+
     return { current: [...this.current].map(([kind, id]) => this.Summary(this.available.get(kind + ':' + id)!)), available: [...this.available.values()].map(pkg => this.Summary(pkg)) };
   }
 
   Check()
   {
     // Fetch outside the catalog lock so local reads and runtime preparation can proceed.
-    return this.checking ??= this.fetchIndex().then(raw => this.queue.Run(async () => {
-      await this.Init();
-      await this.RefreshIndex(raw);
-    })).finally(() => { this.checking = undefined; });
+    return this.checking ??= this.fetchIndex().then(raw => this.queue.Run(async () => { await this.Init(); await this.RefreshIndex(raw); })).finally(() => { this.checking = undefined; });
   }
 
   private async RefreshIndex(raw: Awaited<ReturnType<typeof this.fetchIndex>>)
@@ -262,7 +274,10 @@ export class EngineArtifacts implements EngineArtifactsPort
 
     try
     {
-      const root = await this.store.Prepare(pkg.package, this.signal, value => { this.progress(kind, pkg.adapter!.version, value); onProgress?.(value) });
+      const origin=registryOrigin();
+      const category=pkg.plugin?.type==='connector'||pkg.kind==='world-clock'?'connector':'engine';
+      const localUrl=origin?new URL('/v1/resources/'+category+'/'+pkg.kind+'/'+pkg.adapter!.version+'/download?sha256='+pkg.package.sha256,origin):undefined;
+      const root = await this.store.Prepare(pkg.package, this.signal, value => { this.progress(kind, pkg.adapter!.version, value); onProgress?.(value) },localUrl);
 
       this.progress(kind, pkg.adapter!.version);
 

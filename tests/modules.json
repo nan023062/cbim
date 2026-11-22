@@ -60,7 +60,6 @@
       ],
       "tests": {
         "unit": [
-          "tests/src/framework/connectors/service.test.ts",
           "tests/src/framework/connectors/connector-registry.test.ts"
         ],
         "contract": [],
@@ -654,21 +653,6 @@
       },
       "directory": "src/logic/engines"
     },
-    "logic/engines/packages": {
-      "roots": [
-        "src/logic/engines/packages/"
-      ],
-      "tests": {
-        "unit": [
-          "tests/src/logic/engines/packages/packages.test.ts"
-        ],
-        "contract": [
-          "tests/src/logic/engines/packages/engine-cache-retention.test.ts"
-        ],
-        "integration": []
-      },
-      "directory": "src/logic/engines/packages"
-    },
     "tooling/engine-release": {
       "roots": [
         "scripts/engine-release.ts",
@@ -742,7 +726,8 @@
         "unit": [],
         "contract": [],
         "integration": [
-          "tests/project-runtime-ownership.test.ts"
+          "tests/project-runtime-ownership.test.ts",
+          "tests/desktop-local-registry.test.mjs"
         ]
       },
       "cache": false
@@ -929,8 +914,37 @@
       ],
       "tests": {
         "unit": [],
+        "contract": [],
+        "integration": []
+      }
+    },
+    "resource/engines": {
+      "roots": [
+        "src/resource/engines/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/src/resource/engines/packages.test.ts"
+        ],
         "contract": [
-          "tests/src/logic/resource-management/connector-runtime.test.ts"
+          "tests/src/resource/engines/engine-cache-retention.test.ts"
+        ],
+        "integration": []
+      },
+      "directory": "src/resource/engines"
+    },
+    "resource/connectors": {
+      "directory": "src/resource/connectors",
+      "roots": [
+        "src/resource/connectors/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/src/resource/connectors/runtime-sessions.test.ts",
+          "tests/src/resource/connectors/service.test.ts"
+        ],
+        "contract": [
+          "tests/src/resource/connectors/connector-runtime.test.ts"
         ],
         "integration": []
       }

@@ -28,7 +28,7 @@ function Toggle({ label }: { label: string })
   return <input className="preference-switch" type="checkbox" role="switch" disabled aria-label={label} />;
 }
 
-export function SettingsView({ initial, onBack }: { initial: string; onBack(): void })
+export function SettingsView({ initial, onBack }: { initial: string; onBack: () => void })
 {
   const [section, setSection] = useState(initial);
 

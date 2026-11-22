@@ -18,6 +18,8 @@ import type { AgentPermission } from '../../framework/cability/organization';
 
 import type { OfficeToolCall } from './office-operations';
 
+import type { TaskPermission } from './task-permission';
+
 interface ChatTools
 {
   list(): Promise<{ name: string; description: string; inputSchema: Record<string, unknown> }[]>;
@@ -50,6 +52,8 @@ interface OfficeEngineOptions
 
 interface OfficeEngineContext
 {
+  taskPermission: TaskPermission['snapshot'];
+
   runId: string;
 
   directory: string;

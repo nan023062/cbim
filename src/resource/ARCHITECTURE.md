@@ -30,38 +30,65 @@ Logic 读取模板、选择本机模型配置，并向 Framework 提供运行所
 
 标注为 `virtual` 的节点是直接子模块的虚拟类封装；内部设计沿下方入口阅读。
 
+### 关系组 1：plugins
+
 ```mermaid
 classDiagram
-class N_7a9ef6f11175["connections"] {
+class N_7efd1d4e6b97["plugins"] {
   <<virtual>>
 }
-click N_7a9ef6f11175 href "connections/ARCHITECTURE.md"
-class N_4266e8d9865a["service"] {
+click N_7efd1d4e6b97 href "plugins/ARCHITECTURE.md"
+class N_8ad250db0055["connectors"] {
   <<virtual>>
 }
-click N_4266e8d9865a href "service/ARCHITECTURE.md"
+click N_8ad250db0055 href "connectors/ARCHITECTURE.md"
+class N_5895a029e64d["engines"] {
+  <<virtual>>
+}
+click N_5895a029e64d href "engines/ARCHITECTURE.md"
 class N_d4a09f21afee["OfficeHistory"]
 click N_d4a09f21afee href "office-history.ts"
 class N_7c777722dd25["contracts"] {
   <<module>>
 }
 click N_7c777722dd25 href "contracts.ts"
+class N_7a9ef6f11175["connections"] {
+  <<virtual>>
+}
+click N_7a9ef6f11175 href "connections/ARCHITECTURE.md"
+N_8ad250db0055 ..> N_7efd1d4e6b97 : 依赖
+N_5895a029e64d ..> N_7efd1d4e6b97 : 依赖
+```
+
+### 关系组 2：service
+
+```mermaid
+classDiagram
+class N_4266e8d9865a["service"] {
+  <<virtual>>
+}
+click N_4266e8d9865a href "service/ARCHITECTURE.md"
 class N_c2f553d3f354["models"] {
   <<virtual>>
 }
 click N_c2f553d3f354 href "models/ARCHITECTURE.md"
-class N_7efd1d4e6b97["plugins"] {
-  <<virtual>>
-}
-click N_7efd1d4e6b97 href "plugins/ARCHITECTURE.md"
-N_7a9ef6f11175 ..> N_4266e8d9865a : 依赖
 ```
+
+### 跨图协作
+
+按引用方归并目标，保留全部跨图关系；分图只用于阅读，不表示新增模块或依赖边界。
+
+| 引用方 | 关系 | 目标 |
+| --- | --- | --- |
+| [connections](connections/ARCHITECTURE.md)（图 1） | 依赖 | [service](service/ARCHITECTURE.md)（图 2） |
 
 ## 子模块
 
 | 虚拟封装 | 整体职责 |
 | --- | --- |
 | [connections](connections/ARCHITECTURE.md) | 把资源仓库连接的静态定义、工作区授权和真实读取分开，避免登记连接即获得访问权限。 |
+| [connectors](connectors/ARCHITECTURE.md) | 校验本机连接器包并固定活动版本，按 Office 任务取得连接器会话，在关闭后释放占用。协议及会话原语由框架提供。 |
+| [engines](engines/ARCHITECTURE.md) | 把官方引擎声明接到资源插件管理器，统一安装、活动版本、依赖和运行引用。执行取得固定包及 retain 释放函数，运行期间不重新选择最新版；制品准备通过注入端口完成。 |
 | [models](models/ARCHITECTURE.md) | 管理当前用户的供应商配置、默认选择和加密凭据。配置写入与运行时读取快照共用串行队列。 |
 | [plugins](plugins/ARCHITECTURE.md) | 宿主提供可用产品目录和受信任的制品端口。管理器持久化已安装版本与启用状态，并在运行期间跟踪固定版本及其依赖的引用。 |
 | [service](service/ARCHITECTURE.md) | 管理本地与 HTTP 资源仓库的版本化读写和共享生命周期，不依赖具体应用或 Bridge。 |

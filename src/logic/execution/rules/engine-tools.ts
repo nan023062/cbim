@@ -34,8 +34,36 @@ export interface EngineCapability
   disableNativeTools?: boolean;
 }
 
+/** 宿主签发的能力说明；只用于适配器裁剪工具，调用授权仍由宿主执行。 */
+export interface EngineTaskPermission
+{
+  readonly projectId: string;
+
+  readonly officeId: string;
+
+  readonly agentId: string;
+
+  readonly taskId: string;
+
+  readonly level: 'read' | 'ask' | 'execute';
+
+  readonly commands: 'denied';
+
+  readonly readDirectories: readonly string[];
+
+  readonly writeDirectories: readonly string[];
+
+  readonly excludedDirectories: readonly string[];
+
+  readonly readResources: readonly string[];
+
+  readonly writeResources: readonly string[];
+}
+
 export interface EngineCapabilities
 {
+  taskPermission?: EngineTaskPermission;
+
   capabilities?: readonly EngineCapability[]
 }
 

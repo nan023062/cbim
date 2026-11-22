@@ -28,9 +28,6 @@ import { MainAgentPicker } from './MainAgentPicker';
 
 import { PermissionPicker } from './PermissionPicker';
 
-
-
-
 import type { OfficeSelection } from '../../bridge/contracts/discovery';
 
 import { Icon } from '../../framework-ui/Icon';
@@ -40,9 +37,7 @@ import './office.css';
 interface Props
 {
   /** 顶部项目导航选择的页面；切换不销毁当前会话状态。 */
-
-
-  onAnalyze(text: string, selection: Required<OfficeSelection>): Promise<void>;
+  onAnalyze: (text: string, selection: Required<OfficeSelection>) => Promise<void>;
 
   project: ProjectItem;
 
@@ -50,17 +45,15 @@ interface Props
 
   draft: string;
 
-  onDraft(text: string): void;
+  onDraft: (text: string) => void;
 
-  onSaved(messages: OfficeMessage[]): void;
+  onSaved: (messages: OfficeMessage[]) => void;
 
   started: number;
 
-  onRunning(started: number): void;
+  onRunning: (started: number) => void;
 
-  onManageModels(): void;
-
-
+  onManageModels: () => void;
 }
 
 function duration(ms: number)
@@ -98,15 +91,19 @@ export function OfficeView({ project, conversation, draft, onDraft, onSaved, sta
   callbacks.current = { onSaved, onRunning };
 
   const [engineReason, setEngineReason] = useState('正在加载引擎和模型…');
+
   const [engineWorking, setEngineWorking] = useState(true);
+
   const reportReadiness = useCallback((_ready: boolean, reason: string, working: boolean) => { setEngineReason(reason); setEngineWorking(working); }, []);
 
   const [settingsTab, setSettingsTab] = useState<'model' | 'skills' | 'connectors'>();
 
-
   const [connectorIds, setConnectorIds] = useState<readonly string[]>([]);
+
   const [connectorCatalog, setConnectorCatalog] = useState<Awaited<ReturnType<typeof window.desktopMenu.AgentConnectors>>>([]);
+
   useEffect(() => { let current = true; window.desktopMenu.AgentConnectors().then(items => { if (current) setConnectorCatalog(items); }).catch(() => { if (current) setConnectorCatalog([]); }); return () => { current = false; }; }, [settingsTab, conversation.id]);
+
   const visibleConnectors = connectorIds.flatMap(id => connectorCatalog.filter(item => item.id === id && item.available));
 
   const [availableSkills, setAvailableSkills] = useState<NonNullable<AgentConfiguration['skills']>>([]);
@@ -325,7 +322,6 @@ export function OfficeView({ project, conversation, draft, onDraft, onSaved, sta
 
   const count = persisted + (started ? 2 : 0);
 
-
   return <Screen className="office-chat" aria-label="Office 对话">
     {settingsTab === 'connectors' && <dialog className="agent-settings" ref={node => { if (node && !node.open) node.showModal(); }} onCancel={() => setSettingsTab(undefined)} aria-label="当前对话的连接器"><header><strong>当前对话的连接器</strong><button aria-label="关闭" onClick={() => setSettingsTab(undefined)}><Icon name="close" /></button></header><section>{!connectorCatalog.length && <p>暂无可用连接器</p>}{connectorCatalog.map(item => <label className="agent-connector" key={item.id}><input type="checkbox" checked={connectorIds.includes(item.id)} disabled={!item.available && !connectorIds.includes(item.id)} onChange={event => { const checked = event.currentTarget.checked; setConnectorIds(ids => checked ? [...ids, item.id] : ids.filter(id => id !== item.id)); }} />{item.name}</label>)}</section></dialog>}
     <div className="office-transcript"
@@ -351,9 +347,9 @@ export function OfficeView({ project, conversation, draft, onDraft, onSaved, sta
           {visibleConnectors.length > 0 && <div className="composer-connectors" style={{ minWidth: `min(28%, ${18 + (visibleConnectors.length - 1) * 3}px)` }} role="list" aria-label="可用连接器">{visibleConnectors.map(item => <span className="connector-slot" role="listitem" key={item.id} title={item.name} aria-label={item.name}><b aria-hidden="true" style={{ backgroundColor: 'hsl(' + Array.from(item.id).reduce((hash, c) => (hash * 31 + c.charCodeAt(0)) % 360, 0) + ' 48% 36%)' }}>{item.name.slice(0, 2).toUpperCase()}</b></span>)}</div>}
           <div className="composer-controls"><MainAgentPicker compact onManageModels={onManageModels} onReady={reportReadiness} value={selection} disabled={submitting} fail={setError} change={setSelection} />
           <StateButton className="office-action" state={started ? 'stop' : 'send'} states={{
-            send: { label: '发送', title: sendReason || '发送（Enter；Shift + Enter 换行）', type: 'submit', disabled: !!sendReason, children: <Icon name="sendSolid" size={18} /> },
-            stop: { label: '停止回复', title: '停止当前任务并暂停队列；输入新指令后按 Enter 可排队', disabled: queueBusy, onClick: stop, children: <Icon name="stopSolid" size={16} /> },
-          }} />
+              send: { label: '发送', title: sendReason || '发送（Enter；Shift + Enter 换行）', type: 'submit', disabled: !!sendReason, children: <Icon name="sendSolid" size={18} /> },
+              stop: { label: '停止回复', title: '停止当前任务并暂停队列；输入新指令后按 Enter 可排队', disabled: queueBusy, onClick: stop, children: <Icon name="stopSolid" size={16} /> },
+            }} />
           </div>
         </footer>
       </form>

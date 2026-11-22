@@ -151,7 +151,7 @@ test.each([
  ['src/logic/projects/a.ts','src/engine-plugins/pi/engine.ts',false],
  ['src/bridge/server/desktop/main.ts','src/logic/projects/organization-contract.ts',true],
  ['src/bridge/server/bootstrap/desktop.ts','src/logic/projects/project.ts',false],
- ['src/logic/resource-management/connector-runtime.ts','src/framework/connectors/index.ts',true],
+ ['src/resource/connectors/connector-runtime.ts','src/framework/connectors/index.ts',true],
  ['src/logic/updates/service/desktop-releases.ts','src/updater/release-policy.ts',true],
 ])('current source boundary %s -> %s = %s',(from,to,allowed)=>{
  const spec=path.posix.relative(path.posix.dirname(from),to);

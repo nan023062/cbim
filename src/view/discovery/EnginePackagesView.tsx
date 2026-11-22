@@ -82,9 +82,8 @@ export function EnginePackagesView()
   const transfers = useTransfers();
 
   // 目录保留尚未安装的产品，签名清单还可以提供额外的可安装引擎。
-  const products = [...catalog, ...(state?.items ?? []).filter(item => !catalog.some(entry => entry.id === item.kind)).map(item => ({
-    id: item.kind, label: item.label, logo: item.logo, businessTypes: [], supportedApis: item.requirement.supportedApis,
-  }))];
+  const products = [...catalog, ...(state?.items ?? []).filter(item => !catalog.some(entry => entry.id === item.kind)).map(item => ({ id: item.kind, label: item.label, logo: item.logo, businessTypes: [], supportedApis: item.requirement.supportedApis, }))];
+
   const product = products.find(entry => entry.id === selected) ?? products[0];
 
   const item = state?.items.find(entry => entry.kind === product?.id);
@@ -114,6 +113,7 @@ export function EnginePackagesView()
       <nav className="engine-list" aria-label="支持的执行引擎">{products.map(entry =>
       {
         const row = progressFor(entry.id);
+
         const status = state?.items.find(item => item.kind === entry.id);
 
         return <div className="engine-catalog-row" key={entry.id}><button type="button" aria-current={entry.id === product?.id ? 'true' : undefined} onClick={() => setSelected(entry.id)}>

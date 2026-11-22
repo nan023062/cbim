@@ -10,7 +10,7 @@ Icon 的组织操作图形包含返回、新增团队和新增成员，复用既
 
 | 组成 | 定位 |
 | --- | --- |
-| [Icon](Icon.tsx) | 承载跨界面的图标、品牌及基础样式。 |
+| [品牌标记](BrandMark.tsx) | 展示应用品牌标记。 |
 
 
 <!-- architecture:generated:start -->
@@ -19,10 +19,10 @@ Icon 的组织操作图形包含返回、新增团队和新增成员，复用既
 
 ```mermaid
 classDiagram
-class N_6bb76609a50b["Icon"] {
+class N_c1b9d82de9cb["品牌标记"] {
   <<component>>
 }
-click N_6bb76609a50b href "Icon.tsx"
+click N_c1b9d82de9cb href "BrandMark.tsx"
 ```
 
 [上层设计](../ARCHITECTURE.md)

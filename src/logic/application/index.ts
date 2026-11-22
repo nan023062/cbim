@@ -35,6 +35,22 @@ export class Application implements ApplicationEntry
 {
   public readonly resources: ResourceRepositories;
 
+  private timer?: ReturnType<typeof setTimeout>;
+
+  private stopped = false;
+
+  private ticking?: Promise<void>;
+
+  private Schedule()
+  {
+    if (this.stopped)
+      return;
+
+    this.timer = setTimeout(() => { this.ticking = this.offices.work.Tick((project, item) => this.officeQueue.Change(project, item.session, { action: 'enqueue', id: item.id, text: item.value, selection: item.selection, permission: 'ask' })).catch(e => console.warn('定时调度失败', e)).finally(() => this.Schedule()); }, 5000);
+
+    this.timer.unref();
+  }
+
   private startup?: Promise<void>;
 
   private shutdown?: Promise<void>;
@@ -73,7 +89,7 @@ export class Application implements ApplicationEntry
     if (this.shutdown)
       return Promise.reject(new Error('应用已关闭'));
 
-    return this.startup ??= this.resources.Init().then(async () => { if (options?.restore) await Promise.all((await this.projects.Read()).entries.map(entry => this.projects.Open(entry.id))); });
+    return this.startup ??= this.resources.Init().then(async () => { this.Schedule(); if (options?.restore) await Promise.all((await this.projects.Read()).entries.map(entry => this.projects.Open(entry.id))); });
   }
 
   public Shutdown(): Promise<void>
@@ -83,6 +99,12 @@ export class Application implements ApplicationEntry
 
   private async Close(): Promise<void>
   {
+    this.stopped = true;
+
+    clearTimeout(this.timer);
+
+    await this.ticking;
+
     await this.startup?.catch(() => { });
 
     try

@@ -11,5 +11,5 @@ import type { LoopEngine } from '../logic/engines';
 /** 启动时按本轮能力、Office 执行权限和引擎支持范围生成原生工具清单。实际调用由 beforeTool 授权。 */
 export function allowedNativeTools(context: EngineCapabilities, allowExecution: boolean, engine: LoopEngine)
 {
-  return nativeToolsDisabled(context) ? [] : nativeToolNames(allowExecution, engine);
+  return nativeToolsDisabled(context) ? [] : nativeToolNames(allowExecution && context.taskPermission?.level !== 'read', engine).filter(name => name !== 'bash' || context.taskPermission?.commands !== 'denied');
 }

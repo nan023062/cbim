@@ -74,6 +74,8 @@ test('每轮读取所属项目当前的树，并仅将用户原文写入历史',
       film: { id: 'film', kind: 'workspace', name: '影片', summary: '制作', children: ['shot'], sources: [] },
       shot: { id: 'shot', kind: 'workspace', name: '镜头', summary: '动画验收', children: [], sources: [{location:'src/shots',scope:'animation'}] },
     } });
+    const updated=await projects.Business(entry.id);
+    await project.trees.SaveBusiness({revision:1,nodes:updated.nodes.map(n=>({id:n.id,name:n.name,summary:n.summary,virtual:n.virtual,sources:n.sources,parentId:updated.nodes.find(parent=>parent.children.includes(n.id))?.id??null}))});
     const snapshot = await projects.Business(entry.id);
     expect(snapshot.nodes.find(node => node.id === 'shot')).toMatchObject({name:'镜头',sources:[{location:'src/shots',scope:'animation'}],virtual:false});
     snapshot.nodes[0].children.length = 0;

@@ -53,7 +53,9 @@ export function OfficeQueuePanel({ snapshot, busy, OnChange, OnAnalyze }: { snap
     <div ref={list} role="list" className="office-queue-list">{items.map((item, index) =>
     {
       const attempt = snapshot.attempts?.filter(record => record.itemId === item.id).at(-1);
+
       const last = attempt?.events.at(-1);
+
       const editable = !busy && item.status === 'queued';
 
       const source = item.cancelSource ?? (item.status === 'failed' && /^AbortError(?:$|:)/.test(item.error ?? '') ? 'unknown' : undefined);

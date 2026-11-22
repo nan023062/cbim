@@ -2,8 +2,8 @@ import {test,expect,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import {EnginePackages} from '../../../../../src/logic/engines/packages/index';
-import type {EngineArtifact,EngineArtifactsPort} from '../../../../../src/logic/updates/engine-artifacts';
+import {EnginePackages} from '../../../../src/resource/engines/index';
+import type {EngineArtifact,EngineArtifactsPort} from '../../../../src/logic/updates/engine-artifacts';
 
 const artifact=(kind:string,letter:string,version='1.0.0',dependencies:EngineArtifact['dependencies']=[]):EngineArtifact=>({kind,identity:letter.repeat(64),version,nativeVersion:'1.0.0',protocol:1,dependencies});
 async function fixture(){
@@ -40,7 +40,7 @@ test('发现不激活，更新失败保留活动版与已取得实例，成功�
     const pi2=artifact('pi','c','1.1.0');f.versions.current=[pi2];f.versions.available.push(pi2);
     await f.manager.Check();expect((await f.manager.List())[0].active?.identity).toBe(f.pi.identity);
     f.prepare.mockRejectedValueOnce(Error('空间不足'));await expect(f.manager.Install('pi')).rejects.toThrow(/空间/);expect((await f.manager.ResolveEngine('pi')).identity).toBe(f.pi.identity);
-    await f.manager.Install('pi');expect((await f.manager.ResolveEngine('pi')).identity).toBe(pi2.identity);expect(old.identity).toBe(f.pi.identity);release();
+    await f.manager.Install('pi');expect((await f.manager.ResolveEngine('pi')).identity).toBe(pi2.identity);expect(old.identity).toBe(f.pi.identity);expect((await f.manager.ResolveEngine('pi',f.pi.identity)).identity).toBe(f.pi.identity);await expect(f.manager.ResolveEngine('pi','0'.repeat(64))).rejects.toThrow(/未安装/);release();
   }finally{await f.cleanup()}
 });
 test('远端索引不能新增可用引擎，缺失或未声明依赖在下载前拒绝',async()=>{

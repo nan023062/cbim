@@ -8,8 +8,12 @@ import type { DesktopMenu, ProcessGroup } from '../contracts/discovery';
 
 const menu: DesktopMenu = {
   RegistryList:()=>ipcRenderer.invoke('registry:list'),
+  RegistryHistory:()=>ipcRenderer.invoke('registry:history'),
+  RegistryInventory:()=>ipcRenderer.invoke('registry:inventory'),
   RegistryPublish:key=>ipcRenderer.invoke('registry:publish',key),
   RegistryPull:version=>ipcRenderer.invoke('registry:pull',version),
+  RegistryImport:(version,project,mode,choice)=>ipcRenderer.invoke('registry:import',{version,project,mode,choice}),
+  RegistryPlugin:(project,version,action)=>ipcRenderer.invoke('registry:plugin',{project,version,action}),
   Navigation: change => ipcRenderer.invoke('menu:navigation', change),
   RevealProject: project => ipcRenderer.invoke('project:reveal', project),
   Organization: (project, change) => ipcRenderer.invoke('project:organization', { project, change }),

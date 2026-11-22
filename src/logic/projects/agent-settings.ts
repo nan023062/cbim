@@ -106,6 +106,7 @@ export class AgentSettings
       return { revision: 0, configuration: agentConfigurationSchema.parse({ skills }) };
     }
 
+    if(member?.market)return {revision:member.market.configurationRevision??0,configuration:agentConfigurationSchema.parse(member.configuration??{})};
     try
     {
       const saved = savedSchema.parse(JSON.parse(await fs.readFile(file, 'utf8')));
@@ -128,7 +129,16 @@ export class AgentSettings
 
     const configuration = agentConfigurationSchema.parse(input);
 
-    const { file } = await this.Location(projectId, target);
+    const { file,member } = await this.Location(projectId, target);
+    if(member?.market){
+      const snapshot=await this.organization.Read(projectId);
+      await this.organization.EditMarketNodes(projectId,snapshot.revision,nodes=>{
+        const node=nodes.find(item=>item.id===target.id);
+        if(!node?.market||(node.market.configurationRevision??0)!==revision)throw Error('配置已更新，请重新打开');
+        node.configuration=configuration;node.market.configurationRevision=revision+1;
+      });
+      return {revision:revision+1,configuration};
+    }
 
     if (this._writing.has(file) || this._changingProjects.has(projectId) || this.organization.IsWriting(projectId))
       throw Error('配置正在保存，请重试');

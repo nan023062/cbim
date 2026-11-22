@@ -7,6 +7,22 @@ import os from 'node:os';
 import {startRegistry} from '../src-server/registry.mjs';
 const sha=value=>createHash('sha256').update(value).digest('hex');
 
+test('published metadata survives restart and a priced version requires an entitlement for both artifact reads',async t=>{
+  const data=await mkdtemp(path.join(os.tmpdir(),'registry-price-')),token=randomUUID();
+  let server=await startRegistry({data,token});
+  t.after(async()=>{await server.close();await rm(data,{recursive:true,force:true});});
+  const bytes='team',headers={authorization:'Bearer '+token,'x-content-sha256':sha(bytes)};
+  const route=()=>server.url+'/v1/resources/talent/team/1.2.0';
+  const metadata={name:'Team',developer:'Publishing team',summary:'A review team',priceCnyFen:1250,logo:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jWZkAAAAASUVORK5CYII='};
+  assert.equal((await fetch(route()+'/draft',{method:'PUT',headers,body:bytes})).status,201);
+  assert.equal((await fetch(route()+'/publish',{method:'POST',headers,body:JSON.stringify(metadata)})).status,200);
+  await server.close();server=await startRegistry({data,token});
+  assert.deepEqual((await (await fetch(server.url+'/v1/resources')).json())[0].metadata,metadata);
+  assert.equal((await fetch(route()+'/lock')).status,403);
+  assert.equal((await fetch(route()+'/download?sha256='+sha(bytes))).status,403);
+  assert.equal((await fetch(route()+'/publish',{method:'POST',headers,body:'{"priceCnyFen":0}'})).status,409);
+});
+
 test('two independent clients: draft, publication, pinned recovery after upgrade and restart',async t=>{
   const root=await mkdtemp(path.join(os.tmpdir(),'cbim-registry-'));
   const data=path.join(root,'server'),a=path.join(root,'author'),b=path.join(root,'consumer');

@@ -12,6 +12,9 @@ import { projectReads, projectWrites } from './office-operations';
 
 import { ProjectReferenceStore } from './project-references';
 
+import {marketTemplate,type TemplateChoice} from './market-templates';
+
+
 import type { ProjectResourceStore } from '../../framework/project';
 
 import { ProjectTrees } from './project-trees';
@@ -32,7 +35,7 @@ export class Project
 {
   public readonly runtime: ProjectInstance;
 
-  public constructor(public readonly entry: WorkspaceEntry, public readonly resources: ProjectResources, public readonly cache: ProjectCache, public readonly trees: ProjectTrees, store: ProjectResourceStore)
+  public constructor(public readonly entry: WorkspaceEntry, public readonly resources: ProjectResources, public readonly cache: ProjectCache, public readonly trees: ProjectTrees, store: ProjectResourceStore, public readonly references: ProjectReferenceStore)
   {
     this.runtime = new ProjectInstance(entry.id, resources, cache.worktrees, cache.history, store);
   }
@@ -96,7 +99,7 @@ export class ProjectList extends Catalog
     const project: Project = new Project(entry, resources, this.Cache(id), trees, {
       Read: async raw => { const input = projectReads.parse(raw); if (input.resource === 'member') return this.settings.Read(id, { kind: 'member', id: input.id }); if (input.resource === 'references') return references.Read(); if (input.resource === 'organization') return this.settings.organization.Read(id); if (input.resource === 'business') return this.businessDirectory.Read(id); const state = await this.work.Read(id); return { revision: state.revision, items: state[input.resource] }; },
       Change: async (raw, context) => { const input = projectWrites.parse(raw); if (input.resource === 'references') return references.Change(input.change, value => project.runtime.shared.Replace(value)); if (input.resource === 'member') return this.settings.Save(id, { kind: 'member', id: input.id }, input.revision, input.configuration); if (input.resource === 'organization') return this.settings.organization.Change(id, input.change); if (input.resource === 'business') return this.businessDirectory.Change(id, input.change); return this.work.Change(id, input.resource, input.change, context.session, context.selection); }
-    });
+    }, references);
 
     project.runtime.Subscribe(this.changes.Emit);
 
@@ -109,6 +112,11 @@ export class ProjectList extends Catalog
   {
     return [...this.loaded.values()].flatMap(project => project.runtime.ListOffices());
   }
+
+  public MarketTemplate(project:string,kind:'talent'|'business',origin:{id:string;version:string;sha256:string},template:unknown,mode:'preview'|'import'|'merge',choice?:TemplateChoice){
+    return marketTemplate(this,project,kind,origin,template,mode,choice);
+  }
+
 
   /** 页面与 Agent 读取同一份当前业务树；返回独立快照，不暴露运行对象。 */
   public async Business(projectId: string)

@@ -66,6 +66,12 @@ export class EnginePackages implements EngineRuntimeResolver
     return this.manager.SetEnabled(kind, enabled, remove, revision);
   }
 
+  /** 仅移除用户选择的精确版本。 */
+  RemoveVersion(kind:LoopEngine,identity:string,revision:number)
+  {
+    return this.manager.RemoveVersion(kind,identity,revision);
+  }
+
   async ResolveEngine(raw: string, pinned?: string): Promise<EngineRuntimePackage>
   {
     if (!supportedEngines.some(engine => engine.id === raw))

@@ -187,7 +187,7 @@ N_4486515099c0 ..> N_0894698bbef1 : 依赖
 | --- | --- | --- |
 | [ProjectCache](project-cache.ts)（图 3） | 依赖 | [GitWorktrees](git-worktrees.ts)（图 4） |
 | [ProjectTrees](project-trees.ts)（图 3） | 依赖 | [组织契约](organization-contract.ts)（图 4）、[业务契约](business-contract.ts)（图 4）、[配置契约](agent-configuration.ts)（图 2） |
-| [Project](project.ts)（图 1） | 依赖 | [ProjectCache](project-cache.ts)（图 3）、[ProjectTrees](project-trees.ts)（图 3） |
+| [Project](project.ts)（图 1） | 依赖 | [ProjectCache](project-cache.ts)（图 3）、[ProjectTrees](project-trees.ts)（图 3）、[ProjectReferenceStore](project-references.ts)（图 3） |
 | [ProjectList](project.ts)（图 1） | 依赖 | [ProjectTrees](project-trees.ts)（图 3）、[ProjectReferenceStore](project-references.ts)（图 3）、[OrganizationDirectory](organization-directory.ts)（图 4） |
 | [Catalog](index.ts)（图 1） | 依赖 | [ProjectCache](project-cache.ts)（图 3）、[Paths](paths.ts)（图 3） |
 | [ProjectOffices](offices.ts)（图 2） | 依赖 | [AgentSettings](agent-settings.ts)（图 1）、[ProjectWork](project-work.ts)（图 1）、[BusinessDirectory](business-directory.ts)（图 1）、[ProjectList](project.ts)（图 1） |

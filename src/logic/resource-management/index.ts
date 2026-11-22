@@ -46,4 +46,4 @@ export class ResourceManagement
   }
 }
 
-export { localRegistry,registryKey } from './local-registry';
+export { localRegistry,registryPublication,registryVersion } from './local-registry';

@@ -27,6 +27,24 @@ export class BusinessDirectory
     return (await this._projects.Open(projectId)).trees.Business();
   }
 
+  /** 用与页面编辑相同的项目锁，一次校验和提交商城实例的整棵子树。 */
+  public async EditMarketNodes(projectId:string,revision:number,edit:(nodes:BusinessSnapshot['nodes'])=>void)
+  {
+    if(this._writing.has(projectId))throw Error('项目正在保存，请重试');
+    this._writing.add(projectId);
+    try{
+      const project=await this._projects.Open(projectId),before=await this.Read(projectId);
+      if(before.revision!==revision)throw Error('项目已更改，请重新预览差异');
+      const nodes=structuredClone(before.nodes);
+      edit(nodes);
+      const result=businessSnapshotSchema.parse({revision:revision+1,nodes});
+      const tree=this.Tree(result);
+      await project.trees.SaveBusiness(result);
+      project.runtime.project!.UpdateTree(tree);this._applied.set(projectId,result.revision);
+      this._notify(projectId,ArchitectureUpdate.Describe('business',result.revision,before.nodes,result.nodes));
+    }finally{this._writing.delete(projectId)}
+  }
+
   /** 保存前后身份固定；删除仅移除架构定义，既有工作树与任务实例继续保留。 */
   public async Change(projectId: string, input: BusinessChange): Promise<BusinessSnapshot>
   {
@@ -65,7 +83,7 @@ export class BusinessDirectory
           nodes = nodes.filter(node => node.id !== change.id);
         }
         else
-          nodes[index] = { ...change.definition, id: change.id };
+          nodes[index] = { ...nodes[index], ...change.definition, id: change.id };
       }
 
       const result = businessSnapshotSchema.parse({ revision: previous.revision + 1, nodes });

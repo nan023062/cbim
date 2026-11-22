@@ -68,6 +68,34 @@ export class PluginManager<Id extends string, Artifact extends PluginArtifact, P
     this.state = next
   }
 
+  /** 移除指定摘要的本机安装登记。已取得的租约与已安装依赖必须先释放。 */
+  public RemoveVersion(kind:Id,identity:string,revision:number)
+  {
+    return this.queue.Run(async () => {
+      await this.Init();
+      this.AssertRevision(revision);
+      const next=structuredClone(this.state);
+      const item=next.entries.find(value=>value.kind===kind);
+      if(!item?.installed.includes(identity))throw Error('所选版本未安装');
+      if(this.references.get(kind+':'+identity))throw Error('所选版本正在运行');
+      const {available}=await this.artifacts.List();
+      for(const other of next.entries){
+        for(const digest of other.installed){
+          if(other.kind===kind&&digest===identity)continue;
+          const artifact=available.find(a=>a.kind===other.kind&&a.identity===digest);
+          if(!artifact)throw Error('无法确认已安装包的依赖');
+          if(artifact.dependencies.some(d=>d.kind===kind&&d.identity===identity))throw Error('其他已安装版本依赖此制品');
+        }
+      }
+      item.installed=item.installed.filter(d=>d!==identity);
+      if(item.active===identity){
+        item.active=available.filter(a=>a.kind===kind&&item.installed.includes(a.identity)).sort((a,b)=>b.version.localeCompare(a.version,'en',{numeric:true}))[0]?.identity;
+        if(!item.active)item.enabled=false;
+      }
+      await this.Save(next);
+    });
+  }
+
   private Closure(root: Artifact, available: Artifact[])
   {
     const result: Artifact[] = [],

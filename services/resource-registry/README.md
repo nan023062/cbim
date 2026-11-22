@@ -1,5 +1,11 @@
 # CBIM 本机资源服务器
 
+人力和业务还支持 `{"nodes":[...]}` 子树包。每个节点有稳定的 `key` 和指向父节点键的 `parent`，唯一根的 `parent` 为 null。人力节点携带 `kind/name/position`，岗位还可含 `skills:[{id,name,content}]`；业务节点携带 `name/summary/sources/virtual`。每次导入分配独立实例及节点身份。更新时按实例和稳定节点键比较，在项目修订号仍匹配时一次提交选定修改。发布商品图片支持 72 KB 以内的 PNG、JPEG、WebP，元数据 `logo` 随版本发布并固定。
+
+发布接口支持可选 JSON 元数据 `name`、`summary`、`developer`、`preview`、`changes` 与整数人民币分 `priceCnyFen`。版本发布后元数据固定。旧版本缺价时商城显示「价格未提供」。正价版本可浏览，服务端在锁定和下载阶段返回 403，等待权益服务接入。
+
+商城的人力模板文件使用单个组织节点，例如 `{"kind":"agent","name":"评审员","position":"复核交付物"}`。业务模板使用根节点定义，例如 `{"parentId":null,"name":"交付复核","summary":"复核项目产物","sources":[],"virtual":false}`。两类文件上限 1 MiB；宿主核验所选版本的 SHA-256 后，由项目接口创建独立节点。
+
 独立包位于 `services/resource-registry/`；`src-server/` 是服务端源码目录。运行需要 Node.js ≥22.19（内置 SQLite），无需安装第三方依赖。在本目录执行：
 
 ```powershell

@@ -12,6 +12,8 @@
 
 | [PluginInstallations](plugin-installations.ts) | 保存用户安装意图，重启后按签名目录核验并恢复插件。 |
 
+| [本机商城客户端](local-registry.ts) | 通过回环 HTTP 发布和锁定版本，核验文件后保存到用户缓存。安装和卸载历史按类别、资源 ID、版本保存；项目引用由项目引用存储维护。 |
+
 
 <!-- architecture:generated:start -->
 
@@ -19,10 +21,14 @@
 
 ```mermaid
 classDiagram
-class N_7114dce71c65["PluginInstallations"]
-click N_7114dce71c65 href "plugin-installations.ts"
+class N_91d4bf328aa0["本机商城客户端"] {
+  <<module>>
+}
+click N_91d4bf328aa0 href "local-registry.ts"
 class N_0666ba67e6b7["ResourceManagement"]
 click N_0666ba67e6b7 href "index.ts"
+class N_7114dce71c65["PluginInstallations"]
+click N_7114dce71c65 href "plugin-installations.ts"
 ```
 
 [上层设计](../ARCHITECTURE.md)

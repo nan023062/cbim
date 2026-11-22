@@ -320,3 +320,10 @@ h2.engine-brand img {width:30px;height:30px;}
 .resource-market .ui-screen:not([hidden]) {display:block;}
 .resource-market .menu-page.view-page {padding-inline:0;overflow:visible;}
 .resource-market [role=tablist] {flex-wrap:wrap;}
+.resource-market .definition-grid {display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,250px),1fr));gap:12px}
+.resource-market .market-card {display:grid;grid-template-columns:40px minmax(0,1fr);align-content:start;column-gap:10px;row-gap:4px;min-width:0;padding:14px;text-align:left;border:1px solid var(--line);background:var(--surface);color:var(--text);overflow-wrap:anywhere}
+.resource-market .market-card > :first-child {grid-column:1;grid-row:1 / span 3}.resource-market .market-card > :not(:first-child) {grid-column:2}
+.resource-market .market-card:hover {background:var(--hover)}.resource-market .market-card b {color:var(--warning);font-size:12px}
+.resource-market .market-card img {object-fit:contain}.resource-market .graph-toolbar {flex-wrap:wrap}.resource-market input,.resource-market select {max-width:100%}
+.resource-market section[hidden] {display:none}
+.view-page.menu-page.resource-market {box-sizing:border-box;width:100%;min-width:0;max-width:100%}

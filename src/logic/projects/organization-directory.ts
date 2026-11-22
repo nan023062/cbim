@@ -32,6 +32,24 @@ export class OrganizationDirectory
     return project.trees.Organization();
   }
 
+  /** 用与页面编辑相同的项目锁，一次校验和提交商城实例的整棵子树。 */
+  public async EditMarketNodes(projectId:string,revision:number,edit:(nodes:OrganizationSnapshot['nodes'])=>void)
+  {
+    if(this._writing.has(projectId))throw Error('项目正在保存，请重试');
+    this._writing.add(projectId);
+    try{
+      const project=await this._projects.Open(projectId),before=await this.Read(projectId);
+      if(before.revision!==revision)throw Error('项目已更改，请重新预览差异');
+      const nodes=structuredClone(before.nodes);
+      edit(nodes);
+      const result=organizationSnapshotSchema.parse({revision:revision+1,nodes});
+      const names=new Set<string>();for(const node of nodes){const k=JSON.stringify([node.parentId,node.name.toLocaleLowerCase()]);if(names.has(k))throw Error('同级节点名称重复');names.add(k);} const apply=await this._prepare(projectId,result);
+      await project.trees.SaveOrganization(result);
+      apply();
+      this._notify(projectId,ArchitectureUpdate.Describe('organization',result.revision,before.nodes,result.nodes));
+    }finally{this._writing.delete(projectId)}
+  }
+
   public async Change(projectId: string, input: OrganizationChange): Promise<OrganizationSnapshot>
   {
     const change = organizationChangeSchema.parse(input);

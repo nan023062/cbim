@@ -230,7 +230,7 @@ export function DesktopShell()
       <header className="workspace-topbar">{page !== 'workspace' && <button aria-label="返回工作区" onClick={() => setPage('workspace')}>←</button>}<Icon name="folder" size={16} /><strong className="workspace-project-title" title={title}>{title}</strong>
       </header>
       {error && <p role="alert">{error}</p>}
-      {page !== 'workspace' ? <ResourceMarket /> : selected ? office ?
+      {page !== 'workspace' ? <ResourceMarket project={selected}/> : selected ? office ?
           <OfficeView onAnalyze={Analyze} onManageModels={() => setSettings('模型供应商')} key={office.id} conversation={office} project={selected} draft={drafts[office.id] ?? ''}
             onDraft={text => setDrafts(previous => ({ ...previous, [office.id]: text }))}
             started={running[office.id] ?? 0} onRunning={time => setRunning(previous => ({ ...previous, [office.id]: time }))}

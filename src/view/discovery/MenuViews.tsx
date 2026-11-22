@@ -10,7 +10,6 @@ import type { ProjectItem, RegistryPublication, RegistryVersion } from '../../br
 
 
 
-import { EnginePackagesView } from './EnginePackagesView';
 
 import { useTransfers, TransferProgress } from '../shared/transfers';
 
@@ -227,6 +226,16 @@ export function ResourceMarket({ project }: { project?: ProjectItem }) {
       setBusy(false);
     }
   }
+  function localStatus(v: RegistryVersion) {
+    if (v.kind !== 'engine' && v.kind !== 'connector') return '';
+    const engine = v.kind === 'engine' && engines.data?.managed ? engines.data.items.find(x => x.kind === v.id) : undefined;
+    if (engine?.active) return engine.enabled ? '已启用' : '已停用';
+    if (inventory.error) return '本机状态未知';
+    if (!inventory.data) return '正在读取本机状态…';
+    if (inventory.data.some(x => x.kind === v.kind && x.id === v.id && x.installed.length)) return '已安装';
+    return removed(v) ? '已卸载' : '未安装';
+  }
+  const engine = row?.kind === 'engine' ? engines.data?.items.find(x => x.kind === row.id) : undefined;
   function removed(v: RegistryVersion) {
     const items = history.data?.filter((x) => x.row.kind === v.kind && x.row.id === v.id) ?? [];
     return (
@@ -293,7 +302,7 @@ export function ResourceMarket({ project }: { project?: ProjectItem }) {
                 {kinds[v.kind]} · {price(v)} · 最新 v{v.version} · 安装量暂无统计
               </small>
               {updatable(v) && <b>可更新</b>}
-              {removed(v) && <b>已卸载</b>}
+              {localStatus(v) && <b>{localStatus(v)}</b>}
             </Button>
           );
         })}
@@ -405,10 +414,6 @@ export function ResourceMarket({ project }: { project?: ProjectItem }) {
           }))}
         />
         {catalog.error && <p role="alert">{catalog.error}</p>}
-        <Disclosure>
-          <DisclosureSummary>本机引擎管理</DisclosureSummary>
-          <EnginePackagesView />
-        </Disclosure>
       </section>
       {row && rows && (
         <section>
@@ -454,6 +459,25 @@ export function ResourceMarket({ project }: { project?: ProjectItem }) {
               </li>
             ))}
           </ul>
+          {(row.kind === 'engine' || row.kind === 'connector') && <section aria-label="本机状态">
+            <h3>本机状态</h3><p>{localStatus(row)}{engine?.active && ' · 当前版本 v' + engine.active.version}</p>
+            {row.kind === 'engine' && engines.error && <p role="alert">{engines.error}</p>}
+            {engine && engines.data?.managed && <>
+              {engine.active && <Button disabled={busy || engine.preparing || (engine.enabled && engine.references > 0)}
+                title={engine.enabled && engine.references > 0 ? '使用中的引擎不能停用' : undefined}
+                onClick={() => void act(async () => {
+                  try {
+                    await window.desktopMenu.Engines('configure', { kind: engine.kind, revision: engines.data!.revision, action: engine.enabled ? 'disable' : 'enable' });
+                    return engine.enabled ? '已停用引擎' : '已启用引擎';
+                  } finally { engines.refresh(); }
+                })}>{engine.enabled ? '停用' : '启用'}</Button>}
+              <Disclosure><DisclosureSummary>缓存与依赖</DisclosureSummary>
+                <p>使用中 · {engine.references}</p>
+                {engine.installed.length ? engine.installed.map(v => <p key={v.identity}>已缓存 v{v.version} · {v.identity.slice(0,12)}</p>) : <p>暂无缓存版本</p>}
+                {(engine.active ?? engine.candidate)?.dependencies?.map(dep => <p key={dep.identity}>依赖 {dep.kind} · {dep.identity.slice(0,12)}</p>)}
+              </Disclosure>{engine.error && <p role="alert">{engine.error}</p>}
+            </>}
+          </section>}
           {paid ? (
             <p>此版本需要购买权益，当前未接入支付和授权服务。</p>
           ) : row.kind === 'talent' || row.kind === 'business' ? (

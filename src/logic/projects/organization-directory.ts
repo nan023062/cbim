@@ -70,8 +70,10 @@ export class OrganizationDirectory
 
       let nodes = structuredClone(previous.nodes);
 
+      if (change.action !== 'delete' && change.teamSkills && (change.action === 'create' ? change.kind : nodes.find(n=>n.id===change.id)?.kind) !== 'team') throw Error('团队技能仅适用于团队');
+
       if (change.action === 'create')
-        nodes.push({ id: 'org:' + crypto.randomUUID(), kind: change.kind, ...(change.kind === 'agent' && { configuration: { model: await this._defaultModel(), skills: [], connectorIds: [] } }), parentId: change.parentId, name: change.name, position: change.position });
+        nodes.push({ id: 'org:' + crypto.randomUUID(), kind: change.kind, ...(change.teamSkills && {teamSkills:change.teamSkills}), ...(change.kind === 'agent' && { configuration: { model: await this._defaultModel(), skills: [], connectorIds: [] } }), parentId: change.parentId, name: change.name, position: change.position });
       else
       {
         const node = nodes.find(node => node.id === change.id);
@@ -91,6 +93,7 @@ export class OrganizationDirectory
           node.name = change.name;
 
           node.position = change.position;
+          if(change.teamSkills)node.teamSkills=change.teamSkills;
 
           node.parentId = change.parentId;
         }

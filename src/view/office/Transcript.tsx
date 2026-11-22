@@ -38,6 +38,44 @@ function ActivityRow({ step, group }: { step: OfficeActivity; group: string })
       {step.result !== undefined && <><b>结果</b><pre>{step.result}</pre></>}</div>}</li>;
 }
 
+/** 工具回执可能是纯文本，也可能在 content 文本块内包装结构化错误。 */
+function failureText(value: unknown, depth = 0): string
+{
+  if (!value || depth > 12) return '';
+  if (typeof value === 'string')
+  {
+    const text = value.trim();
+    if (text.startsWith('{') || text.startsWith('['))
+    {
+      try { return failureText(JSON.parse(text), depth + 1); } catch { /* 普通命令输出 */ }
+    }
+    return text;
+  }
+  if (Array.isArray(value)) return value.map(item => failureText(item, depth + 1)).filter(Boolean).join('\n');
+  if (typeof value !== 'object') return '';
+  const result = value as Record<string, unknown>;
+  for (const key of ['message', 'error', 'reason', 'stderr', 'content', 'text'])
+  {
+    const text = failureText(result[key], depth + 1);
+    if (text) return text;
+  }
+  return '';
+}
+
+function FailureDetails({ step }: { step: OfficeActivity })
+{
+  const reason = step.alert === step.label + '执行失败'
+    ? failureText(step.result) || '工具未返回具体原因'
+    : step.alert || '工具未返回具体原因';
+  const lines = reason.split(/\r?\n/).filter(Boolean);
+  const summary = lines.find(line => /^fatal:|^error:/i.test(line)) || lines[0] || '工具执行失败';
+  return <details className="office-work-alert">
+    <summary>{step.label} · {summary.length > 150 ? summary.slice(0, 150) + '…' : summary}</summary>
+    <pre>{reason}</pre>
+    {step.result && step.result !== reason && <><b>工具回执</b><pre>{step.result}</pre></>}
+  </details>;
+}
+
 function WorkRecord({ steps, group, elapsed, live, model }: { steps: OfficeActivity[]; group: string; elapsed?: number; live?: boolean; model?: string })
 {
   const [open, toggle] = useDisclosure(group);
@@ -53,7 +91,7 @@ function WorkRecord({ steps, group, elapsed, live, model }: { steps: OfficeActiv
       {open && !steps.length && <p>本轮未保存步骤明细</p>}
       {open && model && <div>模型 · {model}</div>}
     </section>
-    {steps.filter(step => step.alert).map(step => <p key={step.id} className="office-work-alert" role="alert">{step.label} · {step.alert}</p>)}
+    {steps.filter(step => step.alert).map(step => <FailureDetails key={step.id} step={step} />)}
   </>;
 }
 
@@ -62,7 +100,7 @@ export const Message = memo(function Message({ role, text, elapsed, workLog, mod
   const group = 'office-work:' + (workLog?.[0]?.id ?? messageId);
 
   return <article className={'office-' + role}>{role === 'assistant' ? <>
-    {elapsed !== undefined || live ? <WorkRecord key={group} group={group} steps={workLog ?? []} elapsed={elapsed} model={model} live={live} /> : <small>Office 主 Agent</small>}
+    {elapsed !== undefined || live || workLog?.length ? <WorkRecord key={group} group={group} steps={workLog ?? []} elapsed={elapsed} model={model} live={live} /> : <small>Office 主 Agent</small>}
     <ReplyBody text={text} />
   </> : text}</article>;
 });

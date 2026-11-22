@@ -2,7 +2,7 @@
  * 作用定位：右侧窗口管理浏览器标签和项目工具，切换工具不会卸载中间的对话。
  * 设计原因：独立维护扩展页签可以保留聊天状态。
  */
-import { Button, Disclosure, DisclosureSummary, Form, Icon, Input, PaneDivider, Popover } from '../../framework-ui';
+import { IconButton, nextFocusIndex, Button, Disclosure, DisclosureSummary, Form, Icon, Input, PaneDivider, Popover } from '../../framework-ui';
 import { useEffect, useId, useRef, useState } from 'react';
 
 
@@ -13,7 +13,7 @@ const types = {
   web: ['Web 浏览器', 'globe'],
   organization: ['组织架构', 'team'],
   business: ['业务架构', 'flow'],
-  schedule: ['定时任务', 'clock'],
+  schedule: ['定时任务（未开放）', 'clock'],
   console: ['控制台', 'terminal'],
 } as const;
 
@@ -43,13 +43,13 @@ function WebTab({ hidden }: { hidden: boolean })
           value={address}
           onChange={(e) => setAddress(e.target.value)}
         />
-        <Button type="submit"
-          title="打开网址"
+        <IconButton type="submit"
+          title={address.trim() ? '打开网址' : '请先输入网址'}
           aria-label="打开网址"
           disabled={!address.trim()}
         >
-          →
-        </Button>
+          <Icon name="arrow" size={16}/>
+        </IconButton>
       </Form>
       {error && <small role="alert">{error}</small>}
       {url ? (
@@ -130,6 +130,7 @@ export function ExtensionPanel({ open, project, session, organization, business,
   const next = useRef(choices.length);
 
   const menu = useId();
+  const panelId = useId();
 
   const kind = tabs.find((t) => t.id === active)?.kind;
 
@@ -174,24 +175,26 @@ export function ExtensionPanel({ open, project, session, organization, business,
             <div key={t.id} className={active === t.id ? 'chosen' : ''}>
               <Button
                 role="tab"
+                id={panelId + t.id} aria-controls={panelId} tabIndex={active === t.id ? 0 : -1}
+                onKeyDown={event => { const next = nextFocusIndex(event.key, i, tabs.length); if (next === undefined) return; event.preventDefault(); setActive(tabs[next].id); document.getElementById(panelId + tabs[next].id)?.focus(); }}
                 aria-selected={active === t.id}
                 onClick={() => setActive(t.id)}
               >
                 <Icon name={types[t.kind][1]} size={15} />
                 {types[t.kind][0]}
               </Button>
-              <Button
+              <IconButton
                 aria-label={'关闭' + types[t.kind][0]}
                 onClick={() => { const rest = tabs.filter((v) => v.id !== t.id); setTabs(rest); if (active === t.id) setActive(rest[Math.max(0, i - 1)]?.id ?? -1); }}
               >
                 <Icon name="close" size={12} />
-              </Button>
+              </IconButton>
             </div>
           ))}
         </div>
-        <Button title="新增标签页" aria-label="新增标签页" popoverTarget={menu}>
+        <IconButton title="新增标签页" aria-label="新增标签页" popoverTarget={menu}>
           <Icon name="plus" size={16} />
-        </Button>
+        </IconButton>
         <Popover id={menu} className="extension-types">
           {choices.map((k) => (
             <Button
@@ -205,17 +208,17 @@ export function ExtensionPanel({ open, project, session, organization, business,
             </Button>
           ))}
         </Popover>
-        <Button
+        <IconButton
           className="panel-size"
           aria-label={maximized ? '恢复面板宽度' : '最大化面板'}
           onClick={() => setMaximized(!maximized)}
         >
           <Icon name={maximized ? 'collapse' : 'expand'} size={15} />
-        </Button>
+        </IconButton>
       </header>
       <div
         className="extension-body"
-        role="tabpanel"
+        role="tabpanel" id={panelId} aria-labelledby={kind ? panelId + active : undefined}
         aria-label={kind ? types[kind][0] : '扩展内容'}
       >
         {tabs
@@ -226,7 +229,7 @@ export function ExtensionPanel({ open, project, session, organization, business,
         ) : kind === 'schedule' ? (
           <div className="extension-placeholder">
             <Icon name="clock" size={32} />
-            定时任务调度尚未接入
+            定时任务尚未开放，暂不能在此创建或管理任务。
           </div>
         ) : kind !== 'web' && !project ? (
           <p>请先打开项目。</p>

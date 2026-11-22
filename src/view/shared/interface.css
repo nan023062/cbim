@@ -171,3 +171,26 @@ code,pre,kbd,samp{font-size:var(--font-code);font-weight:var(--weight-regular)}
 .conversation-topic-objective{margin:16px 0 24px}
 
 h4,h5,h6{font-size:var(--font-ui)}
+/* Shared metrics for the desktop page roles. */
+:root {--ui-field-height:36px;--ui-action-size:32px;--ui-compact-size:28px;--ui-icon-size:16px}
+:root :is(.resource-market .view-heading h2,.resource-market section>h2,.preferences header h1,.view-heading h1,.business-panel header h2){font-size:var(--font-page-title);line-height:1.5}
+:root :is(.resource-market section>h3,.preferences section>h2){font-size:16px;line-height:1.5}
+:root :is(.preferences,.graph-toolbar,.business-layout,.menu-page,.agent-settings) :is(input:not([type]),input:is([type=text],[type=search],[type=url],[type=number],[type=password],[type=email]),select){height:var(--ui-field-height);box-sizing:border-box;padding-block:0}
+:root .ui-tooltip>.ui-icon-button {display:inline-flex;align-items:center;justify-content:center;flex:none;width:var(--ui-action-size);height:var(--ui-action-size);min-width:0;min-height:0;padding:0;border-radius:6px}
+:root :is(.office-pickers,.extension-strip,.office-composer footer) .ui-tooltip>.ui-icon-button {width:var(--ui-compact-size);height:var(--ui-compact-size)}
+:root .ui-tooltip>.ui-icon-button svg {width:var(--ui-icon-size);height:var(--ui-icon-size)}
+:root .ui-icon-button:enabled:hover {background-color:var(--hover)}
+:root .ui-button:enabled:active {background-color:var(--selected)}
+:root :is(.ui-button,.ui-tooltip[tabindex]):focus-visible {outline:2px solid var(--focus);outline-offset:3px}
+:root .ui-icon-button:disabled {opacity:.45;cursor:default}
+:root .ui-tooltip>[role=tooltip][popover] {position:fixed;inset:auto;margin:0;padding:4px 8px;box-sizing:border-box;max-width:min(320px,calc(100vw - 8px));height:auto;width:max-content;white-space:normal;overflow-wrap:anywhere;pointer-events:none;background:var(--raised);color:var(--text);border:1px solid var(--line);border-radius:6px;font:inherit;font-size:12px;line-height:1.5}
+.business-tree-actions .ui-icon-button svg {transition:transform .2s ease-in-out}
+.business-tree-actions [aria-expanded=true] svg {transform:rotate(90deg)}
+.resource-market .view-heading h2 {margin-inline-end:auto}
+.resource-market .view-heading {justify-content:flex-start;gap:8px;flex-direction:row;align-items:center}
+.resource-market .market-status[data-status=refresh] svg {color:var(--focus)}
+@media(pointer:coarse){:root {--ui-action-size:44px;--ui-compact-size:44px;--ui-field-height:44px}}
+@media(prefers-reduced-motion:reduce){.business-tree-actions .ui-icon-button svg {transition:none}}
+
+
+:root .ui-tooltip>.ui-icon-button:enabled:active {background-color:var(--selected)}

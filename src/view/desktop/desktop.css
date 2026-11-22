@@ -260,7 +260,7 @@ h2.engine-brand img {width:30px;height:30px;}
 #application-home .sidebar-footer .profile-badge {width:28px;height:28px;font-size:var(--font-ui)}
 #application-home .sidebar-footer b {font-size:var(--font-ui);line-height:1.3}
 #application-home .sidebar-footer small {display:block;font-size:var(--font-ui);line-height:1.3;margin:0}
-#application-home .profile-quick-action {border:1px solid var(--line);border-radius:50%;height:23px;min-height:23px;width:23px;padding:0;background:transparent;color:var(--muted);flex:none}
+#application-home .profile-quick-action {border:1px solid var(--line);border-radius:50%;height:32px;min-height:32px;width:32px;padding:0;background:transparent;color:var(--muted);flex:none}
 @media(max-width:720px) {
   #application-home .workspace-sidebar {width:min(380px,94vw)!important}
   #application-home .office-session-row {min-height:40px;padding-left:20px}
@@ -324,7 +324,14 @@ h2.engine-brand img {width:30px;height:30px;}
 .resource-market .definition-grid {display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,250px),1fr));gap:12px}
 .resource-market .market-card {display:grid;grid-template-columns:40px minmax(0,1fr);align-content:start;column-gap:10px;row-gap:4px;min-width:0;padding:14px;text-align:left;border:1px solid var(--line);background:var(--surface);color:var(--text);overflow-wrap:anywhere}
 .resource-market .market-card > :first-child {grid-column:1;grid-row:1 / span 3}.resource-market .market-card > :not(:first-child) {grid-column:2}
-.resource-market .market-card:hover {background:var(--hover)}.resource-market .market-card b {color:var(--warning);font-size:12px}
+.resource-market .market-card:hover {background:var(--hover)}
+.market-statuses {display:flex;align-items:center;gap:6px}
+.market-status {display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px}
+.market-status svg {color:var(--muted)}
+.market-status:is([data-status="success"],[data-status="play"]) svg {color:var(--green)}
+.market-status:is([data-status="refresh"],[data-status="warning"]) svg {color:var(--warning)}
+.market-statuses .ui-tooltip>[role=tooltip] {inset-block-start:auto;inset-block-end:100%;font-size:12px}
+
 .resource-market .market-card img {object-fit:contain}.resource-market .graph-toolbar {flex-wrap:wrap}.resource-market input,.resource-market select {max-width:100%}
 .resource-market section[hidden] {display:none}
 .view-page.menu-page.resource-market {box-sizing:border-box;width:100%;min-width:0;max-width:100%}

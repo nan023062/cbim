@@ -20,6 +20,7 @@
 | cbim-development | 从 Issues 推进开发、验证和回填 | [开发流程](skills/cbim-development/SKILL.md) |
 | architecture-evolution | 架构调查、方案比较和渐进治理 | [架构演进](skills/architecture-evolution/SKILL.md) |
 | architecture-maintenance | 源码说明、架构资料同步与认知交接 | [架构维护](skills/architecture-maintenance/SKILL.md) |
+| ux-review | UX 规范检查、限时整改与同场景复验 | [UX 检查与整改](skills/ux-review/SKILL.md) |
 | cbim-release | 桌面发布、制品验收和中断恢复 | [发布流程](skills/cbim-release/SKILL.md) |
 
 先按任务选择工作流，再完整读取其共享正文；按流程需要读取配套资料。工具入口中的名称与简介用于发现，不替代工作流正文。

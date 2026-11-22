@@ -164,7 +164,7 @@ export interface DesktopMenu
 
   AgentSettings(project: string, target: import('../../logic/projects/agent-configuration').AgentSettingsTarget, save?: { revision: number; configuration: import('../../logic/projects/agent-configuration').AgentConfiguration }): Promise<{ revision: number; configuration: import('../../logic/projects/agent-configuration').AgentConfiguration }>;
 
-  AgentConnectors(): Promise<{ id: string; name: string; available: boolean }[]>;
+  AgentConnectors(): Promise<{ id: string; name: string; available: boolean; logo?: string }[]>;
 
   EngineCatalog(): Promise<{ id: string; label: string; logo: string; businessTypes: readonly string[]; supportedApis: readonly string[] }[]>;
 

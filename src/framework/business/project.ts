@@ -33,11 +33,17 @@ export class Project
     return [...this._tree.roots];
   }
 
+  private SelectableWorkspaces()
+  {
+    return Object.values(this._tree.nodes).filter(node => node.id !== this.id && !node.virtual).map(({ id, name }) => ({ id, name }));
+  }
+
   /** 当前业务树的层级与职责索引，供主 Agent 在每轮任务定位时读取。 */
   public DescribeWorkspaces()
   {
     return {
       roots: [...this._tree.roots],
+      selectable: this.SelectableWorkspaces(),
       nodes: Object.values(this._tree.nodes).map(({ id, name, summary, children }) => ({ id, name, summary, children: [...children] })),
     };
   }
@@ -64,7 +70,10 @@ export class Project
     const description = this.FindWorkspace(id);
 
     if (!description || description.virtual)
-      throw new Error('项目中没有可打开的物理工作区：' + id);
+    {
+      const choices = this.SelectableWorkspaces().map(node => node.name + ' (' + node.id + ')');
+      throw new Error('派发需要物理工作区的 workspaceId，当前值无效：' + id + '\n' + (choices.length ? '可选工作区：\n' + choices.join('\n') : '项目中尚无可选工作区，请先创建物理业务节点。'));
+    }
 
     return WorkspaceInstance.Open(description, context, factory);
   }

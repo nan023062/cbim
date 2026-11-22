@@ -10,6 +10,7 @@ Button、Toggle、StateButton 与 ListItem 共用按钮语义；ViewList 提供�
 
 | Module | Role |
 | --- | --- |
+| [IconButton](IconButton.tsx) | 带操作名称、焦点和禁用提示的工具栏按钮。 |
 | [Button](Button.tsx) | Button |
 | [ListItem](ListItem.tsx) | ListItem |
 | [StateButton](StateButton.tsx) | StateButton |
@@ -30,6 +31,10 @@ class N_72401930af6e["Button"] {
   <<component>>
 }
 click N_72401930af6e href "Button.tsx"
+class N_f3253f5d5aee["IconButton"] {
+  <<component>>
+}
+click N_f3253f5d5aee href "IconButton.tsx"
 class N_95f561daa8f0["ListItem"] {
   <<component>>
 }
@@ -46,11 +51,10 @@ class N_d271d8227088["Tooltip"] {
   <<component>>
 }
 click N_d271d8227088 href "Tooltip.tsx"
-class N_d2f30baea027["ViewList"] {
-  <<component>>
-}
-click N_d2f30baea027 href "ViewList.tsx"
+N_f3253f5d5aee ..> N_72401930af6e : 依赖
+N_f3253f5d5aee ..> N_d271d8227088 : 依赖
 N_95f561daa8f0 ..> N_72401930af6e : 依赖
+N_dbf558f355d5 ..> N_f3253f5d5aee : 依赖
 N_dbf558f355d5 ..> N_72401930af6e : 依赖
 N_cfbbe42d9877 ..> N_72401930af6e : 依赖
 ```
@@ -63,6 +67,10 @@ class N_f5e9570bf7f4["Fields"] {
   <<component>>
 }
 click N_f5e9570bf7f4 href "Fields.tsx"
+class N_d2f30baea027["ViewList"] {
+  <<component>>
+}
+click N_d2f30baea027 href "ViewList.tsx"
 ```
 
 [上层设计](../ARCHITECTURE.md)

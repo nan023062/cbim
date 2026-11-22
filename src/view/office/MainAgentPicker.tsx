@@ -2,7 +2,7 @@
  * 作用定位：主 Agent 与成员设置共用的引擎、兼容模型选择组件。
  * 设计原因：主与成员采用同一兼容性选择规则，页面保存引用而不读取供应商密钥。
  */
-import { Button, Icon, Popover } from '../../framework-ui';
+import { IconButton, Button, Icon, Popover } from '../../framework-ui';
 import { useEffect, useId, useState } from 'react';
 
 import { type OfficeSelection } from '../../bridge/contracts/discovery';
@@ -56,7 +56,7 @@ export function MainAgentPicker({ value, change, disabled, fail, onReady, onMana
       return '正在读取本机引擎和模型…';
 
     if (!engines.length)
-      return '本机没有可用引擎，请前往「执行引擎」页安装或启用';
+      return '本机没有可用引擎，请前往资源商城安装或启用';
 
     if (!engine)
       return '请选择可用的执行引擎';
@@ -82,7 +82,8 @@ export function MainAgentPicker({ value, change, disabled, fail, onReady, onMana
 
   const modelLabel = choices.find(choice => choice.key === selected)?.label ?? (selected ? value.modelId + '（不可用）' : firstModel?.label ?? '请配置兼容模型');
 
-  return <div className="office-model office-pickers"><Button type="button" className={compact ? 'composer-engine' : 'engine-trigger'} disabled={disabled} popoverTarget={menuId} aria-label="选择执行引擎" title={engine?.label || value.engine || '选择执行引擎'}>{compact ? (logo ? <img width={16} height={16} src={logo} alt="" /> : <Icon name="sparkles" size={16} />) : <><EngineLogo src={logo} />{engine?.label || value.engine || "选择执行引擎"}</>}</Button>
+  const EngineTrigger = compact ? IconButton : Button;
+  return <div className="office-model office-pickers"><EngineTrigger type="button" className={compact ? 'composer-engine' : 'engine-trigger'} disabled={disabled} popoverTarget={menuId} aria-label="选择执行引擎" title={engine?.label || value.engine || '选择执行引擎'}>{compact ? (logo ? <img width={16} height={16} src={logo} alt="" /> : <Icon name="sparkles" size={16} />) : <><EngineLogo src={logo} />{engine?.label || value.engine || "选择执行引擎"}</>}</EngineTrigger>
     <Popover className="engine-options" id={menuId} aria-label="选择执行引擎">
       <div className="picker-list">
       {!engines.length && <small>{working ? '正在读取…' : '暂无可用引擎'}</small>}

@@ -2,7 +2,7 @@
  * 作用定位：设置页提供分类搜索、通用设置概览和当前桌面的外观选择。
  * 设计原因：分类导航和外观交互留在页面，模型设置交给独立组件，未接入栏目不冒充完整业务能力。
  */
-import { Button, Checkbox, FieldLabel, Icon, Input, Option, Select } from '../../framework-ui';
+import { IconButton, Button, FieldLabel, Icon, Input, Option, Select } from '../../framework-ui';
 import { useState, type ReactNode } from 'react';
 
 
@@ -23,12 +23,7 @@ function Row({ label, hint, children }: { label: string; hint?: string; children
   return <div className="preference-row"><div><strong>{label}</strong>{hint && <small>{hint}</small>}</div>{children}</div>;
 }
 
-function Toggle({ label }: { label: string })
-{
-  return <Checkbox className="preference-switch" role="switch" disabled aria-label={label} />;
-}
-
-export function SettingsView({ initial, onBack }: { initial: string; onBack: () => void })
+export function SettingsView({ initial, onBack, onMarket }: { initial: string; onBack: () => void; onMarket: () => void })
 {
   const [section, setSection] = useState(initial);
 
@@ -37,28 +32,24 @@ export function SettingsView({ initial, onBack }: { initial: string; onBack: () 
   const [theme, setTheme] = useState(document.documentElement.dataset.theme || 'dark');
 
   const visible = sections.filter(([name]) => name.includes(query.trim()));
+  const available = ['通用', '外观', '模型供应商', '帮助', '关于'];
+  const upcoming = visible.filter(([name]) => !available.includes(name));
 
   return <main className="preferences">
     <aside aria-label="设置导航">
-      <header><Button aria-label="返回工作区" onClick={onBack}>←</Button><h1>设置</h1></header>
+      <header><IconButton aria-label="返回工作区" onClick={onBack}><Icon name="back" /></IconButton><h1>设置</h1></header>
       <FieldLabel className="preference-search"><Icon name="search" size={15} /><Input autoComplete="off" aria-label="搜索设置分类" placeholder="搜索设置" value={query} onChange={e => setQuery(e.target.value)} /></FieldLabel>
-      <nav>{visible.map(([name, icon]) => <Button key={name} aria-current={section === name ? 'page' : undefined} disabled={!['通用', '外观', '帮助', '关于', '模型供应商'].includes(name)} onClick={() => setSection(name)}><Icon name={icon} size={16} />{name}</Button>)}</nav>
+      <nav>{visible.filter(([name])=>available.includes(name)).map(([name, icon]) => <Button key={name} aria-current={section === name ? 'page' : undefined} onClick={() => setSection(name)}><Icon name={icon} size={16} />{name}</Button>)}</nav>
+      {!!upcoming.length && <details key={query.trim()} open={query.trim() ? true : undefined}><summary>未开放栏目（{upcoming.length}）</summary><p>{upcoming.map(([name])=>name).join('、')}</p></details>}
       {!visible.length && <p role="status">没有匹配的设置分类</p>}
     </aside>
     <div key={section} className="preference-scroll"><div className="preference-content">
       {section === '模型供应商' ? <ModelSettings /> : section === '通用' ? <>
         <div className="preference-profile"><span className="profile-badge">C</span><div><strong>本地用户</strong><small>CBIM · 本地使用</small></div></div>
-        <section><h2>语言</h2><Row label="显示语言" hint="应用界面的显示语言"><Select aria-label="显示语言" disabled><Option>简体中文</Option></Select></Row></section>
-        <section><h2>通知</h2><Row label="系统通知" hint="任务完成、出错或需要回复时提醒"><Toggle label="系统通知" /></Row></section>
-        <section><h2>应用行为</h2><Row label="自动启动" hint="登录电脑后打开 CBIM"><Toggle label="自动启动" /></Row>
-          <Row label="关闭主窗口时"><span>退出 CBIM</span></Row>
-          <Row label="切回时防误触"><Toggle label="切回时防误触" /></Row></section>
-        <section><h2>离开电脑时</h2><Row label="保持电脑唤醒" hint="后台任务执行期间保持唤醒"><Toggle label="保持电脑唤醒" /></Row></section>
-        <section><h2>消息输入</h2><Row label="使用 Ctrl+Enter 发送"><Toggle label="使用 Ctrl+Enter 发送" /></Row>
-          <Row label="运行中发送方式"><Select aria-label="运行中发送方式" disabled><Option>排队</Option><Option>插话</Option></Select></Row></section>
-        <section><h2>新任务默认工作目录</h2><Row label="本机默认工作目录" hint="未设置"><Button disabled>选择目录</Button></Row></section>
+        <section><h2>当前设置</h2><Row label="显示语言"><span>简体中文</span></Row><Row label="关闭主窗口时"><span>退出 CBIM</span></Row></section>
+        <section><h2>尚未开放的设置</h2><p>系统通知、自动启动、切回防误触、保持唤醒、输入快捷键和默认工作目录暂不支持自定义。</p></section>
       </> : section === '外观' ? <section><h2>外观</h2><Row label="界面主题"><Select aria-label="界面主题" value={theme} onChange={e => { const value = e.target.value; localStorage.setItem('cbim.desktop.theme', value); document.documentElement.dataset.theme = value; setTheme(value); }}><Option value="dark">深色</Option><Option value="light">浅色</Option></Select></Row></section> :
-        <section><h2>{section}</h2><div className="preference-row">{section === '帮助' ? '从「新建」选择项目目录，通过「发现」浏览资源。' : 'CBIM Assistant · AI 团队工作空间'}</div></section>}
+        <section><h2>{section}</h2><div className="preference-row">{section === '帮助' ? <><span>选择项目目录后，可在资源商城浏览可用资源。</span><Button onClick={onMarket}>打开资源商城</Button></> : 'CBIM Assistant · AI 团队工作空间'}</div></section>}
     </div></div>
   </main>;
 }

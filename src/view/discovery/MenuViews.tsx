@@ -2,7 +2,7 @@
  * 作用定位：发现页负责展示和筛选资源，运行管理页读取当前应用的监控快照。
  * 设计原因：React 页面只筛选和展示发现结果，资源安装与连接器生命周期由宿主入口处理。
  */
-import { Button, Checkbox, ConfirmWindow, Disclosure, DisclosureSummary, FieldLabel, Form, Icon, Input, Option, Select, Tabs } from '../../framework-ui';
+import { IconButton, Button, Checkbox, ConfirmWindow, Disclosure, DisclosureSummary, FieldLabel, Form, Icon, Input, Option, Select, Tabs, Tooltip, type IconName } from '../../framework-ui';
 import { useEffect, useState, useRef, useLayoutEffect } from 'react';
 
 import type { ProjectItem, RegistryPublication, RegistryVersion } from '../../bridge/contracts/discovery';
@@ -130,7 +130,13 @@ function useMenuData<T>(load: () => Promise<T>) {
 }
 
 const kinds = { engine: '引擎', connector: '连接器', talent: '人力', business: '业务' } as const;
-const glyphs = { engine: 'terminal', connector: 'link', talent: 'teamAdd', business: 'folder' };
+const glyphs = { engine: 'terminal', connector: 'connector', talent: 'teamAdd', business: 'folder' };
+const marketStatusIcons = {
+  '已安装': 'success', '已启用': 'play', '已停用': 'pause', '未安装': 'download',
+  '已卸载': 'remove', '可更新': 'refresh', '本机状态未知': 'warning', '正在读取本机状态…': 'queued',
+} as const satisfies Record<string, IconName>;
+type MarketStatus = keyof typeof marketStatusIcons;
+
 function ProductLogo({src,kind}:{src?:string;kind:Kind}){
   const [failed,setFailed]=useState('');
   return src&&failed!==src?<img src={src} alt="" width="36" height="36" onError={()=>setFailed(src)}/>:<Icon name={glyphs[kind]} size={32}/>;
@@ -226,7 +232,7 @@ export function ResourceMarket({ project }: { project?: ProjectItem }) {
       setBusy(false);
     }
   }
-  function localStatus(v: RegistryVersion) {
+  function localStatus(v: RegistryVersion): MarketStatus | '' {
     if (v.kind !== 'engine' && v.kind !== 'connector') return '';
     const engine = v.kind === 'engine' && engines.data?.managed ? engines.data.items.find(x => x.kind === v.id) : undefined;
     if (engine?.active) return engine.enabled ? '已启用' : '已停用';
@@ -281,10 +287,14 @@ export function ResourceMarket({ project }: { project?: ProjectItem }) {
         {filtered.map(([identity, group]) => {
           const v = group[0],
             item = v.kind === 'engine' ? engines.data?.items.find((x) => x.kind === v.id) : undefined;
+          const state = localStatus(v);
+          const statuses: MarketStatus[] = state ? [state] : [];
+          if (updatable(v)) statuses.push('可更新');
           return (
             <Button
               type="button"
               className="definition-card market-card"
+              aria-description={statuses.join('，') || undefined}
               key={identity}
               onClick={(e) => {
                 card.current = e.currentTarget;
@@ -301,8 +311,9 @@ export function ResourceMarket({ project }: { project?: ProjectItem }) {
               <small>
                 {kinds[v.kind]} · {price(v)} · 最新 v{v.version} · 安装量暂无统计
               </small>
-              {updatable(v) && <b>可更新</b>}
-              {localStatus(v) && <b>{localStatus(v)}</b>}
+              {statuses.length > 0 && <span className="market-statuses">
+                {statuses.map(label => <Tooltip key={label} text={label}><span className="market-status" data-status={marketStatusIcons[label]} aria-label={label} role="img"><Icon name={marketStatusIcons[label]} size={16} /></span></Tooltip>)}
+              </span>}
             </Button>
           );
         })}
@@ -314,17 +325,15 @@ export function ResourceMarket({ project }: { project?: ProjectItem }) {
       <section hidden={Boolean(key)}>
         <header className="view-heading">
           <h2>资源商城</h2>
-          <Button onClick={() => setPublishing(!publishing)}>发布资源</Button>
-          <Button
+          <IconButton aria-label="发布资源" onClick={() => setPublishing(!publishing)}><Icon name="upload" /></IconButton>
+          <IconButton aria-label="刷新"
             disabled={busy}
             onClick={() => {
               catalog.refresh();
               engines.refresh();
               inventory.refresh();
             }}
-          >
-            刷新
-          </Button>
+          ><Icon name="refresh" /></IconButton>
         </header>
         {publishing && (
           <Form

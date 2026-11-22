@@ -1,5 +1,7 @@
 # 业务与组织架构
 
+正式客户端支持在「编辑团队」中维护独立技能，并在「编辑业务节点」中维护产出物与逐行交付标准。两者通过项目版本化架构服务写入项目目录。工作流详情展示正文引用，可复制定位；页面不会按任意路径读取文件。复验命令 `node design-ux/review/architecture-disk-check.cjs` 使用新建的临时目录写入、重新打开并核对数据。
+
 [业务入口](architecture-preview.html#business) · [组织入口](architecture-preview.html#organization) · [业务预览](business-architecture-preview.png) · [组织预览](organization-architecture-preview.png)
 
 业务树对应 [BusinessPanel](../../../../src/view/office/BusinessPanel.tsx)。选择资源商城查看职责、来源和子工作区，进入业务负责人可查看对应岗位并返回。各层业务节点可独立配置工作流步骤、负责团队或岗位、产出物及逐条交付标准。

@@ -12,7 +12,7 @@
 .preferences nav button[aria-current=page] { background: var(--selected); }
 .preference-content { width: min(100%, 770px); box-sizing: border-box; padding: 8px 20px 40px; margin: 0 auto; }
 .preference-content section { margin-top: 26px; }
-.preference-content h2 { font-size: 14px; margin: 0 0 9px; }
+.preferences .preference-content h2 { font-size: 16px; font-weight:500; margin: 0 0 9px; }
 .preference-profile, .preference-row { padding: 14px 16px; border: 1px solid var(--line); background: var(--surface); }
 .preference-profile { min-height: 74px; border-radius: 10px; }
 .preference-content small { display: block; color: var(--muted); margin-top: 4px; }

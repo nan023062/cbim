@@ -124,3 +124,5 @@ return <Tabs label="工作区视图" value={tab} onChange={setTab} items={[
 页面从框架入口导入 Form、Input、Checkbox、Select、Option 和 TextArea。它们支持对应的原生属性、事件与 ref；校验与提交结果由页面提供。Button 默认为普通操作，提交表单请显式传入 type="submit"。原生折叠内容使用 Disclosure 和 DisclosureSummary。
 
 有编辑表单的窗口使用 ModalWindow，由父页面控制挂载，onCancel 处理 Esc。Popover 与触发按钮通过 id / popoverTarget 配对。普通标题、段落和语义布局仍使用 HTML。
+
+工具栏的图标操作使用 IconButton，例如 <IconButton aria-label="刷新" disabled={busy} title={busy ? "正在刷新" : "刷新"} onClick={refresh}><Icon name="refresh" /></IconButton>。操作名保持稳定；title 可说明禁用原因。鼠标悬停或键盘聚焦显示提示，Esc 收起。禁用时保留原生 disabled，不派发操作。

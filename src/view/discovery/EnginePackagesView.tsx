@@ -2,12 +2,11 @@
  * 作用定位：执行引擎的版本、下载安装与更新。
  * 设计原因：以宿主版本快照驱动安装操作和进度，页面不负责解包、校验或运行版本持有。
  */
+import { Button, Disclosure, DisclosureSummary, FieldLabel, Icon, ListItem, Progress, Tooltip } from '../../framework-ui';
 import { useEffect, useState } from 'react';
 
 import type { EnginePackageSettings, EnginePackageStatus } from '../../bridge/contracts/desktop-engines';
 
-import { Icon } from '../../framework-ui';
-import { ListItem, Tooltip } from '../../framework-ui';
 import { EngineLogo } from '../shared/ResourceLogo';
 
 import { useTransfers, TransferProgress } from '../shared/transfers';
@@ -109,7 +108,7 @@ export function EnginePackagesView()
 
   const progress = product && progressFor(product.id);
 
-  return <section className="view-page menu-page engine-page"><header className="view-heading"><h1>执行引擎</h1><button disabled={!!busy || state?.managed === false} onClick={() => void update()}>{busy === 'check' ? '正在检查…' : '检查更新'}</button></header>
+  return <section className="view-page menu-page engine-page"><header className="view-heading"><h1>执行引擎</h1><Button disabled={!!busy || state?.managed === false} onClick={() => void update()}>{busy === 'check' ? '正在检查…' : '检查更新'}</Button></header>
     {error && <p role="alert">{error}</p>}
     <div className="engine-layout">
       <nav className="engine-list" aria-label="支持的执行引擎">{products.map(entry =>
@@ -121,7 +120,7 @@ export function EnginePackagesView()
         return <div className="engine-catalog-row" key={entry.id}><Tooltip text={entry.label}><ListItem aria-label={entry.label} aria-current={entry.id===product?.id || undefined} onClick={()=>setSelected(entry.id)}>
         {row && <span aria-hidden="true" className={'engine-progress-fill' + (row.percent === undefined ? ' pending' : '')} style={{ width: row.percent === undefined ? undefined : row.percent + '%' }} />}
         <span className="engine-list-title"><span className="engine-brand"><EngineLogo src={entry.logo} />{entry.label}</span><EngineVersionIcon state={state} kind={entry.id} /></span><small>{[state?.managed && !status?.active ? '未安装' : '', ...entry.businessTypes].filter(Boolean).join(' · ')}</small>
-      </ListItem></Tooltip>{state?.managed && !status?.active && status?.candidate && <button className="engine-install-shortcut" type="button" disabled={!!busy || status.preparing} aria-label={'安装 ' + entry.label} onClick={() => { setSelected(entry.id); void update(status); }}>{row?.label ?? '安装'}</button>}</div>;
+      </ListItem></Tooltip>{state?.managed && !status?.active && status?.candidate && <Button className="engine-install-shortcut" type="button" disabled={!!busy || status.preparing} aria-label={'安装 ' + entry.label} onClick={() => { setSelected(entry.id); void update(status); }}>{row?.label ?? '安装'}</Button>}</div>;
       })}</nav>
       {product && <article className="engine-detail" aria-label={product.label + ' 详情'}>
         <h2 className="engine-brand"><EngineLogo src={product.logo} />{product.label}</h2><p>{product.businessTypes.join(' · ')}</p>
@@ -131,15 +130,15 @@ export function EnginePackagesView()
         <dt>可用版本</dt><dd>{item?.candidate?.version ?? (state ? '暂无兼容版本' : '—')}</dd></dl>
         {item && <>
           <div className="model-actions">
-          {item.candidate && (item.active?.identity !== item.candidate.identity || item.error) && <button disabled={!!busy || item.preparing} onClick={() => void update(item)}>{progress?.label ?? (item.active ? '更新引擎' : '下载并安装')}</button>}
-          {item.active && <><button disabled={!!busy || item.preparing || item.enabled && item.references > 0} onClick={() => void update(item, item.enabled ? 'disable' : 'enable')}>{item.enabled ? '停用' : '启用'}</button>
-          <button disabled={!!busy || item.preparing || item.references > 0} onClick={() => void update(item, 'remove')}>卸载本机版本</button></>}</div>
-          {progress && <label className="engine-install-progress"><span>{progress.label}</span><span>{progress.percent === undefined ? '准备中…' : progress.percent + '%'}</span>
-            <progress max={100} value={progress.percent} /></label>}
+          {item.candidate && (item.active?.identity !== item.candidate.identity || item.error) && <Button disabled={!!busy || item.preparing} onClick={() => void update(item)}>{progress?.label ?? (item.active ? '更新引擎' : '下载并安装')}</Button>}
+          {item.active && <><Button disabled={!!busy || item.preparing || item.enabled && item.references > 0} onClick={() => void update(item, item.enabled ? 'disable' : 'enable')}>{item.enabled ? '停用' : '启用'}</Button>
+          <Button disabled={!!busy || item.preparing || item.references > 0} onClick={() => void update(item, 'remove')}>卸载本机版本</Button></>}</div>
+          {progress && <FieldLabel className="engine-install-progress"><span>{progress.label}</span><span>{progress.percent === undefined ? '准备中…' : progress.percent + '%'}</span>
+            <Progress max={100} value={progress.percent} /></FieldLabel>}
           {transfers.filter(t => t.identity === (item.preparation?.identity ?? item.candidate?.identity)).map(t => <TransferProgress item={t} key={t.identity} />)}
-          <details><summary>缓存与依赖</summary><p>使用中 · {item.references}</p>
+          <Disclosure><DisclosureSummary>缓存与依赖</DisclosureSummary><p>使用中 · {item.references}</p>
           {item.installed.map(version => <p key={version.identity}>已缓存 {version.version} · {version.identity.slice(0, 12)}</p>)}
-          {(item.active ?? item.candidate)?.dependencies?.map(ref => { const dependency = products.find(entry => entry.id === ref.kind); return <p key={ref.kind}>依赖 <EngineLogo src={dependency?.logo} />{dependency?.label ?? ref.kind} · {ref.identity.slice(0, 12)}</p>; })}</details>
+          {(item.active ?? item.candidate)?.dependencies?.map(ref => { const dependency = products.find(entry => entry.id === ref.kind); return <p key={ref.kind}>依赖 <EngineLogo src={dependency?.logo} />{dependency?.label ?? ref.kind} · {ref.identity.slice(0, 12)}</p>; })}</Disclosure>
           {item.error && <p role="alert">{item.error}</p>}
         </>}
       </article>}

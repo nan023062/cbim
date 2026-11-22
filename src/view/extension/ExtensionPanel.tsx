@@ -2,11 +2,10 @@
  * 作用定位：右侧窗口管理浏览器标签和项目工具，切换工具不会卸载中间的对话。
  * 设计原因：独立维护扩展页签可以保留聊天状态。
  */
+import { Button, Disclosure, DisclosureSummary, Form, Icon, Input, PaneDivider, Popover } from '../../framework-ui';
 import { useEffect, useId, useRef, useState } from 'react';
 
-import { PaneDivider } from '../../framework-ui';
 
-import { Icon } from '../../framework-ui';
 
 import type { OfficeQueueSnapshot } from '../../bridge/contracts/discovery';
 
@@ -34,24 +33,24 @@ function WebTab({ hidden }: { hidden: boolean })
 
   return (
     <section className="extension-web" hidden={hidden}>
-      <form
+      <Form
         className="extension-address"
         onSubmit={(e) => { e.preventDefault(); try { const target = new URL(address.includes(':') ? address : 'https://' + address,); if (!['http:', 'https:'].includes(target.protocol) || target.username || target.password) throw Error(); setUrl(target.href); setAddress(target.href); setError(''); refresh((v) => v + 1); } catch { setError('请输入有效的 HTTP 或 HTTPS 网址'); } }}
       >
-        <input
+        <Input
           placeholder="输入网址"
           aria-label="网址"
           value={address}
           onChange={(e) => setAddress(e.target.value)}
         />
-        <button
+        <Button type="submit"
           title="打开网址"
           aria-label="打开网址"
           disabled={!address.trim()}
         >
           →
-        </button>
-      </form>
+        </Button>
+      </Form>
       {error && <small role="alert">{error}</small>}
       {url ? (
         <iframe
@@ -93,8 +92,8 @@ function ConsoleTab({ project, session, }: { project: string; session: string; }
           .slice()
           .reverse()
           .map((a) => (
-            <details key={a.id}>
-              <summary>
+            <Disclosure key={a.id}>
+              <DisclosureSummary>
                 {new Date(a.started).toLocaleTimeString()} ·{' '}
                 {
                   {
@@ -104,7 +103,7 @@ function ConsoleTab({ project, session, }: { project: string; session: string; }
                     interrupted: '已中断',
                   }[a.outcome]
                 }
-              </summary>
+              </DisclosureSummary>
               <ol>
                 {a.events.map((e, i) => (
                   <li key={i}>
@@ -112,7 +111,7 @@ function ConsoleTab({ project, session, }: { project: string; session: string; }
                   </li>
                 ))}
               </ol>
-            </details>
+            </Disclosure>
           ))
       )}
     </section>
@@ -173,29 +172,29 @@ export function ExtensionPanel({ open, project, session, organization, business,
         <div className="extension-strip" role="tablist" aria-label="扩展标签">
           {tabs.map((t, i) => (
             <div key={t.id} className={active === t.id ? 'chosen' : ''}>
-              <button
+              <Button
                 role="tab"
                 aria-selected={active === t.id}
                 onClick={() => setActive(t.id)}
               >
                 <Icon name={types[t.kind][1]} size={15} />
                 {types[t.kind][0]}
-              </button>
-              <button
+              </Button>
+              <Button
                 aria-label={'关闭' + types[t.kind][0]}
                 onClick={() => { const rest = tabs.filter((v) => v.id !== t.id); setTabs(rest); if (active === t.id) setActive(rest[Math.max(0, i - 1)]?.id ?? -1); }}
               >
                 <Icon name="close" size={12} />
-              </button>
+              </Button>
             </div>
           ))}
         </div>
-        <button title="新增标签页" aria-label="新增标签页" popoverTarget={menu}>
+        <Button title="新增标签页" aria-label="新增标签页" popoverTarget={menu}>
           <Icon name="plus" size={16} />
-        </button>
-        <div id={menu} className="extension-types" popover="auto">
+        </Button>
+        <Popover id={menu} className="extension-types">
           {choices.map((k) => (
-            <button
+            <Button
               key={k}
               popoverTarget={menu}
               popoverTargetAction="hide"
@@ -203,16 +202,16 @@ export function ExtensionPanel({ open, project, session, organization, business,
             >
               <Icon name={types[k][1]} size={15} />
               {types[k][0]}
-            </button>
+            </Button>
           ))}
-        </div>
-        <button
+        </Popover>
+        <Button
           className="panel-size"
           aria-label={maximized ? '恢复面板宽度' : '最大化面板'}
           onClick={() => setMaximized(!maximized)}
         >
           <Icon name={maximized ? 'collapse' : 'expand'} size={15} />
-        </button>
+        </Button>
       </header>
       <div
         className="extension-body"

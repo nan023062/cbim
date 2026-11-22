@@ -2,6 +2,7 @@
  * 作用定位：桌面主布局与 Office、发现、设置和扩展页面的组合组件。
  * 设计原因：React 外壳组合各业务页面并持有窗口内导航，后台任务归宿主服务管理。
  */
+import { Button, Icon, PaneDivider, Popover, ThreePaneLayout } from '../../framework-ui';
 import { useEffect, useRef, useState } from 'react';
 
 import type { ProjectItem, OfficeConversation, OfficeSelection } from '../../bridge/contracts/discovery';
@@ -16,9 +17,7 @@ import { ResourceMarket } from '../discovery/MenuViews';
 
 import { BrandMark } from '../shared/BrandMark';
 
-import { Icon } from '../../framework-ui';
 
-import { ThreePaneLayout, PaneDivider } from '../../framework-ui';
 
 import { ExtensionPanel } from '../extension/ExtensionPanel';
 
@@ -190,50 +189,50 @@ export function DesktopShell()
 
   const [panelOpen, setPanelOpen] = useState(() => window.innerWidth >= 1380);
 
-  const sidebarToggle = <button className="icon-button" aria-controls="team-sidebar" aria-expanded={expanded}
-    aria-label={expanded ? '收起侧栏' : '展开侧栏'} onClick={() => setExpanded(!expanded)}><Icon name="panelLeft" size={16} /></button>;
+  const sidebarToggle = <Button className="icon-button" aria-controls="team-sidebar" aria-expanded={expanded}
+    aria-label={expanded ? '收起侧栏' : '展开侧栏'} onClick={() => setExpanded(!expanded)}><Icon name="panelLeft" size={16} /></Button>;
 
   return <div id="application-home">
     <header className="desktop-titlebar">
       {sidebarToggle}
-      <button onClick={() => void window.desktopMenu.OpenMonitor().catch(e => setError(String(e)))}><Icon name="flow" size={15} />资源监视器</button>
-      <button popoverTarget="title-help">帮助</button>
-      <button popoverTarget="title-about">关于</button>
-      <section id="title-help" className="title-popup title-info" popover="auto" aria-label="帮助">
+      <Button onClick={() => void window.desktopMenu.OpenMonitor().catch(e => setError(String(e)))}><Icon name="flow" size={15} />资源监视器</Button>
+      <Button popoverTarget="title-help">帮助</Button>
+      <Button popoverTarget="title-about">关于</Button>
+      <Popover as="section" id="title-help" className="title-popup title-info" aria-label="帮助">
         <strong>帮助</strong><p>从「新建」选择项目目录，通过「发现」浏览资源。打开「资源监视器」可查看进程占用。</p>
-      </section>
-      <section id="title-about" className="title-popup title-info" popover="auto" aria-label="关于 CBIM">
+      </Popover>
+      <Popover as="section" id="title-about" className="title-popup title-info" aria-label="关于 CBIM">
         <strong>关于 CBIM Assistant</strong><p>在项目工作区中组织 Agent 团队与工作流。</p>
-      </section>
+      </Popover>
     </header>
     {updateOpen && <div className="update-notice" role="region" aria-label="应用更新"><strong>应用更新</strong> {({ disabled: '当前构建不支持更新', idle: '等待检查', checking: '正在检查', available: '有可用更新', current: '已是最新版', downloading: '正在下载', ready: '已就绪，等待重启', installing: '正在重启安装' } as Record<string, string>)[updateStatus?.phase ?? 'checking']} {updateStatus?.version} {updateStatus?.progress != null && Math.round(updateStatus.progress) + '%'} {updateStatus?.error}
-      {updateStatus?.phase === 'ready' && <button onClick={() => void window.desktopMenu.Update('install').catch(e => setError(String(e)))}>重启安装</button>}
-      {updateStatus?.phase === 'available' && <button onClick={() => void window.desktopMenu.Update('download').catch(e => setError(String(e)))}>重新下载</button>}
-      <button onClick={() => setUpdateOpen(false)}>关闭</button></div>}
+      {updateStatus?.phase === 'ready' && <Button onClick={() => void window.desktopMenu.Update('install').catch(e => setError(String(e)))}>重启安装</Button>}
+      {updateStatus?.phase === 'available' && <Button onClick={() => void window.desktopMenu.Update('download').catch(e => setError(String(e)))}>重新下载</Button>}
+      <Button onClick={() => setUpdateOpen(false)}>关闭</Button></div>}
     {settings && <SettingsView initial={settings} onBack={() => setSettings(undefined)} />}
     <ThreePaneLayout hidden={!!settings} leftOpen={expanded} widths={widths} onWidthChange={saveWidth} className={'desktop-shell' + (expanded ? '' : ' sidebar-collapsed')}>
-    {expanded && <button className="sidebar-backdrop" aria-label="关闭项目侧栏" onClick={() => setExpanded(false)} />}
+    {expanded && <Button className="sidebar-backdrop" aria-label="关闭项目侧栏" onClick={() => setExpanded(false)} />}
     <aside id="team-sidebar" className="workspace-sidebar sidebar-frame">
-      <button className="sidebar-new-conversation" onClick={() => selected ? openProject(selected, true) : void chooseProject()}><Icon name="edit" size={16} />新建对话</button>
+      <Button className="sidebar-new-conversation" onClick={() => selected ? openProject(selected, true) : void chooseProject()}><Icon name="edit" size={16} />新建对话</Button>
       <nav className="primary-nav" aria-label="主菜单">
-        <button className={page==='market'?'selected':undefined} aria-current={page==='market'?'page':undefined} onClick={()=>setPage('market')}><Icon name="knowledge" />资源商城</button>
+        <Button className={page==='market'?'selected':undefined} aria-current={page==='market'?'page':undefined} onClick={()=>setPage('market')}><Icon name="knowledge" />资源商城</Button>
       </nav>
       <ProjectSidebar added={added} choosing={choosing} addingName={addingName} reading={page === 'workspace' && !settings} activeProject={page === 'workspace' ? selected?.id : undefined} activeSession={page === 'workspace' ? office?.id : undefined} OnOpen={openProject} OnAdd={() => void chooseProject()} OnSnapshot={items => { setSelected(previous => { const latest = items.find(item => item.id === previous?.id); return latest && previous && (latest.name !== previous.name || latest.path !== previous.path) ? latest : previous; }); }} OnUnavailable={(project, session) => { if (selected?.id === project && (!session || office?.id === session)) { request.current++; localStorage.removeItem('project-last-office'); setOffice(undefined); setSelected(undefined); } }} />
       <footer className="sidebar-footer">
-        <button className="user-profile-trigger" aria-label="用户菜单" popoverTarget="user-actions">
+        <Button className="user-profile-trigger" aria-label="用户菜单" popoverTarget="user-actions">
           <span className="profile-badge">C</span><span className="user-profile-copy"><b>本地用户</b><small>CBIM · 本地使用</small></span>
-        </button>
-        <button className="profile-quick-action" title="设置" aria-label="设置" onClick={() => setSettings('通用')}><Icon name="settings" size={13} /></button>
-        <button className="profile-quick-action" title="切换外观" aria-label="切换外观" onClick={() => setSettings('外观')}><Icon name="palette" size={13} /></button>
-        <div id="user-actions" popover="auto" role="group" aria-label="用户操作">
-          <button popoverTarget="user-actions" popoverTargetAction="hide" onClick={() => { setUpdateOpen(true); void window.desktopMenu.Update('check').catch(e => setError(String(e))); }}><Icon name="retry" size={16} />检查更新</button>
-          <button popoverTarget="user-actions" popoverTargetAction="hide" onClick={() => setSettings('通用')}><Icon name="settings" size={16} />设置</button>
-        </div>
+        </Button>
+        <Button className="profile-quick-action" title="设置" aria-label="设置" onClick={() => setSettings('通用')}><Icon name="settings" size={13} /></Button>
+        <Button className="profile-quick-action" title="切换外观" aria-label="切换外观" onClick={() => setSettings('外观')}><Icon name="palette" size={13} /></Button>
+        <Popover id="user-actions" role="group" aria-label="用户操作">
+          <Button popoverTarget="user-actions" popoverTargetAction="hide" onClick={() => { setUpdateOpen(true); void window.desktopMenu.Update('check').catch(e => setError(String(e))); }}><Icon name="retry" size={16} />检查更新</Button>
+          <Button popoverTarget="user-actions" popoverTargetAction="hide" onClick={() => setSettings('通用')}><Icon name="settings" size={16} />设置</Button>
+        </Popover>
       </footer>
       <PaneDivider side="left" label="调整项目侧栏宽度" controls="team-sidebar" />
     </aside>
     <main className="workspace-main">
-      <header className="workspace-topbar">{page !== 'workspace' && <button aria-label="返回工作区" onClick={() => setPage('workspace')}>←</button>}<Icon name="folder" size={16} /><strong className="workspace-project-title" title={title}>{title}</strong>
+      <header className="workspace-topbar">{page !== 'workspace' && <Button aria-label="返回工作区" onClick={() => setPage('workspace')}>←</Button>}<Icon name="folder" size={16} /><strong className="workspace-project-title" title={title}>{title}</strong>
       </header>
       {error && <p role="alert">{error}</p>}
       {page !== 'workspace' ? <ResourceMarket project={selected}/> : selected ? office ?
@@ -246,10 +245,10 @@ export function DesktopShell()
         
         <h1>打开一个工作区</h1>
         <p>选择本地项目目录，开始 Office 对话。</p>
-        <button className="solid-button" disabled={choosing} onClick={() => void chooseProject()}><Icon name="folder" size={16} />选择目录</button>
+        <Button className="solid-button" disabled={choosing} onClick={() => void chooseProject()}><Icon name="folder" size={16} />选择目录</Button>
       </section>}
     </main>
     <ExtensionPanel open={panelOpen} project={selected?.id} session={office?.id} business={selected && <BusinessPanel key={selected.id} project={selected.id} OnBack={() => setPanelOpen(false)} />} organization={selected && <OrganizationPanel key={selected.id} project={selected.id} OnBack={() => setPanelOpen(false)} OnManageModels={() => setSettings('模型供应商')} />} />
-    <button className="icon-button panel-switch" aria-label={panelOpen ? '收起扩展面板' : '展开扩展面板'} aria-controls="extension-panel" aria-expanded={panelOpen} onClick={() => setPanelOpen(!panelOpen)}><Icon name="panelRight" size={16} /></button>
+    <Button className="icon-button panel-switch" aria-label={panelOpen ? '收起扩展面板' : '展开扩展面板'} aria-controls="extension-panel" aria-expanded={panelOpen} onClick={() => setPanelOpen(!panelOpen)}><Icon name="panelRight" size={16} /></Button>
   </ThreePaneLayout></div>;
 }

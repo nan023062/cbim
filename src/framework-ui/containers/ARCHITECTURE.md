@@ -12,6 +12,7 @@ Panel 提供活动期订阅；Tabs 协调选中项与面板；layout 和 windows
 | --- | --- |
 | [Panel](Panel.tsx) | Panel |
 | [Tabs](Tabs.tsx) | Tabs |
+| [Popover](Popover.tsx) | 共享原生弹出菜单与 Esc 关闭行为。 |
 
 <!-- architecture:generated:start -->
 
@@ -29,6 +30,10 @@ class N_f9f8a923a41f["Tabs"] {
   <<component>>
 }
 click N_f9f8a923a41f href "Tabs.tsx"
+class N_f4632fc9d2a6["Popover"] {
+  <<component>>
+}
+click N_f4632fc9d2a6 href "Popover.tsx"
 class N_56bfbeebf250["layout"] {
   <<virtual>>
 }

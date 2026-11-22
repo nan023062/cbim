@@ -1,5 +1,5 @@
+import { Button, FieldLabel, Icon, Input, type IconName } from '../../framework-ui';
 import { useRef, useState } from 'react';
-import { Icon, type IconName } from '../../framework-ui';
 
 type LogoProps = { kind: 'skill' | 'workflow'; logo?: string; name: string };
 
@@ -31,7 +31,7 @@ export function ResourceLogoEditor({ kind, logo, name, disabled, onChange }: Log
   const [error, setError] = useState('');
   const generation = useRef(0);
   return <div><ResourceLogo key={logo} {...{kind, logo, name}} />
-    <label>自定义 Logo<input type="file" accept="image/png,image/jpeg,image/webp" disabled={disabled} onChange={event => {
+    <FieldLabel>自定义 Logo<Input type="file" accept="image/png,image/jpeg,image/webp" disabled={disabled} onChange={event => {
       const input = event.currentTarget;
       const file = input.files?.[0];
       input.value = '';
@@ -42,7 +42,7 @@ export function ResourceLogoEditor({ kind, logo, name, disabled, onChange }: Log
       reader.onerror = () => setError('图片读取失败。');
       reader.onload = () => { if (request === generation.current && input.isConnected) { setError(''); onChange(String(reader.result)); } };
       reader.readAsDataURL(file);
-    }} /></label>
-    <button type="button" disabled={disabled || !logo} onClick={() => { generation.current++; setError(''); onChange(undefined); }}>恢复默认图标</button>
+    }} /></FieldLabel>
+    <Button type="button" disabled={disabled || !logo} onClick={() => { generation.current++; setError(''); onChange(undefined); }}>恢复默认图标</Button>
     {error && <p role="alert">{error}</p>}</div>;
 }

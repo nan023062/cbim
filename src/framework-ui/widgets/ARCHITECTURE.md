@@ -16,10 +16,13 @@ Button、Toggle、StateButton 与 ListItem 共用按钮语义；ViewList 提供�
 | [Toggle](Toggle.tsx) | Toggle |
 | [Tooltip](Tooltip.tsx) | Tooltip |
 | [ViewList](ViewList.tsx) | ViewList |
+| [Fields](Fields.tsx) | 原生表单、输入、选项、进度和折叠控件；页面提供值与回调。 |
 
 <!-- architecture:generated:start -->
 
 ## 架构关系
+
+### 关系组 1：Button
 
 ```mermaid
 classDiagram
@@ -50,6 +53,16 @@ click N_d2f30baea027 href "ViewList.tsx"
 N_95f561daa8f0 ..> N_72401930af6e : 依赖
 N_dbf558f355d5 ..> N_72401930af6e : 依赖
 N_cfbbe42d9877 ..> N_72401930af6e : 依赖
+```
+
+### 关系组 2：Fields
+
+```mermaid
+classDiagram
+class N_f5e9570bf7f4["Fields"] {
+  <<component>>
+}
+click N_f5e9570bf7f4 href "Fields.tsx"
 ```
 
 [上层设计](../ARCHITECTURE.md)

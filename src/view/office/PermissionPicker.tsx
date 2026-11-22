@@ -2,9 +2,9 @@
  * 作用定位：Office 权限选择器；展示权限图标、说明行与选中标记，权限状态由 OfficeView 持有。
  * 设计原因：受控组件表达三种权限并保留键盘操作，实际工具授权仍由宿主逐次检查。
  */
+import { Button, Icon } from '../../framework-ui';
 import { useEffect, useId, useRef, useState } from 'react';
 
-import { Icon } from '../../framework-ui';
 
 /** 三种权限沿用现有协议值，不因展示调整改变授权。 */
 type Permission = 'read' | 'ask' | 'execute';
@@ -42,7 +42,7 @@ export function PermissionPicker({ value, disabled, OnChange }: { value: Permiss
   }
 
   return <div className="office-permission" ref={root} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false); }} onKeyDown={event => { if (!open) return; if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); Close(); } if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) { event.preventDefault(); const items = [...root.current!.querySelectorAll<HTMLButtonElement>('[role="option"]')]; const index = items.indexOf(document.activeElement as HTMLButtonElement); items[event.key === 'Home' ? 0 : event.key === 'End' ? items.length - 1 : (index + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length]?.focus(); } }}>
-    <button type="button" className="office-permission-trigger" ref={trigger} aria-label={'执行权限：' + current.label} aria-haspopup="listbox" aria-expanded={open} aria-controls={open ? id : undefined} title={current.label + ' · ' + current.description} disabled={disabled} data-permission={value} onClick={() => setOpen(!open)} onKeyDown={event => { if (!open && ['ArrowDown', 'ArrowUp'].includes(event.key)) { event.preventDefault(); setOpen(true); } }}><Icon name={current.icon} size={16} /><span>{current.label}</span><span aria-hidden="true">⌄</span></button>
-    {open && <div className="office-permission-menu" id={id} role="listbox" aria-label="执行权限">{options.map(option => <button type="button" key={option.value} role="option" aria-selected={value === option.value} disabled={disabled} onClick={() => { OnChange(option.value); Close(); }}><Icon name={option.icon} size={18} /><span><b>{option.label}</b><small>{option.description}</small></span>{value === option.value && <Icon name="check" size={16} />}</button>)}</div>}
+    <Button type="button" className="office-permission-trigger" ref={trigger} aria-label={'执行权限：' + current.label} aria-haspopup="listbox" aria-expanded={open} aria-controls={open ? id : undefined} title={current.label + ' · ' + current.description} disabled={disabled} data-permission={value} onClick={() => setOpen(!open)} onKeyDown={event => { if (!open && ['ArrowDown', 'ArrowUp'].includes(event.key)) { event.preventDefault(); setOpen(true); } }}><Icon name={current.icon} size={16} /><span>{current.label}</span><span aria-hidden="true">⌄</span></Button>
+    {open && <div className="office-permission-menu" id={id} role="listbox" aria-label="执行权限">{options.map(option => <Button type="button" key={option.value} role="option" aria-selected={value === option.value} disabled={disabled} onClick={() => { OnChange(option.value); Close(); }}><Icon name={option.icon} size={18} /><span><b>{option.label}</b><small>{option.description}</small></span>{value === option.value && <Icon name="check" size={16} />}</Button>)}</div>}
   </div>;
 }

@@ -2,20 +2,20 @@
  * 作用定位：对照查看 CBIM 运行资源与宿主的真实操作系统进程。
  * 设计原因：只读订阅业务与进程指标并在卸载时清理监听，不把监控列表变成进程控制入口。
  */
+import { Disclosure, DisclosureSummary, Icon, Progress } from '../../framework-ui';
 import { memo, useEffect, useState } from 'react';
 
 import type { ProcessGroup, ProcessRow } from '../../bridge/contracts/discovery';
 
-import { Icon } from '../../framework-ui';
 
 import './monitor.css';
 
 const ResourceList = memo(function ResourceList({ title, rows, icon }: { title: string; rows: ProcessRow[]; icon: string })
 {
-  return <details open><summary>{title}<b>{rows.length}</b></summary>
+  return <Disclosure open><DisclosureSummary>{title}<b>{rows.length}</b></DisclosureSummary>
     {rows.map(row => <div className="resource-entry" key={row.id}>{row.logo ? <img alt="" src={row.logo} width={16} height={16} /> : <Icon name={icon} size={15} />}
       <div><strong>{row.name}</strong><small>{row.detail}</small></div></div>)}
-  </details>;
+  </Disclosure>;
 });
 
 export function ResourceMonitor()
@@ -34,7 +34,7 @@ export function ResourceMonitor()
     <div className="process-list">
       {runtime && <>
         <div className="load-summary"><div><strong>虚拟总负载</strong><b>{runtime.load.total} / {runtime.load.threshold}</b></div>
-          <progress aria-label="虚拟总负载" max={runtime.load.threshold} value={runtime.load.total} />
+          <Progress aria-label="虚拟总负载" max={runtime.load.threshold} value={runtime.load.total} />
           <small>每进程 {runtime.load.weights.agents} · 每核心 {runtime.load.weights.engines} · 每磁盘 {runtime.load.weights.workspaces} · 每外设 {runtime.load.weights.connectors}</small>
         </div>
         <div className="flow-summary">流量（Token 速度）<b>{runtime.traffic.toFixed(1)} tok/s</b></div>

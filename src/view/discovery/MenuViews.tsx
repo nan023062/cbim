@@ -2,15 +2,13 @@
  * 作用定位：发现页负责展示和筛选资源，运行管理页读取当前应用的监控快照。
  * 设计原因：React 页面只筛选和展示发现结果，资源安装与连接器生命周期由宿主入口处理。
  */
+import { Button, Checkbox, ConfirmWindow, Disclosure, DisclosureSummary, FieldLabel, Form, Icon, Input, Option, Select, Tabs } from '../../framework-ui';
 import { useEffect, useState, useRef, useLayoutEffect } from 'react';
 
 import type { ProjectItem, RegistryPublication, RegistryVersion } from '../../bridge/contracts/discovery';
 
-import { Icon } from '../../framework-ui';
 
-import { ConfirmWindow } from '../../framework-ui';
 
-import { Tabs } from '../../framework-ui';
 
 import { EnginePackagesView } from './EnginePackagesView';
 
@@ -64,7 +62,7 @@ function PluginActions({
   if (!state) return <p role={error ? 'alert' : 'status'}>{error || '正在读取本机版本…'}</p>;
   return (
     <>
-      <button
+      <Button
         disabled={
           busy ||
           (!state.installed && !state.candidate) ||
@@ -83,12 +81,12 @@ function PluginActions({
                 ? '安装并在 ' + project.name + ' 引用'
                 : '安装到本机'
               : '暂无匹配的签名版本'}
-      </button>
+      </Button>
       {transfer && <TransferProgress item={transfer} />}
       {state.installed && (
-        <button disabled={busy} onClick={() => setConfirm(true)}>
+        <Button disabled={busy} onClick={() => setConfirm(true)}>
           卸载此版本
-        </button>
+        </Button>
       )}
       {confirm && (
         <ConfirmWindow
@@ -149,9 +147,9 @@ function TemplateUpdates({row,project}:{row:RegistryVersion;project:ProjectItem}
       setFields([]);
     }catch(e){setNote(String(e))}finally{setBusy(false)}
   }
-  return <section><button disabled={busy} onClick={()=>void request('')}>检查已导入实例</button>
-    {Boolean(preview?.instances.length)&&<label>目标实例<select disabled={busy} value={instance} onChange={e=>void request(e.target.value)}><option value="">选择项目实例</option>{preview!.instances.map(item=><option key={item.id} value={item.id}>{item.name} · v{item.version} · {item.id.slice(0,8)}</option>)}</select></label>}
-    {instance&&preview&&<><p>{preview.changes.length?'选择要合并的差异':'当前实例与此版本一致'}</p>{preview.changes.map(change=><label key={change.id} style={{display:'block',overflowWrap:'anywhere'}}><input disabled={busy} type="checkbox" checked={fields.includes(change.id)} onChange={e=>setFields(e.target.checked?[...fields,change.id]:fields.filter(id=>id!==change.id))}/>{change.label} · 当前 {change.before} → 模板 {change.after}</label>)}<button disabled={busy||!fields.length} onClick={()=>void request(instance,true)}>合并选定变更</button></>}
+  return <section><Button disabled={busy} onClick={()=>void request('')}>检查已导入实例</Button>
+    {Boolean(preview?.instances.length)&&<FieldLabel>目标实例<Select disabled={busy} value={instance} onChange={e=>void request(e.target.value)}><Option value="">选择项目实例</Option>{preview!.instances.map(item=><Option key={item.id} value={item.id}>{item.name} · v{item.version} · {item.id.slice(0,8)}</Option>)}</Select></FieldLabel>}
+    {instance&&preview&&<><p>{preview.changes.length?'选择要合并的差异':'当前实例与此版本一致'}</p>{preview.changes.map(change=><FieldLabel key={change.id} style={{display:'block',overflowWrap:'anywhere'}}><Checkbox disabled={busy} checked={fields.includes(change.id)} onChange={e=>setFields(e.target.checked?[...fields,change.id]:fields.filter(id=>id!==change.id))}/>{change.label} · 当前 {change.before} → 模板 {change.after}</FieldLabel>)}<Button disabled={busy||!fields.length} onClick={()=>void request(instance,true)}>合并选定变更</Button></>}
     <p role="status">{busy?'正在处理…':note}</p></section>;
 }
 type Kind = keyof typeof kinds;
@@ -253,20 +251,20 @@ export function ResourceMarket({ project }: { project?: ProjectItem }) {
   const panel = (
     <>
       <div className="graph-toolbar">
-        <label>
-          搜索资源 <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} />
-        </label>
-        <label>
+        <FieldLabel>
+          搜索资源 <Input type="search" value={query} onChange={(e) => setQuery(e.target.value)} />
+        </FieldLabel>
+        <FieldLabel>
           状态{' '}
-          <select value={filter} onChange={(e) => setFilter(e.target.value)}>
-            <option value="all">全部状态</option>
-            <option disabled value="owned">
+          <Select value={filter} onChange={(e) => setFilter(e.target.value)}>
+            <Option value="all">全部状态</Option>
+            <Option disabled value="owned">
               已购（权益服务未接入）
-            </option>
-            <option value="removed">已卸载</option>
-            <option value="update">可更新</option>
-          </select>
-        </label>
+            </Option>
+            <Option value="removed">已卸载</Option>
+            <Option value="update">可更新</Option>
+          </Select>
+        </FieldLabel>
       </div>
       {!catalog.data && !catalog.error && <p>正在读取商城目录…</p>}
       {catalog.data && !filtered.length && <p>没有符合条件的资源。</p>}
@@ -275,7 +273,7 @@ export function ResourceMarket({ project }: { project?: ProjectItem }) {
           const v = group[0],
             item = v.kind === 'engine' ? engines.data?.items.find((x) => x.kind === v.id) : undefined;
           return (
-            <button
+            <Button
               type="button"
               className="definition-card market-card"
               key={identity}
@@ -296,7 +294,7 @@ export function ResourceMarket({ project }: { project?: ProjectItem }) {
               </small>
               {updatable(v) && <b>可更新</b>}
               {removed(v) && <b>已卸载</b>}
-            </button>
+            </Button>
           );
         })}
       </div>
@@ -307,8 +305,8 @@ export function ResourceMarket({ project }: { project?: ProjectItem }) {
       <section hidden={Boolean(key)}>
         <header className="view-heading">
           <h2>资源商城</h2>
-          <button onClick={() => setPublishing(!publishing)}>发布资源</button>
-          <button
+          <Button onClick={() => setPublishing(!publishing)}>发布资源</Button>
+          <Button
             disabled={busy}
             onClick={() => {
               catalog.refresh();
@@ -317,10 +315,10 @@ export function ResourceMarket({ project }: { project?: ProjectItem }) {
             }}
           >
             刷新
-          </button>
+          </Button>
         </header>
         {publishing && (
-          <form
+          <Form
             className="graph-toolbar"
             onSubmit={(e) => {
               e.preventDefault();
@@ -349,29 +347,29 @@ export function ResourceMarket({ project }: { project?: ProjectItem }) {
               });
             }}
           >
-            <label>
+            <FieldLabel>
               类别
-              <select name="kind">
+              <Select name="kind">
                 {Object.entries(kinds).map(([id, label]) => (
-                  <option key={id} value={id}>
+                  <Option key={id} value={id}>
                     {label}
-                  </option>
+                  </Option>
                 ))}
-              </select>
-            </label>
-            <label>
+              </Select>
+            </FieldLabel>
+            <FieldLabel>
               资源 ID
-              <input required name="id" pattern="[a-z][a-z0-9\-]{0,47}" />
-            </label>
-            <label>
+              <Input required name="id" pattern="[a-z][a-z0-9\-]{0,47}" />
+            </FieldLabel>
+            <FieldLabel>
               版本
-              <input
+              <Input
                 name="version"
                 required
                 defaultValue="1.0.0"
                 pattern={'[0-9]{1,8}\\.[0-9]{1,8}\\.[0-9]{1,8}'}
               />
-            </label>
+            </FieldLabel>
             {Object.entries({
               name: '商品名称',
               summary: '功能说明',
@@ -379,22 +377,22 @@ export function ResourceMarket({ project }: { project?: ProjectItem }) {
               preview: '预览说明',
               changes: '更新记录',
             }).map(([id, label]) => (
-              <label key={id}>
+              <FieldLabel key={id}>
                 {label}
-                <input
+                <Input
                   name={id}
                   maxLength={id === 'name' || id === 'developer' ? 100 : id === 'summary' ? 500 : 1000}
                 />
-              </label>
+              </FieldLabel>
             ))}
-            <label>
-              商品图片<input name="logo" type="file" accept="image/png,image/jpeg,image/webp"/>
-            </label><label>
+            <FieldLabel>
+              商品图片<Input name="logo" type="file" accept="image/png,image/jpeg,image/webp"/>
+            </FieldLabel><FieldLabel>
               价格（人民币元）
-              <input type="number" min="0" max="1000000" step=".01" name="price" />
-            </label>
-            <button disabled={busy}>选择文件并发布</button>
-          </form>
+              <Input type="number" min="0" max="1000000" step=".01" name="price" />
+            </FieldLabel>
+            <Button type="submit" disabled={busy}>选择文件并发布</Button>
+          </Form>
         )}
         <Tabs
           label="资源分类"
@@ -407,25 +405,25 @@ export function ResourceMarket({ project }: { project?: ProjectItem }) {
           }))}
         />
         {catalog.error && <p role="alert">{catalog.error}</p>}
-        <details>
-          <summary>本机引擎管理</summary>
+        <Disclosure>
+          <DisclosureSummary>本机引擎管理</DisclosureSummary>
           <EnginePackagesView />
-        </details>
+        </Disclosure>
       </section>
       {row && rows && (
         <section>
-          <button disabled={busy} onClick={() => setKey('')}>
+          <Button disabled={busy} onClick={() => setKey('')}>
             返回商城
-          </button>
+          </Button>
           <h2 tabIndex={-1} ref={heading}>
             {row.metadata?.name ?? row.id}
           </h2>
           <p>
             {kinds[row.kind]} · {price(row)}
           </p>
-          <label>
+          <FieldLabel>
             版本{' '}
-            <select
+            <Select
               disabled={busy}
               value={version}
               onChange={(e) => {
@@ -435,10 +433,10 @@ export function ResourceMarket({ project }: { project?: ProjectItem }) {
               }}
             >
               {rows.map((v) => (
-                <option key={v.version}>{v.version}</option>
+                <Option key={v.version}>{v.version}</Option>
               ))}
-            </select>
-          </label>
+            </Select>
+          </FieldLabel>
           <p>
             {row.size.toLocaleString()} 字节 · {row.id}
           </p>
@@ -460,7 +458,7 @@ export function ResourceMarket({ project }: { project?: ProjectItem }) {
             <p>此版本需要购买权益，当前未接入支付和授权服务。</p>
           ) : row.kind === 'talent' || row.kind === 'business' ? (
             <>
-              <button
+              <Button
                 disabled={busy || !project}
                 onClick={() =>
                   void act(async () => {
@@ -470,7 +468,7 @@ export function ResourceMarket({ project }: { project?: ProjectItem }) {
                 }
               >
                 {project ? '导入到 ' + project.name : '请先打开项目'}
-              </button>
+              </Button>
               {project&&<TemplateUpdates key={row.sha256+project.id} row={row} project={project}/>}
             </>
           ) : (
@@ -488,17 +486,17 @@ export function ResourceMarket({ project }: { project?: ProjectItem }) {
             />
           )}
           {!paid && (
-            <details>
-              <summary>版本文件</summary>
-              <button
+            <Disclosure>
+              <DisclosureSummary>版本文件</DisclosureSummary>
+              <Button
                 disabled={busy}
                 onClick={() =>
                   void act(async () => '已校验并缓存到 ' + (await window.desktopMenu.RegistryPull(row)))
                 }
               >
                 下载所选版本文件
-              </button>
-            </details>
+              </Button>
+            </Disclosure>
           )}
         </section>
       )}

@@ -2,6 +2,7 @@
  * 作用定位：可视窗口内的 Office 历史与流式正文，较早的轮次仅在进入窗口时读取。
  * 设计原因：按可视范围读取历史并复用正文渲染，减少长会话开销，不据展示状态推断执行完成。
  */
+import { Button, Icon } from '../../framework-ui';
 import { memo, useEffect, useState } from 'react';
 
 import Markdown from 'react-markdown';
@@ -10,7 +11,6 @@ import remarkGfm from 'remark-gfm';
 
 import type { OfficeMessage, OfficeActivity } from '../../bridge/contracts/discovery';
 
-import { Icon } from '../../framework-ui';
 
 const ReplyBody = memo(function ReplyBody({ text }: { text: string })
 {
@@ -33,7 +33,7 @@ function ActivityRow({ step, group }: { step: OfficeActivity; group: string })
   if (step.input === undefined && step.result === undefined)
     return <li>{step.label}</li>;
 
-  return <li><button type="button" aria-expanded={!!open} onClick={() => toggle(!open)}>{open ? '▾' : '▸'} {step.label}</button>
+  return <li><Button type="button" aria-expanded={!!open} onClick={() => toggle(!open)}>{open ? '▾' : '▸'} {step.label}</Button>
     {open && <div>{step.input !== undefined && <><b>输入</b><pre>{step.input}</pre></>}
       {step.result !== undefined && <><b>结果</b><pre>{step.result}</pre></>}</div>}</li>;
 }
@@ -46,9 +46,9 @@ function WorkRecord({ steps, group, elapsed, live, model }: { steps: OfficeActiv
 
   return <>
     <section className="office-work-record">
-      <button type="button" aria-expanded={!!open} onClick={() => toggle(!open)}>
+      <Button type="button" aria-expanded={!!open} onClick={() => toggle(!open)}>
         <Icon name="clock" size={13} /> {live ? '正在工作' : '已工作'} {Math.floor((elapsed ?? 0) / 1000)} 秒 {open ? '▾' : '▸'}
-      </button>
+      </Button>
       {visible.length > 0 && <ol>{visible.map(step => <ActivityRow key={step.id} group={group} step={step} />)}</ol>}
       {open && !steps.length && <p>本轮未保存步骤明细</p>}
       {open && model && <div>模型 · {model}</div>}
@@ -78,7 +78,7 @@ export function EarlierTurn({ project, session, file }: { project: string; sessi
   useEffect(() => { let active = true; window.desktopMenu.ReadOfficeTurn(project, session, file).then(result => { if (active) setMessages(result); }).catch(e => { if (active) setError(String(e)); }); return () => { active = false; }; }, [project, session, file, attempt]);
 
   if (error)
-    return <p role="alert">{error} <button onClick={() => { setError(''); setAttempt(attempt + 1); }}>重试</button></p>;
+    return <p role="alert">{error} <Button onClick={() => { setError(''); setAttempt(attempt + 1); }}>重试</Button></p>;
 
   return messages ? <>{messages.map(message => <Message key={message.id} messageId={message.id} role={message.role} text={message.text} elapsed={message.metrics?.elapsed} workLog={message.workLog} model={message.metrics?.model} />)}</> : <p>正在读取对话…</p>;
 }

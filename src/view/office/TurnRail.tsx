@@ -2,6 +2,7 @@
  * 作用定位：将对话轮次映射到列表行，提供定位与预览。
  * 设计原因：旧轮次仅在预览时读取，浏览历史不会改变任务状态。
  */
+import { Button } from '../../framework-ui';
 import { useEffect, useId, useState } from 'react';
 
 import type { OfficeMessage } from '../../bridge/contracts/discovery';
@@ -70,6 +71,6 @@ export function TurnRail({ project, session, earlier, messages, row, jump, live 
     return null;
 
   return <><nav className="turn-rail" aria-label="历史任务定位" onMouseEnter={() => setPointerInside(true)} onMouseLeave={() => { setPointerInside(false); setHover(undefined); }} onBlur={() => setHover(undefined)} onScroll={() => setHover(undefined)} onKeyDown={e => { if (e.key === 'Escape') setHover(undefined); }}>
-    {marks.map((m, i) => <button key={m.file || m.index} type="button" aria-label={'定位第 ' + (i + 1) + ' 个任务'} aria-current={i === active ? 'location' : undefined} aria-describedby={i === hover?.i ? tipId : undefined} onMouseEnter={e => Show(i, e.currentTarget)} onFocus={e => Show(i, e.currentTarget)} onClick={() => jump(m.index)}><i data-motion="turn" style={{ transform: 'scaleX(' + (pointerInside && hover ? markerScale(i - hover.i) : 0.23) + ')' }} /></button>)}
+    {marks.map((m, i) => <Button key={m.file || m.index} type="button" aria-label={'定位第 ' + (i + 1) + ' 个任务'} aria-current={i === active ? 'location' : undefined} aria-describedby={i === hover?.i ? tipId : undefined} onMouseEnter={e => Show(i, e.currentTarget)} onFocus={e => Show(i, e.currentTarget)} onClick={() => jump(m.index)}><i data-motion="turn" style={{ transform: 'scaleX(' + (pointerInside && hover ? markerScale(i - hover.i) : 0.23) + ')' }} /></Button>)}
   </nav>{mark && hover && <div className="turn-preview" data-motion="popup" id={tipId} role="tooltip" style={{ top: hover.top }}><strong>{preview?.text || (file ? '正在读取历史任务…' : '任务')}</strong><span>{preview ? preview.result || '暂无执行结果' : ''}</span></div>}</>;
 }

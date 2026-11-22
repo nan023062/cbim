@@ -118,3 +118,9 @@ return <Tabs label="工作区视图" value={tab} onChange={setTab} items={[
 | `PaneDivider` | 在布局内部对应面板上放置，传 `side="left"` 或 `"right"`、无障碍 `label`、目标面板 ID `controls`。支持指针拖拽、左右键每次移动 10px、Home 或双击复位。 |
 
 实际页面可参照[侧栏列表与确认窗](../src/view/desktop/ProjectSidebar.tsx)、[三栏布局](../src/view/desktop/DesktopShell.tsx)和[聊天虚拟列表](../src/view/office/OfficeView.tsx)。淡入淡出、悬停与循环动效的触发方式和时长见 [ui-tween 手册](UI-TWEEN.md)。
+
+## 桌面页面中的表单与窗口
+
+页面从框架入口导入 Form、Input、Checkbox、Select、Option 和 TextArea。它们支持对应的原生属性、事件与 ref；校验与提交结果由页面提供。Button 默认为普通操作，提交表单请显式传入 type="submit"。原生折叠内容使用 Disclosure 和 DisclosureSummary。
+
+有编辑表单的窗口使用 ModalWindow，由父页面控制挂载，onCancel 处理 Esc。Popover 与触发按钮通过 id / popoverTarget 配对。普通标题、段落和语义布局仍使用 HTML。

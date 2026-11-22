@@ -9,7 +9,7 @@ export type { OfficeQueueAction, OfficeQueueSnapshot, OfficeQueueItem } from '..
 export type { BusinessSnapshot, BusinessChange } from '../../logic/projects/business-contract';
 
 /** 新桌面菜单只公开显示字段及原生目录选择操作。 */
-export { SkillCommands, engineLogoLabel } from '../../logic/projects/agent-configuration';
+export { SkillCommands } from '../../logic/projects/agent-configuration';
 
 export type { AgentConfiguration, AgentSettingsTarget } from '../../logic/projects/agent-configuration';
 

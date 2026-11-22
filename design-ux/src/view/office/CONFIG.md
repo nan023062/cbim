@@ -1,6 +1,6 @@
 # 业务与组织架构配置
 
-Office 的引擎选择菜单与展开态引擎按钮使用静态 LogoLabel。原生按钮继续负责弹出菜单、选中提示和键盘操作。紧凑输入区仅显示引擎图标；模型使用文本，连接器按配置顺序排列图标。
+Office 的引擎选择菜单与展开态引擎按钮使用引擎图标和名称。原生按钮继续负责弹出菜单、选中提示和键盘操作。紧凑输入区仅显示引擎图标；模型使用文本，连接器按配置顺序排列图标。
 
 正式客户端通过 [NamedMark 与资源图标](../../../../src/framework-ui/ResourceLogo.tsx)展示引擎、技能和工作流。logic 以只读数据提供 id、name、logo、fallback、tooltip 和可选的 selected、disabled、disabledReason。静态展示传入 data；可操作的引擎选项使用 `<NamedMark data={option} onActivate={id => selectEngine(id)} />`。父页面保存选择并更新 data。模型保留文字，连接器勾选顺序由页面维护。技能书和流程节点使用当前主题文字色，在自定义图片解码期间占据同一个 20px 方框。成功后显示原图，失败保留当前主题的默认图。仓库包封面与内部对象 Logo 独立。
 

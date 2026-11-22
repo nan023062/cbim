@@ -1,6 +1,6 @@
 # 资源商城配置
 
-执行引擎管理页共用本视图模块。LogoLabel 用于引擎列表、详情标题与依赖引擎名称；安装、进度、版本状态和详情仍由 EnginePackagesView 维护。页面使用 `<LogoLabel data={engineLogoLabel(id,name,src,selected)} onActivate={setSelected} />`。省略回调时为静态展示。禁用原因由数据提供，键盘与鼠标均只上报 id。试跑入口为 `node design-ux/review/named-mark-check.cjs`。
+执行引擎使用 ListItem 选择、Tooltip 提示，安装按钮与选择行并列。详情标题和依赖仅展示图标与名称。
 
 [商城视图](../../../../src/view/discovery/MenuViews.tsx)提供页面入口，资源生命周期参考[资源体系](../../../../design/resource-system.md)。以下节点路径用于设计映射。
 

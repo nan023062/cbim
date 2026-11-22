@@ -11,6 +11,10 @@ export function ResourceLogo(props: LogoProps)
   return <LogoFrame key={logo} data={{name:label,logo}} fallback={props.kind==='skill'?'skillBook':'workflow'} />;
 }
 
+export function EngineLogo({ src }: { src?: string }) {
+  return <span aria-hidden="true"><LogoFrame key={src} data={{name:"",logo:src}} fallback="terminal" /></span>;
+}
+
 function LogoFrame({ data, fallback }: { data: {name:string;logo?:string}; fallback: IconName })
 {
   const [state, setState] = useState<'loading' | 'ready' | 'failed'>('loading');

@@ -12,7 +12,9 @@ export interface EngineArtifact
 
   plugin?:
   {
-    type: 'connector'
+    type: 'connector';
+    label?: string;
+    logo?: string
   } |
   {
     type: 'engine';
